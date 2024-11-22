@@ -20,7 +20,18 @@ use oak_file_utils::data_path;
 use oak_launcher_utils::launcher;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_echo_enclave_app_launch() {
+async fn test_echo_enclave_app_launch_v0() {
+    test_echo_enclave_app_launch_for_initial_data_version(launcher::InitialDataVersion::V0).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn test_echo_enclave_app_launch_v1() {
+    test_echo_enclave_app_launch_for_initial_data_version(launcher::InitialDataVersion::V1).await;
+}
+
+async fn test_echo_enclave_app_launch_for_initial_data_version(
+    initial_data_version: launcher::InitialDataVersion,
+) {
     let oak_restricted_kernel_orchestrator_app_path =
         data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
 
@@ -36,6 +47,7 @@ async fn test_echo_enclave_app_launch() {
         initrd: oak_restricted_kernel_orchestrator_app_path,
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
+        initial_data_version,
     };
     println!("launcher params: {:?}", params);
 

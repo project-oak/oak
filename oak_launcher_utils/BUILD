@@ -34,6 +34,8 @@ rust_library(
         "//micro_rpc",
         "//micro_rpc_build",
         "//oak_channel:oak_channel_client",
+        "//oak_proto_rust",
+        "//oak_restricted_kernel_interface",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bmrng",
         "@oak_crates_index//:clap",

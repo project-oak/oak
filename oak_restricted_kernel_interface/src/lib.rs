@@ -18,6 +18,7 @@
 #![feature(c_size_t)]
 
 pub mod errno;
+pub mod initial_data;
 mod raw_syscall;
 pub mod syscall;
 pub mod syscalls;

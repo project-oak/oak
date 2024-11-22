@@ -2682,6 +2682,8 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_channel",
+ "oak_proto_rust",
+ "oak_restricted_kernel_interface",
  "prost",
  "tokio",
 ]

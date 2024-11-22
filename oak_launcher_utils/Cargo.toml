@@ -16,6 +16,8 @@ bmrng = "*"
 clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 log = "*"
+oak_proto_rust = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
 prost = { workspace = true }
 tokio = { version = "*", features = [
   "rt-multi-thread",

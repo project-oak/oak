@@ -23,7 +23,9 @@ package(
 
 rust_library(
     name = "oak_restricted_kernel_orchestrator",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/lib.rs",
+    ],
     crate_features = ["exchange_evidence"],
     target_compatible_with = [
         "//:x86_64-none-setting",
@@ -34,6 +36,7 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_restricted_kernel_dice",
+        "//oak_restricted_kernel_interface",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",

@@ -99,6 +99,7 @@ async fn test_load_large_lookup_data() {
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("2G".to_string()),
         pci_passthrough: None,
+        initial_data_version: launcher::InitialDataVersion::V0,
     };
     log::debug!("launcher params: {:?}", params);
 
@@ -171,6 +172,7 @@ async fn test_load_two_gib_lookup_data() {
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
+        initial_data_version: launcher::InitialDataVersion::V0,
     };
     log::debug!("launcher params: {:?}", params);
 

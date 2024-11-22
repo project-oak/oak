@@ -121,9 +121,15 @@ fn entrypoint() {
     syscall::write(EVENT_LOG_FD, attested_app.get_encoded_event_log().as_slice())
         .expect("failed to write event log");
 
+    log::info!(
+        "Received {} bytes of endorsement data",
+        attested_app.initial_data.endorsement_bytes.len()
+    );
+
     log::info!("Finished setup, handing off executing to the app and going to sleep.");
-    let pid = syscall::unstable_create_proccess(attested_app.elf_binary.as_slice())
-        .expect("failed to create app process");
+    let pid =
+        syscall::unstable_create_proccess(attested_app.initial_data.application_bytes.as_bytes())
+            .expect("failed to create app process");
     log::warn!("Orchestrator has been awoken! This only happens if the enclave app uses unstable syscalls.");
     for _ in 0..1 {
         log::info!("Zzz... (Hitting snooze, resuming the app)");

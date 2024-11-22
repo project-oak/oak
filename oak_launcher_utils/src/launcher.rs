@@ -20,7 +20,7 @@ use std::{
     net::Shutdown,
     os::{
         fd::AsRawFd,
-        unix::{net, net::UnixStream},
+        unix::net::{self, UnixStream},
     },
     path::PathBuf,
     process::Stdio,
@@ -29,11 +29,20 @@ use std::{
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use command_fds::CommandFdExt;
 use log::info;
+use oak_proto_rust::oak::restricted_kernel::InitialData;
+use prost::Message;
 
 use crate::channel::{Connector, ConnectorHandle};
+
+#[derive(Debug, Clone, Default, PartialEq, ValueEnum)]
+pub enum InitialDataVersion {
+    #[default]
+    V0,
+    V1,
+}
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -72,6 +81,11 @@ pub struct Params {
     /// VFIO.
     #[arg(long, value_name = "ADDRESS")]
     pub pci_passthrough: Option<String>,
+
+    /// Use the V1 format for initial data loading (binary + endorsements in
+    /// proto).
+    #[arg(long, value_name = "INITIAL_DATA_VERSION", default_value_t, value_enum)]
+    pub initial_data_version: InitialDataVersion,
 }
 
 /// Checks if file with a given path exists.
@@ -180,11 +194,25 @@ impl Instance {
         let instance = cmd.spawn()?;
 
         if let Some(app_bytes) = app_bytes {
+            let initial_data_bytes = match params.initial_data_version {
+                InitialDataVersion::V0 => app_bytes,
+                InitialDataVersion::V1 => {
+                    let initial_data =
+                        InitialData { application_bytes: app_bytes, endorsement_bytes: Vec::new() };
+
+                    let mut initial_data_bytes =
+                        oak_restricted_kernel_interface::initial_data::INITIAL_DATA_V1_HEADER
+                            .to_vec();
+                    initial_data.encode(&mut initial_data_bytes)?;
+                    initial_data_bytes
+                }
+            };
+
             // The code below is all sync, but we need some reasonable deadlines otherwise
             // we might just get stuck if the qemu process exits.
             host_socket.set_read_timeout(Some(Duration::from_secs(30)))?;
 
-            oak_channel::basic_framed::send_raw(&mut host_socket, &app_bytes)
+            oak_channel::basic_framed::send_raw(&mut host_socket, &initial_data_bytes)
                 .context("failed to send application")?;
             #[cfg(feature = "exchange_evidence")]
             let _evidence = oak_channel::basic_framed::receive_raw(&mut host_socket)

@@ -77,6 +77,7 @@ cargo_build_script(
         "//proto/oak_functions:testing.proto",
         "//proto/oak_functions/sdk:oak_functions_wasm.proto",
         "//proto/oak_functions/service:oak_functions.proto",
+        "//proto/restricted_kernel:initial_data.proto",
         "//proto/session:messages.proto",
         "//proto/session:service_streaming.proto",
         "//proto/session:session.proto",

@@ -117,6 +117,10 @@ pub mod oak {
         }
     }
 
+    pub mod restricted_kernel {
+        include_proto!("oak.restricted_kernel");
+    }
+
     pub mod session {
         pub mod v1 {
             #![allow(dead_code)]

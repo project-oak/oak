@@ -60,6 +60,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
+        initial_data_version: launcher::InitialDataVersion::V0,
     };
     log::debug!("launcher params: {:?}", params);
 
