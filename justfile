@@ -207,6 +207,12 @@ stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
         --stage0-rom=bazel-bin/stage0_bin/stage0_bin \
         --attestation-measurements-output-dir={{output_dir}}
 
+stage1_cpio:
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1:stage1_cpio
+    cp --force --preserve=timestamps --no-preserve=mode \
+        bazel-bin/oak_containers/stage1/stage1.cpio \
+        artifacts
+
 oak_containers_kernel:
     bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/kernel/...
     cp --force --preserve=timestamps \
