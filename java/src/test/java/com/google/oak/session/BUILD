@@ -21,21 +21,14 @@ package(
 )
 
 java_test(
-    name = "client_test",
-    srcs = ["OakClientTest.java"],
-    test_class = "com.google.oak.client.OakClientTest",
+    name = "session_test",
+    srcs = ["OakSessionTest.java"],
+    test_class = "com.google.oak.session.OakSessionTest",
     deps = [
-        "//java/src/main/java/com/google/oak/client",
-        "//java/src/main/java/com/google/oak/crypto:server_encryptor",
-        "//java/src/main/java/com/google/oak/crypto/hpke",
-        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
-        "//java/src/main/java/com/google/oak/transport",
-        "//java/src/main/java/com/google/oak/util",
-        "//proto/attestation:endorsement_java_proto",
-        "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:verification_java_proto",
-        "//proto/crypto:crypto_java_proto",
-        "//proto/session:messages_java_proto",
+        "//java/src/main/java/com/google/oak/session:client_session",
+        "//java/src/main/java/com/google/oak/session:exception",
+        "//java/src/main/java/com/google/oak/session:server_session",
+        "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
     ],
 )

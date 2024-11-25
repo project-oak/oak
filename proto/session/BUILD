@@ -116,6 +116,11 @@ cc_proto_library(
     deps = [":session_proto"],
 )
 
+java_proto_library(
+    name = "session_java_proto",
+    deps = [":session_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [

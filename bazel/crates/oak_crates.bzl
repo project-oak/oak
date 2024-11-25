@@ -376,6 +376,9 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "hyper-util": crate.spec(version = "0.1.7", features = ["full"]),
     "ignore": crate.spec(version = "0.4.22"),
+    "jni": crate.spec(
+        version = "0.21.1",
+    ),
     "libloading": crate.spec(version = "0.8.5"),
     "nix": crate.spec(
         features = [
