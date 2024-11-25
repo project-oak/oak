@@ -729,7 +729,7 @@
 /// It must be 64-byte aligned and have a length of 48 bytes.
 </span><span class="attr">#[repr(C, align(<span class="number">64</span>))]
 </span><span class="kw">pub struct </span>ExtensionBuffer {
-    data: [u8; <span class="number">48</span>],
+    <span class="kw">pub </span>data: [u8; <span class="number">48</span>],
 }
 
 <span class="doccomment">/// Error when extending an RTMR.
