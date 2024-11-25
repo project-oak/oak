@@ -28,16 +28,16 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
 // The Transparent Release attachment for Oak Stage 0. Measurements
-// are produced with
-// https://github.com/project-oak/oak/snp_measurement.
+// are produced with:
+// https://github.com/project-oak/oak/tree/main/snp_measurement
 message FirmwareAttachment {
   // Maps number of vCPUs to measurement of the modified firmware binary.
   map<int32, HexDigest> configs = 1;
 }
 
 // The Transparent Release attachment for Oak Containers Linux kernel.
-// Measurements are produced with
-// https://github.com/project-oak/oak/oak_kernel_measurement.
+// Measurements are produced with:
+// https://github.com/project-oak/oak/tree/main/oak_kernel_measurement
 message KernelAttachment {
   // Digest of the kernel image part of the bzImage.
   HexDigest image = 1;

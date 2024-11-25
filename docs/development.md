@@ -7,7 +7,8 @@ in sync with what is used by the Continous Integration (CI) system.
 
 This is also necessary (though not by itself sufficient) to enable building Oak
 binaries in a detereministic and reproducible way, which in turn allows Oak to
-be [transparently released](https://github.com/project-oak/transparent-release).
+be
+[transparently released](https://github.com/project-oak/oak/tree/main/docs/tr/README.md).
 
 Mac and Windows development is not officially supported.
 

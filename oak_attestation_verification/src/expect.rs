@@ -668,6 +668,7 @@ fn verify_endorsement_wrapper(
     //     verify_binary_endorsement function once all clients verify via the
     //     new-style fields in EndorsementReferenceValue.
     if ref_value.endorser.is_none() {
+        #[allow(deprecated)]
         return verify_binary_endorsement(
             now_utc_millis,
             endorsement,

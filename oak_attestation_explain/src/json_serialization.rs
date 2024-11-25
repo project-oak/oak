@@ -428,6 +428,7 @@ pub fn serialize_endorsement_reference_value(
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
+    #[allow(deprecated)]
     let EndorsementReferenceValue {
         endorser_public_key,
         rekor_public_key,

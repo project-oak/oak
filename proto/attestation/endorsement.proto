@@ -55,9 +55,6 @@ message Signature {
   bytes raw = 2;
 }
 
-// --------------------------------------------------------------------
-// Second generation message; supersedes TransparentReleaseEndorsement.
-//
 // A signed endorsement which is optionally published.
 message SignedEndorsement {
   // The underlying unsigned endorsement.
@@ -72,15 +69,14 @@ message SignedEndorsement {
   bytes rekor_log_entry = 3;
 }
 
-// --------------------------------------------------------------------
-// First generation message.
-//
-// Endorsement for binaries from the Transparent Release process.
-// <https://github.com/project-oak/oak/blob/main/docs/release.md>
+// A Transparent Release endorsement for a binary which includes the actual
+// endorsement, a signature over it, and optionally a transparency log entry.
+// Don't use this message in new code, use `SignedEndorsement` instead.
+// `SignedEndorsement` supersedes `TransparentReleaseEndorsement`.
 message TransparentReleaseEndorsement {
   // JSON string comtaining the endorsement statement for the underlying binary.
   // The format is described here:
-  // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
+  // https://project-oak.github.io/oak/tr/endorsement/v1
   bytes endorsement = 1;
 
   // The data hashed as endorsement subject can be inlined here when needed.
@@ -98,8 +94,8 @@ message TransparentReleaseEndorsement {
 message RootLayerEndorsements {
   // The serialized TEE certificate(s). The details of the format and how the
   // certificate(s) are encoded into this byte array are implementation
-  // specific. In case of AMD-SEV-SNP, as described in
-  // https://www.amd.com/system/files/TechDocs/57230.pdf, there are three
+  // specific. In case of AMD-SEV-SNP (as described in
+  // https://www.amd.com/system/files/TechDocs/57230.pdf) there are three
   // different certificates packaged in two different files. We only include
   // the machine-specific VCEK certificate since the AMD Root Key (ARK) and
   // AMD SEV Key (ASK) are long-lived.
@@ -154,8 +150,8 @@ message CBEndorsements {
 message AmdSevSnpEndorsement {
   // The serialized TEE certificate(s). The details of the format and how the
   // certificate(s) are encoded into this byte array are implementation
-  // specific. In case of AMD-SEV-SNP, as described in
-  // https://www.amd.com/system/files/TechDocs/57230.pdf, there are three
+  // specific. In case of AMD-SEV-SNP (as described in
+  // https://www.amd.com/system/files/TechDocs/57230.pdf), there are three
   // different certificates packaged in two different files. We only include
   // the machine-specific VCEK certificate since the AMD Root Key (ARK) and
   // AMD SEV Key (ASK) are long-lived.
@@ -194,7 +190,7 @@ message ContainerEndorsement {
 // on it.
 //
 // The name is chosen to match the RATS terminology:
-// <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
+// https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements
 message Endorsements {
   oneof type {
     OakRestrictedKernelEndorsements oak_restricted_kernel = 1;

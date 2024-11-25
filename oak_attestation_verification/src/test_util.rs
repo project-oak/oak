@@ -105,13 +105,12 @@ fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceVal
         raw: endorser_public_key.clone(),
     };
     EndorsementReferenceValue {
-        endorser_public_key,                    // Deprecated, remove.
-        rekor_public_key: "".to_owned().into(), // Deprecated, remove.
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec() }),
         required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
         rekor: Some(VerifyingKeyReferenceValue {
             r#type: Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
         }),
+        ..Default::default()
     }
 }
 

@@ -33,8 +33,8 @@ enum KeyType {
   KEY_TYPE_UNDEFINED = 0;
 
   // An ECDSA key with curve P-256 and SHA2_256 hashing.
-  // An overview of key formats can be found at
-  // https://www.iana.org/assignments/cose/cose.xhtml#algorithms.
+  // An overview of key formats can be found at:
+  // https://www.iana.org/assignments/cose/cose.xhtml#algorithms
   KEY_TYPE_ECDSA_P256_SHA256 = 1;
 }
 
@@ -74,9 +74,9 @@ message VerifyingKeyReferenceValue {
   }
 }
 
-// Specifies a list of claim types. Claims are assertions about artifacts
-// made by the endorsing entity. An overview of the claims maintained by
-// Oak can be found at https://project-oak.github.io/oak/tr/claims.
+// Specifies a list of claim types. Claims are assertions about artifacts made
+// by the endorsing entity. An overview of the claims maintained by Oak can be
+// found at: https://github.com/project-oak/oak/tree/main/docs/tr/claim
 message ClaimReferenceValue {
   repeated string claim_types = 1;
 }
@@ -87,17 +87,17 @@ message EndorsementReferenceValue {
   // attestation verification requires that all endorsements need to be
   // signed, therefore this cannot be empty.
   //
-  // Field will be deprecated in the future. For standalone endorsement
-  // verification, use `endorser` field instead.
-  bytes endorser_public_key = 1;
+  // Deprecated - use field `endorser` instead.
+  // TODO: b/379253152 - Cut support of deprecated field and remove it.
+  bytes endorser_public_key = 1 [deprecated = true];
 
   // Rekor's public verifying key for log entry verification. Needs to be
   // set when a log entry is present that should be verified. If it is not set,
   // then log entry verification is skipped.
   //
-  // Field will be deprecated in the future. For standalone endorsement
-  // verification, use `rekor` field instead.
-  bytes rekor_public_key = 2;
+  // Deprecated - use field `rekor` instead.
+  // TODO: b/379253152 - Cut support of deprecated field and remove it.
+  bytes rekor_public_key = 2 [deprecated = true];
 
   // Verifies the endorsement. Since the signed endorsement is required to
   // be present, this cannot be skipped as part of this message. (It may

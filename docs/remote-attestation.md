@@ -5,7 +5,8 @@ authenticity and the identity of the code running inside the TEE.
 
 If the code of the application is **reproducibly buildable**, the client can
 also check that the TEE is running the application that is expected to run. See
-also [Transparent Release](https://github.com/project-oak/transparent-release).
+also
+[Transparent Release](https://github.com/project-oak/oak/tree/main/docs/tr/README.md).
 
 The Remote Attestation process is based on an **Attestation Report**, a data
 structure signed by the TEE platform and containing information identifying the
@@ -94,7 +95,7 @@ The client then checks:
   enclave
 - that the attestation report measurement corresponds to a trusted version of
   the enclave binary (e.g. via
-  [Transparent Release](https://github.com/project-oak/transparent-release))
+  [Transparent Release](https://github.com/project-oak/oak/tree/main/docs/tr/README.md))
 
 If any of these checks fails, the client refuses to go ahead.
 

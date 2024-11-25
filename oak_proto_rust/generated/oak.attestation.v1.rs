@@ -1,6 +1,6 @@
 /// The Transparent Release attachment for Oak Stage 0. Measurements
-/// are produced with
-/// <https://github.com/project-oak/oak/snp_measurement.>
+/// are produced with:
+/// <https://github.com/project-oak/oak/tree/main/snp_measurement>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct FirmwareAttachment {
@@ -9,8 +9,8 @@ pub struct FirmwareAttachment {
     pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
 }
 /// The Transparent Release attachment for Oak Containers Linux kernel.
-/// Measurements are produced with
-/// <https://github.com/project-oak/oak/oak_kernel_measurement.>
+/// Measurements are produced with:
+/// <https://github.com/project-oak/oak/tree/main/oak_kernel_measurement>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct KernelAttachment {
@@ -342,9 +342,9 @@ pub mod verifying_key_reference_value {
         Verify(super::VerifyingKeySet),
     }
 }
-/// Specifies a list of claim types. Claims are assertions about artifacts
-/// made by the endorsing entity. An overview of the claims maintained by
-/// Oak can be found at <https://project-oak.github.io/oak/tr/claims.>
+/// Specifies a list of claim types. Claims are assertions about artifacts made
+/// by the endorsing entity. An overview of the claims maintained by Oak can be
+/// found at: <https://github.com/project-oak/oak/tree/main/docs/tr/claim>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ClaimReferenceValue {
@@ -359,16 +359,18 @@ pub struct EndorsementReferenceValue {
     /// attestation verification requires that all endorsements need to be
     /// signed, therefore this cannot be empty.
     ///
-    /// Field will be deprecated in the future. For standalone endorsement
-    /// verification, use `endorser` field instead.
+    /// Deprecated - use field `endorser` instead.
+    /// TODO: b/379253152 - Cut support of deprecated field and remove it.
+    #[deprecated]
     #[prost(bytes = "vec", tag = "1")]
     pub endorser_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Rekor's public verifying key for log entry verification. Needs to be
     /// set when a log entry is present that should be verified. If it is not set,
     /// then log entry verification is skipped.
     ///
-    /// Field will be deprecated in the future. For standalone endorsement
-    /// verification, use `rekor` field instead.
+    /// Deprecated - use field `rekor` instead.
+    /// TODO: b/379253152 - Cut support of deprecated field and remove it.
+    #[deprecated]
     #[prost(bytes = "vec", tag = "2")]
     pub rekor_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Verifies the endorsement. Since the signed endorsement is required to
@@ -687,8 +689,8 @@ pub enum KeyType {
     /// A verifying key without a defined type is invalid.
     Undefined = 0,
     /// An ECDSA key with curve P-256 and SHA2_256 hashing.
-    /// An overview of key formats can be found at
-    /// <https://www.iana.org/assignments/cose/cose.xhtml#algorithms.>
+    /// An overview of key formats can be found at:
+    /// <https://www.iana.org/assignments/cose/cose.xhtml#algorithms>
     EcdsaP256Sha256 = 1,
 }
 impl KeyType {
@@ -781,9 +783,6 @@ pub struct Signature {
     #[prost(bytes = "vec", tag = "2")]
     pub raw: ::prost::alloc::vec::Vec<u8>,
 }
-/// --------------------------------------------------------------------
-/// Second generation message; supersedes TransparentReleaseEndorsement.
-///
 /// A signed endorsement which is optionally published.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
@@ -800,17 +799,16 @@ pub struct SignedEndorsement {
     #[prost(bytes = "vec", tag = "3")]
     pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
 }
-/// --------------------------------------------------------------------
-/// First generation message.
-///
-/// Endorsement for binaries from the Transparent Release process.
-/// <<https://github.com/project-oak/oak/blob/main/docs/release.md>>
+/// A Transparent Release endorsement for a binary which includes the actual
+/// endorsement, a signature over it, and optionally a transparency log entry.
+/// Don't use this message in new code, use `SignedEndorsement` instead.
+/// `SignedEndorsement` supersedes `TransparentReleaseEndorsement`.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct TransparentReleaseEndorsement {
     /// JSON string comtaining the endorsement statement for the underlying binary.
     /// The format is described here:
-    /// <https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format>
+    /// <https://project-oak.github.io/oak/tr/endorsement/v1>
     #[prost(bytes = "vec", tag = "1")]
     pub endorsement: ::prost::alloc::vec::Vec<u8>,
     /// The data hashed as endorsement subject can be inlined here when needed.
@@ -830,8 +828,8 @@ pub struct TransparentReleaseEndorsement {
 pub struct RootLayerEndorsements {
     /// The serialized TEE certificate(s). The details of the format and how the
     /// certificate(s) are encoded into this byte array are implementation
-    /// specific. In case of AMD-SEV-SNP, as described in
-    /// <https://www.amd.com/system/files/TechDocs/57230.pdf,> there are three
+    /// specific. In case of AMD-SEV-SNP (as described in
+    /// <https://www.amd.com/system/files/TechDocs/57230.pdf>) there are three
     /// different certificates packaged in two different files. We only include
     /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
     /// AMD SEV Key (ASK) are long-lived.
@@ -914,8 +912,8 @@ pub struct CbEndorsements {
 pub struct AmdSevSnpEndorsement {
     /// The serialized TEE certificate(s). The details of the format and how the
     /// certificate(s) are encoded into this byte array are implementation
-    /// specific. In case of AMD-SEV-SNP, as described in
-    /// <https://www.amd.com/system/files/TechDocs/57230.pdf,> there are three
+    /// specific. In case of AMD-SEV-SNP (as described in
+    /// <https://www.amd.com/system/files/TechDocs/57230.pdf>), there are three
     /// different certificates packaged in two different files. We only include
     /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
     /// AMD SEV Key (ASK) are long-lived.
@@ -970,7 +968,7 @@ pub struct ContainerEndorsement {
 /// on it.
 ///
 /// The name is chosen to match the RATS terminology:
-/// <<https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>>
+/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsements {

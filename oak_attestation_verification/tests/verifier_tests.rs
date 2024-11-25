@@ -277,8 +277,6 @@ fn create_stage1_reference_value() -> BinaryReferenceValue {
 
     BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Endorsement(EndorsementReferenceValue {
-            endorser_public_key,
-            rekor_public_key,
             endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec() }),
             required_claims: Some(ClaimReferenceValue { claim_types }),
             rekor: Some(VerifyingKeyReferenceValue {
@@ -286,6 +284,7 @@ fn create_stage1_reference_value() -> BinaryReferenceValue {
                     VerifyingKeySet { keys: [rekor_key].to_vec() },
                 ))
             }),
+            ..Default::default()
         })),
     }
 }
