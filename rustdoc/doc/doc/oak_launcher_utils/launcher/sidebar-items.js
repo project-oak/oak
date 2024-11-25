@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["launch"],"struct":["Instance","Params"],"trait":["GuestInstance"]};
+window.SIDEBAR_ITEMS = {"enum":["InitialDataVersion"],"fn":["launch"],"struct":["Instance","Params"],"trait":["GuestInstance"]};

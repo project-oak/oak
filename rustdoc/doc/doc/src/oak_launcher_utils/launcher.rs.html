@@ -267,6 +267,34 @@
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -289,7 +317,7 @@
     net::Shutdown,
     os::{
         fd::AsRawFd,
-        unix::{net, net::UnixStream},
+        unix::net::{<span class="self">self</span>, UnixStream},
     },
     path::PathBuf,
     process::Stdio,
@@ -298,11 +326,20 @@
 
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>clap::{Parser, ValueEnum};
 <span class="kw">use </span>command_fds::CommandFdExt;
 <span class="kw">use </span>log::info;
+<span class="kw">use </span>oak_proto_rust::oak::restricted_kernel::InitialData;
+<span class="kw">use </span>prost::Message;
 
 <span class="kw">use </span><span class="kw">crate</span>::channel::{Connector, ConnectorHandle};
+
+<span class="attr">#[derive(Debug, Clone, Default, PartialEq, ValueEnum)]
+</span><span class="kw">pub enum </span>InitialDataVersion {
+    <span class="attr">#[default]
+    </span>V0,
+    V1,
+}
 
 <span class="doccomment">/// Represents parameters used for launching VM instances.
 </span><span class="attr">#[derive(Parser, Clone, Debug, PartialEq)]
@@ -341,6 +378,11 @@
     /// VFIO.
     </span><span class="attr">#[arg(long, value_name = <span class="string">"ADDRESS"</span>)]
     </span><span class="kw">pub </span>pci_passthrough: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+    <span class="doccomment">/// Use the V1 format for initial data loading (binary + endorsements in
+    /// proto).
+    </span><span class="attr">#[arg(long, value_name = <span class="string">"INITIAL_DATA_VERSION"</span>, default_value_t, value_enum)]
+    </span><span class="kw">pub </span>initial_data_version: InitialDataVersion,
 }
 
 <span class="doccomment">/// Checks if file with a given path exists.
@@ -449,11 +491,25 @@
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(app_bytes) = app_bytes {
+            <span class="kw">let </span>initial_data_bytes = <span class="kw">match </span>params.initial_data_version {
+                InitialDataVersion::V0 =&gt; app_bytes,
+                InitialDataVersion::V1 =&gt; {
+                    <span class="kw">let </span>initial_data =
+                        InitialData { application_bytes: app_bytes, endorsement_bytes: Vec::new() };
+
+                    <span class="kw">let </span><span class="kw-2">mut </span>initial_data_bytes =
+                        oak_restricted_kernel_interface::initial_data::INITIAL_DATA_V1_HEADER
+                            .to_vec();
+                    initial_data.encode(<span class="kw-2">&amp;mut </span>initial_data_bytes)<span class="question-mark">?</span>;
+                    initial_data_bytes
+                }
+            };
+
             <span class="comment">// The code below is all sync, but we need some reasonable deadlines otherwise
             // we might just get stuck if the qemu process exits.
             </span>host_socket.set_read_timeout(<span class="prelude-val">Some</span>(Duration::from_secs(<span class="number">30</span>)))<span class="question-mark">?</span>;
 
-            oak_channel::basic_framed::send_raw(<span class="kw-2">&amp;mut </span>host_socket, <span class="kw-2">&amp;</span>app_bytes)
+            oak_channel::basic_framed::send_raw(<span class="kw-2">&amp;mut </span>host_socket, <span class="kw-2">&amp;</span>initial_data_bytes)
                 .context(<span class="string">"failed to send application"</span>)<span class="question-mark">?</span>;
             <span class="attr">#[cfg(feature = <span class="string">"exchange_evidence"</span>)]
             </span><span class="kw">let </span>_evidence = oak_channel::basic_framed::receive_raw(<span class="kw-2">&amp;mut </span>host_socket)

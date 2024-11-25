@@ -124,6 +124,10 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -241,6 +245,10 @@
         <span class="kw">pub mod </span>v1 {
             <span class="macro">include_proto!</span>(<span class="string">"oak.key_provisioning.v1"</span>);
         }
+    }
+
+    <span class="kw">pub mod </span>restricted_kernel {
+        <span class="macro">include_proto!</span>(<span class="string">"oak.restricted_kernel"</span>);
     }
 
     <span class="kw">pub mod </span>session {
