@@ -46,7 +46,7 @@ class ServerEncryptor {
   // key and should outlive the per-session `ServerEncryptor` object.
   ServerEncryptor(EncryptionKeyHandle& encryption_key_handle)
       : encryption_key_handle_(encryption_key_handle),
-        recipient_context_(nullptr){};
+        recipient_context_(nullptr) {};
 
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>

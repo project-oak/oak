@@ -52,7 +52,7 @@ class ClientEncryptor {
   // Constructor for initializing all private variables of the class.
   explicit ClientEncryptor(std::unique_ptr<SenderContext> sender_context)
       : serialized_encapsulated_public_key_has_been_sent_(false),
-        sender_context_(std::move(sender_context)){};
+        sender_context_(std::move(sender_context)) {};
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
