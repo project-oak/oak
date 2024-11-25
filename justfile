@@ -36,7 +36,7 @@ export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
 # Convenience bundle of tests and checks prior to sending a change for review.
 presubmit: \
     format \
-    bazel \
+    build-and-test \
     clippy-ci \
     cargo-audit \
     cargo-udeps
@@ -328,7 +328,11 @@ clang-tidy:
 bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"x86_64-none-setting\", //...)"
 wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
-bazel: test-workspace std-crates bare-metal-crates wasm-crates
+# Build and test all targets.
+# The kokoro script build_test_and_copy_to_placer expects this recipe to
+# generate properly optimized and stripped binaries that it will then copy to
+# placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
+build-and-test: test-workspace std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust
 
 std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):

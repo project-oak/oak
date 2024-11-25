@@ -7,7 +7,7 @@ source "$(dirname "$0")/helpers/common.sh"
 
 ./scripts/docker_pull
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.
-./scripts/docker_run nix develop .#default --command just bazel bazel-cache-test containers_placer_artifacts
+./scripts/docker_run nix develop .#default --command just build-and-test bazel-cache-test containers_placer_artifacts
 ./scripts/git_check_diff
 
 # Upload the bazel execution logs as Kokoro artifacts so we can debug remote cache. This should
