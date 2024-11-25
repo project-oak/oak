@@ -711,6 +711,7 @@
 <a href="#711" id="711">711</a>
 <a href="#712" id="712">712</a>
 <a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1381,7 +1382,8 @@
     //     verify_binary_endorsement function once all clients verify via the
     //     new-style fields in EndorsementReferenceValue.
     </span><span class="kw">if </span>ref_value.endorser.is_none() {
-        <span class="kw">return </span>verify_binary_endorsement(
+        <span class="attr">#[allow(deprecated)]
+        </span><span class="kw">return </span>verify_binary_endorsement(
             now_utc_millis,
             endorsement,
             signature,
