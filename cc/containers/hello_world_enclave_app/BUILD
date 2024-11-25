@@ -56,6 +56,23 @@ cc_binary(
     ],
 )
 
+cc_test(
+    name = "standalone_test",
+    srcs = ["standalone_test.cc"],
+    deps = [
+        ":app_service",
+        "//cc/attestation/verification:insecure_attestation_verifier",
+        "//cc/client",
+        "//cc/containers/sdk/standalone:oak_standalone",
+        "//cc/transport:grpc_streaming_transport",
+        "//oak_containers/examples/hello_world/proto:hello_world_cc_grpc",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:status_matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 pkg_tar(
     name = "tar",
     srcs = [":main"],
