@@ -652,15 +652,6 @@
 <a href="#652" id="652">652</a>
 <a href="#653" id="653">653</a>
 <a href="#654" id="654">654</a>
-<a href="#655" id="655">655</a>
-<a href="#656" id="656">656</a>
-<a href="#657" id="657">657</a>
-<a href="#658" id="658">658</a>
-<a href="#659" id="659">659</a>
-<a href="#660" id="660">660</a>
-<a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -685,10 +676,9 @@
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
     ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    SYSTEM_IMAGE_LAYER_ID,
+    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
@@ -1145,19 +1135,15 @@
     <span class="kw">let </span>kernel_image = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>kernel_setup_data =
         <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="kw">let </span>kernel_cmd_line =
-        <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>kernel_raw_cmd_line = extract_value(values, KERNEL_COMMANDLINE_ID)
         .ok()
         .map(|v| String::from(v.as_text().expect(<span class="string">"kernel_raw_cmd_line found but is not a string"</span>)));
     <span class="kw">let </span>init_ram_fs = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>memory_map = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
     <span class="kw">let </span>acpi = <span class="prelude-val">Some</span>(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)<span class="question-mark">?</span>)<span class="question-mark">?</span>);
-    <span class="attr">#[allow(deprecated)]
-    </span><span class="prelude-val">Ok</span>(KernelLayerData {
+    <span class="prelude-val">Ok</span>(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
         kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
@@ -1265,10 +1251,7 @@
 <span class="doccomment">/// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same
 /// data, just in slightly different proto messages.
 </span><span class="kw">fn </span>stage0_measurements_to_kernel_layer_data(measurements: Stage0Measurements) -&gt; KernelLayerData {
-    <span class="comment">// We need to set fields of [`KernelLayerData`] to create it, some are
-    // deprecated.
-    </span><span class="attr">#[allow(deprecated)]
-    </span>KernelLayerData {
+    KernelLayerData {
         kernel_image: <span class="prelude-val">Some</span>(RawDigest {
             sha2_256: measurements.kernel_measurement,
             ..Default::default()
@@ -1277,7 +1260,6 @@
             sha2_256: measurements.setup_data_digest,
             ..Default::default()
         }),
-        kernel_cmd_line: <span class="prelude-val">None</span>,
         kernel_raw_cmd_line: <span class="prelude-val">Some</span>(measurements.kernel_cmdline),
         init_ram_fs: <span class="prelude-val">Some</span>(RawDigest {
             sha2_256: measurements.ram_disk_digest,

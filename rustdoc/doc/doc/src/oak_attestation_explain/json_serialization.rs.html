@@ -742,44 +742,6 @@
 <a href="#742" id="742">742</a>
 <a href="#743" id="743">743</a>
 <a href="#744" id="744">744</a>
-<a href="#745" id="745">745</a>
-<a href="#746" id="746">746</a>
-<a href="#747" id="747">747</a>
-<a href="#748" id="748">748</a>
-<a href="#749" id="749">749</a>
-<a href="#750" id="750">750</a>
-<a href="#751" id="751">751</a>
-<a href="#752" id="752">752</a>
-<a href="#753" id="753">753</a>
-<a href="#754" id="754">754</a>
-<a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
-<a href="#760" id="760">760</a>
-<a href="#761" id="761">761</a>
-<a href="#762" id="762">762</a>
-<a href="#763" id="763">763</a>
-<a href="#764" id="764">764</a>
-<a href="#765" id="765">765</a>
-<a href="#766" id="766">766</a>
-<a href="#767" id="767">767</a>
-<a href="#768" id="768">768</a>
-<a href="#769" id="769">769</a>
-<a href="#770" id="770">770</a>
-<a href="#771" id="771">771</a>
-<a href="#772" id="772">772</a>
-<a href="#773" id="773">773</a>
-<a href="#774" id="774">774</a>
-<a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
-<a href="#782" id="782">782</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -925,11 +887,9 @@
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    </span><span class="attr">#[allow(deprecated)]
     </span><span class="kw">let </span>KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
         kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
@@ -939,7 +899,6 @@
     <span class="macro">json!</span>({
         <span class="string">"kernel_image"</span>: kernel_image.as_ref().map(serialize_raw_digest),
         <span class="string">"kernel_setup_data"</span>: kernel_setup_data.as_ref().map(serialize_raw_digest),
-        <span class="string">"kernel_cmd_line"</span>: kernel_cmd_line.as_ref().map(serialize_raw_digest),
         <span class="string">"kernel_raw_cmd_line"</span>: kernel_raw_cmd_line,
         <span class="string">"init_ram_fs"</span>: init_ram_fs.as_ref().map(serialize_raw_digest),
         <span class="string">"memory_map"</span>: memory_map.as_ref().map(serialize_raw_digest),
@@ -1311,27 +1270,6 @@
     <span class="macro">json!</span>(value)
 }
 
-<span class="kw">pub fn </span>serialize_regex_reference_value(instance: <span class="kw-2">&amp;</span>RegexReferenceValue) -&gt; serde_json::Value {
-    <span class="comment">// Exhaustive destructuring (e.g., without ", ..") ensures this function handles
-    // all fields. If a new field is added to the struct, this code won't
-    // compile unless this destructuring operation is updated, thereby reminding us
-    // to keep the serialization in sync manually.
-    </span><span class="kw">let </span>RegexReferenceValue { r#type } = instance;
-    <span class="kw">match </span>r#type {
-        <span class="prelude-val">Some</span>(regex_reference_value::Type::Skip(instance)) =&gt; {
-            <span class="macro">json!</span>({
-                <span class="string">"skip"</span>: serialize_skip_verification(instance)
-            })
-        }
-        <span class="prelude-val">Some</span>(regex_reference_value::Type::Regex(instance)) =&gt; {
-            <span class="macro">json!</span>({
-                <span class="string">"regex"</span>: serialize_regex(instance)
-            })
-        }
-        <span class="prelude-val">None </span>=&gt; <span class="macro">json!</span>(null),
-    }
-}
-
 <span class="kw">pub fn </span>serialize_text_reference_value(instance: <span class="kw-2">&amp;</span>TextReferenceValue) -&gt; serde_json::Value {
     <span class="comment">// Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -1421,25 +1359,11 @@
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    </span><span class="attr">#[allow(deprecated)]
-    </span><span class="kw">let </span>KernelLayerReferenceValues {
-        kernel,
-        kernel_cmd_line_text,
-        kernel_setup_data,
-        kernel_image,
-        kernel_cmd_line_regex,
-        kernel_cmd_line,
-        init_ram_fs,
-        memory_map,
-        acpi,
-    } = instance;
+    </span><span class="kw">let </span>KernelLayerReferenceValues { kernel, kernel_cmd_line_text, init_ram_fs, memory_map, acpi } =
+        instance;
     <span class="macro">json!</span>({
         <span class="string">"kernel"</span>: kernel.as_ref().map(serialize_kernel_binary_reference_value),
         <span class="string">"kernel_cmd_line_text"</span>: kernel_cmd_line_text.as_ref().map(serialize_text_reference_value),
-        <span class="string">"kernel_setup_data"</span>: kernel_setup_data.as_ref().map(serialize_binary_reference_value),
-        <span class="string">"kernel_image"</span>: kernel_image.as_ref().map(serialize_binary_reference_value),
-        <span class="string">"kernel_cmd_line_regex"</span>: kernel_cmd_line_regex.as_ref().map(serialize_regex_reference_value),
-        <span class="string">"kernel_cmd_line"</span>: kernel_cmd_line.as_ref().map(serialize_binary_reference_value),
         <span class="string">"init_ram_fs"</span>: init_ram_fs.as_ref().map(serialize_binary_reference_value),
         <span class="string">"memory_map"</span>: memory_map.as_ref().map(serialize_binary_reference_value),
         <span class="string">"acpi"</span>: acpi.as_ref().map(serialize_binary_reference_value),
