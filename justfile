@@ -307,11 +307,11 @@ kokoro_oak_containers: oak_functions_containers_app_bundle_tar oak_containers_te
 # Ask dingelish@ or jibbl@ for more info.
 oak_containers_tdx_testing: stage0_bin_tdx oak_containers_tests oak_containers_kernel oak_containers_system_image oak_containers_launcher containers_placer_artifacts
 
-# This list should contain all crates that either a) have tests and are not bazelified yet or b) have bench tests (not supported on Bazel yet).
-# TODO: b/349572480 - Enable benchmarks in Bazel and remove oak_functions_launcher (after integration tests bazelified) from this list.
-cargo_test_packages_arg := "-p key_value_lookup -p oak_echo_service -p oak_session_wasm"
+# This list should contain all crates that either are not yet bazelified.
+# b/357687528 - Bazelify oak_session_wasm
+cargo_test_packages_arg := "-p oak_session_wasm"
 
-kokoro_run_cargo_tests: all_ensure_no_std all_oak_functions_containers_binaries oak_restricted_kernel_wrapper_virtio_console_channel build_oak_orchestrator build_oak_functions_enclave_app all_wasm_test_crates build-clients
+kokoro_run_cargo_tests:
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
 
 # --- End Kokoro CI Entry Points ---
