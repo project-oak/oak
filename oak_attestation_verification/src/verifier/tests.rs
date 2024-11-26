@@ -176,7 +176,6 @@ fn create_oc_endorsements_reference_values(
                         init_ram_fs: Some(stage1),
                         memory_map: Some(memory_map),
                         acpi: Some(acpi),
-                        ..Default::default()
                     }),
                     system_layer: Some(SystemLayerEndorsements {
                         system_image: Some(system_image),
@@ -214,7 +213,6 @@ fn create_oc_endorsements_reference_values(
                     init_ram_fs: Some(binary_reference_value_for_endorser_pk(stage1_vkey)),
                     memory_map: Some(binary_reference_value_for_endorser_pk(memory_map_vkey)),
                     acpi: Some(binary_reference_value_for_endorser_pk(acpi_vkey)),
-                    ..Default::default()  // Deprecated fields only.
                 }),
                 system_layer: Some(SystemLayerReferenceValues {
                     system_image: Some(binary_reference_value_for_endorser_pk(system_image_vkey)),
@@ -269,7 +267,6 @@ fn create_rk_endorsements_reference_values(
                             init_ram_fs: Some(init_ram_fs),
                             memory_map: Some(memory_map),
                             acpi: Some(acpi),
-                            ..Default::default() // Deprecated fields only
                         }),
                         application_layer: Some(ApplicationLayerEndorsements {
                             binary: Some(app_binary),
@@ -311,7 +308,6 @@ fn create_rk_endorsements_reference_values(
                         init_ram_fs: Some(binary_reference_value_for_endorser_pk(init_ram_fs_vkey)),
                         memory_map: Some(binary_reference_value_for_endorser_pk(memory_map_vkey)),
                         acpi: Some(binary_reference_value_for_endorser_pk(acpi_vkey)),
-                        ..Default::default() // Deprecated fields only
                     }),
                     application_layer: Some(ApplicationLayerReferenceValues {
                         binary: Some(binary_reference_value_for_endorser_pk(app_binary_vkey)),

@@ -159,15 +159,6 @@ message FileReferenceValue {
   string path = 2;
 }
 
-// Verifies that a particular string is equal to at least one of the specified
-// ones. No checks are performed if this is empty.
-message StringReferenceValue {
-  // Use TextReferenceValue instead.
-  option deprecated = true;
-
-  repeated string values = 1;
-}
-
 message Regex {
   string value = 1;
 }
@@ -176,16 +167,6 @@ message Regex {
 // must be specified, otherwise verification fails.
 message StringLiterals {
   repeated string value = 1;
-}
-
-message RegexReferenceValue {
-  // Use TextReferenceValue instead.
-  option deprecated = true;
-
-  oneof type {
-    SkipVerification skip = 1;
-    Regex regex = 2;
-  }
 }
 
 // Reference value to match text via endorsement, or directly via constants
@@ -237,16 +218,11 @@ message KernelLayerReferenceValues {
   // Verifies the kernel based on endorsement.
   KernelBinaryReferenceValue kernel = 1;
 
+  reserved 2, 3, 7, 8;
+
   // Verifies the kernel command line, i.e. the parameters passed to the
   // kernel on boot.
   TextReferenceValue kernel_cmd_line_text = 9;
-
-  // Fields are deprecated and kept only for backwards compatibility. They are
-  // not being used by the verifier. Remove ASAP.
-  BinaryReferenceValue kernel_setup_data = 3 [deprecated = true];
-  BinaryReferenceValue kernel_image = 7 [deprecated = true];
-  RegexReferenceValue kernel_cmd_line_regex = 8 [deprecated = true];
-  BinaryReferenceValue kernel_cmd_line = 2 [deprecated = true];
 
   // Verifies the stage1 binary if running as Oak Containers.
   BinaryReferenceValue init_ram_fs = 4;

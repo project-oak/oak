@@ -134,17 +134,12 @@ fn verify_mock_restricted_kernel_evidence() {
                         insecure: Some(InsecureReferenceValues::default()),
                         ..Default::default()
                     }),
-                    #[allow(deprecated)]
                     kernel_layer: Some(KernelLayerReferenceValues {
                         kernel: Some(KernelBinaryReferenceValue {
                             r#type: Some(kernel_binary_reference_value::Type::Skip(
                                 SkipVerification {},
                             )),
                         }),
-                        kernel_image: None,
-                        kernel_setup_data: None,
-                        kernel_cmd_line: None,
-                        kernel_cmd_line_regex: None,
                         kernel_cmd_line_text: Some(TextReferenceValue {
                             r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
                         }),
@@ -172,7 +167,6 @@ fn verify_mock_restricted_kernel_evidence() {
 }
 
 fn oak_containers_skip_all_reference_values() -> ReferenceValues {
-    #[allow(deprecated)]
     ReferenceValues {
         r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
             root_layer: Some(RootLayerReferenceValues {
@@ -183,10 +177,6 @@ fn oak_containers_skip_all_reference_values() -> ReferenceValues {
                 kernel: Some(KernelBinaryReferenceValue {
                     r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
                 }),
-                kernel_setup_data: None,
-                kernel_image: None,
-                kernel_cmd_line: None,
-                kernel_cmd_line_regex: None,
                 kernel_cmd_line_text: Some(TextReferenceValue {
                     r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
                 }),

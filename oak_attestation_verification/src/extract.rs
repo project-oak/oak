@@ -22,10 +22,9 @@ use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
     ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID,
-    KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
-    LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
-    SYSTEM_IMAGE_LAYER_ID,
+    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -482,19 +481,15 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
-    let kernel_cmd_line =
-        Some(value_to_raw_digest(extract_value(values, KERNEL_COMMANDLINE_MEASUREMENT_ID)?)?);
     let kernel_raw_cmd_line = extract_value(values, KERNEL_COMMANDLINE_ID)
         .ok()
         .map(|v| String::from(v.as_text().expect("kernel_raw_cmd_line found but is not a string")));
     let init_ram_fs = Some(value_to_raw_digest(extract_value(values, INITRD_MEASUREMENT_ID)?)?);
     let memory_map = Some(value_to_raw_digest(extract_value(values, MEMORY_MAP_MEASUREMENT_ID)?)?);
     let acpi = Some(value_to_raw_digest(extract_value(values, ACPI_MEASUREMENT_ID)?)?);
-    #[allow(deprecated)]
     Ok(KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
         kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
@@ -602,9 +597,6 @@ fn value_to_raw_digest(value: &Value) -> anyhow::Result<RawDigest> {
 /// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same
 /// data, just in slightly different proto messages.
 fn stage0_measurements_to_kernel_layer_data(measurements: Stage0Measurements) -> KernelLayerData {
-    // We need to set fields of [`KernelLayerData`] to create it, some are
-    // deprecated.
-    #[allow(deprecated)]
     KernelLayerData {
         kernel_image: Some(RawDigest {
             sha2_256: measurements.kernel_measurement,
@@ -614,7 +606,6 @@ fn stage0_measurements_to_kernel_layer_data(measurements: Stage0Measurements) ->
             sha2_256: measurements.setup_data_digest,
             ..Default::default()
         }),
-        kernel_cmd_line: None,
         kernel_raw_cmd_line: Some(measurements.kernel_cmdline),
         init_ram_fs: Some(RawDigest {
             sha2_256: measurements.ram_disk_digest,

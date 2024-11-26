@@ -457,14 +457,6 @@ pub struct FileReferenceValue {
     #[prost(string, tag = "2")]
     pub path: ::prost::alloc::string::String,
 }
-/// Verifies that a particular string is equal to at least one of the specified
-/// ones. No checks are performed if this is empty.
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct StringReferenceValue {
-    #[prost(string, repeated, tag = "1")]
-    pub values: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Regex {
@@ -478,23 +470,6 @@ pub struct Regex {
 pub struct StringLiterals {
     #[prost(string, repeated, tag = "1")]
     pub value: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct RegexReferenceValue {
-    #[prost(oneof = "regex_reference_value::Type", tags = "1, 2")]
-    pub r#type: ::core::option::Option<regex_reference_value::Type>,
-}
-/// Nested message and enum types in `RegexReferenceValue`.
-pub mod regex_reference_value {
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Type {
-        #[prost(message, tag = "1")]
-        Skip(super::SkipVerification),
-        #[prost(message, tag = "2")]
-        Regex(super::Regex),
-    }
 }
 /// Reference value to match text via endorsement, or directly via constants
 /// or a regular expression.
@@ -573,20 +548,6 @@ pub struct KernelLayerReferenceValues {
     /// kernel on boot.
     #[prost(message, optional, tag = "9")]
     pub kernel_cmd_line_text: ::core::option::Option<TextReferenceValue>,
-    /// Fields are deprecated and kept only for backwards compatibility. They are
-    /// not being used by the verifier. Remove ASAP.
-    #[deprecated]
-    #[prost(message, optional, tag = "3")]
-    pub kernel_setup_data: ::core::option::Option<BinaryReferenceValue>,
-    #[deprecated]
-    #[prost(message, optional, tag = "7")]
-    pub kernel_image: ::core::option::Option<BinaryReferenceValue>,
-    #[deprecated]
-    #[prost(message, optional, tag = "8")]
-    pub kernel_cmd_line_regex: ::core::option::Option<RegexReferenceValue>,
-    #[deprecated]
-    #[prost(message, optional, tag = "2")]
-    pub kernel_cmd_line: ::core::option::Option<BinaryReferenceValue>,
     /// Verifies the stage1 binary if running as Oak Containers.
     #[prost(message, optional, tag = "4")]
     pub init_ram_fs: ::core::option::Option<BinaryReferenceValue>,
@@ -852,10 +813,6 @@ pub struct KernelLayerEndorsements {
     pub memory_map: ::core::option::Option<TransparentReleaseEndorsement>,
     #[prost(message, optional, tag = "6")]
     pub acpi: ::core::option::Option<TransparentReleaseEndorsement>,
-    /// Field is deprecated and kept only for backwards compatibility. Remove ASAP.
-    #[deprecated]
-    #[prost(message, optional, tag = "7")]
-    pub kernel_image: ::core::option::Option<TransparentReleaseEndorsement>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
@@ -1216,11 +1173,6 @@ pub struct KernelLayerData {
     /// Measured digests of the setup data part of the kernel.
     #[prost(message, optional, tag = "3")]
     pub kernel_setup_data: ::core::option::Option<super::super::RawDigest>,
-    /// Measured digests of the command-line that was passed to the kernel
-    /// during startup.
-    #[deprecated]
-    #[prost(message, optional, tag = "2")]
-    pub kernel_cmd_line: ::core::option::Option<super::super::RawDigest>,
     /// Command-line that was passed to the kernel during startup. If absent,
     /// verification will only succeed with the corresponding reference value set
     /// to skip (for compatibility with the legacy version of the evidence

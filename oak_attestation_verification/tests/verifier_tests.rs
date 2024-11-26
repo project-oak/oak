@@ -153,10 +153,8 @@ fn create_oc_endorsements() -> Endorsements {
     let vcek_milan_cert =
         fs::read(data_path(CONTAINERS_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
-    #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
         kernel: None,
-        kernel_image: None,
         kernel_cmd_line: None,
         init_ram_fs: Some(create_stage1_endorsement()),
         memory_map: None,
@@ -183,10 +181,8 @@ fn create_rk_endorsements() -> Endorsements {
     let vcek_milan_cert =
         fs::read(data_path(RK_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
-    #[allow(deprecated)]
     let kernel_layer = KernelLayerEndorsements {
         kernel: None,
-        kernel_image: None,
         kernel_cmd_line: None,
         init_ram_fs: None,
         memory_map: None,
@@ -304,15 +300,10 @@ fn create_oc_reference_values() -> ReferenceValues {
     };
 
     let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
-    #[allow(deprecated)]
     let kernel_layer = KernelLayerReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
             r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
-        kernel_setup_data: None,
-        kernel_image: None,
-        kernel_cmd_line: None,
-        kernel_cmd_line_regex: None,
         kernel_cmd_line_text: Some(TextReferenceValue {
             r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
                 value: vec![String::from(
@@ -358,10 +349,6 @@ fn create_rk_reference_values() -> ReferenceValues {
         kernel: Some(KernelBinaryReferenceValue {
             r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
         }),
-        kernel_setup_data: None,
-        kernel_image: None,
-        kernel_cmd_line: None,
-        kernel_cmd_line_regex: None,
         kernel_cmd_line_text: Some(TextReferenceValue {
             r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
                 value: vec![String::from("console=ttyS0")],

@@ -172,12 +172,10 @@ message KernelLayerData {
   // Measured digests of the image part of the kernel.
   RawDigest kernel_image = 1;
 
+  reserved 2;
+
   // Measured digests of the setup data part of the kernel.
   RawDigest kernel_setup_data = 3;
-
-  // Measured digests of the command-line that was passed to the kernel
-  // during startup.
-  RawDigest kernel_cmd_line = 2 [deprecated = true];
 
   // Command-line that was passed to the kernel during startup. If absent,
   // verification will only succeed with the corresponding reference value set

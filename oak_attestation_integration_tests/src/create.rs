@@ -88,7 +88,6 @@ fn reference_values_for_oak_containers_measurements(
                         }],
                     })),
                 }),
-                ..Default::default()
             }),
             system_layer: Some(SystemLayerReferenceValues {
                 system_image: Some(BinaryReferenceValue {

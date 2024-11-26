@@ -143,11 +143,9 @@ pub fn serialize_kernel_layer_data(instance: &KernelLayerData) -> serde_json::Va
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    #[allow(deprecated)]
     let KernelLayerData {
         kernel_image,
         kernel_setup_data,
-        kernel_cmd_line,
         kernel_raw_cmd_line,
         init_ram_fs,
         memory_map,
@@ -157,7 +155,6 @@ pub fn serialize_kernel_layer_data(instance: &KernelLayerData) -> serde_json::Va
     json!({
         "kernel_image": kernel_image.as_ref().map(serialize_raw_digest),
         "kernel_setup_data": kernel_setup_data.as_ref().map(serialize_raw_digest),
-        "kernel_cmd_line": kernel_cmd_line.as_ref().map(serialize_raw_digest),
         "kernel_raw_cmd_line": kernel_raw_cmd_line,
         "init_ram_fs": init_ram_fs.as_ref().map(serialize_raw_digest),
         "memory_map": memory_map.as_ref().map(serialize_raw_digest),
@@ -529,27 +526,6 @@ pub fn serialize_string_literals(instance: &StringLiterals) -> serde_json::Value
     json!(value)
 }
 
-pub fn serialize_regex_reference_value(instance: &RegexReferenceValue) -> serde_json::Value {
-    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
-    // all fields. If a new field is added to the struct, this code won't
-    // compile unless this destructuring operation is updated, thereby reminding us
-    // to keep the serialization in sync manually.
-    let RegexReferenceValue { r#type } = instance;
-    match r#type {
-        Some(regex_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
-        }
-        Some(regex_reference_value::Type::Regex(instance)) => {
-            json!({
-                "regex": serialize_regex(instance)
-            })
-        }
-        None => json!(null),
-    }
-}
-
 pub fn serialize_text_reference_value(instance: &TextReferenceValue) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -639,25 +615,11 @@ pub fn serialize_kernel_layer_reference_values(
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    #[allow(deprecated)]
-    let KernelLayerReferenceValues {
-        kernel,
-        kernel_cmd_line_text,
-        kernel_setup_data,
-        kernel_image,
-        kernel_cmd_line_regex,
-        kernel_cmd_line,
-        init_ram_fs,
-        memory_map,
-        acpi,
-    } = instance;
+    let KernelLayerReferenceValues { kernel, kernel_cmd_line_text, init_ram_fs, memory_map, acpi } =
+        instance;
     json!({
         "kernel": kernel.as_ref().map(serialize_kernel_binary_reference_value),
         "kernel_cmd_line_text": kernel_cmd_line_text.as_ref().map(serialize_text_reference_value),
-        "kernel_setup_data": kernel_setup_data.as_ref().map(serialize_binary_reference_value),
-        "kernel_image": kernel_image.as_ref().map(serialize_binary_reference_value),
-        "kernel_cmd_line_regex": kernel_cmd_line_regex.as_ref().map(serialize_regex_reference_value),
-        "kernel_cmd_line": kernel_cmd_line.as_ref().map(serialize_binary_reference_value),
         "init_ram_fs": init_ram_fs.as_ref().map(serialize_binary_reference_value),
         "memory_map": memory_map.as_ref().map(serialize_binary_reference_value),
         "acpi": acpi.as_ref().map(serialize_binary_reference_value),

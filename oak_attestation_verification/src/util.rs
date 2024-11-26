@@ -390,10 +390,6 @@ fn kernel_layer_reference_values_from_evidence(
                 }),
             })),
         }),
-        kernel_setup_data: None,
-        kernel_image: None,
-        kernel_cmd_line: None,
-        kernel_cmd_line_regex: None,
         kernel_cmd_line_text: Some(TextReferenceValue {
             r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
                 value: vec![kernel_layer.kernel_raw_cmd_line.expect("no kernel command-line")],
