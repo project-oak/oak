@@ -214,6 +214,15 @@ pub mod session_request {
 }
 /// Wrapper around SessionRequest that is used in cases where it is necessary to
 /// identify a contiguous session across multiple invocations/streams.
+///
+/// This message is intended for cases where it's not possible to maintain a gRPC
+/// stream for the lifetime of the encryption channel. The `session_id` is an
+/// arbitrary identifier that can be used to look up a previously created
+/// `ServerSession` instances cached by the server.
+///
+///   This shouldn't be used for general session ID needs; for example, to track
+///   sessions that span multiple servers. In that case, create your own
+///   ID-containing envelope, place that inside the encrypted message.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionRequestWithSessionId {
