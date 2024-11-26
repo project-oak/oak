@@ -111,6 +111,11 @@ proto_library(
     deps = [":messages_proto"],
 )
 
+cc_proto_library(
+    name = "session_cc_proto",
+    deps = [":session_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
@@ -120,5 +125,6 @@ build_test(
         ":service_unary_cc_grpc",
         ":service_unary_java_grpc",
         ":session_proto",
+        ":session_cc_proto",
     ],
 )
