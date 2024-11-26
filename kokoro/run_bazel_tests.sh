@@ -1,1 +1,0 @@
-build_test_and_copy_to_placer.sh
