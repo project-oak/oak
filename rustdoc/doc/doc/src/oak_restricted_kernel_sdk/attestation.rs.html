@@ -137,6 +137,9 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -272,8 +275,11 @@
     <span class="kw">fn </span>endorse(<span class="kw-2">&amp;</span><span class="self">self</span>, _evidence: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Evidence&gt;) -&gt; anyhow::Result&lt;Endorsements&gt; {
         <span class="comment">// TODO: b/365975893 - Pass Endorsements from Hostlib to the Restricted
         // Kernel application.
-        // TODO: b/375137648 - Populate `event_endorsements` proto field.
-        </span><span class="prelude-val">Ok</span>(Endorsements { r#type: <span class="prelude-val">None</span>, event_endorsements: <span class="prelude-val">None </span>})
+        </span><span class="prelude-val">Ok</span>(Endorsements {
+            r#type: <span class="prelude-val">None</span>,
+            <span class="comment">// TODO: b/375137648 - Populate `events` proto field.
+            </span>..Default::default()
+        })
     }
 }
 </code></pre></div></section></main></body></html>

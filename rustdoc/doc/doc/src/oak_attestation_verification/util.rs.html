@@ -484,13 +484,6 @@
 <a href="#484" id="484">484</a>
 <a href="#485" id="485">485</a>
 <a href="#486" id="486">486</a>
-<a href="#487" id="487">487</a>
-<a href="#488" id="488">488</a>
-<a href="#489" id="489">489</a>
-<a href="#490" id="490">490</a>
-<a href="#491" id="491">491</a>
-<a href="#492" id="492">492</a>
-<a href="#493" id="493">493</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -517,9 +510,9 @@
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, Event, EventEndorsement, ExtractedEvidence, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerReferenceValues,
-        KeyType, OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Digests, Event, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
+        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
+        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
     },
@@ -915,29 +908,22 @@
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event: {}"</span>, error))<span class="question-mark">?</span>;
     decode_protobuf_any::&lt;M&gt;(
         expected_type_url,
-        event_proto.event.context(<span class="string">"no event found in the `event` field"</span>)<span class="question-mark">?</span>,
+        event_proto.event.as_ref().context(<span class="string">"no event found in the `event` field"</span>)<span class="question-mark">?</span>,
     )
 }
 
-<span class="doccomment">/// Decodes serialized event endorsements into a specified [`Message`].
-</span><span class="kw">pub fn </span>decode_event_endorsement_proto&lt;M: Message + Default&gt;(
+<span class="doccomment">/// Decodes serialized endorsement into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_endorsement_proto&lt;M: Message + Default&gt;(
     expected_type_url: <span class="kw-2">&amp;</span>str,
-    encoded_event_endorsement: <span class="kw-2">&amp;</span>[u8],
+    endorsement_proto: <span class="kw-2">&amp;</span>Any,
 ) -&gt; anyhow::Result&lt;M&gt; {
-    <span class="kw">let </span>event_endorsement_proto = EventEndorsement::decode(encoded_event_endorsement)
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event endorsement: {}"</span>, error))<span class="question-mark">?</span>;
-    decode_protobuf_any::&lt;M&gt;(
-        expected_type_url,
-        event_endorsement_proto
-            .event_endorsement
-            .context(<span class="string">"no event endorsement found in the `event_endorsement` field"</span>)<span class="question-mark">?</span>,
-    )
+    decode_protobuf_any::&lt;M&gt;(expected_type_url, endorsement_proto)
 }
 
 <span class="doccomment">/// Decodes [`Any`] message into a specified [`Message`].
 </span><span class="kw">pub fn </span>decode_protobuf_any&lt;M: Message + Default&gt;(
     expected_type_url: <span class="kw-2">&amp;</span>str,
-    message: Any,
+    message: <span class="kw-2">&amp;</span>Any,
 ) -&gt; anyhow::Result&lt;M&gt; {
     <span class="kw">if </span>message.type_url.as_str() != expected_type_url {
         <span class="macro">anyhow::bail!</span>(

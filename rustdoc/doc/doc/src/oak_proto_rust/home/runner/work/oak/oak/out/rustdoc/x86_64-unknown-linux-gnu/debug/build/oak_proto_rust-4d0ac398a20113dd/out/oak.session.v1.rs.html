@@ -246,6 +246,15 @@
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -462,6 +471,15 @@
 }
 <span class="doccomment">/// Wrapper around SessionRequest that is used in cases where it is necessary to
 /// identify a contiguous session across multiple invocations/streams.
+///
+/// This message is intended for cases where it's not possible to maintain a gRPC
+/// stream for the lifetime of the encryption channel. The `session_id` is an
+/// arbitrary identifier that can be used to look up a previously created
+/// `ServerSession` instances cached by the server.
+///
+///   This shouldn't be used for general session ID needs; for example, to track
+///   sessions that span multiple servers. In that case, create your own
+///   ID-containing envelope, place that inside the encrypted message.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SessionRequestWithSessionId {

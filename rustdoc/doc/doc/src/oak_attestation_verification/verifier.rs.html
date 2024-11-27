@@ -382,11 +382,6 @@
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -417,10 +412,11 @@
 <span class="kw">use </span>oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, endorsements, AttestationResults, Endorsements,
-    EventAttestationResults, EventEndorsements, EventLog, Evidence, ExpectedValues,
-    ExtractedEvidence, LayerEvidence, ReferenceValues,
+    EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
+    ReferenceValues,
 };
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
+<span class="kw">use </span>prost_types::Any;
 
 <span class="kw">use crate</span>::{
     compare::compare_expected_values,
@@ -477,10 +473,7 @@
             .event_log
             .as_ref()
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"event log was not provided"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>event_endorsements = <span class="kw-2">&amp;</span>endorsements
-            .event_endorsements
-            .as_ref()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"event endorsements were not provided"</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>event_endorsements = <span class="kw-2">&amp;</span>endorsements.events;
         <span class="kw">let </span>event_attestation_results = verify_event_log(
             event_log,
             event_endorsements,
@@ -739,15 +732,15 @@
 /// Policies and Events is done via ordering.
 </span><span class="kw">fn </span>verify_event_log(
     event_log: <span class="kw-2">&amp;</span>EventLog,
-    event_endorsements: <span class="kw-2">&amp;</span>EventEndorsements,
+    event_endorsements: <span class="kw-2">&amp;</span>[Any],
     policies: <span class="kw-2">&amp;</span>[Box&lt;<span class="kw">dyn </span>EventPolicy&gt;],
     milliseconds_since_epoch: i64,
 ) -&gt; anyhow::Result&lt;Vec&lt;EventAttestationResults&gt;&gt; {
-    <span class="kw">if </span>event_log.encoded_events.len() != event_endorsements.encoded_event_endorsements.len() {
+    <span class="kw">if </span>event_log.encoded_events.len() != event_endorsements.len() {
         <span class="macro">anyhow::bail!</span>(
             <span class="string">"event log length ({}) is not equal to the number of endorsements ({})"</span>,
             event_log.encoded_events.len(),
-            event_endorsements.encoded_event_endorsements.len()
+            event_endorsements.len()
         );
     }
     <span class="kw">if </span>policies.len() != event_log.encoded_events.len() {
@@ -758,14 +751,11 @@
         );
     }
 
-    <span class="kw">let </span>verification_iterator = <span class="macro">izip!</span>(
-        policies.iter(),
-        event_log.encoded_events.iter(),
-        event_endorsements.encoded_event_endorsements.iter()
-    );
+    <span class="kw">let </span>verification_iterator =
+        <span class="macro">izip!</span>(policies.iter(), event_log.encoded_events.iter(), event_endorsements.iter());
     <span class="kw">let </span>event_attestation_results = verification_iterator
-        .map(|(event_policy, event, event_endorsements)| {
-            event_policy.verify(event, event_endorsements, milliseconds_since_epoch).unwrap_or(
+        .map(|(event_policy, event, event_endorsement)| {
+            event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
                 <span class="comment">// TODO: b/366186091 - Use Rust error types for failed attestation.
                 </span>EventAttestationResults {},
             )
