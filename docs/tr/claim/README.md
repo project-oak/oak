@@ -28,7 +28,7 @@
 ## Other
 
 - `10271`
-  [Firmware-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
+  [AMD SEV-SNP-Firmware-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
 - `98982`
   [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
 - `77149`
