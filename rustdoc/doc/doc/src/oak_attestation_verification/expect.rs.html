@@ -712,6 +712,17 @@
 <a href="#712" id="712">712</a>
 <a href="#713" id="713">713</a>
 <a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -735,21 +746,21 @@
     attestation::v1::{
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
         expected_values, kernel_binary_reference_value, reference_values, text_expected_value,
-        text_reference_value, AmdSevExpectedValues, ApplicationLayerEndorsements,
-        ApplicationLayerExpectedValues, ApplicationLayerReferenceValues, BinaryReferenceValue,
-        CbEndorsements, CbExpectedValues, CbReferenceValues, ContainerLayerEndorsements,
-        ContainerLayerExpectedValues, ContainerLayerReferenceValues, Endorsement,
-        EndorsementReferenceValue, Endorsements, EventExpectedValues, EventReferenceValues,
-        ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, FirmwareAttachment,
-        InsecureExpectedValues, IntelTdxExpectedValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelExpectedValues, KernelLayerEndorsements,
-        KernelLayerExpectedValues, KernelLayerReferenceValues, OakContainersEndorsements,
-        OakContainersExpectedValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
-        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
-        Signature, SignedEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
-        SystemLayerReferenceValues, TextExpectedValue, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped,
+        text_reference_value, AmdSevExpectedValues, AmdSevReferenceValues,
+        ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerExpectedValues,
+        ContainerLayerReferenceValues, Endorsement, EndorsementReferenceValue, Endorsements,
+        EventExpectedValues, EventReferenceValues, ExpectedDigests, ExpectedRegex,
+        ExpectedStringLiterals, ExpectedValues, FirmwareAttachment, InsecureExpectedValues,
+        IntelTdxExpectedValues, KernelAttachment, KernelBinaryReferenceValue, KernelExpectedValues,
+        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
+        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
+        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
+        RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
+        SystemLayerEndorsements, SystemLayerExpectedValues, SystemLayerReferenceValues,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -935,7 +946,6 @@
 ) -&gt; anyhow::Result&lt;RootLayerExpectedValues&gt; {
     <span class="comment">// Propagate each of the existing reference value for a TEE platform to the
     // corresponding expected value.
-
     </span><span class="kw">let </span>amd_sev = <span class="kw">if let </span><span class="prelude-val">Some</span>(amd_sev_values) = reference_values.amd_sev.as_ref() {
         <span class="kw">let </span>stage0_expected = get_stage0_expected_values(
             now_utc_millis,
@@ -956,6 +966,18 @@
     <span class="kw">let </span>insecure = reference_values.insecure.as_ref().map(|<span class="kw">_</span>| InsecureExpectedValues {});
 
     <span class="prelude-val">Ok</span>(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_amd_sev_snp_expected_values(
+    reference_values: <span class="kw-2">&amp;</span>AmdSevReferenceValues,
+) -&gt; anyhow::Result&lt;AmdSevExpectedValues&gt; {
+    <span class="prelude-val">Ok</span>(AmdSevExpectedValues {
+        <span class="comment">// TODO: b/376513946 - Remove Stage0 from AMD SEV-SNP expected values
+        // since it will be verified by the firmware policy.
+        </span>stage0_expected: <span class="prelude-val">None</span>,
+        min_tcb_version: reference_values.min_tcb_version.clone(),
+        allow_debug: reference_values.allow_debug,
+    })
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_kernel_layer_expected_values(

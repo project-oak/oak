@@ -361,6 +361,7 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -400,7 +401,8 @@
 
 <span class="kw">use crate</span>::{
     platform::{
-        verify_amd_sev_attestation_report, verify_insecure, verify_intel_tdx_attestation_report,
+        verify_amd_sev_attestation_report_values, verify_insecure,
+        verify_intel_tdx_attestation_report,
     },
     util::is_raw_digest_match,
 };
@@ -540,7 +542,7 @@
                     .context(<span class="string">"no stage0 expected value provided"</span>)<span class="question-mark">?</span>,
             )
             .context(<span class="string">"stage0 measurement values failed verification"</span>)<span class="question-mark">?</span>;
-            verify_amd_sev_attestation_report(report_values, amd_sev_values)
+            verify_amd_sev_attestation_report_values(report_values, amd_sev_values)
         }
         (<span class="prelude-val">Some</span>(Report::Tdx(report_values)), <span class="kw">_</span>, <span class="prelude-val">Some</span>(intel_tdx_values), <span class="kw">_</span>) =&gt; {
             verify_intel_tdx_attestation_report(report_values, intel_tdx_values)

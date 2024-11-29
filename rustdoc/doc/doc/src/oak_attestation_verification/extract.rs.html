@@ -625,33 +625,6 @@
 <a href="#625" id="625">625</a>
 <a href="#626" id="626">626</a>
 <a href="#627" id="627">627</a>
-<a href="#628" id="628">628</a>
-<a href="#629" id="629">629</a>
-<a href="#630" id="630">630</a>
-<a href="#631" id="631">631</a>
-<a href="#632" id="632">632</a>
-<a href="#633" id="633">633</a>
-<a href="#634" id="634">634</a>
-<a href="#635" id="635">635</a>
-<a href="#636" id="636">636</a>
-<a href="#637" id="637">637</a>
-<a href="#638" id="638">638</a>
-<a href="#639" id="639">639</a>
-<a href="#640" id="640">640</a>
-<a href="#641" id="641">641</a>
-<a href="#642" id="642">642</a>
-<a href="#643" id="643">643</a>
-<a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
-<a href="#650" id="650">650</a>
-<a href="#651" id="651">651</a>
-<a href="#652" id="652">652</a>
-<a href="#653" id="653">653</a>
-<a href="#654" id="654">654</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -682,11 +655,11 @@
 };
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        extracted_evidence::EvidenceValues, root_layer_data::Report, AmdAttestationReport,
-        ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
-        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        extracted_evidence::EvidenceValues, root_layer_data::Report, ApplicationKeys,
+        ApplicationLayerData, CbData, ContainerLayerData, Event, EventData, Evidence,
+        ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
-        Stage0Measurements, Stage1Measurements, SystemLayerData, TcbVersion, TeePlatform,
+        Stage0Measurements, Stage1Measurements, SystemLayerData, TeePlatform,
     },
     RawDigest,
 };
@@ -694,6 +667,8 @@
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zerocopy::FromBytes;
+
+<span class="kw">use </span><span class="kw">crate</span>::platform::convert_amd_sev_snp_attestation_report;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApplicationKeyValues {
     <span class="kw">pub</span>(<span class="kw">crate</span>) encryption_public_key: Vec&lt;u8&gt;,
@@ -1005,38 +980,10 @@
         TeePlatform::AmdSevSnp =&gt; {
             <span class="kw">let </span>report = AttestationReport::ref_from(<span class="kw-2">&amp;</span>root_layer.remote_attestation_report)
                 .context(<span class="string">"invalid AMD SEV-SNP attestation report"</span>)<span class="question-mark">?</span>;
-
             report.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
 
-            <span class="kw">let </span>current_tcb = <span class="prelude-val">Some</span>(TcbVersion {
-                boot_loader: report.data.current_tcb.boot_loader.into(),
-                tee: report.data.current_tcb.tee.into(),
-                snp: report.data.current_tcb.snp.into(),
-                microcode: report.data.current_tcb.microcode.into(),
-            });
-            <span class="kw">let </span>reported_tcb = <span class="prelude-val">Some</span>(TcbVersion {
-                boot_loader: report.data.reported_tcb.boot_loader.into(),
-                tee: report.data.reported_tcb.tee.into(),
-                snp: report.data.reported_tcb.snp.into(),
-                microcode: report.data.reported_tcb.microcode.into(),
-            });
-            <span class="kw">let </span>debug = report.has_debug_flag().map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
-            <span class="kw">let </span>hardware_id = report.data.chip_id.as_ref().to_vec();
-            <span class="kw">let </span>initial_measurement = report.data.measurement.as_ref().to_vec();
-            <span class="kw">let </span>report_data = report.data.report_data.as_ref().to_vec();
-            <span class="kw">let </span>vmpl = report.data.vmpl;
-
-            <span class="prelude-val">Ok</span>(RootLayerData {
-                report: <span class="prelude-val">Some</span>(Report::SevSnp(AmdAttestationReport {
-                    current_tcb,
-                    reported_tcb,
-                    debug,
-                    initial_measurement,
-                    hardware_id,
-                    report_data,
-                    vmpl,
-                })),
-            })
+            <span class="kw">let </span>converted_attestation_report = convert_amd_sev_snp_attestation_report(report)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(RootLayerData { report: <span class="prelude-val">Some</span>(Report::SevSnp(converted_attestation_report)) })
         }
         TeePlatform::IntelTdx =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"not supported"</span>)),
         TeePlatform::None =&gt; {
@@ -1044,7 +991,6 @@
             // when not running in a TEE.
             </span><span class="kw">let </span>report = AttestationReport::ref_from(<span class="kw-2">&amp;</span>root_layer.remote_attestation_report)
                 .context(<span class="string">"invalid fake attestation report"</span>)<span class="question-mark">?</span>;
-
             report.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
 
             <span class="kw">let </span>report_data = report.data.report_data.as_ref().to_vec();
