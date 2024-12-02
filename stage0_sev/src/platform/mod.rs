@@ -17,6 +17,7 @@
 mod accept_memory;
 mod dice_attestation;
 mod mmio;
+mod smp;
 
 use alloc::boxed::Box;
 use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
@@ -246,8 +247,14 @@ impl Platform for Sev {
         }
     }
 
-    fn finalize_acpi_tables(_rsdp: &mut Rsdp) -> Result<(), &'static str> {
-        Ok(())
+    fn finalize_acpi_tables(rsdp: &mut Rsdp) -> Result<(), &'static str> {
+        // No further changes needed to ACPI tables, but now that they're in
+        // place, we can bring up other CPUs (APs).
+        let result = smp::bootstrap_aps::<Sev>(rsdp);
+        if let Err(err) = result {
+            log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
+        }
+        result
     }
 
     fn populate_zero_page(zero_page: &mut ZeroPage) {

@@ -912,7 +912,7 @@ impl Madt {
 
     /// Create an iterator over entries of field Interrupt Controller Structure
     /// that returns references to the entries' headers.
-    pub(crate) fn controller_struct_headers(&self) -> MadtIterator<'_> {
+    pub fn controller_struct_headers(&self) -> MadtIterator<'_> {
         // The Madt struct does not itself contain the interrupt controller
         // entries (see struct Madt above) but these entries are expected to
         // exist right after the Madt struct. Therefore, we set the offset to
@@ -986,7 +986,7 @@ impl Madt {
     }
 }
 
-pub(crate) struct MadtIterator<'a> {
+pub struct MadtIterator<'a> {
     madt: &'a Madt,
 
     /// Offset with respect to where Madt starts where the first interrupt
