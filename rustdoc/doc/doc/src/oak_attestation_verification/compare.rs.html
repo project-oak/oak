@@ -360,8 +360,6 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -401,8 +399,8 @@
 
 <span class="kw">use crate</span>::{
     platform::{
-        verify_amd_sev_attestation_report_values, verify_insecure,
-        verify_intel_tdx_attestation_report,
+        convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
+        verify_insecure, verify_intel_tdx_attestation_report,
     },
     util::is_raw_digest_match,
 };
@@ -530,10 +528,8 @@
         expected_values.insecure.as_ref(),
     ) {
         (<span class="prelude-val">Some</span>(Report::SevSnp(report_values)), <span class="prelude-val">Some</span>(amd_sev_values), <span class="kw">_</span>, <span class="kw">_</span>) =&gt; {
-            <span class="kw">let </span>measurement = RawDigest {
-                sha2_384: report_values.initial_measurement.to_vec(),
-                ..Default::default()
-            };
+            <span class="kw">let </span>measurement =
+                convert_amd_sev_snp_initial_measurement(<span class="kw-2">&amp;</span>report_values.initial_measurement);
             compare_measurement_digest(
                 <span class="kw-2">&amp;</span>measurement,
                 amd_sev_values
@@ -674,7 +670,7 @@
 
 <span class="doccomment">/// Verifies the measurement digest value against a reference value and
 /// the expected digests calculated from endorsements and reference values.
-</span><span class="kw">fn </span>compare_measurement_digest(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>compare_measurement_digest(
     measurement: <span class="kw-2">&amp;</span>RawDigest,
     expected: <span class="kw-2">&amp;</span>ExpectedDigests,
 ) -&gt; anyhow::Result&lt;()&gt; {

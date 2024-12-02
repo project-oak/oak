@@ -1579,10 +1579,10 @@
     </span><span class="attr">#[deprecated]
     #[prost(message, repeated, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;Event&gt;,
-    <span class="doccomment">/// Holds serialized instances of the the Event message. The serialized form
-    /// is used instead of `repeated Event events` as proto serialization is non-
-    /// deterministic and attestation evidence contains signatures over the digest
-    /// of serialized events.
+    <span class="doccomment">/// Holds serialized instances of the the \[`Event`\] message. The serialized
+    /// form is used instead of `repeated Event events` as proto serialization is
+    /// non-deterministic and attestation evidence contains signatures over the
+    /// digest of serialized events.
     </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, repeated, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>encoded_events: ::prost::alloc::vec::Vec&lt;::prost::alloc::vec::Vec&lt;u8&gt;&gt;,
 }

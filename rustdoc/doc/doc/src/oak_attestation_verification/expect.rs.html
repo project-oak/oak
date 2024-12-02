@@ -1187,7 +1187,7 @@
 // The subject itself will be verified, and then the expected digests (each
 // corresponding to a number of vCPU, any of them a valid match for the digest
 // in the evidence).
-</span><span class="kw">fn </span>get_stage0_expected_values(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_stage0_expected_values(
     now_utc_millis: i64,
     endorsement: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>TransparentReleaseEndorsement&gt;,
     reference_value: <span class="kw-2">&amp;</span>BinaryReferenceValue,

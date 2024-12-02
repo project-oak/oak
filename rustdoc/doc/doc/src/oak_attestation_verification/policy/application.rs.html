@@ -110,7 +110,7 @@
     }
 }
 
-<span class="comment">// We have to use [`Policy&lt;[u8], [u8]&gt;`] instead of [`EventPolicy`], because
+<span class="comment">// We have to use [`Policy&lt;[u8], Any&gt;`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // &lt;https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md&gt;
 </span><span class="kw">impl </span>Policy&lt;[u8], Any&gt; <span class="kw">for </span>ApplicationPolicy {

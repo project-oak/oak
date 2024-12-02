@@ -382,6 +382,76 @@
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -407,7 +477,9 @@
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>itertools::izip;
 <span class="kw">use </span>oak_attestation_verification_types::{
-    policy::EventPolicy, util::Clock, verifier::AttestationVerifier,
+    policy::{EventPolicy, Policy},
+    util::Clock,
+    verifier::AttestationVerifier,
 };
 <span class="kw">use </span>oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
@@ -415,14 +487,18 @@
     EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
     ReferenceValues,
 };
+<span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
 <span class="kw">use </span>prost_types::Any;
+<span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="kw">use crate</span>::{
     compare::compare_expected_values,
     expect::get_expected_values,
     extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
+    policy::{firmware::FirmwarePolicy, platform::AmdSevSnpPolicy},
+    util::hash_sha2_256,
 };
 
 <span class="comment">// We don't use additional authenticated data.
@@ -449,13 +525,20 @@
 }
 
 <span class="kw">pub struct </span>AmdSevSnpDiceAttestationVerifier {
-    policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;,
+    platform_policy: AmdSevSnpPolicy,
+    firmware_policy: FirmwarePolicy,
+    event_policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;,
     clock: Box&lt;<span class="kw">dyn </span>Clock&gt;,
 }
 
 <span class="kw">impl </span>AmdSevSnpDiceAttestationVerifier {
-    <span class="kw">pub fn </span>new(policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;, clock: Box&lt;<span class="kw">dyn </span>Clock&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ policies, clock }
+    <span class="kw">pub fn </span>new(
+        platform_policy: AmdSevSnpPolicy,
+        firmware_policy: FirmwarePolicy,
+        event_policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;,
+        clock: Box&lt;<span class="kw">dyn </span>Clock&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ platform_policy, firmware_policy, event_policies, clock }
     }
 }
 
@@ -465,8 +548,48 @@
         evidence: <span class="kw-2">&amp;</span>Evidence,
         endorsements: <span class="kw-2">&amp;</span>Endorsements,
     ) -&gt; anyhow::Result&lt;AttestationResults&gt; {
-        <span class="comment">// Last layer's certificate authority key is not used to sign anything.
+        <span class="comment">// Get current time.
+        </span><span class="kw">let </span>milliseconds_since_epoch = <span class="self">self</span>.clock.get_milliseconds_since_epoch();
+
+        <span class="comment">// Get DICE root layer evidence.
+        </span><span class="kw">let </span>root_layer = <span class="kw-2">&amp;</span>evidence
+            .root_layer
+            .as_ref()
+            .context(<span class="string">"root DICE layer wasn't provided in the evidence"</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Parse AMD SEV-SNP attestation report.
+        </span><span class="kw">let </span>attestation_report = AttestationReport::ref_from(<span class="kw-2">&amp;</span>root_layer.remote_attestation_report)
+            .context(<span class="string">"invalid AMD SEV-SNP attestation report"</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>firmware_measurement = <span class="kw-2">&amp;</span>attestation_report.data.measurement;
+
+        <span class="comment">// Verify AMD SEV-SNP platform authenticity and configuration.
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(endorsements::Platform::AmdSevSnp(platform_endorsement)) =
+            endorsements.platform.as_ref()
+        {
+            <span class="self">self</span>.platform_policy
+                .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
+                .context(<span class="string">"couldn't verify AMD SEV-SNP platform"</span>)<span class="question-mark">?</span>;
+        } <span class="kw">else </span>{
+            <span class="macro">anyhow::bail!</span>(<span class="string">"AMD SEV-SNP endorsement wasn't provided in endorsements"</span>)
+        }
+
+        <span class="comment">// Verify that the DICE root ECA key is bound to the attestation report.
+        </span>verify_dice_root_eca_key(attestation_report, <span class="kw-2">&amp;</span>root_layer.eca_public_key)
+            .context(<span class="string">"couldn't verify DICE root ECA key"</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify DICE chain integrity.
+        // The output argument is ommited because last layer's certificate authority key
+        // is not used to sign anything.
         </span><span class="kw">let _ </span>= verify_dice_chain(evidence).context(<span class="string">"couldn't verify DICE chain"</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify firmware measurement.
+        </span><span class="kw">let </span>firmware_endorsement = <span class="kw-2">&amp;</span>endorsements
+            .firmware
+            .as_ref()
+            .context(<span class="string">"firmware endorsement wasn't provided in endorsements"</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.firmware_policy
+            .verify(firmware_measurement, firmware_endorsement, milliseconds_since_epoch)
+            .context(<span class="string">"couldn't verify firmware"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify event log and event endorsements with corresponding policies.
         </span><span class="kw">let </span>event_log = <span class="kw-2">&amp;</span>evidence
@@ -477,8 +600,8 @@
         <span class="kw">let </span>event_attestation_results = verify_event_log(
             event_log,
             event_endorsements,
-            <span class="self">self</span>.policies.as_slice(),
-            <span class="self">self</span>.clock.get_milliseconds_since_epoch(),
+            <span class="self">self</span>.event_policies.as_slice(),
+            milliseconds_since_epoch,
         )
         .context(<span class="string">"couldn't verify event log"</span>)<span class="question-mark">?</span>;
 
@@ -559,6 +682,23 @@
         .context(<span class="string">"comparing expected values to evidence"</span>)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(extracted_evidence)
+}
+
+<span class="doccomment">/// Verifies that the root ECA public key of the DICE chain is bound to the
+/// attestation report to ensure that the entire DICE chain is valid.
+</span><span class="kw">fn </span>verify_dice_root_eca_key(
+    attestation_report: <span class="kw-2">&amp;</span>AttestationReport,
+    eca_public_key: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>expected = <span class="kw-2">&amp;</span>hash_sha2_256(eca_public_key)[..];
+    <span class="kw">let </span>actual = attestation_report.data.report_data;
+    <span class="macro">anyhow::ensure!</span>(
+        <span class="comment">// The report data contains 64 bytes by default, but we only use the first 32 bytes
+        // at the moment.
+        </span>expected.len() &lt; actual.len() &amp;&amp; expected == <span class="kw-2">&amp;</span>actual[..expected.len()],
+        <span class="string">"the root ECA public key is not bound to the AMD SEV-SNP attestation report"
+    </span>);
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Verifies signatures of the certificates in the DICE chain and returns last
