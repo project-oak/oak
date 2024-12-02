@@ -8,3 +8,28 @@
 
 This standalone example uses a Noise Protocol end-to-end encrypted session over
 gRPC.
+
+To run this example locally in a docker container use:
+
+```bash
+bazel run //oak_gcp/examples/echo/enclave_app:echo_enclave_app_push
+docker run --publish 8080:8080 \
+    --rm --init \
+    europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app:latest
+```
+
+Note: pushing the image requires authenticating with gcloud:
+
+```bash
+gcloud auth login
+gcloud config set project oak-ci
+gcloud auth configure-docker
+gcloud auth configure-docker europe-west2-docker.pkg.dev
+```
+
+Once the app is running it can be tested from another shell using:
+
+```bash
+bazel run //oak_gcp/examples/echo/client:bin/oak_gcp_examples_echo_client -- \
+    --request='test message'
+```
