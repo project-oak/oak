@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
@@ -22,49 +22,32 @@ package(
 )
 
 rust_library(
-    name = "oak_gcp_examples_echo_enclave_app",
-    srcs = [
-        "src/app.rs",
-        "src/app_service.rs",
-        "src/lib.rs",
-    ],
+    name = "oak_gcp_examples_echo_client",
+    srcs = ["src/lib.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        "//oak_containers_sdk",
+        "//oak_client",
         "//oak_crypto",
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "//oak_session",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:async-stream",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
-    ],
-)
-
-rust_test(
-    name = "integration_test",
-    srcs = ["tests/integration_test.rs"],
-    deps = [
-        ":oak_gcp_examples_echo_enclave_app",
-        "//oak_gcp/examples/echo/client:oak_gcp_examples_echo_client",
-        "//oak_gcp/examples/echo/proto:echo_rust_proto",
-        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
 )
 
 rust_binary(
-    name = "bin/oak_gcp_examples_echo_enclave_app",
+    name = "bin/oak_gcp_examples_echo_client",
     srcs = ["src/main.rs"],
     deps = [
-        ":oak_gcp_examples_echo_enclave_app",
-        "//oak_session",
+        ":oak_gcp_examples_echo_client",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:tokio",
     ],
 )
