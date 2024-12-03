@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
 
 package(
     default_visibility = ["//:internal"],
@@ -49,6 +49,11 @@ rust_library(
         "@oak_crates_index//:tower",
         "@oak_crates_index//:ubyte",
     ],
+)
+
+rust_test(
+    name = "unit_tests",
+    crate = ":lib",
 )
 
 rust_binary(
