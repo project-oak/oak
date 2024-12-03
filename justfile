@@ -224,7 +224,9 @@ oak_containers_kernel:
         $(realpath oak_containers)/kernel/bin/subjects
 
 oak_containers_launcher:
-    cargo build --release --package=oak_containers_launcher
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/launcher:oak_containers_launcher
+    cp bazel-bin/oak_containers/launcher/oak_containers_launcher \
+        $(realpath artifacts/oak_containers_launcher)
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
