@@ -376,11 +376,6 @@ fn tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -> TeePlatform {
     }
 }
 
-#[deprecated(note = "Use `oak_attestation::dice::evidence_and_event_log_to_proto` instead.")]
-pub fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evidence> {
-    evidence_and_event_log_to_proto(value, None)
-}
-
 pub fn evidence_and_event_log_to_proto(
     value: oak_dice::evidence::Evidence,
     encoded_event_log: Option<&[u8]>,
