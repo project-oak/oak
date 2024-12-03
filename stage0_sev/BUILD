@@ -23,7 +23,13 @@ package(
 
 rust_library(
     name = "stage0_sev",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = [
+        "src/lib.rs",
+        "src/platform/accept_memory.rs",
+        "src/platform/dice_attestation.rs",
+        "src/platform/mmio.rs",
+        "src/platform/mod.rs",
+    ],
     aliases = {"//stage0": "oak_stage0"},
     deps = [
         "//oak_attestation",

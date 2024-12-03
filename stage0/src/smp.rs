@@ -20,11 +20,14 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use oak_stage0::{
-    disable_pic8259, hal::Platform, Lapic, LocalApicFlags, Madt, ProcessorLocalApic,
-    ProcessorLocalX2Apic, Rsdp,
-};
 use x86_64::{structures::paging::Size4KiB, PhysAddr};
+
+use crate::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::Lapic,
+    pic::disable_pic8259,
+    Platform,
+};
 
 extern "C" {
     #[link_name = "ap_start"]
