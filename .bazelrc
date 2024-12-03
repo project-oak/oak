@@ -71,10 +71,6 @@ build:ci --compilation_mode opt
 # Strip debug information from linked results.
 build:ci --linkopt=-Wl,--strip-all
 
-# --build_tag_filters=-noci allow us to skip broken/flaky/specialized test
-# targets during CI builds by adding tags = ["noci"]
-build:ci --build_tag_filters=-noci
-
 # --show_result leads to all of the built packages being logged at the
 # end, so we can visually verify that CI tasks are building everything we want.
 build:ci --show_result=1000000
@@ -100,6 +96,30 @@ build:unsafe-fast-presubmit --config=ci
 build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
 build:unsafe-fast-presubmit --remote_upload_local_results=true
 build:unsafe-fast-presubmit --google_default_credentials=true
+
+# Many of these flags were discovered by looking for `build:asan` examples internally.
+build:asan --strip=never
+build:asan --copt -fsanitize=address
+build:asan --copt -DADDRESS_SANITIZER=1
+build:asan --copt -O1
+build:asan --copt -g3
+build:asan --copt -fno-optimize-sibling-calls
+build:asan --copt -fno-omit-frame-pointer
+build:asan --compilation_mode=dbg
+build:asan --linkopt -fsanitize=address
+# The other options trigger a maybe-uninitialized error when compiling protobuf; this prevents it.
+build:asan --copt -Wno-error=maybe-uninitialized
+# The flags improve symbolication and rust stack trace expansion
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Zsanitizer=address
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cdebuginfo=full
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Ccodegen-units=1
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Clink-dead-code
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cpasses=sancov-module
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-level=4
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-pc-table
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-inline-8bit-counters
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-trace-compares
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-stack-depth
 
 # Use a custom local bazelrc if present.
 #
