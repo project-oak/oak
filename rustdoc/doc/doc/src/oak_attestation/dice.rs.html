@@ -426,11 +426,6 @@
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -807,11 +802,6 @@
         oak_dice::evidence::TeePlatform::IntelTdx =&gt; TeePlatform::IntelTdx,
         oak_dice::evidence::TeePlatform::None =&gt; TeePlatform::None,
     }
-}
-
-<span class="attr">#[deprecated(note = <span class="string">"Use `oak_attestation::dice::evidence_and_event_log_to_proto` instead."</span>)]
-</span><span class="kw">pub fn </span>evidence_to_proto(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;Evidence&gt; {
-    evidence_and_event_log_to_proto(value, <span class="prelude-val">None</span>)
 }
 
 <span class="kw">pub fn </span>evidence_and_event_log_to_proto(
