@@ -308,7 +308,7 @@ kokoro_oak_containers: oak_functions_containers_app_bundle_tar oak_containers_te
 
 # This is for use with the `oak-containers-test.sh` helper script for testing on the TDX machines.
 # Ask dingelish@ or jibbl@ for more info.
-oak_containers_tdx_testing: stage0_bin_tdx oak_containers_tests oak_containers_kernel oak_containers_system_image oak_containers_launcher containers_placer_artifacts
+oak_containers_tdx_testing: stage0_bin_tdx stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_containers_launcher containers_placer_artifacts
 
 # This list should contain all crates that either are not yet bazelified.
 # b/357687528 - Bazelify oak_session_wasm

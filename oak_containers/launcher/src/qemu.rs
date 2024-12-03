@@ -89,7 +89,7 @@ pub struct Params {
     pub pci_passthrough: Option<String>,
 
     /// Type of the confidential VM. It could be Default, Sev, SevEs,
-    /// SevSnp, or Tdx (TDX is unimplemented yet)
+    /// SevSnp, or Tdx.
     #[arg(long, required = false, value_enum, default_value_t = VmType::Default)]
     pub vm_type: VmType,
 }
