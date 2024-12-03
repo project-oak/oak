@@ -334,7 +334,15 @@ wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatibl
 # The kokoro script build_test_and_copy_to_placer expects this recipe to
 # generate properly optimized and stripped binaries that it will then copy to
 # placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
-build-and-test: test-workspace std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust
+build-and-test: test-workspace std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan
+
+# The list of ASAN targets is currently constrained right now because:
+# * ASAN builds/tests are quite a bit slower
+# * In some build targets (cargo_build_scripts for example), LD_LIBRARY_PATH is
+#   not correct, and libasan can not be found.
+asan:
+    bazel build {{BAZEL_CONFIG_FLAG}} --config=asan //cc/oak_session/...
+
 
 std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):

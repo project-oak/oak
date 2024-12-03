@@ -15,6 +15,9 @@
 //
 
 /// A basic wrapper around C-provided bytes of known length.
+///
+/// Note: any Bytes objects passed from Rust to C++ should be passed as a
+/// pointer, and eventually de-allocated using `free_bytes`.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Bytes {
@@ -103,15 +106,26 @@ impl ErrorOrBytes {
     }
 }
 
-///  Return ownership of memory owned by the [`Bytes`] instance to Rust, where
-/// it will be  dropped and all related memory released.
+///  Return ownership of the [`Bytes`] pointer back to Rust, where
+/// it will be  dropped and all related memory released, including the allocated
+/// contents.
 ///
-///  # Safety
+/// Note: if you have a [`Bytes`] structure, but not a poiner to it, use
+/// [`free_bytes_contents`]` instead.
 ///
-///  * The provided [`Bytes`] is a valid, still allocated instance.
+/// # Safety
+///
+///  * The provided [`Bytes`] is a valid, still allocated instance, containing
+///    valid, allocated bytes.
 ///  * The instance should not be used anymore after calling this function.
 #[no_mangle]
-pub unsafe extern "C" fn free_bytes(bytes: Bytes) {
+pub unsafe extern "C" fn free_bytes(bytes: *mut Bytes) {
+    let bytes_boxed = Box::from_raw(bytes);
+    free_bytes_contents(*bytes);
+    drop(bytes_boxed)
+}
+
+unsafe fn free_bytes_contents(bytes: Bytes) {
     drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
 }
 
@@ -125,5 +139,6 @@ pub unsafe extern "C" fn free_bytes(bytes: Bytes) {
 ///  * The pointer should not be used anymore after calling this function.
 #[no_mangle]
 pub unsafe extern "C" fn free_error(error: *mut Error) {
+    free_bytes_contents((*error).message);
     drop(Box::from_raw(error));
 }
