@@ -516,7 +516,12 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "toml": crate.spec(version = "0.5.11"),
     "tonic": crate.spec(
-        features = ["gzip"],
+        features = [
+            "gzip",
+            "tls",
+            "tls-roots-common",
+            "tls-webpki-roots",
+        ],
         version = "0.11.0",
     ),
     "tonic-build": crate.spec(version = "0.11.0"),

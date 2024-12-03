@@ -33,3 +33,11 @@ Once the app is running it can be tested from another shell using:
 bazel run //oak_gcp/examples/echo/client:bin/oak_gcp_examples_echo_client -- \
     --request='test message'
 ```
+
+To test the instance of the app deployed on Google Cloud Run use:
+
+```bash
+bazel run //oak_gcp/examples/echo/client:bin/oak_gcp_examples_echo_client -- \
+    --uri=https://echo-enclave-app-691249393555.europe-west2.run.app \
+    --request='test message'
+```
