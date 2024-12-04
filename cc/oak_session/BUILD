@@ -26,6 +26,7 @@ cc_library(
         "//oak_session/ffi:oak_session_ffi_client_session",
         "//oak_session/ffi:oak_session_ffi_server_session",
         "//oak_session/ffi:oak_session_ffi_types",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:string_view",
     ],
 )
@@ -50,5 +51,46 @@ cc_library(
     hdrs = ["oak_session_testing.h"],
     deps = [
         "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "client_session",
+    srcs = ["client_session.cc"],
+    hdrs = ["client_session.h"],
+    deps = [
+        ":oak_session_bindings",
+        "//proto/session:session_cc_proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_library(
+    name = "server_session",
+    srcs = ["server_session.cc"],
+    hdrs = ["server_session.h"],
+    deps = [
+        ":oak_session_bindings",
+        "//proto/session:session_cc_proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_test(
+    name = "client_server_session_test",
+    srcs = ["client_server_session_test.cc"],
+    tags = ["asan"],
+    deps = [
+        ":client_session",
+        ":server_session",
+        "//proto/session:session_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status:status_matchers",
+        "@com_google_googletest//:gtest_main",
     ],
 )

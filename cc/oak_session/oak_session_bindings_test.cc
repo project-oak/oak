@@ -23,7 +23,7 @@
 #include "gtest/gtest.h"
 #include "proto/session/session.pb.h"
 
-namespace oak::session {
+namespace oak::session::bindings {
 namespace {
 
 using ::oak::session::v1::SessionRequest;
@@ -37,11 +37,10 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   // We could just past init.result directly, but let's ensure that the request
   // successfully goes through the ser/deser properly.
   SessionRequest request;
-  ASSERT_TRUE(
-      request.ParseFromString(oak::session::BytesToString(*init.result)));
+  ASSERT_TRUE(request.ParseFromString(BytesToString(*init.result)));
   std::string request_reserialized;
   ASSERT_TRUE(request.SerializeToString(&request_reserialized));
-  Bytes request_bytes = oak::session::BytesFromString(request_reserialized);
+  Bytes request_bytes = BytesFromString(request_reserialized);
   free_bytes(init.result);
 
   ASSERT_THAT(server_put_incoming_message(server_session, request_bytes),
@@ -51,15 +50,13 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   ASSERT_THAT(init_resp, IsResult());
 
   SessionResponse response;
-  ASSERT_TRUE(
-      response.ParseFromString(oak::session::BytesToString(*init_resp.result)));
+  ASSERT_TRUE(response.ParseFromString(BytesToString(*init_resp.result)));
   free_bytes(init_resp.result);
   std::string response_reserialized;
   ASSERT_TRUE(response.SerializeToString(&response_reserialized));
-  ASSERT_THAT(
-      client_put_incoming_message(
-          client_session, oak::session::BytesFromString(response_reserialized)),
-      NoError());
+  ASSERT_THAT(client_put_incoming_message(
+                  client_session, BytesFromString(response_reserialized)),
+              NoError());
 
   ASSERT_TRUE(server_is_open(server_session));
   ASSERT_TRUE(client_is_open(client_session));
@@ -204,4 +201,4 @@ TEST(OakSessionBindingsTest, ErrorsAreReturned) {
 }
 
 }  // namespace
-}  // namespace oak::session
+}  // namespace oak::session::bindings

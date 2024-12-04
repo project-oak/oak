@@ -20,9 +20,10 @@
 #include <cstdint>
 #include <string>
 
+#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 
-namespace oak::session {
+namespace oak::session::bindings {
 
 // The corresponding C definitions for the Rust FFI bindings.
 // The rust bindings are defined in: oak_session/ffi
@@ -102,6 +103,20 @@ extern void free_bytes(Bytes*);
 extern void free_error(Error*);
 }
 
-}  // namespace oak::session
+// A convenience function to create a new absl::Status instance containing a
+// message populated from the provided error.
+//
+// The error will be released.
+absl::Status ErrorIntoStatus(bindings::Error* error) {
+  if (error == nullptr) {
+    return absl::OkStatus();
+  }
+  absl::Status status = absl::Status(absl::StatusCode::kInternal,
+                                     bindings::BytesToString(error->message));
+  free_error(error);
+  return status;
+}
+
+}  // namespace oak::session::bindings
 
 #endif  // CC_OAK_SESSION_OAK_SESSION_BINDINGS_H_
