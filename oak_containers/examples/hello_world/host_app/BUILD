@@ -82,7 +82,7 @@ rust_test_suite(
         "//cc/containers/hello_world_enclave_app:bundle",
         "//oak_containers/examples/hello_world/enclave_app:bundle",
         "//oak_containers/kernel",
-        "//oak_containers/stage1:stage1_cpio",
+        "//oak_containers/stage1_bin:stage1_cpio",
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],

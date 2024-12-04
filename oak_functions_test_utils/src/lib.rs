@@ -270,7 +270,7 @@ pub fn run_oak_functions_containers_example_in_background(
     let qemu = which::which("qemu-system-x86_64").unwrap();
     let stage0_bin = data_path("stage0_bin/stage0_bin");
     let kernel = data_path("oak_containers/kernel/bzImage");
-    let initrd = data_path("oak_containers/stage1/stage1.cpio");
+    let initrd = data_path("oak_containers/stage1_bin/stage1.cpio");
     let system_image = data_path("oak_containers/system_image/oak_containers_system_image.tar.xz");
     let container_bundle = data_path("oak_functions_containers_app/bundle.tar");
     let lookup_data_path = data_path(lookup_data_path);

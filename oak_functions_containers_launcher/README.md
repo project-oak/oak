@@ -29,7 +29,7 @@ root@hostname:~/project/oak_functions_containers_launcher$ cargo run -- \
     --vmm-binary=$(which qemu-system-x86_64) \
     --stage0-binary=../artifacts/stage0_bin \
     --kernel=../bazel-bin/oak_containers/kernel/bzImage \
-    --initrd=../bazel-bin/oak_containers/stage1/stage1.cpio \
+    --initrd=../bazel-bin/oak_containers/stage1_bin/stage1.cpio \
     --ramdrive-size=5000000 \
     --memory-size=10G
 ```

@@ -82,7 +82,7 @@ rust_test_suite(
         "//cc/client:cli",
         "//java/src/main/java/com/google/oak/client/oak_functions_client",
         "//oak_containers/kernel",
-        "//oak_containers/stage1",
+        "//oak_containers/stage1_bin",
         "//oak_containers/system_image:oak_containers_system_image",
         "//oak_functions/examples/echo",
         "//oak_functions/examples/key_value_lookup",

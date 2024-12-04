@@ -26,7 +26,7 @@ pub fn launcher_args(
     anyhow::ensure!(stage0_binary.exists(), "Stage0 not found at {stage0_binary:?}");
     let kernel = data_path("oak_containers/kernel/bzImage");
     anyhow::ensure!(kernel.exists(), "Kernel not found at {kernel:?}");
-    let initrd = data_path("oak_containers/stage1/stage1.cpio");
+    let initrd = data_path("oak_containers/stage1_bin/stage1.cpio");
     anyhow::ensure!(initrd.exists(), "Stage1 not found at {initrd:?}");
     Ok(oak_containers_launcher::Args {
         system_image,

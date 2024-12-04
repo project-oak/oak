@@ -44,26 +44,24 @@ use tonic::transport::Uri;
 use x86_64::PhysAddr;
 
 #[derive(Parser, Debug)]
-struct Args {
+pub struct Args {
     #[arg(long, default_value = "http://10.0.2.100:8080")]
-    launcher_addr: Uri,
+    pub launcher_addr: Uri,
 
     #[arg(long, default_value = "/sbin/init")]
-    init: String,
+    pub init: String,
 
     #[arg(long = "oak-dice", value_parser = try_parse_phys_addr)]
-    dice_addr: PhysAddr,
+    pub dice_addr: PhysAddr,
 
     #[arg(long = "oak-dice-length")]
-    dice_data_length: Option<usize>,
+    pub dice_data_length: Option<usize>,
 
     #[arg(long = "oak-event-log", value_parser = try_parse_phys_addr)]
-    event_log: PhysAddr,
+    pub event_log: PhysAddr,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let args = Args::parse();
+pub async fn main(args: &Args) -> Result<(), Box<dyn Error>> {
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
     }

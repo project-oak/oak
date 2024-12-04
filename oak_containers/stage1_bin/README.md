@@ -4,11 +4,8 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-containers-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"><img alt="Project Oak Containers Logo" src="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-# Stage 1
+# Stage 1 with DICE Attestation
 
-Stage 1 is the first process that is launched by the Linux kernel from the
-initial RAM disk. It is responsible for loading and launching the system image,
-which contains the Linux distribution and the Orchestrator.
-
-This directory contains the library implementation of Stage 1 that is shared by
-the platform-specific Stage 1 binaries.
+A version of the Oak Containers Stage 1 that uses the DICE Attestation mechanism
+and is compatible with AMD SEV-SNP, AMD SEV-ES, AMD SEV and with no memory
+encryption.
