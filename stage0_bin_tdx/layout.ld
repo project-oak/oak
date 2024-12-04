@@ -60,7 +60,6 @@ HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
  */
 PHDRS
 {
-    ap_bss PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
@@ -86,13 +85,7 @@ SECTIONS {
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
 
-    .ap_bss 0x1000 (NOLOAD) : {
-        ap_bss_start = .;
-        *(.ap_bss .ap_bss.*)
-    } > ram_low : ap_bss
-    ap_bss_size = SIZEOF(.ap_bss);
-
-    .bss (NOLOAD) : {
+    .bss 0x1000 (NOLOAD) : {
         bss_start = .;
         /* Include large section (.lbss) to support large code model.
          * See <https://lld.llvm.org/ELF/large_sections.html>.

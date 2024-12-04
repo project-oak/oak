@@ -62,14 +62,16 @@ pub mod mailbox;
 pub mod msr;
 pub mod paging;
 mod pic;
-mod smp;
 mod zero_page;
 
 pub use acpi::Ebda;
 pub use acpi_tables::{
-    DescriptionHeader, Madt, MultiprocessorWakeup, Rsdp, Rsdt, RsdtEntryPairMut, Xsdt,
+    DescriptionHeader, LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic,
+    ProcessorLocalX2Apic, Rsdp, Rsdt, RsdtEntryPairMut, Xsdt,
 };
+pub use apic::Lapic;
 pub use hal::Platform;
+pub use pic::disable_pic8259;
 pub use zero_page::ZeroPage;
 
 type Measurement = [u8; 32];
@@ -165,12 +167,6 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let acpi_digest = acpi_digest.finalize();
     let mut acpi_sha2_256_digest = Measurement::default();
     acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
-
-    // TODO: b/379079124 - Stop calling this for TDX and create a common abstraction
-    // for waking up APs.
-    if let Err(err) = smp::bootstrap_aps::<P>(rsdp) {
-        log::warn!("Failed to bootstrap APs: {}. APs may not be properly initialized.", err);
-    }
 
     let ram_disk_sha2_256_digest =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel)
