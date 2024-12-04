@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+echo "[$(date --utc)] Starting $0"
+
 set -o errexit
 set -o nounset
 set -o xtrace
