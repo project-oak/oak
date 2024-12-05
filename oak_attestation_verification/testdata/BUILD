@@ -75,3 +75,21 @@ filegroup(
         "vcek_genoa.der",
     ],
 )
+
+filegroup(
+    name = "oc_attestation",
+    srcs = [
+        "oc_endorsements_20241205.binarypb",
+        "oc_evidence_20241205.binarypb",
+        "oc_reference_values_20241205.binarypb",
+    ],
+)
+
+filegroup(
+    name = "rk_attestation",
+    srcs = [
+        "rk_endorsements_20241205.binarypb",
+        "rk_evidence_20241205.binarypb",
+        "rk_reference_values_20241205.binarypb",
+    ],
+)

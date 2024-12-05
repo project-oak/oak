@@ -2135,6 +2135,7 @@ dependencies = [
  "getrandom",
  "hex",
  "itertools 0.10.5",
+ "lazy_static",
  "oak_attestation_verification_types",
  "oak_dice",
  "oak_file_utils",

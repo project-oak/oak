@@ -569,7 +569,9 @@ fn value_to_raw_digest(value: &Value) -> anyhow::Result<RawDigest> {
 
 /// Translates [`Stage0Measurements`] to [`KernelLayerData`]. Both hold the same
 /// data, just in slightly different proto messages.
-fn stage0_measurements_to_kernel_layer_data(measurements: Stage0Measurements) -> KernelLayerData {
+pub(crate) fn stage0_measurements_to_kernel_layer_data(
+    measurements: Stage0Measurements,
+) -> KernelLayerData {
     KernelLayerData {
         kernel_image: Some(RawDigest {
             sha2_256: measurements.kernel_measurement,

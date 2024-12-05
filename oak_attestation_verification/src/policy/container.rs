@@ -17,53 +17,54 @@
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::attestation::v1::{
-    EventAttestationResults, KernelLayerEndorsements, KernelLayerReferenceValues,
-    Stage0Measurements,
+    ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+    EventAttestationResults,
 };
 use prost_types::Any;
 
 use crate::{
-    compare::compare_kernel_layer_measurement_digests,
-    expect::get_kernel_layer_expected_values,
-    extract::stage0_measurements_to_kernel_layer_data,
+    compare::compare_container_layer_measurement_digests,
+    expect::get_container_layer_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
-pub struct KernelPolicy {
-    reference_values: KernelLayerReferenceValues,
+pub struct ContainerPolicy {
+    reference_values: ContainerLayerReferenceValues,
 }
 
-impl KernelPolicy {
-    pub fn new(reference_values: &KernelLayerReferenceValues) -> Self {
+impl ContainerPolicy {
+    pub fn new(reference_values: &ContainerLayerReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
 }
 
-impl Policy<[u8], Any> for KernelPolicy {
+// We have to use [`Policy<[u8], Any>`] instead of [`EventPolicy`], because
+// Rust doesn't yet support implementing trait aliases.
+// <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
+impl Policy<[u8], Any> for ContainerPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
         encoded_event_endorsement: &Any,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
-        let event =
-            stage0_measurements_to_kernel_layer_data(decode_event_proto::<Stage0Measurements>(
-                "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
-                encoded_event,
-            )?);
-        let event_endorsements = decode_endorsement_proto::<KernelLayerEndorsements>(
-            "type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements",
+        let event = decode_event_proto::<ContainerLayerData>(
+            "type.googleapis.com/oak.attestation.v1.ContainerLayerData",
+            encoded_event,
+        )?;
+        let event_endorsement = decode_endorsement_proto::<ContainerLayerEndorsements>(
+            "type.googleapis.com/oak.attestation.v1.ContainerLayerEndorsements",
             encoded_event_endorsement,
         )?;
 
-        let expected_values = get_kernel_layer_expected_values(
+        let expected_values = get_container_layer_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsements),
+            Some(&event_endorsement),
             &self.reference_values,
         )
-        .context("couldn't verify kernel endosements")?;
-        compare_kernel_layer_measurement_digests(&event, &expected_values)
-            .context("couldn't verify kernel event")?;
+        .context("couldn't verify container endosements")?;
+        compare_container_layer_measurement_digests(&event, &expected_values)
+            .context("couldn't verify container event")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults {})

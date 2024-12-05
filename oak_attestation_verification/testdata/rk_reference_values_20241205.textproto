@@ -1,0 +1,97 @@
+# proto-file: third_party/oak/proto/attestation/reference_value.proto
+# proto-message: oak.attestation.v1.ReferenceValues
+oak_restricted_kernel {
+  root_layer {
+    amd_sev {
+      stage0 {
+        endorsement {
+          endorser {
+            keys {
+              type: KEY_TYPE_ECDSA_P256_SHA256
+              key_id: 1
+              raw: "0Y0\023\006\007*\206H\316=\002\001\006\010*\206H\316=\003\001\007\003B\000\004G\375H\02308%|>\224\035\273\024\260\253\310b\276\313\300\322\035zc]\275\r\345\272J\"\206\243\021g\254\002\2552\225\257\030(d\333\036\355s !|\307\304\207\260C=\3677\327\003\024%\330"
+            }
+          }
+          required_claims {
+            claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/66738.md"
+            claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md"
+          }
+          rekor {
+            skip {
+            }
+          }
+        }
+      }
+      min_tcb_version {
+        boot_loader: 3
+        snp: 20
+        microcode: 209
+      }
+    }
+    intel_tdx {
+    }
+    insecure {
+    }
+  }
+  kernel_layer {
+    kernel {
+      endorsement {
+        endorser {
+          keys {
+            type: KEY_TYPE_ECDSA_P256_SHA256
+            key_id: 1
+            raw: "0Y0\023\006\007*\206H\316=\002\001\006\010*\206H\316=\003\001\007\003B\000\004G\375H\02308%|>\224\035\273\024\260\253\310b\276\313\300\322\035zc]\275\r\345\272J\"\206\243\021g\254\002\2552\225\257\030(d\333\036\355s !|\307\304\207\260C=\3677\327\003\024%\330"
+          }
+        }
+        required_claims {
+          claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/36746.md"
+          claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md"
+        }
+        rekor {
+          skip {
+          }
+        }
+      }
+    }
+    init_ram_fs {
+      endorsement {
+        endorser {
+          keys {
+            type: KEY_TYPE_ECDSA_P256_SHA256
+            key_id: 1
+            raw: "0Y0\023\006\007*\206H\316=\002\001\006\010*\206H\316=\003\001\007\003B\000\004G\375H\02308%|>\224\035\273\024\260\253\310b\276\313\300\322\035zc]\275\r\345\272J\"\206\243\021g\254\002\2552\225\257\030(d\333\036\355s !|\307\304\207\260C=\3677\327\003\024%\330"
+          }
+        }
+        required_claims {
+          claim_types: "https://github.com/project-oak/oak/blob/main/docs/tr/claim/87425.md"
+        }
+        rekor {
+          skip {
+          }
+        }
+      }
+    }
+    memory_map {
+      skip {
+      }
+    }
+    acpi {
+      skip {
+      }
+    }
+    kernel_cmd_line_text {
+      skip {
+      }
+    }
+  }
+  application_layer {
+    binary {
+      skip {
+      }
+    }
+    configuration {
+      skip {
+      }
+    }
+  }
+}
