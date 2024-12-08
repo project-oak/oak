@@ -66,6 +66,9 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -85,13 +88,15 @@
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_attestation_verification_types::policy::Policy;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    EventAttestationResults, KernelLayerData, KernelLayerEndorsements, KernelLayerReferenceValues,
+    EventAttestationResults, KernelLayerEndorsements, KernelLayerReferenceValues,
+    Stage0Measurements,
 };
 <span class="kw">use </span>prost_types::Any;
 
 <span class="kw">use crate</span>::{
     compare::compare_kernel_layer_measurement_digests,
     expect::get_kernel_layer_expected_values,
+    extract::stage0_measurements_to_kernel_layer_data,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -112,10 +117,11 @@
         encoded_event_endorsement: <span class="kw-2">&amp;</span>Any,
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
-        <span class="kw">let </span>event = decode_event_proto::&lt;KernelLayerData&gt;(
-            <span class="string">"type.googleapis.com/oak.attestation.v1.KernelLayerData"</span>,
-            encoded_event,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>event =
+            stage0_measurements_to_kernel_layer_data(decode_event_proto::&lt;Stage0Measurements&gt;(
+                <span class="string">"type.googleapis.com/oak.attestation.v1.Stage0Measurements"</span>,
+                encoded_event,
+            )<span class="question-mark">?</span>);
         <span class="kw">let </span>event_endorsements = decode_endorsement_proto::&lt;KernelLayerEndorsements&gt;(
             <span class="string">"type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements"</span>,
             encoded_event_endorsement,

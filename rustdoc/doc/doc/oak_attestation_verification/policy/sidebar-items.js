@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["application","binary","firmware","kernel","platform","system"]};
+window.SIDEBAR_ITEMS = {"mod":["application","binary","container","firmware","kernel","platform","system"]};
