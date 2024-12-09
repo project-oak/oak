@@ -35,7 +35,7 @@ pub struct SessionConfig {
     pub attestation_provider_config: AttestationProviderConfig,
     pub handshaker_config: HandshakerConfig,
     pub encryptor_config: EncryptorConfig,
-    pub binding_key_extractor: Box<dyn KeyExtractor>,
+    pub binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
 }
 
 impl SessionConfig {
@@ -84,13 +84,13 @@ impl SessionConfigBuilder {
         let encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        let binding_key_extractor = Box::new(DefaultSigningKeyExtractor);
+        let binding_key_extractors = BTreeMap::new();
 
         let config = SessionConfig {
             attestation_provider_config,
             handshaker_config,
             encryptor_config,
-            binding_key_extractor,
+            binding_key_extractors,
         };
         Self { config }
     }
@@ -117,7 +117,8 @@ impl SessionConfigBuilder {
 
     /// Add an Attestation Verifier that will verify Evidence and Endorsements
     /// from the peer's TEE. Verifier only verifies Evidence and
-    /// Endorsements with with the same ID as the `attester_id`.
+    /// Endorsements with with the same ID as the `attester_id`. A default key
+    /// extractor is used to bind the received evidence to the session.
     ///
     /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
     pub fn add_peer_verifier(
@@ -125,7 +126,35 @@ impl SessionConfigBuilder {
         attester_id: String,
         verifier: Box<dyn AttestationVerifier>,
     ) -> Self {
-        self.config.attestation_provider_config.peer_verifiers.insert(attester_id, verifier);
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier);
+        self.config
+            .binding_key_extractors
+            .insert(attester_id, Box::new(DefaultSigningKeyExtractor {}));
+        self
+    }
+
+    /// Add an Attestation Verifier with the custom key extractor to extract the
+    /// key to bind the attestation to the session. The verifier will verify
+    /// Evidence and Endorsements from the peer's TEE, and the key extractor
+    /// will be used to extract the bindign key from the evidence. Verifier only
+    /// verifies Evidence and Endorsements with with the same ID as the
+    /// `attester_id`.
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+    pub fn add_peer_verifier_with_key_extractor(
+        mut self,
+        attester_id: String,
+        verifier: Box<dyn AttestationVerifier>,
+        key_extractor: Box<dyn KeyExtractor>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier);
+        self.config.binding_key_extractors.insert(attester_id, key_extractor);
         self
     }
 
@@ -152,14 +181,6 @@ impl SessionConfigBuilder {
         encryptor_provider: Box<dyn EncryptorProvider>,
     ) -> Self {
         self.config.encryptor_config.encryptor_provider = encryptor_provider;
-        self
-    }
-
-    pub fn set_binding_key_extractor(
-        mut self,
-        binding_key_extractor: Box<dyn KeyExtractor>,
-    ) -> Self {
-        self.config.binding_key_extractor = binding_key_extractor;
         self
     }
 

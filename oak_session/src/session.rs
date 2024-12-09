@@ -123,7 +123,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
 /// Client-side secure attested session entrypoint.
 pub struct ClientSession {
     step: Step<ClientAttestationProvider, ClientHandshaker>,
-    binding_key_extractor: Box<dyn KeyExtractor>,
+    binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
     attestation_result: Option<AttestationSuccess>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
@@ -149,7 +149,7 @@ impl ClientSession {
                     encryptor_provider: config.encryptor_config.encryptor_provider,
                 },
             },
-            binding_key_extractor: config.binding_key_extractor,
+            binding_key_extractors: config.binding_key_extractors,
             attestation_result: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
@@ -268,7 +268,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 ))?;
                 if let Some(attestation_result) = &self.attestation_result {
                     verify_session_binding(
-                        self.binding_key_extractor.as_ref(),
+                        &self.binding_key_extractors,
                         attestation_result,
                         &handshake_message.attestation_bindings,
                         handshaker.get_handshake_hash()?.as_slice(),
@@ -291,7 +291,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 // Server-side secure attested session entrypoint.
 pub struct ServerSession {
     step: Step<ServerAttestationProvider, ServerHandshaker>,
-    binding_key_extractor: Box<dyn KeyExtractor>,
+    binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
     // encryptor is initialized once the handshake is completed and the session becomes open
     attestation_result: Option<AttestationSuccess>,
     outgoing_responses: VecDeque<SessionResponse>,
@@ -326,7 +326,7 @@ impl ServerSession {
                     encryptor_provider: config.encryptor_config.encryptor_provider,
                 },
             },
-            binding_key_extractor: config.binding_key_extractor,
+            binding_key_extractors: config.binding_key_extractors,
             attestation_result: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
@@ -442,7 +442,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 if handshaker.is_handshake_complete() {
                     if let Some(attestation_result) = &self.attestation_result {
                         verify_session_binding(
-                            self.binding_key_extractor.as_ref(),
+                            &self.binding_key_extractors,
                             attestation_result,
                             &handshake_message.attestation_bindings,
                             handshaker.get_handshake_hash()?.as_slice(),
@@ -461,12 +461,15 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 }
 
 fn verify_session_binding(
-    binding_key_extractor: &dyn KeyExtractor,
+    binding_key_extractors: &BTreeMap<String, Box<dyn KeyExtractor>>,
     attestation: &AttestationSuccess,
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
     for (verifier_id, results) in &attestation.attestation_results {
+        let binding_key_extractor = binding_key_extractors
+            .get(verifier_id)
+            .ok_or(anyhow!("no key provider supplied for the verifier ID {verifier_id}"))?;
         let binding_verifier = SignatureBindingVerifierBuilder::default()
             .verifier(binding_key_extractor.extract_verifying_key(results)?)
             .build()
