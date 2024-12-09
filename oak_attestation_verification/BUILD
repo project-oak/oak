@@ -93,12 +93,14 @@ rust_test_suite(
         "//oak_attestation_verification_types",
         "//oak_file_utils",
         "//oak_proto_rust",
+        "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
+        "@oak_crates_index//:zerocopy",
     ],
 )
 
@@ -174,11 +176,13 @@ rust_test_suite(
         "//oak_attestation_verification_types",
         "//oak_file_utils",
         "//oak_proto_rust",
+        "//oak_sev_snp_attestation_report",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
+        "@oak_crates_index//:zerocopy",
     ],
 )

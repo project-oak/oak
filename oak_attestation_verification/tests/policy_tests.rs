@@ -16,20 +16,23 @@
 
 use std::fs;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use oak_attestation_verification::policy::{
-    application::ApplicationPolicy, container::ContainerPolicy, kernel::KernelPolicy,
-    system::SystemPolicy,
+    application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
+    kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
 };
 use oak_attestation_verification_types::policy::Policy;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
-    endorsements, reference_values, Endorsements, Evidence, OakContainersEndorsements,
-    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues,
+    binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement, Endorsements,
+    Evidence, FirmwareEndorsement, OakContainersEndorsements, OakContainersReferenceValues,
+    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+    SkipVerification,
 };
+use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
 use prost_types::Any;
+use zerocopy::FromBytes;
 
 const OC_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/oc_evidence_20241205.binarypb";
@@ -52,6 +55,13 @@ const CONTAINER_EVENT_INDEX: usize = 2;
 
 // Pretend the tests run at this time: 5 Dec 2024, 12:00 UTC.
 const MILLISECONDS_SINCE_EPOCH: i64 = 1733400000000;
+
+fn extract_attestation_report(evidence: &Evidence) -> anyhow::Result<&AttestationReport> {
+    let root_layer =
+        &evidence.root_layer.as_ref().context("root DICE layer wasn't provided in the evidence")?;
+    AttestationReport::ref_from(&root_layer.remote_attestation_report)
+        .context("invalid AMD SEV-SNP attestation report")
+}
 
 fn extract_event(evidence: &Evidence, index: usize) -> anyhow::Result<Vec<u8>> {
     if let Some(event_log) = &evidence.event_log {
@@ -107,6 +117,7 @@ fn load_oc_reference_values() -> OakContainersReferenceValues {
         _ => panic!("couldn't find Oak Containers reference values"),
     };
     assert!(containers_reference_values.root_layer.is_some());
+    assert!(containers_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
     assert!(containers_reference_values.kernel_layer.is_some());
     assert!(containers_reference_values.system_layer.is_some());
     assert!(containers_reference_values.container_layer.is_some());
@@ -161,6 +172,51 @@ lazy_static::lazy_static! {
     static ref RK_EVIDENCE: Evidence = load_rk_evidence();
     static ref RK_ENDORSEMENTS: OakRestrictedKernelEndorsements = load_rk_endorsements();
     static ref RK_REFERENCE_VALUES: OakRestrictedKernelReferenceValues = load_rk_reference_values();
+}
+
+#[test]
+fn amd_sev_snp_platform_policy_verify_succeeds() {
+    let platform_reference_values =
+        OC_REFERENCE_VALUES.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
+    let policy = AmdSevSnpPolicy::new(platform_reference_values);
+
+    let attestation_report = extract_attestation_report(&OC_EVIDENCE).unwrap();
+    // TODO: b/375137648 - Use new endorsements directly once they are available.
+    let platform_endorsement = AmdSevSnpEndorsement {
+        tee_certificate: OC_ENDORSEMENTS.root_layer.as_ref().unwrap().tee_certificate.to_vec(),
+    };
+
+    let result = policy.verify(attestation_report, &platform_endorsement, MILLISECONDS_SINCE_EPOCH);
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok());
+}
+
+#[test]
+fn amd_sev_snp_firmware_policy_verify_succeeds() {
+    let firmware_reference_values = OC_REFERENCE_VALUES
+        .root_layer
+        .as_ref()
+        .unwrap()
+        .amd_sev
+        .as_ref()
+        .unwrap()
+        .stage0
+        .as_ref()
+        .unwrap();
+    // TODO: b/375137648 - Use real reference once new endorsements are available.
+    let mut skip_firmware_reference_values = firmware_reference_values.clone();
+    skip_firmware_reference_values.r#type =
+        Some(binary_reference_value::Type::Skip(SkipVerification {}));
+    let policy = FirmwarePolicy::new(&skip_firmware_reference_values);
+
+    let firmware_measurement = &extract_attestation_report(&OC_EVIDENCE).unwrap().data.measurement;
+    // TODO: b/375137648 - Use new endorsements directly once available.
+    let firmware_endorsement = FirmwareEndorsement { firmware: None };
+
+    let result =
+        policy.verify(firmware_measurement, &firmware_endorsement, MILLISECONDS_SINCE_EPOCH);
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok());
 }
 
 #[test]
