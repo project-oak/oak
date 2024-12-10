@@ -60,6 +60,7 @@
 //! Collectively, these structures are referred to as "the ACPI tables".
 
 use core::{
+    alloc::{Allocator, Layout},
     any::type_name,
     fmt::Display,
     marker::PhantomData,
@@ -72,7 +73,7 @@ use bitflags::bitflags;
 use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::{acpi::Ebda, Platform};
+use crate::acpi::EBDA_ALLOCATOR;
 
 type ResultStaticErr<T> = Result<T, &'static str>;
 
@@ -117,7 +118,7 @@ pub struct Rsdp {
 static_assertions::assert_eq_size!(Rsdp, [u8; 36usize]);
 
 impl Rsdp {
-    pub fn validate<P: Platform>(&self) -> ResultStaticErr<()> {
+    pub fn validate(&self) -> ResultStaticErr<()> {
         if &self.signature != b"RSD PTR " {
             return Err("Invalid RSDP signature");
         }
@@ -142,10 +143,13 @@ impl Rsdp {
         }
 
         // Check the pointer addresses; if present, they should point within the EBDA.
-        if self.rsdt_address > 0 && !Ebda::instance().contains_addr(self.rsdt_address as usize) {
+        if self.rsdt_address > 0
+            && !EBDA_ALLOCATOR.contains_addr(VirtAddr::new(self.rsdt_address as u64))
+        {
             return Err("Invalid RSDT address: does not point to within EBDA");
         }
-        if self.xsdt_address > 0 && !Ebda::instance().contains_addr(self.xsdt_address as usize) {
+        if self.xsdt_address > 0 && !EBDA_ALLOCATOR.contains_addr(VirtAddr::new(self.xsdt_address))
+        {
             return Err("Invalid XSDT address: does not point to within EBDA");
         }
 
@@ -237,8 +241,8 @@ impl DescriptionHeader {
     }
 
     /// Returns the address range where this table is located.
-    pub fn addr_range(&self) -> Range<usize> {
-        let base = self as *const _ as usize;
+    pub fn addr_range(&self) -> Range<VirtAddr> {
+        let base = VirtAddr::from_ptr(self);
         base..base + self.length as usize
     }
 
@@ -251,7 +255,7 @@ impl DescriptionHeader {
     }
 
     fn validate(&self) -> ResultStaticErr<()> {
-        if !Ebda::instance().contains_addr_range(&self.addr_range()) {
+        if !EBDA_ALLOCATOR.contains_addr_range(self.addr_range()) {
             return Err("ACPI table falls outside EBDA");
         }
 
@@ -266,7 +270,7 @@ impl DescriptionHeader {
     fn compute_checksum(&self) -> u8 {
         // Safety: we've ensured that the table is within EBDA.
         let data = unsafe {
-            slice::from_raw_parts(self.addr_range().start as *const u8, self.length as usize)
+            slice::from_raw_parts(self.addr_range().start.as_ptr(), self.length as usize)
         };
         data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs))
     }
@@ -427,7 +431,7 @@ impl Rsdt {
         }
 
         for &entry in self.entries_arr() {
-            if !Ebda::instance().contains_addr(entry as usize) {
+            if !EBDA_ALLOCATOR.contains_addr(VirtAddr::new(entry as u64)) {
                 return Err("RSDT invalid: entry points outside EBDA");
             }
         }
@@ -621,7 +625,7 @@ impl Xsdt {
         }
 
         for entry in self.entries_arr() {
-            if !Ebda::instance().contains_addr(entry.raw_val() as usize) {
+            if !EBDA_ALLOCATOR.contains_addr(VirtAddr::new(entry.raw_val())) {
                 return Err("XSDT invalid: entry points outside EBDA");
             }
         }
@@ -690,11 +694,11 @@ pub struct ControllerHeader {
 impl ControllerHeader {
     fn validate(&self) -> ResultStaticErr<()> {
         let structure = {
-            let base = self as *const _ as usize;
+            let base = VirtAddr::from_ptr(self);
             base..base + self.len as usize
         };
 
-        if !Ebda::instance().contains_addr_range(&structure) {
+        if !EBDA_ALLOCATOR.contains_addr_range(structure) {
             return Err("ACPI interrupt data structure falls outside EBDA");
         }
 
@@ -946,7 +950,17 @@ impl Madt {
             old_madt_len + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as usize;
 
         // New contents = old contents + MPW. Allocate new length, copy old contents.
-        let new_madt_buf: &mut [u8] = Ebda::instance().allocate(new_madt_len)?;
+        let mut new_madt_buf = EBDA_ALLOCATOR
+            .allocate(
+                Layout::from_size_align(new_madt_len, align_of::<Madt>())
+                    .expect("invalid layout for MADT"),
+            )
+            .map_err(|_| "failed to allocate memory for new MADT")?;
+        // Safety: [u8] has no alignment restrictions (but we're `Madt`-aligned); this
+        // is new memory so no other aliases to it exist; it's non-null (it's `NonNull`
+        // after all); any value is valid for u8 so any contents of the slice are valid.
+        // Plus, we'll overwrite the contents in a moment anyway.
+        let new_madt_buf = unsafe { new_madt_buf.as_mut() };
         new_madt_buf[0..old_madt_len].copy_from_slice(self.as_byte_slice()?);
         log::info!("MADT contents copied to {:?}", new_madt_buf.as_ptr_range());
 
