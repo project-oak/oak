@@ -2122,6 +2122,7 @@ dependencies = [
  "anyhow",
  "mockall",
  "oak_proto_rust",
+ "prost",
 ]
 
 [[package]]
@@ -2313,6 +2314,7 @@ dependencies = [
  "log",
  "nix 0.28.0",
  "oak_attestation",
+ "oak_attestation_types",
  "oak_attestation_verification",
  "oak_containers_agent",
  "oak_containers_attestation",

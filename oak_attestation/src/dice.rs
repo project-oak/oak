@@ -19,7 +19,10 @@ use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use ciborium::Value;
 use coset::{cwt::ClaimName, CborSerializable, CoseKey};
-use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_attestation_types::{
+    attester::Attester,
+    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+};
 use oak_dice::{
     cert::{
         cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
@@ -299,8 +302,8 @@ impl Attester for DiceAttester {
 
 impl Serializable for DiceAttester {
     fn deserialize(bytes: &[u8]) -> anyhow::Result<Self> {
-        let dice_data = DiceData::decode_length_delimited(bytes)
-            .map_err(|error| anyhow!("couldn't parse DICE data: {:?}", error))?;
+        let dice_data: DiceData =
+            try_decode_length_delimited_proto(bytes).context("couldn't parse DICE data: {:?}")?;
         dice_data.try_into()
     }
 
@@ -311,7 +314,7 @@ impl Serializable for DiceAttester {
                 eca_private_key: self.signing_key.to_bytes().as_slice().into(),
             }),
         };
-        let result = dice_data.encode_length_delimited_to_vec();
+        let result = encode_length_delimited_proto(&dice_data);
 
         // Zero out the ECA private key in the proto.
         dice_data

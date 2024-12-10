@@ -25,7 +25,10 @@ use alloc::{boxed::Box, format, vec::Vec};
 use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
-use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_attestation_types::{
+    attester::Attester,
+    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+};
 use oak_dice::evidence::{
     DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
     STAGE0_DICE_PROTO_MAGIC,
@@ -33,7 +36,6 @@ use oak_dice::evidence::{
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
 use oak_stage0_dice::{derive_sealing_cdi, DerivedKey};
-use prost::Message;
 use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3},
@@ -221,18 +223,13 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     attester.extend(&stage0_event[..]).expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 
-    let attestation_data = DiceData::decode_length_delimited(&serialized_attestation_data[..])
-        .expect("couldn't decode attestation data");
-    // Zero out the serialized proto since it contains a copy of the private key.
-    serialized_attestation_data.zeroize();
+    let attestation_data: DiceData =
+        try_decode_length_delimited_proto(&serialized_attestation_data[..])
+            .expect("couldn't decode attestation data");
 
     let mut attestation_data_struct =
         oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
             .expect("couldn't create attestation data struct");
-
-    // Re-serialize the proto, but without the length-prefix since CB Stage1 doesn't
-    // currently expect the prefix.
-    serialized_attestation_data = attestation_data.encode_to_vec();
 
     // Zero out the copy of the private key in the proto that we just created.
     attestation_data
@@ -260,11 +257,11 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let mut event_log = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
     // Ensure that Eventlog is not too big. The 8 bytes are reserved for the size of
     // the encoded eventlog proto.
-    assert!(event_log_proto.encoded_len() < PAGE_SIZE - 8);
+    let serialized_event_log = encode_length_delimited_proto(&event_log_proto);
+    assert!(serialized_event_log.len() < PAGE_SIZE);
     // First copy the size of the encoded proto in Little Endian format. Then copy
     // the actual EventLog.
-    event_log.extend_from_slice(event_log_proto.encoded_len().to_le_bytes().as_slice());
-    event_log.extend_from_slice(event_log_proto.encode_to_vec().as_bytes());
+    event_log.extend_from_slice(serialized_event_log.as_bytes());
     let event_log_data = event_log.leak();
     // Reserve memory containing Eventlog Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
@@ -280,11 +277,9 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let mut encoded_attestation_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
     // Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
     // the size of the encoded DiceData proto.
-    assert!(serialized_attestation_data.len() < PAGE_SIZE - 8 * 2);
+    assert!(serialized_attestation_data.len() < PAGE_SIZE - size_of_val(&STAGE0_DICE_PROTO_MAGIC));
     // Insert a magic number to ensure the correctness of the data being read.
     encoded_attestation_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
-    encoded_attestation_proto
-        .extend_from_slice(serialized_attestation_data.len().to_le_bytes().as_slice());
     encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_ref());
     // Zero out the serialized proto since it contains a copy of the private key.
     serialized_attestation_data.zeroize();

@@ -15,7 +15,10 @@
 //
 
 use oak_attestation::dice::DiceAttester;
-use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_attestation_types::{
+    attester::Attester,
+    util::{encode_length_delimited_proto, Serializable},
+};
 use oak_attestation_verification::verifier::verify_dice_chain;
 use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{attestation::v1::ApplicationLayerData, RawDigest};
@@ -30,7 +33,7 @@ fn dice_attester_generates_correct_dice_chain() {
         TeePlatform::None,
     )
     .expect("couldn't create initial DICE data");
-    let serialized_stage0_dice_data = stage0_dice_data_proto.encode_length_delimited_to_vec();
+    let serialized_stage0_dice_data = encode_length_delimited_proto(&stage0_dice_data_proto);
 
     let mut dice_attester = DiceAttester::deserialize(&serialized_stage0_dice_data)
         .expect("couldn't deserialize attester");

@@ -20,8 +20,7 @@ use std::{
 
 use anyhow::Context;
 use oak_attestation::dice::DiceAttester;
-use oak_proto_rust::oak::attestation::v1::DiceData;
-use prost::Message;
+use oak_attestation_types::util::Serializable;
 use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.
@@ -46,8 +45,7 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
     let mut buffer = Vec::with_capacity(size);
     file.read_to_end(&mut buffer).context("couldn't read DICE data from file")?;
 
-    let result =
-        DiceData::decode_length_delimited(&buffer[..]).context("couldn't parse DICE data")?;
+    let result = DiceAttester::deserialize(&buffer[..]).context("couldn't parse DICE data")?;
 
     buffer.zeroize();
     file.rewind()?;
@@ -59,7 +57,7 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
     // Still the following line does not guarantee overwriting the keys as the
     // filesystem might pick other memory pages to write the data on.
     file.write_all(&zeros).context("couldn't overwrite DICE data file")?;
-    result.try_into()
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -71,7 +69,7 @@ mod tests {
     #[test]
     fn test_load_stage1_dice_data() {
         const DICE_DATA_PATH: &str = "dice";
-        const DICE_DATA_SIZE: usize = 2483;
+        const DICE_DATA_SIZE: usize = 2489;
 
         #[cfg(feature = "bazel")]
         fs::copy("oak_containers/orchestrator/testdata/test_dice", DICE_DATA_PATH).unwrap();

@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 oak_proto_rust = { workspace = true }
+prost = { workspace = true }
 
 [dev-dependencies]
 mockall = { version = "*", default-features = false }

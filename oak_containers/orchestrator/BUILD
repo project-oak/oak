@@ -36,6 +36,7 @@ rust_library(
     crate_features = ["bazel"],
     deps = [
         "//oak_attestation",
+        "//oak_attestation_types",
         "//oak_attestation_verification",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_containers/channel",

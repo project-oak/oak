@@ -19,6 +19,7 @@ hpke = { version = "*", default-features = false, features = [
 log = "*"
 nix = { version = "*", features = ["user", "fs"] }
 oak_attestation = { workspace = true }
+oak_attestation_types = { workspace = true }
 oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_containers_agent = { workspace = true }

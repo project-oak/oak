@@ -21,7 +21,10 @@ use alloc::vec::Vec;
 
 use anyhow::Context;
 use oak_attestation::dice::{evidence_and_event_log_to_proto, DiceAttester};
-use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_attestation_types::{
+    attester::Attester,
+    util::{try_decode_length_delimited_proto, Serializable},
+};
 use oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
@@ -29,7 +32,7 @@ use oak_crypto::{
 };
 use oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 use oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, DiceData, EventLog, Evidence},
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
 };
 use p256::ecdsa::SigningKey;
@@ -70,7 +73,7 @@ fn get_mock_dice_data_and_event_log() -> (RestrictedKernelDiceData, Vec<u8>) {
             dice_attester.extend(&stage0_event).expect("couldn't extend attester evidence");
 
             oak_stage0_dice::dice_data_proto_to_stage0_dice_data(
-                &DiceData::decode_length_delimited(dice_attester.serialize().as_slice())
+                &try_decode_length_delimited_proto(dice_attester.serialize().as_slice())
                     .expect("couldn't decode attestation data"),
             )
             .expect("couldn't create attestation data struct")
