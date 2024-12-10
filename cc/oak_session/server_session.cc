@@ -16,6 +16,7 @@
 
 #include "cc/oak_session/server_session.h"
 
+#include <optional>
 #include <string>
 
 #include "absl/status/status.h"
@@ -26,7 +27,7 @@
 namespace oak::session {
 
 absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create() {
-  bindings::ErrorOrServerSession result = bindings::new_server_session();
+  const bindings::ErrorOrServerSession result = bindings::new_server_session();
 
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
@@ -39,7 +40,7 @@ bool ServerSession::IsOpen() { return bindings::server_is_open(rust_session_); }
 
 absl::Status ServerSession::PutIncomingMessage(
     const v1::SessionRequest& request) {
-  std::string request_bytes = request.SerializeAsString();
+  const std::string request_bytes = request.SerializeAsString();
   bindings::Error* error = bindings::server_put_incoming_message(
       rust_session_, bindings::BytesFromString(request_bytes));
   return bindings::ErrorIntoStatus(error);
@@ -47,7 +48,7 @@ absl::Status ServerSession::PutIncomingMessage(
 
 absl::StatusOr<std::optional<v1::SessionResponse>>
 ServerSession::GetOutgoingMessage() {
-  bindings::ErrorOrBytes result =
+  const bindings::ErrorOrBytes result =
       bindings::server_get_outgoing_message(rust_session_);
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
@@ -75,7 +76,7 @@ absl::Status ServerSession::Write(absl::string_view unencrypted_request) {
 }
 
 absl::StatusOr<std::optional<std::string>> ServerSession::Read() {
-  bindings::ErrorOrBytes result = bindings::server_read(rust_session_);
+  const bindings::ErrorOrBytes result = bindings::server_read(rust_session_);
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
   }

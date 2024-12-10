@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#ifndef CC_OAK_SESSION_TESTING_MATCHERS_H_
+#define CC_OAK_SESSION_TESTING_MATCHERS_H_
 #include "gmock/gmock.h"
 
 // A matcher that verifies that ErrorOr* types contain a result.
@@ -55,3 +58,5 @@ MATCHER(NoError, "") {
   }
   return true;
 }
+
+#endif  // CC_OAK_SESSION_TESTING_MATCHERS_H_

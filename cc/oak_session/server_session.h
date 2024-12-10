@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+#include <optional>
 #include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
 #include "proto/session/session.pb.h"
 
@@ -44,7 +46,7 @@ class ServerSession {
   absl::StatusOr<std::optional<std::string>> Read();
 
  private:
-  ServerSession(bindings::ServerSession* rust_session)
+  explicit ServerSession(bindings::ServerSession* rust_session)
       : rust_session_(rust_session) {}
   bindings::ServerSession* rust_session_;
 };

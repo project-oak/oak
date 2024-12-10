@@ -21,6 +21,7 @@ package(
 
 cc_library(
     name = "oak_session_bindings",
+    srcs = ["oak_session_bindings.cc"],
     hdrs = ["oak_session_bindings.h"],
     deps = [
         "//oak_session/ffi:oak_session_ffi_client_session",
@@ -42,15 +43,6 @@ cc_test(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",
         "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "oak_session_testing",
-    testonly = True,
-    hdrs = ["oak_session_testing.h"],
-    deps = [
-        "@com_google_googletest//:gtest",
     ],
 )
 

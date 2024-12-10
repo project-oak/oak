@@ -16,6 +16,7 @@
 
 #include "cc/oak_session/client_session.h"
 
+#include <optional>
 #include <string>
 
 #include "absl/status/status.h"
@@ -28,7 +29,7 @@ namespace oak::session {
 namespace {}  // namespace
 
 absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create() {
-  bindings::ErrorOrClientSession result = bindings::new_client_session();
+  const bindings::ErrorOrClientSession result = bindings::new_client_session();
 
   if (result.error != nullptr) {
     return ErrorIntoStatus(result.error);
@@ -41,7 +42,7 @@ bool ClientSession::IsOpen() { return bindings::client_is_open(rust_session_); }
 
 absl::Status ClientSession::PutIncomingMessage(
     const v1::SessionResponse& response) {
-  std::string response_bytes = response.SerializeAsString();
+  const std::string response_bytes = response.SerializeAsString();
   bindings::Error* error = bindings::client_put_incoming_message(
       rust_session_, bindings::BytesFromString(response_bytes));
   return ErrorIntoStatus(error);
@@ -49,7 +50,7 @@ absl::Status ClientSession::PutIncomingMessage(
 
 absl::StatusOr<std::optional<v1::SessionRequest>>
 ClientSession::GetOutgoingMessage() {
-  bindings::ErrorOrBytes result =
+  const bindings::ErrorOrBytes result =
       bindings::client_get_outgoing_message(rust_session_);
   if (result.error != nullptr) {
     return ErrorIntoStatus(result.error);
@@ -77,7 +78,7 @@ absl::Status ClientSession::Write(absl::string_view unencrypted_request) {
 }
 
 absl::StatusOr<std::optional<std::string>> ClientSession::Read() {
-  bindings::ErrorOrBytes result = bindings::client_read(rust_session_);
+  const bindings::ErrorOrBytes result = bindings::client_read(rust_session_);
   if (result.error != nullptr) {
     return ErrorIntoStatus(result.error);
   }
@@ -87,7 +88,7 @@ absl::StatusOr<std::optional<std::string>> ClientSession::Read() {
   }
 
   // Copy into new result string so we can free the bytes.
-  std::string result_string = bindings::BytesToString(*result.result);
+  const std::string result_string = bindings::BytesToString(*result.result);
 
   bindings::free_bytes(result.result);
   return result_string;

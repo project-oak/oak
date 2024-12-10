@@ -45,13 +45,14 @@ struct Bytes {
   uint64_t len;
 };
 
-inline Bytes BytesFromString(absl::string_view bytes) {
-  return Bytes{.data = bytes.data(), .len = bytes.size()};
-}
+// Create a `Bytes` instance wrapping the provided string data.
+// The lifetime of the created bytes is determined by the lifetime
+// of the data backing the string_view.
+Bytes BytesFromString(absl::string_view bytes);
 
-inline std::string BytesToString(Bytes bytes) {
-  return std::string(bytes.data, bytes.len);
-}
+// Create a new string wrapping the Bytes object.
+// The Bytes data will be copied into a new string.
+std::string BytesToString(Bytes bytes);
 
 // Corresponds to Error struct in oak_session/ffi/types.rs
 struct Error {
@@ -107,15 +108,7 @@ extern void free_error(Error*);
 // message populated from the provided error.
 //
 // The error will be released.
-absl::Status ErrorIntoStatus(bindings::Error* error) {
-  if (error == nullptr) {
-    return absl::OkStatus();
-  }
-  absl::Status status = absl::Status(absl::StatusCode::kInternal,
-                                     bindings::BytesToString(error->message));
-  free_error(error);
-  return status;
-}
+absl::Status ErrorIntoStatus(bindings::Error* error);
 
 }  // namespace oak::session::bindings
 
