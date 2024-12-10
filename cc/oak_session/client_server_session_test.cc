@@ -79,12 +79,12 @@ TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
 
   DoHandshake(**client_session, **server_session);
 
-  absl::StatusOr<std::optional<std::string>> client_read =
+  absl::StatusOr<std::optional<v1::PlaintextMessage>> client_read =
       (*client_session)->Read();
   ASSERT_THAT(client_read, IsOk());
   ASSERT_THAT(*client_read, Eq(std::nullopt));
 
-  absl::StatusOr<std::optional<std::string>> server_read =
+  absl::StatusOr<std::optional<v1::PlaintextMessage>> server_read =
       (*server_session)->Read();
   ASSERT_THAT(server_read, IsOk());
   ASSERT_THAT(*server_read, Eq(std::nullopt));
@@ -96,21 +96,23 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
 
   DoHandshake(**client_session, **server_session);
 
-  std::string request_text = "Hello Server";
+  v1::PlaintextMessage plaintext_message_request;
+  plaintext_message_request.set_plaintext("Hello Server");
 
-  ASSERT_THAT((*client_session)->Write(request_text), IsOk());
+  ASSERT_THAT((*client_session)->Write(plaintext_message_request), IsOk());
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
   ASSERT_THAT(request, IsOk());
   ASSERT_THAT(*request, Ne(std::nullopt));
 
   ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
-  absl::StatusOr<std::optional<std::string>> received_request =
+  absl::StatusOr<std::optional<v1::PlaintextMessage>> received_request =
       (*server_session)->Read();
   ASSERT_THAT(received_request, IsOk());
   ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT(**received_request, Eq(request_text));
+  EXPECT_THAT((**received_request).plaintext(),
+              Eq(plaintext_message_request.plaintext()));
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
@@ -119,21 +121,23 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
 
   DoHandshake(**client_session, **server_session);
 
-  std::string response_text = "Hello Server";
+  v1::PlaintextMessage plaintext_message_response;
+  plaintext_message_response.set_plaintext("Hello Client");
 
-  ASSERT_THAT((*server_session)->Write(response_text), IsOk());
+  ASSERT_THAT((*server_session)->Write(plaintext_message_response), IsOk());
   absl::StatusOr<std::optional<SessionResponse>> response =
       (*server_session)->GetOutgoingMessage();
   ASSERT_THAT(response, IsOk());
   ASSERT_THAT(*response, Ne(std::nullopt));
 
   ASSERT_THAT((*client_session)->PutIncomingMessage(**response), IsOk());
-  absl::StatusOr<std::optional<std::string>> received_response =
+  absl::StatusOr<std::optional<v1::PlaintextMessage>> received_request =
       (*client_session)->Read();
-  ASSERT_THAT(received_response, IsOk());
-  ASSERT_THAT(*received_response, Ne(std::nullopt));
+  ASSERT_THAT(received_request, IsOk());
+  ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT(**received_response, Eq(response_text));
+  EXPECT_THAT((**received_request).plaintext(),
+              Eq(plaintext_message_response.plaintext()));
 }
 
 }  // namespace

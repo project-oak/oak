@@ -17,10 +17,14 @@
 #ifndef CC_SERVER_OAK_SESSION_CHANNEL_H_
 #define CC_SERVER_OAK_SESSION_CHANNEL_H_
 
+#include <optional>
+#include <string>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 #include "cc/utils/status/status.h"
+#include "proto/session/session.pb.h"
 
 namespace oak::session::channel {
 
@@ -56,7 +60,9 @@ class OakSessionChannel {
 
   // Encrypt and send a message back to the other party.
   absl::Status Send(absl::string_view unencrypted_message) {
-    absl::Status write_result = session_->Write(unencrypted_message);
+    v1::PlaintextMessage plaintext_message;
+    plaintext_message.set_plaintext(unencrypted_message);
+    absl::Status write_result = session_->Write(plaintext_message);
     if (!write_result.ok()) {
       return util::status::Annotate(write_result,
                                     "Failed to write message for encryption");
@@ -100,7 +106,7 @@ class OakSessionChannel {
           put_result, "Failed to put incoming request onto state machine");
     }
 
-    absl::StatusOr<std::optional<std::string>> decrypted_message =
+    absl::StatusOr<std::optional<v1::PlaintextMessage>> decrypted_message =
         session_->Read();
 
     if (!decrypted_message.ok()) {
@@ -115,7 +121,7 @@ class OakSessionChannel {
           "result");
     }
 
-    return **decrypted_message;
+    return (**decrypted_message).plaintext();
   }
 
   // Create a new OakSessionChannel instance with the provided session and

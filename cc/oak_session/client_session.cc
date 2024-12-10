@@ -70,14 +70,16 @@ ClientSession::GetOutgoingMessage() {
   return request;
 }
 
-absl::Status ClientSession::Write(absl::string_view unencrypted_request) {
+absl::Status ClientSession::Write(
+    const v1::PlaintextMessage& unencrypted_request) {
   bindings::Error* error = bindings::client_write(
-      rust_session_, bindings::BytesFromString(unencrypted_request));
+      rust_session_,
+      bindings::BytesFromString(unencrypted_request.SerializeAsString()));
 
   return ErrorIntoStatus(error);
 }
 
-absl::StatusOr<std::optional<std::string>> ClientSession::Read() {
+absl::StatusOr<std::optional<v1::PlaintextMessage>> ClientSession::Read() {
   const bindings::ErrorOrBytes result = bindings::client_read(rust_session_);
   if (result.error != nullptr) {
     return ErrorIntoStatus(result.error);
@@ -87,11 +89,15 @@ absl::StatusOr<std::optional<std::string>> ClientSession::Read() {
     return std::nullopt;
   }
 
-  // Copy into new result string so we can free the bytes.
-  const std::string result_string = bindings::BytesToString(*result.result);
+  v1::PlaintextMessage plaintext_message_result;
+  if (!plaintext_message_result.ParseFromString(
+          bindings::BytesToString(*result.result))) {
+    return absl::InternalError(
+        "Failed to parse client_read result bytes as PlaintextMessage");
+  }
 
   bindings::free_bytes(result.result);
-  return result_string;
+  return plaintext_message_result;
 }
 
 ClientSession::~ClientSession() {

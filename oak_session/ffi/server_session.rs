@@ -157,7 +157,7 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrBytes {
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(decrypted_message.plaintext.as_slice())
+    ErrorOrBytes::ok(&Message::encode_to_vec(&decrypted_message))
 }
 
 ///  Calls [`ServerSession::write`] on the provided
@@ -178,13 +178,18 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrBytes {
 #[no_mangle]
 pub unsafe extern "C" fn server_write(
     session: *mut ServerSession,
-    plaintext_bytes: Bytes,
+    plaintext_message_bytes: Bytes,
 ) -> *const Error {
-    safe_server_write(&mut *session, plaintext_bytes.as_slice())
+    safe_server_write(&mut *session, plaintext_message_bytes.as_slice())
 }
 
 fn safe_server_write(session: &mut ServerSession, plaintext_slice: &[u8]) -> *const Error {
-    match session.write(&PlaintextMessage { plaintext: plaintext_slice.to_vec() }) {
+    let plaintext_message = match PlaintextMessage::decode(plaintext_slice) {
+        Ok(r) => r,
+        Err(e) => return Error::new_raw(e.to_string()),
+    };
+
+    match session.write(&plaintext_message) {
         Ok(()) => std::ptr::null(),
         Err(e) => Error::new_raw(e.to_string()),
     }

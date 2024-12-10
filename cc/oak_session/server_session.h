@@ -42,8 +42,8 @@ class ServerSession {
   bool IsOpen();
   absl::Status PutIncomingMessage(const v1::SessionRequest& request);
   absl::StatusOr<std::optional<v1::SessionResponse>> GetOutgoingMessage();
-  absl::Status Write(absl::string_view unencrypted_request);
-  absl::StatusOr<std::optional<std::string>> Read();
+  absl::Status Write(const v1::PlaintextMessage& unencrypted_request);
+  absl::StatusOr<std::optional<v1::PlaintextMessage>> Read();
 
  private:
   explicit ServerSession(bindings::ServerSession* rust_session)

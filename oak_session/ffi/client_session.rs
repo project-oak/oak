@@ -136,6 +136,8 @@ fn safe_client_put_incoming_message(
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
 ///
+/// The returned [`Bytes`] will be a serialized [`PlaintextMessage`] proto.
+///
 /// If non-null bytes are returned, they should be freed with free_bytes.
 /// If a non-null error is returned, it should be freed with free_error.
 ///
@@ -155,16 +157,17 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrBytes {
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(&decrypted_message.plaintext)
+    ErrorOrBytes::ok(&Message::encode_to_vec(&decrypted_message))
 }
 
 /// Calls [`ClientSession::write`] on the provided
 /// [`ClientSession`] pointer.
 ///
+/// The provided `Bytes` should be a serialized `PlaintextMessage` proto.
+///
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
 ///
-/// If non-null bytes are returned, they should be freed with free_bytes.
 /// If a non-null error is returned, it should be freed with free_error.
 ///
 /// # Safety
@@ -176,13 +179,21 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrBytes {
 #[no_mangle]
 pub unsafe extern "C" fn client_write(
     session: *mut ClientSession,
-    plaintext_bytes: Bytes,
+    plaintext_message_bytes: Bytes,
 ) -> *const Error {
-    safe_client_write(&mut *session, plaintext_bytes.as_slice())
+    safe_client_write(&mut *session, plaintext_message_bytes.as_slice())
 }
 
 fn safe_client_write(session: &mut ClientSession, plaintext_slice: &[u8]) -> *const Error {
-    match session.write(&PlaintextMessage { plaintext: plaintext_slice.to_vec() }) {
+    let plaintext_message = match PlaintextMessage::decode(plaintext_slice) {
+        Ok(r) => r,
+        Err(e) => {
+            println!("ERROR {e}");
+            return Error::new_raw(e.to_string());
+        }
+    };
+
+    match session.write(&plaintext_message) {
         Ok(()) => std::ptr::null(),
         Err(e) => Error::new_raw(e.to_string()),
     }

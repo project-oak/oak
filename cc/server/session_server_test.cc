@@ -70,10 +70,11 @@ TEST(OakSessionServerTest, CreatedSessionCanSend) {
 
   std::string test_send_msg = "Testing Send";
   ASSERT_THAT((*channel)->Send(test_send_msg), IsOk());
-  absl::StatusOr<std::optional<std::string>> test_send_read_back =
-      client_session_ptr->Read();
+  absl::StatusOr<std::optional<session::v1::PlaintextMessage>>
+      test_send_read_back = client_session_ptr->Read();
   EXPECT_THAT(test_send_read_back, IsOk());
-  EXPECT_THAT(*test_send_read_back, Optional(Eq(test_send_msg)));
+  EXPECT_THAT(*test_send_read_back, Ne(std::nullopt));
+  EXPECT_THAT((**test_send_read_back).plaintext(), Eq(test_send_msg));
 }
 
 TEST(OakSessionServerTest, CreatedSessionCanReceive) {
@@ -84,12 +85,13 @@ TEST(OakSessionServerTest, CreatedSessionCanReceive) {
   auto channel = OakSessionServer().NewChannel(
       std::make_unique<TestTransport>(std::move(*client_session)));
 
-  std::string test_recv_msg = "Testing Receive";
-  ASSERT_THAT(client_session_ptr->Write(test_recv_msg), IsOk());
+  session::v1::PlaintextMessage test_recv_plaintext_msg;
+  test_recv_plaintext_msg.set_plaintext("Testing Receive");
+  ASSERT_THAT(client_session_ptr->Write(test_recv_plaintext_msg), IsOk());
 
   absl::StatusOr<std::string> server_read = (*channel)->Receive();
   EXPECT_THAT(server_read, IsOk());
-  EXPECT_THAT(*server_read, Eq(test_recv_msg));
+  EXPECT_THAT(*server_read, Eq(test_recv_plaintext_msg.plaintext()));
 }
 }  // namespace
 }  // namespace oak::server

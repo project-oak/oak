@@ -130,8 +130,12 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
 
   DoHandshake(server_session, client_session);
 
-  std::string msg = "Hello Client To Server";
-  ASSERT_THAT(client_write(client_session, BytesFromString(msg)), NoError());
+  v1::PlaintextMessage plaintext_message_out;
+  plaintext_message_out.set_plaintext("Hello Client To Server");
+  ASSERT_THAT(
+      client_write(client_session,
+                   BytesFromString(plaintext_message_out.SerializeAsString())),
+      NoError());
 
   ErrorOrBytes client_out = client_get_outgoing_message(client_session);
   ASSERT_THAT(client_out, IsResult());
@@ -143,7 +147,11 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
   ErrorOrBytes server_in = server_read(server_session);
   ASSERT_THAT(server_in, IsResult());
 
-  ASSERT_EQ(msg, BytesToString(*server_in.result));
+  v1::PlaintextMessage plaintext_message_in;
+  ASSERT_TRUE(
+      plaintext_message_in.ParseFromString(BytesToString(*server_in.result)));
+  EXPECT_THAT(plaintext_message_in.plaintext(),
+              Eq(plaintext_message_out.plaintext()));
   free_bytes(server_in.result);
 
   free_server_session(server_session);
@@ -160,8 +168,12 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
 
   DoHandshake(server_session, client_session);
 
-  std::string msg = "Hello Server to Client";
-  ASSERT_THAT(server_write(server_session, BytesFromString(msg)), NoError());
+  v1::PlaintextMessage plaintext_message_out;
+  plaintext_message_out.set_plaintext("Hello Server to Client");
+  ASSERT_THAT(
+      server_write(server_session,
+                   BytesFromString(plaintext_message_out.SerializeAsString())),
+      NoError());
 
   ErrorOrBytes server_out = server_get_outgoing_message(server_session);
   ASSERT_THAT(server_out, IsResult());
@@ -173,7 +185,11 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
   ErrorOrBytes client_in = client_read(client_session);
   ASSERT_THAT(client_in, IsResult());
 
-  ASSERT_EQ(msg, BytesToString(*client_in.result));
+  v1::PlaintextMessage plaintext_message_in;
+  ASSERT_TRUE(
+      plaintext_message_in.ParseFromString(BytesToString(*client_in.result)));
+  ASSERT_EQ(plaintext_message_in.plaintext(),
+            plaintext_message_out.plaintext());
   free_bytes(client_in.result);
 
   free_server_session(server_session);

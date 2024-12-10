@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::session::{ClientSession, ServerSession};
 use oak_session_ffi_client_session as client_ffi;
 use oak_session_ffi_server_session as server_ffi;
@@ -40,8 +40,10 @@ fn test_client_encrypt_server_decrypt() {
 
     // Encrypt
     let message = b"Hello FFI World Client To Server";
-    let message_bytes = Bytes::new_alloc(message);
-    let write_result = unsafe { client_ffi::client_write(client_session_ptr, message_bytes) };
+    let plaintext_message = PlaintextMessage { plaintext: message.to_vec() };
+    let message_bytes = Message::encode_to_vec(&plaintext_message);
+    let write_result =
+        unsafe { client_ffi::client_write(client_session_ptr, Bytes::new_alloc(&message_bytes)) };
     assert_eq!(write_result, std::ptr::null());
     let encrypted_result = unsafe { client_ffi::client_get_outgoing_message(client_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
@@ -56,8 +58,11 @@ fn test_client_encrypt_server_decrypt() {
     let decrypted_result = unsafe { server_ffi::server_read(server_session_ptr) };
     assert_eq!(decrypted_result.error, std::ptr::null());
 
-    let decrypted_slice = unsafe { decrypted_result.result_slice() };
-    assert_eq!(decrypted_slice, message);
+    let plaintext_message =
+        PlaintextMessage::decode(unsafe { (*decrypted_result.result).as_slice() })
+            .expect("couldn't decode PlaintextMessage result");
+
+    assert_eq!(plaintext_message.plaintext, message);
 
     unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
 }
@@ -70,8 +75,10 @@ fn test_server_encrypt_client_decrypt() {
 
     // Encrypt
     let message = b"Hello FFI World Server To Client";
-    let message_bytes = Bytes::new_alloc(message);
-    let write_result = unsafe { server_ffi::server_write(server_session_ptr, message_bytes) };
+    let plaintext_message = PlaintextMessage { plaintext: message.to_vec() };
+    let message_bytes = Message::encode_to_vec(&plaintext_message);
+    let write_result =
+        unsafe { server_ffi::server_write(server_session_ptr, Bytes::new_alloc(&message_bytes)) };
     assert_eq!(write_result, std::ptr::null());
     let encrypted_result = unsafe { server_ffi::server_get_outgoing_message(server_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
@@ -86,8 +93,10 @@ fn test_server_encrypt_client_decrypt() {
     let decrypted_result = unsafe { client_ffi::client_read(client_session_ptr) };
     assert_eq!(decrypted_result.error, std::ptr::null());
 
-    let decrypted_slice = unsafe { decrypted_result.result_slice() };
-    assert_eq!(decrypted_slice, message);
+    let plaintext_message =
+        PlaintextMessage::decode(unsafe { (*decrypted_result.result).as_slice() })
+            .expect("couldn't decode PlaintextMessage result");
+    assert_eq!(plaintext_message.plaintext, message);
 
     unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
 }

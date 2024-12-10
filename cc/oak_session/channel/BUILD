@@ -24,6 +24,7 @@ cc_library(
     hdrs = ["oak_session_channel.h"],
     deps = [
         "//cc/utils/status",
+        "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
