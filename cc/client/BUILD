@@ -79,3 +79,32 @@ cc_binary(
         "@com_google_absl//absl/log",
     ],
 )
+
+cc_library(
+    name = "session_client",
+    srcs = ["session_client.cc"],
+    hdrs = ["session_client.h"],
+    deps = [
+        "//cc/oak_session:client_session",
+        "//cc/oak_session/channel",
+        "//cc/utils/status",
+        "//proto/session:session_cc_proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "session_client_test",
+    srcs = ["session_client_test.cc"],
+    deps = [
+        ":session_client",
+        "//cc/oak_session:client_session",
+        "//cc/oak_session:server_session",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:status_matchers",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
