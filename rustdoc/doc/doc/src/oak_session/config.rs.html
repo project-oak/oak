@@ -202,6 +202,27 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -239,7 +260,7 @@
     <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig,
     <span class="kw">pub </span>handshaker_config: HandshakerConfig,
     <span class="kw">pub </span>encryptor_config: EncryptorConfig,
-    <span class="kw">pub </span>binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
+    <span class="kw">pub </span>binding_key_extractors: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
 }
 
 <span class="kw">impl </span>SessionConfig {
@@ -288,13 +309,13 @@
         <span class="kw">let </span>encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        <span class="kw">let </span>binding_key_extractor = Box::new(DefaultSigningKeyExtractor);
+        <span class="kw">let </span>binding_key_extractors = BTreeMap::new();
 
         <span class="kw">let </span>config = SessionConfig {
             attestation_provider_config,
             handshaker_config,
             encryptor_config,
-            binding_key_extractor,
+            binding_key_extractors,
         };
         <span class="self">Self </span>{ config }
     }
@@ -321,7 +342,8 @@
 
     <span class="doccomment">/// Add an Attestation Verifier that will verify Evidence and Endorsements
     /// from the peer's TEE. Verifier only verifies Evidence and
-    /// Endorsements with with the same ID as the `attester_id`.
+    /// Endorsements with with the same ID as the `attester_id`. A default key
+    /// extractor is used to bind the received evidence to the session.
     ///
     /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-verifier&gt;
     </span><span class="kw">pub fn </span>add_peer_verifier(
@@ -329,7 +351,35 @@
         attester_id: String,
         verifier: Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;,
     ) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.attestation_provider_config.peer_verifiers.insert(attester_id, verifier);
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier);
+        <span class="self">self</span>.config
+            .binding_key_extractors
+            .insert(attester_id, Box::new(DefaultSigningKeyExtractor {}));
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Add an Attestation Verifier with the custom key extractor to extract the
+    /// key to bind the attestation to the session. The verifier will verify
+    /// Evidence and Endorsements from the peer's TEE, and the key extractor
+    /// will be used to extract the bindign key from the evidence. Verifier only
+    /// verifies Evidence and Endorsements with with the same ID as the
+    /// `attester_id`.
+    ///
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-verifier&gt;
+    </span><span class="kw">pub fn </span>add_peer_verifier_with_key_extractor(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        verifier: Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;,
+        key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier);
+        <span class="self">self</span>.config.binding_key_extractors.insert(attester_id, key_extractor);
         <span class="self">self
     </span>}
 
@@ -356,14 +406,6 @@
         encryptor_provider: Box&lt;<span class="kw">dyn </span>EncryptorProvider&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.config.encryptor_config.encryptor_provider = encryptor_provider;
-        <span class="self">self
-    </span>}
-
-    <span class="kw">pub fn </span>set_binding_key_extractor(
-        <span class="kw-2">mut </span><span class="self">self</span>,
-        binding_key_extractor: Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.binding_key_extractor = binding_key_extractor;
         <span class="self">self
     </span>}
 
