@@ -84,8 +84,6 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -108,8 +106,7 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_attestation::dice::DiceAttester;
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::DiceData;
-<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>oak_attestation_types::util::Serializable;
 <span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// The path to the file where the DICE data provided by Stage 1 is stored.
@@ -134,8 +131,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity(size);
     file.read_to_end(<span class="kw-2">&amp;mut </span>buffer).context(<span class="string">"couldn't read DICE data from file"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>result =
-        DiceData::decode_length_delimited(<span class="kw-2">&amp;</span>buffer[..]).context(<span class="string">"couldn't parse DICE data"</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>result = DiceAttester::deserialize(<span class="kw-2">&amp;</span>buffer[..]).context(<span class="string">"couldn't parse DICE data"</span>)<span class="question-mark">?</span>;
 
     buffer.zeroize();
     file.rewind()<span class="question-mark">?</span>;
@@ -147,7 +143,7 @@
     // Still the following line does not guarantee overwriting the keys as the
     // filesystem might pick other memory pages to write the data on.
     </span>file.write_all(<span class="kw-2">&amp;</span>zeros).context(<span class="string">"couldn't overwrite DICE data file"</span>)<span class="question-mark">?</span>;
-    result.try_into()
+    <span class="prelude-val">Ok</span>(result)
 }
 
 <span class="attr">#[cfg(test)]
@@ -159,7 +155,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_load_stage1_dice_data() {
         <span class="kw">const </span>DICE_DATA_PATH: <span class="kw-2">&amp;</span>str = <span class="string">"dice"</span>;
-        <span class="kw">const </span>DICE_DATA_SIZE: usize = <span class="number">2483</span>;
+        <span class="kw">const </span>DICE_DATA_SIZE: usize = <span class="number">2489</span>;
 
         <span class="attr">#[cfg(feature = <span class="string">"bazel"</span>)]
         </span>fs::copy(<span class="string">"oak_containers/orchestrator/testdata/test_dice"</span>, DICE_DATA_PATH).unwrap();

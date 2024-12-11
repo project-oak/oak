@@ -184,6 +184,9 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -207,7 +210,10 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_attestation::dice::{evidence_and_event_log_to_proto, DiceAttester};
-<span class="kw">use </span>oak_attestation_types::{attester::Attester, util::Serializable};
+<span class="kw">use </span>oak_attestation_types::{
+    attester::Attester,
+    util::{try_decode_length_delimited_proto, Serializable},
+};
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
@@ -215,7 +221,7 @@
 };
 <span class="kw">use </span>oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, DiceData, EventLog, Evidence},
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
 };
 <span class="kw">use </span>p256::ecdsa::SigningKey;
@@ -256,7 +262,7 @@
             dice_attester.extend(<span class="kw-2">&amp;</span>stage0_event).expect(<span class="string">"couldn't extend attester evidence"</span>);
 
             oak_stage0_dice::dice_data_proto_to_stage0_dice_data(
-                <span class="kw-2">&amp;</span>DiceData::decode_length_delimited(dice_attester.serialize().as_slice())
+                <span class="kw-2">&amp;</span>try_decode_length_delimited_proto(dice_attester.serialize().as_slice())
                     .expect(<span class="string">"couldn't decode attestation data"</span>),
             )
             .expect(<span class="string">"couldn't create attestation data struct"</span>)

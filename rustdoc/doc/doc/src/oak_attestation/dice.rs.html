@@ -426,6 +426,9 @@
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -447,7 +450,10 @@
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable, CoseKey};
-<span class="kw">use </span>oak_attestation_types::{attester::Attester, util::Serializable};
+<span class="kw">use </span>oak_attestation_types::{
+    attester::Attester,
+    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+};
 <span class="kw">use </span>oak_dice::{
     cert::{
         cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
@@ -727,8 +733,8 @@
 
 <span class="kw">impl </span>Serializable <span class="kw">for </span>DiceAttester {
     <span class="kw">fn </span>deserialize(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>dice_data = DiceData::decode_length_delimited(bytes)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"couldn't parse DICE data: {:?}"</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>dice_data: DiceData =
+            try_decode_length_delimited_proto(bytes).context(<span class="string">"couldn't parse DICE data: {:?}"</span>)<span class="question-mark">?</span>;
         dice_data.try_into()
     }
 
@@ -739,7 +745,7 @@
                 eca_private_key: <span class="self">self</span>.signing_key.to_bytes().as_slice().into(),
             }),
         };
-        <span class="kw">let </span>result = dice_data.encode_length_delimited_to_vec();
+        <span class="kw">let </span>result = encode_length_delimited_proto(<span class="kw-2">&amp;</span>dice_data);
 
         <span class="comment">// Zero out the ECA private key in the proto.
         </span>dice_data
