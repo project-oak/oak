@@ -27,8 +27,8 @@ rust_library(
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
+        "//oak_containers/attestation",
         "//oak_containers/channel",
-        "//oak_containers/stage1_dice",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",

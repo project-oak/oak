@@ -38,6 +38,7 @@ use oak_proto_rust::oak::{
     session::v1::EndorsedEvidence,
 };
 use p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
+use prost::Message;
 
 use crate::OrchestratorInterface;
 
@@ -151,9 +152,10 @@ impl StandaloneOrchestrator {
 
         attester.extend(&encoded_stage0_event).context("couldn't extend attester evidence")?;
 
-        // Add Stage1 layer data
-        let stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
-        attester.add_layer(stage1_layer_data)?;
+        // Add Stage1 event
+        let stage1_event =
+            oak_containers_attestation::create_system_layer_event(stage1_system_image);
+        attester.extend(&stage1_event.encode_to_vec())?;
 
         // Add Orchestrator layer data
         let orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(

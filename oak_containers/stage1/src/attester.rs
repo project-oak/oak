@@ -14,16 +14,17 @@
 // limitations under the License.
 //
 
-use core::ops::RangeBounds;
+use core::{marker::PhantomData, ops::RangeBounds};
 use std::fs::{read_dir, read_to_string, OpenOptions};
 
 use anyhow::Context;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-use oak_dice::evidence::STAGE0_MAGIC;
-use oak_proto_rust::oak::attestation::v1::EventLog;
-use prost::Message;
-use x86_64::PhysAddr;
-use zerocopy::FromBytes;
+use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_dice::evidence::STAGE0_DICE_PROTO_MAGIC;
+use x86_64::{
+    structures::paging::{PageSize, Size4KiB},
+    PhysAddr,
+};
 use zeroize::Zeroize;
 
 use crate::try_parse_phys_addr;
@@ -56,34 +57,27 @@ impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
     }
 }
 
-/// Holds a reference to the DICE data in physical memory.
+/// Holds a reference to the Attester data in physical memory.
 ///
 /// Zeroes out the source physical memory on drop.
-pub struct SensitiveDiceDataMemory {
+pub struct SensitiveDataMemory<A> {
     start_ptr: *mut u8,
-    eventlog_ptr: *mut u8,
+    attester_ptr: *const u8,
     sensitive_memory_length: usize,
+    _phantom: PhantomData<A>,
 }
 
-impl SensitiveDiceDataMemory {
-    /// Safety: Caller must ensure that there is only instance of this struct.
+impl<A> SensitiveDataMemory<A>
+where
+    A: Attester + Serializable,
+{
+    /// Safety: Caller must ensure that there is only instance of this struct
+    /// for a given memory range.
     pub unsafe fn new(
         start: PhysAddr,
         eventlog_start: PhysAddr,
-        sensitive_memory_length: Option<usize>,
+        sensitive_memory_length: usize,
     ) -> anyhow::Result<Self> {
-        // Indicates the length of the DICE data that needs to be zeroed to delete
-        // the layer1 certificate authority from memory. Older versions of stage0 do not
-        // send it, then we default to the length of the relevant struct.
-        let sensitive_memory_length = sensitive_memory_length
-            .inspect(|&l| {
-                assert!(
-                    l >= core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-                    "the cmdline argument for dice data length must be no less than the size of the Stage0DiceData struct"
-                );
-            })
-            .unwrap_or_else(core::mem::size_of::<oak_dice::evidence::Stage0DiceData>);
-
         // Linux presents an inclusive end address.
         let end = start + (sensitive_memory_length as u64 - 1);
         // Ensure that the memory range is in reserved memory.
@@ -97,11 +91,11 @@ impl SensitiveDiceDataMemory {
         );
 
         // Open a file representing the physical memory.
-        let dice_file = OpenOptions::new()
+        let attester_file = OpenOptions::new()
             .read(true)
             .write(true)
             .open(PHYS_MEM_PATH)
-            .context("couldn't open DICE memory device for reading")?;
+            .context("couldn't open attester memory device for reading")?;
 
         // Safety: we have checked it is within a reserved region, so the Linux kernel
         // will not use it for anything else.
@@ -112,84 +106,58 @@ impl SensitiveDiceDataMemory {
                 ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
                 MapFlags::MAP_SHARED,
                 // Pass the file descriptor as reference to avoid closing it.
-                Some(&dice_file),
+                Some(&attester_file),
                 start.as_u64().try_into()?,
             )?
         };
 
-        // Calculate the eventlog start pointer using the offset between start and
-        // eventlog_start
-        let eventlog_offset = eventlog_start.as_u64() - start.as_u64();
-        let eventlog_ptr = unsafe { start_ptr.add(eventlog_offset as usize) };
+        // Calculate the attester start pointer using the offset between `start`` and
+        // `eventlog_start``. The serialized attester is stored 4 KiB after the start of
+        // the event log. The attester region starts with an 8 byte magic number.
+        let attester_offset = (eventlog_start.as_u64() - start.as_u64() + Size4KiB::SIZE) as usize;
+
+        anyhow::ensure!(
+            attester_offset + core::mem::size_of::<u64>() < sensitive_memory_length,
+            "serialized attester is not in sensitive memory range"
+        );
+
+        // Safety: we have checked that the magic number pointer falls in the sensitive
+        // memory range.
+        let magic_ptr = unsafe { start_ptr.add(attester_offset) } as *const u64;
+        anyhow::ensure!(magic_ptr.is_aligned(), "attester magic number is not properly aligned");
+        // Safety: we have checked that the magic number pointer is correctly aligned.
+        let magic = unsafe { magic_ptr.read() };
+        anyhow::ensure!(magic == STAGE0_DICE_PROTO_MAGIC, "attester magic number is invalid");
+        // Note: adding 1 to the pointer adds 8 bytes since points to a `u64`.
+        //
+        // Safety: we have checked that the data after the magic number pointer falls in
+        // the sensitive memory range.
+        let attester_ptr = unsafe { magic_ptr.add(1) } as *const u8;
 
         Ok(Self {
             start_ptr: start_ptr as *mut u8,
-            eventlog_ptr: eventlog_ptr as *mut u8,
+            attester_ptr,
             sensitive_memory_length,
+            _phantom: PhantomData,
         })
     }
 
-    /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
-    /// located at the given physical address.
-    fn read_stage0_dice_data(&self) -> Result<oak_dice::evidence::Stage0DiceData, anyhow::Error> {
-        let struct_slice = {
-            // Safety: We have checked the length, know it is backed by physical memory.
-            unsafe {
-                std::slice::from_raw_parts(
-                    self.start_ptr,
-                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
-                )
-            }
-        };
-        oak_dice::evidence::Stage0DiceData::read_from(struct_slice)
-            .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))
-            .and_then(|result| {
-                if result.magic != STAGE0_MAGIC {
-                    Err(anyhow::Error::msg("invalid DICE data"))
-                } else {
-                    Ok(result)
-                }
-            })
-    }
+    /// Extracts the serialized attester from the sensitive memory region and
+    /// deserializes it.
+    pub fn read_into_attester(self) -> anyhow::Result<A> {
+        let attester_size = (self.start_ptr as usize + self.sensitive_memory_length)
+            .checked_sub(self.attester_ptr as usize)
+            .context("invalid attester pointer")?;
+        // Safety: We calculated the length to make sure it fits in the sensitive memory
+        // range.
+        let attester_bytes =
+            unsafe { std::slice::from_raw_parts(self.attester_ptr, attester_size) };
 
-    // TODO: b/356454287 - Use this function.
-    /// Reads the event log from the specified physical address.
-    #[allow(dead_code)]
-    fn read_eventlog(&self) -> anyhow::Result<EventLog> {
-        // Read the event log size (first 8 bytes)
-        // Safety: We have checked the length, know it is backed by physical memory.
-        let event_log_size = unsafe {
-            let size_bytes = std::slice::from_raw_parts(self.eventlog_ptr, 8);
-            u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize
-        };
-
-        // Check if the event log extends beyond the sensitive memory region
-        if (self.eventlog_ptr as usize) + 8 + event_log_size
-            > (self.start_ptr as usize) + self.sensitive_memory_length
-        {
-            return Err(anyhow::anyhow!("Event log extends beyond sensitive memory region"));
-        }
-
-        // Read the event log bytes
-        let event_log_bytes = {
-            // Safety: We have checked the length, know it is backed by physical memory.
-            unsafe { std::slice::from_raw_parts(self.eventlog_ptr.add(8), event_log_size) }
-        };
-
-        // Decode the EventLog proto
-        EventLog::decode(event_log_bytes).context("Failed to decode EventLog proto")
-    }
-
-    /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data
-    /// located at the given physical address.
-    pub fn read_into_attester(self) -> anyhow::Result<oak_attestation::dice::DiceAttester> {
-        let stage0_dice_data = self.read_stage0_dice_data()?;
-        let eventlog = self.read_eventlog()?;
-        oak_containers_stage1_dice::stage0_dice_data_into_dice_attester(stage0_dice_data, eventlog)
+        A::deserialize(attester_bytes).context("couldn't deserialize attester")
     }
 }
 
-impl Drop for SensitiveDiceDataMemory {
+impl<A> Drop for SensitiveDataMemory<A> {
     fn drop(&mut self) {
         // Zero out the sensitive_dice_data_memory.
         // Safety: This struct is only used once. We have checked the length,

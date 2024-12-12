@@ -2354,7 +2354,6 @@ dependencies = [
  "oak_attestation",
  "oak_attestation_types",
  "oak_containers_attestation",
- "oak_containers_stage1_dice",
  "oak_crypto",
  "oak_dice",
  "oak_grpc",
@@ -2369,20 +2368,6 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tower",
-]
-
-[[package]]
-name = "oak_containers_stage1_dice"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ciborium",
- "coset",
- "oak_attestation",
- "oak_dice",
- "oak_proto_rust",
- "prost",
- "prost-types",
 ]
 
 [[package]]

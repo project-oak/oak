@@ -40,7 +40,6 @@ rust_library(
         "//oak_attestation",
         "//oak_attestation_types",
         "//oak_containers/attestation:oak_containers_attestation",
-        "//oak_containers/stage1_dice",
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",

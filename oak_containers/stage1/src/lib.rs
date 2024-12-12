@@ -17,8 +17,8 @@
 #![feature(iterator_try_collect)]
 #![feature(never_type)]
 
+mod attester;
 mod client;
-mod dice;
 mod image;
 
 use std::{
@@ -38,7 +38,8 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_attestation_types::util::Serializable;
+use oak_attestation_types::{attester::Attester, util::Serializable};
+use prost::Message;
 use tokio::process::Command;
 use tonic::transport::Uri;
 use x86_64::PhysAddr;
@@ -55,13 +56,13 @@ pub struct Args {
     pub dice_addr: PhysAddr,
 
     #[arg(long = "oak-dice-length")]
-    pub dice_data_length: Option<usize>,
+    pub dice_data_length: usize,
 
     #[arg(long = "oak-event-log", value_parser = try_parse_phys_addr)]
     pub event_log: PhysAddr,
 }
 
-pub async fn main(args: &Args) -> Result<(), Box<dyn Error>> {
+pub async fn main<A: Attester + Serializable>(args: &Args) -> Result<(), Box<dyn Error>> {
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
     }
@@ -85,7 +86,7 @@ pub async fn main(args: &Args) -> Result<(), Box<dyn Error>> {
     let mut attester = {
         // Safety: This will be the only instance of this struct.
         unsafe {
-            dice::SensitiveDiceDataMemory::new(
+            attester::SensitiveDataMemory::<A>::new(
                 args.dice_addr,
                 args.event_log,
                 args.dice_data_length,
@@ -117,10 +118,9 @@ pub async fn main(args: &Args) -> Result<(), Box<dyn Error>> {
     };
 
     // For safety we generate the DICE data for the next layer before processing the
-    // compressed system image. This consumes the `DiceBuilder` which also
-    // clears the ECA private key provided by Stage 0.
-    let layer_data = oak_containers_stage1_dice::get_layer_data(&buf);
-    attester.add_layer(layer_data)?;
+    // compressed system image.
+    let system_image_event = oak_containers_attestation::create_system_layer_event(&buf);
+    attester.extend(&system_image_event.encode_to_vec())?;
     let dice_data = attester.serialize();
 
     image::extract(&buf, Path::new("/")).await.context("error loading the system image")?;

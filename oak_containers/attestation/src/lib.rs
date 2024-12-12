@@ -26,9 +26,23 @@ use oak_crypto::{
 };
 use oak_dice::cert::{generate_ecdsa_key_pair, SHA2_256_ID};
 use oak_proto_rust::oak::{
-    crypto::v1::EncryptedRequest, key_provisioning::v1::GroupKeys as GroupKeysProto,
+    attestation::v1::{Event, SystemLayerData},
+    crypto::v1::EncryptedRequest,
+    key_provisioning::v1::GroupKeys as GroupKeysProto,
 };
 use prost::Message;
+
+/// Measures the system image and returns a corresponding event log entry.
+pub fn create_system_layer_event(system_image: &[u8]) -> Event {
+    let digest = oak_attestation::dice::MeasureDigest::measure_digest(&system_image);
+    Event {
+        tag: "stage1".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.SystemLayerData".to_string(),
+            value: SystemLayerData { system_image: Some(digest) }.encode_to_vec(),
+        }),
+    }
+}
 
 /// Measures the downloaded container image bytes and configuration and returns
 /// these as a vector of additional CWT claims.

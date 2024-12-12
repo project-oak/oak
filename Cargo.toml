@@ -22,7 +22,6 @@ members = [
   "oak_containers/orchestrator",
   "oak_containers/attestation",
   "oak_containers_sdk",
-  "oak_containers/stage1_dice",
   "oak_containers/syslogd",
   "oak_core",
   "oak_crypto",
@@ -109,7 +108,6 @@ oak_containers_attestation = { path = "./oak_containers/attestation" }
 oak_containers_channel = { path = "./oak_containers/channel" }
 oak_containers_launcher = { path = "./oak_containers/launcher" }
 oak_containers_sdk = { path = "./oak_containers_sdk" }
-oak_containers_stage1_dice = { path = "./oak_containers/stage1_dice" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_debug_service = { path = "./oak_debug_service" }
