@@ -130,6 +130,20 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -158,9 +172,23 @@
 };
 <span class="kw">use </span>oak_dice::cert::{generate_ecdsa_key_pair, SHA2_256_ID};
 <span class="kw">use </span>oak_proto_rust::oak::{
-    crypto::v1::EncryptedRequest, key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
+    attestation::v1::{Event, SystemLayerData},
+    crypto::v1::EncryptedRequest,
+    key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
 };
 <span class="kw">use </span>prost::Message;
+
+<span class="doccomment">/// Measures the system image and returns a corresponding event log entry.
+</span><span class="kw">pub fn </span>create_system_layer_event(system_image: <span class="kw-2">&amp;</span>[u8]) -&gt; Event {
+    <span class="kw">let </span>digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>system_image);
+    Event {
+        tag: <span class="string">"stage1"</span>.to_string(),
+        event: <span class="prelude-val">Some</span>(prost_types::Any {
+            type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.SystemLayerData"</span>.to_string(),
+            value: SystemLayerData { system_image: <span class="prelude-val">Some</span>(digest) }.encode_to_vec(),
+        }),
+    }
+}
 
 <span class="doccomment">/// Measures the downloaded container image bytes and configuration and returns
 /// these as a vector of additional CWT claims.

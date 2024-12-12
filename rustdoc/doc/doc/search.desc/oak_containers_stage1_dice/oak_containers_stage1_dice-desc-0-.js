@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_containers_stage1_dice", 0, "")

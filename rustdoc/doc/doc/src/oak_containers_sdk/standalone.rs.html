@@ -246,6 +246,8 @@
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -286,6 +288,7 @@
     session::v1::EndorsedEvidence,
 };
 <span class="kw">use </span>p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
+<span class="kw">use </span>prost::Message;
 
 <span class="kw">use </span><span class="kw">crate</span>::OrchestratorInterface;
 
@@ -399,9 +402,10 @@
 
         attester.extend(<span class="kw-2">&amp;</span>encoded_stage0_event).context(<span class="string">"couldn't extend attester evidence"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Add Stage1 layer data
-        </span><span class="kw">let </span>stage1_layer_data = oak_containers_stage1_dice::get_layer_data(stage1_system_image);
-        attester.add_layer(stage1_layer_data)<span class="question-mark">?</span>;
+        <span class="comment">// Add Stage1 event
+        </span><span class="kw">let </span>stage1_event =
+            oak_containers_attestation::create_system_layer_event(stage1_system_image);
+        attester.extend(<span class="kw-2">&amp;</span>stage1_event.encode_to_vec())<span class="question-mark">?</span>;
 
         <span class="comment">// Add Orchestrator layer data
         </span><span class="kw">let </span>orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
