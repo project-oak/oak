@@ -28,6 +28,7 @@ cc_library(
         "//cc/oak_session/channel",
         "//cc/utils/status",
         "//proto/session:session_cc_proto",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

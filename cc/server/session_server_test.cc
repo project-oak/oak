@@ -16,7 +16,14 @@
 
 #include "cc/server/session_server.h"
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+
+#include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
+#include "absl/status/statusor.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"
 #include "gmock/gmock.h"
