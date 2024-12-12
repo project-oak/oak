@@ -66,6 +66,7 @@ pub struct StandaloneOrchestratorBuilder<'a> {
     application_config: Vec<u8>,
     encryption_key_pair: Option<(EncryptionKey, Vec<u8>)>,
     signing_key_pair: Option<(SigningKey, VerifyingKey)>,
+    session_binding_key_pair: Option<(SigningKey, VerifyingKey)>,
 }
 
 macro_rules! builder_param {
@@ -89,6 +90,11 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
             None => generate_ecdsa_key_pair(),
         };
 
+        let session_binding_key_pair = match self.session_binding_key_pair {
+            Some((public, private)) => (public, private),
+            None => generate_ecdsa_key_pair(),
+        };
+
         StandaloneOrchestrator::create(
             self.stage0_measurements,
             self.stage1_system_image,
@@ -96,6 +102,7 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
             self.application_config,
             encryption_key_pair,
             signing_key_pair,
+            session_binding_key_pair,
         )
     }
 
@@ -105,6 +112,7 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
     builder_param!(application_config: Vec<u8>);
     builder_param!(encryption_key_pair: Option<(EncryptionKey, Vec<u8>)>);
     builder_param!(signing_key_pair: Option<(SigningKey, VerifyingKey)>);
+    builder_param!(session_binding_key_pair: Option<(SigningKey, VerifyingKey)>);
 }
 
 impl Default for StandaloneOrchestrator {
@@ -123,6 +131,7 @@ impl StandaloneOrchestrator {
             application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
             encryption_key_pair: None,
             signing_key_pair: None,
+            session_binding_key_pair: None,
         }
     }
 
@@ -133,7 +142,20 @@ impl StandaloneOrchestrator {
         application_config: Vec<u8>,
         encryption_key_pair: (EncryptionKey, Vec<u8>),
         signing_key_pair: (SigningKey, VerifyingKey),
+        session_binding_key_pair: (SigningKey, VerifyingKey),
     ) -> Result<Self> {
+        let (encryption_key, encryption_public_key) = encryption_key_pair;
+        let (signing_key, signing_public_key) = signing_key_pair;
+        let (session_binding_key, session_binding_public_key) = session_binding_key_pair;
+
+        let instance_private_keys =
+            InstanceKeys { encryption_key, signing_key, session_binding_key };
+        let instance_public_keys = InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+            session_binding_public_key,
+        };
+
         // Generate the root layer (Stage0) event
         let encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
 
@@ -152,28 +174,35 @@ impl StandaloneOrchestrator {
 
         attester.extend(&encoded_stage0_event).context("couldn't extend attester evidence")?;
 
-        // Add Stage1 event
+        // Add Stage1 event.
         let stage1_event =
             oak_containers_attestation::create_system_layer_event(stage1_system_image);
-        attester.extend(&stage1_event.encode_to_vec())?;
+        attester
+            .extend(&stage1_event.encode_to_vec())
+            .context("couldn't add system event to the evidence")?;
 
-        // Add Orchestrator layer data
-        let orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
+        // Add container event and add it to the event log.
+        let container_event = oak_containers_attestation::create_container_event(
             application_image,
             &application_config,
+            &instance_public_keys,
         );
+        attester
+            .extend(&container_event.encode_to_vec())
+            .context("couldn't add container event to the evidence")?;
 
-        // Add application keys and generate the final evidence
+        // Add container DICE layer data.
+        let container_layer =
+            oak_containers_attestation::create_container_dice_layer(&container_event);
+
+        // Add application keys and generate the final evidence.
         let evidence = attester.add_application_keys(
-            orchestrator_layer_data,
-            &encryption_key_pair.1,
-            &signing_key_pair.1,
+            container_layer,
+            &instance_public_keys.encryption_public_key,
+            &instance_public_keys.signing_public_key,
             None,
             None,
         )?;
-
-        let instance_private_keys =
-            InstanceKeys { encryption_key: encryption_key_pair.0, signing_key: signing_key_pair.0 };
 
         Ok(Self { instance_private_keys, evidence, application_config })
     }

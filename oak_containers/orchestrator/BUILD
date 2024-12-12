@@ -89,6 +89,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_containers_orchestrator",
+        "//oak_attestation_types",
         "//oak_containers/agent",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_proto_rust",
@@ -96,6 +97,7 @@ rust_binary(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:nix",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:tikv-jemallocator",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-util",

@@ -192,11 +192,20 @@ pub fn serialize_container_layer_data(instance: &ContainerLayerData) -> serde_js
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let ContainerLayerData { bundle, config } = instance;
+    let ContainerLayerData {
+        bundle,
+        config,
+        encryption_public_key,
+        signing_public_key,
+        session_binding_public_key,
+    } = instance;
 
     json!({
         "bundle":  bundle.as_ref().map(serialize_raw_digest),
         "config": config.as_ref().map(serialize_raw_digest),
+        "encryption_public_key": encryption_public_key,
+        "signing_public_key": signing_public_key,
+        "session_binding_public_key": session_binding_public_key,
     })
 }
 

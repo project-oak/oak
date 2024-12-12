@@ -17,10 +17,12 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use oak_attestation_types::attester::Attester;
 use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 use oak_containers_attestation::generate_instance_keys;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
+use prost::Message;
 use tokio_util::sync::CancellationToken;
 
 #[global_allocator]
@@ -92,14 +94,21 @@ async fn main() -> anyhow::Result<()> {
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
-    // Generate attestation evidence and send it to the Hostlib.
-    let attester = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
-    let layer_data = oak_containers_attestation::measure_container_and_config(
+    // Create a container event and add it to the event log.
+    let mut attester = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
+    let container_event = oak_containers_attestation::create_container_event(
         &container_bundle,
         &application_config,
+        &instance_public_keys,
     );
+    attester
+        .extend(&container_event.encode_to_vec())
+        .context("couldn't add container event to the evidence")?;
+
+    // Add the container event to the DICE chain.
+    let container_layer = oak_containers_attestation::create_container_dice_layer(&container_event);
     let evidence = attester.add_application_keys(
-        layer_data,
+        container_layer,
         &instance_public_keys.encryption_public_key,
         &instance_public_keys.signing_public_key,
         if let Some(ref group_public_keys) = group_public_keys {
@@ -110,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
         None,
     )?;
 
+    // Send the attestation evidence to the Hostlib.
     launcher_client
         .send_attestation_evidence(evidence.clone())
         .await

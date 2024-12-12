@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String, vec, vec::Vec};
 
 use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
@@ -486,7 +486,14 @@ fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerL
     let bundle = Some(value_to_raw_digest(extract_value(values, LAYER_3_CODE_MEASUREMENT_ID)?)?);
     let config =
         Some(value_to_raw_digest(extract_value(values, FINAL_LAYER_CONFIG_MEASUREMENT_ID)?)?);
-    Ok(ContainerLayerData { bundle, config })
+    Ok(ContainerLayerData {
+        bundle,
+        config,
+        // TODO: b/384476430 - Extract public keys from the event.
+        encryption_public_key: vec![],
+        signing_public_key: vec![],
+        session_binding_public_key: vec![],
+    })
 }
 
 /// Extracts the measurement values for the enclave application layer.
@@ -616,7 +623,14 @@ fn stage1_measurements_to_system_layer_data(measurements: Stage1Measurements) ->
 fn oak_containers_orchestrator_measurements_to_container_layer_data(
     measurements: OrchestratorMeasurements,
 ) -> ContainerLayerData {
-    ContainerLayerData { bundle: measurements.container_image, config: measurements.config }
+    ContainerLayerData {
+        bundle: measurements.container_image,
+        config: measurements.config,
+        // TODO: b/384476430 - Extract public keys from the event.
+        encryption_public_key: vec![],
+        signing_public_key: vec![],
+        session_binding_public_key: vec![],
+    }
 }
 
 /// Parses the CBOR map from a serialized certificate.

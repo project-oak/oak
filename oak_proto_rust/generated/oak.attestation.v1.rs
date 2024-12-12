@@ -1218,6 +1218,15 @@ pub struct ContainerLayerData {
     /// Measurement RawDigest of the configuration used by the container.
     #[prost(message, optional, tag = "2")]
     pub config: ::core::option::Option<super::super::RawDigest>,
+    /// Key used to initialize HPKE encryption from the client.
+    #[prost(bytes = "vec", tag = "3")]
+    pub encryption_public_key: ::prost::alloc::vec::Vec<u8>,
+    /// Key used to verify artifacts signed by the TEE.
+    #[prost(bytes = "vec", tag = "4")]
+    pub signing_public_key: ::prost::alloc::vec::Vec<u8>,
+    /// Key used to verify that Noise session is bound to the evidence.
+    #[prost(bytes = "vec", tag = "5")]
+    pub session_binding_public_key: ::prost::alloc::vec::Vec<u8>,
 }
 /// Values extracted from the evidence that represents an event.
 #[allow(clippy::derive_partial_eq_without_eq)]

@@ -211,12 +211,6 @@ impl DiceAttester {
             group_encryption_public_key_certificate,
             group_signing_public_key_certificate,
         });
-
-        evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
         Ok(evidence)
     }
 }

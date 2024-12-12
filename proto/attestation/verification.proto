@@ -219,6 +219,15 @@ message ContainerLayerData {
 
   // Measurement RawDigest of the configuration used by the container.
   RawDigest config = 2;
+
+  // Key used to initialize HPKE encryption from the client.
+  bytes encryption_public_key = 3;
+
+  // Key used to verify artifacts signed by the TEE.
+  bytes signing_public_key = 4;
+
+  // Key used to verify that Noise session is bound to the evidence.
+  bytes session_binding_public_key = 5;
 }
 
 // Values extracted from the evidence that represents an event.

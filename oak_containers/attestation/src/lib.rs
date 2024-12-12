@@ -44,26 +44,40 @@ pub fn create_system_layer_event(system_image: &[u8]) -> Event {
     }
 }
 
-/// Measures the downloaded container image bytes and configuration and returns
-/// these as a vector of additional CWT claims.
-pub fn measure_container_and_config(
+/// Creates a container event that includes image bytes and configuration
+/// measurements and public keys used by the container.
+pub fn create_container_event(
     container_bytes: &[u8],
     config_bytes: &[u8],
-) -> oak_attestation::dice::LayerData {
+    instance_public_keys: &InstancePublicKeys,
+) -> Event {
     let container_digest = oak_attestation::dice::MeasureDigest::measure_digest(&container_bytes);
     let config_digest = oak_attestation::dice::MeasureDigest::measure_digest(&config_bytes);
-    let encoded_event = oak_proto_rust::oak::attestation::v1::Event {
+    Event {
         tag: "ORCHESTRATOR".to_string(),
         event: Some(prost_types::Any {
             type_url: "type.googleapis.com/oak.attestation.v1.ContainerLayerData".to_string(),
             value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
                 bundle: Some(container_digest.clone()),
                 config: Some(config_digest.clone()),
+                encryption_public_key: instance_public_keys.encryption_public_key.to_vec(),
+                signing_public_key: instance_public_keys
+                    .signing_public_key
+                    .to_sec1_bytes()
+                    .to_vec(),
+                session_binding_public_key: instance_public_keys
+                    .session_binding_public_key
+                    .to_sec1_bytes()
+                    .to_vec(),
             }
             .encode_to_vec(),
         }),
     }
-    .encode_to_vec();
+}
+
+/// Measures the provided event and returns as an additional CWT claim.
+pub fn create_container_dice_layer(event: &Event) -> oak_attestation::dice::LayerData {
+    let encoded_event = event.encode_to_vec();
     let event_digest =
         oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
     oak_attestation::dice::LayerData {
@@ -81,20 +95,27 @@ pub fn measure_container_and_config(
 pub fn generate_instance_keys() -> (InstanceKeys, InstancePublicKeys) {
     let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
     let (signing_key, signing_public_key) = generate_ecdsa_key_pair();
+    let (session_binding_key, session_binding_public_key) = generate_ecdsa_key_pair();
     (
-        InstanceKeys { encryption_key, signing_key },
-        InstancePublicKeys { encryption_public_key, signing_public_key },
+        InstanceKeys { encryption_key, signing_key, session_binding_key },
+        InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+            session_binding_public_key,
+        },
     )
 }
 
 pub struct InstanceKeys {
     pub encryption_key: EncryptionKey,
     pub signing_key: p256::ecdsa::SigningKey,
+    pub session_binding_key: p256::ecdsa::SigningKey,
 }
 
 pub struct InstancePublicKeys {
     pub encryption_public_key: Vec<u8>,
     pub signing_public_key: p256::ecdsa::VerifyingKey,
+    pub session_binding_public_key: p256::ecdsa::VerifyingKey,
 }
 
 impl InstanceKeys {
