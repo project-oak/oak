@@ -225,7 +225,8 @@ oak_containers_kernel:
 
 oak_containers_launcher:
     bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/launcher:oak_containers_launcher
-    cp bazel-bin/oak_containers/launcher/oak_containers_launcher \
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/launcher/oak_containers_launcher \
         $(realpath artifacts/oak_containers_launcher)
 
 # Profile the Wasm execution and generate a flamegraph.
@@ -258,13 +259,13 @@ oak_functions_containers_app_bundle_tar:
 
 oak_functions_containers_launcher:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_launcher
-    cp --preserve=timestamps --force \
+    cp --force --preserve=timestamps \
         bazel-bin/oak_functions_containers_launcher/oak_functions_containers_launcher \
         artifacts/oak_functions_containers_launcher
 
 oak_functions_launcher:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_launcher
-    cp --preserve=timestamps --force \
+    cp --force --preserve=timestamps \
         bazel-bin/oak_functions_launcher/oak_functions_launcher \
         artifacts/oak_functions_launcher
 
@@ -476,10 +477,10 @@ containers_placer_artifacts:
         bazel-bin/oak_containers/examples/hello_world/enclave_app/bundle.tar \
         artifacts/rust_hello_world_enclave_bundle.tar
 
-    cp --preserve=timestamps --force \
+    cp --force --preserve=timestamps \
         bazel-bin/oak_functions_containers_app/bundle.tar \
         artifacts/oak_functions_containers_app_bundle.tar
-    cp --preserve=timestamps --force \
+    cp --force --preserve=timestamps \
         bazel-bin/oak_functions_containers_app/bundle_insecure.tar \
         artifacts/oak_functions_containers_app_bundle_insecure.tar
 
