@@ -21,9 +21,9 @@ package(
     licenses = ["notice"],
 )
 
-# Stage1 binary for platforms that use DICE attestation.
+# Stage1 binary for Intel TDX.
 rust_binary(
-    name = "oak_containers_stage1_bin",
+    name = "oak_containers_stage1_bin_tdx",
     srcs = glob(["src/**"]),
     deps = [
         "//oak_attestation",
@@ -34,16 +34,16 @@ rust_binary(
 )
 
 alias(
-    name = "stage1_bin",
-    actual = ":stage1_cpio",
+    name = "stage1_bin_tdx",
+    actual = ":stage1_tdx_cpio",
 )
 
-# Oak Containers Initial RAM Filesystem for platforms that use DICE attestation.
+# Oak Containers Initial RAM Filesystem for Intel TDX.
 # TODO: b/384002139 - Replace genrule with reusable macro or rule.
 genrule(
-    name = "stage1_cpio",
+    name = "stage1_tdx_cpio",
     srcs = [
-        ":oak_containers_stage1_bin",
+        ":oak_containers_stage1_bin_tdx",
         "@e2fsprogs//:mke2fs",
         "@oak_cc_toolchain_sysroot//:linker_library",
         "@oak_cc_toolchain_sysroot//:stage1_shared_libraries",
@@ -64,7 +64,7 @@ genrule(
         cp --dereference --recursive $(locations @e2fsprogs//:mke2fs) $(RULEDIR)/root/
 
         # Strip and rename the oak_containers_stage1 binary.
-        strip $(location :oak_containers_stage1_bin) -o $(RULEDIR)/root/init
+        strip $(location :oak_containers_stage1_bin_tdx) -o $(RULEDIR)/root/init
 
         # Create the compressed CPIO archive.
         (cd $(RULEDIR)/root && find .) | sort | \
