@@ -46,7 +46,7 @@ class OakSessionChannel {
   class Transport {
    public:
     virtual ~Transport() = default;
-    virtual absl::Status Send(const SendMessage& message) = 0;
+    virtual absl::Status Send(SendMessage&& message) = 0;
 
     // Implementations should block until a new message is available to return.
     // Blocking semantics, deadlines, etc should be defined by the particular
@@ -79,7 +79,7 @@ class OakSessionChannel {
           "Reading back encrypted message returned null result");
     }
 
-    absl::Status send_result = transport_->Send(**outgoing_message);
+    absl::Status send_result = transport_->Send(std::move(**outgoing_message));
     if (!send_result.ok()) {
       return util::status::Annotate(
           send_result, "Failed to send outgoing message on provided transport");

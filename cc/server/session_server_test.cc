@@ -28,13 +28,12 @@ namespace {
 using ::absl_testing::IsOk;
 using ::testing::Eq;
 using ::testing::Ne;
-using ::testing::Optional;
 
 class TestTransport : public OakSessionServer::Channel::Transport {
  public:
   TestTransport(std::unique_ptr<session::ClientSession> client_session)
       : client_session_(std::move(client_session)) {}
-  absl::Status Send(const session::v1::SessionResponse& request) override {
+  absl::Status Send(session::v1::SessionResponse&& request) override {
     return client_session_->PutIncomingMessage(request);
   }
   absl::StatusOr<session::v1::SessionRequest> Receive() override {

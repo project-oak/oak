@@ -16,6 +16,8 @@
 
 #include "cc/client/session_client.h"
 
+#include <utility>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "cc/oak_session/client_session.h"
@@ -42,7 +44,7 @@ OakSessionClient::NewChannel(std::unique_ptr<Channel::Transport> transport) {
       return absl::InternalError("No outgoing message but session not open");
     }
 
-    absl::Status send_result = transport->Send(**init_request);
+    absl::Status send_result = transport->Send(std::move(**init_request));
     if (!send_result.ok()) {
       return util::status::Annotate(send_result,
                                     "Failed to send outgoing message");

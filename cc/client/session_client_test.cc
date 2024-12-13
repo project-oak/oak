@@ -16,6 +16,7 @@
 
 #include "cc/client/session_client.h"
 
+#include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"
@@ -34,7 +35,7 @@ class TestTransport : public OakSessionClient::Channel::Transport {
  public:
   TestTransport(std::unique_ptr<session::ServerSession> server_session)
       : server_session_(std::move(server_session)) {}
-  absl::Status Send(const session::v1::SessionRequest& request) override {
+  absl::Status Send(session::v1::SessionRequest&& request) override {
     return server_session_->PutIncomingMessage(request);
   }
   absl::StatusOr<session::v1::SessionResponse> Receive() override {

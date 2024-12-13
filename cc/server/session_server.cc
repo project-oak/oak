@@ -58,7 +58,7 @@ OakSessionServer::NewChannel(std::unique_ptr<Channel::Transport> transport) {
     }
 
     if (*init_response != std::nullopt) {
-      absl::Status send_result = transport->Send(**init_response);
+      absl::Status send_result = transport->Send(std::move(**init_response));
       if (!send_result.ok()) {
         return util::status::Annotate(send_result,
                                       "Failed to send outgoing message");
