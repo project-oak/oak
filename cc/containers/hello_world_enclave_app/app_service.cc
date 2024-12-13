@@ -23,6 +23,7 @@
 #include "cc/containers/sdk/oak_session.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/server_encryptor.h"
+#include "cc/transport/grpc_sync_session_server_transport.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
@@ -34,22 +35,48 @@ namespace oak::containers::hello_world_enclave_app {
 
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
+using ::oak::session::v1::SessionRequest;
+using ::oak::session::v1::SessionResponse;
+
+grpc::Status FromAbsl(const absl::Status& status) {
+  return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
+                      std::string(status.message()));
+}
+
+std::string EnclaveApplicationImpl::HandleRequest(absl::string_view request) {
+  return absl::StrCat("Hello from the enclave, ", request,
+                      "! Btw, the app has a config with a length of ",
+                      application_config_.size(), " bytes.");
+}
 
 grpc::Status EnclaveApplicationImpl::LegacySession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>* stream) {
-  absl::string_view application_config = application_config_;
   absl::Status status = oak_session_context_.OakSession(
-      stream,
-      [&application_config](
-          absl::string_view request) -> absl::StatusOr<std::string> {
-        return absl::StrCat("Hello from the enclave, ", request,
-                            "! Btw, the app has a config with a length of ",
-                            application_config.size(), " bytes.");
+      stream, [this](absl::string_view request) -> absl::StatusOr<std::string> {
+        return HandleRequest(request);
       });
 
-  return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
-                      std::string(status.message()));
+  return FromAbsl(status);
+}
+
+grpc::Status EnclaveApplicationImpl::OakSession(
+    grpc::ServerContext* context,
+    grpc::ServerReaderWriter<SessionResponse, SessionRequest>* stream) {
+  auto channel = session_server_.NewChannel(
+      std::make_unique<transport::GrpcSyncSessionServerTransport>(stream));
+  while (true) {
+    absl::StatusOr<std::string> request = (*channel)->Receive();
+    if (!request.ok()) {
+      return FromAbsl(request.status());
+    }
+    std::string response = HandleRequest(*request);
+    absl::Status send_result = (*channel)->Send(response);
+    if (!send_result.ok()) {
+      return FromAbsl(send_result);
+    }
+  }
+  return grpc::Status();
 }
 
 }  // namespace oak::containers::hello_world_enclave_app

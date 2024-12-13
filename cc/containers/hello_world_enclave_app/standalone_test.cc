@@ -20,9 +20,14 @@
 #include "absl/status/status_matchers.h"
 #include "cc/attestation/verification/insecure_attestation_verifier.h"
 #include "cc/client/client.h"
+#include "cc/client/session_client.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/standalone/oak_standalone.h"
+#include "cc/oak_session/channel/oak_session_channel.h"
+#include "cc/oak_session/client_session.h"
 #include "cc/transport/grpc_streaming_transport.h"
+#include "cc/transport/grpc_sync_session_client_transport.h"
+#include "gmock/gmock.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
 #include "gtest/gtest.h"
@@ -33,6 +38,7 @@ namespace oak::containers::sdk::standalone {
 namespace {
 
 using ::absl_testing::IsOk;
+using ::absl_testing::IsOkAndHolds;
 using ::oak::attestation::v1::AttestationResults;
 using ::oak::attestation::verification::InsecureAttestationVerifier;
 using ::oak::client::OakClient;
@@ -41,8 +47,12 @@ using ::oak::containers::hello_world_enclave_app::EnclaveApplicationImpl;
 using ::oak::crypto::EncryptionKeyProvider;
 using ::oak::crypto::KeyPair;
 using ::oak::session::v1::EndorsedEvidence;
+using ::oak::session::v1::SessionRequest;
+using ::oak::session::v1::SessionResponse;
 using ::oak::transport::GrpcStreamingTransport;
 using ::testing::Eq;
+
+constexpr absl::string_view kApplicationConfig = "{}";
 
 class HelloWorldStandaloneTest : public testing::Test {
   void SetUp() override {
@@ -63,7 +73,7 @@ class HelloWorldStandaloneTest : public testing::Test {
     service_ = std::make_unique<EnclaveApplicationImpl>(
         OakSessionContext(std::move(*endorsed_evidence),
                           std::make_unique<EncryptionKeyProvider>(*key_pair)),
-        "{}");
+        kApplicationConfig);
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());
@@ -86,14 +96,32 @@ TEST_F(HelloWorldStandaloneTest, LegacySessionReturnsResponse) {
       std::make_unique<GrpcStreamingTransport>(stub_->LegacySession(&context));
   InsecureAttestationVerifier verifier;
   auto client = OakClient::Create(std::move(transport), verifier);
-  ASSERT_TRUE(client.ok());
+  ASSERT_THAT(client, IsOk());
 
   auto result = (*client)->Invoke("Standalone Test");
-  ASSERT_TRUE(result.ok());
+  ASSERT_THAT(result, IsOk());
   EXPECT_EQ(*result,
-            "Hello from the enclave, Standalone Test! Btw, the app has a "
-            "config with a length of 2 bytes.");
+            absl::Substitute(
+                "Hello from the enclave, Standalone Test! Btw, the app has a "
+                "config with a length of $0 bytes.",
+                kApplicationConfig.size()));
 }
+
+TEST_F(HelloWorldStandaloneTest, OakSessionReturnsResponse) {
+  client::OakSessionClient session_client;
+  grpc::ClientContext context;
+  auto channel = session_client.NewChannel(
+      std::make_unique<transport::GrpcSyncSessionClientTransport>(
+          stub_->OakSession(&context)));
+
+  ASSERT_THAT((*channel)->Send("Standalone Test"), IsOk());
+  ASSERT_THAT((*channel)->Receive(),
+              IsOkAndHolds(absl::Substitute(
+                  "Hello from the enclave, Standalone Test! Btw, the "
+                  "app has a config with a length of $0 bytes.",
+                  kApplicationConfig.size())));
+}
+
 }  // namespace
 
 }  // namespace oak::containers::sdk::standalone

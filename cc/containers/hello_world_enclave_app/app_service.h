@@ -24,6 +24,7 @@
 #include "cc/containers/sdk/encryption_key_handle.h"
 #include "cc/containers/sdk/oak_session.h"
 #include "cc/containers/sdk/orchestrator_client.h"
+#include "cc/server/session_server.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
@@ -46,7 +47,15 @@ class EnclaveApplicationImpl
                                oak::session::v1::RequestWrapper>* stream)
       override;
 
+  grpc::Status OakSession(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<oak::session::v1::SessionResponse,
+                               oak::session::v1::SessionRequest>* stream)
+      override;
+
  private:
+  server::OakSessionServer session_server_;
+  std::string HandleRequest(absl::string_view request);
   oak::containers::sdk::OakSessionContext oak_session_context_;
   const oak::session::v1::EndorsedEvidence endorsed_evidence_;
   const std::string application_config_;

@@ -1,7 +1,7 @@
 #
 # Copyright 2023 The Project Oak Authors
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0(the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -108,5 +108,31 @@ cc_test(
         "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "grpc_sync_session_server_transport",
+    srcs = ["grpc_sync_session_server_transport.cc"],
+    hdrs = ["grpc_sync_session_server_transport.h"],
+    deps = [
+        "//cc/oak_session:server_session",
+        "//cc/server:session_server",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "grpc_sync_session_client_transport",
+    srcs = ["grpc_sync_session_client_transport.cc"],
+    hdrs = ["grpc_sync_session_client_transport.h"],
+    deps = [
+        "//cc/client:session_client",
+        "//cc/oak_session:client_session",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
