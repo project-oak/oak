@@ -39,11 +39,29 @@ java_proto_library(
     deps = [":digest_proto"],
 )
 
+proto_library(
+    name = "variant_proto",
+    srcs = ["variant.proto"],
+)
+
+cc_proto_library(
+    name = "variant_cc_proto",
+    deps = [":variant_proto"],
+)
+
+java_proto_library(
+    name = "variant_java_proto",
+    deps = [":variant_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
         ":digest_proto",
         ":digest_cc_proto",
         ":digest_java_proto",
+        ":variant_proto",
+        ":variant_cc_proto",
+        ":variant_java_proto",
     ],
 )

@@ -55,3 +55,14 @@ pub struct HexDigest {
     #[prost(string, tag = "32")]
     pub sha2_384: ::prost::alloc::string::String,
 }
+/// Container that can contain any serialized data and a corresponding ID.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct Variant {
+    /// Unique payload identifier that also defines how to deserialize the `value`.
+    #[prost(bytes = "vec", tag = "1")]
+    pub id: ::prost::alloc::vec::Vec<u8>,
+    /// Serialized data.
+    #[prost(bytes = "vec", tag = "2")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
+}

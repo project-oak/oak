@@ -55,6 +55,7 @@ cargo_build_script(
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         "//proto:digest.proto",
+        "//proto:variant.proto",
         "//proto/attestation:attachment.proto",
         "//proto/attestation:dice.proto",
         "//proto/attestation:endorsement.proto",
