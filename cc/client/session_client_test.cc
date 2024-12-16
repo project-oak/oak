@@ -16,6 +16,8 @@
 
 #include "cc/client/session_client.h"
 
+#include <memory>
+
 #include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
 #include "cc/oak_session/client_session.h"
@@ -54,24 +56,28 @@ class TestTransport : public OakSessionClient::Channel::Transport {
   std::unique_ptr<session::ServerSession> server_session_;
 };
 
+session::SessionConfig* TestSessionConfig() {
+  return session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                       session::HandshakeType::kNoiseNN)
+      .Build();
+}
+
 TEST(OakSessionClientTest, CreateSuccessFullyHandshakes) {
-  auto server_session = session::ServerSession::Create();
+  auto server_session = session::ServerSession::Create(TestSessionConfig());
   ASSERT_THAT(server_session, IsOk());
-  auto client_session = session::ClientSession::Create();
-  ASSERT_THAT(client_session, IsOk());
-  auto _ = OakSessionClient().NewChannel(
-      std::make_unique<TestTransport>(std::move(*server_session)));
+  auto _ = OakSessionClient(TestSessionConfig())
+               .NewChannel(
+                   std::make_unique<TestTransport>(std::move(*server_session)));
 }
 
 TEST(OakSessionClientTest, CreatedSessionCanSend) {
-  auto server_session = session::ServerSession::Create();
+  auto server_session = session::ServerSession::Create(TestSessionConfig());
   // Hold a pointer for testing behavior below.
   session::ServerSession* server_session_ptr = server_session->get();
   ASSERT_THAT(server_session, IsOk());
-  auto client_session = session::ClientSession::Create();
-  ASSERT_THAT(client_session, IsOk());
-  auto channel = OakSessionClient().NewChannel(
-      std::make_unique<TestTransport>(std::move(*server_session)));
+  auto channel = OakSessionClient(TestSessionConfig())
+                     .NewChannel(std::make_unique<TestTransport>(
+                         std::move(*server_session)));
 
   std::string test_send_msg = "Testing Send";
   ASSERT_THAT((*channel)->Send(test_send_msg), IsOk());
@@ -83,14 +89,13 @@ TEST(OakSessionClientTest, CreatedSessionCanSend) {
 }
 
 TEST(OakSessionClientTest, CreatedSessionCanReceive) {
-  auto server_session = session::ServerSession::Create();
+  auto server_session = session::ServerSession::Create(TestSessionConfig());
   // Hold a pointer for testing behavior below.
   session::ServerSession* server_session_ptr = server_session->get();
   ASSERT_THAT(server_session, IsOk());
-  auto client_session = session::ClientSession::Create();
-  ASSERT_THAT(client_session, IsOk());
-  auto channel = OakSessionClient().NewChannel(
-      std::make_unique<TestTransport>(std::move(*server_session)));
+  auto channel = OakSessionClient(TestSessionConfig())
+                     .NewChannel(std::make_unique<TestTransport>(
+                         std::move(*server_session)));
 
   session::v1::PlaintextMessage test_recv_plaintext_msg;
   test_recv_plaintext_msg.set_plaintext("Testing Receive");

@@ -16,6 +16,7 @@
 
 #include "cc/oak_session/client_session.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -28,14 +29,22 @@ namespace oak::session {
 
 namespace {}  // namespace
 
-absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create() {
-  const bindings::ErrorOrClientSession result = bindings::new_client_session();
+absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create(
+    session::SessionConfig* config) {
+  const bindings::ErrorOrClientSession result =
+      bindings::new_client_session(config);
 
   if (result.error != nullptr) {
     return ErrorIntoStatus(result.error);
   }
 
   return absl::WrapUnique(new ClientSession(result.result));
+}
+
+absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create() {
+  return Create(SessionConfigBuilder(session::AttestationType::kUnattested,
+                                     session::HandshakeType::kNoiseNN)
+                    .Build());
 }
 
 bool ClientSession::IsOpen() { return bindings::client_is_open(rust_session_); }

@@ -20,11 +20,15 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "cc/oak_session/channel/oak_session_channel.h"
+#include "cc/oak_session/config.h"
 #include "cc/oak_session/server_session.h"
 #include "proto/session/session.pb.h"
 
 namespace oak::server {
 
+// A lightweight class that can be used to create new attested, encrypted
+// channels using a consistent configuration, for implementing server-side
+// handlers.
 class OakSessionServer {
  public:
   using Channel =
@@ -32,7 +36,17 @@ class OakSessionServer {
                                           session::v1::SessionRequest,
                                           session::ServerSession>;
 
-  OakSessionServer() = default;
+  // A valid `SessionConfig` can be obtained using
+  // oak::session::SessionConfigBuilder.
+  OakSessionServer(session::SessionConfig* config) : config_(config) {}
+
+  // Use a default configuration, Unattested + NoiseNN
+  ABSL_DEPRECATED("Use the config-providing variant.")
+  OakSessionServer()
+      : OakSessionServer(
+            session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                          session::HandshakeType::kNoiseNN)
+                .Build()) {}
 
   // Create a new OakServerChannel instance with the provided session and
   // transport.
@@ -45,6 +59,9 @@ class OakSessionServer {
   // succeed.
   absl::StatusOr<std::unique_ptr<Channel>> NewChannel(
       std::unique_ptr<OakSessionServer::Channel::Transport> transport);
+
+ private:
+  session::SessionConfig* config_;
 };
 
 }  // namespace oak::server

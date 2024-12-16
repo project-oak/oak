@@ -25,6 +25,8 @@
 
 namespace oak::client {
 
+// A lightweight class that can be used to create new attested, encrypted
+// channels using a consistent configuration.
 class OakSessionClient {
  public:
   // OakClientChannel manages an established connection between a client and
@@ -34,19 +36,32 @@ class OakSessionClient {
                                           session::v1::SessionResponse,
                                           session::ClientSession>;
 
-  OakSessionClient() = default;
+  // A valid `SessionConfig` can be obtained using
+  // oak::session::SessionConfigBuilder.
+  OakSessionClient(session::SessionConfig* config) : config_(config) {}
+
+  // Use a default configuration, Unattested + NoiseNN
+  ABSL_DEPRECATED("Use the config-providing variant.")
+  OakSessionClient()
+      : OakSessionClient(
+            session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                          session::HandshakeType::kNoiseNN)
+                .Build()) {}
 
   // Create a new OakClientChannel instance with the provided session and
   // transport.
   //
-  // client_session should be a newly created ClientSession instance with a
-  // configuration that matches the configuration of the target server.
+  // client_session should be a newly created ClientSession instance with
+  // a configuration that matches the configuration of the target server.
   //
-  // The call will block during the initialization sequence, and return an open
-  // channel that is ready to use, or return an error if the handshake didn't
-  // succeed.
+  // The call will block during the initialization sequence, and return an
+  // open channel that is ready to use, or return an error if the
+  // handshake didn't succeed.
   absl::StatusOr<std::unique_ptr<OakSessionClient::Channel>> NewChannel(
       std::unique_ptr<OakSessionClient::Channel::Transport> transport);
+
+ private:
+  session::SessionConfig* config_;
 };
 
 }  // namespace oak::client

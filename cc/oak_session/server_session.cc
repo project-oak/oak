@@ -16,24 +16,34 @@
 
 #include "cc/oak_session/server_session.h"
 
+#include <memory>
 #include <optional>
 #include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
 #include "proto/session/session.pb.h"
 
 namespace oak::session {
 
-absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create() {
-  const bindings::ErrorOrServerSession result = bindings::new_server_session();
+absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create(
+    session::SessionConfig* config) {
+  const bindings::ErrorOrServerSession result =
+      bindings::new_server_session(config);
 
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
   }
 
   return absl::WrapUnique(new ServerSession(result.result));
+}
+
+absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create() {
+  return Create(SessionConfigBuilder(session::AttestationType::kUnattested,
+                                     session::HandshakeType::kNoiseNN)
+                    .Build());
 }
 
 bool ServerSession::IsOpen() { return bindings::server_is_open(rust_session_); }

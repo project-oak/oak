@@ -23,6 +23,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "cc/oak_session/channel/oak_session_channel.h"
+#include "cc/oak_session/config.h"
 #include "cc/oak_session/server_session.h"
 #include "cc/utils/status/status.h"
 #include "proto/session/session.pb.h"
@@ -31,7 +32,7 @@ namespace oak::server {
 
 absl::StatusOr<std::unique_ptr<OakSessionServer::Channel>>
 OakSessionServer::NewChannel(std::unique_ptr<Channel::Transport> transport) {
-  auto session = session::ServerSession::Create();
+  auto session = session::ServerSession::Create(config_);
   if (!session.ok()) {
     return util::status::Annotate(session.status(),
                                   "Failed to create server session");

@@ -16,9 +16,7 @@
 
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest};
 use oak_session::{
-    attestation::AttestationType,
     config::SessionConfig,
-    handshake::HandshakeType,
     session::{ServerSession, Session},
     ProtocolEngine,
 };
@@ -26,6 +24,9 @@ use oak_session_ffi_types::{Bytes, Error, ErrorOrBytes};
 use prost::Message;
 
 ///  Create a new [`ServerSession`] instance for FFI usage.
+///
+///  Ownership of the proivded `SessionConfig` object will be passed back to
+///  Rust and it will be freed.
 ///
 ///  If the functions succeeds, `ErrorOrServerSession::result` will contain a
 ///  pointer to the [`ServerSession`] that can be used as the first argument to
@@ -37,11 +38,17 @@ use prost::Message;
 ///
 ///  When the instance is no longer needed, it should be released with
 ///  [`free_server_session`].
+///
+///  # Safety
+///
+///  config is a valid, properly aligned pointer to a SessionConfig object. Once
+///  the config object has been provided here, it should not be used again.
 #[no_mangle]
-pub extern "C" fn new_server_session() -> ErrorOrServerSession {
-    let server_session = ServerSession::create(
-        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-    );
+pub unsafe extern "C" fn new_server_session(
+    session_config: *mut SessionConfig,
+) -> ErrorOrServerSession {
+    let session_config = Box::from_raw(session_config);
+    let server_session = ServerSession::create(*session_config);
 
     match server_session {
         Ok(session) => ErrorOrServerSession {

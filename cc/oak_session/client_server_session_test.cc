@@ -32,6 +32,12 @@ using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
 using ::testing::Ne;
 
+SessionConfig* TestConfig() {
+  return SessionConfigBuilder(AttestationType::kUnattested,
+                              HandshakeType::kNoiseNN)
+      .Build();
+}
+
 void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
   absl::StatusOr<std::optional<SessionRequest>> init =
       client_session.GetOutgoingMessage();
@@ -50,15 +56,15 @@ void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
 }
 
 TEST(ClientServerSessionTest, HandshakeSucceeds) {
-  auto client_session = ClientSession::Create();
-  auto server_session = ServerSession::Create();
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
 
   DoHandshake(**client_session, **server_session);
 }
 
 TEST(ClientServerSessionTest, AcceptEmptyOutgoingMessageResult) {
-  auto client_session = ClientSession::Create();
-  auto server_session = ServerSession::Create();
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
 
   DoHandshake(**client_session, **server_session);
 
@@ -74,8 +80,8 @@ TEST(ClientServerSessionTest, AcceptEmptyOutgoingMessageResult) {
 }
 
 TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
-  auto client_session = ClientSession::Create();
-  auto server_session = ServerSession::Create();
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
 
   DoHandshake(**client_session, **server_session);
 
@@ -91,8 +97,8 @@ TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
 }
 
 TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
-  auto client_session = ClientSession::Create();
-  auto server_session = ServerSession::Create();
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
 
   DoHandshake(**client_session, **server_session);
 
@@ -116,8 +122,8 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
-  auto client_session = ClientSession::Create();
-  auto server_session = ServerSession::Create();
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
 
   DoHandshake(**client_session, **server_session);
 

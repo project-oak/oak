@@ -48,6 +48,15 @@ rust_library(
 )
 
 rust_library(
+    name = "oak_session_ffi_config",
+    srcs = ["config.rs"],
+    deps = [
+        ":oak_session_ffi_types",
+        "//oak_session",
+    ],
+)
+
+rust_library(
     name = "oak_session_ffi_types",
     srcs = ["types.rs"],
 )
@@ -57,6 +66,7 @@ rust_test(
     srcs = ["tests.rs"],
     deps = [
         ":oak_session_ffi_client_session",
+        ":oak_session_ffi_config",
         ":oak_session_ffi_server_session",
         ":oak_session_ffi_types",
         "//oak_proto_rust",

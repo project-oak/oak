@@ -25,6 +25,7 @@ cc_library(
     hdrs = ["oak_session_bindings.h"],
     deps = [
         "//oak_session/ffi:oak_session_ffi_client_session",
+        "//oak_session/ffi:oak_session_ffi_config",
         "//oak_session/ffi:oak_session_ffi_server_session",
         "//oak_session/ffi:oak_session_ffi_types",
         "@com_google_absl//absl/status",
@@ -51,6 +52,7 @@ cc_library(
     srcs = ["client_session.cc"],
     hdrs = ["client_session.h"],
     deps = [
+        ":config",
         ":oak_session_bindings",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
@@ -64,6 +66,7 @@ cc_library(
     srcs = ["server_session.cc"],
     hdrs = ["server_session.h"],
     deps = [
+        ":config",
         ":oak_session_bindings",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
@@ -84,5 +87,16 @@ cc_test(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status:status_matchers",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "config",
+    srcs = ["config.cc"],
+    hdrs = ["config.h"],
+    deps = [
+        ":oak_session_bindings",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/strings",
     ],
 )

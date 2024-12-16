@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "absl/log/log.h"
 #include "cc/oak_session/testing/matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -62,11 +63,22 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   ASSERT_TRUE(client_is_open(client_session));
 }
 
+SessionConfig* TestConfig() {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_UNATTESTED,
+                                           HANDSHAKE_TYPE_NOISE_NN);
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << BytesToString(result.error->message);
+  }
+
+  return session_config_builder_build(result.result);
+}
+
 TEST(OakSessionBindingsTest, TestHandshake) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -77,10 +89,10 @@ TEST(OakSessionBindingsTest, TestHandshake) {
 }
 
 TEST(OakSessionBindingsTest, AcceptEmptyOutgoingMessage) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -99,10 +111,10 @@ TEST(OakSessionBindingsTest, AcceptEmptyOutgoingMessage) {
 }
 
 TEST(OakSessionBindingsTest, AcceptEmptyRead) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -121,10 +133,10 @@ TEST(OakSessionBindingsTest, AcceptEmptyRead) {
 }
 
 TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -159,10 +171,10 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
 }
 
 TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -197,10 +209,10 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
 }
 
 TEST(OakSessionBindingsTest, ErrorsAreReturned) {
-  ErrorOrServerSession server_session_result = new_server_session();
+  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session();
+  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 

@@ -24,6 +24,7 @@ cc_library(
     srcs = ["session_server.cc"],
     hdrs = ["session_server.h"],
     deps = [
+        "//cc/oak_session:config",
         "//cc/oak_session:server_session",
         "//cc/oak_session/channel",
         "//cc/utils/status",

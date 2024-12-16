@@ -16,9 +16,7 @@
 
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionResponse};
 use oak_session::{
-    attestation::AttestationType,
     config::SessionConfig,
-    handshake::HandshakeType,
     session::{ClientSession, Session},
     ProtocolEngine,
 };
@@ -27,9 +25,13 @@ use prost::Message;
 
 /// Create a new [`ClientSession`] instance for FFI usage.
 ///
-/// If the functions succeeds, `ErrorOrClientSession::result` will contain a
-/// pointer to the [`ClientSession`] that can be used as the first argument to
-/// the other FFI calls.
+/// Ownership of the proivded `SessionConfig` object will be passed back to Rust
+/// and it will be freed.
+///
+/// If the functions succeeds,
+/// `ErrorOrClientSession::result` will contain a pointer to the
+/// [`ClientSession`] that can be used as the first argument to the other FFI
+/// calls.
 ///
 /// In case of an error, `ErrorOrClientSession::error` will contain a poiner to
 /// an error, containing a string description of the Rust error encountered.
@@ -37,11 +39,15 @@ use prost::Message;
 ///
 /// When the instance is no longer needed, it should be released with
 /// [`free_client_session`].
+///
+/// # Safety
+///
+/// config is a valid, properly aligned pointer to a SessionConfig object. Once
+/// the config object has been provided here, it should not be used again.
 #[no_mangle]
-pub extern "C" fn new_client_session() -> ErrorOrClientSession {
-    let client_session = ClientSession::create(
-        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-    );
+pub unsafe extern "C" fn new_client_session(config: *mut SessionConfig) -> ErrorOrClientSession {
+    let config = Box::from_raw(config);
+    let client_session = ClientSession::create(*config);
     match client_session {
         Ok(session) => ErrorOrClientSession {
             result: Box::into_raw(Box::new(session)),

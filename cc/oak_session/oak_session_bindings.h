@@ -22,11 +22,30 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
+#include "cc/oak_session/oak_session_bindings.h"
 
 namespace oak::session::bindings {
 
+// These correspond to the definitions in oak_session/ffi/config.rs
+constexpr int HANDSHAKE_TYPE_NOISE_KK = 1;
+constexpr int HANDSHAKE_TYPE_NOISE_KN = 2;
+constexpr int HANDSHAKE_TYPE_NOISE_NK = 3;
+constexpr int HANDSHAKE_TYPE_NOISE_NN = 4;
+
+// These correspond to the definitions in oak_session/ffi/config.rs
+constexpr int ATTESTATION_TYPE_BIDIRECTIONAL = 1;
+constexpr int ATTESTATION_TYPE_SELF_UNIDIRECTIONAL = 2;
+constexpr int ATTESTATION_TYPE_PEER_UNIDIRECTIONAL = 3;
+constexpr int ATTESTATION_TYPE_UNATTESTED = 4;
+
 // The corresponding C definitions for the Rust FFI bindings.
 // The rust bindings are defined in: oak_session/ffi
+
+// An opaque Rust SessionConfigBuilder.
+class SessionConfigBuilder;
+
+// An opaque Rust SessionConfig pointer.
+class SessionConfig;
 
 // An opaque Rust ServerSession.
 // Pointers to this incomplete type are used to reference
@@ -79,10 +98,22 @@ struct ErrorOrServerSession {
   Error* error;
 };
 
+// Corresponds to ErrorOrSessionConfigBuilder struct in
+// oak_session/ffi/config.rs
+struct ErrorOrSessionConfigBuilder {
+  SessionConfigBuilder* result;
+  Error* error;
+};
+
 extern "C" {
 
+// Corresponds to functions in oak_session/ffi/config.rs
+extern ErrorOrSessionConfigBuilder new_session_config_builder(uint32_t,
+                                                              uint32_t);
+extern SessionConfig* session_config_builder_build(SessionConfigBuilder*);
+
 // Corresponds to functions in oak_session/ffi/client_session.rs
-extern ErrorOrClientSession new_client_session();
+extern ErrorOrClientSession new_client_session(SessionConfig*);
 extern bool client_is_open(ClientSession*);
 extern Error* client_put_incoming_message(ClientSession*, Bytes);
 extern ErrorOrBytes client_get_outgoing_message(ClientSession*);
@@ -91,7 +122,7 @@ extern Error* client_write(ClientSession*, Bytes);
 extern void free_client_session(ClientSession*);
 
 // Corresponds to functions in oak_session/ffi/server_session.rs
-extern ErrorOrServerSession new_server_session();
+extern ErrorOrServerSession new_server_session(SessionConfig*);
 extern bool server_is_open(ServerSession*);
 extern Error* server_put_incoming_message(ServerSession*, Bytes);
 extern ErrorOrBytes server_get_outgoing_message(ServerSession*);

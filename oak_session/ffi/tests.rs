@@ -16,6 +16,7 @@
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::session::{ClientSession, ServerSession};
 use oak_session_ffi_client_session as client_ffi;
+use oak_session_ffi_config as config_ffi;
 use oak_session_ffi_server_session as server_ffi;
 use oak_session_ffi_types::Bytes;
 use prost::Message;
@@ -121,11 +122,21 @@ unsafe fn do_handshake(
     assert_eq!(put_result, std::ptr::null());
 }
 
+fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
+    let session_config_builder = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_UNATTESTED,
+        config_ffi::HANDSHAKE_TYPE_NOISE_NN,
+    );
+    assert_eq!(session_config_builder.error, std::ptr::null());
+    unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
+}
 fn create_test_sessions() -> (*mut ClientSession, *mut ServerSession) {
-    let client_session_ptr_result = client_ffi::new_client_session();
+    let client_session_ptr_result =
+        unsafe { client_ffi::new_client_session(create_test_session_config()) };
     assert_eq!(client_session_ptr_result.error, std::ptr::null());
     let client_session_ptr = client_session_ptr_result.result;
-    let server_session_ptr_result = server_ffi::new_server_session();
+    let server_session_ptr_result =
+        unsafe { server_ffi::new_server_session(create_test_session_config()) };
     assert_eq!(server_session_ptr_result.error, std::ptr::null());
     let server_session_ptr = server_session_ptr_result.result;
     (client_session_ptr, server_session_ptr)

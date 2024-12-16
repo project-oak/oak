@@ -20,6 +20,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
 #include "proto/session/session.pb.h"
 
@@ -36,6 +37,12 @@ namespace oak::session {
 // See oak_session/session.rs for more info.
 class ClientSession {
  public:
+  // A valid `SessionConfig` can be obtained using
+  // oak::session::SessionConfigBuilder.
+  static absl::StatusOr<std::unique_ptr<ClientSession>> Create(
+      session::SessionConfig* config);
+  // Use a default configuration, Unattested + NoiseNN
+  ABSL_DEPRECATED("Use the config-providing variant.")
   static absl::StatusOr<std::unique_ptr<ClientSession>> Create();
   ~ClientSession();
 
