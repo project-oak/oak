@@ -108,3 +108,17 @@ kt_jvm_library(
     deps = [
     ],
 )
+
+kt_jvm_library(
+    name = "grpc_session_v1_client_transport",
+    srcs = [
+        "GrpcSessionV1ClientTransport.kt",
+    ],
+    deps = [
+        ":session_transport",
+        "//proto/services:session_v1_service_kt_grpc",
+        "//proto/session:session_java_proto",
+        "@io_grpc_grpc_java//api",
+        "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
+    ],
+)

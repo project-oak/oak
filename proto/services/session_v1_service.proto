@@ -20,6 +20,9 @@ package oak.services;
 
 import "proto/session/session.proto";
 
+option java_multiple_files = true;
+option java_package = "com.google.oak.services";
+
 service OakSessionV1Service {
   rpc Stream(stream oak.session.v1.SessionRequest)
       returns (stream oak.session.v1.SessionResponse) {}

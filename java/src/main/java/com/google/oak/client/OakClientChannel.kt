@@ -17,7 +17,9 @@
 package com.google.oak.client
 
 import com.google.oak.session.OakClientSession
+import com.google.oak.session.OakSessionException
 import com.google.oak.session.v1.PlaintextMessage
+import com.google.oak.session.v1.SessionRequest
 import com.google.oak.session.v1.SessionResponse
 import com.google.oak.transport.SessionTransport
 import com.google.protobuf.ByteString
@@ -28,17 +30,19 @@ import com.google.protobuf.ByteString
  */
 class OakClientChannel(
   private val session: OakClientSession,
-  private val transport: SessionTransport,
+  private val transport: SessionTransport<SessionRequest, SessionResponse>,
 ) {
   suspend fun read(): ByteArray {
-    val inBytes = transport.read()
-    session.putIncomingMessage(SessionResponse.parseFrom(inBytes))
+    val inMessage = transport.read()
+    if (!session.putIncomingMessage(inMessage)) {
+      throw OakSessionException("Session doesn't expect an incoming message")
+    }
     return session.read().orElseThrow().plaintext.toByteArray()
   }
 
   suspend fun write(message: ByteArray) {
     session.write(PlaintextMessage.newBuilder().setPlaintext(ByteString.copyFrom(message)).build())
     val outMessage = session.getOutgoingMessage().orElseThrow()
-    transport.write(outMessage.toByteArray())
+    transport.write(outMessage)
   }
 }

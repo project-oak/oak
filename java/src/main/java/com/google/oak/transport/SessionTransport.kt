@@ -16,8 +16,8 @@
 
 package com.google.oak.transport
 
-interface SessionTransport {
-  suspend fun write(bytes: ByteArray)
+interface SessionTransport<Request, Response> {
+  suspend fun write(request: Request)
 
-  suspend fun read(): ByteArray
+  suspend fun read(): Response
 }

@@ -18,21 +18,21 @@ package com.google.oak.client
 
 import com.google.oak.session.OakClientSession
 import com.google.oak.session.OakSessionException
+import com.google.oak.session.v1.SessionRequest
 import com.google.oak.session.v1.SessionResponse
 import com.google.oak.transport.SessionTransport
 
 /** Client to establish and use a streaming Oak Session using the Noise protocol. */
-class OakSessionClient(private val transport: SessionTransport) {
+class OakSessionClient(private val transport: SessionTransport<SessionRequest, SessionResponse>) {
   suspend fun newChannel(): OakClientChannel {
     val session = OakClientSession.createClientUnattested()
     while (!session.isOpen()) {
       val outMessage = session.getOutgoingMessage().orElseThrow()
-      transport.write(outMessage.toByteArray())
+      transport.write(outMessage)
       if (!session.isOpen()) {
         // Some protocols require the client to send a message that doesn't need to be answered by
         // the server before the session becomes open.
-        val inBytes = transport.read()
-        val inMessage = SessionResponse.parseFrom(inBytes)
+        val inMessage = transport.read()
         if (!session.putIncomingMessage(inMessage)) {
           throw OakSessionException("Unexpected message received during the handshake")
         }

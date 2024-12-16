@@ -95,6 +95,23 @@ load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO
 
 grpc_java_repositories()
 
+# Kotlin gRPC
+http_archive(
+    name = "com_github_grpc_grpc_kotlin",
+    repo_mapping = {"@io_bazel_rules_kotlin": "@rules_kotlin"},
+    strip_prefix = "grpc-kotlin-1.4.2",
+    url = "https://github.com/grpc/grpc-kotlin/archive/refs/tags/v1.4.2.tar.gz",
+)
+
+load(
+    "@com_github_grpc_grpc_kotlin//:repositories.bzl",
+    "IO_GRPC_GRPC_KOTLIN_ARTIFACTS",
+    "IO_GRPC_GRPC_KOTLIN_OVERRIDE_TARGETS",
+    "grpc_kt_repositories",
+)
+
+grpc_kt_repositories()
+
 ### --- Base Proto Support --- ###
 http_archive(
     name = "rules_proto",
@@ -138,13 +155,18 @@ maven_install(
     artifacts = [
         "co.nstant.in:cbor:0.9",
         "com.google.crypto.tink:tink:1.12.0",
+        "com.google.protobuf:protobuf-kotlin:3.18.0",
         "org.assertj:assertj-core:3.12.1",
         "org.bouncycastle:bcpkix-jdk18on:1.77",
         "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1",
         "org.mockito:mockito-core:3.3.3",
-    ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
+    ] + IO_GRPC_GRPC_JAVA_ARTIFACTS + IO_GRPC_GRPC_KOTLIN_ARTIFACTS,
     generate_compat_repositories = True,
-    override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
+    override_targets = dict(
+        IO_GRPC_GRPC_KOTLIN_OVERRIDE_TARGETS.items() +
+        IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS.items(),
+    ),
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",

@@ -43,6 +43,7 @@ kt_jvm_library(
     ],
     deps = [
         "//java/src/main/java/com/google/oak/session:client_session",
+        "//java/src/main/java/com/google/oak/session:exception",
         "//java/src/main/java/com/google/oak/transport:session_transport",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_java",
