@@ -317,6 +317,9 @@ SECTIONS {
      * See https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp .
      */
     .ebda 0x80000 (NOLOAD) : {
+        /* Ensure RSDP is always first in the EBDA. */
+        KEEP(*(.ebda.rsdp))
+        . = ALIGN(1K);
         *(.ebda .ebda.*)
     } > ram_low : ebda
     ASSERT(. <= 0xA0000, "EBDA overflow")

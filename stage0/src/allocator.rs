@@ -19,7 +19,7 @@ use core::{
     alloc::{AllocError, Allocator, Layout},
     marker::PhantomData,
     mem::MaybeUninit,
-    ops::{Deref, DerefMut, Range},
+    ops::{Deref, DerefMut},
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -71,15 +71,6 @@ pub struct BumpAllocator<const N: usize> {
 impl<const N: usize> BumpAllocator<N> {
     pub const fn uninit() -> Self {
         Self { inner: Spinlock::new(Inner::new()) }
-    }
-
-    pub fn contains_addr(&self, addr: VirtAddr) -> bool {
-        let base = VirtAddr::from_ptr(self.inner.lock().storage.as_ptr());
-        addr >= base && addr < (base + N)
-    }
-
-    pub fn contains_addr_range(&self, range: Range<VirtAddr>) -> bool {
-        self.contains_addr(range.start) && self.contains_addr(range.end)
     }
 }
 

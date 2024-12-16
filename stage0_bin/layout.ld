@@ -150,6 +150,9 @@ SECTIONS {
      * the first KiB of the EBDA.
      */
     .ebda 0x80000 (NOLOAD) : {
+        /* Ensure RSDP is always first in the EBDA. */
+        KEEP(*(.ebda.rsdp))
+        . = ALIGN(1K);
         *(.ebda .ebda.*)
     } > ram_low : ebda
 
