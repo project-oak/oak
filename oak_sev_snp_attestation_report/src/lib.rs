@@ -74,7 +74,7 @@ pub const REPORT_DATA_SIZE: usize = 64;
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
-    /// This implementation is based on version 2.
+    /// This implementation is based on version 3.
     pub version: u32,
     /// The guest security version number.
     pub guest_svn: u32,
@@ -100,13 +100,15 @@ pub struct AttestationReportData {
     /// Use `AttestationReportData::get_platform_info` to try to convert this to
     /// a `PlatformInfo` biflag representation.
     pub platform_info: u64,
-    /// The least significant bit indicates Whether the digest of the author key
-    /// is included in the report, all other bits are reserved and must be
-    /// zero.
-    ///
-    /// Use `AttestationReportData::get_author_key_en` to try to convert this to
-    /// an `AuthorKey` enum.
-    pub author_key_en: u64,
+    /// Bit-packed field containing the following:
+    /// 31:5 -- reserved, MBZ
+    /// 4:2 -- SIGNING_KEY, key used to sign this report
+    /// 1 - MASK_CHIP_KEY
+    /// 0 - AUTHOR_KEY_EN
+    key: u32,
+
+    /// Reserved. Must be zero.
+    _reserved_4: u32,
     /// Guest-provided data. The custom data provided in the attestation
     /// request.
     pub report_data: [u8; REPORT_DATA_SIZE],
@@ -128,8 +130,14 @@ pub struct AttestationReportData {
     /// The reported TCB version that was used to generate the versioned chip
     /// endorsement key (VCEK) used to sign this report.
     pub reported_tcb: TcbVersion,
+    /// Family ID (combined Extended Family ID and Family ID).
+    pub cpuid_fam_id: u8,
+    /// Model (combined Extended Model and Model fields).
+    pub cpuid_mod_id: u8,
+    /// Stepping.
+    pub cpuid_step: u8,
     /// Reserved, must be zero.
-    _reserved_0: [u8; 24],
+    _reserved_0: [u8; 21],
     /// Identifier unique to the chip, unless the ID has been masked in
     /// configuration in which case it is all zeroes.
     pub chip_id: [u8; 64],
@@ -167,9 +175,20 @@ impl AttestationReportData {
         PlatformInfo::from_bits(self.platform_info)
     }
 
+    // Gets the key used to sign this report.
+    pub fn get_signing_key(&self) -> Option<SigningKey> {
+        // bits 2, 3 and 4
+        SigningKey::from_repr(self.key & 0b11100)
+    }
+
+    /// Gets the value of MaskChipKey.
+    pub fn get_mask_chip_key(&self) -> bool {
+        self.key & 0b10 > 0
+    }
+
     /// Gets the author key enabled field as an `AuthorKey` enum if possible.
     pub fn get_author_key_en(&self) -> Option<AuthorKey> {
-        AuthorKey::from_repr(self.author_key_en)
+        AuthorKey::from_repr(self.key & 0b1)
     }
 
     /// Gets the signing algorithm field as a `SigningAlgorithm` enum if
@@ -181,21 +200,15 @@ impl AttestationReportData {
     /// Checks that fields with specific expected values or ranges are valid and
     /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
+        if self.version > 3 {
+            return Err("unsupported attestation report version");
+        }
         self.policy.validate()?;
         self.current_tcb.validate()?;
         self.reported_tcb.validate()?;
         self.committed_tcb.validate()?;
-        if self._reserved_0.iter().any(|&value| value != 0) {
-            return Err("nonzero value in _reserved_0");
-        }
-        if self._reserved_1 != 0 {
-            return Err("nonzero value in _reserved_1");
-        }
-        if self._reserved_2 != 0 {
-            return Err("nonzero value in _reserved_2");
-        }
-        if self._reserved_3.iter().any(|&value| value != 0) {
-            return Err("nonzero value in _reserved_3");
+        if self._reserved_4 != 0 {
+            return Err("nonzero value in _reserved_4");
         }
         if self.get_signature_algo().is_none() {
             return Err("invalid signature algorithm");
@@ -231,6 +244,17 @@ pub enum SigningAlgorithm {
     Invalid = 0,
     /// ECDSA using curve P-384 with SHA-384.
     EcdsaP384Sha384 = 1,
+}
+
+/// Key used to sign the attestation report.
+///
+/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+#[derive(Debug, FromRepr, PartialEq)]
+#[repr(u32)]
+pub enum SigningKey {
+    VCEK = 0 << 2,
+    VLEK = 1 << 2,
+    None = 7 << 2,
 }
 
 /// The required policy for a guest to run.
@@ -322,7 +346,7 @@ bitflags! {
 
 /// Whether the author key digest is included in the report.
 #[derive(Debug, FromRepr)]
-#[repr(u64)]
+#[repr(u32)]
 pub enum AuthorKey {
     /// The author key digest is not present.
     No = 0,
