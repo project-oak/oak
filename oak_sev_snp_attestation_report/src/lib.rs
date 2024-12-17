@@ -172,7 +172,10 @@ impl AttestationReportData {
     /// Gets the platform info field as a `PlatformInfo` representation if
     /// possible.
     pub fn get_platform_info(&self) -> Option<PlatformInfo> {
-        PlatformInfo::from_bits(self.platform_info)
+        // The latest documentation defines only the lowest 5 bits, with the others
+        // reserved. We, however, have encountered the reserved bits being set in the
+        // wild; therefore, mask them out here.
+        PlatformInfo::from_bits(self.platform_info & 0b11111)
     }
 
     // Gets the key used to sign this report.
@@ -231,6 +234,12 @@ bitflags! {
         const SMT_EN = (1 << 0);
         /// Indicates that transparent secure memory encryption (TSME) is enabled.
         const TSME_EN = (1 << 1);
+        /// Indicates that the plaform is using error correcting codes for memory.
+        const ECC_EN = (1 << 2);
+        /// Indicates that the RAPL feature is disabled.
+        const RAPL_DIS = (1 << 3);
+        /// Indicates ciphertext hiding is enabled for the DRAM.
+        const CIPHERTEXT_HIDING_DRAM_EN = (1 << 4);
     }
 }
 
