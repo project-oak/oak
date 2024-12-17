@@ -356,6 +356,30 @@
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -432,7 +456,7 @@
 </span><span class="kw">pub struct </span>AttestationReportData {
     <span class="doccomment">/// The version of the attestation report format.
     ///
-    /// This implementation is based on version 2.
+    /// This implementation is based on version 3.
     </span><span class="kw">pub </span>version: u32,
     <span class="doccomment">/// The guest security version number.
     </span><span class="kw">pub </span>guest_svn: u32,
@@ -458,13 +482,15 @@
     /// Use `AttestationReportData::get_platform_info` to try to convert this to
     /// a `PlatformInfo` biflag representation.
     </span><span class="kw">pub </span>platform_info: u64,
-    <span class="doccomment">/// The least significant bit indicates Whether the digest of the author key
-    /// is included in the report, all other bits are reserved and must be
-    /// zero.
-    ///
-    /// Use `AttestationReportData::get_author_key_en` to try to convert this to
-    /// an `AuthorKey` enum.
-    </span><span class="kw">pub </span>author_key_en: u64,
+    <span class="doccomment">/// Bit-packed field containing the following:
+    /// 31:5 -- reserved, MBZ
+    /// 4:2 -- SIGNING_KEY, key used to sign this report
+    /// 1 - MASK_CHIP_KEY
+    /// 0 - AUTHOR_KEY_EN
+    </span>key: u32,
+
+    <span class="doccomment">/// Reserved. Must be zero.
+    </span>_reserved_4: u32,
     <span class="doccomment">/// Guest-provided data. The custom data provided in the attestation
     /// request.
     </span><span class="kw">pub </span>report_data: [u8; REPORT_DATA_SIZE],
@@ -486,8 +512,14 @@
     <span class="doccomment">/// The reported TCB version that was used to generate the versioned chip
     /// endorsement key (VCEK) used to sign this report.
     </span><span class="kw">pub </span>reported_tcb: TcbVersion,
+    <span class="doccomment">/// Family ID (combined Extended Family ID and Family ID).
+    </span><span class="kw">pub </span>cpuid_fam_id: u8,
+    <span class="doccomment">/// Model (combined Extended Model and Model fields).
+    </span><span class="kw">pub </span>cpuid_mod_id: u8,
+    <span class="doccomment">/// Stepping.
+    </span><span class="kw">pub </span>cpuid_step: u8,
     <span class="doccomment">/// Reserved, must be zero.
-    </span>_reserved_0: [u8; <span class="number">24</span>],
+    </span>_reserved_0: [u8; <span class="number">21</span>],
     <span class="doccomment">/// Identifier unique to the chip, unless the ID has been masked in
     /// configuration in which case it is all zeroes.
     </span><span class="kw">pub </span>chip_id: [u8; <span class="number">64</span>],
@@ -525,9 +557,20 @@
         PlatformInfo::from_bits(<span class="self">self</span>.platform_info)
     }
 
+    <span class="comment">// Gets the key used to sign this report.
+    </span><span class="kw">pub fn </span>get_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningKey&gt; {
+        <span class="comment">// bits 2, 3 and 4
+        </span>SigningKey::from_repr(<span class="self">self</span>.key &amp; <span class="number">0b11100</span>)
+    }
+
+    <span class="doccomment">/// Gets the value of MaskChipKey.
+    </span><span class="kw">pub fn </span>get_mask_chip_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.key &amp; <span class="number">0b10 </span>&gt; <span class="number">0
+    </span>}
+
     <span class="doccomment">/// Gets the author key enabled field as an `AuthorKey` enum if possible.
     </span><span class="kw">pub fn </span>get_author_key_en(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AuthorKey&gt; {
-        AuthorKey::from_repr(<span class="self">self</span>.author_key_en)
+        AuthorKey::from_repr(<span class="self">self</span>.key &amp; <span class="number">0b1</span>)
     }
 
     <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if
@@ -539,21 +582,15 @@
     <span class="doccomment">/// Checks that fields with specific expected values or ranges are valid and
     /// the reserved bytes are all zero.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="kw">if </span><span class="self">self</span>.version &gt; <span class="number">3 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"unsupported attestation report version"</span>);
+        }
         <span class="self">self</span>.policy.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.current_tcb.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.reported_tcb.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.committed_tcb.validate()<span class="question-mark">?</span>;
-        <span class="kw">if </span><span class="self">self</span>._reserved_0.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_0"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>._reserved_1 != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_1"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>._reserved_2 != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_2"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>._reserved_3.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_3"</span>);
+        <span class="kw">if </span><span class="self">self</span>._reserved_4 != <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_4"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.get_signature_algo().is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid signature algorithm"</span>);
@@ -589,6 +626,17 @@
     </span>Invalid = <span class="number">0</span>,
     <span class="doccomment">/// ECDSA using curve P-384 with SHA-384.
     </span>EcdsaP384Sha384 = <span class="number">1</span>,
+}
+
+<span class="doccomment">/// Key used to sign the attestation report.
+///
+/// See Table 22 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+</span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>SigningKey {
+    VCEK = <span class="number">0 </span>&lt;&lt; <span class="number">2</span>,
+    VLEK = <span class="number">1 </span>&lt;&lt; <span class="number">2</span>,
+    <span class="prelude-val">None </span>= <span class="number">7 </span>&lt;&lt; <span class="number">2</span>,
 }
 
 <span class="doccomment">/// The required policy for a guest to run.
@@ -680,7 +728,7 @@
 
 <span class="doccomment">/// Whether the author key digest is included in the report.
 </span><span class="attr">#[derive(Debug, FromRepr)]
-#[repr(u64)]
+#[repr(u32)]
 </span><span class="kw">pub enum </span>AuthorKey {
     <span class="doccomment">/// The author key digest is not present.
     </span>No = <span class="number">0</span>,
