@@ -27,8 +27,8 @@ import com.google.protobuf.ByteString
  * peer.
  */
 class OakClientChannel(
-        private val session: OakClientSession,
-        private val transport: SessionTransport
+  private val session: OakClientSession,
+  private val transport: SessionTransport,
 ) {
   suspend fun read(): ByteArray {
     val inBytes = transport.read()

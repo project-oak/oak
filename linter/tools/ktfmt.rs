@@ -29,7 +29,11 @@ impl linter::LinterTool for KtfmtTool {
     }
 
     fn check(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("ktfmt", &["--google-style", "--dry-run"], path)
+        super::linter_command(
+            "ktfmt",
+            &["--google-style", "--dry-run", "--set-exit-if-changed"],
+            path,
+        )
     }
 
     fn fix(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
