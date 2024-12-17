@@ -380,6 +380,15 @@
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -554,7 +563,10 @@
     <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if
     /// possible.
     </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PlatformInfo&gt; {
-        PlatformInfo::from_bits(<span class="self">self</span>.platform_info)
+        <span class="comment">// The latest documentation defines only the lowest 5 bits, with the others
+        // reserved. We, however, have encountered the reserved bits being set in the
+        // wild; therefore, mask them out here.
+        </span>PlatformInfo::from_bits(<span class="self">self</span>.platform_info &amp; <span class="number">0b11111</span>)
     }
 
     <span class="comment">// Gets the key used to sign this report.
@@ -613,6 +625,12 @@
         </span><span class="kw">const </span>SMT_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
         <span class="doccomment">/// Indicates that transparent secure memory encryption (TSME) is enabled.
         </span><span class="kw">const </span>TSME_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">1</span>);
+        <span class="doccomment">/// Indicates that the plaform is using error correcting codes for memory.
+        </span><span class="kw">const </span>ECC_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">2</span>);
+        <span class="doccomment">/// Indicates that the RAPL feature is disabled.
+        </span><span class="kw">const </span>RAPL_DIS = (<span class="number">1 </span>&lt;&lt; <span class="number">3</span>);
+        <span class="doccomment">/// Indicates ciphertext hiding is enabled for the DRAM.
+        </span><span class="kw">const </span>CIPHERTEXT_HIDING_DRAM_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">4</span>);
     }
 }
 
