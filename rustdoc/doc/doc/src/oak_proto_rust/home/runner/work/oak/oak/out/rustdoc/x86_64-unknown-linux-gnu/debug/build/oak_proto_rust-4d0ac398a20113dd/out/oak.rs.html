@@ -55,6 +55,17 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Contains various digest formats for the same underlying file. Mixing
 /// digests from various files is "undefined behavior". There is no distinction
 /// between empty and not set, it means the same.
@@ -111,5 +122,16 @@
     </span><span class="kw">pub </span>sha3_224: ::prost::alloc::string::String,
     <span class="attr">#[prost(string, tag = <span class="string">"32"</span>)]
     </span><span class="kw">pub </span>sha2_384: ::prost::alloc::string::String,
+}
+<span class="doccomment">/// Container that can contain any serialized data and a corresponding ID.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>Variant {
+    <span class="doccomment">/// Unique payload identifier that also defines how to deserialize the `value`.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>id: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Serialized data.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 </code></pre></div></section></main></body></html>
