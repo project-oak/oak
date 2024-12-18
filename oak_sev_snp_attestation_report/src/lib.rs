@@ -169,19 +169,18 @@ pub struct AttestationReportData {
 static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
 
 impl AttestationReportData {
-    /// Gets the platform info field as a `PlatformInfo` representation if
-    /// possible.
-    pub fn get_platform_info(&self) -> Option<PlatformInfo> {
+    /// Gets the platform info field as a `PlatformInfo` representation.
+    pub fn get_platform_info(&self) -> PlatformInfo {
         // The latest documentation defines only the lowest 5 bits, with the others
         // reserved. We, however, have encountered the reserved bits being set in the
         // wild; therefore, mask them out here.
-        PlatformInfo::from_bits(self.platform_info & 0b11111)
+        PlatformInfo::from_bits_truncate(self.platform_info)
     }
 
     // Gets the key used to sign this report.
     pub fn get_signing_key(&self) -> Option<SigningKey> {
-        // bits 2, 3 and 4
-        SigningKey::from_repr(self.key & 0b11100)
+        // Only bits 2, 3, 4 are of interest, mask out the rest and shift.
+        SigningKey::from_repr((self.key & 0b11100) >> 2)
     }
 
     /// Gets the value of MaskChipKey.
@@ -189,9 +188,10 @@ impl AttestationReportData {
         self.key & 0b10 > 0
     }
 
-    /// Gets the author key enabled field as an `AuthorKey` enum if possible.
-    pub fn get_author_key_en(&self) -> Option<AuthorKey> {
-        AuthorKey::from_repr(self.key & 0b1)
+    /// Returns the value of AUTHOR_KEY_EN, i.e. whether the author key digest
+    /// is included in the report.
+    pub fn has_author_key(&self) -> bool {
+        self.key & 1 > 0
     }
 
     /// Gets the signing algorithm field as a `SigningAlgorithm` enum if
@@ -213,14 +213,11 @@ impl AttestationReportData {
         if self._reserved_4 != 0 {
             return Err("nonzero value in _reserved_4");
         }
+        if self.get_signing_key().is_none() {
+            return Err("invalid signing key setting");
+        }
         if self.get_signature_algo().is_none() {
             return Err("invalid signature algorithm");
-        }
-        if self.get_platform_info().is_none() {
-            return Err("invalid platform info");
-        }
-        if self.get_author_key_en().is_none() {
-            return Err("invalid value for author_key_en");
         }
         Ok(())
     }
@@ -230,7 +227,7 @@ bitflags! {
     /// Information on the platform configuration.
     #[derive(Default)]
     pub struct PlatformInfo: u64 {
-        /// Indicates that simulatneous multi-threading (SMT) is enabled.
+        /// Indicates that simultaneous multi-threading (SMT) is enabled.
         const SMT_EN = (1 << 0);
         /// Indicates that transparent secure memory encryption (TSME) is enabled.
         const TSME_EN = (1 << 1);
@@ -245,7 +242,7 @@ bitflags! {
 
 /// The signing algorithm used for the report signature.
 ///
-/// See Table 117 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 133 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningAlgorithm {
@@ -261,9 +258,10 @@ pub enum SigningAlgorithm {
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningKey {
-    VCEK = 0 << 2,
-    VLEK = 1 << 2,
-    None = 7 << 2,
+    VCEK = 0,
+    VLEK = 1,
+    // Values 2 through 6 are reserved.
+    None = 7,
 }
 
 /// The required policy for a guest to run.
@@ -353,19 +351,9 @@ bitflags! {
     }
 }
 
-/// Whether the author key digest is included in the report.
-#[derive(Debug, FromRepr)]
-#[repr(u32)]
-pub enum AuthorKey {
-    /// The author key digest is not present.
-    No = 0,
-    /// The author key digest is present.
-    Yes = 1,
-}
-
 /// An ECDSA signature.
 ///
-/// See Table 119 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 135 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct EcdsaSignature {
