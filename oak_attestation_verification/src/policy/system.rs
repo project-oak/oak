@@ -15,11 +15,14 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::Policy;
-use oak_proto_rust::oak::attestation::v1::{
-    EventAttestationResults, SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues,
+use oak_attestation_verification_types::{policy::Policy, SYSTEM_ENDORSEMENT_ID};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        EventAttestationResults, SystemLayerData, SystemLayerEndorsements,
+        SystemLayerReferenceValues,
+    },
+    Variant,
 };
-use prost_types::Any;
 
 use crate::{
     compare::compare_system_layer_measurement_digests,
@@ -37,19 +40,20 @@ impl SystemPolicy {
     }
 }
 
-impl Policy<[u8], Any> for SystemPolicy {
+impl Policy<[u8], Variant> for SystemPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &Any,
+        encoded_event_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<SystemLayerData>(
             "type.googleapis.com/oak.attestation.v1.SystemLayerData",
             encoded_event,
         )?;
+        // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsements = decode_endorsement_proto::<SystemLayerEndorsements>(
-            "type.googleapis.com/oak.attestation.v1.SystemLayerEndorsements",
+            SYSTEM_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

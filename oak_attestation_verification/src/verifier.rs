@@ -28,14 +28,16 @@ use oak_attestation_verification_types::{
     verifier::AttestationVerifier,
 };
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
-use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, AttestationResults, Endorsements,
-    EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
-    ReferenceValues,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, endorsements, AttestationResults, Endorsements,
+        EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence,
+        LayerEvidence, ReferenceValues,
+    },
+    Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use p256::ecdsa::VerifyingKey;
-use prost_types::Any;
 use zerocopy::FromBytes;
 
 use crate::{
@@ -109,15 +111,13 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         let firmware_measurement = &attestation_report.data.measurement;
 
         // Verify AMD SEV-SNP platform authenticity and configuration.
-        if let Some(endorsements::Platform::AmdSevSnp(platform_endorsement)) =
-            endorsements.platform.as_ref()
-        {
-            self.platform_policy
-                .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
-                .context("couldn't verify AMD SEV-SNP platform")?;
-        } else {
-            anyhow::bail!("AMD SEV-SNP endorsement wasn't provided in endorsements")
-        }
+        let platform_endorsement = endorsements
+            .platform
+            .as_ref()
+            .context("AMD SEV-SNP endorsement wasn't provided in endorsements")?;
+        self.platform_policy
+            .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
+            .context("couldn't verify AMD SEV-SNP platform")?;
 
         // Verify that the DICE root ECA key is bound to the attestation report.
         verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
@@ -130,7 +130,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
 
         // Verify firmware measurement.
         let firmware_endorsement = &endorsements
-            .firmware
+            .initial
             .as_ref()
             .context("firmware endorsement wasn't provided in endorsements")?;
         self.firmware_policy
@@ -418,7 +418,7 @@ fn validate_that_event_log_is_captured_in_dice_layers(
 /// Policies and Events is done via ordering.
 fn verify_event_log(
     event_log: &EventLog,
-    event_endorsements: &[Any],
+    event_endorsements: &[Variant],
     policies: &[Box<dyn EventPolicy>],
     milliseconds_since_epoch: i64,
 ) -> anyhow::Result<Vec<EventAttestationResults>> {

@@ -59,6 +59,7 @@ cargo_build_script(
     data = [
         ":hello_world.proto",
         "//proto:digest.proto",
+        "//proto:variant.proto",
         "//proto/attestation:endorsement.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",

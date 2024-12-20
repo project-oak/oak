@@ -908,20 +908,21 @@ pub struct ContainerEndorsement {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsements {
-    /// Endorsement corresponding to the initial TEE measurement done by the
+    /// Endorsement that proves the TEE platform authenticity.
+    #[prost(message, optional, tag = "5")]
+    pub platform: ::core::option::Option<super::super::Variant>,
+    /// Endorsement corresponding to the initial measurement done by the TEE
     /// platform.
-    /// Firmware endorsement is not included in the event log, because
+    /// Initial endorsement is not included in the event log, because
     /// events can only be generated after the TEE starts up.
     #[prost(message, optional, tag = "6")]
-    pub firmware: ::core::option::Option<FirmwareEndorsement>,
+    pub initial: ::core::option::Option<super::super::Variant>,
     /// Endorsements corresponding to the event log.
     #[prost(message, repeated, tag = "7")]
-    pub events: ::prost::alloc::vec::Vec<::prost_types::Any>,
+    pub events: ::prost::alloc::vec::Vec<super::super::Variant>,
     /// TODO: b/380407219 - Remove this field once Oak clients switch to policies.
     #[prost(oneof = "endorsements::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<endorsements::Type>,
-    #[prost(oneof = "endorsements::Platform", tags = "5")]
-    pub platform: ::core::option::Option<endorsements::Platform>,
 }
 /// Nested message and enum types in `Endorsements`.
 pub mod endorsements {
@@ -935,12 +936,6 @@ pub mod endorsements {
         OakContainers(super::OakContainersEndorsements),
         #[prost(message, tag = "3")]
         Cb(super::CbEndorsements),
-    }
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
-    pub enum Platform {
-        #[prost(message, tag = "5")]
-        AmdSevSnp(super::AmdSevSnpEndorsement),
     }
 }
 /// Represents a verification result. Can be extended to return certain

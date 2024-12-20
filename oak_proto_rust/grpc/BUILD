@@ -50,6 +50,7 @@ cargo_build_script(
     crate_features = ["bazel"],
     data = [
         "//proto:digest.proto",
+        "//proto:variant.proto",
         "//proto/attestation:endorsement.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",

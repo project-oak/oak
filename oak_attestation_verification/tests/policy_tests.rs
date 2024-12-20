@@ -21,17 +21,23 @@ use oak_attestation_verification::policy::{
     application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
     kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
 };
-use oak_attestation_verification_types::policy::Policy;
+use oak_attestation_verification_types::{
+    policy::Policy, AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID, APPLICATION_ENDORSEMENT_ID,
+    CONTAINER_ENDORSEMENT_ID, FIRMWARE_ENDORSEMENT_ID, KERNEL_ENDORSEMENT_ID,
+    SYSTEM_ENDORSEMENT_ID,
+};
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement, Endorsements,
-    Evidence, FirmwareEndorsement, OakContainersEndorsements, OakContainersReferenceValues,
-    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-    SkipVerification,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement, Endorsements,
+        Evidence, FirmwareEndorsement, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        SkipVerification,
+    },
+    Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
-use prost_types::Any;
 use zerocopy::FromBytes;
 
 const OC_EVIDENCE_PATH: &str =
@@ -185,8 +191,12 @@ fn amd_sev_snp_platform_policy_verify_succeeds() {
     let platform_endorsement = AmdSevSnpEndorsement {
         tee_certificate: OC_ENDORSEMENTS.root_layer.as_ref().unwrap().tee_certificate.to_vec(),
     };
+    let encoded_endorsement = Variant {
+        id: AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID.to_vec(),
+        value: platform_endorsement.encode_to_vec(),
+    };
 
-    let result = policy.verify(attestation_report, &platform_endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(attestation_report, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok());
 }
@@ -212,9 +222,13 @@ fn amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_measurement = &extract_attestation_report(&OC_EVIDENCE).unwrap().data.measurement;
     // TODO: b/375137648 - Use new endorsements directly once available.
     let firmware_endorsement = FirmwareEndorsement { firmware: None };
+    let encoded_endorsement = Variant {
+        id: FIRMWARE_ENDORSEMENT_ID.to_vec(),
+        value: firmware_endorsement.encode_to_vec(),
+    };
 
     let result =
-        policy.verify(firmware_measurement, &firmware_endorsement, MILLISECONDS_SINCE_EPOCH);
+        policy.verify(firmware_measurement, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok());
 }
@@ -228,10 +242,8 @@ fn oc_kernel_policy_verify_succeeds() {
     let endorsement = OC_ENDORSEMENTS.kernel_layer.as_ref().unwrap();
 
     // TODO: b/375137648 - Populate `events` proto field.
-    let encoded_endorsement = Any {
-        type_url: "type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements".to_string(),
-        value: endorsement.encode_to_vec(),
-    };
+    let encoded_endorsement =
+        Variant { id: KERNEL_ENDORSEMENT_ID.to_vec(), value: endorsement.encode_to_vec() };
 
     let result = policy.verify(&event, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -247,10 +259,8 @@ fn oc_system_policy_verify_succeeds() {
     let endorsement = OC_ENDORSEMENTS.system_layer.as_ref().unwrap();
 
     // TODO: b/375137648 - Populate `events` proto field.
-    let encoded_endorsement = Any {
-        type_url: "type.googleapis.com/oak.attestation.v1.SystemLayerEndorsements".to_string(),
-        value: endorsement.encode_to_vec(),
-    };
+    let encoded_endorsement =
+        Variant { id: SYSTEM_ENDORSEMENT_ID.to_vec(), value: endorsement.encode_to_vec() };
 
     let result = policy.verify(&event, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -270,10 +280,8 @@ fn oc_container_policy_verify_succeeds() {
     let endorsement = std::vec![];
 
     // TODO: b/375137648 - Populate `events` proto field.
-    let encoded_endorsement = Any {
-        type_url: "type.googleapis.com/oak.attestation.v1.ContainerLayerEndorsements".to_string(),
-        value: endorsement.encode_to_vec(),
-    };
+    let encoded_endorsement =
+        Variant { id: CONTAINER_ENDORSEMENT_ID.to_vec(), value: endorsement.encode_to_vec() };
 
     let result = policy.verify(&event, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -289,10 +297,8 @@ fn rk_kernel_policy_verify_succeeds() {
     let endorsement = RK_ENDORSEMENTS.kernel_layer.as_ref().unwrap();
 
     // TODO: b/375137648 - Populate `events` proto field.
-    let encoded_endorsement = Any {
-        type_url: "type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements".to_string(),
-        value: endorsement.encode_to_vec(),
-    };
+    let encoded_endorsement =
+        Variant { id: KERNEL_ENDORSEMENT_ID.to_vec(), value: endorsement.encode_to_vec() };
 
     let result = policy.verify(&event, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -310,10 +316,8 @@ fn rk_application_policy_verify_succeeds() {
     let endorsement = RK_ENDORSEMENTS.application_layer.as_ref().unwrap();
 
     // TODO: b/375137648 - Populate `events` proto field.
-    let encoded_endorsement = Any {
-        type_url: "type.googleapis.com/oak.attestation.v1.ApplicationLayerEndorsements".to_string(),
-        value: endorsement.encode_to_vec(),
-    };
+    let encoded_endorsement =
+        Variant { id: APPLICATION_ENDORSEMENT_ID.to_vec(), value: endorsement.encode_to_vec() };
 
     let result = policy.verify(&event, &encoded_endorsement, MILLISECONDS_SINCE_EPOCH);
     // TODO: b/356631062 - Verify detailed attestation results.

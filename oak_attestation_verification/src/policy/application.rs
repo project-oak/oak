@@ -15,12 +15,14 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::Policy;
-use oak_proto_rust::oak::attestation::v1::{
-    ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-    EventAttestationResults,
+use oak_attestation_verification_types::{policy::Policy, APPLICATION_ENDORSEMENT_ID};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        EventAttestationResults,
+    },
+    Variant,
 };
-use prost_types::Any;
 
 use crate::{
     compare::compare_application_layer_measurement_digests,
@@ -38,22 +40,23 @@ impl ApplicationPolicy {
     }
 }
 
-// We have to use [`Policy<[u8], Any>`] instead of [`EventPolicy`], because
+// We have to use [`Policy<[u8], Variant>`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
-impl Policy<[u8], Any> for ApplicationPolicy {
+impl Policy<[u8], Variant> for ApplicationPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &Any,
+        encoded_event_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ApplicationLayerData>(
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
             encoded_event,
         )?;
+        // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsement = decode_endorsement_proto::<ApplicationLayerEndorsements>(
-            "type.googleapis.com/oak.attestation.v1.ApplicationLayerEndorsements",
+            APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

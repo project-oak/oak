@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
-import "google/protobuf/any.proto";
+import "proto/variant.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -198,16 +198,15 @@ message Endorsements {
     CBEndorsements cb = 3;
   }
 
-  oneof platform {
-    AmdSevSnpEndorsement amd_sev_snp = 5;
-  }
+  // Endorsement that proves the TEE platform authenticity.
+  oak.Variant platform = 5;
 
-  // Endorsement corresponding to the initial TEE measurement done by the
+  // Endorsement corresponding to the initial measurement done by the TEE
   // platform.
-  // Firmware endorsement is not included in the event log, because
+  // Initial endorsement is not included in the event log, because
   // events can only be generated after the TEE starts up.
-  FirmwareEndorsement firmware = 6;
+  oak.Variant initial = 6;
 
   // Endorsements corresponding to the event log.
-  repeated google.protobuf.Any events = 7;
+  repeated oak.Variant events = 7;
 };

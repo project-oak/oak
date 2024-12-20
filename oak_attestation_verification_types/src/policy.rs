@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-use oak_proto_rust::oak::attestation::v1::EventAttestationResults;
-use prost_types::Any;
+use oak_proto_rust::oak::{attestation::v1::EventAttestationResults, Variant};
 
 /// Verification Policy that takes a generic evidence and endorsement and
 /// performs attestation verification.
@@ -34,4 +33,4 @@ pub trait Policy<V: ?Sized, N: ?Sized>: Send + Sync {
 
 /// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
-pub trait EventPolicy = Policy<[u8], Any>;
+pub trait EventPolicy = Policy<[u8], Variant>;

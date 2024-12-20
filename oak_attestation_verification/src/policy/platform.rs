@@ -15,9 +15,10 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::Policy;
-use oak_proto_rust::oak::attestation::v1::{
-    AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults,
+use oak_attestation_verification_types::{policy::Policy, AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID};
+use oak_proto_rust::oak::{
+    attestation::v1::{AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults},
+    Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 
@@ -27,6 +28,7 @@ use crate::{
         convert_amd_sev_snp_attestation_report, verify_amd_sev_attestation_report_values,
         verify_amd_sev_snp_attestation_report_validity,
     },
+    util::decode_endorsement_proto,
 };
 
 pub struct AmdSevSnpPolicy {
@@ -39,13 +41,18 @@ impl AmdSevSnpPolicy {
     }
 }
 
-impl Policy<AttestationReport, AmdSevSnpEndorsement> for AmdSevSnpPolicy {
+impl Policy<AttestationReport, Variant> for AmdSevSnpPolicy {
     fn verify(
         &self,
         attestation_report: &AttestationReport,
-        platform_endorsement: &AmdSevSnpEndorsement,
+        encoded_platform_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
+        let platform_endorsement = decode_endorsement_proto::<AmdSevSnpEndorsement>(
+            AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID,
+            encoded_platform_endorsement,
+        )?;
+
         // Ensure the Attestation report is properly signed by the platform and the
         // corresponding certificate is signed by AMD.
         verify_amd_sev_snp_attestation_report_validity(

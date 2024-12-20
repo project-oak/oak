@@ -15,12 +15,14 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::policy::Policy;
-use oak_proto_rust::oak::attestation::v1::{
-    EventAttestationResults, KernelLayerEndorsements, KernelLayerReferenceValues,
-    Stage0Measurements,
+use oak_attestation_verification_types::{policy::Policy, KERNEL_ENDORSEMENT_ID};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        EventAttestationResults, KernelLayerEndorsements, KernelLayerReferenceValues,
+        Stage0Measurements,
+    },
+    Variant,
 };
-use prost_types::Any;
 
 use crate::{
     compare::compare_kernel_layer_measurement_digests,
@@ -39,11 +41,11 @@ impl KernelPolicy {
     }
 }
 
-impl Policy<[u8], Any> for KernelPolicy {
+impl Policy<[u8], Variant> for KernelPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &Any,
+        encoded_event_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event =
@@ -51,8 +53,9 @@ impl Policy<[u8], Any> for KernelPolicy {
                 "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
                 encoded_event,
             )?);
+        // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsements = decode_endorsement_proto::<KernelLayerEndorsements>(
-            "type.googleapis.com/oak.attestation.v1.KernelLayerEndorsements",
+            KERNEL_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

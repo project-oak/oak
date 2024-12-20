@@ -864,7 +864,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oak_proto_rust",
- "prost-types",
 ]
 
 [[package]]
