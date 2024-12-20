@@ -423,12 +423,6 @@
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -642,12 +636,6 @@
             group_encryption_public_key_certificate,
             group_signing_public_key_certificate,
         });
-
-        evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
         <span class="prelude-val">Ok</span>(evidence)
     }
 }

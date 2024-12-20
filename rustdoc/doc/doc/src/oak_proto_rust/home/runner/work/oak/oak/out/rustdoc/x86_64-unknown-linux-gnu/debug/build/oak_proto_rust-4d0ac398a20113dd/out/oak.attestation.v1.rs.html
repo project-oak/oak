@@ -1490,6 +1490,15 @@
 <a href="#1490" id="1490">1490</a>
 <a href="#1491" id="1491">1491</a>
 <a href="#1492" id="1492">1492</a>
+<a href="#1493" id="1493">1493</a>
+<a href="#1494" id="1494">1494</a>
+<a href="#1495" id="1495">1495</a>
+<a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with:
 /// &lt;https://github.com/project-oak/oak/tree/main/snp_measurement&gt;
@@ -2710,6 +2719,15 @@
     <span class="doccomment">/// Measurement RawDigest of the configuration used by the container.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>config: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::RawDigest&gt;,
+    <span class="doccomment">/// Key used to initialize HPKE encryption from the client.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"3"</span>)]
+    </span><span class="kw">pub </span>encryption_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Key used to verify artifacts signed by the TEE.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"4"</span>)]
+    </span><span class="kw">pub </span>signing_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Key used to verify that Noise session is bound to the evidence.
+    </span><span class="attr">#[prost(bytes = <span class="string">"vec"</span>, tag = <span class="string">"5"</span>)]
+    </span><span class="kw">pub </span>session_binding_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="doccomment">/// Values extracted from the evidence that represents an event.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]

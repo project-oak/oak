@@ -248,6 +248,35 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -316,6 +345,7 @@
     application_config: Vec&lt;u8&gt;,
     encryption_key_pair: <span class="prelude-ty">Option</span>&lt;(EncryptionKey, Vec&lt;u8&gt;)&gt;,
     signing_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;,
+    session_binding_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;,
 }
 
 <span class="macro">macro_rules!</span> builder_param {
@@ -339,6 +369,11 @@
             <span class="prelude-val">None </span>=&gt; generate_ecdsa_key_pair(),
         };
 
+        <span class="kw">let </span>session_binding_key_pair = <span class="kw">match </span><span class="self">self</span>.session_binding_key_pair {
+            <span class="prelude-val">Some</span>((public, private)) =&gt; (public, private),
+            <span class="prelude-val">None </span>=&gt; generate_ecdsa_key_pair(),
+        };
+
         StandaloneOrchestrator::create(
             <span class="self">self</span>.stage0_measurements,
             <span class="self">self</span>.stage1_system_image,
@@ -346,6 +381,7 @@
             <span class="self">self</span>.application_config,
             encryption_key_pair,
             signing_key_pair,
+            session_binding_key_pair,
         )
     }
 
@@ -355,6 +391,7 @@
     <span class="macro">builder_param!</span>(application_config: Vec&lt;u8&gt;);
     <span class="macro">builder_param!</span>(encryption_key_pair: <span class="prelude-ty">Option</span>&lt;(EncryptionKey, Vec&lt;u8&gt;)&gt;);
     <span class="macro">builder_param!</span>(signing_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;);
+    <span class="macro">builder_param!</span>(session_binding_key_pair: <span class="prelude-ty">Option</span>&lt;(SigningKey, VerifyingKey)&gt;);
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>StandaloneOrchestrator {
@@ -373,6 +410,7 @@
             application_config: DEFAULT_APPLICATION_CONFIG.to_vec(),
             encryption_key_pair: <span class="prelude-val">None</span>,
             signing_key_pair: <span class="prelude-val">None</span>,
+            session_binding_key_pair: <span class="prelude-val">None</span>,
         }
     }
 
@@ -383,7 +421,20 @@
         application_config: Vec&lt;u8&gt;,
         encryption_key_pair: (EncryptionKey, Vec&lt;u8&gt;),
         signing_key_pair: (SigningKey, VerifyingKey),
+        session_binding_key_pair: (SigningKey, VerifyingKey),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>(encryption_key, encryption_public_key) = encryption_key_pair;
+        <span class="kw">let </span>(signing_key, signing_public_key) = signing_key_pair;
+        <span class="kw">let </span>(session_binding_key, session_binding_public_key) = session_binding_key_pair;
+
+        <span class="kw">let </span>instance_private_keys =
+            InstanceKeys { encryption_key, signing_key, session_binding_key };
+        <span class="kw">let </span>instance_public_keys = InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+            session_binding_public_key,
+        };
+
         <span class="comment">// Generate the root layer (Stage0) event
         </span><span class="kw">let </span>encoded_stage0_event = oak_stage0_dice::encode_stage0_event(root_layer_event.clone());
 
@@ -402,28 +453,35 @@
 
         attester.extend(<span class="kw-2">&amp;</span>encoded_stage0_event).context(<span class="string">"couldn't extend attester evidence"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Add Stage1 event
+        <span class="comment">// Add Stage1 event.
         </span><span class="kw">let </span>stage1_event =
             oak_containers_attestation::create_system_layer_event(stage1_system_image);
-        attester.extend(<span class="kw-2">&amp;</span>stage1_event.encode_to_vec())<span class="question-mark">?</span>;
+        attester
+            .extend(<span class="kw-2">&amp;</span>stage1_event.encode_to_vec())
+            .context(<span class="string">"couldn't add system event to the evidence"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Add Orchestrator layer data
-        </span><span class="kw">let </span>orchestrator_layer_data = oak_containers_attestation::measure_container_and_config(
+        <span class="comment">// Add container event and add it to the event log.
+        </span><span class="kw">let </span>container_event = oak_containers_attestation::create_container_event(
             application_image,
             <span class="kw-2">&amp;</span>application_config,
+            <span class="kw-2">&amp;</span>instance_public_keys,
         );
+        attester
+            .extend(<span class="kw-2">&amp;</span>container_event.encode_to_vec())
+            .context(<span class="string">"couldn't add container event to the evidence"</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Add application keys and generate the final evidence
+        <span class="comment">// Add container DICE layer data.
+        </span><span class="kw">let </span>container_layer =
+            oak_containers_attestation::create_container_dice_layer(<span class="kw-2">&amp;</span>container_event);
+
+        <span class="comment">// Add application keys and generate the final evidence.
         </span><span class="kw">let </span>evidence = attester.add_application_keys(
-            orchestrator_layer_data,
-            <span class="kw-2">&amp;</span>encryption_key_pair.<span class="number">1</span>,
-            <span class="kw-2">&amp;</span>signing_key_pair.<span class="number">1</span>,
+            container_layer,
+            <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
+            <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
             <span class="prelude-val">None</span>,
             <span class="prelude-val">None</span>,
         )<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>instance_private_keys =
-            InstanceKeys { encryption_key: encryption_key_pair.<span class="number">0</span>, signing_key: signing_key_pair.<span class="number">0 </span>};
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ instance_private_keys, evidence, application_config })
     }

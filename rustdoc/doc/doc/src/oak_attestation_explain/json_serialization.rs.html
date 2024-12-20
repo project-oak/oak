@@ -742,6 +742,15 @@
 <a href="#742" id="742">742</a>
 <a href="#743" id="743">743</a>
 <a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -936,11 +945,20 @@
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    </span><span class="kw">let </span>ContainerLayerData { bundle, config } = instance;
+    </span><span class="kw">let </span>ContainerLayerData {
+        bundle,
+        config,
+        encryption_public_key,
+        signing_public_key,
+        session_binding_public_key,
+    } = instance;
 
     <span class="macro">json!</span>({
         <span class="string">"bundle"</span>:  bundle.as_ref().map(serialize_raw_digest),
         <span class="string">"config"</span>: config.as_ref().map(serialize_raw_digest),
+        <span class="string">"encryption_public_key"</span>: encryption_public_key,
+        <span class="string">"signing_public_key"</span>: signing_public_key,
+        <span class="string">"session_binding_public_key"</span>: session_binding_public_key,
     })
 }
 

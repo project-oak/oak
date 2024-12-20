@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["create_system_layer_event","generate_instance_keys","measure_container_and_config"],"struct":["GroupKeys","GroupPublicKeys","InstanceKeys","InstancePublicKeys"]};
+window.SIDEBAR_ITEMS = {"fn":["create_container_dice_layer","create_container_event","create_system_layer_event","generate_instance_keys"],"struct":["GroupKeys","GroupPublicKeys","InstanceKeys","InstancePublicKeys"]};

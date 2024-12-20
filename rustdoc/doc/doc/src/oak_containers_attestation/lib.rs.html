@@ -144,6 +144,27 @@
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -190,26 +211,40 @@
     }
 }
 
-<span class="doccomment">/// Measures the downloaded container image bytes and configuration and returns
-/// these as a vector of additional CWT claims.
-</span><span class="kw">pub fn </span>measure_container_and_config(
+<span class="doccomment">/// Creates a container event that includes image bytes and configuration
+/// measurements and public keys used by the container.
+</span><span class="kw">pub fn </span>create_container_event(
     container_bytes: <span class="kw-2">&amp;</span>[u8],
     config_bytes: <span class="kw-2">&amp;</span>[u8],
-) -&gt; oak_attestation::dice::LayerData {
+    instance_public_keys: <span class="kw-2">&amp;</span>InstancePublicKeys,
+) -&gt; Event {
     <span class="kw">let </span>container_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>container_bytes);
     <span class="kw">let </span>config_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>config_bytes);
-    <span class="kw">let </span>encoded_event = oak_proto_rust::oak::attestation::v1::Event {
+    Event {
         tag: <span class="string">"ORCHESTRATOR"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
             type_url: <span class="string">"type.googleapis.com/oak.attestation.v1.ContainerLayerData"</span>.to_string(),
             value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
                 bundle: <span class="prelude-val">Some</span>(container_digest.clone()),
                 config: <span class="prelude-val">Some</span>(config_digest.clone()),
+                encryption_public_key: instance_public_keys.encryption_public_key.to_vec(),
+                signing_public_key: instance_public_keys
+                    .signing_public_key
+                    .to_sec1_bytes()
+                    .to_vec(),
+                session_binding_public_key: instance_public_keys
+                    .session_binding_public_key
+                    .to_sec1_bytes()
+                    .to_vec(),
             }
             .encode_to_vec(),
         }),
     }
-    .encode_to_vec();
+}
+
+<span class="doccomment">/// Measures the provided event and returns as an additional CWT claim.
+</span><span class="kw">pub fn </span>create_container_dice_layer(event: <span class="kw-2">&amp;</span>Event) -&gt; oak_attestation::dice::LayerData {
+    <span class="kw">let </span>encoded_event = event.encode_to_vec();
     <span class="kw">let </span>event_digest =
         oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event.as_slice());
     oak_attestation::dice::LayerData {
@@ -227,20 +262,27 @@
 <span class="kw">pub fn </span>generate_instance_keys() -&gt; (InstanceKeys, InstancePublicKeys) {
     <span class="kw">let </span>(encryption_key, encryption_public_key) = generate_encryption_key_pair();
     <span class="kw">let </span>(signing_key, signing_public_key) = generate_ecdsa_key_pair();
+    <span class="kw">let </span>(session_binding_key, session_binding_public_key) = generate_ecdsa_key_pair();
     (
-        InstanceKeys { encryption_key, signing_key },
-        InstancePublicKeys { encryption_public_key, signing_public_key },
+        InstanceKeys { encryption_key, signing_key, session_binding_key },
+        InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+            session_binding_public_key,
+        },
     )
 }
 
 <span class="kw">pub struct </span>InstanceKeys {
     <span class="kw">pub </span>encryption_key: EncryptionKey,
     <span class="kw">pub </span>signing_key: p256::ecdsa::SigningKey,
+    <span class="kw">pub </span>session_binding_key: p256::ecdsa::SigningKey,
 }
 
 <span class="kw">pub struct </span>InstancePublicKeys {
     <span class="kw">pub </span>encryption_public_key: Vec&lt;u8&gt;,
     <span class="kw">pub </span>signing_public_key: p256::ecdsa::VerifyingKey,
+    <span class="kw">pub </span>session_binding_public_key: p256::ecdsa::VerifyingKey,
 }
 
 <span class="kw">impl </span>InstanceKeys {
