@@ -484,6 +484,12 @@
 <a href="#484" id="484">484</a>
 <a href="#485" id="485">485</a>
 <a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -516,7 +522,7 @@
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
     },
-    HexDigest, RawDigest,
+    HexDigest, RawDigest, Variant,
 };
 <span class="kw">use </span>p256::pkcs8::{der::Decode, DecodePublicKey};
 <span class="kw">use </span>prost::Message;
@@ -914,10 +920,16 @@
 
 <span class="doccomment">/// Decodes serialized endorsement into a specified [`Message`].
 </span><span class="kw">pub fn </span>decode_endorsement_proto&lt;M: Message + Default&gt;(
-    expected_type_url: <span class="kw-2">&amp;</span>str,
-    endorsement_proto: <span class="kw-2">&amp;</span>Any,
+    id: <span class="kw-2">&amp;</span>[u8],
+    message: <span class="kw-2">&amp;</span>Variant,
 ) -&gt; anyhow::Result&lt;M&gt; {
-    decode_protobuf_any::&lt;M&gt;(expected_type_url, endorsement_proto)
+    <span class="kw">if </span>message.id == id {
+        <span class="kw">let </span>decoded_message = M::decode(message.value.as_ref())
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't decode endorsement: {:?}"</span>, error))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(decoded_message)
+    } <span class="kw">else </span>{
+        <span class="macro">anyhow::bail!</span>(<span class="string">"unexpected endorsement ID, expected {:?}, found {:?}"</span>, id, message.id);
+    }
 }
 
 <span class="doccomment">/// Decodes [`Any`] message into a specified [`Message`].

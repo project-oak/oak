@@ -34,7 +34,6 @@
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -51,8 +50,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_proto_rust::oak::attestation::v1::EventAttestationResults;
-<span class="kw">use </span>prost_types::Any;
+</span><span class="kw">use </span>oak_proto_rust::oak::{attestation::v1::EventAttestationResults, Variant};
 
 <span class="doccomment">/// Verification Policy that takes a generic evidence and endorsement and
 /// performs attestation verification.
@@ -71,5 +69,5 @@
 
 <span class="doccomment">/// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
-</span><span class="kw">pub trait </span>EventPolicy = Policy&lt;[u8], Any&gt;;
+</span><span class="kw">pub trait </span>EventPolicy = Policy&lt;[u8], Variant&gt;;
 </code></pre></div></section></main></body></html>

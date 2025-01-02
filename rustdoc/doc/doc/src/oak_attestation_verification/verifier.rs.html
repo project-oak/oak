@@ -482,14 +482,16 @@
     verifier::AttestationVerifier,
 };
 <span class="kw">use </span>oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, AttestationResults, Endorsements,
-    EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence,
-    ReferenceValues,
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, endorsements, AttestationResults, Endorsements,
+        EventAttestationResults, EventLog, Evidence, ExpectedValues, ExtractedEvidence,
+        LayerEvidence, ReferenceValues,
+    },
+    Variant,
 };
 <span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
-<span class="kw">use </span>prost_types::Any;
 <span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="kw">use crate</span>::{
@@ -563,15 +565,13 @@
         <span class="kw">let </span>firmware_measurement = <span class="kw-2">&amp;</span>attestation_report.data.measurement;
 
         <span class="comment">// Verify AMD SEV-SNP platform authenticity and configuration.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(endorsements::Platform::AmdSevSnp(platform_endorsement)) =
-            endorsements.platform.as_ref()
-        {
-            <span class="self">self</span>.platform_policy
-                .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
-                .context(<span class="string">"couldn't verify AMD SEV-SNP platform"</span>)<span class="question-mark">?</span>;
-        } <span class="kw">else </span>{
-            <span class="macro">anyhow::bail!</span>(<span class="string">"AMD SEV-SNP endorsement wasn't provided in endorsements"</span>)
-        }
+        </span><span class="kw">let </span>platform_endorsement = endorsements
+            .platform
+            .as_ref()
+            .context(<span class="string">"AMD SEV-SNP endorsement wasn't provided in endorsements"</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.platform_policy
+            .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
+            .context(<span class="string">"couldn't verify AMD SEV-SNP platform"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify that the DICE root ECA key is bound to the attestation report.
         </span>verify_dice_root_eca_key(attestation_report, <span class="kw-2">&amp;</span>root_layer.eca_public_key)
@@ -584,7 +584,7 @@
 
         <span class="comment">// Verify firmware measurement.
         </span><span class="kw">let </span>firmware_endorsement = <span class="kw-2">&amp;</span>endorsements
-            .firmware
+            .initial
             .as_ref()
             .context(<span class="string">"firmware endorsement wasn't provided in endorsements"</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.firmware_policy
@@ -872,7 +872,7 @@
 /// Policies and Events is done via ordering.
 </span><span class="kw">fn </span>verify_event_log(
     event_log: <span class="kw-2">&amp;</span>EventLog,
-    event_endorsements: <span class="kw-2">&amp;</span>[Any],
+    event_endorsements: <span class="kw-2">&amp;</span>[Variant],
     policies: <span class="kw-2">&amp;</span>[Box&lt;<span class="kw">dyn </span>EventPolicy&gt;],
     milliseconds_since_epoch: i64,
 ) -&gt; anyhow::Result&lt;Vec&lt;EventAttestationResults&gt;&gt; {

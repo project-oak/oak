@@ -70,6 +70,9 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -87,12 +90,14 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification_types::policy::Policy;
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
-    ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-    EventAttestationResults,
+<span class="kw">use </span>oak_attestation_verification_types::{policy::Policy, APPLICATION_ENDORSEMENT_ID};
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{
+        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        EventAttestationResults,
+    },
+    Variant,
 };
-<span class="kw">use </span>prost_types::Any;
 
 <span class="kw">use crate</span>::{
     compare::compare_application_layer_measurement_digests,
@@ -110,22 +115,23 @@
     }
 }
 
-<span class="comment">// We have to use [`Policy&lt;[u8], Any&gt;`] instead of [`EventPolicy`], because
+<span class="comment">// We have to use [`Policy&lt;[u8], Variant&gt;`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // &lt;https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md&gt;
-</span><span class="kw">impl </span>Policy&lt;[u8], Any&gt; <span class="kw">for </span>ApplicationPolicy {
+</span><span class="kw">impl </span>Policy&lt;[u8], Variant&gt; <span class="kw">for </span>ApplicationPolicy {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
-        encoded_event_endorsement: <span class="kw-2">&amp;</span>Any,
+        encoded_event_endorsement: <span class="kw-2">&amp;</span>Variant,
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>event = decode_event_proto::&lt;ApplicationLayerData&gt;(
             <span class="string">"type.googleapis.com/oak.attestation.v1.ApplicationLayerData"</span>,
             encoded_event,
         )<span class="question-mark">?</span>;
-        <span class="kw">let </span>event_endorsement = decode_endorsement_proto::&lt;ApplicationLayerEndorsements&gt;(
-            <span class="string">"type.googleapis.com/oak.attestation.v1.ApplicationLayerEndorsements"</span>,
+        <span class="comment">// TODO: b/375137648 - Decode into new endorsement protos.
+        </span><span class="kw">let </span>event_endorsement = decode_endorsement_proto::&lt;ApplicationLayerEndorsements&gt;(
+            APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )<span class="question-mark">?</span>;
 

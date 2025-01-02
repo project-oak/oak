@@ -22,6 +22,17 @@
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -46,4 +57,15 @@
 <span class="kw">pub mod </span>policy;
 <span class="kw">pub mod </span>util;
 <span class="kw">pub mod </span>verifier;
+
+<span class="comment">// IDs are generated as UUID v4 which is represented as a random string, except
+// for the four bits that are used to indicate version 4 and two to three bits
+// are used to indicate the variant.
+// &lt;https://datatracker.ietf.org/doc/rfc9562/&gt;
+</span><span class="kw">pub static </span>AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"5a12d00f-48a0-4224-bff4-975c7657438f"</span>;
+<span class="kw">pub static </span>FIRMWARE_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"de4a0d55-60ea-4dc6-abd1-09ed744f80ea"</span>;
+<span class="kw">pub static </span>KERNEL_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"89511d65-5d35-4601-900b-1e6dbaf842b6"</span>;
+<span class="kw">pub static </span>SYSTEM_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"4722655d-963d-4fc9-8443-f14571dd32a2"</span>;
+<span class="kw">pub static </span>APPLICATION_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"e84ed714-669d-430a-a60f-8a651e5a5503"</span>;
+<span class="kw">pub static </span>CONTAINER_ENDORSEMENT_ID: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"7297a51f-a05d-49a1-afdb-64cdee07862d"</span>;
 </code></pre></div></section></main></body></html>
