@@ -385,7 +385,7 @@
     </span><span class="kw">pub </span>pci_passthrough: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
     <span class="doccomment">/// Type of the confidential VM. It could be Default, Sev, SevEs,
-    /// SevSnp, or Tdx (TDX is unimplemented yet)
+    /// SevSnp, or Tdx.
     </span><span class="attr">#[arg(long, required = <span class="bool-val">false</span>, value_enum, default_value_t = VmType::Default)]
     </span><span class="kw">pub </span>vm_type: VmType,
 }
