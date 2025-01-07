@@ -41,7 +41,6 @@ pub mod proto {
     }
 }
 
-#[derive(Default)]
 pub struct EchoService<A: Attester> {
     pub attester: A,
 }
