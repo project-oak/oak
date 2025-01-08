@@ -17,19 +17,35 @@ image. However, to generate all necessary components, there is also a rule in
 the just file:
 
 ```console
-root@hostname:~/project$ just all_oak_functions_containers_binaries
+just all_oak_functions_containers_binaries
 ```
 
-Bring up the Oak Functions Launcher with the Trusted App:
+Build the WASM module to be used, for example:
 
 ```console
-root@hostname:~/project/oak_functions_containers_launcher$ cargo run -- \
- --system-image=../artifacts/oak_containers_system_image.tar.xz \
-    --container-bundle=../oak_functions_containers_container/target/oak_container_example_oci_filesystem_bundle.tar \
+just all_wasm_test_crates
+```
+
+Bring up the Oak Functions Launcher, for example to run it with the test lookup
+Wasm module:
+
+```console
+$ artifacts/oak_functions_containers_launcher \
     --vmm-binary=$(which qemu-system-x86_64) \
-    --stage0-binary=../artifacts/stage0_bin \
-    --kernel=../bazel-bin/oak_containers/kernel/bzImage \
-    --initrd=../bazel-bin/oak_containers/stage1_bin/stage1.cpio \
-    --ramdrive-size=5000000 \
-    --memory-size=10G
+    --stage0-binary=artifacts/stage0_bin \
+    --kernel=artifacts/oak_containers_kernel \
+    --initrd=artifacts/stage1.cpio \
+    --system-image=artifacts/oak_containers_system_image.tar.xz \
+    --container-bundle=artifacts/oak_functions_containers_app_bundle.tar \
+    --ramdrive-size=1000000 \
+    --memory-size=10G \
+    --wasm=target/wasm32-unknown-unknown/release/key_value_lookup.wasm \
+    --lookup-data=oak_functions_launcher/mock_lookup_data
+```
+
+To test the example lookup service while the Oak Functions Launcher is running,
+execute the client in a separate shell:
+
+```console
+bazel run //cc/client:cli -- --address=127.0.0.1:8080 --request=test_key
 ```

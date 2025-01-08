@@ -256,6 +256,9 @@ cc_oak_containers_hello_world_container_bundle_tar:
 
 oak_functions_containers_app_bundle_tar:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_app:bundle oak_functions_containers_app:bundle_insecure
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_functions_containers_app/bundle.tar \
+        artifacts/oak_functions_containers_app_bundle.tar
 
 oak_functions_containers_launcher:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_functions_containers_launcher
@@ -269,7 +272,7 @@ oak_functions_launcher:
         bazel-bin/oak_functions_launcher/oak_functions_launcher \
         artifacts/oak_functions_launcher
 
-all_oak_functions_containers_binaries: stage0_bin \
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio \
     oak_containers_kernel oak_containers_system_image \
     oak_functions_containers_app_bundle_tar oak_functions_containers_launcher \
     oak_functions_launcher
