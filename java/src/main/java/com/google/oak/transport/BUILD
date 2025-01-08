@@ -114,11 +114,15 @@ kt_jvm_library(
     srcs = [
         "GrpcSessionV1ClientTransport.kt",
     ],
+    runtime_deps = [
+        "@maven//:com_google_flogger_flogger_system_backend",
+    ],
     deps = [
         ":session_transport",
         "//proto/services:session_v1_service_kt_grpc",
         "//proto/session:session_java_proto",
         "@io_grpc_grpc_java//api",
+        "@maven//:com_google_flogger_google_extensions",
         "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
     ],
 )

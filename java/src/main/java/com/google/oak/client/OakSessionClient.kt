@@ -25,7 +25,10 @@ import com.google.oak.transport.SessionTransport
 /** Client to establish and use a streaming Oak Session using the Noise protocol. */
 class OakSessionClient(private val transport: SessionTransport<SessionRequest, SessionResponse>) {
   suspend fun newChannel(): OakClientChannel {
+    // If load has already been called this does nothing.
+    OakClientSession.loadNativeLib()
     val session = OakClientSession.createClientUnattested()
+
     while (!session.isOpen()) {
       val outMessage = session.getOutgoingMessage().orElseThrow()
       transport.write(outMessage)

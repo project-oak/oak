@@ -16,35 +16,49 @@
 
 package com.google.oak.transport
 
+import com.google.common.flogger.GoogleLogger
 import com.google.oak.services.OakSessionV1ServiceGrpcKt
 import com.google.oak.session.v1.SessionRequest
 import com.google.oak.session.v1.SessionResponse
-import io.grpc.ManagedChannelBuilder
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.first
+import io.grpc.ManagedChannel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 
-class GrpcSessionV1ClientTransport(val host: String, val port: Int) :
+class GrpcSessionV1ClientTransport(val channel: ManagedChannel, val scope: CoroutineScope) :
   SessionTransport<SessionRequest, SessionResponse> {
-  private val channel =
-    ManagedChannelBuilder.forAddress(this.host, this.port).usePlaintext().build()
-  private val requestFlow = MutableSharedFlow<SessionRequest>()
-  private val responseFlow: Flow<SessionResponse>
+  private val requests = Channel<SessionRequest>()
+  private val responses = Channel<SessionResponse>()
 
-  init {
-    val serviceStub = OakSessionV1ServiceGrpcKt.OakSessionV1ServiceCoroutineStub(channel)
-    responseFlow = serviceStub.stream(requestFlow)
-  }
+  private val backgroundJob =
+    OakSessionV1ServiceGrpcKt.OakSessionV1ServiceCoroutineStub(channel)
+      .stream(requests.receiveAsFlow())
+      .catch { e -> logger.atSevere().withCause(e).log("Failure in the session gRPC stream") }
+      .onEach { responses.send(it) }
+      .onCompletion {
+        requests.cancel()
+        responses.cancel()
+      }
+      .launchIn(scope)
 
   override suspend fun write(request: SessionRequest) {
-    requestFlow.emit(request)
+    requests.send(request)
   }
 
   override suspend fun read(): SessionResponse {
-    return responseFlow.first()
+    return responses.receive()
   }
 
-  fun close() {
+  override fun close() {
     channel.shutdown()
+    backgroundJob.cancel()
+  }
+
+  companion object {
+    private val logger = GoogleLogger.forEnclosingClass()
   }
 }

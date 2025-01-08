@@ -45,4 +45,8 @@ class OakClientChannel(
     val outMessage = session.getOutgoingMessage().orElseThrow()
     transport.write(outMessage)
   }
+
+  fun close() {
+    transport.close()
+  }
 }

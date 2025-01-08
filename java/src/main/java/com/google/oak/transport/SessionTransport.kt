@@ -16,8 +16,17 @@
 
 package com.google.oak.transport
 
+/** Transport layer for the Oak client session. */
 interface SessionTransport<Request, Response> {
+  /** Write the request into the transport layer. */
   suspend fun write(request: Request)
 
+  /** Read a message from the transport layer. May block until a new message is received. */
   suspend fun read(): Response
+
+  /**
+   * Close the channel and free the underlying resources. Any reads or writes after this call will
+   * fail.
+   */
+  fun close()
 }
