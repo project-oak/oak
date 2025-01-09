@@ -25,6 +25,9 @@ rust_binary(
     name = "oak_echo_raw_enclave_app",
     srcs = ["src/main.rs"],
     platform = "//:x86_64-unknown-none",
+    rustc_flags = [
+        "--codegen=link-arg=-zmax-page-size=0x200000",
+    ],
     deps = [
         "//micro_rpc",
         "//oak_restricted_kernel_sdk",

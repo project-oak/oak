@@ -25,6 +25,9 @@ rust_binary(
     name = "oak_orchestrator",
     srcs = ["src/main.rs"],
     platform = "//:x86_64-unknown-none",
+    rustc_flags = [
+        "--codegen=link-arg=-zmax-page-size=0x200000",
+    ],
     deps = [
         "//oak_dice",
         "//oak_restricted_kernel_interface",

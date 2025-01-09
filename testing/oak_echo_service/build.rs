@@ -14,16 +14,6 @@
 // limitations under the License.
 //
 
-#[cfg(not(feature = "bazel"))]
-fn main() {
-    micro_rpc_build::compile(
-        &["testing/oak_echo_service/proto/oak_echo.proto", "proto/attestation/evidence.proto"],
-        &["../.."],
-        Default::default(),
-    );
-}
-
-#[cfg(feature = "bazel")]
 fn main() {
     micro_rpc_build::compile(
         &[

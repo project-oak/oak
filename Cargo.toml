@@ -59,7 +59,6 @@ members = [
   "sev_serial",
   "snp_measurement",
   "stage0_dice",
-  "testing/oak_echo_service",
   "oak_restricted_kernel_sdk_proc_macro",
 ]
 exclude = [
