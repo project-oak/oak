@@ -377,18 +377,6 @@
 <a href="#377" id="377">377</a>
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -560,19 +548,18 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationReportData, [u8; <span class="number">672</span>]);
 
 <span class="kw">impl </span>AttestationReportData {
-    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if
-    /// possible.
-    </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PlatformInfo&gt; {
+    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation.
+    </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PlatformInfo {
         <span class="comment">// The latest documentation defines only the lowest 5 bits, with the others
         // reserved. We, however, have encountered the reserved bits being set in the
         // wild; therefore, mask them out here.
-        </span>PlatformInfo::from_bits(<span class="self">self</span>.platform_info &amp; <span class="number">0b11111</span>)
+        </span>PlatformInfo::from_bits_truncate(<span class="self">self</span>.platform_info)
     }
 
     <span class="comment">// Gets the key used to sign this report.
     </span><span class="kw">pub fn </span>get_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningKey&gt; {
-        <span class="comment">// bits 2, 3 and 4
-        </span>SigningKey::from_repr(<span class="self">self</span>.key &amp; <span class="number">0b11100</span>)
+        <span class="comment">// Only bits 2, 3, 4 are of interest, mask out the rest and shift.
+        </span>SigningKey::from_repr((<span class="self">self</span>.key &amp; <span class="number">0b11100</span>) &gt;&gt; <span class="number">2</span>)
     }
 
     <span class="doccomment">/// Gets the value of MaskChipKey.
@@ -580,10 +567,11 @@
         <span class="self">self</span>.key &amp; <span class="number">0b10 </span>&gt; <span class="number">0
     </span>}
 
-    <span class="doccomment">/// Gets the author key enabled field as an `AuthorKey` enum if possible.
-    </span><span class="kw">pub fn </span>get_author_key_en(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AuthorKey&gt; {
-        AuthorKey::from_repr(<span class="self">self</span>.key &amp; <span class="number">0b1</span>)
-    }
+    <span class="doccomment">/// Returns the value of AUTHOR_KEY_EN, i.e. whether the author key digest
+    /// is included in the report.
+    </span><span class="kw">pub fn </span>has_author_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.key &amp; <span class="number">1 </span>&gt; <span class="number">0
+    </span>}
 
     <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if
     /// possible.
@@ -604,14 +592,11 @@
         <span class="kw">if </span><span class="self">self</span>._reserved_4 != <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_4"</span>);
         }
+        <span class="kw">if </span><span class="self">self</span>.get_signing_key().is_none() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid signing key setting"</span>);
+        }
         <span class="kw">if </span><span class="self">self</span>.get_signature_algo().is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid signature algorithm"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>.get_platform_info().is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid platform info"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>.get_author_key_en().is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid value for author_key_en"</span>);
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -621,7 +606,7 @@
     <span class="doccomment">/// Information on the platform configuration.
     </span><span class="attr">#[derive(Default)]
     </span><span class="kw">pub struct </span>PlatformInfo: u64 {
-        <span class="doccomment">/// Indicates that simulatneous multi-threading (SMT) is enabled.
+        <span class="doccomment">/// Indicates that simultaneous multi-threading (SMT) is enabled.
         </span><span class="kw">const </span>SMT_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
         <span class="doccomment">/// Indicates that transparent secure memory encryption (TSME) is enabled.
         </span><span class="kw">const </span>TSME_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">1</span>);
@@ -636,7 +621,7 @@
 
 <span class="doccomment">/// The signing algorithm used for the report signature.
 ///
-/// See Table 117 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 133 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>SigningAlgorithm {
@@ -652,9 +637,10 @@
 </span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>SigningKey {
-    VCEK = <span class="number">0 </span>&lt;&lt; <span class="number">2</span>,
-    VLEK = <span class="number">1 </span>&lt;&lt; <span class="number">2</span>,
-    <span class="prelude-val">None </span>= <span class="number">7 </span>&lt;&lt; <span class="number">2</span>,
+    VCEK = <span class="number">0</span>,
+    VLEK = <span class="number">1</span>,
+    <span class="comment">// Values 2 through 6 are reserved.
+    </span><span class="prelude-val">None </span>= <span class="number">7</span>,
 }
 
 <span class="doccomment">/// The required policy for a guest to run.
@@ -744,19 +730,9 @@
     }
 }
 
-<span class="doccomment">/// Whether the author key digest is included in the report.
-</span><span class="attr">#[derive(Debug, FromRepr)]
-#[repr(u32)]
-</span><span class="kw">pub enum </span>AuthorKey {
-    <span class="doccomment">/// The author key digest is not present.
-    </span>No = <span class="number">0</span>,
-    <span class="doccomment">/// The author key digest is present.
-    </span>Yes = <span class="number">1</span>,
-}
-
 <span class="doccomment">/// An ECDSA signature.
 ///
-/// See Table 119 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 135 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
