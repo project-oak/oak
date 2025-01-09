@@ -4,8 +4,8 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-containers-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"><img alt="Project Oak Containers Logo" src="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-# Orchestrator
+# Orchestrator with DICE Attestation
 
-Implementation of the orchestrator which is responsible for loading a container
-image and running it in a container runtime. It also exposes configuration and
-remote attestation logic to the instantiated container.
+A version of the Oak Containers Orchestrator that uses the DICE Attestation
+mechanism and is compatible with AMD SEV-SNP, AMD SEV-ES, AMD SEV and with no
+memory encryption.

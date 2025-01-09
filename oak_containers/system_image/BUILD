@@ -26,12 +26,12 @@ package(
 pkg_files(
     name = "orchestrator_files",
     srcs = [
-        "//oak_containers/orchestrator:bin/oak_containers_orchestrator",
+        "//oak_containers/orchestrator_bin:bin/oak_containers_orchestrator",
     ],
     attributes = pkg_attributes(
         mode = "0744",
     ),
-    strip_prefix = "/oak_containers/orchestrator/bin",
+    strip_prefix = "/oak_containers/orchestrator_bin/bin",
 )
 
 pkg_files(

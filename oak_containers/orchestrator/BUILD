@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -38,6 +38,7 @@ rust_library(
         "//oak_attestation",
         "//oak_attestation_types",
         "//oak_attestation_verification",
+        "//oak_containers/agent",
         "//oak_containers/attestation:oak_containers_attestation",
         "//oak_containers/channel",
         "//oak_crypto",
@@ -47,6 +48,7 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:ciborium",
+        "@oak_crates_index//:clap",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:hpke",
         "@oak_crates_index//:log",
@@ -81,26 +83,6 @@ rust_test(
         "//oak_containers/orchestrator/testdata:oci_spec_base.json",
         "//oak_containers/orchestrator/testdata:oci_spec_target.json",
         "//oak_containers/orchestrator/testdata:test_dice",
-    ],
-)
-
-rust_binary(
-    name = "bin/oak_containers_orchestrator",
-    srcs = ["src/main.rs"],
-    deps = [
-        ":oak_containers_orchestrator",
-        "//oak_attestation_types",
-        "//oak_containers/agent",
-        "//oak_containers/attestation:oak_containers_attestation",
-        "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:nix",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:tikv-jemallocator",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-util",
     ],
 )
 

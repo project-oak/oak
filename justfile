@@ -482,7 +482,7 @@ containers_placer_artifacts:
 
     cp --force --preserve=timestamps bazel-bin/oak_containers/kernel/bzImage artifacts/oak_containers_kernel
     cp --force --preserve=timestamps bazel-bin/oak_containers/agent/bin/oak_containers_agent artifacts
-    cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator/bin/oak_containers_orchestrator artifacts
+    cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator_bin/bin/oak_containers_orchestrator artifacts
     cp --force --preserve=timestamps bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
 
     cp --force --preserve=timestamps --no-preserve=mode \
@@ -494,7 +494,7 @@ bazel_build_copy package target:
     cp --force --preserve=timestamps "bazel-bin/{{package}}/{{target}}" artifacts
 
 oak_containers_agent: (bazel_build_copy "oak_containers/agent" "bin/oak_containers_agent")
-oak_containers_orchestrator: (bazel_build_copy "oak_containers/orchestrator" "bin/oak_containers_orchestrator")
+oak_containers_orchestrator: (bazel_build_copy "oak_containers/orchestrator_bin" "bin/oak_containers_orchestrator")
 oak_containers_syslogd: (bazel_build_copy "oak_containers/syslogd" "oak_containers_syslogd")
 
 oak_containers_system_image:
