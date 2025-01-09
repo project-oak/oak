@@ -394,16 +394,9 @@ bazel-update-crate crate:
 bazel-rustfmt:
     bazel build --config=rustfmt {{BAZEL_CONFIG_FLAG}} //...:all -- -third_party/...
 
-clippy: bazel-clippy cargo-clippy
+clippy: bazel-clippy
 
-clippy-ci: bazel-clippy-ci cargo-clippy
-
-cargo-clippy:
-    #!/bin/sh
-    for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
-    do
-        env --chdir=$(dirname "$workspace") cargo clippy --all-features --all-targets --no-deps -- --deny=warnings
-    done
+clippy-ci: bazel-clippy-ci
 
 cargo-lockfiles:
     #!/bin/sh
