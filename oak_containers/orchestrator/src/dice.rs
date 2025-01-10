@@ -19,8 +19,9 @@ use std::{
 };
 
 use anyhow::Context;
-use oak_attestation::dice::DiceAttester;
-use oak_attestation_types::util::Serializable;
+#[allow(deprecated)]
+use oak_attestation::ApplicationKeysAttester;
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.
@@ -30,11 +31,16 @@ const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
 ///
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
-pub fn load_stage1_dice_data() -> anyhow::Result<DiceAttester> {
+#[allow(deprecated)]
+pub fn load_stage1_dice_data<A: Attester + Serializable + ApplicationKeysAttester>(
+) -> anyhow::Result<A> {
     load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
 }
 
-fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
+#[allow(deprecated)]
+fn load_stage1_dice_data_from_path<A: Attester + Serializable + ApplicationKeysAttester>(
+    path: &str,
+) -> anyhow::Result<A> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -45,7 +51,7 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
     let mut buffer = Vec::with_capacity(size);
     file.read_to_end(&mut buffer).context("couldn't read DICE data from file")?;
 
-    let result = DiceAttester::deserialize(&buffer[..]).context("couldn't parse DICE data")?;
+    let result = A::deserialize(&buffer[..]).context("couldn't parse DICE data")?;
 
     buffer.zeroize();
     file.rewind()?;
@@ -64,6 +70,8 @@ fn load_stage1_dice_data_from_path(path: &str) -> anyhow::Result<DiceAttester> {
 mod tests {
     use std::fs;
 
+    use oak_attestation::dice::DiceAttester;
+
     use super::*;
 
     #[test]
@@ -76,7 +84,7 @@ mod tests {
         #[cfg(not(feature = "bazel"))]
         fs::copy("testdata/test_dice", DICE_DATA_PATH).unwrap();
 
-        load_stage1_dice_data_from_path(DICE_DATA_PATH).unwrap();
+        load_stage1_dice_data_from_path::<DiceAttester>(DICE_DATA_PATH).unwrap();
         let mut file = OpenOptions::new().read(true).open(DICE_DATA_PATH).unwrap();
         let mut buffer = Vec::with_capacity(DICE_DATA_SIZE);
         file.read_to_end(&mut buffer).unwrap();

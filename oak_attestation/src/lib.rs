@@ -18,4 +18,31 @@
 
 extern crate alloc;
 
+use dice::LayerData;
+use oak_proto_rust::oak::attestation::v1::Evidence;
+use p256::ecdsa::VerifyingKey;
+
 pub mod dice;
+
+/// Deprecated trait that allow for explicitly adding application keys to the
+/// attestation evidence.
+#[deprecated = "Use application keys from the event log."]
+pub trait ApplicationKeysAttester {
+    // TODO: b/368030563 - Remove this trait once all client library instances use
+    // the applications keys from the event log.
+
+    /// Adds certificates representing the application keys to the attestation
+    /// evidence.
+    //
+    /// This is an outdated approach that has been replaced by adding the
+    /// applications keys to the event log. It is only retained for
+    /// compatibility while some client deployments still expect this format.
+    fn add_application_keys(
+        self,
+        layer_data: LayerData,
+        kem_public_key: &[u8],
+        verifying_key: &VerifyingKey,
+        group_kem_public_key: Option<&[u8]>,
+        group_verifying_key: Option<&VerifyingKey>,
+    ) -> anyhow::Result<Evidence>;
+}

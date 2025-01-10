@@ -18,5 +18,5 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    oak_containers_orchestrator::main().await
+    oak_containers_orchestrator::main::<oak_attestation::dice::DiceAttester>().await
 }

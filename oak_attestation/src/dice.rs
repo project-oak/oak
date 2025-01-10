@@ -43,6 +43,9 @@ use prost::Message;
 use sha2::Digest;
 use zeroize::Zeroize;
 
+#[allow(deprecated)]
+use crate::ApplicationKeysAttester;
+
 pub trait MeasureDigest {
     fn measure_digest(&self) -> RawDigest;
 }
@@ -70,62 +73,16 @@ pub struct DiceAttester {
     signing_key: SigningKey,
 }
 
-// TODO: b/366141836 - Remove this implementation once all Oak clients have been
-// updated to the EventLog attestation.
-impl DiceAttester {
-    /// Adds an additional layer of evidence to the DICE data.
-    ///
-    /// The evidence is in the form of a CWT certificate that contains the
-    /// `additional_claims` provided. Adding a layer generates a new ECA
-    /// private key for the layer and uses it to replace the existing
-    /// signing key. The CWT certificate contains the public key for this new
-    /// signing key.
-    pub fn add_layer(&mut self, layer_data: LayerData) -> anyhow::Result<()> {
-        // The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        let layer_evidence = self
-            .evidence
-            .layers
-            .last()
-            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?;
-        let claims_set = get_claims_set_from_certificate_bytes(&layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)?;
-
-        // The issuer for the next layer is the subject of the current last layer.
-        let issuer_id = claims_set.subject.ok_or_else(|| anyhow!("no subject in certificate"))?;
-
-        let evidence = &mut self.evidence;
-        let (signing_key, verifying_key) = generate_ecdsa_key_pair();
-
-        let eca_certificate = generate_signing_certificate(
-            &self.signing_key,
-            issuer_id,
-            &verifying_key,
-            layer_data.additional_claims,
-        )
-        .map_err(anyhow::Error::msg)
-        .context("couldn't generate ECA certificate for the next layer")?;
-        evidence.layers.push(LayerEvidence {
-            eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)?,
-        });
-        // Replacing the signing key will cause the previous signing key to be dropped,
-        // which will zero out its memory.
-        self.signing_key = signing_key;
-        self.evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
-        Ok(())
-    }
-
+// TODO: b/368030563 - Remove this implementation once all client library
+// instances use the applications keys from the event log.
+#[allow(deprecated)]
+impl ApplicationKeysAttester for DiceAttester {
     /// Adds the CWT certificates application keys to the DICE data.
     ///
     /// Since no additional evidence can be added after the application keys are
     /// added, this consumes DICE data, discards the signing key and returns
     /// the finalized evidence.
-    pub fn add_application_keys(
+    fn add_application_keys(
         self,
         layer_data: LayerData,
         kem_public_key: &[u8],

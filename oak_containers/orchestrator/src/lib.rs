@@ -18,7 +18,9 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use launcher_client::LauncherClient;
-use oak_attestation_types::attester::Attester;
+#[allow(deprecated)]
+use oak_attestation::ApplicationKeysAttester;
+use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 use oak_containers_attestation::generate_instance_keys;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
@@ -51,7 +53,8 @@ struct Args {
     runtime_user: String,
 }
 
-pub async fn main() -> anyhow::Result<()> {
+#[allow(deprecated)]
+pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> anyhow::Result<()> {
     crate::logging::setup()?;
 
     let args = Args::parse();
@@ -99,7 +102,7 @@ pub async fn main() -> anyhow::Result<()> {
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
     // Create a container event and add it to the event log.
-    let mut attester = crate::dice::load_stage1_dice_data()?;
+    let mut attester: A = crate::dice::load_stage1_dice_data()?;
     let container_event = oak_containers_attestation::create_container_event(
         &container_bundle,
         &application_config,
@@ -111,18 +114,26 @@ pub async fn main() -> anyhow::Result<()> {
 
     // Add the container event to the DICE chain.
     let container_layer = oak_containers_attestation::create_container_dice_layer(&container_event);
-    let evidence = attester.add_application_keys(
-        container_layer,
-        &instance_public_keys.encryption_public_key,
-        &instance_public_keys.signing_public_key,
-        if let Some(ref group_public_keys) = group_public_keys {
-            Some(&group_public_keys.encryption_public_key)
-        } else {
-            None
-        },
-        None,
-    )?;
-
+    let evidence = {
+        #[cfg(feature = "application_keys")]
+        {
+            attester.add_application_keys(
+                container_layer,
+                &instance_public_keys.encryption_public_key,
+                &instance_public_keys.signing_public_key,
+                if let Some(ref group_public_keys) = group_public_keys {
+                    Some(&group_public_keys.encryption_public_key)
+                } else {
+                    None
+                },
+                None,
+            )?
+        }
+        #[cfg(not(feature = "application_keys"))]
+        {
+            attester.quote()?
+        }
+    };
     // Send the attestation evidence to the Hostlib.
     launcher_client
         .send_attestation_evidence(evidence.clone())

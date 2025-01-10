@@ -33,7 +33,11 @@ rust_library(
         "src/lib.rs",
         "src/logging.rs",
     ],
-    crate_features = ["bazel"],
+    # TODO: b/368030563 - Remove this feature once all client library instances use
+    # the applications keys from the event log.
+    crate_features = [
+        "application_keys",
+    ],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -77,7 +81,10 @@ rust_library(
 rust_test(
     name = "oak_containers_orchestrator_test",
     crate = ":oak_containers_orchestrator",
-    crate_features = ["bazel"],
+    crate_features = [
+        "bazel",
+        "application_keys",
+    ],
     data = [
         "//oak_containers/orchestrator/testdata:cdi.json",
         "//oak_containers/orchestrator/testdata:oci_spec_base.json",

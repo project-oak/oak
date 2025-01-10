@@ -8,6 +8,12 @@ authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+# TODO: b/368030563 - Remove this feature once all client library instances use
+# the applications keys from the event log.
+application_keys = []
+default = ["application_keys"]
+
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive", "env"] }

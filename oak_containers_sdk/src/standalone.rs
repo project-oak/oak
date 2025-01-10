@@ -24,7 +24,8 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use oak_attestation::dice::DiceAttester;
+#[allow(deprecated)]
+use oak_attestation::{dice::DiceAttester, ApplicationKeysAttester};
 use oak_attestation_types::attester::Attester;
 use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 use oak_crypto::{
@@ -196,6 +197,7 @@ impl StandaloneOrchestrator {
             oak_containers_attestation::create_container_dice_layer(&container_event);
 
         // Add application keys and generate the final evidence.
+        #[allow(deprecated)]
         let evidence = attester.add_application_keys(
             container_layer,
             &instance_public_keys.encryption_public_key,
