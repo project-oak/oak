@@ -18,7 +18,7 @@ use anyhow::Context;
 use oak_attestation_verification_types::{policy::Policy, CONTAINER_ENDORSEMENT_ID};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        ContainerEndorsement, ContainerLayerData, ContainerLayerReferenceValues,
         EventAttestationResults,
     },
     Variant,
@@ -26,7 +26,7 @@ use oak_proto_rust::oak::{
 
 use crate::{
     compare::compare_container_layer_measurement_digests,
-    expect::get_container_layer_expected_values,
+    expect::acquire_container_event_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -54,18 +54,18 @@ impl Policy<[u8], Variant> for ContainerPolicy {
             "type.googleapis.com/oak.attestation.v1.ContainerLayerData",
             encoded_event,
         )?;
-        // TODO: b/375137648 - Decode into new endorsement protos.
-        let event_endorsement = decode_endorsement_proto::<ContainerLayerEndorsements>(
+        let endorsement = decode_endorsement_proto::<ContainerEndorsement>(
             &CONTAINER_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 
-        let expected_values = get_container_layer_expected_values(
+        let expected_values = acquire_container_event_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsement),
+            Some(&endorsement),
             &self.reference_values,
         )
-        .context("couldn't verify container endosements")?;
+        .context("couldn't verify container endorsements")?;
+
         compare_container_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify container event")?;
 

@@ -22,7 +22,7 @@ use oak_proto_rust::oak::{
 };
 
 use crate::{
-    compare::compare_measurement_digest, expect::get_stage0_expected_values,
+    compare::compare_measurement_digest, expect::acquire_stage0_expected_values,
     platform::convert_amd_sev_snp_initial_measurement, util::decode_endorsement_proto,
 };
 
@@ -44,21 +44,19 @@ impl Policy<[u8], Variant> for FirmwarePolicy {
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
-        let _firmware_endorsement = decode_endorsement_proto::<FirmwareEndorsement>(
+        let endorsement = decode_endorsement_proto::<FirmwareEndorsement>(
             &FIRMWARE_ENDORSEMENT_ID,
             encoded_firmware_endorsement,
         )?;
 
-        let initial_measurement_expected_values = get_stage0_expected_values(
+        let expected_values = acquire_stage0_expected_values(
             milliseconds_since_epoch,
-            // TODO: b/375137648 - Use firmware endorsement, once we switch to new endorsment
-            // types.
-            None,
+            Some(&endorsement),
             &self.reference_values,
         )
         .context("getting stage0 values")?;
 
-        compare_measurement_digest(&initial_measurement, &initial_measurement_expected_values)
+        compare_measurement_digest(&initial_measurement, &expected_values)
             .context("stage0 measurement values failed verification")?;
 
         // TODO: b/356631062 - Return detailed attestation results.

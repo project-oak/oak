@@ -18,15 +18,14 @@ use anyhow::Context;
 use oak_attestation_verification_types::{policy::Policy, SYSTEM_ENDORSEMENT_ID};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        EventAttestationResults, SystemLayerData, SystemLayerEndorsements,
-        SystemLayerReferenceValues,
+        EventAttestationResults, SystemEndorsement, SystemLayerData, SystemLayerReferenceValues,
     },
     Variant,
 };
 
 use crate::{
     compare::compare_system_layer_measurement_digests,
-    expect::get_system_layer_expected_values,
+    expect::acquire_system_event_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -51,18 +50,18 @@ impl Policy<[u8], Variant> for SystemPolicy {
             "type.googleapis.com/oak.attestation.v1.SystemLayerData",
             encoded_event,
         )?;
-        // TODO: b/375137648 - Decode into new endorsement protos.
-        let event_endorsements = decode_endorsement_proto::<SystemLayerEndorsements>(
+        let endorsement = decode_endorsement_proto::<SystemEndorsement>(
             &SYSTEM_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 
-        let expected_values = get_system_layer_expected_values(
+        let expected_values = acquire_system_event_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsements),
+            Some(&endorsement),
             &self.reference_values,
         )
-        .context("couldn't verify system endosements")?;
+        .context("couldn't verify system endorsement")?;
+
         compare_system_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify system event")?;
 

@@ -18,15 +18,14 @@ use anyhow::Context;
 use oak_attestation_verification_types::{policy::Policy, KERNEL_ENDORSEMENT_ID};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        EventAttestationResults, KernelLayerEndorsements, KernelLayerReferenceValues,
-        Stage0Measurements,
+        EventAttestationResults, KernelEndorsement, KernelLayerReferenceValues, Stage0Measurements,
     },
     Variant,
 };
 
 use crate::{
     compare::compare_kernel_layer_measurement_digests,
-    expect::get_kernel_layer_expected_values,
+    expect::acquire_kernel_event_expected_values,
     extract::stage0_measurements_to_kernel_layer_data,
     util::{decode_endorsement_proto, decode_event_proto},
 };
@@ -53,18 +52,17 @@ impl Policy<[u8], Variant> for KernelPolicy {
                 "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
                 encoded_event,
             )?);
-        // TODO: b/375137648 - Decode into new endorsement protos.
-        let event_endorsements = decode_endorsement_proto::<KernelLayerEndorsements>(
+        let endorsement = decode_endorsement_proto::<KernelEndorsement>(
             &KERNEL_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 
-        let expected_values = get_kernel_layer_expected_values(
+        let expected_values = acquire_kernel_event_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsements),
+            Some(&endorsement),
             &self.reference_values,
         )
-        .context("couldn't verify kernel endosements")?;
+        .context("couldn't verify kernel endorsements")?;
         compare_kernel_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify kernel event")?;
 

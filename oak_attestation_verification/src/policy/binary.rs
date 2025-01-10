@@ -22,7 +22,7 @@ use oak_proto_rust::oak::{
 };
 
 use crate::{
-    compare::compare_event_measurement_digests, expect::get_event_expected_values,
+    compare::compare_event_measurement_digests, expect::acquire_event_expected_values,
     util::decode_event_proto,
 };
 
@@ -49,8 +49,9 @@ impl Policy<[u8], Variant> for BinaryPolicy {
         )?;
 
         let expected_values =
-            get_event_expected_values(milliseconds_since_epoch, &self.reference_values)
-                .context("couldn't verify event endosements")?;
+            acquire_event_expected_values(milliseconds_since_epoch, &self.reference_values)
+                .context("couldn't verify event endorsements")?;
+
         compare_event_measurement_digests(&event, &expected_values)
             .context("couldn't verify generic event")?;
 

@@ -18,7 +18,7 @@ use anyhow::Context;
 use oak_attestation_verification_types::{policy::Policy, APPLICATION_ENDORSEMENT_ID};
 use oak_proto_rust::oak::{
     attestation::v1::{
-        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        ApplicationEndorsement, ApplicationLayerData, ApplicationLayerReferenceValues,
         EventAttestationResults,
     },
     Variant,
@@ -26,7 +26,7 @@ use oak_proto_rust::oak::{
 
 use crate::{
     compare::compare_application_layer_measurement_digests,
-    expect::get_application_layer_expected_values,
+    expect::acquire_application_event_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -54,18 +54,18 @@ impl Policy<[u8], Variant> for ApplicationPolicy {
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
             encoded_event,
         )?;
-        // TODO: b/375137648 - Decode into new endorsement protos.
-        let event_endorsement = decode_endorsement_proto::<ApplicationLayerEndorsements>(
+        let endorsement = decode_endorsement_proto::<ApplicationEndorsement>(
             &APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 
-        let expected_values = get_application_layer_expected_values(
+        let expected_values = acquire_application_event_expected_values(
             milliseconds_since_epoch,
-            Some(&event_endorsement),
+            Some(&endorsement),
             &self.reference_values,
         )
-        .context("couldn't verify application endosements")?;
+        .context("couldn't verify application endorsements")?;
+
         compare_application_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify application event")?;
 
