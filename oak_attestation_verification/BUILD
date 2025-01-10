@@ -63,8 +63,10 @@ rust_test(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:endorsement",
-        "//oak_attestation_verification/testdata:evidence",
+        "//oak_attestation_verification/testdata:oc_attestation_legacy",
+        "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
         "//oak_file_utils",
@@ -83,10 +85,15 @@ rust_test_suite(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:cb_attestation",
+        "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:endorsement",
-        "//oak_attestation_verification/testdata:evidence",
+        "//oak_attestation_verification/testdata:fake_attestation",
+        "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation",
+        "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation",
+        "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
         ":oak_attestation_verification",
@@ -141,8 +148,10 @@ rust_test(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:endorsement",
-        "//oak_attestation_verification/testdata:evidence",
+        "//oak_attestation_verification/testdata:oc_attestation_legacy",
+        "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
         "//oak_file_utils",
@@ -165,10 +174,15 @@ rust_test_suite(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:cb_attestation",
+        "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:endorsement",
-        "//oak_attestation_verification/testdata:evidence",
+        "//oak_attestation_verification/testdata:fake_attestation",
+        "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation",
+        "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation",
+        "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
         ":oak_attestation_verification_with_regex",
