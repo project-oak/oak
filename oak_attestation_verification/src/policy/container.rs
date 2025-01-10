@@ -56,7 +56,7 @@ impl Policy<[u8], Variant> for ContainerPolicy {
         )?;
         // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsement = decode_endorsement_proto::<ContainerLayerEndorsements>(
-            CONTAINER_ENDORSEMENT_ID,
+            &CONTAINER_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

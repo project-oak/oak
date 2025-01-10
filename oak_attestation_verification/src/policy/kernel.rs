@@ -55,7 +55,7 @@ impl Policy<[u8], Variant> for KernelPolicy {
             )?);
         // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsements = decode_endorsement_proto::<KernelLayerEndorsements>(
-            KERNEL_ENDORSEMENT_ID,
+            &KERNEL_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

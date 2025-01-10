@@ -53,7 +53,7 @@ impl Policy<[u8], Variant> for SystemPolicy {
         )?;
         // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsements = decode_endorsement_proto::<SystemLayerEndorsements>(
-            SYSTEM_ENDORSEMENT_ID,
+            &SYSTEM_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

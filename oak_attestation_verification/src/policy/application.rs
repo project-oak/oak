@@ -56,7 +56,7 @@ impl Policy<[u8], Variant> for ApplicationPolicy {
         )?;
         // TODO: b/375137648 - Decode into new endorsement protos.
         let event_endorsement = decode_endorsement_proto::<ApplicationLayerEndorsements>(
-            APPLICATION_ENDORSEMENT_ID,
+            &APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )?;
 

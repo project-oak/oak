@@ -49,7 +49,7 @@ impl Policy<AttestationReport, Variant> for AmdSevSnpPolicy {
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let platform_endorsement = decode_endorsement_proto::<AmdSevSnpEndorsement>(
-            AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID,
+            &AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID,
             encoded_platform_endorsement,
         )?;
 

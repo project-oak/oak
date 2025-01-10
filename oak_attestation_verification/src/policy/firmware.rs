@@ -45,7 +45,7 @@ impl Policy<[u8], Variant> for FirmwarePolicy {
     ) -> anyhow::Result<EventAttestationResults> {
         let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
         let _firmware_endorsement = decode_endorsement_proto::<FirmwareEndorsement>(
-            FIRMWARE_ENDORSEMENT_ID,
+            &FIRMWARE_ENDORSEMENT_ID,
             encoded_firmware_endorsement,
         )?;
 
