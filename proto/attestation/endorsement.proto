@@ -199,14 +199,16 @@ message Endorsements {
   }
 
   // Endorsement that proves the TEE platform authenticity.
-  oak.Variant platform = 5;
+  oak.Variant platform = 8;
 
   // Endorsement corresponding to the initial measurement done by the TEE
   // platform.
   // Initial endorsement is not included in the event log, because
   // events can only be generated after the TEE starts up.
-  oak.Variant initial = 6;
+  oak.Variant initial = 9;
 
   // Endorsements corresponding to the event log.
-  repeated oak.Variant events = 7;
+  repeated oak.Variant events = 10;
+
+  reserved 4 to 7;
 };
