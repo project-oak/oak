@@ -2405,16 +2405,16 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Endorsements {
     <span class="doccomment">/// Endorsement that proves the TEE platform authenticity.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"5"</span>)]
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"8"</span>)]
     </span><span class="kw">pub </span>platform: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::Variant&gt;,
     <span class="doccomment">/// Endorsement corresponding to the initial measurement done by the TEE
     /// platform.
     /// Initial endorsement is not included in the event log, because
     /// events can only be generated after the TEE starts up.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"6"</span>)]
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">"9"</span>)]
     </span><span class="kw">pub </span>initial: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::Variant&gt;,
     <span class="doccomment">/// Endorsements corresponding to the event log.
-    </span><span class="attr">#[prost(message, repeated, tag = <span class="string">"7"</span>)]
+    </span><span class="attr">#[prost(message, repeated, tag = <span class="string">"10"</span>)]
     </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;<span class="kw">super</span>::<span class="kw">super</span>::Variant&gt;,
     <span class="doccomment">/// TODO: b/380407219 - Remove this field once Oak clients switch to policies.
     </span><span class="attr">#[prost(oneof = <span class="string">"endorsements::Type"</span>, tags = <span class="string">"1, 2, 3"</span>)]
