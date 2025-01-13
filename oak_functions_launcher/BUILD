@@ -113,3 +113,37 @@ rust_test(
         "@oak_crates_index//:which",
     ],
 )
+
+rust_test(
+    name = "oak_functions_launcher_benches",
+    size = "large",
+    srcs = ["benches/integration_benches.rs"],
+    data = [
+        "mock_lookup_data",
+        ":oak_functions_launcher",
+        "//enclave_apps/oak_functions_enclave_app",
+        "//enclave_apps/oak_orchestrator",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
+    env = {
+        "RUST_LOG": "debug",
+    },
+    deps = [
+        ":lib",
+        "//micro_rpc",
+        "//oak_client",
+        "//oak_crypto",
+        "//oak_functions_test_utils",
+        "//oak_launcher_utils",
+        "//oak_proto_rust",
+        "//oak_proto_rust/micro_rpc",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:ubyte",
+        "@oak_crates_index//:which",
+    ],
+)
