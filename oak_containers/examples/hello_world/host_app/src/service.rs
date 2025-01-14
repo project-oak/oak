@@ -15,24 +15,24 @@
 
 use std::{future::Future, pin::Pin, sync::Arc};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use futures::{channel::mpsc, Stream, StreamExt};
-use oak_hello_world_proto::oak::containers::example::host_application_server::{
-    HostApplication, HostApplicationServer,
+use oak_hello_world_proto::oak::containers::example::{
+    enclave_application_client::EnclaveApplicationClient,
+    host_application_server::{HostApplication, HostApplicationServer},
 };
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{net::TcpListener, sync::Mutex, time::Duration};
 use tokio_stream::wrappers::TcpListenerStream;
-
-use crate::app_client::EnclaveApplicationClient;
+use tonic::transport::{channel::Channel, Endpoint};
 
 /// The sample application's implementation of Oak's streaming service protocol.
 struct HostApplicationImpl {
-    enclave_app: Arc<Mutex<EnclaveApplicationClient>>,
+    enclave_app: Arc<Mutex<EnclaveApplicationClient<Channel>>>,
 }
 
 impl HostApplicationImpl {
-    pub fn new(enclave_app: EnclaveApplicationClient) -> Self {
+    pub fn new(enclave_app: EnclaveApplicationClient<Channel>) -> Self {
         Self { enclave_app: Arc::new(Mutex::new(enclave_app)) }
     }
 }
@@ -48,12 +48,12 @@ async fn forward_stream<Fut>(
     upstream_starter: impl FnOnce(mpsc::Receiver<RequestWrapper>) -> Fut,
 ) -> Result<impl Stream<Item = Result<ResponseWrapper, tonic::Status>>, tonic::Status>
 where
-    Fut: Future<Output = Result<tonic::Streaming<ResponseWrapper>, tonic::Status>>,
+    Fut: Future<Output = Result<tonic::Response<tonic::Streaming<ResponseWrapper>>, tonic::Status>>,
 {
     let mut request_stream = request_stream;
     let (mut tx, rx) = mpsc::channel(10);
 
-    let mut upstream = upstream_starter(rx).await?;
+    let mut upstream = upstream_starter(rx).await?.into_inner();
 
     Ok(async_stream::try_stream! {
         loop {
@@ -120,9 +120,13 @@ pub async fn create(
         .get_trusted_app_address()
         .await
         .map_err(|error| anyhow!("Failed to get app address: {error:?}"))?;
-    let app_client = EnclaveApplicationClient::create(format!("http://{enclave_app_address}"))
+    let channel = Endpoint::from_shared(format!("http://{enclave_app_address}"))
+        .context("couldn't form channel")?
+        .connect_timeout(Duration::from_secs(120))
+        .connect()
         .await
-        .map_err(|error| anyhow!("Failed to create enclave application client: {error:?}"))?;
+        .context("couldn't connect to enclave app")?;
+    let app_client = EnclaveApplicationClient::new(channel);
     tonic::transport::Server::builder()
         .add_service(HostApplicationServer::new(HostApplicationImpl::new(app_client)))
         .serve_with_incoming(TcpListenerStream::new(listener))

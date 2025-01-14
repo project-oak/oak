@@ -24,7 +24,6 @@ package(
 rust_library(
     name = "oak_containers_examples_hello_world_host_app",
     srcs = [
-        "src/app_client.rs",
         "src/demo_transport.rs",
         "src/http_service.rs",
         "src/launcher_args.rs",

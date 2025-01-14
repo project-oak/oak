@@ -22,24 +22,25 @@ use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::{body, server::conn::http1, service::service_fn, Request, Response};
 use hyper_util::rt::{TokioIo, TokioTimer};
+use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use prost::Message;
-use tokio::{net::TcpListener, sync::Mutex};
-
-use crate::app_client::EnclaveApplicationClient;
+use tokio::{net::TcpListener, sync::Mutex, time::Duration};
+use tonic::transport::{channel::Channel, Endpoint};
 
 async fn handle_request(
     request: RequestWrapper,
-    enclave_app: Arc<Mutex<EnclaveApplicationClient>>,
+    enclave_app: Arc<Mutex<EnclaveApplicationClient<Channel>>>,
 ) -> tonic::Result<ResponseWrapper> {
     // This is not how we should actually use the streaming interface, but it
     // works for HPKE, as long as all requests go to the same machine.
-    let mut response_stream =
+    let response_stream =
         enclave_app.lock().await.legacy_session(tokio_stream::iter(vec![request])).await.map_err(
             |err| tonic::Status::internal(format!("starting streaming session failed: {err:?}")),
         )?;
 
     response_stream
+        .into_inner()
         .message()
         .await?
         .context("no response wrapper was returned")
@@ -58,9 +59,13 @@ pub async fn serve(
         .get_trusted_app_address()
         .await
         .map_err(|error| anyhow!("Failed to get app address: {error:?}"))?;
-    let app_client = EnclaveApplicationClient::create(format!("http://{enclave_app_address}"))
+    let channel = Endpoint::from_shared(format!("http://{enclave_app_address}"))
+        .context("couldn't form channel")?
+        .connect_timeout(Duration::from_secs(120))
+        .connect()
         .await
-        .map_err(|error| anyhow!("Failed to create enclave application client: {error:?}"))?;
+        .context("couldn't connect to enclave app")?;
+    let app_client = EnclaveApplicationClient::new(channel);
 
     let app_client = Arc::new(Mutex::new(app_client));
 
