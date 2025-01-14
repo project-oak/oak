@@ -125,7 +125,7 @@
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>platform_endorsement = decode_endorsement_proto::&lt;AmdSevSnpEndorsement&gt;(
-            AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID,
+            <span class="kw-2">&amp;</span>AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID,
             encoded_platform_endorsement,
         )<span class="question-mark">?</span>;
 

@@ -131,7 +131,7 @@
         )<span class="question-mark">?</span>;
         <span class="comment">// TODO: b/375137648 - Decode into new endorsement protos.
         </span><span class="kw">let </span>event_endorsement = decode_endorsement_proto::&lt;ApplicationLayerEndorsements&gt;(
-            APPLICATION_ENDORSEMENT_ID,
+            <span class="kw-2">&amp;</span>APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )<span class="question-mark">?</span>;
 

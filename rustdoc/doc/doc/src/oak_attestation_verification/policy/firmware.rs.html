@@ -112,7 +112,7 @@
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
         <span class="kw">let </span>_firmware_endorsement = decode_endorsement_proto::&lt;FirmwareEndorsement&gt;(
-            FIRMWARE_ENDORSEMENT_ID,
+            <span class="kw-2">&amp;</span>FIRMWARE_ENDORSEMENT_ID,
             encoded_firmware_endorsement,
         )<span class="question-mark">?</span>;
 
