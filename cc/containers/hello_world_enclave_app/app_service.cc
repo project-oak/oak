@@ -63,8 +63,14 @@ grpc::Status EnclaveApplicationImpl::LegacySession(
 grpc::Status EnclaveApplicationImpl::OakSession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<SessionResponse, SessionRequest>* stream) {
+  // Set up channel and do handshake.
   auto channel = session_server_.NewChannel(
       std::make_unique<transport::GrpcSyncSessionServerTransport>(stream));
+  if (!channel.ok()) {
+    return FromAbsl(channel.status());
+  }
+
+  // Handshake done, process requests until closed.
   while (true) {
     absl::StatusOr<std::string> request = (*channel)->Receive();
     if (!request.ok()) {
