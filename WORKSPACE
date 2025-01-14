@@ -297,9 +297,9 @@ load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 oak_toolchain_repositories()
 
 # Expected hashes for our base image tarballs
-SYSROOT_SHA256 = "4c13529ab388e5e8570fb7164757b8255a284bc845b713906b968eb71c4f748e"
+SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
 
-BASE_IMAGE_SHA256 = "b826bc141a91ae385f9c45a43eb800f691eca92dc537f0dc5d743c51df459ecb"
+BASE_IMAGE_SHA256 = "f539ecab633fa0a760ec49e917a0719f2d3ffc1eb6fe7853d518d17699fa035e"
 
 NVIDIA_BASE_IMAGE_SHA256 = "ba7f59ebfc71c54c90a54e508dc2acb58d1bd55606d57aa7c771d1cf67dc61f2"
 

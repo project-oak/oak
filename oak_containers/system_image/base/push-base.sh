@@ -13,7 +13,7 @@ printf "  gcloud config set project oak-ci\n"
 printf "  gcloud auth configure-docker\n"
 printf "  gcloud auth configure-docker europe-west2-docker.pkg.dev\n"
 
-readonly TARGET_DIR=oak_containers/system_image/target
+readonly TARGET_DIR=oak_containers/system_image/base/target
 if [ "$1" == "vanilla" ]
 then
     $SCRIPTS_DIR/build-base.sh vanilla
