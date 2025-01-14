@@ -3,7 +3,6 @@ cargo-features = ["trim-paths"]
 [workspace]
 resolver = "2"
 members = [
-  "oak_linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
   "oak_attestation",
@@ -21,11 +20,9 @@ members = [
   "oak_containers/launcher",
   "oak_containers/orchestrator",
   "oak_containers/attestation",
-  "oak_containers_sdk",
   "oak_containers/syslogd",
   "oak_core",
   "oak_crypto",
-  "oak_debug_service",
   "oak_dice",
   "oak_enclave_runtime_support",
   "oak_file_utils",
@@ -39,23 +36,17 @@ members = [
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
   "oak_functions_service",
-  "oak_functions_enclave_service",
-  "oak_functions_test_module",
   "oak_functions_test_utils",
-  "oak_launcher_utils",
   "oak_proto_rust",
   "oak_proto_rust/grpc",
   "oak_proto_rust/micro_rpc",
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
-  "oak_restricted_kernel_launcher",
   "oak_session",
   "oak_session_wasm",
   "oak_sev_guest",
   "oak_sev_snp_attestation_report",
-  "oak_simple_io",
-  "oak_tdx_guest",
   "sev_serial",
   "snp_measurement",
   "stage0_dice",
@@ -106,10 +97,8 @@ oak_containers_orchestrator = { path = "./oak_containers/orchestrator" }
 oak_containers_attestation = { path = "./oak_containers/attestation" }
 oak_containers_channel = { path = "./oak_containers/channel" }
 oak_containers_launcher = { path = "./oak_containers/launcher" }
-oak_containers_sdk = { path = "./oak_containers_sdk" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
-oak_debug_service = { path = "./oak_debug_service" }
 oak_dice = { path = "./oak_dice" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support", default-features = false }
 oak_file_utils = { path = "./oak_file_utils" }
@@ -118,14 +107,10 @@ oak_functions_client = { path = "./oak_functions_client" }
 oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
-oak_functions_enclave_service = { path = "./oak_functions_enclave_service", default-features = false }
-oak_functions_test_module = { path = "./oak_functions_test_module" }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_grpc = { path = "./oak_proto_rust/grpc" }
-oak_launcher_utils = { path = "./oak_launcher_utils" }
-oak_linux_boot_params = { path = "./oak_linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
 oak_micro_rpc = { path = "./oak_proto_rust/micro_rpc" }
 oak_proto_rust = { path = "./oak_proto_rust" }
@@ -137,8 +122,6 @@ oak_session = { path = "./oak_session" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
 oak_stage0_dice = { path = "./stage0_dice" }
-oak_simple_io = { path = "./oak_simple_io" }
-oak_tdx_guest = { path = "./oak_tdx_guest" }
 sev_serial = { path = "./sev_serial" }
 # Common external crates.
 prost = { version = "*", default-features = false, features = ["prost-derive"] }

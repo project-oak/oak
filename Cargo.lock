@@ -327,16 +327,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bmrng"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
-dependencies = [
- "futures-core",
- "tokio",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2330,32 +2320,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_containers_sdk"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "async-trait",
- "oak_attestation",
- "oak_attestation_types",
- "oak_containers_attestation",
- "oak_crypto",
- "oak_dice",
- "oak_grpc",
- "oak_grpc_utils",
- "oak_proto_rust",
- "oak_session",
- "oak_stage0_dice",
- "p256",
- "prost",
- "prost-types",
- "tokio",
- "tokio-stream",
- "tonic",
- "tower",
-]
-
-[[package]]
 name = "oak_containers_syslogd"
 version = "0.1.0"
 dependencies = [
@@ -2408,20 +2372,6 @@ dependencies = [
  "static_assertions",
  "tokio",
  "zeroize",
-]
-
-[[package]]
-name = "oak_debug_service"
-version = "0.1.0"
-dependencies = [
- "oak_grpc",
- "oak_grpc_utils",
- "oak_proto_rust",
- "pprof",
- "prost",
- "prost-types",
- "tokio",
- "tonic",
 ]
 
 [[package]]
@@ -2489,27 +2439,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_enclave_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger",
- "log",
- "micro_rpc",
- "oak_attestation",
- "oak_client",
- "oak_core",
- "oak_crypto",
- "oak_dice",
- "oak_functions_service",
- "oak_functions_test_utils",
- "oak_micro_rpc",
- "oak_proto_rust",
- "oak_restricted_kernel_sdk",
- "prost",
-]
-
-[[package]]
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
@@ -2572,18 +2501,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_test_module"
-version = "0.1.0"
-dependencies = [
- "micro_rpc",
- "micro_rpc_build",
- "oak_functions_sdk",
- "oak_micro_rpc",
- "oak_proto_rust",
- "prost",
-]
-
-[[package]]
 name = "oak_functions_test_utils"
 version = "0.1.0"
 dependencies = [
@@ -2629,36 +2546,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_launcher_utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bmrng",
- "clap",
- "command-fds",
- "hashbrown 0.14.3",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_channel",
- "oak_proto_rust",
- "oak_restricted_kernel_interface",
- "prost",
- "tokio",
-]
-
-[[package]]
-name = "oak_linux_boot_params"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.4.1",
- "static_assertions",
- "strum",
- "zerocopy",
-]
-
-[[package]]
 name = "oak_micro_rpc"
 version = "0.1.0"
 dependencies = [
@@ -2697,19 +2584,6 @@ dependencies = [
  "bitflags 2.4.1",
  "os_pipe",
  "strum",
-]
-
-[[package]]
-name = "oak_restricted_kernel_launcher"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "env_logger",
- "log",
- "oak_channel",
- "oak_launcher_utils",
- "tokio",
 ]
 
 [[package]]
@@ -2809,14 +2683,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_simple_io"
-version = "0.1.0"
-dependencies = [
- "oak_sev_guest",
- "x86_64",
-]
-
-[[package]]
 name = "oak_stage0_dice"
 version = "0.1.0"
 dependencies = [
@@ -2832,15 +2698,6 @@ dependencies = [
  "rand_core",
  "sha2",
  "zerocopy",
-]
-
-[[package]]
-name = "oak_tdx_guest"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.4.1",
- "strum",
- "x86_64",
 ]
 
 [[package]]
@@ -3223,10 +3080,6 @@ dependencies = [
  "nix 0.26.4",
  "once_cell",
  "parking_lot",
- "prost",
- "prost-build",
- "prost-derive",
- "sha2",
  "smallvec",
  "symbolic-demangle",
  "tempfile",
