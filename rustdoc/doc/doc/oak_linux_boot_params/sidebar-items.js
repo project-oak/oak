@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["CC_BLOB_SEV_INFO_MAGIC"],"enum":["E820EntryType","SetupDataType"],"struct":["APMBiosInfo","BootE820Entry","BootParams","CCBlobSevInfo","CCSetupData","EDIDInfo","EFIInfo","ISTInfo","LoadFlags","OLPCOfwHeader","Ramdisk","ScreenInfo","SetupData","SetupHeader","SysDescTable","XLoadFlags"]};

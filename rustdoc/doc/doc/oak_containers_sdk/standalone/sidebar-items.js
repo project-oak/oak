@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["KeyPair","StandaloneInstanceEncryptionKeyHandle","StandaloneInstanceSigner","StandaloneOrchestrator","StandaloneOrchestratorBuilder"]};

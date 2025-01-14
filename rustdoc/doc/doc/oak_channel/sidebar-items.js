@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["basic_framed","client","message","server"],"trait":["Channel","Read","Write"]};
+window.SIDEBAR_ITEMS = {"mod":["basic_framed","message","server"],"trait":["Channel","Read","Write"]};

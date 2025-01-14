@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_restricted_kernel_launcher", 0, "")

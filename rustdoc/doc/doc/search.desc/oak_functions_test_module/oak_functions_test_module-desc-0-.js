@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_functions_test_module", 0, "Oak Functions test module.")
