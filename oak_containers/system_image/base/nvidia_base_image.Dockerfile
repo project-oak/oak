@@ -24,9 +24,11 @@ RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearm
     sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
     tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
+# Skips nvidia-smi as it's not available for the latest version of the driver.
+# Includes libnvidia-ml1 as the underlying library that provides NVML APIs.
 RUN apt-get --yes update \
     && apt-get install --yes --no-install-recommends \
-    nvidia-driver nvidia-smi \
+    nvidia-driver libnvidia-ml1 \
     libcuda1 nvidia-container-toolkit \
     # Stuff to build kernel (will be purged later, see below)
     libc6-dev flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
@@ -44,8 +46,8 @@ RUN tar --directory=/tmp --extract --file /tmp/linux-${LINUX_KERNEL_VERSION}.tar
     && cp /tmp/minimal.config /tmp/linux-${LINUX_KERNEL_VERSION}/.config \
     && make --directory=/tmp/linux-${LINUX_KERNEL_VERSION} -j"$(nproc)" bindeb-pkg \
     && dpkg --install /tmp/linux-headers-${LINUX_KERNEL_VERSION}_${LINUX_KERNEL_VERSION}-1_amd64.deb \
-    && dkms build -m nvidia-current -v "$(dpkg-query --showformat='${source:Upstream-Version}' --show nvidia-driver)" -k ${LINUX_KERNEL_VERSION} \
-    && dkms install -m nvidia-current -v "$(dpkg-query --showformat='${source:Upstream-Version}' --show nvidia-driver)" -k ${LINUX_KERNEL_VERSION} \
+    && dkms build -m nvidia -v "$(dpkg-query --showformat='${source:Upstream-Version}' --show nvidia-driver)" -k ${LINUX_KERNEL_VERSION} \
+    && dkms install -m nvidia -v "$(dpkg-query --showformat='${source:Upstream-Version}' --show nvidia-driver)" -k ${LINUX_KERNEL_VERSION} \
     && rm -rf /tmp/linux-${LINUX_KERNEL_VERSION} /tmp/linux-${LINUX_KERNEL_VERSION}.tar.xz /tmp/minimal.config \
     && apt-get --yes purge libc6-dev flex bison build-essential bc cpio libncurses5-dev libelf-dev libssl-dev dwarves debhelper-compat rsync \
     && apt-get --yes autoremove

@@ -301,7 +301,7 @@ SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a186
 
 BASE_IMAGE_SHA256 = "f539ecab633fa0a760ec49e917a0719f2d3ffc1eb6fe7853d518d17699fa035e"
 
-NVIDIA_BASE_IMAGE_SHA256 = "ba7f59ebfc71c54c90a54e508dc2acb58d1bd55606d57aa7c771d1cf67dc61f2"
+NVIDIA_BASE_IMAGE_SHA256 = "10e665a269b79aef1e12a45a60abd1bf4638edae3bad0c41cec764ceacbfe0a9"
 
 # Experimental sysroot for the build toolchain, based on Oak Containers sysimage.
 #
