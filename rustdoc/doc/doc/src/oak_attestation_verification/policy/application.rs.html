@@ -93,7 +93,7 @@
 <span class="kw">use </span>oak_attestation_verification_types::{policy::Policy, APPLICATION_ENDORSEMENT_ID};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        ApplicationLayerData, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        ApplicationEndorsement, ApplicationLayerData, ApplicationLayerReferenceValues,
         EventAttestationResults,
     },
     Variant,
@@ -101,7 +101,7 @@
 
 <span class="kw">use crate</span>::{
     compare::compare_application_layer_measurement_digests,
-    expect::get_application_layer_expected_values,
+    expect::acquire_application_event_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -129,18 +129,18 @@
             <span class="string">"type.googleapis.com/oak.attestation.v1.ApplicationLayerData"</span>,
             encoded_event,
         )<span class="question-mark">?</span>;
-        <span class="comment">// TODO: b/375137648 - Decode into new endorsement protos.
-        </span><span class="kw">let </span>event_endorsement = decode_endorsement_proto::&lt;ApplicationLayerEndorsements&gt;(
+        <span class="kw">let </span>endorsement = decode_endorsement_proto::&lt;ApplicationEndorsement&gt;(
             <span class="kw-2">&amp;</span>APPLICATION_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>expected_values = get_application_layer_expected_values(
+        <span class="kw">let </span>expected_values = acquire_application_event_expected_values(
             milliseconds_since_epoch,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>event_endorsement),
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>endorsement),
             <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values,
         )
-        .context(<span class="string">"couldn't verify application endosements"</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">"couldn't verify application endorsements"</span>)<span class="question-mark">?</span>;
+
         compare_application_layer_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify application event"</span>)<span class="question-mark">?</span>;
 

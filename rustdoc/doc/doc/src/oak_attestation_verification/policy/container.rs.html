@@ -93,7 +93,7 @@
 <span class="kw">use </span>oak_attestation_verification_types::{policy::Policy, CONTAINER_ENDORSEMENT_ID};
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
-        ContainerLayerData, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        ContainerEndorsement, ContainerLayerData, ContainerLayerReferenceValues,
         EventAttestationResults,
     },
     Variant,
@@ -101,7 +101,7 @@
 
 <span class="kw">use crate</span>::{
     compare::compare_container_layer_measurement_digests,
-    expect::get_container_layer_expected_values,
+    expect::acquire_container_event_expected_values,
     util::{decode_endorsement_proto, decode_event_proto},
 };
 
@@ -129,18 +129,18 @@
             <span class="string">"type.googleapis.com/oak.attestation.v1.ContainerLayerData"</span>,
             encoded_event,
         )<span class="question-mark">?</span>;
-        <span class="comment">// TODO: b/375137648 - Decode into new endorsement protos.
-        </span><span class="kw">let </span>event_endorsement = decode_endorsement_proto::&lt;ContainerLayerEndorsements&gt;(
+        <span class="kw">let </span>endorsement = decode_endorsement_proto::&lt;ContainerEndorsement&gt;(
             <span class="kw-2">&amp;</span>CONTAINER_ENDORSEMENT_ID,
             encoded_event_endorsement,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>expected_values = get_container_layer_expected_values(
+        <span class="kw">let </span>expected_values = acquire_container_event_expected_values(
             milliseconds_since_epoch,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>event_endorsement),
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>endorsement),
             <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values,
         )
-        .context(<span class="string">"couldn't verify container endosements"</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">"couldn't verify container endorsements"</span>)<span class="question-mark">?</span>;
+
         compare_container_layer_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify container event"</span>)<span class="question-mark">?</span>;
 

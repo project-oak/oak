@@ -63,8 +63,6 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -89,7 +87,7 @@
 };
 
 <span class="kw">use crate</span>::{
-    compare::compare_measurement_digest, expect::get_stage0_expected_values,
+    compare::compare_measurement_digest, expect::acquire_stage0_expected_values,
     platform::convert_amd_sev_snp_initial_measurement, util::decode_endorsement_proto,
 };
 
@@ -111,21 +109,19 @@
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
-        <span class="kw">let </span>_firmware_endorsement = decode_endorsement_proto::&lt;FirmwareEndorsement&gt;(
+        <span class="kw">let </span>endorsement = decode_endorsement_proto::&lt;FirmwareEndorsement&gt;(
             <span class="kw-2">&amp;</span>FIRMWARE_ENDORSEMENT_ID,
             encoded_firmware_endorsement,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>initial_measurement_expected_values = get_stage0_expected_values(
+        <span class="kw">let </span>expected_values = acquire_stage0_expected_values(
             milliseconds_since_epoch,
-            <span class="comment">// TODO: b/375137648 - Use firmware endorsement, once we switch to new endorsment
-            // types.
-            </span><span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>endorsement),
             <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values,
         )
         .context(<span class="string">"getting stage0 values"</span>)<span class="question-mark">?</span>;
 
-        compare_measurement_digest(<span class="kw-2">&amp;</span>initial_measurement, <span class="kw-2">&amp;</span>initial_measurement_expected_values)
+        compare_measurement_digest(<span class="kw-2">&amp;</span>initial_measurement, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"stage0 measurement values failed verification"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// TODO: b/356631062 - Return detailed attestation results.

@@ -58,6 +58,7 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -82,7 +83,7 @@
 };
 
 <span class="kw">use crate</span>::{
-    compare::compare_event_measurement_digests, expect::get_event_expected_values,
+    compare::compare_event_measurement_digests, expect::acquire_event_expected_values,
     util::decode_event_proto,
 };
 
@@ -109,8 +110,9 @@
         )<span class="question-mark">?</span>;
 
         <span class="kw">let </span>expected_values =
-            get_event_expected_values(milliseconds_since_epoch, <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values)
-                .context(<span class="string">"couldn't verify event endosements"</span>)<span class="question-mark">?</span>;
+            acquire_event_expected_values(milliseconds_since_epoch, <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values)
+                .context(<span class="string">"couldn't verify event endorsements"</span>)<span class="question-mark">?</span>;
+
         compare_event_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify generic event"</span>)<span class="question-mark">?</span>;
 
