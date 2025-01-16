@@ -23,10 +23,15 @@ use oak_attestation_verification::policy::{
 };
 use oak_attestation_verification_types::policy::Policy;
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement, Endorsements,
-    Evidence, FirmwareEndorsement, OakContainersReferenceValues,
-    OakRestrictedKernelReferenceValues, ReferenceValues, SkipVerification,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        binary_reference_value, endorsements, kernel_binary_reference_value, reference_values,
+        text_reference_value, AmdSevSnpEndorsement, BinaryReferenceValue, CbReferenceValues,
+        Endorsements, Evidence, FirmwareEndorsement, KernelBinaryReferenceValue,
+        KernelLayerReferenceValues, OakContainersReferenceValues,
+        OakRestrictedKernelReferenceValues, ReferenceValues, SkipVerification, TextReferenceValue,
+    },
+    Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
@@ -45,6 +50,13 @@ const RK_ENDORSEMENTS_PATH: &str =
     "oak_attestation_verification/testdata/rk_endorsements_20241205.binarypb";
 const RK_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/rk_reference_values_20241205.binarypb";
+
+const CB_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/cb_evidence_20250124.binarypb";
+const CB_ENDORSEMENTS_PATH: &str =
+    "oak_attestation_verification/testdata/cb_endorsements_20250124.binarypb";
+const CB_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/cb_reference_values_20250124.binarypb";
 
 const KERNEL_EVENT_INDEX: usize = 0;
 const RK_APPLICATION_EVENT_INDEX: usize = 1;
@@ -125,6 +137,36 @@ fn load_rk_reference_values() -> OakRestrictedKernelReferenceValues {
     rk_reference_values
 }
 
+fn load_cb_evidence() -> Evidence {
+    let serialized = fs::read(data_path(CB_EVIDENCE_PATH)).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+fn load_cb_endorsements() -> Endorsements {
+    let serialized =
+        fs::read(data_path(CB_ENDORSEMENTS_PATH)).expect("could not read endorsements");
+    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsements")
+}
+
+fn load_cb_reference_values() -> CbReferenceValues {
+    let serialized =
+        fs::read(data_path(CB_REFERENCE_VALUES_PATH)).expect("could not read reference values");
+    let reference_values =
+        ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference values");
+    let containers_reference_values = match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::Cb(containers_reference_values)) => {
+            containers_reference_values.clone()
+        }
+        _ => panic!("couldn't find CB reference values"),
+    };
+    assert!(containers_reference_values.root_layer.is_some());
+    assert!(containers_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
+    assert!(containers_reference_values.kernel_layer.is_some());
+    assert!(containers_reference_values.system_layer.is_some());
+    assert!(containers_reference_values.application_layer.is_some());
+    containers_reference_values
+}
+
 lazy_static::lazy_static! {
     static ref OC_EVIDENCE: Evidence = load_oc_evidence();
     static ref OC_ENDORSEMENTS: Endorsements = load_oc_endorsements();
@@ -133,6 +175,10 @@ lazy_static::lazy_static! {
     static ref RK_EVIDENCE: Evidence = load_rk_evidence();
     static ref RK_ENDORSEMENTS: Endorsements = load_rk_endorsements();
     static ref RK_REFERENCE_VALUES: OakRestrictedKernelReferenceValues = load_rk_reference_values();
+
+    static ref CB_EVIDENCE: Evidence = load_cb_evidence();
+    static ref CB_ENDORSEMENTS: Endorsements = load_cb_endorsements();
+    static ref CB_REFERENCE_VALUES: CbReferenceValues = load_cb_reference_values();
 }
 
 #[test]
@@ -247,6 +293,36 @@ fn rk_application_policy_verify_succeeds() {
     let endorsement = &RK_ENDORSEMENTS.events[RK_APPLICATION_EVENT_INDEX];
 
     let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
+fn cb_kernel_policy_verify_succeeds() {
+    // TODO: b/388251723 - Use real CB reference values instead of [`Skip`].
+    let _reference_values = CB_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
+    let kernel_skip = KernelBinaryReferenceValue {
+        r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+    let text_skip =
+        TextReferenceValue { r#type: Some(text_reference_value::Type::Skip(SkipVerification {})) };
+    let binary_skip = BinaryReferenceValue {
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
+    };
+    let skip_reference_values = KernelLayerReferenceValues {
+        kernel: Some(kernel_skip),
+        kernel_cmd_line_text: Some(text_skip),
+        init_ram_fs: Some(binary_skip.clone()),
+        memory_map: Some(binary_skip.clone()),
+        acpi: Some(binary_skip),
+    };
+
+    let policy = KernelPolicy::new(&skip_reference_values);
+    let event = &CB_EVIDENCE.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
+    let endorsement = Variant::default();
+
+    let result = policy.verify(event, &endorsement, MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
