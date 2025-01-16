@@ -84,6 +84,14 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -105,8 +113,9 @@
 };
 
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation::dice::DiceAttester;
-<span class="kw">use </span>oak_attestation_types::util::Serializable;
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">use </span>oak_attestation::ApplicationKeysAttester;
+<span class="kw">use </span>oak_attestation_types::{attester::Attester, util::Serializable};
 <span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// The path to the file where the DICE data provided by Stage 1 is stored.
@@ -116,11 +125,16 @@
 ///
 /// The file is also overwritten with zeros to ensure it cannot be reused by
 /// another process.
-</span><span class="kw">pub fn </span>load_stage1_dice_data() -&gt; anyhow::Result&lt;DiceAttester&gt; {
+</span><span class="attr">#[allow(deprecated)]
+</span><span class="kw">pub fn </span>load_stage1_dice_data&lt;A: Attester + Serializable + ApplicationKeysAttester&gt;(
+) -&gt; anyhow::Result&lt;A&gt; {
     load_stage1_dice_data_from_path(STAGE1_DICE_DATA_PATH)
 }
 
-<span class="kw">fn </span>load_stage1_dice_data_from_path(path: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;DiceAttester&gt; {
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">fn </span>load_stage1_dice_data_from_path&lt;A: Attester + Serializable + ApplicationKeysAttester&gt;(
+    path: <span class="kw-2">&amp;</span>str,
+) -&gt; anyhow::Result&lt;A&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>file = OpenOptions::new()
         .read(<span class="bool-val">true</span>)
         .write(<span class="bool-val">true</span>)
@@ -131,7 +145,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity(size);
     file.read_to_end(<span class="kw-2">&amp;mut </span>buffer).context(<span class="string">"couldn't read DICE data from file"</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>result = DiceAttester::deserialize(<span class="kw-2">&amp;</span>buffer[..]).context(<span class="string">"couldn't parse DICE data"</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>result = A::deserialize(<span class="kw-2">&amp;</span>buffer[..]).context(<span class="string">"couldn't parse DICE data"</span>)<span class="question-mark">?</span>;
 
     buffer.zeroize();
     file.rewind()<span class="question-mark">?</span>;
@@ -150,6 +164,8 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::fs;
 
+    <span class="kw">use </span>oak_attestation::dice::DiceAttester;
+
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="attr">#[test]
@@ -162,7 +178,7 @@
         <span class="attr">#[cfg(not(feature = <span class="string">"bazel"</span>))]
         </span>fs::copy(<span class="string">"testdata/test_dice"</span>, DICE_DATA_PATH).unwrap();
 
-        load_stage1_dice_data_from_path(DICE_DATA_PATH).unwrap();
+        load_stage1_dice_data_from_path::&lt;DiceAttester&gt;(DICE_DATA_PATH).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>file = OpenOptions::new().read(<span class="bool-val">true</span>).open(DICE_DATA_PATH).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity(DICE_DATA_SIZE);
         file.read_to_end(<span class="kw-2">&amp;mut </span>buffer).unwrap();

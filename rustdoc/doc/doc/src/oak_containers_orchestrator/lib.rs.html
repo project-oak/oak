@@ -188,6 +188,17 @@
 <a href="#188" id="188">188</a>
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -208,7 +219,9 @@
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>launcher_client::LauncherClient;
-<span class="kw">use </span>oak_attestation_types::attester::Attester;
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">use </span>oak_attestation::ApplicationKeysAttester;
+<span class="kw">use </span>oak_attestation_types::{attester::Attester, util::Serializable};
 <span class="kw">use </span>oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 <span class="kw">use </span>oak_containers_attestation::generate_instance_keys;
 <span class="kw">use </span>oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
@@ -241,7 +254,8 @@
     </span>runtime_user: String,
 }
 
-<span class="kw">pub async fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">pub async fn </span>main&lt;A: Attester + ApplicationKeysAttester + Serializable&gt;() -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">crate</span>::logging::setup()<span class="question-mark">?</span>;
 
     <span class="kw">let </span>args = Args::parse();
@@ -289,7 +303,7 @@
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"couldn't get application config: {:?}"</span>, error))<span class="question-mark">?</span>;
 
     <span class="comment">// Create a container event and add it to the event log.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>attester = <span class="kw">crate</span>::dice::load_stage1_dice_data()<span class="question-mark">?</span>;
+    </span><span class="kw">let </span><span class="kw-2">mut </span>attester: A = <span class="kw">crate</span>::dice::load_stage1_dice_data()<span class="question-mark">?</span>;
     <span class="kw">let </span>container_event = oak_containers_attestation::create_container_event(
         <span class="kw-2">&amp;</span>container_bundle,
         <span class="kw-2">&amp;</span>application_config,
@@ -301,18 +315,26 @@
 
     <span class="comment">// Add the container event to the DICE chain.
     </span><span class="kw">let </span>container_layer = oak_containers_attestation::create_container_dice_layer(<span class="kw-2">&amp;</span>container_event);
-    <span class="kw">let </span>evidence = attester.add_application_keys(
-        container_layer,
-        <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
-        <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>group_public_keys) = group_public_keys {
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>group_public_keys.encryption_public_key)
-        } <span class="kw">else </span>{
-            <span class="prelude-val">None
-        </span>},
-        <span class="prelude-val">None</span>,
-    )<span class="question-mark">?</span>;
-
+    <span class="kw">let </span>evidence = {
+        <span class="attr">#[cfg(feature = <span class="string">"application_keys"</span>)]
+        </span>{
+            attester.add_application_keys(
+                container_layer,
+                <span class="kw-2">&amp;</span>instance_public_keys.encryption_public_key,
+                <span class="kw-2">&amp;</span>instance_public_keys.signing_public_key,
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>group_public_keys) = group_public_keys {
+                    <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>group_public_keys.encryption_public_key)
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">None
+                </span>},
+                <span class="prelude-val">None</span>,
+            )<span class="question-mark">?
+        </span>}
+        <span class="attr">#[cfg(not(feature = <span class="string">"application_keys"</span>))]
+        </span>{
+            attester.quote()<span class="question-mark">?
+        </span>}
+    };
     <span class="comment">// Send the attestation evidence to the Hostlib.
     </span>launcher_client
         .send_attestation_evidence(evidence.clone())

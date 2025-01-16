@@ -380,49 +380,6 @@
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -468,6 +425,9 @@
 <span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zeroize::Zeroize;
 
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">use </span><span class="kw">crate</span>::ApplicationKeysAttester;
+
 <span class="kw">pub trait </span>MeasureDigest {
     <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest;
 }
@@ -495,62 +455,16 @@
     signing_key: SigningKey,
 }
 
-<span class="comment">// TODO: b/366141836 - Remove this implementation once all Oak clients have been
-// updated to the EventLog attestation.
-</span><span class="kw">impl </span>DiceAttester {
-    <span class="doccomment">/// Adds an additional layer of evidence to the DICE data.
-    ///
-    /// The evidence is in the form of a CWT certificate that contains the
-    /// `additional_claims` provided. Adding a layer generates a new ECA
-    /// private key for the layer and uses it to replace the existing
-    /// signing key. The CWT certificate contains the public key for this new
-    /// signing key.
-    </span><span class="kw">pub fn </span>add_layer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layer_data: LayerData) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="comment">// The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        </span><span class="kw">let </span>layer_evidence = <span class="self">self
-            </span>.evidence
-            .layers
-            .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence layers found"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-
-        <span class="comment">// The issuer for the next layer is the subject of the current last layer.
-        </span><span class="kw">let </span>issuer_id = claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>evidence = <span class="kw-2">&amp;mut </span><span class="self">self</span>.evidence;
-        <span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
-
-        <span class="kw">let </span>eca_certificate = generate_signing_certificate(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
-            issuer_id,
-            <span class="kw-2">&amp;</span>verifying_key,
-            layer_data.additional_claims,
-        )
-        .map_err(anyhow::Error::msg)
-        .context(<span class="string">"couldn't generate ECA certificate for the next layer"</span>)<span class="question-mark">?</span>;
-        evidence.layers.push(LayerEvidence {
-            eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)<span class="question-mark">?</span>,
-        });
-        <span class="comment">// Replacing the signing key will cause the previous signing key to be dropped,
-        // which will zero out its memory.
-        </span><span class="self">self</span>.signing_key = signing_key;
-        <span class="self">self</span>.evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
-        <span class="prelude-val">Ok</span>(())
-    }
-
+<span class="comment">// TODO: b/368030563 - Remove this implementation once all client library
+// instances use the applications keys from the event log.
+</span><span class="attr">#[allow(deprecated)]
+</span><span class="kw">impl </span>ApplicationKeysAttester <span class="kw">for </span>DiceAttester {
     <span class="doccomment">/// Adds the CWT certificates application keys to the DICE data.
     ///
     /// Since no additional evidence can be added after the application keys are
     /// added, this consumes DICE data, discards the signing key and returns
     /// the finalized evidence.
-    </span><span class="kw">pub fn </span>add_application_keys(
+    </span><span class="kw">fn </span>add_application_keys(
         <span class="self">self</span>,
         layer_data: LayerData,
         kem_public_key: <span class="kw-2">&amp;</span>[u8],
