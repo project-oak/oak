@@ -32,7 +32,7 @@ namespace oak::server {
 
 absl::StatusOr<std::unique_ptr<OakSessionServer::Channel>>
 OakSessionServer::NewChannel(std::unique_ptr<Channel::Transport> transport) {
-  auto session = session::ServerSession::Create(config_);
+  auto session = session::ServerSession::Create(config_provider_());
   if (!session.ok()) {
     return util::status::Annotate(session.status(),
                                   "Failed to create server session");

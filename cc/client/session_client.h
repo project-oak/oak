@@ -37,16 +37,29 @@ class OakSessionClient {
                                           session::ClientSession>;
 
   // A valid `SessionConfig` can be obtained using
-  // oak::session::SessionConfigBuilder.
-  OakSessionClient(session::SessionConfig* config) : config_(config) {}
+  // oak::session::SessionConfigBuilder. Each session needs its own unique
+  // SessionConfig instance, so a function to create a new SessionConfig should
+  // be provided here.
+  OakSessionClient(
+      absl::AnyInvocable<session::SessionConfig*()> config_provider)
+      : config_provider_(std::move(config_provider)) {}
 
-  // Use a default configuration, Unattested + NoiseNN
-  ABSL_DEPRECATED("Use the config-providing variant.")
+  // Use a default configuration provider, Unattested + NoiseNN
+  ABSL_DEPRECATED("Use the config-provider-providing variant.")
   OakSessionClient()
-      : OakSessionClient(
-            session::SessionConfigBuilder(session::AttestationType::kUnattested,
-                                          session::HandshakeType::kNoiseNN)
-                .Build()) {}
+      : OakSessionClient([] {
+          return session::SessionConfigBuilder(
+                     session::AttestationType::kUnattested,
+                     session::HandshakeType::kNoiseNN)
+              .Build();
+        }) {}
+
+  // Keeping this around briefly until we transition existing clients.
+  ABSL_DEPRECATED(
+      "This constructor will lead to UB. Use the config-provider-providing "
+      "variant.")
+  OakSessionClient(session::SessionConfig* config)
+      : OakSessionClient([config] { return config; }) {}
 
   // Create a new OakClientChannel instance with the provided session and
   // transport.
@@ -61,7 +74,7 @@ class OakSessionClient {
       std::unique_ptr<OakSessionClient::Channel::Transport> transport);
 
  private:
-  session::SessionConfig* config_;
+  absl::AnyInvocable<session::SessionConfig*()> config_provider_;
 };
 
 }  // namespace oak::client

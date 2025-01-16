@@ -29,7 +29,7 @@ namespace oak::client {
 absl::StatusOr<std::unique_ptr<OakSessionClient::Channel>>
 OakSessionClient::NewChannel(std::unique_ptr<Channel::Transport> transport) {
   absl::StatusOr<std::unique_ptr<session::ClientSession>> session =
-      session::ClientSession::Create(config_);
+      session::ClientSession::Create(config_provider_());
 
   while (!(*session)->IsOpen()) {
     absl::StatusOr<std::optional<session::v1::SessionRequest>> init_request =
