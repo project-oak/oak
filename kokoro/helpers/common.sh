@@ -44,6 +44,10 @@ function kokoro_cleanup() {
       ./bazel-out \
       ./bazel-testlogs \
       ./bazel-workspace \
+      ./codelab/bazel-out \
+      ./codelab/bazel-bin \
+      ./codelab/bazel-testlogs \
+      ./codelab/bazel-codelab \
       ./bazel/test_workspace/bazel-bin \
       ./bazel/test_workspace/bazel-out \
       ./bazel/test_workspace/bazel-testlogs \

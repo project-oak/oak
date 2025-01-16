@@ -1,0 +1,42 @@
+// Copyright 2025 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+import "service/proto/evidence.proto";
+
+package sealed.codelabs.enclave;
+
+message EchoRequest {
+  bytes msg = 1;
+}
+
+message EchoResponse {
+  bytes msg = 1;
+}
+
+message GetEvidenceRequest {}
+
+message GetEvidenceResponse {
+  oak.attestation.v1.Evidence evidence = 1;
+  // oak.attestation.v1.Evidence evidence = 1;
+}
+
+service EnclaveService {
+  // method_id: 0
+  rpc Echo(EchoRequest) returns (EchoResponse) {}
+
+  // method_id: 1
+  rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {}
+}
