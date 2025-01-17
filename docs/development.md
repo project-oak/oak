@@ -191,10 +191,10 @@ To view stats about the cache, see https://app.cachix.org/cache/oak-1 .
 Running the integration tests for Oak Functions will confirm that all core
 prerequisites have been installed.
 
-Run them inside Docker with:
+Run them with:
 
 ```bash
-cargo nextest run --package=oak_functions_launcher
+bazel test //oak_functions_launcher:oak_functions_launcher_integration_test
 ```
 
 Each test:
