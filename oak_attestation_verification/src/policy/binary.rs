@@ -40,7 +40,7 @@ impl Policy<[u8], Variant> for BinaryPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        _encoded_event_endorsement: &Variant,
+        _encoded_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<EventData>(

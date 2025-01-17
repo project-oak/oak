@@ -30,7 +30,7 @@ use oak_proto_rust::oak::{
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
         SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
     },
-    HexDigest, RawDigest, Variant,
+    HexDigest, RawDigest,
 };
 use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
@@ -424,20 +424,6 @@ pub fn decode_event_proto<M: Message + Default>(
         expected_type_url,
         event_proto.event.as_ref().context("no event found in the `event` field")?,
     )
-}
-
-/// Decodes serialized endorsement into a specified [`Message`].
-pub fn decode_endorsement_proto<M: Message + Default>(
-    id: &[u8],
-    message: &Variant,
-) -> anyhow::Result<M> {
-    if message.id == id {
-        let decoded_message = M::decode(message.value.as_ref())
-            .map_err(|error| anyhow::anyhow!("couldn't decode endorsement: {:?}", error))?;
-        Ok(decoded_message)
-    } else {
-        anyhow::bail!("unexpected endorsement ID, expected {:?}, found {:?}", id, message.id);
-    }
 }
 
 /// Decodes [`Any`] message into a specified [`Message`].

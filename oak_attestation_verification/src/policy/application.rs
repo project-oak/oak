@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::{policy::Policy, APPLICATION_ENDORSEMENT_ID};
+use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
         ApplicationEndorsement, ApplicationLayerData, ApplicationLayerReferenceValues,
@@ -26,8 +26,7 @@ use oak_proto_rust::oak::{
 
 use crate::{
     compare::compare_application_layer_measurement_digests,
-    expect::acquire_application_event_expected_values,
-    util::{decode_endorsement_proto, decode_event_proto},
+    expect::acquire_application_event_expected_values, util::decode_event_proto,
 };
 
 pub struct ApplicationPolicy {
@@ -47,17 +46,15 @@ impl Policy<[u8], Variant> for ApplicationPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        encoded_event_endorsement: &Variant,
+        encoded_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ApplicationLayerData>(
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
             encoded_event,
         )?;
-        let endorsement = decode_endorsement_proto::<ApplicationEndorsement>(
-            &APPLICATION_ENDORSEMENT_ID,
-            encoded_event_endorsement,
-        )?;
+        let endorsement: ApplicationEndorsement =
+            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_application_event_expected_values(
             milliseconds_since_epoch,

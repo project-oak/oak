@@ -15,7 +15,7 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification_types::{policy::Policy, FIRMWARE_ENDORSEMENT_ID};
+use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{BinaryReferenceValue, EventAttestationResults, FirmwareEndorsement},
     Variant,
@@ -23,7 +23,7 @@ use oak_proto_rust::oak::{
 
 use crate::{
     compare::compare_measurement_digest, expect::acquire_stage0_expected_values,
-    platform::convert_amd_sev_snp_initial_measurement, util::decode_endorsement_proto,
+    platform::convert_amd_sev_snp_initial_measurement,
 };
 
 pub struct FirmwarePolicy {
@@ -40,14 +40,12 @@ impl Policy<[u8], Variant> for FirmwarePolicy {
     fn verify(
         &self,
         firmware_measurement: &[u8],
-        encoded_firmware_endorsement: &Variant,
+        encoded_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
-        let endorsement = decode_endorsement_proto::<FirmwareEndorsement>(
-            &FIRMWARE_ENDORSEMENT_ID,
-            encoded_firmware_endorsement,
-        )?;
+        let endorsement: FirmwareEndorsement =
+            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_stage0_expected_values(
             milliseconds_since_epoch,

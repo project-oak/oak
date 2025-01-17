@@ -37,8 +37,9 @@ pub mod perftools {
     }
 }
 
-pub mod oak {
+pub mod variant;
 
+pub mod oak {
     // Do not lint generated code.
     #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 
