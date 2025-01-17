@@ -46,7 +46,6 @@ pub unsafe extern "C" fn new_fake_evidence(
         }),
         layers: vec![],
         event_log: Some(EventLog {
-            events: vec![],
             encoded_events: vec![unsafe { fake_event_log_data_bytes.as_slice().to_vec() }],
         }),
     };
