@@ -26,3 +26,8 @@ prost = { version = "*", default-features = false }
 [dev-dependencies]
 mockall = { version = "*", default-features = false }
 rand_core = { version = "*", default-features = false }
+criterion = "0.5.1"
+
+[[bench]]
+name = "handshake_benchmark"
+harness = false

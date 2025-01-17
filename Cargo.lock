@@ -2675,6 +2675,7 @@ version = "0.1.0"
 dependencies = [
  "aead",
  "anyhow",
+ "criterion",
  "derive_builder",
  "itertools 0.12.1",
  "mockall",
