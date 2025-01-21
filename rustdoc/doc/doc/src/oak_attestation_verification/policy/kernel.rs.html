@@ -68,8 +68,6 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -87,7 +85,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification_types::{policy::Policy, KERNEL_ENDORSEMENT_ID};
+<span class="kw">use </span>oak_attestation_verification_types::policy::Policy;
 <span class="kw">use </span>oak_proto_rust::oak::{
     attestation::v1::{
         EventAttestationResults, KernelEndorsement, KernelLayerReferenceValues, Stage0Measurements,
@@ -98,8 +96,7 @@
 <span class="kw">use crate</span>::{
     compare::compare_kernel_layer_measurement_digests,
     expect::acquire_kernel_event_expected_values,
-    extract::stage0_measurements_to_kernel_layer_data,
-    util::{decode_endorsement_proto, decode_event_proto},
+    extract::stage0_measurements_to_kernel_layer_data, util::decode_event_proto,
 };
 
 <span class="kw">pub struct </span>KernelPolicy {
@@ -116,7 +113,7 @@
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
-        encoded_event_endorsement: <span class="kw-2">&amp;</span>Variant,
+        encoded_endorsement: <span class="kw-2">&amp;</span>Variant,
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>event =
@@ -124,10 +121,8 @@
                 <span class="string">"type.googleapis.com/oak.attestation.v1.Stage0Measurements"</span>,
                 encoded_event,
             )<span class="question-mark">?</span>);
-        <span class="kw">let </span>endorsement = decode_endorsement_proto::&lt;KernelEndorsement&gt;(
-            <span class="kw-2">&amp;</span>KERNEL_ENDORSEMENT_ID,
-            encoded_event_endorsement,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>endorsement: KernelEndorsement =
+            encoded_endorsement.try_into().map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>expected_values = acquire_kernel_event_expected_values(
             milliseconds_since_epoch,
@@ -135,6 +130,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.reference_values,
         )
         .context(<span class="string">"couldn't verify kernel endorsements"</span>)<span class="question-mark">?</span>;
+
         compare_kernel_layer_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify kernel event"</span>)<span class="question-mark">?</span>;
 

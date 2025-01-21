@@ -101,7 +101,7 @@
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encoded_event: <span class="kw-2">&amp;</span>[u8],
-        _encoded_event_endorsement: <span class="kw-2">&amp;</span>Variant,
+        _encoded_endorsement: <span class="kw-2">&amp;</span>Variant,
         milliseconds_since_epoch: i64,
     ) -&gt; anyhow::Result&lt;EventAttestationResults&gt; {
         <span class="kw">let </span>event = decode_event_proto::&lt;EventData&gt;(

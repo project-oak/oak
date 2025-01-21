@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["oak","perftools"]};
+window.SIDEBAR_ITEMS = {"mod":["oak","perftools","variant"]};
