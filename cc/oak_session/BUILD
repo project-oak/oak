@@ -90,6 +90,23 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "client_server_session_benchmark",
+    testonly = True,
+    srcs = ["client_server_session_benchmark.cc"],
+    tags = ["asan"],
+    deps = [
+        ":client_session",
+        ":server_session",
+        "//proto/session:session_cc_proto",
+        "@com_github_google_benchmark//:benchmark",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status:status_matchers",
+    ],
+)
+
 cc_library(
     name = "config",
     srcs = ["config.cc"],

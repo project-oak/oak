@@ -61,6 +61,16 @@ http_archive(
     ],
 )
 
+# GoogleBenchmark
+# https://github.com/google/benchmark
+http_archive(
+    name = "com_github_google_benchmark",
+    strip_prefix = "benchmark-1.9.1",
+    urls = [
+        "https://github.com/google/benchmark/archive/refs/tags/v1.9.1.zip",
+    ],
+)
+
 # C++ gRPC support.
 # https://github.com/grpc/grpc
 http_archive(

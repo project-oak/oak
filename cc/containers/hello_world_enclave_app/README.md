@@ -10,3 +10,9 @@ C++ implementation of the enclave app part (inside the TEE) of the Oak
 Containers Hello World example application. This implementation parallels the
 Rust implementation in
 [`/oak_containers/examples/hello_world/enclave_app`](../../../oak_containers/examples/hello_world/enclave_app).
+
+## Benchmarks
+
+To get some basic benchmark statistics:
+
+bazel run cc/containers/hello_world_enclave_app:standalone_benchmark

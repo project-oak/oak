@@ -33,6 +33,7 @@
 
 namespace oak::containers::hello_world_enclave_app {
 
+using ::oak::session::v1::PlaintextMessage;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 using ::oak::session::v1::SessionRequest;
@@ -81,6 +82,19 @@ grpc::Status EnclaveApplicationImpl::OakSession(
     if (!send_result.ok()) {
       return FromAbsl(send_result);
     }
+  }
+  return grpc::Status();
+}
+
+grpc::Status EnclaveApplicationImpl::PlaintextSession(
+    grpc::ServerContext* context,
+    grpc::ServerReaderWriter<PlaintextMessage, PlaintextMessage>* stream) {
+  PlaintextMessage request;
+  while (stream->Read(&request)) {
+    std::string response_text = HandleRequest(request.plaintext());
+    PlaintextMessage response;
+    *(response.mutable_plaintext()) = response_text;
+    stream->Write(response);
   }
   return grpc::Status();
 }

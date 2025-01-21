@@ -106,6 +106,8 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
     type LegacySessionStream = oak_containers_sdk::tonic::OakSessionStream;
     type OakSessionStream =
         Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
+    type PlaintextSessionStream =
+        Pin<Box<dyn Stream<Item = Result<PlaintextMessage, tonic::Status>> + Send + 'static>>;
 
     async fn legacy_session(
         &self,
@@ -144,6 +146,28 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
             }
         };
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::OakSessionStream))
+    }
+
+    async fn plaintext_session(
+        &self,
+        request: tonic::Request<tonic::Streaming<PlaintextMessage>>,
+    ) -> Result<tonic::Response<Self::PlaintextSessionStream>, tonic::Status> {
+        let mut request_stream = request.into_inner();
+        let application_handler = self.application_handler.clone();
+
+        let response_stream = async_stream::try_stream! {
+            while let Some(request) = request_stream.next().await {
+                let plaintext_message = request?;
+                    yield PlaintextMessage {
+                        plaintext: application_handler
+                            .handle(&plaintext_message.plaintext)
+                            .await
+                            .into_tonic_result("application failed")?
+                    };
+            }
+        };
+
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::PlaintextSessionStream))
     }
 }
 

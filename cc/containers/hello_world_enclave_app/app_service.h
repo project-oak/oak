@@ -53,6 +53,12 @@ class EnclaveApplicationImpl
                                oak::session::v1::SessionRequest>* stream)
       override;
 
+  grpc::Status PlaintextSession(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<oak::session::v1::PlaintextMessage,
+                               oak::session::v1::PlaintextMessage>* stream)
+      override;
+
  private:
   server::OakSessionServer session_server_;
   std::string HandleRequest(absl::string_view request);

@@ -80,6 +80,27 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "standalone_benchmark",
+    testonly = True,
+    srcs = ["standalone_benchmark.cc"],
+    deps = [
+        ":app_service",
+        "//cc/attestation/verification:insecure_attestation_verifier",
+        "//cc/client",
+        "//cc/client:session_client",
+        "//cc/containers/sdk/standalone:oak_standalone",
+        "//cc/oak_session:client_session",
+        "//cc/transport:grpc_streaming_transport",
+        "//cc/transport:grpc_sync_session_client_transport",
+        "//oak_containers/examples/hello_world/proto:hello_world_cc_grpc",
+        "@com_github_google_benchmark//:benchmark",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:status_matchers",
+    ],
+)
+
 pkg_tar(
     name = "tar",
     srcs = [":main"],

@@ -27,6 +27,9 @@ service EnclaveApplication {
 
   rpc OakSession(stream oak.session.v1.SessionRequest)
       returns (stream oak.session.v1.SessionResponse) {}
+
+  rpc PlaintextSession(stream oak.session.v1.PlaintextMessage)
+      returns (stream oak.session.v1.PlaintextMessage) {}
 }
 
 service HostApplication {
