@@ -1,1 +1,0 @@
-searchState.loadedDescShard("sev_serial", 0, "Basic implementation that allows for writing to a serial …\nReturns the argument unchanged.\nInitializes the serial port for writing.\nCalls <code>U::from(self)</code>.\nCreates a new instance of a serial port with the given …\nSends a byte of data via the serial port.\nWait until the output buffer is empty.")

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["PAGE_INFO_SIZE"],"enum":["ImiPage","PageType"],"struct":["PageInfo"]};

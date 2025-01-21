@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["page","stage0","vmsa"],"struct":["Cli"]};
