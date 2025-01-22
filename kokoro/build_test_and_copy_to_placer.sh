@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
+echo "[$(date --utc)] Starting $0"
 
-# shellcheck source=./kokoro/helpers/copy_binaries.sh
-source "$(dirname "$0")/helpers/copy_binaries.sh"
-# shellcheck source=./kokoro/helpers/common.sh
-source "$(dirname "$0")/helpers/common.sh"
+set -o errexit
+set -o nounset
+set -o xtrace
+set -o pipefail
+
+# Make sure we're in the root of the repository.
+cd "$(dirname "$0")/.."
+
+# shellcheck source=kokoro/helpers/copy_binaries.sh
+source kokoro/helpers/copy_binaries.sh
+# shellcheck source=kokoro/helpers/common.sh
+source kokoro/helpers/common.sh
 
 ./scripts/docker_pull
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.

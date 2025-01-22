@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-echo "[$(date --utc)] Starting $0"
-
-set -o errexit
-set -o nounset
-set -o xtrace
-set -o pipefail
-
-
 # Detect the kokoro job type, so our scripts can make configuration decisions
 # based on whether we are running in presubmit or continous mode.
 #
@@ -31,9 +23,6 @@ export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
 export JUST_TIMESTAMP=true
 export JUST_TIMESTAMP_FORMAT='JUST:%H:%M:%S%.3f'
-
-# Make sure we're in the root of the repository.
-cd "$(dirname "$0")/.."
 
 function kokoro_cleanup() {
     # Clean up bazel out directories to avoid everything being considered an action output.
