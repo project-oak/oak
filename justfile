@@ -191,6 +191,12 @@ stage0_bin:
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin/stage0_bin \
         artifacts/stage0_bin
+    mkdir -p artifacts/stage0_bin_subjects
+    rm --force artifacts/stage0_bin_subjects/*
+    bazel run {{BAZEL_CONFIG_FLAG}} //snp_measurement -- \
+        --vcpu-count=1,2,4,8,16,32,64 \
+        --stage0-rom=$(realpath artifacts/stage0_bin) \
+        --attestation-measurements-output-dir=$(realpath artifacts/stage0_bin_subjects)
 
 stage0_bin_tdx:
     bazel build {{BAZEL_CONFIG_FLAG}} --platforms=//:x86_64-firmware \
@@ -198,14 +204,6 @@ stage0_bin_tdx:
     cp --force --preserve=timestamps --no-preserve=mode \
         bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
         artifacts/stage0_bin_tdx
-
-stage0_provenance_subjects output_dir="stage0_bin/bin/subjects": stage0_bin
-    rm --recursive --force {{output_dir}}
-    mkdir --parents {{output_dir}}
-    cargo run --package=snp_measurement --quiet -- \
-        --vcpu-count=1,2,4,8,16,32,64 \
-        --stage0-rom=bazel-bin/stage0_bin/stage0_bin \
-        --attestation-measurements-output-dir={{output_dir}}
 
 stage1_cpio:
     bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1_bin
