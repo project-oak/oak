@@ -131,7 +131,7 @@ _tdx_64bit_start:
 
 _park_ap_64bit:
     leaq (AP_IN_64BIT_COUNT), %rcx       # Load address of AP_IN_64BIT_COUNT onto rcx
-    lock incq (%rcx)                     # Atomically increment AP_IN_64BIT_COUNT
+    lock incl (%rcx)                     # Atomically increment AP_IN_64BIT_COUNT
 
     movl %esi, %ebp                      # esi has the VCPU_INDEX, save it in ebp
 
