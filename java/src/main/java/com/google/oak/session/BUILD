@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -23,6 +24,13 @@ package(
 
 java_library(
     name = "exception",
+    srcs = [
+        "OakSessionException.java",
+    ],
+)
+
+android_library(
+    name = "exception_android",
     srcs = [
         "OakSessionException.java",
     ],
@@ -38,6 +46,20 @@ java_library(
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+android_library(
+    name = "client_session_android",
+    srcs = [
+        "OakClientSession.java",
+    ],
+    deps = [
+        ":exception_android",
+        "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
+        "//proto/session:session_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//java/core",
     ],
 )
 
