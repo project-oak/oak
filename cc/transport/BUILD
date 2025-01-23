@@ -131,6 +131,8 @@ cc_library(
     deps = [
         "//cc/client:session_client",
         "//cc/oak_session:client_session",
+        "//cc/oak_session/channel",
+        "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
