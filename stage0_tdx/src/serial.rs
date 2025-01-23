@@ -96,7 +96,7 @@ impl Debug for &str {
 impl Debug for &[u8] {
     fn debug(&self) {
         "0x".debug();
-        write_bytes_hex(&self)
+        write_bytes_hex(self)
     }
 }
 
@@ -106,6 +106,7 @@ impl Debug for &[u8] {
 /// If you cast to a `str`, the bytes will be written as characters.
 /// If you cast to a `&[u8]`, the hex representation of the bytes will be
 /// written.
+#[macro_export]
 macro_rules! debug {
     ($($arg:expr),*) => {
         $($arg.debug();)*
@@ -113,4 +114,4 @@ macro_rules! debug {
     };
 }
 
-pub(crate) use debug;
+pub use debug;

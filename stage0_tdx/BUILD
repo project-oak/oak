@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,40 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@rules_rust//rust:defs.bzl", "rust_binary")
-load("//bazel:defs.bzl", "objcopy")
+
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "stage0_bin_tdx_elf",
+rust_library(
+    name = "stage0_tdx",
     srcs = glob(["src/**/*.rs"]),
     aliases = {"@//stage0": "oak_stage0"},
-    compile_data = [
-        "src/asm/reset_vector_tdx.s",
-        "src/asm/tdx.s",
-    ],
-    features = [
-        # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
-        "no_libstdcxx",
-
-        # The default link flags include dynamically linking -lm, which causes failures.
-        "-default_link_flags",
-    ],
-    linker_script = ":layout.ld",
-    platform = "//:x86_64-firmware",
-    rustc_flags = [
-        "--codegen=relocation-model=static",
-        "--codegen=opt-level=z",
-        "--codegen=lto=fat",
-        "--codegen=link-arg=-Wl,--defsym=BIOS_SIZE=2M",
-        "--codegen=link-arg=-static",
-        "--codegen=link-arg=-Wl,-static",
-    ],
-    tags = ["no-clippy"],
     deps = [
         "//oak_attestation",
         "//oak_dice",
@@ -54,15 +32,9 @@ rust_binary(
         "//oak_sev_snp_attestation_report",
         "//oak_tdx_guest",
         "//stage0",
-        "//stage0_tdx",
         "@oak_crates_index//:log",
         "@oak_crates_index//:x86_64",
         "@oak_crates_index//:zerocopy",
         "@oak_crates_index//:zeroize",
     ],
-)
-
-objcopy(
-    name = "stage0_bin_tdx",
-    src = ":stage0_bin_tdx_elf",
 )

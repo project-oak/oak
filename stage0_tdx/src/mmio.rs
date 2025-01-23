@@ -1,5 +1,5 @@
 //
-// Copyright 2024 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,22 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+use oak_tdx_guest::vmcall::{mmio_read_u32, mmio_write_u32};
 
-#![no_std]
-#![no_main]
+pub struct Mmio {}
 
-extern crate alloc;
-use core::panic::PanicInfo;
-
-use oak_stage0::paging;
-mod asm;
-
-#[no_mangle]
-pub extern "C" fn rust64_start() -> ! {
-    oak_stage0::rust64_start::<stage0_tdx::Tdx>()
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_stage0::panic(info)
+impl<S: x86_64::structures::paging::page::PageSize> oak_stage0::hal::Mmio<S> for Mmio {
+    fn read_u32(&self, offset: usize) -> u32 {
+        mmio_read_u32(offset as *const u32).unwrap()
+    }
+    unsafe fn write_u32(&mut self, offset: usize, val: u32) {
+        mmio_write_u32(offset as *mut u32, val).unwrap()
+    }
 }
