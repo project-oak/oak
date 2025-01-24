@@ -18,7 +18,7 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 use core::{
-    mem::{size_of, MaybeUninit},
+    mem::size_of,
     ops::{DerefMut, Index, IndexMut},
     pin::pin,
     ptr::addr_of,
@@ -51,12 +51,11 @@ use zeroize::Zeroize;
 
 use crate::{
     accept_memory::{counters, TdAcceptPage},
+    hob,
+    hob::ResourceDescription,
     mmio::Mmio,
     serial,
 };
-
-#[no_mangle]
-static mut TD_HOB_START: MaybeUninit<HandoffInfoTable> = MaybeUninit::uninit(); // Keep named as in layout.ld
 
 /// Firmware Mailbox.
 ///
@@ -77,51 +76,6 @@ static mut GPAW: u32 = 0;
 static mut AP_IN_64BIT_COUNT: i32 = 0;
 
 static HELLO_OAK: &str = "Hello from stage0_bin_tdx!";
-
-const EFI_HOB_TYPE_HANDOFF: u16 = 0x0001;
-const EFI_HOB_TYPE_RESOURCE_DESCRIPTOR: u16 = 0x0003;
-const EFI_HOB_TYPE_END_OF_HOB_LIST: u16 = 0xFFFF;
-
-/// UEFI Standard HoB Header.
-/// See UEFI Platform Initialization Specification, section 5.2.
-/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct Header {
-    pub hob_type: u16,
-    pub hob_length: u16,
-    pub reserved: u32,
-}
-
-/// UEFI Standard Handoff Info Table (PHIT HOB).
-/// See UEFI Platform Initialization Specification, section 5.3.
-/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct HandoffInfoTable {
-    header: Header,
-    version: u32,
-    boot_mode: u32,
-    memory_top: u64,
-    memory_bottom: u64,
-    free_memory_top: u64,
-    free_memory_bottom: u64,
-    end_of_hob_list: u64,
-}
-
-/// UEFI Standard Resource Descriptor (HoB)
-/// See UEFI Platform Initialization Specification, section 5.5.
-/// https://uefi.org/sites/default/files/resources/PI_Spec_1_6.pdf
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct ResourceDescription {
-    header: Header,
-    owner: [u8; 16], // Guid
-    resource_type: u32,
-    resource_attribute: u32,
-    physical_start: u64,
-    resource_length: u64,
-}
 
 fn get_tdx_shared_bit() -> usize {
     unsafe { GPAW as usize - 1 }
@@ -236,30 +190,11 @@ impl oak_stage0::Platform for Tdx {
     fn prefill_e820_table<T: AsBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
         serial::debug!("Prefill e820 table from TDHOB");
 
-        let hit = unsafe { TD_HOB_START.assume_init() };
-        serial::debug!("HOB TYPE: ", hit.header.hob_type as u32);
-        serial::debug!("HOB LENGTH: ", hit.header.hob_length as u32);
-        serial::debug!("HOB VERSION: ", hit.version);
-        serial::debug!("HOB BOOT MODE: ", hit.boot_mode);
-        serial::debug!("HOB MEMORY TOP: ", hit.memory_top);
-        serial::debug!("HOB MEMORY BOTTOM: ", hit.memory_bottom);
-        serial::debug!("HOB FREE MEMORY TOP: ", hit.free_memory_top);
-        serial::debug!("HOB FREE MEMORY BOTTOM: ", hit.free_memory_bottom);
-        serial::debug!("HOB END OF HOB LIST: ", hit.end_of_hob_list);
-
-        if hit.header.hob_length as usize != size_of::<HandoffInfoTable>()
-            || hit.header.hob_type != EFI_HOB_TYPE_HANDOFF
-        {
-            return Err("Corrupted TD HoB header");
-        }
-
-        let mut curr_ptr = unsafe {
-            TD_HOB_START.as_ptr().byte_offset(hit.header.hob_length as isize) as *const Header
-        };
-        let mut curr_hdr = unsafe { *curr_ptr };
+        let hit = hob::get_hit()?;
         let mut index = 0;
 
-        while (curr_ptr as u64) < hit.end_of_hob_list {
+        for curr_ptr in hit.into_iter() {
+            let curr_hdr = unsafe { *curr_ptr };
             // Every HoB entry starts with a Header struct
             serial::debug!("==================");
             serial::debug!("HOB PTR: ", curr_ptr as u32);
@@ -267,8 +202,7 @@ impl oak_stage0::Platform for Tdx {
             serial::debug!("HOB LENGTH: ", curr_hdr.hob_length as u32);
 
             // We only care the resource descriptor entries
-            if curr_hdr.hob_type == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR && curr_hdr.hob_length == 0x30
-            {
+            if curr_hdr.is_resource_descriptor() {
                 let curr_src = unsafe { *(curr_ptr as *const ResourceDescription) };
                 serial::debug!("Resource type: ", curr_src.resource_type);
                 serial::debug!("Resource attribute: ", curr_src.resource_attribute);
@@ -280,20 +214,19 @@ impl oak_stage0::Platform for Tdx {
                     dest.as_bytes_mut().as_mut_ptr().byte_add(index) as *mut BootE820Entry
                 };
 
-                let entry_type =
-                    if curr_src.physical_start == unsafe { TD_HOB_START.as_ptr() as u64 } {
-                        E820EntryType::NVS // is this correct?
-                    } else if curr_src.physical_start == (addr_of!(TD_MAILBOX) as u64) {
-                        E820EntryType::NVS // ditto
-                    } else if curr_src.physical_start == 0 {
-                        // [0x0, 512KB) is usable
-                        E820EntryType::RAM
-                    } else if curr_src.resource_type == 0 {
-                        // [0xF_0000, 0x10_0000)
-                        E820EntryType::RESERVED
-                    } else {
-                        E820EntryType::RAM
-                    };
+                let entry_type = if curr_src.physical_start == hob::get_hob_start() as u64 {
+                    E820EntryType::NVS // is this correct?
+                } else if curr_src.physical_start == (addr_of!(TD_MAILBOX) as u64) {
+                    E820EntryType::NVS // ditto
+                } else if curr_src.physical_start == 0 {
+                    // [0x0, 512KB) is usable
+                    E820EntryType::RAM
+                } else if curr_src.resource_type == 0 {
+                    // [0xF_0000, 0x10_0000)
+                    E820EntryType::RESERVED
+                } else {
+                    E820EntryType::RAM
+                };
 
                 unsafe {
                     *new_entry_ptr = BootE820Entry::new(
@@ -303,13 +236,11 @@ impl oak_stage0::Platform for Tdx {
                     );
                 }
                 index += size_of::<BootE820Entry>();
-            } else if curr_hdr.hob_type == EFI_HOB_TYPE_END_OF_HOB_LIST {
+            } else if curr_hdr.is_end_of_hob_list() {
                 // reached at the end
             } else {
                 return Err("Unknown resource type found in TD HoB");
             }
-            curr_ptr = unsafe { curr_ptr.byte_offset(curr_hdr.hob_length as isize) };
-            curr_hdr = unsafe { *curr_ptr };
         }
         if index == 0 {
             Err("no valid TD HoB found")
