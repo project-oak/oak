@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
@@ -121,16 +123,19 @@ pub trait Signer {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
 }
 
+#[derive(Clone)]
 pub struct InstanceSigner {
-    orchestrator_crypto_client: OrchestratorCryptoClient,
+    orchestrator_crypto_client: Arc<OrchestratorCryptoClient>,
 }
 
 impl InstanceSigner {
     pub async fn create() -> anyhow::Result<Self> {
         Ok(Self {
-            orchestrator_crypto_client: OrchestratorCryptoClient::create()
-                .await
-                .context("couldn't create Orchestrator crypto client")?,
+            orchestrator_crypto_client: Arc::new(
+                OrchestratorCryptoClient::create()
+                    .await
+                    .context("couldn't create Orchestrator crypto client")?,
+            ),
         })
     }
 }
@@ -139,5 +144,17 @@ impl InstanceSigner {
 impl Signer for InstanceSigner {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
         self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await
+    }
+}
+
+impl oak_crypto::signer::Signer for InstanceSigner {
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        tokio::runtime::Handle::current()
+            .block_on(<Self as Signer>::sign(self, message))
+            // Since there's no way to return the error, logging and returning an empty response is
+            // preferable to panicking.
+            .inspect_err(|err| log::error!("OrchestratorCryptoClient signing failed: {:?}", err))
+            .unwrap_or_default()
+            .signature
     }
 }
