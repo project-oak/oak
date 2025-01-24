@@ -30,7 +30,9 @@ use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_stage0::{
     hal::PortFactory,
     mailbox::{FirmwareMailbox, OsMailbox},
-    paging, Madt, Rsdp, RsdtEntryPairMut, BOOT_ALLOC,
+    paging,
+    paging::PageTableRefs,
+    Madt, Rsdp, RsdtEntryPairMut, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
     tdcall::{extend_rtmr, get_td_info, ExtensionBuffer, RtmrIndex},
@@ -50,9 +52,8 @@ use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
 
 use crate::{
-    accept_memory::{counters, TdAcceptPage},
-    hob,
-    hob::ResourceDescription,
+    accept_memory::{accept_memory_range, counters, TdAcceptPage},
+    hob::{self, ResourceDescription},
     mmio::Mmio,
     serial,
 };
@@ -156,6 +157,118 @@ fn show_td_info() {
     debug_print_td_mailbox();
 }
 
+fn setup_mailbox() {
+    assert!(addr_of!(TD_MAILBOX) as u64 == TD_MAILBOX_LOCATION, "TD Mailbox is misplaced");
+    info!("Creating OS Mailbox");
+    let os_mailbox = Box::new_in(OsMailbox::default(), &BOOT_ALLOC);
+    let os_mailbox_ptr = Box::leak(os_mailbox) as *const OsMailbox; // Let the allocator forget about it so it never deallocates it.
+
+    // Use the firmware mailbox to tell APs where the OS mailbox is.
+    // Safety: this is the only access to the structure at TD_MAILBOX_START.
+    unsafe { TD_MAILBOX.set_os_mailbox_address(os_mailbox_ptr as u64) };
+
+    info!("OS Mailbox created and its address passed to APs via TD Mailbox");
+    debug_print_td_mailbox();
+}
+
+fn init_tdx_page_tables() -> lock_api::MutexGuard<'static, spinning_top::RawSpinlock, PageTableRefs>
+{
+    let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
+    let accept_pd_pt = pin!(oak_stage0::paging::PageTable::new());
+    if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
+        panic!("PDPT[1] is in use");
+    }
+
+    page_tables.pdpt[1]
+        .set_lower_level_table::<Tdx>(accept_pd_pt.as_ref(), PageTableFlags::PRESENT);
+    info!("added pdpt[1]");
+
+    info!("adding pd_0[1]");
+    let accept_pt_pt = pin!(oak_stage0::paging::PageTable::new());
+    if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
+        panic!("PD_0[1] is in use");
+    }
+    page_tables.pd_0[1]
+        .set_lower_level_table::<Tdx>(accept_pt_pt.as_ref(), PageTableFlags::PRESENT);
+    info!("added pd_0[1]");
+    page_tables
+}
+
+fn accept_tdx_memory(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
+    info!("starting TDX memory acceptance");
+    // Initialize page tables for TDX memory acceptance.
+    let mut page_tables = init_tdx_page_tables();
+    let min_addr = 0xA0000;
+
+    // TODO: b/360256588 - use TD-HoB to replace the e820_table here
+    for entry in e820_table {
+        if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
+            continue;
+        }
+
+        let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
+        let limit_address =
+            PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
+
+        if start_address > limit_address {
+            log::error!(
+                "nonsensical entry in E820 table: [{}, {})",
+                entry.addr(),
+                entry.addr() + entry.size()
+            );
+            continue;
+        }
+        accept_memory_range(start_address, limit_address);
+    }
+
+    page_tables.pd_0[1].set_unused();
+    page_tables.pdpt[1].set_unused();
+    tlb::flush_all();
+
+    log::info!("TDX memory acceptance complete.");
+    log::info!("  Accepted using 2 MiB pages: {}", counters::ACCEPTED_2M.load(Ordering::SeqCst));
+    log::info!("  Accepted using 4 KiB pages: {}", counters::ACCEPTED_4K.load(Ordering::SeqCst));
+    log::info!(
+        "  TDX page size mismatch errors (fallback to 4K): {}",
+        counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
+    );
+}
+
+fn handle_legacy_smbios(e820_table: &[oak_linux_boot_params::BootE820Entry]) {
+    // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
+    // Unwrap() will panic if entry not found with expected start, size, and type.
+    let legacy_smbios_range_entry = e820_table
+        .iter()
+        .find(|entry| {
+            entry.addr() == 0xF_0000
+                && entry.size() == 0x1_0000
+                && entry.entry_type() == Some(E820EntryType::RESERVED)
+        })
+        .expect("couldn't find legacy SMBIOS memory range");
+
+    // Accept the legacy SMBIOS range since legacy code may scan this range for
+    // the SMBIOS entry point table, even if the range is marked as reserved.
+    let range = PhysFrame::<Size4KiB>::range(
+        PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
+            .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(
+            (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
+        ))
+        .unwrap(),
+    );
+    range.accept_page().expect("failed to accept SMBIOS memory");
+
+    // Safety: the E820 table indicates that this is the correct memory segment.
+    let legacy_smbios_range_bytes = unsafe {
+        core::slice::from_raw_parts_mut::<u8>(
+            legacy_smbios_range_entry.addr() as *mut u8,
+            legacy_smbios_range_entry.size(),
+        )
+    };
+    // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
+    legacy_smbios_range_bytes.zeroize();
+}
+
 pub struct Tdx {}
 
 impl oak_stage0::Platform for Tdx {
@@ -254,150 +367,9 @@ impl oak_stage0::Platform for Tdx {
         info!("initialize platform");
         info!("{:?}", e820_table);
 
-        assert!(addr_of!(TD_MAILBOX) as u64 == TD_MAILBOX_LOCATION, "TD Mailbox is misplaced");
-        info!("Creating OS Mailbox");
-        let os_mailbox = Box::new_in(OsMailbox::default(), &BOOT_ALLOC);
-        let os_mailbox_ptr = Box::leak(os_mailbox) as *const OsMailbox; // Let the allocator forget about it so it never deallocates it.
-
-        // Use the firmware mailbox to tell APs where the OS mailbox is.
-        // Safety: this is the only access to the structure at TD_MAILBOX_START.
-        unsafe { TD_MAILBOX.set_os_mailbox_address(os_mailbox_ptr as u64) };
-
-        info!("OS Mailbox created and its address passed to APs via TD Mailbox");
-        debug_print_td_mailbox();
-
-        info!("starting TDX memory acceptance");
-        let mut page_tables = paging::PAGE_TABLE_REFS.get().unwrap().lock();
-        let accept_pd_pt = pin!(oak_stage0::paging::PageTable::new());
-        if page_tables.pdpt[1].flags().contains(PageTableFlags::PRESENT) {
-            panic!("PDPT[1] is in use");
-        }
-
-        page_tables.pdpt[1]
-            .set_lower_level_table::<Tdx>(accept_pd_pt.as_ref(), PageTableFlags::PRESENT);
-        info!("added pdpt[1]");
-
-        info!("adding pd_0[1]");
-        let accept_pt_pt = pin!(oak_stage0::paging::PageTable::new());
-        if page_tables.pd_0[1].flags().contains(PageTableFlags::PRESENT) {
-            panic!("PD_0[1] is in use");
-        }
-        page_tables.pd_0[1]
-            .set_lower_level_table::<Tdx>(accept_pt_pt.as_ref(), PageTableFlags::PRESENT);
-        info!("added pd_0[1]");
-
-        let min_addr = 0xA0000;
-
-        // TODO: b/360256588 - use TD-HoB to replace the e820_table here
-        for entry in e820_table {
-            if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
-                continue;
-            }
-
-            let start_address = PhysAddr::new(entry.addr() as u64).align_up(Size4KiB::SIZE);
-            let limit_address =
-                PhysAddr::new((entry.addr() + entry.size()) as u64).align_down(Size4KiB::SIZE);
-
-            if start_address > limit_address {
-                log::error!(
-                    "nonsensical entry in E820 table: [{}, {})",
-                    entry.addr(),
-                    entry.addr() + entry.size()
-                );
-                continue;
-            }
-
-            // Attempt to validate as many pages as possible using 2 MiB pages (aka
-            // hugepages).
-            let hugepage_start = start_address.align_up(Size2MiB::SIZE);
-            let hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
-
-            // If start_address == hugepage_start, we're aligned with 2M address boundary.
-            // Otherwise, we need to process any 4K pages before the alignment.
-            // Note that limit_address may be less than hugepage_start, which means that the
-            // E820 entry was less than 2M in size and didn't cross a 2M boundary.
-            if hugepage_start > start_address {
-                let limit = core::cmp::min(hugepage_start, limit_address);
-                // We know the addresses are aligned to at least 4K, so the unwraps are safe.
-                let range = PhysFrame::<Size4KiB>::range(
-                    PhysFrame::from_start_address(start_address).unwrap(),
-                    PhysFrame::from_start_address(limit).unwrap(),
-                );
-                range.accept_page().unwrap();
-            }
-
-            // If hugepage_limit > hugepage_start, we've got some contiguous 2M chunks that
-            // we can process as hugepages.
-            if hugepage_limit > hugepage_start {
-                // These unwraps can't fail as we've made sure that the addresses are 2
-                // MiB-aligned.
-                let range = PhysFrame::<Size2MiB>::range(
-                    PhysFrame::from_start_address(hugepage_start).unwrap(),
-                    PhysFrame::from_start_address(hugepage_limit).unwrap(),
-                );
-                range.accept_page().unwrap();
-            }
-            // And finally, we may have some trailing 4K pages in [hugepage_limit,
-            // limit_address) that we need to process.
-            if limit_address > hugepage_limit {
-                let start = core::cmp::max(start_address, hugepage_limit);
-                // We know the addresses are aligned to at least 4K, so the unwraps are safe.
-                let range = PhysFrame::<Size4KiB>::range(
-                    PhysFrame::from_start_address(start).unwrap(),
-                    PhysFrame::from_start_address(limit_address).unwrap(),
-                );
-                range.accept_page().unwrap();
-            }
-        }
-        // Locate the legacy SMBIOS range [0xF_0000, 0x10_0000) in the E820 table.
-        // Unwrap() will panic if entry not found with expected start, size, and type.
-        let legacy_smbios_range_entry = e820_table
-            .iter()
-            .find(|entry| {
-                entry.addr() == 0xF_0000
-                    && entry.size() == 0x1_0000
-                    && entry.entry_type() == Some(E820EntryType::RESERVED)
-            })
-            .expect("couldn't find legacy SMBIOS memory range");
-
-        // Pvalidate the legacy SMBIOS range since legacy code may scan this range for
-        // the SMBIOS entry point table, even if the range is marked as reserved.
-        let range = PhysFrame::<Size4KiB>::range(
-            PhysFrame::from_start_address(PhysAddr::new(legacy_smbios_range_entry.addr() as u64))
-                .unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(
-                (legacy_smbios_range_entry.addr() + legacy_smbios_range_entry.size()) as u64,
-            ))
-            .unwrap(),
-        );
-        range.accept_page().expect("failed to validate SMBIOS memory");
-
-        // Safety: the E820 table indicates that this is the correct memory segment.
-        let legacy_smbios_range_bytes = unsafe {
-            core::slice::from_raw_parts_mut::<u8>(
-                legacy_smbios_range_entry.addr() as *mut u8,
-                legacy_smbios_range_entry.size(),
-            )
-        };
-        // Zeroize the legacy SMBIOS range bytes to avoid legacy code reading garbage.
-        legacy_smbios_range_bytes.zeroize();
-        page_tables.pd_0[1].set_unused();
-        page_tables.pdpt[1].set_unused();
-        tlb::flush_all();
-
-        log::info!("TDX memory acceptance complete.");
-        log::info!(
-            "  Accepted using 2 MiB pages: {}",
-            counters::ACCEPTED_2M.load(Ordering::SeqCst)
-        );
-        log::info!(
-            "  Accepted using 4 KiB pages: {}",
-            counters::ACCEPTED_4K.load(Ordering::SeqCst)
-        );
-        log::info!(
-            "  TDX page size mismatch errors (fallback to 4K): {}",
-            counters::ERROR_FAIL_SIZE_MISMATCH.load(Ordering::SeqCst)
-        );
+        setup_mailbox();
+        accept_tdx_memory(e820_table);
+        handle_legacy_smbios(e820_table);
 
         info!("initialize platform completed");
     }

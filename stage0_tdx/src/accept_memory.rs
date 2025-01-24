@@ -17,10 +17,11 @@
 use core::sync::atomic::Ordering;
 
 use x86_64::{
-    structures::paging::{frame::PhysFrameRange, page::NotGiantPageSize, PhysFrame, Size4KiB},
+    structures::paging::{
+        frame::PhysFrameRange, page::NotGiantPageSize, PageSize, PhysFrame, Size2MiB, Size4KiB,
+    },
     PhysAddr,
 };
-
 pub mod counters {
     use core::sync::atomic::AtomicUsize;
 
@@ -74,5 +75,49 @@ impl<S: NotGiantPageSize + oak_tdx_guest::tdcall::TdxSize> TdAcceptPage for Phys
         }
 
         Ok(())
+    }
+}
+
+pub fn accept_memory_range(start_address: PhysAddr, limit_address: PhysAddr) {
+    // Attempt to validate as many pages as possible using 2 MiB pages (aka
+    // hugepages).
+    let hugepage_start = start_address.align_up(Size2MiB::SIZE);
+    let hugepage_limit = limit_address.align_down(Size2MiB::SIZE);
+
+    // If start_address == hugepage_start, we're aligned with 2M address boundary.
+    // Otherwise, we need to process any 4K pages before the alignment.
+    // Note that limit_address may be less than hugepage_start, which means that the
+    // E820 entry was less than 2M in size and didn't cross a 2M boundary.
+    if hugepage_start > start_address {
+        let limit = core::cmp::min(hugepage_start, limit_address);
+        // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+        let range = PhysFrame::<Size4KiB>::range(
+            PhysFrame::from_start_address(start_address).unwrap(),
+            PhysFrame::from_start_address(limit).unwrap(),
+        );
+        range.accept_page().unwrap();
+    }
+
+    // If hugepage_limit > hugepage_start, we've got some contiguous 2M chunks that
+    // we can process as hugepages.
+    if hugepage_limit > hugepage_start {
+        // These unwraps can't fail as we've made sure that the addresses are 2
+        // MiB-aligned.
+        let range = PhysFrame::<Size2MiB>::range(
+            PhysFrame::from_start_address(hugepage_start).unwrap(),
+            PhysFrame::from_start_address(hugepage_limit).unwrap(),
+        );
+        range.accept_page().unwrap();
+    }
+    // And finally, we may have some trailing 4K pages in [hugepage_limit,
+    // limit_address) that we need to process.
+    if limit_address > hugepage_limit {
+        let start = core::cmp::max(start_address, hugepage_limit);
+        // We know the addresses are aligned to at least 4K, so the unwraps are safe.
+        let range = PhysFrame::<Size4KiB>::range(
+            PhysFrame::from_start_address(start).unwrap(),
+            PhysFrame::from_start_address(limit_address).unwrap(),
+        );
+        range.accept_page().unwrap();
     }
 }
