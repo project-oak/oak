@@ -60,7 +60,7 @@ OakSessionClient::NewChannel(std::unique_ptr<Channel::Transport> transport) {
         transport->Receive();
     if (!init_response.ok()) {
       return util::status::Annotate(
-          init_request.status(),
+          init_response.status(),
           "Failed to get next init response from server");
     }
 
