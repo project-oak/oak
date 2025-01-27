@@ -59,7 +59,6 @@ android_library(
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
-        "@com_google_protobuf//java/core",
     ],
 )
 

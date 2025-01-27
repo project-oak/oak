@@ -19,7 +19,6 @@ package com.google.oak.session;
 import com.google.oak.session.v1.PlaintextMessage;
 import com.google.oak.session.v1.SessionRequest;
 import com.google.oak.session.v1.SessionResponse;
-import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
 
@@ -47,8 +46,7 @@ public class OakClientSession implements AutoCloseable {
       return Optional.empty();
     }
     try {
-      return Optional.of(
-          SessionRequest.parseFrom(serializedMessage, ExtensionRegistry.getEmptyRegistry()));
+      return Optional.of(SessionRequest.parseFrom(serializedMessage));
     } catch (InvalidProtocolBufferException e) {
       throw new OakSessionException("Couldn't parse the proto from the native session", e);
     }
@@ -64,8 +62,7 @@ public class OakClientSession implements AutoCloseable {
       return Optional.empty();
     }
     try {
-      return Optional.of(
-          PlaintextMessage.parseFrom(serializedMessage, ExtensionRegistry.getEmptyRegistry()));
+      return Optional.of(PlaintextMessage.parseFrom(serializedMessage));
     } catch (InvalidProtocolBufferException e) {
       throw new OakSessionException("Couldn't parse the proto from the native session", e);
     }
