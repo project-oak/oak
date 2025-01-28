@@ -30,7 +30,6 @@ message GetEvidenceRequest {}
 
 message GetEvidenceResponse {
   oak.attestation.v1.Evidence evidence = 1;
-  // oak.attestation.v1.Evidence evidence = 1;
 }
 
 service EnclaveService {
