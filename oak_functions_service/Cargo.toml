@@ -36,6 +36,7 @@ wasmtime = { version = "*", optional = true, default-features = false, features 
   "async",
   "cranelift",
   "cache",
+  "gc",
   "parallel-compilation",
   "pooling-allocator",
   "runtime",
