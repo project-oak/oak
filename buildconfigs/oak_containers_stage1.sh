@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_containers_stage1
 export BUILD_COMMAND=(
   nix
   develop
-  .#stage1Shell
+  .#githubBuildShell
   --command
   just
   stage1_cpio

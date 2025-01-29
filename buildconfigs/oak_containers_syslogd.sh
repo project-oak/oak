@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_containers_syslogd
 export BUILD_COMMAND=(
   nix
   develop
-  .#systemImageShell
+  .#githubBuildShell
   --command
   just
   oak_containers_syslogd

@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_containers_kernel
 export BUILD_COMMAND=(
   nix
   develop
-  .#linuxKernelShell
+  .#githubBuildShell
   --command
   just
   oak_containers_kernel

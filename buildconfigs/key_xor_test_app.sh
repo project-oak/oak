@@ -7,7 +7,7 @@ export PACKAGE_NAME=key_xor_test_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#bazelRustShell
+  .#githubBuildShell
   --command
   just
   build_key_xor_test_app

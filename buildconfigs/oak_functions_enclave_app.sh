@@ -7,7 +7,7 @@ export PACKAGE_NAME=oak_functions_enclave_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#bazelRustShell
+  .#githubBuildShell
   --command
   just
   build_enclave_app

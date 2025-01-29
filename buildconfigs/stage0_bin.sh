@@ -7,6 +7,7 @@ export PACKAGE_NAME=stage0_bin
 export BUILD_COMMAND=(
   nix
   develop
+  .#githubBuildShell
   --command
   just
   stage0_bin

@@ -13,7 +13,6 @@ cd "$(dirname "$0")/.."
 source kokoro/helpers/common.sh
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command just kokoro_verify_buildconfigs
-./scripts/git_check_diff
+./scripts/docker_run nix develop .#githubBuildShell --command just kokoro_verify_buildconfigs
 
 kokoro_cleanup

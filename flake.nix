@@ -177,13 +177,6 @@
                 bazel-buildtools
               ];
             };
-            # Generic shell to build Rust binaries with bazel.
-            bazelRustShell = with pkgs; mkShell {
-              inputsFrom = [
-                rust
-                bazelShell
-              ];
-            };
             # Shell for building Oak Containers kernel and system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
@@ -242,29 +235,6 @@
                 libelf
               ];
             };
-            # Shell for oak_containers_stage1.
-            stage1Shell = with pkgs; mkShell {
-              inputsFrom = [
-                rust
-                bazelShell
-              ];
-              packages = [
-                cpio
-                glibc
-                glibc.static
-                strip-nondeterminism
-              ];
-            };
-            # Shell for Oak Containers system images.
-            systemImageShell = with pkgs; mkShell {
-              inputsFrom = [
-                rust
-                bazelShell
-              ];
-              packages = [
-                elfutils
-              ];
-            };
             # Shell for most CI steps (i.e. without containers support).
             ci = pkgs.mkShell {
              shellHook = ''
@@ -278,6 +248,15 @@
                 rust
                 bazelShell
                 lint
+              ];
+            };
+            # This is the shell used by the build scripts executed by GitHub jobs.
+            githubBuildShell = pkgs.mkShell {
+              packages = [ ];
+              inputsFrom = [
+                containers
+                rust
+                bazelShell
               ];
             };
             # By default create a shell with all the inputs.
