@@ -15,40 +15,23 @@
 
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ClientSession,
-    ProtocolEngine, ServerSession, Session,
+    ServerSession,
 };
-use oak_session_channel::OakSessionChannel;
+use oak_session_channel::{new_client_channel, new_server_channel};
 use oak_session_channel_testing::test_transport;
 
 #[tokio::test]
-async fn channel_session_nn_succeeds() {
+async fn client_session_channel_nn_succeeds() {
     let client_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    let mut server_session = ServerSession::create(server_config).unwrap();
-
-    // Handshake
-    let handshake_request = client_session
-        .get_outgoing_message()
-        .expect("failed to get handshake message")
-        .expect("no handshake request");
-    server_session
-        .put_incoming_message(&handshake_request)
-        .expect("failed to put handshake request");
-    let handshake_response = server_session
-        .get_outgoing_message()
-        .expect("failed handshake response")
-        .expect("no handshake response");
-    client_session
-        .put_incoming_message(&handshake_response)
-        .expect("failed to put handshake_response");
-    assert!(client_session.is_open());
-    assert!(server_session.is_open());
+    let server_session = ServerSession::create(server_config).unwrap();
 
     let (transport, mut mock_server_verification) = test_transport(server_session);
-    let mut channel = OakSessionChannel::create(Box::new(transport), Box::new(client_session));
+    let mut channel = new_client_channel(client_config, transport)
+        .await
+        .expect("Failed to create new client channel");
 
     let client_message = b"hello server".to_vec();
     channel.send(&client_message).await.expect("failed to send");
@@ -57,4 +40,27 @@ async fn channel_session_nn_succeeds() {
     let server_message = b"hello client";
     mock_server_verification.add_message_to_send(server_message.to_vec());
     assert_eq!(server_message, channel.receive().await.expect("failed to receive").as_slice());
+}
+
+#[tokio::test]
+async fn server_session_channel_nn_succeeds() {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let client_session = ClientSession::create(client_config).unwrap();
+
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+
+    let (transport, mut mock_client_verification) = test_transport(client_session);
+    let mut channel = new_server_channel(server_config, transport)
+        .await
+        .expect("Failed to create new client channel");
+
+    let server_message = b"hello client".to_vec();
+    channel.send(&server_message).await.expect("failed to send");
+    assert_eq!(vec![server_message], mock_client_verification.get_received_messages());
+
+    let client_message = b"hello server";
+    mock_client_verification.add_message_to_send(client_message.to_vec());
+    assert_eq!(client_message, channel.receive().await.expect("failed to receive").as_slice());
 }

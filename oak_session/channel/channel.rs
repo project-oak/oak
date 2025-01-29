@@ -17,7 +17,9 @@
 use std::{fmt, result};
 
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
-use oak_session::{session::Session, ClientSession, ProtocolEngine, ServerSession};
+use oak_session::{
+    config::SessionConfig, session::Session, ClientSession, ProtocolEngine, ServerSession,
+};
 
 /// A transport implementation for an [`OakSessionChannel`].
 ///
@@ -183,6 +185,84 @@ impl<
             .expect_non_empty("no message to read after putting incoming message")
             .map(|pt| pt.plaintext)
     }
+}
+
+pub async fn new_client_channel<T, E: Send + Sync + std::fmt::Debug + 'static>(
+    config: SessionConfig,
+    transport: T,
+) -> Result<OakSessionChannel<SessionRequest, SessionResponse, E, T>, E>
+where
+    T: Transport<OutgoingMessage = SessionRequest, IncomingMessage = SessionResponse, Error = E>,
+{
+    let mut transport = transport;
+    let mut session = ClientSession::create(config)
+        .map_err(|e| Error::new_session_error(e, "failed to create session"))?;
+
+    while !session.is_open() {
+        let init_request = session
+            .get_outgoing_message()
+            .map_err(|e| Error::new_session_error(e, "failed to get init request"))?
+            .ok_or_else(|| Error::new_channel_error("no init message available"))?;
+
+        transport
+            .send(init_request)
+            .await
+            .map_err(|e| Error::new_transport_error(e, "failed to send outgoing init request"))?;
+
+        if session.is_open() {
+            break;
+        }
+
+        let init_response = transport
+            .receive()
+            .await
+            .map_err(|e| Error::new_transport_error(e, "failed to receive init response"))?;
+
+        session
+            .put_incoming_message(&init_response)
+            .map_err(|e| Error::new_session_error(e, "failed to accept init response"))?;
+    }
+
+    Ok(OakSessionChannel::create(Box::new(transport), Box::new(session)))
+}
+
+pub async fn new_server_channel<T, E: Send + Sync + std::fmt::Debug + 'static>(
+    config: SessionConfig,
+    transport: T,
+) -> Result<OakSessionChannel<SessionResponse, SessionRequest, E, T>, E>
+where
+    T: Transport<OutgoingMessage = SessionResponse, IncomingMessage = SessionRequest, Error = E>,
+{
+    let mut transport = transport;
+    let mut session = ServerSession::create(config)
+        .map_err(|e| Error::new_session_error(e, "failed to create session"))?;
+
+    while !session.is_open() {
+        let incoming_init_request = transport
+            .receive()
+            .await
+            .map_err(|e| Error::new_transport_error(e, "failed to receive init request"))?;
+
+        session
+            .put_incoming_message(&incoming_init_request)
+            .map_err(|e| Error::new_session_error(e, "failed to accept init request"))?;
+
+        if session.is_open() {
+            break;
+        }
+
+        let init_response = session
+            .get_outgoing_message()
+            .map_err(|e| Error::new_session_error(e, "failed to get init response"))?
+            .ok_or_else(|| Error::new_channel_error("no init response provided"))?;
+
+        transport
+            .send(init_response)
+            .await
+            .map_err(|e| Error::new_transport_error(e, "failed to send outgoing init response"))?;
+    }
+
+    Ok(OakSessionChannel::create(Box::new(transport), Box::new(session)))
 }
 
 // The following items are convenience traits to aid in the readability of the
