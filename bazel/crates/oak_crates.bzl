@@ -440,7 +440,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "prost-codec",
             "criterion",
         ],
-        version = "0.13.0",
+        version = "0.14.0",
     ),
     "pretty_assertions": crate.spec(version = "1.4.0"),
     "procfs": crate.spec(version = "0.16.0"),

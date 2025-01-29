@@ -30,13 +30,22 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
-rand = { version = "0.8", features = ["std", "std_rng","small_rng"], default-features = false }
-tokio = { version = "1", features = ["rt", "time", "macros", "rt-multi-thread"] }
+rand = { version = "0.8", features = [
+  "std",
+  "std_rng",
+  "small_rng",
+], default-features = false }
+tokio = { version = "1", features = [
+  "rt",
+  "time",
+  "macros",
+  "rt-multi-thread",
+] }
 tokio-stream = { version = "0.1.1" }
-async-std = { version = "1.10", features = ["unstable"]}
+async-std = { version = "1.10", features = ["unstable"] }
 
 [target.'cfg(not(target_os = "windows"))'.dev-dependencies]
-pprof = { version = "0.13", features = ["flamegraph", "criterion"] }
+pprof = { version = "0.14", features = ["flamegraph", "criterion"] }
 
 [features]
 default = ["metrics"]
