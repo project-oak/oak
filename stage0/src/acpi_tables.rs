@@ -288,11 +288,13 @@ impl Display for DescriptionHeader {
 ///
 /// See Section 5.2.7 in the ACPI specification for more details.
 #[derive(Debug)]
-#[repr(C, packed)]
+#[repr(C, align(4))]
 pub struct Rsdt {
     pub header: DescriptionHeader,
     // The RSDT contains an array of pointers to other tables, but unfortunately this can't be
-    // expressed in Rust.
+    // expressed in Rust. By adding an zero size array here, we can make sure that `entries_arr`
+    // always aligns at 4. Otherwise, the compiler will throw an error.
+    entries_arr: [u32; 0],
 }
 
 pub type RsdtEntryPairMut<'a> = (&'a mut u32, &'a mut DescriptionHeader);
@@ -388,8 +390,7 @@ impl Rsdt {
     }
 
     fn entries_arr(&self) -> &[u32] {
-        let entries_base_ptr =
-            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *const u32;
+        let entries_base_ptr = &self.entries_arr as *const u32;
         check_ptr_aligned(entries_base_ptr);
         // Safety: we've validated that the address and length makes sense in
         // `validate()`.
@@ -402,8 +403,7 @@ impl Rsdt {
     }
 
     fn entries_arr_mut(&mut self) -> &mut [u32] {
-        let entries_base_ptr =
-            (self as *const _ as usize + size_of::<DescriptionHeader>()) as *mut u32;
+        let entries_base_ptr = &self.entries_arr as *const _ as *mut u32;
         check_ptr_aligned(entries_base_ptr);
         // Safety: we've validated that the address and length makes sense in
         // `validate()`.
@@ -1031,6 +1031,6 @@ impl<'a> Iterator for MadtIterator<'a> {
 
 fn check_ptr_aligned<T>(ptr: *const T) {
     if !ptr.is_aligned() {
-        panic!("Incorrect pointer alignmnt for type {}", type_name::<T>());
+        panic!("Incorrect pointer {:?} alignmnt for type {}", ptr, type_name::<T>());
     }
 }
