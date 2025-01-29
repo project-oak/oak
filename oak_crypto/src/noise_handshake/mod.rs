@@ -128,7 +128,9 @@ fn aes_gcm_256_decrypt(
     nonce: &[u8; NONCE_LEN],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, Error> {
-    let plaintext =
+    // Aes256Gcm implements Aead in terms of AeadInPlace, so even if you remove the
+    // `Vec::from` here the underlying libraries will end up doing the copy anyway.
+    let mut plaintext =
         crypto_wrapper::aes_256_gcm_open_in_place(key, nonce, &[], Vec::from(ciphertext))
             .map_err(|_| Error::DecryptFailed)?;
 
@@ -138,7 +140,8 @@ fn aes_gcm_256_decrypt(
         return Err(Error::DecryptionPadding);
     }
     let unpadded_length = plaintext.len() - (plaintext[plaintext.len() - 1] as usize);
-    Ok(Vec::from(&plaintext[0..unpadded_length - 1]))
+    plaintext.truncate(unpadded_length - 1);
+    Ok(plaintext)
 }
 
 pub struct OrderedCrypter {
