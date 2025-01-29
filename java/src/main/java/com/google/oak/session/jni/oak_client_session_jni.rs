@@ -45,11 +45,11 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomin
     env: JNIEnv,
     _class: JClass,
     native_ptr: jlong,
-    message: JByteArray,
+    session_response_message: JByteArray,
 ) -> jboolean {
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
 
-    let byte_array = match env.convert_byte_array(&message) {
+    let byte_array = match env.convert_byte_array(&session_response_message) {
         Ok(array) => array,
         Err(err) => {
             oak_exception(env, "Error getting byte array elements", err);

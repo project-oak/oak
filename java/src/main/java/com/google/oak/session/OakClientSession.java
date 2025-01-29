@@ -36,8 +36,8 @@ public class OakClientSession implements AutoCloseable {
   }
 
   /** Returns true if the message was expected, false otherwise. */
-  public boolean putIncomingMessage(SessionResponse request) {
-    return nativePutIncomingMessage(nativePtr, request.toByteArray());
+  public boolean putIncomingMessage(SessionResponse response) {
+    return nativePutIncomingMessage(nativePtr, response.toByteArray());
   }
 
   public Optional<SessionRequest> getOutgoingMessage() {
