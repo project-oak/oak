@@ -50,7 +50,8 @@ absl::StatusOr<SessionKeys> OrchestratorCryptoClient::DeriveSessionKeys(
   DeriveSessionKeysRequest request;
   request.set_key_origin(key_origin);
   request.set_serialized_encapsulated_public_key(
-      serialized_encapsulated_public_key.data());
+      serialized_encapsulated_public_key.data(),
+      serialized_encapsulated_public_key.size());
   DeriveSessionKeysResponse response;
 
   grpc::Status status = stub_->DeriveSessionKeys(&context, request, &response);
@@ -69,7 +70,7 @@ absl::StatusOr<Signature> OrchestratorCryptoClient::Sign(
   context.set_authority(kContextAuthority);
   SignRequest request;
   request.set_key_origin(key_origin);
-  request.set_message(message.data());
+  request.set_message(message.data(), message.size());
   SignResponse response;
 
   grpc::Status status = stub_->Sign(&context, request, &response);
