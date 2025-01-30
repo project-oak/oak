@@ -333,6 +333,17 @@ http_archive(
     url = "https://storage.googleapis.com/oak-bins/sysroot/" + SYSROOT_SHA256 + ".tar.xz",
 )
 
+# The binary is used for stage0 tdx measurement test
+# (//tdx_measurement:tdx_measurement_test) only.
+STAGE0_BIN_TDX_COMMIT = "0689771e6fd6d174121eaa0b7df5fe54c4746ce3"
+
+http_file(
+    name = "stage0_tdx_bin_for_test",
+    downloaded_file_path = "stage0_tdx_bin_for_test",
+    sha256 = "87fe23ad59066718f97acfe2672f70e6ddfa488f7593d59b8886f67d0ca08715",
+    url = "https://storage.googleapis.com/oak-bins/binary/" + STAGE0_BIN_TDX_COMMIT + "/stage0_bin_tdx/binary",
+)
+
 http_file(
     name = "oak_containers_system_image_base",
     downloaded_file_path = "base-image.tar.xz",
