@@ -74,3 +74,16 @@ java_library(
         "@com_google_protobuf//:protobuf_java",
     ],
 )
+
+android_library(
+    name = "server_session_android",
+    srcs = [
+        "OakServerSession.java",
+    ],
+    deps = [
+        ":exception_android",
+        "//java/src/main/java/com/google/oak/session/jni:oak_server_session_jni",
+        "//proto/session:session_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
+    ],
+)
