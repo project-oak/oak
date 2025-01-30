@@ -407,6 +407,9 @@
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -537,7 +540,9 @@
     nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN],
     ciphertext: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-    <span class="kw">let </span>plaintext =
+    <span class="comment">// Aes256Gcm implements Aead in terms of AeadInPlace, so even if you remove the
+    // `Vec::from` here the underlying libraries will end up doing the copy anyway.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>plaintext =
         crypto_wrapper::aes_256_gcm_open_in_place(key, nonce, <span class="kw-2">&amp;</span>[], Vec::from(ciphertext))
             .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
 
@@ -547,7 +552,8 @@
         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptionPadding);
     }
     <span class="kw">let </span>unpadded_length = plaintext.len() - (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize);
-    <span class="prelude-val">Ok</span>(Vec::from(<span class="kw-2">&amp;</span>plaintext[<span class="number">0</span>..unpadded_length - <span class="number">1</span>]))
+    plaintext.truncate(unpadded_length - <span class="number">1</span>);
+    <span class="prelude-val">Ok</span>(plaintext)
 }
 
 <span class="kw">pub struct </span>OrderedCrypter {
