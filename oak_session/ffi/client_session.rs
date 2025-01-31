@@ -96,7 +96,7 @@ fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrBytes
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).as_slice())
+    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
 }
 
 /// Calls [`ClientSession:put_incoming_message`] on the provided pointer.
@@ -163,7 +163,7 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrBytes {
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(&Message::encode_to_vec(&decrypted_message))
+    ErrorOrBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
 }
 
 /// Calls [`ClientSession::write`] on the provided

@@ -137,7 +137,7 @@ fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrBytes
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).as_slice())
+    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
 }
 
 ///  Calls [`ServerSession::read`] on the provided [`ServerSession`] pointer.
@@ -164,7 +164,7 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrBytes {
         Err(e) => return ErrorOrBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(&Message::encode_to_vec(&decrypted_message))
+    ErrorOrBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
 }
 
 ///  Calls [`ServerSession::write`] on the provided

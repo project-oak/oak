@@ -34,14 +34,6 @@ impl Bytes {
         Bytes { data: leaked_bytes.as_ptr(), len: leaked_bytes.len() }
     }
 
-    /// Create a new [`Bytes`] by allocating a new [`Box<[u8]`>] with a copy of
-    /// the provided slice data.
-    /// Ownership of the box will be released, so the memory will need to be
-    /// freed later with a call to [`free_bytes`].
-    pub fn new_alloc(bytes: &[u8]) -> Bytes {
-        Self::new(bytes.to_vec().into_boxed_slice())
-    }
-
     /// Return a `std::slice` representation of this [`Bytes`] instance. There
     /// will not be any ownership changes.
     ///
@@ -62,10 +54,10 @@ pub struct Error {
 impl Error {
     /// Create a new instance containing the provided [`message`].
     pub fn new(message: impl AsRef<str>) -> Error {
-        Error { message: Bytes::new_alloc(message.as_ref().as_bytes()) }
+        Error { message: Bytes::new(message.as_ref().as_bytes().to_vec().into_boxed_slice()) }
     }
 
-    pub fn new_raw(message: impl AsRef<str>) -> *const Error {
+    pub fn new_raw(message: impl AsRef<str>) -> *mut Error {
         Box::into_raw(Box::new(Error::new(message)))
     }
 }
@@ -81,18 +73,18 @@ impl ErrorOrBytes {
     /// Create a new instance with the `error` field populated with a newly
     /// created Error instance.
     pub fn err(msg: impl AsRef<str>) -> ErrorOrBytes {
-        ErrorOrBytes { result: std::ptr::null(), error: Error::new_raw(msg) }
+        ErrorOrBytes { result: std::ptr::null_mut(), error: Error::new_raw(msg) }
     }
 
-    pub fn ok(bytes: &[u8]) -> ErrorOrBytes {
+    pub fn ok(bytes: Box<[u8]>) -> ErrorOrBytes {
         ErrorOrBytes {
-            result: Box::into_raw(Box::new(Bytes::new_alloc(bytes))),
-            error: std::ptr::null(),
+            result: Box::into_raw(Box::new(Bytes::new(bytes))),
+            error: std::ptr::null_mut(),
         }
     }
 
     pub fn null() -> ErrorOrBytes {
-        ErrorOrBytes { result: std::ptr::null(), error: std::ptr::null() }
+        ErrorOrBytes { result: std::ptr::null_mut(), error: std::ptr::null_mut() }
     }
 
     /// Return the result [`Bytes`] as a slice. No ownership changes.
@@ -119,13 +111,20 @@ impl ErrorOrBytes {
 ///    valid, allocated bytes.
 ///  * The instance should not be used anymore after calling this function.
 #[no_mangle]
-pub unsafe extern "C" fn free_bytes(bytes: *mut Bytes) {
-    let bytes_boxed = Box::from_raw(bytes);
+pub unsafe extern "C" fn free_bytes(bytes: *const Bytes) {
+    let bytes_boxed = Box::from_raw(bytes as *mut Bytes);
     free_bytes_contents(*bytes);
     drop(bytes_boxed)
 }
 
-unsafe fn free_bytes_contents(bytes: Bytes) {
+/// Release the rust memory owned by the provided Bytes struct.
+///
+/// # Safety
+///
+///  * The provided [`Bytes`] is a valid, still allocated instance, containing
+///    valid, allocated bytes. It should not be used anymore after calling this
+///    function.
+pub unsafe fn free_bytes_contents(bytes: Bytes) {
     drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
 }
 
@@ -138,7 +137,7 @@ unsafe fn free_bytes_contents(bytes: Bytes) {
 ///  * The [`Bytes`] representing the error message is valid.
 ///  * The pointer should not be used anymore after calling this function.
 #[no_mangle]
-pub unsafe extern "C" fn free_error(error: *mut Error) {
+pub unsafe extern "C" fn free_error(error: *const Error) {
     free_bytes_contents((*error).message);
-    drop(Box::from_raw(error));
+    drop(Box::from_raw(error as *mut Error));
 }

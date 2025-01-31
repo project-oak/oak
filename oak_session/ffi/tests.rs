@@ -42,29 +42,30 @@ fn test_client_encrypt_server_decrypt() {
     // Encrypt
     let message = b"Hello FFI World Client To Server";
     let plaintext_message = PlaintextMessage { plaintext: message.to_vec() };
-    let message_bytes = Message::encode_to_vec(&plaintext_message);
-    let write_result =
-        unsafe { client_ffi::client_write(client_session_ptr, Bytes::new_alloc(&message_bytes)) };
-    assert_eq!(write_result, std::ptr::null());
+    let message_bytes = Bytes::new(Message::encode_to_vec(&plaintext_message).into_boxed_slice());
+    let write_result = unsafe { client_ffi::client_write(client_session_ptr, message_bytes) };
+    assert_eq!(write_result, std::ptr::null_mut());
     let encrypted_result = unsafe { client_ffi::client_get_outgoing_message(client_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
     let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
-    assert_eq!(encrypted_result.error, std::ptr::null());
+    assert_eq!(encrypted_result.error, std::ptr::null_mut());
 
     // Decrypt
     let put_result = unsafe {
         server_ffi::server_put_incoming_message(server_session_ptr, *encrypted_result.result)
     };
-    assert_eq!(put_result, std::ptr::null());
+    assert_eq!(put_result, std::ptr::null_mut());
     let decrypted_result = unsafe { server_ffi::server_read(server_session_ptr) };
-    assert_eq!(decrypted_result.error, std::ptr::null());
+    assert_eq!(decrypted_result.error, std::ptr::null_mut());
 
     let plaintext_message =
         PlaintextMessage::decode(unsafe { (*decrypted_result.result).as_slice() })
             .expect("couldn't decode PlaintextMessage result");
 
     assert_eq!(plaintext_message.plaintext, message);
-
+    unsafe { oak_session_ffi_types::free_bytes(decrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_bytes(encrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_bytes_contents(message_bytes) };
     unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
 }
 
@@ -77,28 +78,30 @@ fn test_server_encrypt_client_decrypt() {
     // Encrypt
     let message = b"Hello FFI World Server To Client";
     let plaintext_message = PlaintextMessage { plaintext: message.to_vec() };
-    let message_bytes = Message::encode_to_vec(&plaintext_message);
-    let write_result =
-        unsafe { server_ffi::server_write(server_session_ptr, Bytes::new_alloc(&message_bytes)) };
-    assert_eq!(write_result, std::ptr::null());
+    let message_bytes = Bytes::new(Message::encode_to_vec(&plaintext_message).into_boxed_slice());
+    let write_result = unsafe { server_ffi::server_write(server_session_ptr, message_bytes) };
+    assert_eq!(write_result, std::ptr::null_mut());
     let encrypted_result = unsafe { server_ffi::server_get_outgoing_message(server_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
     let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
-    assert_eq!(encrypted_result.error, std::ptr::null());
+    assert_eq!(encrypted_result.error, std::ptr::null_mut());
 
     // Decrypt
     let put_result = unsafe {
         client_ffi::client_put_incoming_message(client_session_ptr, *encrypted_result.result)
     };
-    assert_eq!(put_result, std::ptr::null());
+    assert_eq!(put_result, std::ptr::null_mut());
     let decrypted_result = unsafe { client_ffi::client_read(client_session_ptr) };
-    assert_eq!(decrypted_result.error, std::ptr::null());
+    assert_eq!(decrypted_result.error, std::ptr::null_mut());
 
     let plaintext_message =
         PlaintextMessage::decode(unsafe { (*decrypted_result.result).as_slice() })
             .expect("couldn't decode PlaintextMessage result");
     assert_eq!(plaintext_message.plaintext, message);
 
+    unsafe { oak_session_ffi_types::free_bytes(encrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_bytes(decrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_bytes_contents(message_bytes) };
     unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
 }
 
@@ -108,18 +111,21 @@ unsafe fn do_handshake(
 ) {
     // Handshake
     let init = client_ffi::client_get_outgoing_message(client_session_ptr);
-    assert_eq!(init.error, std::ptr::null());
+    assert_eq!(init.error, std::ptr::null_mut());
     let incoming_slice = (*init.result).as_slice();
     let _ = SessionRequest::decode(incoming_slice).expect("couldn't decode init request");
 
     let result = server_ffi::server_put_incoming_message(server_session_ptr, *init.result);
-    assert_eq!(result, std::ptr::null());
+    assert_eq!(result, std::ptr::null_mut());
+    unsafe { oak_session_ffi_types::free_bytes(init.result) };
+
     let init_resp = server_ffi::server_get_outgoing_message(server_session_ptr);
-    assert_eq!(init_resp.error, std::ptr::null());
+    assert_eq!(init_resp.error, std::ptr::null_mut());
     let init_resp_slice = (*init_resp.result).as_slice();
     let _ = SessionResponse::decode(init_resp_slice).expect("couldn't decode init response");
     let put_result = client_ffi::client_put_incoming_message(client_session_ptr, *init_resp.result);
-    assert_eq!(put_result, std::ptr::null());
+    unsafe { oak_session_ffi_types::free_bytes(init_resp.result) };
+    assert_eq!(put_result, std::ptr::null_mut());
 }
 
 fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
@@ -127,17 +133,17 @@ fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
         config_ffi::ATTESTATION_TYPE_UNATTESTED,
         config_ffi::HANDSHAKE_TYPE_NOISE_NN,
     );
-    assert_eq!(session_config_builder.error, std::ptr::null());
+    assert_eq!(session_config_builder.error, std::ptr::null_mut());
     unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
 }
 fn create_test_sessions() -> (*mut ClientSession, *mut ServerSession) {
     let client_session_ptr_result =
         unsafe { client_ffi::new_client_session(create_test_session_config()) };
-    assert_eq!(client_session_ptr_result.error, std::ptr::null());
+    assert_eq!(client_session_ptr_result.error, std::ptr::null_mut());
     let client_session_ptr = client_session_ptr_result.result;
     let server_session_ptr_result =
         unsafe { server_ffi::new_server_session(create_test_session_config()) };
-    assert_eq!(server_session_ptr_result.error, std::ptr::null());
+    assert_eq!(server_session_ptr_result.error, std::ptr::null_mut());
     let server_session_ptr = server_session_ptr_result.result;
     (client_session_ptr, server_session_ptr)
 }
