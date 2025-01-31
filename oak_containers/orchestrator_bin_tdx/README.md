@@ -4,7 +4,7 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-containers-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"><img alt="Project Oak Containers Logo" src="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-# Stage 1 with RTMR Attestation
+# Orchestrator with RTMR Attestation
 
-A version of the Oak Containers Stage 1 that will use the RTMR Attestation
-mechanism and is compatible with Intel TDX
+A version of the Oak Containers Orchestrator that uses the RTMR Attestation
+mechanism and is compatible with Intel TDX.
