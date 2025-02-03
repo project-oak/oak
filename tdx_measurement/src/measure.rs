@@ -15,12 +15,15 @@
 //
 
 use sha2::{Digest, Sha384};
-
+use stage0_parsing::Stage0Info;
+const TDX_STAGE0_ROM_SIZE: usize = 2 * 1024 * 1024;
 const MEM_PAGE_ADD_HEADER: &[u8] = b"MEM.PAGE.ADD";
 const MR_EXTEND_HEADER: &[u8] = b"MR.EXTEND";
 const PAGE_SIZE: u64 = 0x1000;
 const CHUNK_SIZE: usize = 256;
 const EXTENSION_BUFFER_SIZE: usize = 128;
+// See https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm#L51
+const TDX_METADATA_GUID: u128 = 0xc28ebfa785465e864798984ae47a6535;
 
 // Intel TDX Application Binary Interface (ABI) Reference Draft 1.5.05.44
 // 5.3.20. TDH.MEM.PAGE.ADD Leaf
@@ -64,6 +67,82 @@ fn extend_256_byte(
     (buf1, buf2, buf3)
 }
 
+/// TDVF Descriptor. See TDX Virtual Firmware Design Guide, chapter 11, Table
+/// 11-2: TDVF_SECTION definition.
+#[derive(Debug)]
+#[repr(C)]
+struct TdvfSection {
+    pub offset: u32,
+    pub raw_data_size: u32,
+    pub memory_base: u64,
+    pub memory_size: u64,
+    pub type_: u32,
+    pub attributes: u32,
+}
+
+impl TdvfSection {
+    pub fn parse(bytes: &[u8]) -> Self {
+        assert!(bytes.len() == 32);
+        let offset = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let raw_data_size = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let memory_base = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        let memory_size = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let type_ = u32::from_le_bytes(bytes[24..28].try_into().unwrap());
+        let attributes = u32::from_le_bytes(bytes[28..32].try_into().unwrap());
+        Self { offset, raw_data_size, memory_base, memory_size, type_, attributes }
+    }
+}
+
+/// TDVF Descriptor. See TDX Virtual Firmware Design Guide, chapter 11, Table
+/// 11-1: TDVF_DESCRIPTOR definition.
+#[derive(Debug)]
+#[repr(C)]
+struct TdvfDescriptor {
+    pub signature: u32,
+    pub len: u32,
+    pub version: u32,
+    pub section_num: u32,
+}
+
+impl TdvfDescriptor {
+    pub fn parse(bytes: &[u8]) -> Self {
+        const SIGNATURE: &str = "TDVF";
+        assert!(bytes.len() == 16);
+
+        let signature = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
+        let len = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let version = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let section_num = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        assert!(version == 1);
+        assert!(signature.to_le_bytes() == SIGNATURE.as_bytes());
+        Self { signature, len, version, section_num }
+    }
+}
+
+/// Measure a tdvf section using MEM.PAGE.ADD on each page. If the section has
+/// MR.EXTEND attribute set, measure the page content with MR.EXTEND.
+fn measure_section(section: &TdvfSection, hasher: &mut Sha384, stage0_bin: &[u8]) {
+    assert!(section.memory_size % PAGE_SIZE == 0);
+
+    // MEM.PAGE.ADD for every page.
+    for i in 0..section.memory_size / PAGE_SIZE {
+        hasher.update(add_page(section.memory_base + i * PAGE_SIZE));
+    }
+    const MR_EXTEND: u32 = 0x1;
+
+    // If `MR.EXTEND` is set, extend the page content.
+    if section.attributes & MR_EXTEND != 0 {
+        for chunk_offset in (0..section.raw_data_size as usize).step_by(CHUNK_SIZE) {
+            let chunk = &stage0_bin[chunk_offset..chunk_offset + CHUNK_SIZE];
+            let (buf1, buf2, buf3) =
+                extend_256_byte(section.memory_base + chunk_offset as u64, chunk);
+            hasher.update(buf1);
+            hasher.update(buf2);
+            hasher.update(buf3);
+        }
+    }
+}
+
 /// Calculates the MR_TD measurement for a TD's initial state.
 ///
 /// This function simulates the SHA384 measurement of the TD's initial state by
@@ -102,34 +181,32 @@ fn extend_256_byte(
 /// The function effectively reproduces this sequence to calculate the MR_TD
 /// measurement.
 pub fn mr_td_measurement(stage0_bin: &[u8]) -> Vec<u8> {
-    assert_eq!(stage0_bin.len(), 2 * 1024 * 1024);
+    assert_eq!(stage0_bin.len(), TDX_STAGE0_ROM_SIZE);
+    let stage0_info = Stage0Info::new(stage0_bin.to_vec());
+
+    let guid_table = stage0_info.parse_firmware_guid_table();
+    let metadata_entry =
+        guid_table.get(&TDX_METADATA_GUID).expect("couldn't find TDX metadata entry in GUID table");
+    assert!(metadata_entry.len() == 4, "invalid length for TDX metadata entry");
+    let metadata_offset = u32::from_le_bytes(metadata_entry[0..4].try_into().unwrap()) as usize;
+    assert!(metadata_offset < stage0_info.bytes.len(), "invalid TDX metadata offset");
+
+    let tdx_metadata_header_start = stage0_info.bytes.len() - metadata_offset;
+    let tdvf_descriptor = TdvfDescriptor::parse(
+        &stage0_info.bytes[tdx_metadata_header_start..tdx_metadata_header_start + 16],
+    );
+
+    assert!(size_of::<TdvfDescriptor>() == 16);
+    let section_start = tdx_metadata_header_start + size_of::<TdvfDescriptor>();
+    const SECTION_SIZE: usize = 32;
 
     let mut hasher = Sha384::new();
-
-    hasher.update(add_page(0x10_0000));
-    hasher.update(add_page(0x10_1000));
-    hasher.update(add_page(0x10_2000));
-
-    for i in 0..512 {
-        hasher.update(add_page(0xffe0_0000 + 0x1000 * i));
+    for i in 0..tdvf_descriptor.section_num as usize {
+        let offset = section_start + i * SECTION_SIZE;
+        let section = TdvfSection::parse(&stage0_info.bytes[offset..offset + SECTION_SIZE]);
+        measure_section(&section, &mut hasher, stage0_bin);
     }
-
-    for i in 0..8192 {
-        let chunk_offset = i * CHUNK_SIZE;
-        let chunk = &stage0_bin[chunk_offset..chunk_offset + CHUNK_SIZE];
-        let (buf1, buf2, buf3) = extend_256_byte(0xffe0_0000 + chunk_offset as u64, chunk);
-        hasher.update(buf1);
-        hasher.update(buf2);
-        hasher.update(buf3);
-    }
-
-    for i in 0..160 {
-        hasher.update(add_page(PAGE_SIZE * i));
-    }
-
-    let result = hasher.finalize();
-
-    result.as_slice().into()
+    hasher.finalize().as_slice().into()
 }
 
 #[cfg(test)]

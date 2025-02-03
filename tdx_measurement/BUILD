@@ -29,6 +29,7 @@ rust_binary(
     srcs = glob(["src/**"]),
     crate_root = "src/main.rs",
     deps = [
+        "//stage0_parsing",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
