@@ -27,7 +27,7 @@ use page::PageInfo;
 use x86_64::structures::paging::{PageSize, Size4KiB};
 
 use crate::{
-    stage0::load_stage0,
+    stage0::{load_stage0, SnpRomParsing},
     vmsa::{get_ap_vmsa, get_boot_vmsa, VMSA_ADDRESS},
 };
 

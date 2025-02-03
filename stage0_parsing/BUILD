@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,32 +14,22 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-# Example:
-# bazel run //snp_measurement -- \
-#  --stage0-rom=$(pwd)/artifacts/stage0_bin \
-#  --vcpu-count=4
-rust_binary(
-    name = "snp_measurement",
+rust_library(
+    name = "stage0_parsing",
     srcs = glob(["src/**"]),
-    crate_root = "src/main.rs",
     deps = [
         "//oak_sev_guest",
-        "//stage0_parsing",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:log",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:static_assertions",
-        "@oak_crates_index//:strum",
         "@oak_crates_index//:x86_64",
         "@oak_crates_index//:zerocopy",
     ],
