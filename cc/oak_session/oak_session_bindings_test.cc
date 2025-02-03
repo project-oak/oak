@@ -32,7 +32,7 @@ using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
 
 void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
-  ErrorOrBytes init = client_get_outgoing_message(client_session);
+  ErrorOrRustBytes init = client_get_outgoing_message(client_session);
   ASSERT_THAT(init, IsResult());
 
   // We could just past init.result directly, but let's ensure that the request
@@ -41,23 +41,23 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   ASSERT_TRUE(request.ParseFromString(*init.result));
   std::string request_reserialized;
   ASSERT_TRUE(request.SerializeToString(&request_reserialized));
-  Bytes request_bytes = Bytes(request_reserialized);
-  free_bytes(init.result);
+  BytesView request_bytes = BytesView(request_reserialized);
+  free_rust_bytes(init.result);
 
   ASSERT_THAT(server_put_incoming_message(server_session, request_bytes),
               NoError());
 
-  ErrorOrBytes init_resp = server_get_outgoing_message(server_session);
+  ErrorOrRustBytes init_resp = server_get_outgoing_message(server_session);
   ASSERT_THAT(init_resp, IsResult());
 
   SessionResponse response;
   ASSERT_TRUE(response.ParseFromString(*init_resp.result));
-  free_bytes(init_resp.result);
+  free_rust_bytes(init_resp.result);
   std::string response_reserialized;
   ASSERT_TRUE(response.SerializeToString(&response_reserialized));
-  ASSERT_THAT(
-      client_put_incoming_message(client_session, Bytes(response_reserialized)),
-      NoError());
+  ASSERT_THAT(client_put_incoming_message(client_session,
+                                          BytesView(response_reserialized)),
+              NoError());
 
   ASSERT_TRUE(server_is_open(server_session));
   ASSERT_TRUE(client_is_open(client_session));
@@ -68,7 +68,7 @@ SessionConfig* TestConfig() {
                                            HANDSHAKE_TYPE_NOISE_NN);
   if (result.error != nullptr) {
     LOG(FATAL) << "Failed to create session config builder"
-               << result.error->message;
+               << static_cast<absl::string_view>(result.error->message);
   }
 
   return session_config_builder_build(result.result);
@@ -98,11 +98,11 @@ TEST(OakSessionBindingsTest, AcceptEmptyOutgoingMessage) {
 
   DoHandshake(server_session, client_session);
 
-  ErrorOrBytes client_out = client_get_outgoing_message(client_session);
+  ErrorOrRustBytes client_out = client_get_outgoing_message(client_session);
   ASSERT_THAT(client_out.error, Eq(nullptr));
   ASSERT_THAT(client_out.result, Eq(nullptr));
 
-  ErrorOrBytes server_out = server_get_outgoing_message(server_session);
+  ErrorOrRustBytes server_out = server_get_outgoing_message(server_session);
   ASSERT_THAT(server_out.error, Eq(nullptr));
   ASSERT_THAT(server_out.result, Eq(nullptr));
 
@@ -120,11 +120,11 @@ TEST(OakSessionBindingsTest, AcceptEmptyRead) {
 
   DoHandshake(server_session, client_session);
 
-  ErrorOrBytes client_out = client_read(client_session);
+  ErrorOrRustBytes client_out = client_read(client_session);
   ASSERT_THAT(client_out.error, Eq(nullptr));
   ASSERT_THAT(client_out.result, Eq(nullptr));
 
-  ErrorOrBytes server_out = server_read(server_session);
+  ErrorOrRustBytes server_out = server_read(server_session);
   ASSERT_THAT(server_out.error, Eq(nullptr));
   ASSERT_THAT(server_out.result, Eq(nullptr));
 
@@ -144,25 +144,27 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
 
   v1::PlaintextMessage plaintext_message_out;
   plaintext_message_out.set_plaintext("Hello Client To Server");
-  ASSERT_THAT(client_write(client_session,
-                           Bytes(plaintext_message_out.SerializeAsString())),
-              NoError());
+  ASSERT_THAT(
+      client_write(client_session,
+                   BytesView(plaintext_message_out.SerializeAsString())),
+      NoError());
 
-  ErrorOrBytes client_out = client_get_outgoing_message(client_session);
+  ErrorOrRustBytes client_out = client_get_outgoing_message(client_session);
   ASSERT_THAT(client_out, IsResult());
 
-  ASSERT_THAT(server_put_incoming_message(server_session, *client_out.result),
+  ASSERT_THAT(server_put_incoming_message(server_session,
+                                          BytesView(*client_out.result)),
               NoError());
-  free_bytes(client_out.result);
+  free_rust_bytes(client_out.result);
 
-  ErrorOrBytes server_in = server_read(server_session);
+  ErrorOrRustBytes server_in = server_read(server_session);
   ASSERT_THAT(server_in, IsResult());
 
   v1::PlaintextMessage plaintext_message_in;
   ASSERT_TRUE(plaintext_message_in.ParseFromString(*server_in.result));
   EXPECT_THAT(plaintext_message_in.plaintext(),
               Eq(plaintext_message_out.plaintext()));
-  free_bytes(server_in.result);
+  free_rust_bytes(server_in.result);
 
   free_server_session(server_session);
   free_client_session(client_session);
@@ -180,25 +182,27 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
 
   v1::PlaintextMessage plaintext_message_out;
   plaintext_message_out.set_plaintext("Hello Server to Client");
-  ASSERT_THAT(server_write(server_session,
-                           Bytes(plaintext_message_out.SerializeAsString())),
-              NoError());
+  ASSERT_THAT(
+      server_write(server_session,
+                   BytesView(plaintext_message_out.SerializeAsString())),
+      NoError());
 
-  ErrorOrBytes server_out = server_get_outgoing_message(server_session);
+  ErrorOrRustBytes server_out = server_get_outgoing_message(server_session);
   ASSERT_THAT(server_out, IsResult());
 
-  ASSERT_THAT(client_put_incoming_message(client_session, *server_out.result),
+  ASSERT_THAT(client_put_incoming_message(client_session,
+                                          BytesView(*server_out.result)),
               NoError());
-  free_bytes(server_out.result);
+  free_rust_bytes(server_out.result);
 
-  ErrorOrBytes client_in = client_read(client_session);
+  ErrorOrRustBytes client_in = client_read(client_session);
   ASSERT_THAT(client_in, IsResult());
 
   v1::PlaintextMessage plaintext_message_in;
   ASSERT_TRUE(plaintext_message_in.ParseFromString(*client_in.result));
   ASSERT_EQ(plaintext_message_in.plaintext(),
             plaintext_message_out.plaintext());
-  free_bytes(client_in.result);
+  free_rust_bytes(client_in.result);
 
   free_server_session(server_session);
   free_client_session(client_session);
@@ -212,11 +216,11 @@ TEST(OakSessionBindingsTest, ErrorsAreReturned) {
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
-  ErrorOrBytes client_in = client_read(client_session);
+  ErrorOrRustBytes client_in = client_read(client_session);
   ASSERT_THAT(client_in, IsError());
   free_error(client_in.error);
 
-  ErrorOrBytes server_in = server_read(server_session);
+  ErrorOrRustBytes server_in = server_read(server_session);
   ASSERT_THAT(server_in, IsError());
   free_error(server_in.error);
 

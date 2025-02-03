@@ -20,7 +20,7 @@ use oak_session::{
     session::{ClientSession, Session},
     ProtocolEngine,
 };
-use oak_session_ffi_types::{Bytes, Error, ErrorOrBytes};
+use oak_session_ffi_types::{BytesView, Error, ErrorOrRustBytes};
 use prost::Message;
 
 /// Create a new [`ClientSession`] instance for FFI usage.
@@ -85,18 +85,20 @@ pub unsafe extern "C" fn client_is_open(session: *const ClientSession) -> bool {
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
 #[no_mangle]
-pub unsafe extern "C" fn client_get_outgoing_message(session: *mut ClientSession) -> ErrorOrBytes {
+pub unsafe extern "C" fn client_get_outgoing_message(
+    session: *mut ClientSession,
+) -> ErrorOrRustBytes {
     safe_client_get_outgoing_message(&mut *session)
 }
 
-fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrBytes {
+fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrRustBytes {
     let outgoing_message = match session.get_outgoing_message() {
         Ok(Some(om)) => om,
-        Ok(None) => return ErrorOrBytes::null(),
-        Err(e) => return ErrorOrBytes::err(e.to_string()),
+        Ok(None) => return ErrorOrRustBytes::null(),
+        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
 }
 
 /// Calls [`ClientSession:put_incoming_message`] on the provided pointer.
@@ -111,11 +113,11 @@ fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrBytes
 /// * The provided [`ClientSession`] pointer should be non-null, properly
 ///   aligned, and points to a valid [`ClientSession`] instance.
 ///
-/// * The provided [`Bytes`] is valid.
+/// * The provided [`BytesView`] is valid.
 #[no_mangle]
 pub unsafe extern "C" fn client_put_incoming_message(
     session: *mut ClientSession,
-    session_response_bytes: Bytes,
+    session_response_bytes: BytesView,
 ) -> *const Error {
     safe_client_put_incoming_message(&mut *session, session_response_bytes.as_slice())
 }
@@ -142,7 +144,7 @@ fn safe_client_put_incoming_message(
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
 ///
-/// The returned [`Bytes`] will be a serialized [`PlaintextMessage`] proto.
+/// The returned [`RustBytes`] will be a serialized [`PlaintextMessage`] proto.
 ///
 /// If non-null bytes are returned, they should be freed with free_bytes.
 /// If a non-null error is returned, it should be freed with free_error.
@@ -152,24 +154,24 @@ fn safe_client_put_incoming_message(
 /// The provided [`ClientSession`] pointer should be non-null, properly aligned,
 /// and points to a valid [`ClientSession`] instance.
 #[no_mangle]
-pub unsafe extern "C" fn client_read(session: *mut ClientSession) -> ErrorOrBytes {
+pub unsafe extern "C" fn client_read(session: *mut ClientSession) -> ErrorOrRustBytes {
     safe_client_read(&mut *session)
 }
 
-fn safe_client_read(session: &mut ClientSession) -> ErrorOrBytes {
+fn safe_client_read(session: &mut ClientSession) -> ErrorOrRustBytes {
     let decrypted_message = match session.read() {
         Ok(Some(om)) => om,
-        Ok(None) => return ErrorOrBytes::null(),
-        Err(e) => return ErrorOrBytes::err(e.to_string()),
+        Ok(None) => return ErrorOrRustBytes::null(),
+        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
 }
 
 /// Calls [`ClientSession::write`] on the provided
 /// [`ClientSession`] pointer.
 ///
-/// The provided `Bytes` should be a serialized `PlaintextMessage` proto.
+/// The provided `RustBytes` should be a serialized `PlaintextMessage` proto.
 ///
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
@@ -181,11 +183,11 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrBytes {
 /// * The provided [`ClientSession`] pointer should be non-null, properly
 ///   aligned, and points to a valid [`ClientSession`] instance.
 ///
-/// * The provided [`Bytes`] is valid.
+/// * The provided [`BytesView`] is valid.
 #[no_mangle]
 pub unsafe extern "C" fn client_write(
     session: *mut ClientSession,
-    plaintext_message_bytes: Bytes,
+    plaintext_message_bytes: BytesView,
 ) -> *const Error {
     safe_client_write(&mut *session, plaintext_message_bytes.as_slice())
 }

@@ -23,9 +23,12 @@
 
 namespace oak::session::bindings {
 
-Bytes::Bytes(absl::string_view bytes) : data(bytes.data()), len(bytes.size()) {}
+BytesView::BytesView(absl::string_view bytes)
+    : data(bytes.data()), len(bytes.size()) {}
 
-std::ostream& operator<<(std::ostream& stream, const Bytes& bytes) {
+BytesView::BytesView(RustBytes bytes) : data(bytes.data), len(bytes.len) {}
+
+std::ostream& operator<<(std::ostream& stream, const BytesView& bytes) {
   stream << absl::string_view(bytes.data, bytes.len);
   return stream;
 }

@@ -22,7 +22,8 @@
 // Works with ErrorOrBytes, ErrorOrClientSession, ErrorOrServerSession.
 MATCHER(IsResult, "Contains result and no error") {
   if (arg.error != nullptr) {
-    *result_listener << "Expected no error, but have:  " << arg.error->message;
+    *result_listener << "Expected no error, but have:  "
+                     << static_cast<absl::string_view>(arg.error->message);
     return false;
   }
   if (arg.result == nullptr) {
@@ -36,7 +37,8 @@ MATCHER(IsResult, "Contains result and no error") {
 // A matcher that verifies that ErrorOr* types contain an error.
 MATCHER(IsError, "Contains error and no result") {
   if (arg.result != nullptr) {
-    *result_listener << "Expected no result, but have:  " << *arg.result;
+    *result_listener << "Expected no result, but have:  "
+                     << static_cast<absl::string_view>(*arg.result);
     return false;
   }
   if (arg.error == nullptr) {
@@ -50,7 +52,8 @@ MATCHER(IsError, "Contains error and no result") {
 // A matcher that verifies that an Error* is null.
 MATCHER(NoError, "") {
   if (arg != nullptr) {
-    *result_listener << "Expected non-null error, but got: " << arg->message;
+    *result_listener << "Expected non-null error, but got: "
+                     << static_cast<absl::string_view>(arg->message);
     return false;
   }
   return true;

@@ -20,7 +20,7 @@ use oak_session::{
     session::{ServerSession, Session},
     ProtocolEngine,
 };
-use oak_session_ffi_types::{Bytes, Error, ErrorOrBytes};
+use oak_session_ffi_types::{BytesView, Error, ErrorOrRustBytes};
 use prost::Message;
 
 ///  Create a new [`ServerSession`] instance for FFI usage.
@@ -86,11 +86,11 @@ pub unsafe extern "C" fn server_is_open(session: *const ServerSession) -> bool {
 ///  * The provided [`ServerSession`] pointer should be non-null, properly
 ///    aligned, and points to a valid [`ServerSession`] instance.
 ///
-///  * The provided [`Bytes`] is valid.
+///  * The provided [`BytesView`] is valid.
 #[no_mangle]
 pub unsafe extern "C" fn server_put_incoming_message(
     session: *mut ServerSession,
-    request_bytes: Bytes,
+    request_bytes: BytesView,
 ) -> *const Error {
     safe_server_put_incoming_message(&mut *session, request_bytes.as_slice())
 }
@@ -126,18 +126,20 @@ fn safe_server_put_incoming_message(
 ///  The provided [`ServerSession`] pointer should be non-null, properly
 ///  aligned, and points to a valid [`ServerSession`] instance.
 #[no_mangle]
-pub unsafe extern "C" fn server_get_outgoing_message(session: *mut ServerSession) -> ErrorOrBytes {
+pub unsafe extern "C" fn server_get_outgoing_message(
+    session: *mut ServerSession,
+) -> ErrorOrRustBytes {
     safe_server_get_outgoing_message(&mut *session)
 }
 
-fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrBytes {
+fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrRustBytes {
     let outgoing_message = match session.get_outgoing_message() {
         Ok(Some(om)) => om,
-        Ok(None) => return ErrorOrBytes::null(),
-        Err(e) => return ErrorOrBytes::err(e.to_string()),
+        Ok(None) => return ErrorOrRustBytes::null(),
+        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
 }
 
 ///  Calls [`ServerSession::read`] on the provided [`ServerSession`] pointer.
@@ -153,18 +155,18 @@ fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrBytes
 ///  The provided [`ServerSession`] pointer should be non-null, properly
 ///  aligned, and points to a valid [`ServerSession`] instance.
 #[no_mangle]
-pub unsafe extern "C" fn server_read(session: *mut ServerSession) -> ErrorOrBytes {
+pub unsafe extern "C" fn server_read(session: *mut ServerSession) -> ErrorOrRustBytes {
     safe_server_read(&mut *session)
 }
 
-fn safe_server_read(session: &mut ServerSession) -> ErrorOrBytes {
+fn safe_server_read(session: &mut ServerSession) -> ErrorOrRustBytes {
     let decrypted_message = match session.read() {
         Ok(Some(om)) => om,
-        Ok(None) => return ErrorOrBytes::null(),
-        Err(e) => return ErrorOrBytes::err(e.to_string()),
+        Ok(None) => return ErrorOrRustBytes::null(),
+        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
 }
 
 ///  Calls [`ServerSession::write`] on the provided
@@ -181,11 +183,11 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrBytes {
 ///  * The provided [`ServerSession`] pointer should be non-null, properly
 ///    aligned, and points to a valid [`ServerSession`] instance.
 ///
-///  * The provided [`Bytes`] is valid.
+///  * The provided [`BytesView`] is valid.
 #[no_mangle]
 pub unsafe extern "C" fn server_write(
     session: *mut ServerSession,
-    plaintext_message_bytes: Bytes,
+    plaintext_message_bytes: BytesView,
 ) -> *const Error {
     safe_server_write(&mut *session, plaintext_message_bytes.as_slice())
 }

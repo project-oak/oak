@@ -52,13 +52,13 @@ absl::Status ServerSession::PutIncomingMessage(
     const v1::SessionRequest& request) {
   const std::string request_bytes = request.SerializeAsString();
   bindings::Error* error = bindings::server_put_incoming_message(
-      rust_session_, bindings::Bytes(request_bytes));
+      rust_session_, bindings::BytesView(request_bytes));
   return bindings::ErrorIntoStatus(error);
 }
 
 absl::StatusOr<std::optional<v1::SessionResponse>>
 ServerSession::GetOutgoingMessage() {
-  const bindings::ErrorOrBytes result =
+  const bindings::ErrorOrRustBytes result =
       bindings::server_get_outgoing_message(rust_session_);
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
@@ -74,20 +74,22 @@ ServerSession::GetOutgoingMessage() {
         "Failed to parse GetOutoingMessage result bytes as SessionResponse");
   }
 
-  free_bytes(result.result);
+  free_rust_bytes(result.result);
   return response;
 }
 
 absl::Status ServerSession::Write(
     const v1::PlaintextMessage& unencrypted_request) {
   bindings::Error* error = bindings::server_write(
-      rust_session_, bindings::Bytes(unencrypted_request.SerializeAsString()));
+      rust_session_,
+      bindings::BytesView(unencrypted_request.SerializeAsString()));
 
   return bindings::ErrorIntoStatus(error);
 }
 
 absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
-  const bindings::ErrorOrBytes result = bindings::server_read(rust_session_);
+  const bindings::ErrorOrRustBytes result =
+      bindings::server_read(rust_session_);
   if (result.error != nullptr) {
     return bindings::ErrorIntoStatus(result.error);
   }
@@ -103,7 +105,7 @@ absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
         "Failed to parse server_read result bytes as PlaintextMessage");
   }
 
-  bindings::free_bytes(result.result);
+  bindings::free_rust_bytes(result.result);
   return plaintext_message_result;
 }
 

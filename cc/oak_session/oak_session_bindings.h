@@ -57,34 +57,42 @@ class ServerSession;
 // the corresponding Rust struct in the function calls.
 class ClientSession;
 
-// A struct holding a sequence of Bytes.
-// Corresponds to Bytes struct in oak_session/ffi/types.rs
+// A struct holding a sequence of Bytes allocated in Rust.
+// Corresponds to RustBytes struct in oak_session/ffi/types.rs
 //
-// There are no specified ownership requirements for the type. A function that
-// accepts or returns this type should document expectations around ownership
-// and de-allocation requirements.
-struct Bytes {
+// C/C++ that receives an instance of this as a return value from Rust will be
+// expected to free it, either by calling `free_rust_bytes_contents`, or by
+// passing the bytes back to Rust as an argument to a function that specifies in
+// the documentation that it will re-claim ownership of the parameter.
+struct RustBytes {
   const char* data;
   uint64_t len;
-
-  // Create a `Bytes` instance wrapping the provided string data.
-  // The lifetime of the created bytes is determined by the lifetime
-  // of the data backing the string_view.
-  explicit Bytes(absl::string_view data);
 
   operator absl::string_view() { return absl::string_view(data, len); }
 };
 
-std::ostream& operator<<(std::ostream& stream, const Bytes& bytes);
+// A borrowed view of bytes from either C or Rust.
+//
+// Functions that use or return BytesView structures should document the
+// lifetime expectations of the view.
+//
+// Corresponds to BytesView struct in oak_session/ffi/types.rs
+struct BytesView {
+  const char* data;
+  uint64_t len;
+
+  explicit BytesView(absl::string_view data);
+  explicit BytesView(RustBytes data);
+};
 
 // Corresponds to Error struct in oak_session/ffi/types.rs
 struct Error {
-  Bytes message;
+  RustBytes message;
 };
 
 // Corresponds to ErrorOrBytes struct in oak_session/ffi/types.rs
-struct ErrorOrBytes {
-  Bytes* result;
+struct ErrorOrRustBytes {
+  RustBytes* result;
   Error* error;
 };
 
@@ -119,23 +127,23 @@ extern SessionConfig* session_config_builder_build(SessionConfigBuilder*);
 // Corresponds to functions in oak_session/ffi/client_session.rs
 extern ErrorOrClientSession new_client_session(SessionConfig*);
 extern bool client_is_open(ClientSession*);
-extern Error* client_put_incoming_message(ClientSession*, Bytes);
-extern ErrorOrBytes client_get_outgoing_message(ClientSession*);
-extern ErrorOrBytes client_read(ClientSession*);
-extern Error* client_write(ClientSession*, Bytes);
+extern Error* client_put_incoming_message(ClientSession*, BytesView);
+extern ErrorOrRustBytes client_get_outgoing_message(ClientSession*);
+extern ErrorOrRustBytes client_read(ClientSession*);
+extern Error* client_write(ClientSession*, BytesView);
 extern void free_client_session(ClientSession*);
 
 // Corresponds to functions in oak_session/ffi/server_session.rs
 extern ErrorOrServerSession new_server_session(SessionConfig*);
 extern bool server_is_open(ServerSession*);
-extern Error* server_put_incoming_message(ServerSession*, Bytes);
-extern ErrorOrBytes server_get_outgoing_message(ServerSession*);
-extern ErrorOrBytes server_read(ServerSession*);
-extern Error* server_write(ServerSession*, Bytes);
+extern Error* server_put_incoming_message(ServerSession*, BytesView);
+extern ErrorOrRustBytes server_get_outgoing_message(ServerSession*);
+extern ErrorOrRustBytes server_read(ServerSession*);
+extern Error* server_write(ServerSession*, BytesView);
 extern void free_server_session(ServerSession*);
 
 // Corresponds to functions in oak_session/ffi/types.rs
-extern void free_bytes(Bytes*);
+extern void free_rust_bytes(RustBytes*);
 extern void free_error(Error*);
 }
 
