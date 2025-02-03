@@ -38,10 +38,10 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   // We could just past init.result directly, but let's ensure that the request
   // successfully goes through the ser/deser properly.
   SessionRequest request;
-  ASSERT_TRUE(request.ParseFromString(BytesToString(*init.result)));
+  ASSERT_TRUE(request.ParseFromString(*init.result));
   std::string request_reserialized;
   ASSERT_TRUE(request.SerializeToString(&request_reserialized));
-  Bytes request_bytes = BytesFromString(request_reserialized);
+  Bytes request_bytes = Bytes(request_reserialized);
   free_bytes(init.result);
 
   ASSERT_THAT(server_put_incoming_message(server_session, request_bytes),
@@ -51,13 +51,13 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   ASSERT_THAT(init_resp, IsResult());
 
   SessionResponse response;
-  ASSERT_TRUE(response.ParseFromString(BytesToString(*init_resp.result)));
+  ASSERT_TRUE(response.ParseFromString(*init_resp.result));
   free_bytes(init_resp.result);
   std::string response_reserialized;
   ASSERT_TRUE(response.SerializeToString(&response_reserialized));
-  ASSERT_THAT(client_put_incoming_message(
-                  client_session, BytesFromString(response_reserialized)),
-              NoError());
+  ASSERT_THAT(
+      client_put_incoming_message(client_session, Bytes(response_reserialized)),
+      NoError());
 
   ASSERT_TRUE(server_is_open(server_session));
   ASSERT_TRUE(client_is_open(client_session));
@@ -68,7 +68,7 @@ SessionConfig* TestConfig() {
                                            HANDSHAKE_TYPE_NOISE_NN);
   if (result.error != nullptr) {
     LOG(FATAL) << "Failed to create session config builder"
-               << BytesToString(result.error->message);
+               << result.error->message;
   }
 
   return session_config_builder_build(result.result);
@@ -144,10 +144,9 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
 
   v1::PlaintextMessage plaintext_message_out;
   plaintext_message_out.set_plaintext("Hello Client To Server");
-  ASSERT_THAT(
-      client_write(client_session,
-                   BytesFromString(plaintext_message_out.SerializeAsString())),
-      NoError());
+  ASSERT_THAT(client_write(client_session,
+                           Bytes(plaintext_message_out.SerializeAsString())),
+              NoError());
 
   ErrorOrBytes client_out = client_get_outgoing_message(client_session);
   ASSERT_THAT(client_out, IsResult());
@@ -160,8 +159,7 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
   ASSERT_THAT(server_in, IsResult());
 
   v1::PlaintextMessage plaintext_message_in;
-  ASSERT_TRUE(
-      plaintext_message_in.ParseFromString(BytesToString(*server_in.result)));
+  ASSERT_TRUE(plaintext_message_in.ParseFromString(*server_in.result));
   EXPECT_THAT(plaintext_message_in.plaintext(),
               Eq(plaintext_message_out.plaintext()));
   free_bytes(server_in.result);
@@ -182,10 +180,9 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
 
   v1::PlaintextMessage plaintext_message_out;
   plaintext_message_out.set_plaintext("Hello Server to Client");
-  ASSERT_THAT(
-      server_write(server_session,
-                   BytesFromString(plaintext_message_out.SerializeAsString())),
-      NoError());
+  ASSERT_THAT(server_write(server_session,
+                           Bytes(plaintext_message_out.SerializeAsString())),
+              NoError());
 
   ErrorOrBytes server_out = server_get_outgoing_message(server_session);
   ASSERT_THAT(server_out, IsResult());
@@ -198,8 +195,7 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
   ASSERT_THAT(client_in, IsResult());
 
   v1::PlaintextMessage plaintext_message_in;
-  ASSERT_TRUE(
-      plaintext_message_in.ParseFromString(BytesToString(*client_in.result)));
+  ASSERT_TRUE(plaintext_message_in.ParseFromString(*client_in.result));
   ASSERT_EQ(plaintext_message_in.plaintext(),
             plaintext_message_out.plaintext());
   free_bytes(client_in.result);

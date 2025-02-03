@@ -34,7 +34,7 @@ SessionConfigBuilder::SessionConfigBuilder(AttestationType attestation_type,
   if (builder_result.error != nullptr) {
     LOG(FATAL) << absl::StrCat(
         "Failed to create builder: ",
-        bindings::BytesToString(builder_result.error->message));
+        static_cast<absl::string_view>(builder_result.error->message));
   }
 
   builder_ = builder_result.result;

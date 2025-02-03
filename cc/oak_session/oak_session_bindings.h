@@ -59,19 +59,23 @@ class ClientSession;
 
 // A struct holding a sequence of Bytes.
 // Corresponds to Bytes struct in oak_session/ffi/types.rs
+//
+// There are no specified ownership requirements for the type. A function that
+// accepts or returns this type should document expectations around ownership
+// and de-allocation requirements.
 struct Bytes {
   const char* data;
   uint64_t len;
+
+  // Create a `Bytes` instance wrapping the provided string data.
+  // The lifetime of the created bytes is determined by the lifetime
+  // of the data backing the string_view.
+  explicit Bytes(absl::string_view data);
+
+  operator absl::string_view() { return absl::string_view(data, len); }
 };
 
-// Create a `Bytes` instance wrapping the provided string data.
-// The lifetime of the created bytes is determined by the lifetime
-// of the data backing the string_view.
-Bytes BytesFromString(absl::string_view bytes);
-
-// Create a new string wrapping the Bytes object.
-// The Bytes data will be copied into a new string.
-std::string BytesToString(Bytes bytes);
+std::ostream& operator<<(std::ostream& stream, const Bytes& bytes);
 
 // Corresponds to Error struct in oak_session/ffi/types.rs
 struct Error {

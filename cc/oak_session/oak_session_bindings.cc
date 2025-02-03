@@ -23,20 +23,19 @@
 
 namespace oak::session::bindings {
 
-Bytes BytesFromString(absl::string_view bytes) {
-  return Bytes{.data = bytes.data(), .len = bytes.size()};
-}
+Bytes::Bytes(absl::string_view bytes) : data(bytes.data()), len(bytes.size()) {}
 
-std::string BytesToString(Bytes bytes) {
-  return std::string(bytes.data, bytes.len);
+std::ostream& operator<<(std::ostream& stream, const Bytes& bytes) {
+  stream << absl::string_view(bytes.data, bytes.len);
+  return stream;
 }
 
 absl::Status ErrorIntoStatus(bindings::Error* error) {
   if (error == nullptr) {
     return absl::OkStatus();
   }
-  absl::Status status = absl::Status(absl::StatusCode::kInternal,
-                                     bindings::BytesToString(error->message));
+  absl::Status status =
+      absl::Status(absl::StatusCode::kInternal, error->message);
   free_error(error);
   return status;
 }
