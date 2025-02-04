@@ -17,7 +17,9 @@
 #include <string>
 
 #include "absl/status/status_matchers.h"
+#include "absl/strings/string_view.h"
 #include "cc/oak_session/client_session.h"
+#include "cc/oak_session/rust_bytes.h"
 #include "cc/oak_session/server_session.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -102,10 +104,12 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
 
   DoHandshake(**client_session, **server_session);
 
+  std::string plaintext_message = "Hello Server";
   v1::PlaintextMessage plaintext_message_request;
-  plaintext_message_request.set_plaintext("Hello Server");
+  plaintext_message_request.set_plaintext(plaintext_message);
 
   ASSERT_THAT((*client_session)->Write(plaintext_message_request), IsOk());
+
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
   ASSERT_THAT(request, IsOk());
@@ -117,8 +121,31 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
   ASSERT_THAT(received_request, IsOk());
   ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT((**received_request).plaintext(),
-              Eq(plaintext_message_request.plaintext()));
+  EXPECT_THAT(((*received_request)->plaintext()), Eq(plaintext_message));
+}
+
+TEST(ClientServerSessionTest, ClientEncryptServerDecryptRaw) {
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
+
+  DoHandshake(**client_session, **server_session);
+
+  std::string plaintext_message = "Hello Server";
+
+  ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
+  absl::StatusOr<std::optional<SessionRequest>> request =
+      (*client_session)->GetOutgoingMessage();
+  ASSERT_THAT(request, IsOk());
+  ASSERT_THAT(*request, Ne(std::nullopt));
+
+  ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
+  absl::StatusOr<std::optional<RustBytes>> received_request =
+      (*server_session)->ReadToRustBytes();
+  ASSERT_THAT(received_request, IsOk());
+  ASSERT_THAT(*received_request, Ne(std::nullopt));
+
+  EXPECT_THAT(static_cast<absl::string_view>(**received_request),
+              Eq(plaintext_message));
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
@@ -127,8 +154,9 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
 
   DoHandshake(**client_session, **server_session);
 
+  std::string response_message = "Hello Client";
   v1::PlaintextMessage plaintext_message_response;
-  plaintext_message_response.set_plaintext("Hello Client");
+  plaintext_message_response.set_plaintext(response_message);
 
   ASSERT_THAT((*server_session)->Write(plaintext_message_response), IsOk());
   absl::StatusOr<std::optional<SessionResponse>> response =
@@ -142,8 +170,31 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
   ASSERT_THAT(received_request, IsOk());
   ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT((**received_request).plaintext(),
-              Eq(plaintext_message_response.plaintext()));
+  EXPECT_THAT(((*received_request)->plaintext()), Eq(response_message));
+}
+
+TEST(ClientServerSessionTest, ServerEncryptClientDecryptRaw) {
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
+
+  DoHandshake(**client_session, **server_session);
+
+  std::string response_message = "Hello Client";
+
+  ASSERT_THAT((*server_session)->Write(response_message), IsOk());
+  absl::StatusOr<std::optional<SessionResponse>> response =
+      (*server_session)->GetOutgoingMessage();
+  ASSERT_THAT(response, IsOk());
+  ASSERT_THAT(*response, Ne(std::nullopt));
+
+  ASSERT_THAT((*client_session)->PutIncomingMessage(**response), IsOk());
+  absl::StatusOr<std::optional<RustBytes>> received_request =
+      (*client_session)->ReadToRustBytes();
+  ASSERT_THAT(received_request, IsOk());
+  ASSERT_THAT(*received_request, Ne(std::nullopt));
+
+  EXPECT_THAT(static_cast<absl::string_view>(**received_request),
+              Eq(response_message));
 }
 
 }  // namespace

@@ -144,7 +144,11 @@ fn safe_client_put_incoming_message(
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
 ///
-/// The returned [`RustBytes`] will be a serialized [`PlaintextMessage`] proto.
+/// The returned [`RustBytes`] will be the bytes in the `plaintext` field of the
+/// [`PlaintextMessage`] returned by the state machine.
+/// We make this divergence from the underlying Rust API to
+/// avoid the copy/serialization/deserialization overhead associated with
+/// passing the proto back and forth.
 ///
 /// If non-null bytes are returned, they should be freed with free_bytes.
 /// If a non-null error is returned, it should be freed with free_error.
@@ -165,13 +169,17 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrRustBytes {
         Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrRustBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(decrypted_message.plaintext.into_boxed_slice())
 }
 
 /// Calls [`ClientSession::write`] on the provided
 /// [`ClientSession`] pointer.
 ///
-/// The provided `RustBytes` should be a serialized `PlaintextMessage` proto.
+/// The provided `RustBytes` should be the raw application bytes to be
+/// encrypted. They'll be added to a `PlaintextMessage` proto by the library
+/// implementation. We make this divergence from the underlying Rust API to
+/// avoid the copy/serialization/deserialization overhead associated with
+/// passing the proto back and forth.
 ///
 /// If the call results in an error, the `error` field of the result will be
 /// populated with a string decription of the Rust error.
@@ -192,16 +200,8 @@ pub unsafe extern "C" fn client_write(
     safe_client_write(&mut *session, plaintext_message_bytes.as_slice())
 }
 
-fn safe_client_write(session: &mut ClientSession, plaintext_slice: &[u8]) -> *const Error {
-    let plaintext_message = match PlaintextMessage::decode(plaintext_slice) {
-        Ok(r) => r,
-        Err(e) => {
-            println!("ERROR {e}");
-            return Error::new_raw(e.to_string());
-        }
-    };
-
-    match session.write(&plaintext_message) {
+fn safe_client_write(session: &mut ClientSession, plaintext_bytes_slice: &[u8]) -> *const Error {
+    match session.write(&PlaintextMessage { plaintext: plaintext_bytes_slice.to_vec() }) {
         Ok(()) => std::ptr::null(),
         Err(e) => Error::new_raw(e.to_string()),
     }

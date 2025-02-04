@@ -144,6 +144,13 @@ fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrRustB
 
 ///  Calls [`ServerSession::read`] on the provided [`ServerSession`] pointer.
 ///
+/// THe returned [`Bytes`] will contain the `plaintext` field of the
+/// [`PlaintextMessage`] proto returned by the underlying library.
+///
+/// We make this divergence from the underlying Rust API to
+/// avoid the copy/serialization/deserialization overhead associated with
+/// passing the proto back and forth.
+///
 ///  If the call results in an error, the `error` field of the result will be
 ///  populated with a string decription of the Rust error.
 ///
@@ -166,11 +173,17 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrRustBytes {
         Err(e) => return ErrorOrRustBytes::err(e.to_string()),
     };
 
-    ErrorOrRustBytes::ok(Message::encode_to_vec(&decrypted_message).into_boxed_slice())
+    ErrorOrRustBytes::ok(decrypted_message.plaintext.into_boxed_slice())
 }
 
 ///  Calls [`ServerSession::write`] on the provided
 ///  [`ServerSession`] pointer.
+///
+/// The provided `Bytes` should be the raw application bytes to be encrypted.
+/// They'll be added to a `PlaintextMessage` proto by the library
+/// implementation. We make this divergence from the underlying Rust API to
+/// avoid the copy/serialization/deserialization overhead associated with
+/// passing the proto back and forth.
 ///
 ///  If the call results in an error, the `error` field of the result will be
 ///  populated with a string decription of the Rust error.
@@ -193,12 +206,7 @@ pub unsafe extern "C" fn server_write(
 }
 
 fn safe_server_write(session: &mut ServerSession, plaintext_slice: &[u8]) -> *const Error {
-    let plaintext_message = match PlaintextMessage::decode(plaintext_slice) {
-        Ok(r) => r,
-        Err(e) => return Error::new_raw(e.to_string()),
-    };
-
-    match session.write(&plaintext_message) {
+    match session.write(&PlaintextMessage { plaintext: plaintext_slice.to_vec() }) {
         Ok(()) => std::ptr::null(),
         Err(e) => Error::new_raw(e.to_string()),
     }

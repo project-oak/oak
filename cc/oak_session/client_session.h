@@ -22,6 +22,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
+#include "cc/oak_session/rust_bytes.h"
 #include "proto/session/session.pb.h"
 
 #ifndef CC_OAK_SESSION_CLIENT_SESSION_H_
@@ -49,8 +50,20 @@ class ClientSession {
   bool IsOpen();
   absl::Status PutIncomingMessage(const v1::SessionResponse& request);
   absl::StatusOr<std::optional<v1::SessionRequest>> GetOutgoingMessage();
+
+  // Write the provided PlaintextMessage.
+  ABSL_DEPRECATED(
+      "Use the version accepting an absl::string_view to avoid needless "
+      "copying.")
   absl::Status Write(const v1::PlaintextMessage& unencrypted_request);
+  ABSL_DEPRECATED("Use ReadToRustBytes instead to avoid needless copying.")
   absl::StatusOr<std::optional<v1::PlaintextMessage>> Read();
+  absl::Status Write(absl::string_view unencrypted_request);
+
+  // This returns a wrapper around the Rust bytes generated from the library. It
+  // can be cast to an absl::string_view for read-only usage, otherwise it
+  // should be copied (for example, by creating a std::string from it.)
+  absl::StatusOr<std::optional<RustBytes>> ReadToRustBytes();
 
  private:
   explicit ClientSession(bindings::ClientSession* rust_session)

@@ -20,6 +20,15 @@ package(
 )
 
 cc_library(
+    name = "rust_bytes",
+    hdrs = ["rust_bytes.h"],
+    deps = [
+        ":oak_session_bindings",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_library(
     name = "oak_session_bindings",
     srcs = ["oak_session_bindings.cc"],
     hdrs = ["oak_session_bindings.h"],
@@ -54,6 +63,7 @@ cc_library(
     deps = [
         ":config",
         ":oak_session_bindings",
+        ":rust_bytes",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -68,6 +78,7 @@ cc_library(
     deps = [
         ":config",
         ":oak_session_bindings",
+        ":rust_bytes",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -81,11 +92,13 @@ cc_test(
     tags = ["asan"],
     deps = [
         ":client_session",
+        ":rust_bytes",
         ":server_session",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status:status_matchers",
+        "@com_google_absl//absl/strings:string_view",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -42,10 +42,12 @@ cc_test(
     deps = [
         ":session_server",
         "//cc/oak_session:client_session",
+        "//cc/oak_session:rust_bytes",
         "//cc/oak_session:server_session",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:status_matchers",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
         "@com_google_googletest//:gtest_main",
     ],
 )

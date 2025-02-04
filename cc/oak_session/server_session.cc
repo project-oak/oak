@@ -24,6 +24,7 @@
 #include "absl/status/statusor.h"
 #include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
+#include "cc/oak_session/rust_bytes.h"
 #include "proto/session/session.pb.h"
 
 namespace oak::session {
@@ -80,9 +81,12 @@ ServerSession::GetOutgoingMessage() {
 
 absl::Status ServerSession::Write(
     const v1::PlaintextMessage& unencrypted_request) {
+  return Write(unencrypted_request.plaintext());
+}
+
+absl::Status ServerSession::Write(absl::string_view unencrypted_request) {
   bindings::Error* error = bindings::server_write(
-      rust_session_,
-      bindings::BytesView(unencrypted_request.SerializeAsString()));
+      rust_session_, bindings::BytesView(unencrypted_request));
 
   return bindings::ErrorIntoStatus(error);
 }
@@ -98,15 +102,25 @@ absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
     return std::nullopt;
   }
 
-  // Copy into new result string so we can free the bytes.
   v1::PlaintextMessage plaintext_message_result;
-  if (!plaintext_message_result.ParseFromString(*result.result)) {
-    return absl::InternalError(
-        "Failed to parse server_read result bytes as PlaintextMessage");
-  }
+  plaintext_message_result.set_plaintext(*result.result);
 
   bindings::free_rust_bytes(result.result);
   return plaintext_message_result;
+}
+
+absl::StatusOr<std::optional<RustBytes>> ServerSession::ReadToRustBytes() {
+  const bindings::ErrorOrRustBytes result =
+      bindings::server_read(rust_session_);
+  if (result.error != nullptr) {
+    return bindings::ErrorIntoStatus(result.error);
+  }
+
+  if (result.result == nullptr) {
+    return std::nullopt;
+  }
+
+  return RustBytes(result.result);
 }
 
 ServerSession::~ServerSession() {

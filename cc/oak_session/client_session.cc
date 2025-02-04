@@ -22,7 +22,9 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
+#include "cc/oak_session/rust_bytes.h"
 #include "proto/session/session.pb.h"
 
 namespace oak::session {
@@ -81,14 +83,36 @@ ClientSession::GetOutgoingMessage() {
 
 absl::Status ClientSession::Write(
     const v1::PlaintextMessage& unencrypted_request) {
+  return Write(unencrypted_request.plaintext());
+}
+
+absl::Status ClientSession::Write(absl::string_view unencrypted_request) {
   bindings::Error* error = bindings::client_write(
-      rust_session_,
-      bindings::BytesView(unencrypted_request.SerializeAsString()));
+      rust_session_, bindings::BytesView(unencrypted_request));
 
   return ErrorIntoStatus(error);
 }
 
 absl::StatusOr<std::optional<v1::PlaintextMessage>> ClientSession::Read() {
+  const bindings::ErrorOrRustBytes result =
+      bindings::client_read(rust_session_);
+
+  if (result.error != nullptr) {
+    return ErrorIntoStatus(result.error);
+  }
+
+  if (result.result == nullptr) {
+    return std::nullopt;
+  }
+
+  v1::PlaintextMessage plaintext_message_result;
+  plaintext_message_result.set_plaintext(*result.result);
+
+  bindings::free_rust_bytes(result.result);
+  return plaintext_message_result;
+}
+
+absl::StatusOr<std::optional<RustBytes>> ClientSession::ReadToRustBytes() {
   const bindings::ErrorOrRustBytes result =
       bindings::client_read(rust_session_);
   if (result.error != nullptr) {
@@ -99,14 +123,7 @@ absl::StatusOr<std::optional<v1::PlaintextMessage>> ClientSession::Read() {
     return std::nullopt;
   }
 
-  v1::PlaintextMessage plaintext_message_result;
-  if (!plaintext_message_result.ParseFromString(*result.result)) {
-    return absl::InternalError(
-        "Failed to parse client_read result bytes as PlaintextMessage");
-  }
-
-  bindings::free_rust_bytes(result.result);
-  return plaintext_message_result;
+  return RustBytes(result.result);
 }
 
 ClientSession::~ClientSession() {

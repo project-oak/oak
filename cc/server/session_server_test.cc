@@ -25,6 +25,7 @@
 #include "absl/status/status_matchers.h"
 #include "absl/status/statusor.h"
 #include "cc/oak_session/client_session.h"
+#include "cc/oak_session/rust_bytes.h"
 #include "cc/oak_session/server_session.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -101,11 +102,12 @@ TEST(OakSessionServerTest, CreatedSessionCanSend) {
 
   std::string test_send_msg = "Testing Send";
   ASSERT_THAT((*channel)->Send(test_send_msg), IsOk());
-  absl::StatusOr<std::optional<session::v1::PlaintextMessage>>
-      test_send_read_back = client_session_ptr->Read();
+  absl::StatusOr<std::optional<session::RustBytes>> test_send_read_back =
+      client_session_ptr->ReadToRustBytes();
   EXPECT_THAT(test_send_read_back, IsOk());
   EXPECT_THAT(*test_send_read_back, Ne(std::nullopt));
-  EXPECT_THAT((**test_send_read_back).plaintext(), Eq(test_send_msg));
+  EXPECT_THAT(static_cast<absl::string_view>(**test_send_read_back),
+              Eq(test_send_msg));
 }
 
 TEST(OakSessionServerTest, CreatedSessionCanReceive) {
@@ -117,13 +119,12 @@ TEST(OakSessionServerTest, CreatedSessionCanReceive) {
                      .NewChannel(std::make_unique<TestTransport>(
                          std::move(*client_session)));
 
-  session::v1::PlaintextMessage test_recv_plaintext_msg;
-  test_recv_plaintext_msg.set_plaintext("Testing Receive");
-  ASSERT_THAT(client_session_ptr->Write(test_recv_plaintext_msg), IsOk());
+  std::string test_recv_msg = "Testing Receive";
+  ASSERT_THAT(client_session_ptr->Write(test_recv_msg), IsOk());
 
   absl::StatusOr<std::string> server_read = (*channel)->Receive();
   EXPECT_THAT(server_read, IsOk());
-  EXPECT_THAT(*server_read, Eq(test_recv_plaintext_msg.plaintext()));
+  EXPECT_THAT(*server_read, Eq(test_recv_msg));
 }
 }  // namespace
 }  // namespace oak::server

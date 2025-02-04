@@ -23,6 +23,7 @@ cc_library(
     name = "channel",
     hdrs = ["oak_session_channel.h"],
     deps = [
+        "//cc/oak_session:rust_bytes",
         "//cc/utils/status",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
