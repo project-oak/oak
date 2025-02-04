@@ -63,8 +63,8 @@ impl RustBytes {
     /// Ownership of the box will be released, so the memory will need
     /// to be freed later with a call to [`free_rust_bytes`].
     pub fn new(bytes: Box<[u8]>) -> RustBytes {
-        let leaked_bytes = Box::leak(bytes);
-        RustBytes { data: leaked_bytes.as_ptr(), len: leaked_bytes.len() }
+        let raw_bytes_ptr = Box::into_raw(bytes);
+        RustBytes { data: raw_bytes_ptr as *const u8, len: raw_bytes_ptr.len() }
     }
 
     /// Return a `std::slice` representation of this [`RustBytes`] instance.
