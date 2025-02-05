@@ -120,7 +120,7 @@ class OakSessionChannel {
           "result");
     }
 
-    return std::string(static_cast<absl::string_view>(**decrypted_message));
+    return std::string(**decrypted_message);
   }
 
   // Create a new OakSessionChannel instance with the provided session and

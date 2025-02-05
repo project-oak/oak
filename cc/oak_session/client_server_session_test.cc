@@ -151,8 +151,7 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecryptRaw) {
   ASSERT_THAT(received_request, IsOk());
   ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT(static_cast<absl::string_view>(**received_request),
-              Eq(plaintext_message));
+  EXPECT_THAT(**received_request, Eq(plaintext_message));
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
@@ -200,8 +199,60 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecryptRaw) {
   ASSERT_THAT(received_request, IsOk());
   ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT(static_cast<absl::string_view>(**received_request),
-              Eq(response_message));
+  EXPECT_THAT(**received_request, Eq(response_message));
+}
+
+TEST(ClientServerSessionTest, ConvertsToStringView) {
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
+
+  DoHandshake(**client_session, **server_session);
+
+  std::string plaintext_message = "Hello Server";
+
+  ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
+  absl::StatusOr<std::optional<SessionRequest>> request =
+      (*client_session)->GetOutgoingMessage();
+  ASSERT_THAT(request, IsOk());
+  ASSERT_THAT(*request, Ne(std::nullopt));
+
+  ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
+  absl::StatusOr<std::optional<RustBytes>> received_request =
+      (*server_session)->ReadToRustBytes();
+  ASSERT_THAT(received_request, IsOk());
+  ASSERT_THAT(*received_request, Ne(std::nullopt));
+
+  absl::string_view received_request_string_view(**received_request);
+  EXPECT_THAT(received_request_string_view, Eq(plaintext_message));
+}
+
+TEST(ClientServerSessionTest, ConvertsToString) {
+  auto client_session = ClientSession::Create(TestConfig());
+  auto server_session = ServerSession::Create(TestConfig());
+
+  DoHandshake(**client_session, **server_session);
+
+  std::string plaintext_message = "Hello Server";
+
+  ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
+  absl::StatusOr<std::optional<SessionRequest>> request =
+      (*client_session)->GetOutgoingMessage();
+  ASSERT_THAT(request, IsOk());
+  ASSERT_THAT(*request, Ne(std::nullopt));
+
+  // Let Rust Bytes go out of scope before doing comparison to verify copy
+  // behavior.
+  std::string received_request_string;
+  [&]() {
+    ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
+    absl::StatusOr<std::optional<RustBytes>> received_request =
+        (*server_session)->ReadToRustBytes();
+    ASSERT_THAT(received_request, IsOk());
+    ASSERT_THAT(*received_request, Ne(std::nullopt));
+    received_request_string = std::string(**received_request);
+  }();
+
+  EXPECT_THAT(received_request_string, Eq(plaintext_message));
 }
 
 }  // namespace

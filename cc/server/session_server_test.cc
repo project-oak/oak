@@ -106,8 +106,7 @@ TEST(OakSessionServerTest, CreatedSessionCanSend) {
       client_session_ptr->ReadToRustBytes();
   EXPECT_THAT(test_send_read_back, IsOk());
   EXPECT_THAT(*test_send_read_back, Ne(std::nullopt));
-  EXPECT_THAT(static_cast<absl::string_view>(**test_send_read_back),
-              Eq(test_send_msg));
+  EXPECT_THAT(**test_send_read_back, Eq(test_send_msg));
 }
 
 TEST(OakSessionServerTest, CreatedSessionCanReceive) {

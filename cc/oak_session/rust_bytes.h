@@ -32,6 +32,12 @@ namespace oak::session {
 // This wraper class takes care to ensure that the Rust memory is freed once the
 // C++ code is finished using it.
 //
+// The type contains convenience conversions to make it easy to convert it to an
+// `absl::string_view` for use in cases where that parameter type is expected.
+//
+// If you want to take ownership of the memory, you can copy it into a
+// `std::string` using the explict `std::string` conversion operator provided.
+//
 // The type has move semantics similar to a std::unique_ptr - you can move
 // ownership around, but there can only be one owner at a time.
 class RustBytes {
@@ -63,13 +69,30 @@ class RustBytes {
     }
   }
 
-  operator absl::string_view() {
+  // Expose the underlying Rust bytes as an absl::string_view.
+  //
+  // This conversion operator allows the RustBytes type to be used, for
+  // example, as a function parameter in a position that's expected
+  // absl::string_view.
+  //
+  // No copy of the underlying data will occur.
+  operator absl::string_view() const {
     return static_cast<absl::string_view>(*ffi_rust_bytes_);
+  }
+
+  // Copy the underlying Rust bytes into a new std::string in the C++ memory
+  // space.
+  explicit operator std::string() const {
+    return std::string(ffi_rust_bytes_->data, ffi_rust_bytes_->len);
   }
 
  private:
   bindings::RustBytes* ffi_rust_bytes_;
 };
+
+inline bool operator==(const RustBytes& lhs, absl::string_view rhs) {
+  return static_cast<absl::string_view>(lhs) == rhs;
+}
 
 }  // namespace oak::session
 
