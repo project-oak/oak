@@ -31,33 +31,17 @@ use oak_dice::{
     },
     evidence::Stage0DiceData,
 };
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
-        RootLayerEvidence, TeePlatform,
-    },
-    RawDigest,
+use oak_proto_rust::oak::attestation::v1::{
+    ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
+    RootLayerEvidence, TeePlatform,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
 use prost::Message;
-use sha2::Digest;
 use zeroize::Zeroize;
 
 #[allow(deprecated)]
 use crate::ApplicationKeysAttester;
-
-pub trait MeasureDigest {
-    fn measure_digest(&self) -> RawDigest;
-}
-
-impl MeasureDigest for &[u8] {
-    fn measure_digest(&self) -> RawDigest {
-        let mut digest = sha2::Sha256::default();
-        digest.update(self);
-        let digest_bytes: [u8; 32] = digest.finalize().into();
-        RawDigest { sha2_256: digest_bytes.to_vec(), ..Default::default() }
-    }
-}
+use crate::MeasureDigest;
 
 /// Holds additional claims and the encoded event for a DICE layer.
 pub struct LayerData {

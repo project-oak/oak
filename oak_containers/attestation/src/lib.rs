@@ -34,7 +34,7 @@ use prost::Message;
 
 /// Measures the system image and returns a corresponding event log entry.
 pub fn create_system_layer_event(system_image: &[u8]) -> Event {
-    let digest = oak_attestation::dice::MeasureDigest::measure_digest(&system_image);
+    let digest = oak_attestation::MeasureDigest::measure_digest(&system_image);
     Event {
         tag: "stage1".to_string(),
         event: Some(prost_types::Any {
@@ -51,8 +51,8 @@ pub fn create_container_event(
     config_bytes: &[u8],
     instance_public_keys: &InstancePublicKeys,
 ) -> Event {
-    let container_digest = oak_attestation::dice::MeasureDigest::measure_digest(&container_bytes);
-    let config_digest = oak_attestation::dice::MeasureDigest::measure_digest(&config_bytes);
+    let container_digest = oak_attestation::MeasureDigest::measure_digest(&container_bytes);
+    let config_digest = oak_attestation::MeasureDigest::measure_digest(&config_bytes);
     Event {
         tag: "ORCHESTRATOR".to_string(),
         event: Some(prost_types::Any {
@@ -78,9 +78,8 @@ pub fn create_container_event(
 /// Measures the provided event and returns as an additional CWT claim.
 pub fn create_container_dice_layer(event: &Event) -> oak_attestation::dice::LayerData {
     let encoded_event = event.encode_to_vec();
-    let event_digest =
-        oak_attestation::dice::MeasureDigest::measure_digest(&encoded_event.as_slice());
-    oak_attestation::dice::LayerData {
+    let event_digest = oak_attestation::MeasureDigest::measure_digest(&encoded_event.as_slice());
+    oak_attestation::LayerData {
         additional_claims: vec![(
             ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
             Value::Map(vec![(

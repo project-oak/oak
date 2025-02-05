@@ -18,9 +18,10 @@
 
 extern crate alloc;
 
-use dice::LayerData;
-use oak_proto_rust::oak::attestation::v1::Evidence;
+pub use dice::LayerData;
+use oak_proto_rust::oak::{attestation::v1::Evidence, RawDigest};
 use p256::ecdsa::VerifyingKey;
+use sha2::Digest;
 
 pub mod dice;
 
@@ -45,4 +46,17 @@ pub trait ApplicationKeysAttester {
         group_kem_public_key: Option<&[u8]>,
         group_verifying_key: Option<&VerifyingKey>,
     ) -> anyhow::Result<Evidence>;
+}
+
+pub trait MeasureDigest {
+    fn measure_digest(&self) -> RawDigest;
+}
+
+impl MeasureDigest for &[u8] {
+    fn measure_digest(&self) -> RawDigest {
+        let mut digest = sha2::Sha256::default();
+        digest.update(self);
+        let digest_bytes: [u8; 32] = digest.finalize().into();
+        RawDigest { sha2_256: digest_bytes.to_vec(), ..Default::default() }
+    }
 }
