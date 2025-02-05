@@ -36,19 +36,21 @@ macro_rules! assert_no_error {
 
 #[test]
 fn test_handshake() {
-    let (client_session_ptr, server_session_ptr) = create_test_sessions();
+    let client_session_ptr = create_client_session(create_unattested_nn_session_config());
+    let server_session_ptr = create_server_session(create_unattested_nn_session_config());
 
     unsafe { do_handshake(client_session_ptr, server_session_ptr) };
 
     assert!(unsafe { client_ffi::client_is_open(client_session_ptr) });
     assert!(unsafe { server_ffi::server_is_open(server_session_ptr) });
-
-    unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
 
 #[test]
 fn test_client_encrypt_server_decrypt() {
-    let (client_session_ptr, server_session_ptr) = create_test_sessions();
+    let client_session_ptr = create_client_session(create_unattested_nn_session_config());
+    let server_session_ptr = create_server_session(create_unattested_nn_session_config());
 
     unsafe { do_handshake(client_session_ptr, server_session_ptr) };
 
@@ -77,12 +79,14 @@ fn test_client_encrypt_server_decrypt() {
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
     unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
     unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
-    unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
 
 #[test]
 fn test_server_encrypt_client_decrypt() {
-    let (client_session_ptr, server_session_ptr) = create_test_sessions();
+    let client_session_ptr = create_client_session(create_unattested_nn_session_config());
+    let server_session_ptr = create_server_session(create_unattested_nn_session_config());
     unsafe { do_handshake(client_session_ptr, server_session_ptr) };
 
     // Encrypt
@@ -110,7 +114,8 @@ fn test_server_encrypt_client_decrypt() {
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
     unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
     unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
-    unsafe { free_test_sessions(client_session_ptr, server_session_ptr) };
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
 
 unsafe fn do_handshake(
@@ -149,7 +154,7 @@ unsafe fn do_handshake(
     }
 }
 
-fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
+fn create_unattested_nn_session_config() -> *mut oak_session::config::SessionConfig {
     let session_config_builder = config_ffi::new_session_config_builder(
         config_ffi::ATTESTATION_TYPE_UNATTESTED,
         config_ffi::HANDSHAKE_TYPE_NOISE_NN,
@@ -157,22 +162,15 @@ fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
     assert_no_error!(session_config_builder.error);
     unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
 }
-fn create_test_sessions() -> (*mut ClientSession, *mut ServerSession) {
-    let client_session_ptr_result =
-        unsafe { client_ffi::new_client_session(create_test_session_config()) };
+
+fn create_client_session(config: *mut oak_session::config::SessionConfig) -> *mut ClientSession {
+    let client_session_ptr_result = unsafe { client_ffi::new_client_session(config) };
     assert_no_error!(client_session_ptr_result.error);
-    let client_session_ptr = client_session_ptr_result.result;
-    let server_session_ptr_result =
-        unsafe { server_ffi::new_server_session(create_test_session_config()) };
-    assert_no_error!(server_session_ptr_result.error);
-    let server_session_ptr = server_session_ptr_result.result;
-    (client_session_ptr, server_session_ptr)
+    client_session_ptr_result.result
 }
 
-unsafe fn free_test_sessions(
-    client_session: *mut ClientSession,
-    server_session: *mut ServerSession,
-) {
-    client_ffi::free_client_session(client_session);
-    server_ffi::free_server_session(server_session);
+fn create_server_session(config: *mut oak_session::config::SessionConfig) -> *mut ServerSession {
+    let server_session_ptr_result = unsafe { server_ffi::new_server_session(config) };
+    assert_no_error!(server_session_ptr_result.error);
+    server_session_ptr_result.result
 }
