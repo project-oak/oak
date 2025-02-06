@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"trait":["Endorser"]};
+window.SIDEBAR_ITEMS = {"struct":["SimpleEndorser"],"trait":["Endorser"]};
