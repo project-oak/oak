@@ -41,17 +41,24 @@ SessionConfig* TestConfig() {
 }
 
 void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
-  absl::StatusOr<std::optional<SessionRequest>> init =
-      client_session.GetOutgoingMessage();
-  ASSERT_THAT(init, IsOk());
-  ASSERT_THAT(*init, Ne(std::nullopt));
-  ASSERT_THAT(server_session.PutIncomingMessage(**init), IsOk());
+  while (!client_session.IsOpen() && !server_session.IsOpen()) {
+    if (!client_session.IsOpen()) {
+      absl::StatusOr<std::optional<SessionRequest>> init =
+          client_session.GetOutgoingMessage();
+      ASSERT_THAT(init, IsOk());
+      ASSERT_THAT(*init, Ne(std::nullopt));
+      ASSERT_THAT(server_session.PutIncomingMessage(**init), IsOk());
+    }
 
-  absl::StatusOr<std::optional<SessionResponse>> init_resp =
-      server_session.GetOutgoingMessage();
-  ASSERT_THAT(init_resp, IsOk());
-  ASSERT_THAT(*init_resp, Ne(std::nullopt));
-  ASSERT_THAT(client_session.PutIncomingMessage(**init_resp), IsOk());
+    if (!server_session.IsOpen()) {
+      absl::StatusOr<std::optional<SessionResponse>> init_resp =
+          server_session.GetOutgoingMessage();
+      ASSERT_THAT(init_resp, IsOk());
+      if (*init_resp != std::nullopt) {
+        ASSERT_THAT(client_session.PutIncomingMessage(**init_resp), IsOk());
+      }
+    }
+  }
 
   EXPECT_THAT(client_session.IsOpen(), Eq(true));
   EXPECT_THAT(server_session.IsOpen(), Eq(true));

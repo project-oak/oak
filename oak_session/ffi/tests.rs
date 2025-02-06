@@ -12,9 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
-use oak_session::session::{ClientSession, ServerSession};
+use oak_session::{
+    session::{ClientSession, ServerSession},
+    Session,
+};
 use oak_session_ffi_client_session as client_ffi;
 use oak_session_ffi_config as config_ffi;
 use oak_session_ffi_server_session as server_ffi;
@@ -115,27 +117,36 @@ unsafe fn do_handshake(
     client_session_ptr: *mut ClientSession,
     server_session_ptr: *mut ServerSession,
 ) {
-    // Handshake
-    let init = client_ffi::client_get_outgoing_message(client_session_ptr);
-    assert_no_error!(init.error);
-    let incoming_slice = (*init.result).as_slice();
-    let _ = SessionRequest::decode(incoming_slice).expect("couldn't decode init request");
+    while !(*client_session_ptr).is_open() && !(*server_session_ptr).is_open() {
+        if !(*client_session_ptr).is_open() {
+            let init = client_ffi::client_get_outgoing_message(client_session_ptr);
+            assert_no_error!(init.error);
+            let incoming_slice = (*init.result).as_slice();
+            let _ = SessionRequest::decode(incoming_slice).expect("couldn't decode init request");
+            let result = server_ffi::server_put_incoming_message(
+                server_session_ptr,
+                (*init.result).as_bytes_view(),
+            );
+            assert_no_error!(result);
+            unsafe { oak_session_ffi_types::free_rust_bytes(init.result) };
+        }
 
-    let result =
-        server_ffi::server_put_incoming_message(server_session_ptr, (*init.result).as_bytes_view());
-    assert_no_error!(result);
-    unsafe { oak_session_ffi_types::free_rust_bytes(init.result) };
-
-    let init_resp = server_ffi::server_get_outgoing_message(server_session_ptr);
-    assert_no_error!(init_resp.error);
-    let init_resp_slice = (*init_resp.result).as_slice();
-    let _ = SessionResponse::decode(init_resp_slice).expect("couldn't decode init response");
-    let put_result = client_ffi::client_put_incoming_message(
-        client_session_ptr,
-        (*init_resp.result).as_bytes_view(),
-    );
-    unsafe { oak_session_ffi_types::free_rust_bytes(init_resp.result) };
-    assert_no_error!(put_result);
+        if !(*server_session_ptr).is_open() {
+            let init_resp = server_ffi::server_get_outgoing_message(server_session_ptr);
+            assert_no_error!(init_resp.error);
+            if !init_resp.result.is_null() {
+                let init_resp_slice = (*init_resp.result).as_slice();
+                let _ = SessionResponse::decode(init_resp_slice)
+                    .expect("couldn't decode init response");
+                let put_result = client_ffi::client_put_incoming_message(
+                    client_session_ptr,
+                    (*init_resp.result).as_bytes_view(),
+                );
+                assert_no_error!(put_result);
+                unsafe { oak_session_ffi_types::free_rust_bytes(init_resp.result) };
+            }
+        }
+    }
 }
 
 fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
