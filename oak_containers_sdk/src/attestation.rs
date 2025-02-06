@@ -26,13 +26,15 @@ use tower::service_fn;
 
 use crate::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
+/// An Attester that obtains its Evidence by downloading it from
+/// the Orchestrator running on the same TEE on its default socket.
 #[derive(Clone)]
-pub struct InstanceAttester {
+pub struct FromOrchestratorAttester {
     endorsed_evidence: EndorsedEvidence,
 }
 
-impl InstanceAttester {
-    pub async fn create() -> anyhow::Result<Self> {
+impl FromOrchestratorAttester {
+    pub async fn from_downloading_evidence() -> anyhow::Result<Self> {
         // TODO: b/370474308 - Use a dedicated attestation gRPC client once
         // attestation is provided by a separate interface.
         let mut grpc_client: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
@@ -51,7 +53,7 @@ impl InstanceAttester {
     }
 }
 
-impl Attester for InstanceAttester {
+impl Attester for FromOrchestratorAttester {
     fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
         anyhow::bail!("evidence extension is not currently supported in Oak Containers");
     }
@@ -71,13 +73,15 @@ impl Attester for InstanceAttester {
     }
 }
 
+/// An Endorser that obtains its Endorsements by downloading them from
+/// the Orchestrator running on the same TEE on its default socket.
 #[derive(Clone)]
-pub struct InstanceEndorser {
+pub struct FromOrchestratorEndorser {
     endorsed_evidence: EndorsedEvidence,
 }
 
-impl InstanceEndorser {
-    pub async fn create() -> anyhow::Result<Self> {
+impl FromOrchestratorEndorser {
+    pub async fn from_downloading_endorsements() -> anyhow::Result<Self> {
         // TODO: b/370474308 - Use a dedicated attestation gRPC client once
         // attestation is provided by a separate interface.
         let mut grpc_client: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
@@ -96,7 +100,7 @@ impl InstanceEndorser {
     }
 }
 
-impl Endorser for InstanceEndorser {
+impl Endorser for FromOrchestratorEndorser {
     /// Retrieves the endorsements from the Orchestrator.
     fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
         // TODO: b/370474308 - Currently we receive [`EndorsedEvidence`] from the
