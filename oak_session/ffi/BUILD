@@ -52,7 +52,11 @@ rust_library(
     srcs = ["config.rs"],
     deps = [
         ":oak_session_ffi_types",
+        "//oak_attestation_types",
+        "//oak_attestation_verification_types",
+        "//oak_crypto",
         "//oak_session",
+        "@oak_crates_index//:p256",
     ],
 )
 
@@ -61,13 +65,43 @@ rust_library(
     srcs = ["types.rs"],
 )
 
+rust_library(
+    name = "oak_session_ffi_attestation",
+    srcs = ["attestation.rs"],
+    deps = [
+        ":oak_session_ffi_config",
+        ":oak_session_ffi_types",
+        "//oak_attestation_types",
+        "//oak_proto_rust",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_library(
+    name = "oak_session_ffi_testing",
+    srcs = ["testing.rs"],
+    deps = [
+        ":oak_session_ffi_config",
+        ":oak_session_ffi_types",
+        "//oak_attestation_types",
+        "//oak_attestation_verification_types",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand_core",
+    ],
+)
+
 rust_test(
     name = "tests",
     srcs = ["tests.rs"],
     deps = [
+        ":oak_session_ffi_attestation",
         ":oak_session_ffi_client_session",
         ":oak_session_ffi_config",
         ":oak_session_ffi_server_session",
+        ":oak_session_ffi_testing",
         ":oak_session_ffi_types",
         "//oak_proto_rust",
         "//oak_session",

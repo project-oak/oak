@@ -32,12 +32,18 @@ pub static ATTESTATION_TYPE_PEER_UNIDIRECTIONAL: u32 = 3;
 #[no_mangle]
 pub static ATTESTATION_TYPE_UNATTESTED: u32 = 4;
 
+use std::ffi::c_void;
+
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
     handshake::HandshakeType,
+    session_binding::SignatureBinderBuilder,
 };
-use oak_session_ffi_types::Error;
+use oak_session_ffi_types::{BytesView, Error};
+use p256::ecdsa::SigningKey;
 
 /// Create a new `SessionConfigBuilder` for use in FFI;
 #[no_mangle]
@@ -71,6 +77,79 @@ pub extern "C" fn new_session_config_builder(
     ErrorOrSessionConfigBuilder::ok(Box::into_raw(Box::new(session_config_builder)))
 }
 
+/// A wrapper around a *mut c_void that holds a pointer to a `dyn Attester`
+///
+/// Attesters that are to be provided as `oak_session` configuration items in
+/// C++ code should provide a constructor wrapper around the desired `Attester`
+/// implementation that returns the pointer wrapped in this structure.
+#[repr(C)]
+pub struct FfiAttester {
+    // Opaque dyn Attester
+    attester: *mut c_void,
+}
+
+impl FfiAttester {
+    pub fn new(attester: Box<dyn Attester>) -> Self {
+        Self { attester: Box::into_raw(Box::new(attester)) as *mut c_void }
+    }
+
+    pub fn null() -> Self {
+        Self { attester: std::ptr::null_mut() }
+    }
+
+    pub fn into_attester(self) -> Box<dyn Attester> {
+        unsafe { *Box::from_raw(self.attester as *mut _) }
+    }
+}
+
+/// A wrapper around a *mut c_void that holds a pointer to a `dyn Endorser`
+///
+/// Endorsers that are to be provided as `oak_session` configuration items in
+/// C++ code should provide a constructor wrapper around the desired `Endorser`
+/// implementation that returns the pointer wrapped in this structure.
+#[repr(C)]
+pub struct FfiEndorser {
+    // Opaque dyn Endorser
+    pub endorser: *mut c_void,
+}
+
+impl FfiEndorser {
+    pub fn new(endorser: Box<dyn Endorser>) -> Self {
+        Self { endorser: Box::into_raw(Box::new(endorser)) as *mut c_void }
+    }
+
+    pub fn null() -> Self {
+        Self { endorser: std::ptr::null_mut() }
+    }
+
+    pub fn into_endorser(self) -> Box<dyn Endorser> {
+        unsafe { *Box::from_raw(self.endorser as *mut _) }
+    }
+}
+
+/// A wrapper around a *mut c_void that holds a pointer to a `dyn
+/// AttestationVerifier`
+///
+/// AttestationVerifiers that are to be provided as `oak_session` configuration
+/// items in C++ code should provide a constructor wrapper around the desired
+/// `AttestationVerifier` implementation that returns the pointer wrapped in
+/// this structure.
+#[repr(C)]
+pub struct FfiAttestationVerifier {
+    // Opaque dyn AttestationVerifier
+    pub verifier: *mut c_void,
+}
+
+impl FfiAttestationVerifier {
+    pub fn new(verifier: Box<dyn AttestationVerifier>) -> Self {
+        Self { verifier: Box::into_raw(Box::new(verifier)) as *mut c_void }
+    }
+
+    pub fn into_verifier(self) -> Box<dyn AttestationVerifier> {
+        unsafe { *Box::from_raw(self.verifier as *mut _) }
+    }
+}
+
 /// Consumes and builds the config for the provided builder.
 /// The returned SessionConfig pointer is still owned by Rust.
 ///
@@ -88,6 +167,89 @@ pub unsafe extern "C" fn session_config_builder_build(
     // Take back ownership.
     let builder = Box::from_raw(builder);
     Box::into_raw(Box::new(builder.build()))
+}
+
+/// Call add_self_attestion on the provided builder.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * attester_id is a valid Bytes instances.
+/// * FfiAttester was obtained from a suitable source and has not been used in
+///   another call that consumes it.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_add_self_attester(
+    builder: *mut SessionConfigBuilder,
+    attester_id: BytesView,
+    ffi_attester: FfiAttester,
+) -> *mut SessionConfigBuilder {
+    let attester: Box<dyn Attester> = ffi_attester.into_attester();
+    let next_builder = Box::from_raw(builder)
+        .add_self_attester(String::from_utf8_lossy(attester_id.as_slice()).to_string(), attester);
+    Box::into_raw(Box::new(next_builder))
+}
+
+/// Call add_self_endorser on the provided builder.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * endorser_id is a valid Bytes instances.
+/// * FfiEndorser was obtained from a suitable source and has not been used in
+///   another call that consumes it.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_add_self_endorser(
+    builder: *mut SessionConfigBuilder,
+    endorser_id: BytesView,
+    ffi_endorser: FfiEndorser,
+) -> *mut SessionConfigBuilder {
+    let endorser: Box<dyn Endorser> = ffi_endorser.into_endorser();
+    let next_builder = Box::from_raw(builder)
+        .add_self_endorser(String::from_utf8_lossy(endorser_id.as_slice()).to_string(), endorser);
+    Box::into_raw(Box::new(next_builder))
+}
+
+/// Call add_peer_verifier on the provided builder.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * attester_id is a valid Bytes instances.
+/// * FfiAttestationVerifier was obtained from a suitable source and has not
+///   been used in another call that consumes it.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_add_peer_verifier(
+    builder: *mut SessionConfigBuilder,
+    attester_id: BytesView,
+    ffi_verifier: FfiAttestationVerifier,
+) -> *mut SessionConfigBuilder {
+    let verifier: Box<dyn AttestationVerifier> = ffi_verifier.into_verifier();
+    let next_builder = Box::from_raw(builder)
+        .add_peer_verifier(String::from_utf8_lossy(attester_id.as_slice()).to_string(), verifier);
+    Box::into_raw(Box::new(next_builder))
+}
+
+/// Call add_sesion_binder on the provided builder.
+///
+/// This call does not consume the SigningKey.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * attester_id is a valid BytesView instances.
+/// * binding_server_key was obtained from a suitable source and is still valid.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_add_session_binder(
+    builder: *mut SessionConfigBuilder,
+    attester_id: BytesView,
+    binding_server_key: *const SigningKey,
+) -> *mut SessionConfigBuilder {
+    let signing_key = (*binding_server_key).clone();
+    let next_builder = Box::from_raw(builder).add_session_binder(
+        String::from_utf8_lossy(attester_id.as_slice()).to_string(),
+        Box::new(SignatureBinderBuilder::default().signer(Box::new(signing_key)).build().unwrap()),
+    );
+    Box::into_raw(Box::new(next_builder))
 }
 
 #[repr(C)]

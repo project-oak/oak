@@ -31,11 +31,16 @@ pub trait Endorser: Send + Sync {
 /// A SimpleEndorser simply quotes the evidence that it is built with.
 // #[derive(Clone)]
 pub struct SimpleEndorser {
-    endoresements: Endorsements,
+    endorsements: Endorsements,
 }
 
+impl SimpleEndorser {
+    pub fn new(endorsements: Endorsements) -> Self {
+        Self { endorsements }
+    }
+}
 impl Endorser for SimpleEndorser {
     fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
-        Ok(self.endoresements.clone())
+        Ok(self.endorsements.clone())
     }
 }

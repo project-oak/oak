@@ -57,6 +57,27 @@ class ServerSession;
 // the corresponding Rust struct in the function calls.
 class ClientSession;
 
+// An opaque Rust Attestor
+// Pointers to this incomplete type are used to reference
+// the corresponding Rust struct in the function calls.
+class FfiAttester {
+  void* attester;
+};
+
+// An opaque Rust Endorser
+// Pointers to this incomplete type are used to reference
+// the corresponding Rust struct in the function calls.
+class FfiEndorser {
+  void* endorser;
+};
+
+// An opaque Rust Attestation Verifier
+// Pointers to this incomplete type are used to reference
+// the corresponding Rust struct in the function calls.
+class FfiAttestationVerifier {
+  void* verifier;
+};
+
 // A struct holding a sequence of Bytes allocated in Rust.
 // Corresponds to RustBytes struct in oak_session/ffi/types.rs
 //
@@ -117,11 +138,45 @@ struct ErrorOrSessionConfigBuilder {
   Error* error;
 };
 
+// Corresponds to ErrorOrFfiAttester struct in
+// oak_session/ffi/attestation.rs
+struct ErrorOrFfiAttester {
+  FfiAttester result;
+  Error* error;
+};
+
+// Corresponds to ErrorOrFfiEndorser struct in
+// oak_session/ffi/attestation.rs
+struct ErrorOrFfiEndorser {
+  FfiEndorser result;
+  Error* error;
+};
+
+struct SigningKey;
+
 extern "C" {
 
 // Corresponds to functions in oak_session/ffi/config.rs
 extern ErrorOrSessionConfigBuilder new_session_config_builder(uint32_t,
                                                               uint32_t);
+extern SessionConfigBuilder* session_config_builder_add_self_attester(
+    SessionConfigBuilder*, BytesView, FfiAttester);
+extern SessionConfigBuilder* session_config_builder_add_self_endorser(
+    SessionConfigBuilder*, BytesView, FfiEndorser);
+extern SessionConfigBuilder* session_config_builder_add_peer_verifier(
+    SessionConfigBuilder*, BytesView, FfiAttestationVerifier);
+extern SessionConfigBuilder* session_config_builder_add_session_binder(
+    SessionConfigBuilder*, BytesView, SigningKey*);
+extern RustBytes new_fake_evidence(BytesView, BytesView);
+extern ErrorOrFfiAttester new_simple_attester(BytesView);
+extern RustBytes new_fake_endorsements(BytesView);
+extern ErrorOrFfiEndorser new_simple_endorser(BytesView);
+extern FfiAttestationVerifier new_fake_attestation_verifier(BytesView,
+                                                            BytesView);
+extern SigningKey* new_random_signing_key();
+extern RustBytes signing_key_verifying_key_bytes(SigningKey*);
+extern void free_signing_key(SigningKey*);
+
 extern SessionConfig* session_config_builder_build(SessionConfigBuilder*);
 
 // Corresponds to functions in oak_session/ffi/client_session.rs
@@ -144,6 +199,7 @@ extern void free_server_session(ServerSession*);
 
 // Corresponds to functions in oak_session/ffi/types.rs
 extern void free_rust_bytes(RustBytes*);
+extern void free_rust_bytes_contents(RustBytes);
 extern void free_error(Error*);
 }
 

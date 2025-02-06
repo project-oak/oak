@@ -33,9 +33,11 @@ cc_library(
     srcs = ["oak_session_bindings.cc"],
     hdrs = ["oak_session_bindings.h"],
     deps = [
+        "//oak_session/ffi:oak_session_ffi_attestation",
         "//oak_session/ffi:oak_session_ffi_client_session",
         "//oak_session/ffi:oak_session_ffi_config",
         "//oak_session/ffi:oak_session_ffi_server_session",
+        "//oak_session/ffi:oak_session_ffi_testing",
         "//oak_session/ffi:oak_session_ffi_types",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:string_view",

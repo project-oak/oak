@@ -17,10 +17,19 @@ use oak_session::{
     session::{ClientSession, ServerSession},
     Session,
 };
+use oak_session_ffi_attestation::{new_simple_attester, new_simple_endorser};
 use oak_session_ffi_client_session as client_ffi;
-use oak_session_ffi_config as config_ffi;
+use oak_session_ffi_config::{
+    self as config_ffi, session_config_builder_add_peer_verifier,
+    session_config_builder_add_self_attester, session_config_builder_add_self_endorser,
+    session_config_builder_add_session_binder,
+};
 use oak_session_ffi_server_session as server_ffi;
-use oak_session_ffi_types::BytesView;
+use oak_session_ffi_testing::{
+    free_signing_key, new_fake_attestation_verifier, new_fake_endorsements, new_fake_evidence,
+    new_random_signing_key, signing_key_verifying_key_bytes,
+};
+use oak_session_ffi_types::{free_rust_bytes_contents, BytesView};
 use prost::Message;
 
 macro_rules! assert_no_error {
@@ -118,6 +127,77 @@ fn test_server_encrypt_client_decrypt() {
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
 
+#[test]
+fn test_client_encrypt_server_decrypt_with_attestation() {
+    let client_session_ptr = create_client_session(create_attested_nn_client_session_config());
+    let server_session_ptr = create_server_session(create_attested_nn_server_session_config());
+
+    unsafe { do_handshake(client_session_ptr, server_session_ptr) };
+
+    // Encrypt
+    let message = b"Hello FFI World Client To Server";
+    let plaintext_message_bytes = message.to_vec();
+    let message_bytes = BytesView::new_from_slice(plaintext_message_bytes.as_slice());
+    let write_result = unsafe { client_ffi::client_write(client_session_ptr, message_bytes) };
+    assert_eq!(write_result, std::ptr::null_mut());
+    let encrypted_result = unsafe { client_ffi::client_get_outgoing_message(client_session_ptr) };
+    let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
+    let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
+    assert_eq!(encrypted_result.error, std::ptr::null_mut());
+
+    // Decrypt
+    let put_result = unsafe {
+        server_ffi::server_put_incoming_message(
+            server_session_ptr,
+            (*encrypted_result.result).as_bytes_view(),
+        )
+    };
+    assert_eq!(put_result, std::ptr::null_mut());
+    let decrypted_result = unsafe { server_ffi::server_read(server_session_ptr) };
+    assert_eq!(decrypted_result.error, std::ptr::null_mut());
+
+    assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
+    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
+}
+
+#[test]
+fn test_server_encrypt_client_decrypt_with_attestation() {
+    let client_session_ptr = create_client_session(create_attested_nn_client_session_config());
+    let server_session_ptr = create_server_session(create_attested_nn_server_session_config());
+    unsafe { do_handshake(client_session_ptr, server_session_ptr) };
+
+    // Encrypt
+    let message = b"Hello FFI World Server To Client";
+    let plaintext_message_bytes = message.to_vec();
+    let message_bytes = BytesView::new_from_slice(plaintext_message_bytes.as_slice());
+    let write_result = unsafe { server_ffi::server_write(server_session_ptr, message_bytes) };
+    assert_no_error!(write_result);
+    let encrypted_result = unsafe { server_ffi::server_get_outgoing_message(server_session_ptr) };
+    let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
+    let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
+    assert_no_error!(encrypted_result.error);
+
+    // Decrypt
+    let put_result = unsafe {
+        client_ffi::client_put_incoming_message(
+            client_session_ptr,
+            (*encrypted_result.result).as_bytes_view(),
+        )
+    };
+    assert_no_error!(put_result);
+    let decrypted_result = unsafe { client_ffi::client_read(client_session_ptr) };
+    assert_no_error!(decrypted_result.error);
+
+    assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
+    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
+    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
+}
+
 unsafe fn do_handshake(
     client_session_ptr: *mut ClientSession,
     server_session_ptr: *mut ServerSession,
@@ -154,6 +234,8 @@ unsafe fn do_handshake(
     }
 }
 
+const FAKE_ATTESTER_ID: &[u8] = b"fake_attester";
+
 fn create_unattested_nn_session_config() -> *mut oak_session::config::SessionConfig {
     let session_config_builder = config_ffi::new_session_config_builder(
         config_ffi::ATTESTATION_TYPE_UNATTESTED,
@@ -161,6 +243,88 @@ fn create_unattested_nn_session_config() -> *mut oak_session::config::SessionCon
     );
     assert_no_error!(session_config_builder.error);
     unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
+}
+
+fn create_attested_nn_server_session_config() -> *mut oak_session::config::SessionConfig {
+    let session_config_builder_result = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_SELF_UNIDIRECTIONAL,
+        config_ffi::HANDSHAKE_TYPE_NOISE_NN,
+    );
+    assert_eq!(session_config_builder_result.error, std::ptr::null_mut());
+    let mut session_config_builder = session_config_builder_result.result;
+
+    let signing_key = new_random_signing_key();
+    let verifying_key_bytes = unsafe { signing_key_verifying_key_bytes(signing_key) };
+    let fake_evidence = unsafe {
+        new_fake_evidence(
+            verifying_key_bytes.as_bytes_view(),
+            BytesView::new_from_slice(b"fake event"),
+        )
+    };
+    unsafe { free_rust_bytes_contents(verifying_key_bytes) };
+
+    let attester_result = unsafe { new_simple_attester(fake_evidence.as_bytes_view()) };
+    assert_no_error!(attester_result.error);
+
+    unsafe { free_rust_bytes_contents(fake_evidence) };
+
+    session_config_builder = unsafe {
+        session_config_builder_add_self_attester(
+            session_config_builder,
+            BytesView::new_from_slice(FAKE_ATTESTER_ID),
+            attester_result.result,
+        )
+    };
+    let fake_endorsements =
+        unsafe { new_fake_endorsements(BytesView::new_from_slice(b"fake platform")) };
+    let endorser_result = unsafe { new_simple_endorser(fake_endorsements.as_bytes_view()) };
+    assert_no_error!(endorser_result.error);
+
+    unsafe { free_rust_bytes_contents(fake_endorsements) };
+
+    session_config_builder = unsafe {
+        session_config_builder_add_self_endorser(
+            session_config_builder,
+            BytesView::new_from_slice(FAKE_ATTESTER_ID),
+            endorser_result.result,
+        )
+    };
+
+    session_config_builder = unsafe {
+        session_config_builder_add_session_binder(
+            session_config_builder,
+            BytesView::new_from_slice(FAKE_ATTESTER_ID),
+            signing_key,
+        )
+    };
+    unsafe { free_signing_key(signing_key) };
+    unsafe { config_ffi::session_config_builder_build(session_config_builder) }
+}
+
+fn create_attested_nn_client_session_config() -> *mut oak_session::config::SessionConfig {
+    let session_config_builder_result = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_PEER_UNIDIRECTIONAL,
+        config_ffi::HANDSHAKE_TYPE_NOISE_NN,
+    );
+    assert_eq!(session_config_builder_result.error, std::ptr::null_mut());
+    let mut session_config_builder = session_config_builder_result.result;
+
+    let fake_attestation_verifier = unsafe {
+        new_fake_attestation_verifier(
+            BytesView::new_from_slice(b"fake event"),
+            BytesView::new_from_slice(b"fake platform"),
+        )
+    };
+
+    session_config_builder = unsafe {
+        session_config_builder_add_peer_verifier(
+            session_config_builder,
+            BytesView::new_from_slice(FAKE_ATTESTER_ID),
+            fake_attestation_verifier,
+        )
+    };
+
+    unsafe { config_ffi::session_config_builder_build(session_config_builder) }
 }
 
 fn create_client_session(config: *mut oak_session::config::SessionConfig) -> *mut ClientSession {

@@ -167,7 +167,8 @@ pub unsafe extern "C" fn free_rust_bytes(bytes: *const RustBytes) {
 ///  * The provided [`Bytes`] is a valid, still allocated instance, containing
 ///    valid, allocated bytes. It should not be used anymore after calling this
 ///    function.
-pub unsafe fn free_rust_bytes_contents(bytes: RustBytes) {
+#[no_mangle]
+pub unsafe extern "C" fn free_rust_bytes_contents(bytes: RustBytes) {
     drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
 }
 

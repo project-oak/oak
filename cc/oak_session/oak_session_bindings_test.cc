@@ -71,7 +71,7 @@ void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   ASSERT_TRUE(client_is_open(client_session));
 }
 
-SessionConfig* TestConfig() {
+SessionConfig* TestConfigUnattestedNN() {
   auto result = new_session_config_builder(ATTESTATION_TYPE_UNATTESTED,
                                            HANDSHAKE_TYPE_NOISE_NN);
   if (result.error != nullptr) {
@@ -82,11 +82,76 @@ SessionConfig* TestConfig() {
   return session_config_builder_build(result.result);
 }
 
+SessionConfig* TestConfigAttestedNNServer() {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_SELF_UNIDIRECTIONAL,
+                                           HANDSHAKE_TYPE_NOISE_NN);
+
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << static_cast<absl::string_view>(result.error->message);
+  }
+  auto session_config_builder = result.result;
+
+  std::string attester_id = "fake_attester";
+  std::string fake_event = "fake event";
+  std::string fake_platform = "fake platform";
+  auto signing_key = new_random_signing_key();
+  auto verifying_bytes = signing_key_verifying_key_bytes(signing_key);
+  auto fake_evidence =
+      new_fake_evidence(BytesView(verifying_bytes), BytesView(fake_event));
+  free_rust_bytes_contents(verifying_bytes);
+  auto attester = new_simple_attester(BytesView(fake_evidence));
+  free_rust_bytes_contents(fake_evidence);
+  if (attester.error != nullptr) {
+    LOG(FATAL) << "Failed to create simple attester"
+               << static_cast<absl::string_view>(attester.error->message);
+  }
+  session_config_builder = session_config_builder_add_self_attester(
+      session_config_builder, BytesView(attester_id), attester.result);
+  auto fake_endorsements = new_fake_endorsements(BytesView(fake_platform));
+  auto endorser_result = new_simple_endorser(BytesView(fake_endorsements));
+  free_rust_bytes_contents(fake_endorsements);
+  if (endorser_result.error != nullptr) {
+    LOG(FATAL) << "Failed to create simple endorser"
+               << static_cast<absl::string_view>(
+                      endorser_result.error->message);
+  }
+  session_config_builder = session_config_builder_add_self_endorser(
+      session_config_builder, BytesView(attester_id), endorser_result.result);
+  session_config_builder = session_config_builder_add_session_binder(
+      session_config_builder, BytesView(attester_id), signing_key);
+  free_signing_key(signing_key);
+  return session_config_builder_build(session_config_builder);
+}
+
+SessionConfig* TestConfigAttestedNNClient() {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_PEER_UNIDIRECTIONAL,
+                                           HANDSHAKE_TYPE_NOISE_NN);
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << static_cast<absl::string_view>(result.error->message);
+  }
+  auto session_config_builder = result.result;
+
+  std::string attester_id = "fake_attester";
+  std::string fake_event = "fake event";
+  std::string fake_platform = "fake platform";
+  auto verifier = new_fake_attestation_verifier(BytesView(fake_event),
+                                                BytesView(fake_platform));
+
+  session_config_builder = session_config_builder_add_peer_verifier(
+      session_config_builder, BytesView(attester_id), verifier);
+
+  return session_config_builder_build(session_config_builder);
+}
+
 TEST(OakSessionBindingsTest, TestHandshake) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -97,10 +162,12 @@ TEST(OakSessionBindingsTest, TestHandshake) {
 }
 
 TEST(OakSessionBindingsTest, AcceptEmptyOutgoingMessage) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -119,10 +186,12 @@ TEST(OakSessionBindingsTest, AcceptEmptyOutgoingMessage) {
 }
 
 TEST(OakSessionBindingsTest, AcceptEmptyRead) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -140,11 +209,13 @@ TEST(OakSessionBindingsTest, AcceptEmptyRead) {
   free_client_session(client_session);
 }
 
-TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+TEST(OakSessionBindingsTest, TestClientEncryptServerDecryptUnattested) {
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -178,11 +249,53 @@ TEST(OakSessionBindingsTest, TestClientEncryptServerDecrypt) {
   free_client_session(client_session);
 }
 
-TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+TEST(OakSessionBindingsTest, TestClientEncryptServerDecryptAttested) {
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigAttestedNNServer());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigAttestedNNClient());
+  ASSERT_THAT(client_session_result, IsResult());
+  ClientSession* client_session = client_session_result.result;
+
+  DoHandshake(server_session, client_session);
+
+  v1::PlaintextMessage plaintext_message_out;
+  plaintext_message_out.set_plaintext("Hello Client To Server");
+  ASSERT_THAT(
+      client_write(client_session,
+                   BytesView(plaintext_message_out.SerializeAsString())),
+      NoError());
+
+  ErrorOrRustBytes client_out = client_get_outgoing_message(client_session);
+  ASSERT_THAT(client_out, IsResult());
+
+  ASSERT_THAT(server_put_incoming_message(server_session,
+                                          BytesView(*client_out.result)),
+              NoError());
+  free_rust_bytes(client_out.result);
+
+  ErrorOrRustBytes server_in = server_read(server_session);
+  ASSERT_THAT(server_in, IsResult());
+
+  v1::PlaintextMessage plaintext_message_in;
+  ASSERT_TRUE(plaintext_message_in.ParseFromString(*server_in.result));
+  EXPECT_THAT(plaintext_message_in.plaintext(),
+              Eq(plaintext_message_out.plaintext()));
+  free_rust_bytes(server_in.result);
+
+  free_server_session(server_session);
+  free_client_session(client_session);
+}
+
+TEST(OakSessionBindingsTest, TestServerEncryptClientDecryptUnattested) {
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
+  ASSERT_THAT(server_session_result, IsResult());
+  ServerSession* server_session = server_session_result.result;
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -217,10 +330,12 @@ TEST(OakSessionBindingsTest, TestServerEncryptClientDecrypt) {
 }
 
 TEST(OakSessionBindingsTest, ErrorsAreReturned) {
-  ErrorOrServerSession server_session_result = new_server_session(TestConfig());
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
-  ErrorOrClientSession client_session_result = new_client_session(TestConfig());
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
