@@ -105,6 +105,8 @@ proto_library(
     deps = [
         ":tcb_version_proto",
         "//proto:digest_proto",
+        "@com_google_protobuf//:duration_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
 )
 

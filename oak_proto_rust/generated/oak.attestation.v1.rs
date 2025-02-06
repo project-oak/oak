@@ -291,6 +291,19 @@ pub struct VerifyingKey {
     #[prost(bytes = "vec", tag = "3")]
     pub raw: ::prost::alloc::vec::Vec<u8>,
 }
+/// Verifies a single UTC timestamp.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct TimestampReferenceValue {
+    /// Verification passes whenever the timestamp under verification is not before
+    /// the specified timestamp.
+    #[prost(message, optional, tag = "1")]
+    pub not_before_absolute: ::core::option::Option<::prost_types::Timestamp>,
+    /// Verification passes whenever the timestamp under verification is not before
+    /// the current time to which the specified (signed) duration is added.
+    #[prost(message, optional, tag = "2")]
+    pub not_before_relative: ::core::option::Option<::prost_types::Duration>,
+}
 /// Set of keys currently needed for verification. Will contain one element
 /// most of the time, but there may be more during key rotation/revocation.
 /// To revoke a key, simply add a new one, allow a grace period, and then
@@ -300,6 +313,13 @@ pub struct VerifyingKey {
 pub struct VerifyingKeySet {
     #[prost(message, repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<VerifyingKey>,
+    /// If the signature covers a timestamp, it can be verified here. Currently
+    /// this only supports verifying the Rekor log integration timestamp covered by
+    /// the Rekor signature. If this is specified for any other type of signature,
+    /// then verification will fail. If not specified then no timestamp
+    /// verification will be performed at all.
+    #[prost(message, optional, tag = "2")]
+    pub signed_timestamp: ::core::option::Option<TimestampReferenceValue>,
 }
 /// Reference values that control how the endorsement is verified.
 #[allow(clippy::derive_partial_eq_without_eq)]

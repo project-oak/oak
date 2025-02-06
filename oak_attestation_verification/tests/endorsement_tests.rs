@@ -86,11 +86,11 @@ fn load_testdata() -> TestData {
             rekor_log_entry: log_entry.clone(),
         },
         ref_value: EndorsementReferenceValue {
-            endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec() }),
+            endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
             required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
             rekor: Some(VerifyingKeyReferenceValue {
                 r#type: Some(oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Verify(
-                    VerifyingKeySet { keys: [rekor_key].to_vec() },
+                    VerifyingKeySet { keys: [rekor_key].to_vec(), ..Default::default() },
                 )),
             }),
             ..Default::default()

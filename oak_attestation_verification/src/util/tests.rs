@@ -20,11 +20,13 @@ use alloc::{borrow::ToOwned, string::String, vec::Vec};
 use std::fs;
 
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::HexDigest;
+use oak_proto_rust::oak::{attestation::v1::TimestampReferenceValue, HexDigest};
+use prost_types::{Duration, Timestamp};
+use time::OffsetDateTime;
 
 use crate::util::{
     convert_pem_to_raw, convert_raw_to_pem, convert_raw_to_verifying_key, equal_keys,
-    get_hex_digest_match, verify_signature_ecdsa, MatchResult,
+    get_hex_digest_match, verify_signature_ecdsa, verify_timestamp, MatchResult,
 };
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
@@ -150,4 +152,89 @@ fn test_contradictory() {
     let b = HexDigest { sha1: HASH4.to_owned(), sha2_256: HASH1.to_owned(), ..Default::default() };
     let result = get_hex_digest_match(&a, &b);
     assert!(result == MatchResult::Contradictory);
+}
+
+#[test]
+fn test_verify_timestamp_valid_both_absolute_and_relative() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_599_999_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_absolute: Some(Timestamp { seconds: 1_500_000_000, nanos: 0 }),
+        not_before_relative: Some(Duration { seconds: -2_000_000, nanos: 0 }),
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_ok());
+}
+
+#[test]
+fn test_verify_timestamp_valid_only_absolute() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_599_999_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_absolute: Some(Timestamp { seconds: 1_500_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_ok());
+}
+
+#[test]
+fn test_verify_timestamp_valid_only_relative() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_599_999_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_relative: Some(Duration { seconds: -2_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_ok());
+}
+
+#[test]
+fn test_verify_timestamp_valid_no_restrictions() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_599_999_000).unwrap();
+    let reference_value = TimestampReferenceValue::default();
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_ok());
+}
+
+#[test]
+fn test_verify_timestamp_invalid_absolute() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_400_000_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_absolute: Some(Timestamp { seconds: 1_500_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_err());
+}
+
+#[test]
+fn test_verify_timestamp_invalid_relative() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp = OffsetDateTime::from_unix_timestamp(1_500_000_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_relative: Some(Duration { seconds: -1_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp, &reference_value).is_err());
+}
+
+#[test]
+fn test_verify_timestamp_edge_case_absolute() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp_valid_abs = OffsetDateTime::from_unix_timestamp(1_500_000_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_absolute: Some(Timestamp { seconds: 1_500_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp_valid_abs, &reference_value).is_ok());
+}
+
+#[test]
+fn test_verify_timestamp_edge_case_relative() {
+    let now_utc_millis = 1_600_000_000_000;
+    let timestamp_valid_rel = OffsetDateTime::from_unix_timestamp(1_599_000_000).unwrap();
+    let reference_value = TimestampReferenceValue {
+        not_before_relative: Some(Duration { seconds: -1_000_000, nanos: 0 }),
+        ..Default::default()
+    };
+    assert!(verify_timestamp(now_utc_millis, &timestamp_valid_rel, &reference_value).is_ok());
 }

@@ -17,7 +17,7 @@
 use alloc::{string::String, vec, vec::Vec};
 use core::cmp::Ordering;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -28,7 +28,8 @@ use oak_proto_rust::oak::{
         KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
         OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
-        SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
+        SystemLayerReferenceValues, TextReferenceValue, TimestampReferenceValue, Validity,
+        VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
@@ -36,7 +37,7 @@ use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
 use prost_types::Any;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use time::OffsetDateTime;
+use time::{Duration, OffsetDateTime};
 
 use crate::endorsement;
 
@@ -115,6 +116,45 @@ pub fn verify_signature_ecdsa(
 
     key.verify(contents, &sig)
         .map_err(|error| anyhow::anyhow!("couldn't verify signature: {}", error))
+}
+
+/// Verifies the given timestamp is valid based on the current time and the
+/// TimestampReferenceValue.
+pub fn verify_timestamp(
+    now_utc_millis: i64,
+    timestamp: &OffsetDateTime,
+    reference_value: &TimestampReferenceValue,
+) -> anyhow::Result<()> {
+    // if not_before_absolute is set, check that the timestamp is not before that
+    // time.
+    if let Some(not_before_absolute) = &reference_value.not_before_absolute {
+        let not_before_absolute_time = OffsetDateTime::UNIX_EPOCH
+            + Duration::new(not_before_absolute.seconds, not_before_absolute.nanos);
+        if *timestamp < not_before_absolute_time {
+            bail!(
+                "Timestamp is too early: timestamp = {:?}, must not be before = {:?}",
+                *timestamp,
+                not_before_absolute_time
+            );
+        }
+    }
+
+    // if not_before_relative is set, check that the given timestamp is after or
+    // equal to the current time plus that (signed) duration.
+    if let Some(not_before_relative) = &reference_value.not_before_relative {
+        let offset = Duration::new(not_before_relative.seconds, not_before_relative.nanos);
+        let current_time = OffsetDateTime::UNIX_EPOCH + Duration::milliseconds(now_utc_millis);
+        if *timestamp < current_time + offset {
+            bail!(
+                "Timestamp is out of range: timestamp = {:?}, range [{:?}, {:?}]",
+                *timestamp,
+                current_time + offset,
+                current_time
+            );
+        }
+    }
+
+    Ok(())
 }
 
 pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {

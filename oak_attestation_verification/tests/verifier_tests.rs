@@ -280,11 +280,11 @@ fn create_stage1_reference_value() -> BinaryReferenceValue {
 
     BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Endorsement(EndorsementReferenceValue {
-            endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec() }),
+            endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
             required_claims: Some(ClaimReferenceValue { claim_types }),
             rekor: Some(VerifyingKeyReferenceValue {
                 r#type: Some(oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Verify(
-                    VerifyingKeySet { keys: [rekor_key].to_vec() },
+                    VerifyingKeySet { keys: [rekor_key].to_vec(), ..Default::default() },
                 ))
             }),
             ..Default::default()

@@ -19,14 +19,15 @@
 
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
+use time::OffsetDateTime;
 
-use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa};
+use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa, verify_timestamp};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -186,9 +187,17 @@ pub fn verify_rekor_log_entry(
     log_entry: &[u8],
     rekor_key_set: &VerifyingKeySet,
     serialized_endorsement: &[u8],
+    now_utc_millis: i64,
 ) -> anyhow::Result<()> {
     if !rekor_key_set.keys.iter().any(|k| verify_rekor_signature(log_entry, &k.raw).is_ok()) {
         anyhow::bail!("could not verify rekor signature");
+    }
+
+    // If the TimestampReferenceValues field is set, we need to validate the time
+    // the Rekor log was integrated.
+    if let Some(signed_timestamp) = &rekor_key_set.signed_timestamp {
+        let integrated_timestamp = get_rekor_log_entry_integrated_time(log_entry)?;
+        verify_timestamp(now_utc_millis, &integrated_timestamp, signed_timestamp)?;
     }
 
     let body = get_rekor_log_entry_body(log_entry)?;
@@ -228,6 +237,17 @@ pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
 
     serde_json::from_slice(&body_bytes)
         .map_err(|error| anyhow::anyhow!("couldn't parse bytes into a Body object: {}", error))
+}
+
+fn get_rekor_log_entry_integrated_time(log_entry: &[u8]) -> anyhow::Result<OffsetDateTime> {
+    let parsed: BTreeMap<String, LogEntry> =
+        serde_json::from_slice(log_entry).map_err(|error| {
+            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
+        })?;
+    let entry = parsed.values().next().context("no entry in the map")?;
+    let unix_timestamp: i64 = entry.integrated_time.try_into().unwrap();
+
+    OffsetDateTime::from_unix_timestamp(unix_timestamp).map_err(|e| anyhow!(e))
 }
 
 /// Parses a blob into a Rekor log entry and verifies the signature in

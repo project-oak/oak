@@ -28,6 +28,7 @@ rust_library(
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:serde_yaml",

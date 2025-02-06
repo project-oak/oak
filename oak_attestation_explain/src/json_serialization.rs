@@ -43,6 +43,7 @@ use oak_proto_rust::oak::{
     },
     RawDigest,
 };
+use prost_types::{Duration, Timestamp};
 use serde_json::json;
 
 macro_rules! json {
@@ -385,13 +386,61 @@ fn serialize_verifying_key(instance: &VerifyingKey) -> serde_json::Value {
     })
 }
 
+// Function to serialize TimestampReferenceValue
+fn serialize_timestamp_reference_value(
+    timestamp_ref: &TimestampReferenceValue,
+) -> serde_json::Value {
+    let TimestampReferenceValue { not_before_absolute, not_before_relative } = timestamp_ref;
+
+    let mut result = json!({});
+
+    if let Some(absolute) = not_before_absolute {
+        result["not_before_absolute"] = serialize_timestamp_to_millis(absolute);
+    }
+
+    if let Some(relative) = not_before_relative {
+        result["not_before_relative"] = serialize_duration_to_millis(relative);
+    }
+    result
+}
+
+// Helper function to serialize google.protobuf.Timestamp to milliseconds
+fn serialize_timestamp_to_millis(timestamp: &Timestamp) -> serde_json::Value {
+    let seconds = timestamp.seconds;
+    let nanos = timestamp.nanos;
+
+    // Convert to milliseconds (i64)
+    let millis = seconds * 1000 + (nanos / 1_000_000) as i64;
+    json!(millis)
+}
+
+// Helper function to serialize google.protobuf.Duration to milliseconds
+fn serialize_duration_to_millis(duration: &Duration) -> serde_json::Value {
+    let seconds = duration.seconds;
+    let nanos = duration.nanos;
+
+    // Convert to milliseconds (i64).  Handle negative durations correctly.
+    let millis = seconds * 1000 + (nanos / 1_000_000) as i64;
+    json!(millis)
+}
+
 fn serialize_verifying_key_set(instance: &VerifyingKeySet) -> serde_json::Value {
+    let mut result = json!({});
+
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let VerifyingKeySet { keys } = instance;
-    json!(keys.iter().map(serialize_verifying_key).collect::<Vec<serde_json::Value>>())
+    let VerifyingKeySet { keys, signed_timestamp } = instance;
+
+    result["keys"] =
+        json!(keys.iter().map(serialize_verifying_key).collect::<Vec<serde_json::Value>>());
+
+    if let Some(timestamp_ref) = signed_timestamp {
+        result["signed_timestamp"] = serialize_timestamp_reference_value(timestamp_ref);
+    }
+
+    result
 }
 
 fn serialize_verifying_key_reference_value(

@@ -198,7 +198,7 @@ pub fn verify_endorsement(
             if log_entry.is_empty() {
                 anyhow::bail!("log entry unavailable but verification was requested");
             }
-            verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized)
+            verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized, now_utc_millis)
                 .context("verifying rekor log entry")?;
             verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)?;
             Ok(statement)

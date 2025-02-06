@@ -19,6 +19,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/digest.proto";
 
@@ -51,12 +53,30 @@ message VerifyingKey {
   bytes raw = 3;
 }
 
+// Verifies a single UTC timestamp.
+message TimestampReferenceValue {
+  // Verification passes whenever the timestamp under verification is not before
+  // the specified timestamp.
+  google.protobuf.Timestamp not_before_absolute = 1;
+
+  // Verification passes whenever the timestamp under verification is not before
+  // the current time to which the specified (signed) duration is added.
+  google.protobuf.Duration not_before_relative = 2;
+}
+
 // Set of keys currently needed for verification. Will contain one element
 // most of the time, but there may be more during key rotation/revocation.
 // To revoke a key, simply add a new one, allow a grace period, and then
 // don’t pass the old key here.
 message VerifyingKeySet {
   repeated VerifyingKey keys = 1;
+
+  // If the signature covers a timestamp, it can be verified here. Currently
+  // this only supports verifying the Rekor log integration timestamp covered by
+  // the Rekor signature. If this is specified for any other type of signature,
+  // then verification will fail. If not specified then no timestamp
+  // verification will be performed at all.
+  TimestampReferenceValue signed_timestamp = 2;
 }
 
 // Reference values that control how the endorsement is verified.
