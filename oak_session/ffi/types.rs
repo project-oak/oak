@@ -98,6 +98,10 @@ impl Error {
     pub fn new_raw(message: impl AsRef<str>) -> *mut Error {
         Box::into_raw(Box::new(Error::new(message)))
     }
+
+    pub fn message(&self) -> &RustBytes {
+        &self.message
+    }
 }
 
 /// A type that will contain *either* a result (RustBytes) type, or an error

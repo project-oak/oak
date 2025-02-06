@@ -21,6 +21,17 @@ use oak_session_ffi_server_session as server_ffi;
 use oak_session_ffi_types::BytesView;
 use prost::Message;
 
+macro_rules! assert_no_error {
+    ($error_ptr:expr) => {
+        assert_eq!(
+            $error_ptr,
+            std::ptr::null(),
+            "ERR: {}",
+            String::from_utf8_lossy(unsafe { (*$error_ptr).message().as_slice() })
+        );
+    };
+}
+
 #[test]
 fn test_handshake() {
     let (client_session_ptr, server_session_ptr) = create_test_sessions();
@@ -44,11 +55,11 @@ fn test_client_encrypt_server_decrypt() {
     let plaintext_message_bytes = message.to_vec();
     let message_bytes = BytesView::new_from_slice(plaintext_message_bytes.as_slice());
     let write_result = unsafe { client_ffi::client_write(client_session_ptr, message_bytes) };
-    assert_eq!(write_result, std::ptr::null_mut());
+    assert_no_error!(write_result);
     let encrypted_result = unsafe { client_ffi::client_get_outgoing_message(client_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
     let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
-    assert_eq!(encrypted_result.error, std::ptr::null_mut());
+    assert_no_error!(encrypted_result.error);
 
     // Decrypt
     let put_result = unsafe {
@@ -57,9 +68,9 @@ fn test_client_encrypt_server_decrypt() {
             (*encrypted_result.result).as_bytes_view(),
         )
     };
-    assert_eq!(put_result, std::ptr::null_mut());
+    assert_no_error!(put_result);
     let decrypted_result = unsafe { server_ffi::server_read(server_session_ptr) };
-    assert_eq!(decrypted_result.error, std::ptr::null_mut());
+    assert_no_error!(decrypted_result.error);
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
     unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
@@ -77,11 +88,11 @@ fn test_server_encrypt_client_decrypt() {
     let plaintext_message_bytes = message.to_vec();
     let message_bytes = BytesView::new_from_slice(plaintext_message_bytes.as_slice());
     let write_result = unsafe { server_ffi::server_write(server_session_ptr, message_bytes) };
-    assert_eq!(write_result, std::ptr::null_mut());
+    assert_no_error!(write_result);
     let encrypted_result = unsafe { server_ffi::server_get_outgoing_message(server_session_ptr) };
     let encrypted_result_slice = unsafe { (*encrypted_result.result).as_slice() };
     let _ = SessionRequest::decode(encrypted_result_slice).expect("couldn't decode init request");
-    assert_eq!(encrypted_result.error, std::ptr::null_mut());
+    assert_no_error!(encrypted_result.error);
 
     // Decrypt
     let put_result = unsafe {
@@ -90,9 +101,9 @@ fn test_server_encrypt_client_decrypt() {
             (*encrypted_result.result).as_bytes_view(),
         )
     };
-    assert_eq!(put_result, std::ptr::null_mut());
+    assert_no_error!(put_result);
     let decrypted_result = unsafe { client_ffi::client_read(client_session_ptr) };
-    assert_eq!(decrypted_result.error, std::ptr::null_mut());
+    assert_no_error!(decrypted_result.error);
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
     unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
@@ -106,17 +117,17 @@ unsafe fn do_handshake(
 ) {
     // Handshake
     let init = client_ffi::client_get_outgoing_message(client_session_ptr);
-    assert_eq!(init.error, std::ptr::null_mut());
+    assert_no_error!(init.error);
     let incoming_slice = (*init.result).as_slice();
     let _ = SessionRequest::decode(incoming_slice).expect("couldn't decode init request");
 
     let result =
         server_ffi::server_put_incoming_message(server_session_ptr, (*init.result).as_bytes_view());
-    assert_eq!(result, std::ptr::null_mut());
+    assert_no_error!(result);
     unsafe { oak_session_ffi_types::free_rust_bytes(init.result) };
 
     let init_resp = server_ffi::server_get_outgoing_message(server_session_ptr);
-    assert_eq!(init_resp.error, std::ptr::null_mut());
+    assert_no_error!(init_resp.error);
     let init_resp_slice = (*init_resp.result).as_slice();
     let _ = SessionResponse::decode(init_resp_slice).expect("couldn't decode init response");
     let put_result = client_ffi::client_put_incoming_message(
@@ -124,7 +135,7 @@ unsafe fn do_handshake(
         (*init_resp.result).as_bytes_view(),
     );
     unsafe { oak_session_ffi_types::free_rust_bytes(init_resp.result) };
-    assert_eq!(put_result, std::ptr::null_mut());
+    assert_no_error!(put_result);
 }
 
 fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
@@ -132,17 +143,17 @@ fn create_test_session_config() -> *mut oak_session::config::SessionConfig {
         config_ffi::ATTESTATION_TYPE_UNATTESTED,
         config_ffi::HANDSHAKE_TYPE_NOISE_NN,
     );
-    assert_eq!(session_config_builder.error, std::ptr::null_mut());
+    assert_no_error!(session_config_builder.error);
     unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
 }
 fn create_test_sessions() -> (*mut ClientSession, *mut ServerSession) {
     let client_session_ptr_result =
         unsafe { client_ffi::new_client_session(create_test_session_config()) };
-    assert_eq!(client_session_ptr_result.error, std::ptr::null_mut());
+    assert_no_error!(client_session_ptr_result.error);
     let client_session_ptr = client_session_ptr_result.result;
     let server_session_ptr_result =
         unsafe { server_ffi::new_server_session(create_test_session_config()) };
-    assert_eq!(server_session_ptr_result.error, std::ptr::null_mut());
+    assert_no_error!(server_session_ptr_result.error);
     let server_session_ptr = server_session_ptr_result.result;
     (client_session_ptr, server_session_ptr)
 }
