@@ -45,7 +45,7 @@ use crate::{
     expect::get_expected_values,
     extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
-    policy::{firmware::FirmwarePolicy, platform::AmdSevSnpPolicy},
+    policy::platform::AmdSevSnpPolicy,
     util::hash_sha2_256,
 };
 
@@ -74,7 +74,7 @@ pub fn to_attestation_results(
 
 pub struct AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
-    firmware_policy: FirmwarePolicy,
+    firmware_policy: Box<dyn EventPolicy>,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Box<dyn Clock>,
 }
@@ -82,7 +82,7 @@ pub struct AmdSevSnpDiceAttestationVerifier {
 impl AmdSevSnpDiceAttestationVerifier {
     pub fn new(
         platform_policy: AmdSevSnpPolicy,
-        firmware_policy: FirmwarePolicy,
+        firmware_policy: Box<dyn EventPolicy>,
         event_policies: Vec<Box<dyn EventPolicy>>,
         clock: Box<dyn Clock>,
     ) -> Self {
