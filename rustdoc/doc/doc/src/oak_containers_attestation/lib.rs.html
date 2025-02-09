@@ -164,7 +164,6 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -201,7 +200,7 @@
 
 <span class="doccomment">/// Measures the system image and returns a corresponding event log entry.
 </span><span class="kw">pub fn </span>create_system_layer_event(system_image: <span class="kw-2">&amp;</span>[u8]) -&gt; Event {
-    <span class="kw">let </span>digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>system_image);
+    <span class="kw">let </span>digest = oak_attestation::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>system_image);
     Event {
         tag: <span class="string">"stage1"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
@@ -218,8 +217,8 @@
     config_bytes: <span class="kw-2">&amp;</span>[u8],
     instance_public_keys: <span class="kw-2">&amp;</span>InstancePublicKeys,
 ) -&gt; Event {
-    <span class="kw">let </span>container_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>container_bytes);
-    <span class="kw">let </span>config_digest = oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>config_bytes);
+    <span class="kw">let </span>container_digest = oak_attestation::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>container_bytes);
+    <span class="kw">let </span>config_digest = oak_attestation::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>config_bytes);
     Event {
         tag: <span class="string">"ORCHESTRATOR"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
@@ -245,9 +244,8 @@
 <span class="doccomment">/// Measures the provided event and returns as an additional CWT claim.
 </span><span class="kw">pub fn </span>create_container_dice_layer(event: <span class="kw-2">&amp;</span>Event) -&gt; oak_attestation::dice::LayerData {
     <span class="kw">let </span>encoded_event = event.encode_to_vec();
-    <span class="kw">let </span>event_digest =
-        oak_attestation::dice::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event.as_slice());
-    oak_attestation::dice::LayerData {
+    <span class="kw">let </span>event_digest = oak_attestation::MeasureDigest::measure_digest(<span class="kw-2">&amp;</span>encoded_event.as_slice());
+    oak_attestation::LayerData {
         additional_claims: <span class="macro">vec!</span>[(
             ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
             Value::Map(<span class="macro">vec!</span>[(

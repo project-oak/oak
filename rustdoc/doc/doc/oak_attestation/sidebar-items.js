@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["dice"],"trait":["ApplicationKeysAttester"]};
+window.SIDEBAR_ITEMS = {"mod":["dice"],"trait":["ApplicationKeysAttester","MeasureDigest"]};
