@@ -26,6 +26,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         "//oak_attestation",
+        "//oak_attestation_tdx",
         "//oak_containers/orchestrator",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tikv-jemallocator",
