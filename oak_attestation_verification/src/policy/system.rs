@@ -63,6 +63,6 @@ impl Policy<[u8], Variant> for SystemPolicy {
             .context("couldn't verify system event")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }

@@ -1032,7 +1032,16 @@ pub mod attestation_results {
 /// TODO: b/366419879 - Implement descriptive per-event attestation results.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
-pub struct EventAttestationResults {}
+pub struct EventAttestationResults {
+    /// Map of artifacts extracted from current event.
+    /// An example of an artifact could be a encryption public key recorded in the
+    /// event and signed by the evidence.
+    #[prost(btree_map = "string, bytes", tag = "1")]
+    pub artifacts: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::vec::Vec<u8>,
+    >,
+}
 /// Specifies a temporal range of validity for an endorsement.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

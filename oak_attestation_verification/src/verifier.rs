@@ -443,7 +443,7 @@ fn verify_event_log(
         .map(|(event_policy, event, event_endorsement)| {
             event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
                 // TODO: b/366186091 - Use Rust error types for failed attestation.
-                EventAttestationResults {},
+                EventAttestationResults { ..Default::default() },
             )
         })
         .collect::<Vec<EventAttestationResults>>();

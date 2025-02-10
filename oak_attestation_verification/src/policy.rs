@@ -21,3 +21,10 @@ pub mod firmware;
 pub mod kernel;
 pub mod platform;
 pub mod system;
+
+/// Public key used by the client to establish an HPKE session with the enclave.
+pub const ENCRYPTION_PUBLIC_KEY_NAME: &str = "oak-encryption-public-key:X25519";
+/// Public key used to verify artifacts signed by the enclave.
+pub const SIGNING_PUBLIC_KEY_NAME: &str = "oak-signing-public-key:ecdsa-p256";
+/// Public key used to verify that the Noise handshake transcript signature.
+pub const SESSION_BINDING_PUBLIC_KEY_NAME: &str = "oak-session-binding-public-key:ecdsa-p256";

@@ -65,6 +65,6 @@ impl Policy<[u8], Variant> for KernelPolicy {
             .context("couldn't verify kernel event")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }

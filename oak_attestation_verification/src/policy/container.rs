@@ -14,6 +14,13 @@
 // limitations under the License.
 //
 
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
@@ -26,7 +33,11 @@ use oak_proto_rust::oak::{
 
 use crate::{
     compare::compare_container_layer_measurement_digests,
-    expect::acquire_container_event_expected_values, util::decode_event_proto,
+    expect::acquire_container_event_expected_values,
+    policy::{
+        ENCRYPTION_PUBLIC_KEY_NAME, SESSION_BINDING_PUBLIC_KEY_NAME, SIGNING_PUBLIC_KEY_NAME,
+    },
+    util::decode_event_proto,
 };
 
 pub struct ContainerPolicy {
@@ -66,7 +77,18 @@ impl Policy<[u8], Variant> for ContainerPolicy {
         compare_container_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify container event")?;
 
+        let artifacts = vec![
+            (ENCRYPTION_PUBLIC_KEY_NAME.to_string(), event.encryption_public_key.to_vec()),
+            (SIGNING_PUBLIC_KEY_NAME.to_string(), event.signing_public_key.to_vec()),
+            (
+                SESSION_BINDING_PUBLIC_KEY_NAME.to_string(),
+                event.session_binding_public_key.to_vec(),
+            ),
+        ]
+        .into_iter()
+        .collect::<BTreeMap<String, Vec<u8>>>();
+
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { artifacts })
     }
 }

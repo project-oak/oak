@@ -68,6 +68,6 @@ impl Policy<AttestationReport, Variant> for AmdSevSnpPolicy {
             .context("couldn't verify attestation report fields")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }

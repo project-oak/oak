@@ -56,6 +56,6 @@ impl Policy<[u8], Variant> for BinaryPolicy {
             .context("couldn't verify generic event")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }

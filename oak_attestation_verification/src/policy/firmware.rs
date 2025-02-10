@@ -58,6 +58,6 @@ impl Policy<[u8], Variant> for FirmwarePolicy {
             .context("stage0 measurement values failed verification")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {})
+        Ok(EventAttestationResults { ..Default::default() })
     }
 }
