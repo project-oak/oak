@@ -1494,6 +1494,17 @@
 <a href="#1494" id="1494">1494</a>
 <a href="#1495" id="1495">1495</a>
 <a href="#1496" id="1496">1496</a>
+<a href="#1497" id="1497">1497</a>
+<a href="#1498" id="1498">1498</a>
+<a href="#1499" id="1499">1499</a>
+<a href="#1500" id="1500">1500</a>
+<a href="#1501" id="1501">1501</a>
+<a href="#1502" id="1502">1502</a>
+<a href="#1503" id="1503">1503</a>
+<a href="#1504" id="1504">1504</a>
+<a href="#1505" id="1505">1505</a>
+<a href="#1506" id="1506">1506</a>
+<a href="#1507" id="1507">1507</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with:
 /// &lt;https://github.com/project-oak/oak/tree/main/snp_measurement&gt;
@@ -1504,7 +1515,7 @@
     </span><span class="attr">#[prost(btree_map = <span class="string">"int32, message"</span>, tag = <span class="string">"1"</span>)]
     </span><span class="kw">pub </span>configs: ::prost::alloc::collections::BTreeMap&lt;i32, <span class="kw">super</span>::<span class="kw">super</span>::HexDigest&gt;,
 }
-<span class="doccomment">/// The Transparent Release attachment for Oak Containers Linux kernel.
+<span class="doccomment">/// The Transparent Release attachment for bzImage-like kernels.
 /// Measurements are produced with:
 /// &lt;https://github.com/project-oak/oak/tree/main/oak_kernel_measurement&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -1516,6 +1527,17 @@
     <span class="doccomment">/// Digest of the setup data part of the bzImage.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">"2"</span>)]
     </span><span class="kw">pub </span>setup_data: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::HexDigest&gt;,
+}
+<span class="doccomment">/// The Transparent Release attachment for MPMs.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>MpmAttachment {
+    <span class="doccomment">/// The name of the MPM.
+    </span><span class="attr">#[prost(string, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>package_name: ::prost::alloc::string::String,
+    <span class="doccomment">/// The version of the MPM.
+    </span><span class="attr">#[prost(string, tag = <span class="string">"2"</span>)]
+    </span><span class="kw">pub </span>package_version: ::prost::alloc::string::String,
 }
 <span class="doccomment">/// All the related measurements for Stage 0.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
