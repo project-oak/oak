@@ -499,7 +499,7 @@
     expect::get_expected_values,
     extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
-    policy::{firmware::FirmwarePolicy, platform::AmdSevSnpPolicy},
+    policy::platform::AmdSevSnpPolicy,
     util::hash_sha2_256,
 };
 
@@ -528,7 +528,7 @@
 
 <span class="kw">pub struct </span>AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
-    firmware_policy: FirmwarePolicy,
+    firmware_policy: Box&lt;<span class="kw">dyn </span>EventPolicy&gt;,
     event_policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;,
     clock: Box&lt;<span class="kw">dyn </span>Clock&gt;,
 }
@@ -536,7 +536,7 @@
 <span class="kw">impl </span>AmdSevSnpDiceAttestationVerifier {
     <span class="kw">pub fn </span>new(
         platform_policy: AmdSevSnpPolicy,
-        firmware_policy: FirmwarePolicy,
+        firmware_policy: Box&lt;<span class="kw">dyn </span>EventPolicy&gt;,
         event_policies: Vec&lt;Box&lt;<span class="kw">dyn </span>EventPolicy&gt;&gt;,
         clock: Box&lt;<span class="kw">dyn </span>Clock&gt;,
     ) -&gt; <span class="self">Self </span>{
