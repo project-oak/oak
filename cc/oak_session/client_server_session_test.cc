@@ -29,10 +29,12 @@ namespace oak::session {
 namespace {
 
 using ::absl_testing::IsOk;
+using ::absl_testing::IsOkAndHolds;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
 using ::testing::Ne;
+using ::testing::Optional;
 
 SessionConfig* TestConfig() {
   return SessionConfigBuilder(AttestationType::kUnattested,
@@ -45,8 +47,7 @@ void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
     if (!client_session.IsOpen()) {
       absl::StatusOr<std::optional<SessionRequest>> init =
           client_session.GetOutgoingMessage();
-      ASSERT_THAT(init, IsOk());
-      ASSERT_THAT(*init, Ne(std::nullopt));
+      ASSERT_THAT(init, IsOkAndHolds(Ne(std::nullopt)));
       ASSERT_THAT(server_session.PutIncomingMessage(**init), IsOk());
     }
 
@@ -79,13 +80,11 @@ TEST(ClientServerSessionTest, AcceptEmptyOutgoingMessageResult) {
 
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
-  ASSERT_THAT(request, IsOk());
-  ASSERT_THAT(*request, Eq(std::nullopt));
+  ASSERT_THAT(request, IsOkAndHolds(Eq(std::nullopt)));
 
   absl::StatusOr<std::optional<SessionResponse>> response =
       (*server_session)->GetOutgoingMessage();
-  ASSERT_THAT(response, IsOk());
-  ASSERT_THAT(*response, Eq(std::nullopt));
+  ASSERT_THAT(response, IsOkAndHolds(Eq(std::nullopt)));
 }
 
 TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
@@ -96,13 +95,11 @@ TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
 
   absl::StatusOr<std::optional<v1::PlaintextMessage>> client_read =
       (*client_session)->Read();
-  ASSERT_THAT(client_read, IsOk());
-  ASSERT_THAT(*client_read, Eq(std::nullopt));
+  ASSERT_THAT(client_read, IsOkAndHolds(Eq(std::nullopt)));
 
   absl::StatusOr<std::optional<v1::PlaintextMessage>> server_read =
       (*server_session)->Read();
-  ASSERT_THAT(server_read, IsOk());
-  ASSERT_THAT(*server_read, Eq(std::nullopt));
+  ASSERT_THAT(server_read, IsOkAndHolds(Eq(std::nullopt)));
 }
 
 TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
@@ -119,15 +116,12 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
 
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
-  ASSERT_THAT(request, IsOk());
-  ASSERT_THAT(*request, Ne(std::nullopt));
+  ASSERT_THAT(request, IsOkAndHolds(Ne(std::nullopt)));
 
   ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
   absl::StatusOr<std::optional<v1::PlaintextMessage>> received_request =
       (*server_session)->Read();
-  ASSERT_THAT(received_request, IsOk());
-  ASSERT_THAT(*received_request, Ne(std::nullopt));
-
+  ASSERT_THAT(received_request, IsOkAndHolds(Ne(std::nullopt)));
   EXPECT_THAT(((*received_request)->plaintext()), Eq(plaintext_message));
 }
 
@@ -142,14 +136,12 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecryptRaw) {
   ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
-  ASSERT_THAT(request, IsOk());
-  ASSERT_THAT(*request, Ne(std::nullopt));
+  ASSERT_THAT(request, IsOkAndHolds(Ne(std::nullopt)));
 
   ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
   absl::StatusOr<std::optional<RustBytes>> received_request =
       (*server_session)->ReadToRustBytes();
-  ASSERT_THAT(received_request, IsOk());
-  ASSERT_THAT(*received_request, Ne(std::nullopt));
+  ASSERT_THAT(received_request, IsOkAndHolds(Ne(std::nullopt)));
 
   EXPECT_THAT(**received_request, Eq(plaintext_message));
 }
@@ -167,14 +159,12 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
   ASSERT_THAT((*server_session)->Write(plaintext_message_response), IsOk());
   absl::StatusOr<std::optional<SessionResponse>> response =
       (*server_session)->GetOutgoingMessage();
-  ASSERT_THAT(response, IsOk());
-  ASSERT_THAT(*response, Ne(std::nullopt));
+  ASSERT_THAT(response, IsOkAndHolds(Ne(std::nullopt)));
 
   ASSERT_THAT((*client_session)->PutIncomingMessage(**response), IsOk());
   absl::StatusOr<std::optional<v1::PlaintextMessage>> received_request =
       (*client_session)->Read();
-  ASSERT_THAT(received_request, IsOk());
-  ASSERT_THAT(*received_request, Ne(std::nullopt));
+  ASSERT_THAT(received_request, IsOkAndHolds(Ne(std::nullopt)));
 
   EXPECT_THAT(((*received_request)->plaintext()), Eq(response_message));
 }
@@ -190,16 +180,13 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecryptRaw) {
   ASSERT_THAT((*server_session)->Write(response_message), IsOk());
   absl::StatusOr<std::optional<SessionResponse>> response =
       (*server_session)->GetOutgoingMessage();
-  ASSERT_THAT(response, IsOk());
-  ASSERT_THAT(*response, Ne(std::nullopt));
+  ASSERT_THAT(response, IsOkAndHolds(Ne(std::nullopt)));
 
   ASSERT_THAT((*client_session)->PutIncomingMessage(**response), IsOk());
   absl::StatusOr<std::optional<RustBytes>> received_request =
       (*client_session)->ReadToRustBytes();
-  ASSERT_THAT(received_request, IsOk());
-  ASSERT_THAT(*received_request, Ne(std::nullopt));
 
-  EXPECT_THAT(**received_request, Eq(response_message));
+  ASSERT_THAT(received_request, IsOkAndHolds(Optional(Eq(response_message))));
 }
 
 TEST(ClientServerSessionTest, ConvertsToStringView) {
@@ -213,14 +200,12 @@ TEST(ClientServerSessionTest, ConvertsToStringView) {
   ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
-  ASSERT_THAT(request, IsOk());
-  ASSERT_THAT(*request, Ne(std::nullopt));
+  ASSERT_THAT(request, IsOkAndHolds(Ne(std::nullopt)));
 
   ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
   absl::StatusOr<std::optional<RustBytes>> received_request =
       (*server_session)->ReadToRustBytes();
-  ASSERT_THAT(received_request, IsOk());
-  ASSERT_THAT(*received_request, Ne(std::nullopt));
+  ASSERT_THAT(received_request, IsOkAndHolds(Ne(std::nullopt)));
 
   absl::string_view received_request_string_view(**received_request);
   EXPECT_THAT(received_request_string_view, Eq(plaintext_message));
@@ -237,8 +222,7 @@ TEST(ClientServerSessionTest, ConvertsToString) {
   ASSERT_THAT((*client_session)->Write(plaintext_message), IsOk());
   absl::StatusOr<std::optional<SessionRequest>> request =
       (*client_session)->GetOutgoingMessage();
-  ASSERT_THAT(request, IsOk());
-  ASSERT_THAT(*request, Ne(std::nullopt));
+  ASSERT_THAT(request, IsOkAndHolds(Ne(std::nullopt)));
 
   // Let Rust Bytes go out of scope before doing comparison to verify copy
   // behavior.
@@ -247,8 +231,8 @@ TEST(ClientServerSessionTest, ConvertsToString) {
     ASSERT_THAT((*server_session)->PutIncomingMessage(**request), IsOk());
     absl::StatusOr<std::optional<RustBytes>> received_request =
         (*server_session)->ReadToRustBytes();
-    ASSERT_THAT(received_request, IsOk());
-    ASSERT_THAT(*received_request, Ne(std::nullopt));
+    ASSERT_THAT(received_request,
+                IsOkAndHolds(Optional(Eq(plaintext_message))));
     received_request_string = std::string(**received_request);
   }();
 

@@ -35,6 +35,7 @@
 namespace oak::containers::sdk::standalone {
 
 using ::absl_testing::IsOk;
+using ::absl_testing::IsOkAndHolds;
 using ::oak::attestation::v1::AttestationResults;
 using ::oak::attestation::verification::InsecureAttestationVerifier;
 using ::oak::crypto::ClientEncryptor;
@@ -46,6 +47,7 @@ using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::EndorsedEvidence;
 using ::testing::Eq;
+using ::testing::Field;
 
 namespace {
 TEST(OakStandaloneTest, GetEndorsedEvidenceProvidesValidKeys) {
@@ -82,8 +84,9 @@ TEST(OakStandaloneTest, GetEndorsedEvidenceProvidesValidKeys) {
   ASSERT_THAT(encrypted_client_msg, IsOk());
   absl::StatusOr<DecryptionResult> decrypted_client_msg =
       server_encryptor.Decrypt(*encrypted_client_msg);
-  ASSERT_THAT(decrypted_client_msg, IsOk());
-  EXPECT_EQ(decrypted_client_msg->plaintext, "Hello Server");
+  EXPECT_THAT(
+      decrypted_client_msg,
+      IsOkAndHolds(Field(&DecryptionResult::plaintext, Eq("Hello Server"))));
 
   // Verify server messages are decrypted by client.
   absl::StatusOr<EncryptedResponse> encrypted_server_msg =
@@ -91,8 +94,9 @@ TEST(OakStandaloneTest, GetEndorsedEvidenceProvidesValidKeys) {
   ASSERT_THAT(encrypted_server_msg, IsOk());
   absl::StatusOr<DecryptionResult> decrypted_server_msg =
       (*client_encryptor)->Decrypt(*encrypted_server_msg);
-  ASSERT_THAT(decrypted_server_msg, IsOk());
-  EXPECT_EQ(decrypted_server_msg->plaintext, "Hello Client");
+  EXPECT_THAT(
+      decrypted_server_msg,
+      IsOkAndHolds(Field(&DecryptionResult::plaintext, Eq("Hello Client"))));
 }
 }  // namespace
 

@@ -30,6 +30,7 @@ namespace oak::client {
 namespace {
 
 using ::absl_testing::IsOk;
+using ::absl_testing::IsOkAndHolds;
 using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Optional;
@@ -100,9 +101,7 @@ TEST(OakSessionClientTest, CreatedSessionCanSend) {
   ASSERT_THAT((*channel)->Send(test_send_msg), IsOk());
   absl::StatusOr<std::optional<session::RustBytes>> test_send_read_back =
       server_session_ptr->ReadToRustBytes();
-  EXPECT_THAT(test_send_read_back, IsOk());
-  EXPECT_THAT(*test_send_read_back, Ne(std::nullopt));
-  EXPECT_THAT(**test_send_read_back, Eq(test_send_msg));
+  EXPECT_THAT(test_send_read_back, IsOkAndHolds(Optional(Eq(test_send_msg))));
 }
 
 TEST(OakSessionClientTest, CreatedSessionCanReceive) {
@@ -118,8 +117,7 @@ TEST(OakSessionClientTest, CreatedSessionCanReceive) {
   ASSERT_THAT(server_session_ptr->Write(test_recv_msg), IsOk());
 
   absl::StatusOr<std::string> server_read = (*channel)->Receive();
-  EXPECT_THAT(server_read, IsOk());
-  EXPECT_THAT(*server_read, Eq(test_recv_msg));
+  EXPECT_THAT(server_read, IsOkAndHolds(test_recv_msg));
 }
 }  // namespace
 }  // namespace oak::client

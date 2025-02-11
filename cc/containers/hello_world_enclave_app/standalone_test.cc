@@ -99,12 +99,11 @@ TEST_F(HelloWorldStandaloneTest, LegacySessionReturnsResponse) {
   ASSERT_THAT(client, IsOk());
 
   auto result = (*client)->Invoke("Standalone Test");
-  ASSERT_THAT(result, IsOk());
-  EXPECT_EQ(*result,
-            absl::Substitute(
-                "Hello from the enclave, Standalone Test! Btw, the app has a "
-                "config with a length of $0 bytes.",
-                kApplicationConfig.size()));
+  ASSERT_THAT(result,
+              IsOkAndHolds(Eq(absl::Substitute(
+                  "Hello from the enclave, Standalone Test! Btw, the app has a "
+                  "config with a length of $0 bytes.",
+                  kApplicationConfig.size()))));
 }
 
 TEST_F(HelloWorldStandaloneTest, OakSessionReturnsResponse) {
