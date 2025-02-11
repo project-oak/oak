@@ -29,9 +29,11 @@
 
 - `10271`
   [AMD SEV-SNP-Firmware-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
-- `98982`
-  [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
 - `77149`
   [Inline-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/77149.md)
+- `98982`
+  [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
+- `31543`
+  [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
 - `75606`
   [Secure logging](https://github.com/project-oak/oak/blob/main/docs/tr/claim/75606.md)

@@ -8,7 +8,7 @@ pub struct FirmwareAttachment {
     #[prost(btree_map = "int32, message", tag = "1")]
     pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
 }
-/// The Transparent Release attachment for Oak Containers Linux kernel.
+/// The Transparent Release attachment for bzImage-like kernels.
 /// Measurements are produced with:
 /// <https://github.com/project-oak/oak/tree/main/oak_kernel_measurement>
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -20,6 +20,17 @@ pub struct KernelAttachment {
     /// Digest of the setup data part of the bzImage.
     #[prost(message, optional, tag = "2")]
     pub setup_data: ::core::option::Option<super::super::HexDigest>,
+}
+/// The Transparent Release attachment for MPMs.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct MpmAttachment {
+    /// The name of the MPM.
+    #[prost(string, tag = "1")]
+    pub package_name: ::prost::alloc::string::String,
+    /// The version of the MPM.
+    #[prost(string, tag = "2")]
+    pub package_version: ::prost::alloc::string::String,
 }
 /// All the related measurements for Stage 0.
 #[allow(clippy::derive_partial_eq_without_eq)]

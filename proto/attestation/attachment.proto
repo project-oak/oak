@@ -35,7 +35,7 @@ message FirmwareAttachment {
   map<int32, HexDigest> configs = 1;
 }
 
-// The Transparent Release attachment for Oak Containers Linux kernel.
+// The Transparent Release attachment for bzImage-like kernels.
 // Measurements are produced with:
 // https://github.com/project-oak/oak/tree/main/oak_kernel_measurement
 message KernelAttachment {
@@ -44,4 +44,13 @@ message KernelAttachment {
 
   // Digest of the setup data part of the bzImage.
   HexDigest setup_data = 2;
+}
+
+// The Transparent Release attachment for MPMs.
+message MpmAttachment {
+  // The name of the MPM.
+  string package_name = 1;
+
+  // The version of the MPM.
+  string package_version = 2;
 }
