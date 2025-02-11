@@ -50,6 +50,12 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -91,6 +97,12 @@
 </span><span class="comment">// #[derive(Clone)]
 </span><span class="kw">pub struct </span>SimpleAttester {
     evidence: Evidence,
+}
+
+<span class="kw">impl </span>SimpleAttester {
+    <span class="kw">pub fn </span>new(evidence: Evidence) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ evidence }
+    }
 }
 
 <span class="kw">impl </span>Attester <span class="kw">for </span>SimpleAttester {
