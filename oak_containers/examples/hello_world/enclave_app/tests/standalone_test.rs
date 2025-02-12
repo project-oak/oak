@@ -19,9 +19,7 @@ use anyhow::{Context, Result};
 use futures::channel::mpsc;
 use oak_client::{client::OakClient, verifier::InsecureAttestationVerifier};
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_sdk::{
-    standalone::StandaloneOrchestrator, OakSessionContext, OrchestratorInterface,
-};
+use oak_containers_sdk::{standalone::StandaloneOrchestrator, OakSessionContext};
 use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{
@@ -36,11 +34,11 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let mut orchestrator = StandaloneOrchestrator::default();
+    let orchestrator = StandaloneOrchestrator::default();
     let encryption_key_handle = orchestrator.get_instance_encryption_key_handle();
 
     let endorsed_evidence = orchestrator.get_endorsed_evidence();
-    let application_config = orchestrator.get_application_config().await?;
+    let application_config = orchestrator.get_application_config();
 
     Ok((
         addr,

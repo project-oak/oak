@@ -23,7 +23,6 @@
 //! It does not currently support any sort of attestation flow.
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 #[allow(deprecated)]
 use oak_attestation::{dice::DiceAttester, ApplicationKeysAttester};
 use oak_attestation_types::attester::Attester;
@@ -41,14 +40,11 @@ use oak_proto_rust::oak::{
 use p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
 use prost::Message;
 
-use crate::OrchestratorInterface;
-
 /// Default values for StandaloneOrchestrator to measure
 const DEFAULT_STAGE1_SYSTEM_IMAGE: &[u8] = &[];
 const DEFAULT_APPLICATION_IMAGE: &[u8] = &[];
 const DEFAULT_APPLICATION_CONFIG: &[u8] = &[1, 2, 3, 4];
 
-/// A mock implementation of the OrchestratorInterface for standalone testing
 pub struct StandaloneOrchestrator {
     instance_private_keys: oak_containers_attestation::InstanceKeys,
     evidence: Evidence,
@@ -236,21 +232,9 @@ impl StandaloneOrchestrator {
             }),
         }
     }
-}
 
-#[async_trait]
-impl OrchestratorInterface for StandaloneOrchestrator {
-    async fn get_application_config(&mut self) -> Result<Vec<u8>> {
-        Ok(self.application_config.clone())
-    }
-
-    async fn notify_app_ready(&mut self) -> Result<()> {
-        // In standalone mode, we don't need to notify anyone
-        Ok(())
-    }
-
-    async fn get_endorsed_evidence(&mut self) -> Result<EndorsedEvidence> {
-        Ok(StandaloneOrchestrator::get_endorsed_evidence(self))
+    pub fn get_application_config(&self) -> Vec<u8> {
+        self.application_config.clone()
     }
 }
 
