@@ -23,20 +23,20 @@ use oak_proto_rust::oak::attestation::v1::Evidence;
 ///
 /// A typical use case of this sort of attester is in Oak Containers
 /// applications that receive a finalized Evidence from the Orchestrator.
-pub struct InstanceAttester {
+pub struct StaticAttester {
     evidence: Evidence,
 }
 
-impl InstanceAttester {
-    /// Create a new [`InstanceAttester`].
-    ///
-    /// It will always return the provided [`Evidence`].
+impl StaticAttester {
+    /// Create a new instance that always returns the provided [`Evidence`].
     pub fn new(evidence: Evidence) -> Self {
         Self { evidence }
     }
 }
 
-impl Attester for InstanceAttester {
+impl Attester for StaticAttester {
+    /// This always fails: it's not possible to extend the evidence in a
+    /// [`StaticAttester`].
     fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
         anyhow::bail!("This attester type is finalized and can not be extended.");
     }

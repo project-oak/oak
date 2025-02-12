@@ -22,8 +22,8 @@ package(
 )
 
 rust_library(
-    name = "oak_instance_attester",
-    srcs = ["instance_attester.rs"],
+    name = "oak_static_attester",
+    srcs = ["static_attester.rs"],
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "//oak_attestation_types",
@@ -33,8 +33,8 @@ rust_library(
 )
 
 rust_library(
-    name = "oak_instance_endorser",
-    srcs = ["instance_endorser.rs"],
+    name = "oak_static_endorser",
+    srcs = ["static_endorser.rs"],
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "//oak_attestation_types",

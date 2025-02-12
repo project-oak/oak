@@ -25,7 +25,7 @@ rust_library(
     name = "oak_sdk_common",
     srcs = ["lib.rs"],
     deps = [
-        "//oak_sdk/common/attestation:oak_instance_attester",
-        "//oak_sdk/common/attestation:oak_instance_endorser",
+        "//oak_sdk/common/attestation:oak_static_attester",
+        "//oak_sdk/common/attestation:oak_static_endorser",
     ],
 )

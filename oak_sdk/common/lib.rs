@@ -14,5 +14,5 @@
 // limitations under the License.
 //
 
-pub use oak_instance_attester::InstanceAttester;
-pub use oak_instance_endorser::InstanceEndorser;
+pub use oak_static_attester::StaticAttester;
+pub use oak_static_endorser::StaticEndorser;

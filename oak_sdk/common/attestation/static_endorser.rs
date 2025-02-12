@@ -17,17 +17,19 @@
 use oak_attestation_types::endorser::Endorser;
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 
-/// A simple [`Endorser`] instance that provides a single endorsement set.
-pub struct InstanceEndorser {
+/// A simple [`Endorser`] instance that provides a single unchanging endorsement
+/// set, regardless of the provided evidence.
+pub struct StaticEndorser {
     endorsements: Endorsements,
 }
 
-impl InstanceEndorser {
+impl StaticEndorser {
+    /// Create a new instance that always returns the provided [`Endorsements`].
     pub fn new(endorsements: Endorsements) -> Self {
         Self { endorsements }
     }
 }
-impl Endorser for InstanceEndorser {
+impl Endorser for StaticEndorser {
     /// Returns the [`Endorsements`] provided at construction.
     ///
     /// The `evidence` argument is ignored.
