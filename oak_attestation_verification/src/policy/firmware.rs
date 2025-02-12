@@ -36,7 +36,7 @@ impl FirmwarePolicy {
     }
 }
 
-impl Policy<[u8], Variant> for FirmwarePolicy {
+impl Policy<[u8]> for FirmwarePolicy {
     fn verify(
         &self,
         firmware_measurement: &[u8],
@@ -44,12 +44,12 @@ impl Policy<[u8], Variant> for FirmwarePolicy {
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
-        let endorsement: FirmwareEndorsement =
+        let endorsement: Option<FirmwareEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_stage0_expected_values(
             milliseconds_since_epoch,
-            Some(&endorsement),
+            endorsement.as_ref(),
             &self.reference_values,
         )
         .context("getting stage0 values")?;

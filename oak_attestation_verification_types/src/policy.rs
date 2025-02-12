@@ -22,15 +22,15 @@ use oak_proto_rust::oak::{attestation::v1::EventAttestationResults, Variant};
 /// Verification Policy correspond to the "Appraisal Policy for Evidence"
 /// provided by the RATS standard.
 /// <https://datatracker.ietf.org/doc/html/rfc9334#section-8.5>
-pub trait Policy<V: ?Sized, N: ?Sized>: Send + Sync {
+pub trait Policy<V: ?Sized>: Send + Sync {
     fn verify(
         &self,
         evidence: &V,
-        endorsement: &N,
+        endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults>;
 }
 
 /// Verification Policy that takes an encoded Event and an encoded Event
 /// Endorsement and performs attestation verification for this specific Event.
-pub trait EventPolicy = Policy<[u8], Variant>;
+pub trait EventPolicy = Policy<[u8]>;

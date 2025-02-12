@@ -23,6 +23,18 @@ use crate::oak::{
     Variant,
 };
 
+impl Variant {
+    pub fn is_empty(&self) -> bool {
+        self.id.is_empty()
+    }
+}
+
+impl From<Option<Variant>> for Variant {
+    fn from(value: Option<Variant>) -> Self {
+        value.unwrap_or_default()
+    }
+}
+
 /// A random ID for each endorsement protocol buffer type that appears as ID
 /// in the oak::Variant encoding.
 const AMD_SEV_SNP_PLATFORM_ENDORSEMENT_ID: [u8; 16] =
@@ -87,6 +99,25 @@ impl TryFrom<&Variant> for ApplicationEndorsement {
         try_into_message(&APPLICATION_ENDORSEMENT_ID, value)
     }
 }
+
+macro_rules! impl_try_from_variant_to_option {
+    ($value_type:ty) => {
+        impl TryFrom<&Variant> for Option<$value_type> {
+            type Error = &'static str;
+            fn try_from(value: &Variant) -> Result<Self, Self::Error> {
+                let result = if !value.is_empty() { Some(value.try_into()?) } else { None };
+                Ok(result)
+            }
+        }
+    };
+}
+
+impl_try_from_variant_to_option!(AmdSevSnpEndorsement);
+impl_try_from_variant_to_option!(FirmwareEndorsement);
+impl_try_from_variant_to_option!(KernelEndorsement);
+impl_try_from_variant_to_option!(SystemEndorsement);
+impl_try_from_variant_to_option!(ContainerEndorsement);
+impl_try_from_variant_to_option!(ApplicationEndorsement);
 
 impl From<AmdSevSnpEndorsement> for Variant {
     fn from(value: AmdSevSnpEndorsement) -> Self {

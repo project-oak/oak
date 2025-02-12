@@ -39,10 +39,10 @@ impl ApplicationPolicy {
     }
 }
 
-// We have to use [`Policy<[u8], Variant>`] instead of [`EventPolicy`], because
+// We have to use [`Policy<[u8]>`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
-impl Policy<[u8], Variant> for ApplicationPolicy {
+impl Policy<[u8]> for ApplicationPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
@@ -53,12 +53,12 @@ impl Policy<[u8], Variant> for ApplicationPolicy {
             "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
             encoded_event,
         )?;
-        let endorsement: ApplicationEndorsement =
+        let endorsement: Option<ApplicationEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_application_event_expected_values(
             milliseconds_since_epoch,
-            Some(&endorsement),
+            endorsement.as_ref(),
             &self.reference_values,
         )
         .context("couldn't verify application endorsements")?;

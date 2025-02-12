@@ -40,7 +40,7 @@ impl AmdSevSnpPolicy {
     }
 }
 
-impl Policy<AttestationReport, Variant> for AmdSevSnpPolicy {
+impl Policy<AttestationReport> for AmdSevSnpPolicy {
     fn verify(
         &self,
         attestation_report: &AttestationReport,

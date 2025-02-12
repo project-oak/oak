@@ -47,10 +47,10 @@ impl ContainerPolicy {
     }
 }
 
-// We have to use [`Policy<[u8], Variant>`] instead of [`EventPolicy`], because
+// We have to use [`Policy<[u8]>`] instead of [`EventPolicy`], because
 // Rust doesn't yet support implementing trait aliases.
 // <https://github.com/rust-lang/rfcs/blob/master/text/1733-trait-alias.md>
-impl Policy<[u8], Variant> for ContainerPolicy {
+impl Policy<[u8]> for ContainerPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
@@ -61,12 +61,12 @@ impl Policy<[u8], Variant> for ContainerPolicy {
             "type.googleapis.com/oak.attestation.v1.ContainerLayerData",
             encoded_event,
         )?;
-        let endorsement: ContainerEndorsement =
+        let endorsement: Option<ContainerEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_container_event_expected_values(
             milliseconds_since_epoch,
-            Some(&endorsement),
+            endorsement.as_ref(),
             &self.reference_values,
         )
         .context("couldn't verify container endorsements")?;

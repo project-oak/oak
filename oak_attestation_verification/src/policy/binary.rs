@@ -36,7 +36,7 @@ impl BinaryPolicy {
     }
 }
 
-impl Policy<[u8], Variant> for BinaryPolicy {
+impl Policy<[u8]> for BinaryPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],

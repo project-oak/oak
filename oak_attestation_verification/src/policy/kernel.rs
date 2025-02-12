@@ -39,7 +39,7 @@ impl KernelPolicy {
     }
 }
 
-impl Policy<[u8], Variant> for KernelPolicy {
+impl Policy<[u8]> for KernelPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
@@ -51,12 +51,12 @@ impl Policy<[u8], Variant> for KernelPolicy {
                 "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
                 encoded_event,
             )?);
-        let endorsement: KernelEndorsement =
+        let endorsement: Option<KernelEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_kernel_event_expected_values(
             milliseconds_since_epoch,
-            Some(&endorsement),
+            endorsement.as_ref(),
             &self.reference_values,
         )
         .context("couldn't verify kernel endorsements")?;

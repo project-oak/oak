@@ -38,7 +38,7 @@ impl SystemPolicy {
     }
 }
 
-impl Policy<[u8], Variant> for SystemPolicy {
+impl Policy<[u8]> for SystemPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
@@ -49,12 +49,12 @@ impl Policy<[u8], Variant> for SystemPolicy {
             "type.googleapis.com/oak.attestation.v1.SystemLayerData",
             encoded_event,
         )?;
-        let endorsement: SystemEndorsement =
+        let endorsement: Option<SystemEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_system_event_expected_values(
             milliseconds_since_epoch,
-            Some(&endorsement),
+            endorsement.as_ref(),
             &self.reference_values,
         )
         .context("couldn't verify system endorsement")?;

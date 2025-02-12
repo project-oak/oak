@@ -432,13 +432,6 @@ fn verify_event_log(
     policies: &[Box<dyn EventPolicy>],
     milliseconds_since_epoch: i64,
 ) -> anyhow::Result<Vec<EventAttestationResults>> {
-    if event_log.encoded_events.len() != event_endorsements.len() {
-        anyhow::bail!(
-            "event log length ({}) is not equal to the number of endorsements ({})",
-            event_log.encoded_events.len(),
-            event_endorsements.len()
-        );
-    }
     if policies.len() != event_log.encoded_events.len() {
         anyhow::bail!(
             "number of policies ({}) is not equal to the event log length ({})",
@@ -446,9 +439,27 @@ fn verify_event_log(
             event_log.encoded_events.len()
         );
     }
+    if event_log.encoded_events.len() < event_endorsements.len() {
+        anyhow::bail!(
+            "event log length ({}) is smaller than the number of endorsements ({})",
+            event_log.encoded_events.len(),
+            event_endorsements.len()
+        );
+    }
+
+    // Pad `event_endorsements` with an empty [`Variant`] to the same length as the
+    // event log.
+    let empty_endorsement = Variant::default();
+    let mut padded_event_endorsements: Vec<&Variant> = event_endorsements.iter().collect();
+    if event_log.encoded_events.len() > event_endorsements.len() {
+        padded_event_endorsements.extend(
+            core::iter::repeat(&empty_endorsement)
+                .take(event_log.encoded_events.len() - event_endorsements.len()),
+        );
+    }
 
     let verification_iterator =
-        izip!(policies.iter(), event_log.encoded_events.iter(), event_endorsements.iter());
+        izip!(policies.iter(), event_log.encoded_events.iter(), padded_event_endorsements.iter());
     let event_attestation_results = verification_iterator
         .map(|(event_policy, event, event_endorsement)| {
             event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
