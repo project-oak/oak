@@ -117,7 +117,9 @@ cc_library(
     hdrs = ["grpc_sync_session_server_transport.h"],
     deps = [
         "//cc/oak_session:server_session",
+        "//cc/oak_session/channel",
         "//cc/server:session_server",
+        "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
