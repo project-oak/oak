@@ -4,8 +4,7 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/oak-logo/svgs/oak-logo-negative.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="docs/oak-logo/svgs/oak-logo.svg?sanitize=true"><img alt="Project Oak Logo" src="docs/oak-logo/svgs/oak-logo.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/project-oak/oak/ci.yaml?branch=main&style=for-the-badge)](https://github.com/project-oak/oak/actions/workflows/ci.yaml?query=branch%3Amain)
-[![Docs](https://img.shields.io/badge/docs-rust-brightgreen?style=for-the-badge)](https://project-oak.github.io/oak)
+[![Docs](https://img.shields.io/badge/docs-rust-brightgreen?style=for-the-badge)](https://project-oak.github.io/oak/rustdoc)
 
 Oak is a software platform for building distributed systems providing externally
 verifiable (or falsifiable) claims about system behaviors in a transparent way.
