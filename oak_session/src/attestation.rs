@@ -18,9 +18,9 @@
 //! handles remote attestation between two parties.
 
 use alloc::{
-    boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 use core::fmt::Display;
@@ -310,7 +310,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
 }
 
 fn combine_attestation_results(
-    verifiers: &BTreeMap<String, Box<dyn AttestationVerifier>>,
+    verifiers: &BTreeMap<String, Arc<dyn AttestationVerifier>>,
     attested_evidence: &BTreeMap<String, EndorsedEvidence>,
 ) -> Result<BTreeMap<String, AttestationResults>, Error> {
     let verifiable_evidence = verifiers

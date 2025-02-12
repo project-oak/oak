@@ -27,7 +27,7 @@ use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 use p256::ecdsa::VerifyingKey;
 
-pub trait KeyExtractor: Send {
+pub trait KeyExtractor: Send + Sync {
     fn extract_verifying_key(
         &self,
         results: &AttestationResults,

@@ -21,6 +21,7 @@ use alloc::{
     boxed::Box,
     collections::{BTreeMap, VecDeque},
     string::String,
+    sync::Arc,
 };
 use core::mem;
 
@@ -123,7 +124,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
 /// Client-side secure attested session entrypoint.
 pub struct ClientSession {
     step: Step<ClientAttestationProvider, ClientHandshaker>,
-    binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
+    binding_key_extractors: BTreeMap<String, Arc<dyn KeyExtractor>>,
     attestation_result: Option<AttestationSuccess>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
@@ -291,7 +292,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 // Server-side secure attested session entrypoint.
 pub struct ServerSession {
     step: Step<ServerAttestationProvider, ServerHandshaker>,
-    binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
+    binding_key_extractors: BTreeMap<String, Arc<dyn KeyExtractor>>,
     // encryptor is initialized once the handshake is completed and the session becomes open
     attestation_result: Option<AttestationSuccess>,
     outgoing_responses: VecDeque<SessionResponse>,
@@ -461,7 +462,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 }
 
 fn verify_session_binding(
-    binding_key_extractors: &BTreeMap<String, Box<dyn KeyExtractor>>,
+    binding_key_extractors: &BTreeMap<String, Arc<dyn KeyExtractor>>,
     attestation: &AttestationSuccess,
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_hash: &[u8],

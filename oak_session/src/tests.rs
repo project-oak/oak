@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
@@ -207,19 +207,19 @@ fn attestation_verification_fails() {
     assert!(server_attestation_result.is_err());
 }
 
-fn create_mock_attester() -> Box<dyn Attester> {
+fn create_mock_attester() -> Arc<dyn Attester> {
     let mut attester = MockTestAttester::new();
     attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
-    Box::new(attester)
+    Arc::new(attester)
 }
 
-fn create_mock_endorser() -> Box<dyn Endorser> {
+fn create_mock_endorser() -> Arc<dyn Endorser> {
     let mut endorser = MockTestEndorser::new();
     endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
-    Box::new(endorser)
+    Arc::new(endorser)
 }
 
-fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
+fn create_passing_mock_verifier() -> Arc<dyn AttestationVerifier> {
     let mut verifier = MockTestAttestationVerifier::new();
     verifier.expect_verify().returning(|_, _| {
         Ok(AttestationResults {
@@ -227,10 +227,10 @@ fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
             ..Default::default()
         })
     });
-    Box::new(verifier)
+    Arc::new(verifier)
 }
 
-fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
+fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
     let mut verifier = MockTestAttestationVerifier::new();
     verifier.expect_verify().returning(|_, _| {
         Ok(AttestationResults {
@@ -239,7 +239,7 @@ fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
             ..Default::default()
         })
     });
-    Box::new(verifier)
+    Arc::new(verifier)
 }
 
 #[test]

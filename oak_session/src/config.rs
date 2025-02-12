@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use anyhow::Error;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
@@ -35,7 +35,7 @@ pub struct SessionConfig {
     pub attestation_provider_config: AttestationProviderConfig,
     pub handshaker_config: HandshakerConfig,
     pub encryptor_config: EncryptorConfig,
-    pub binding_key_extractors: BTreeMap<String, Box<dyn KeyExtractor>>,
+    pub binding_key_extractors: BTreeMap<String, Arc<dyn KeyExtractor>>,
 }
 
 impl SessionConfig {
@@ -101,7 +101,20 @@ impl SessionConfigBuilder {
     ///
     /// <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
     pub fn add_self_attester(mut self, attester_id: String, attester: Box<dyn Attester>) -> Self {
-        self.config.attestation_provider_config.self_attesters.insert(attester_id, attester);
+        self.config.attestation_provider_config.self_attesters.insert(attester_id, attester.into());
+        self
+    }
+
+    /// Add an Attester but retain ownership of the object.
+    pub fn add_self_attester_ref(
+        mut self,
+        attester_id: String,
+        attester: &Arc<dyn Attester>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .self_attesters
+            .insert(attester_id, attester.clone());
         self
     }
 
@@ -111,7 +124,20 @@ impl SessionConfigBuilder {
     ///
     /// <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
     pub fn add_self_endorser(mut self, endorser_id: String, endorser: Box<dyn Endorser>) -> Self {
-        self.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser);
+        self.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser.into());
+        self
+    }
+
+    /// Add an Endorser but retain ownership of the object
+    pub fn add_self_endorser_ref(
+        mut self,
+        endorser_id: String,
+        endorser: &Arc<dyn Endorser>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .self_endorsers
+            .insert(endorser_id, endorser.clone());
         self
     }
 
@@ -129,10 +155,26 @@ impl SessionConfigBuilder {
         self.config
             .attestation_provider_config
             .peer_verifiers
-            .insert(attester_id.clone(), verifier);
+            .insert(attester_id.clone(), verifier.into());
         self.config
             .binding_key_extractors
-            .insert(attester_id, Box::new(DefaultSigningKeyExtractor {}));
+            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
+        self
+    }
+
+    /// Add an Attestation Verifier but retain ownership of the object.
+    pub fn add_peer_verifier_ref(
+        mut self,
+        attester_id: String,
+        verifier: &Arc<dyn AttestationVerifier>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.clone());
+        self.config
+            .binding_key_extractors
+            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
         self
     }
 
@@ -153,8 +195,24 @@ impl SessionConfigBuilder {
         self.config
             .attestation_provider_config
             .peer_verifiers
-            .insert(attester_id.clone(), verifier);
-        self.config.binding_key_extractors.insert(attester_id, key_extractor);
+            .insert(attester_id.clone(), verifier.into());
+        self.config.binding_key_extractors.insert(attester_id, key_extractor.into());
+        self
+    }
+
+    /// Add an Attestation Verifier with the custom key extractor but retain
+    /// ownership of the objects.
+    pub fn add_peer_verifier_with_key_extractor_ref(
+        mut self,
+        attester_id: String,
+        verifier: &Arc<dyn AttestationVerifier>,
+        key_extractor: &Arc<dyn KeyExtractor>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.clone());
+        self.config.binding_key_extractors.insert(attester_id, key_extractor.clone());
         self
     }
 
@@ -201,9 +259,9 @@ impl SessionConfigBuilder {
 #[allow(dead_code)]
 pub struct AttestationProviderConfig {
     pub attestation_type: AttestationType,
-    pub self_attesters: BTreeMap<String, Box<dyn Attester>>,
-    pub self_endorsers: BTreeMap<String, Box<dyn Endorser>>,
-    pub peer_verifiers: BTreeMap<String, Box<dyn AttestationVerifier>>,
+    pub self_attesters: BTreeMap<String, Arc<dyn Attester>>,
+    pub self_endorsers: BTreeMap<String, Arc<dyn Endorser>>,
+    pub peer_verifiers: BTreeMap<String, Arc<dyn AttestationVerifier>>,
     pub attestation_aggregator: Box<dyn AttestationAggregator>,
 }
 
