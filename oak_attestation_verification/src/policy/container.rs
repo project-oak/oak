@@ -17,7 +17,6 @@
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
-    vec,
     vec::Vec,
 };
 
@@ -34,9 +33,7 @@ use oak_proto_rust::oak::{
 use crate::{
     compare::compare_container_layer_measurement_digests,
     expect::acquire_container_event_expected_values,
-    policy::{
-        ENCRYPTION_PUBLIC_KEY_NAME, SESSION_BINDING_PUBLIC_KEY_NAME, SIGNING_PUBLIC_KEY_NAME,
-    },
+    policy::{ENCRYPTION_PUBLIC_KEY_ID, SESSION_BINDING_PUBLIC_KEY_ID, SIGNING_PUBLIC_KEY_ID},
     util::decode_event_proto,
 };
 
@@ -77,13 +74,10 @@ impl Policy<[u8], Variant> for ContainerPolicy {
         compare_container_layer_measurement_digests(&event, &expected_values)
             .context("couldn't verify container event")?;
 
-        let artifacts = vec![
-            (ENCRYPTION_PUBLIC_KEY_NAME.to_string(), event.encryption_public_key.to_vec()),
-            (SIGNING_PUBLIC_KEY_NAME.to_string(), event.signing_public_key.to_vec()),
-            (
-                SESSION_BINDING_PUBLIC_KEY_NAME.to_string(),
-                event.session_binding_public_key.to_vec(),
-            ),
+        let artifacts = [
+            (ENCRYPTION_PUBLIC_KEY_ID.to_string(), event.encryption_public_key.to_vec()),
+            (SIGNING_PUBLIC_KEY_ID.to_string(), event.signing_public_key.to_vec()),
+            (SESSION_BINDING_PUBLIC_KEY_ID.to_string(), event.session_binding_public_key.to_vec()),
         ]
         .into_iter()
         .collect::<BTreeMap<String, Vec<u8>>>();

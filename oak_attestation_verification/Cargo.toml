@@ -21,6 +21,7 @@ getrandom = { version = "*", default-features = false, features = [
   # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
   "rdrand",
 ] }
+hashbrown = { version = "*", default-features = false, features = ["ahash"] }
 hex = { version = "*", default-features = false }
 itertools = { version = "*", default-features = false }
 oak_attestation_verification_types = { workspace = true }

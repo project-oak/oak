@@ -16,11 +16,18 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 use anyhow::Context;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
+use hashbrown::HashSet;
 use itertools::izip;
 use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
@@ -150,6 +157,9 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             milliseconds_since_epoch,
         )
         .context("couldn't verify event log")?;
+
+        verify_event_artifacts_uniqueness(&event_attestation_results)
+            .context("couldn't verify event artifacts ID uniqueness")?;
 
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
@@ -448,6 +458,35 @@ fn verify_event_log(
         })
         .collect::<Vec<EventAttestationResults>>();
     Ok(event_attestation_results)
+}
+
+/// Verifies that artifacts in all events have unique IDs.
+fn verify_event_artifacts_uniqueness(
+    event_attestation_results: &[EventAttestationResults],
+) -> anyhow::Result<()> {
+    event_attestation_results.iter().try_fold(HashSet::new(), |id_set, event| {
+        let updated_id_set = event.artifacts.keys().try_fold(id_set, |mut global_id_set, id| {
+            if global_id_set.insert(id) {
+                Ok(global_id_set)
+            } else {
+                anyhow::bail!("artifact ID `{}` is duplicated in multiple events", id)
+            }
+        })?;
+        Ok::<HashSet<&String>, anyhow::Error>(updated_id_set)
+    })?;
+    Ok(())
+}
+
+/// Returns a reference to the event artifact from `attestation_results` with a
+/// given `artifact_id`.
+pub fn get_event_artifact<'a>(
+    attestation_results: &'a AttestationResults,
+    artifact_id: &str,
+) -> Option<&'a Vec<u8>> {
+    attestation_results
+        .event_attestation_results
+        .iter()
+        .find_map(|event| event.artifacts.get(artifact_id))
 }
 
 #[cfg(test)]
