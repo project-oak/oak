@@ -17,6 +17,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
+use oak_sdk_containers::default_orchestrator_channel;
 use oak_sdk_server_v1::OakApplicationContext;
 use tokio::net::TcpListener;
 
@@ -25,9 +26,10 @@ const ENCLAVE_APP_PORT: u16 = 8080;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Logging!");
+    let orchestrator_channel =
+        default_orchestrator_channel().await.context("failed to create orchestrator channel")?;
 
-    let mut orchestrator_client =
-        OrchestratorClient::create().await.context("Could't create orchestrator client")?;
+    let mut orchestrator_client = OrchestratorClient::create(&orchestrator_channel);
 
     let application_config = orchestrator_client
         .get_application_config()
@@ -39,9 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("failed to get endorsed evidence")?;
 
-    let encryption_key_handle = InstanceEncryptionKeyHandle::create()
-        .await
-        .context("couldn't create encryption key handle")?;
+    let encryption_key_handle = InstanceEncryptionKeyHandle::create(&orchestrator_channel);
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;

@@ -13,13 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use oak_grpc::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 use oak_proto_rust::oak::session::v1::EndorsedEvidence;
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
-
-use crate::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 /// Utility struct used to interface with the Orchestrator.
 #[derive(Clone)]
@@ -28,19 +24,8 @@ pub struct OrchestratorClient {
 }
 
 impl OrchestratorClient {
-    pub async fn create() -> Result<Self> {
-        let inner: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context("couldn't form endpoint")?
-                .connect_with_connector(service_fn(move |_: Uri| {
-                    tokio::net::UnixStream::connect(IPC_SOCKET)
-                }))
-                .await
-                .context("couldn't connect to UDS socket")?;
-
-            GrpcOrchestratorClient::new(channel)
-        };
-        Ok(Self { inner })
+    pub fn create(channel: &tonic::transport::channel::Channel) -> Self {
+        Self { inner: GrpcOrchestratorClient::new(channel.clone()) }
     }
 
     /// Retrieves the application configuration from the Orchestrator.

@@ -78,6 +78,7 @@ rust_binary(
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
         "//oak_containers_sdk",
+        "//oak_sdk/containers:oak_sdk_containers",
         "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",

@@ -41,6 +41,7 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_sdk/containers:oak_sdk_containers",
         "//oak_session",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
@@ -52,7 +53,6 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
-        "@oak_crates_index//:tower",
     ],
 )
 

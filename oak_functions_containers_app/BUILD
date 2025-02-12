@@ -115,6 +115,7 @@ rust_binary(
     deps = APP_DEPS + [
         ":lib",
         "//oak_functions_service:lib_unrestricted",
+        "//oak_sdk/containers:oak_sdk_containers",
     ],
 )
 
@@ -128,6 +129,7 @@ rust_binary(
     deps = APP_DEPS + [
         ":lib_insecure",
         "//oak_functions_service:lib_insecure_unrestricted",
+        "//oak_sdk/containers:oak_sdk_containers",
     ],
 )
 

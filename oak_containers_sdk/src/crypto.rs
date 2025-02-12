@@ -23,29 +23,14 @@ use oak_proto_rust::oak::{
     containers::v1::{DeriveSessionKeysRequest, KeyOrigin, SignRequest},
     crypto::v1::{SessionKeys, Signature},
 };
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
-
-use crate::{IGNORED_ENDPOINT_URI, IPC_SOCKET};
 
 struct OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel>,
 }
 
 impl OrchestratorCryptoClient {
-    async fn create() -> anyhow::Result<Self> {
-        let inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context("couldn't form endpoint")?
-                .connect_with_connector(service_fn(move |_: Uri| {
-                    tokio::net::UnixStream::connect(IPC_SOCKET)
-                }))
-                .await
-                .context("couldn't connect to UDS socket")?;
-
-            GrpcOrchestratorCryptoClient::new(channel)
-        };
-        Ok(Self { inner })
+    fn create(channel: &tonic::transport::channel::Channel) -> Self {
+        Self { inner: GrpcOrchestratorCryptoClient::new(channel.clone()) }
     }
 
     async fn derive_session_keys(
@@ -85,12 +70,8 @@ pub struct InstanceEncryptionKeyHandle {
 }
 
 impl InstanceEncryptionKeyHandle {
-    pub async fn create() -> anyhow::Result<Self> {
-        Ok(Self {
-            orchestrator_crypto_client: OrchestratorCryptoClient::create()
-                .await
-                .context("couldn't create Orchestrator crypto client")?,
-        })
+    pub fn create(orchestrator_channel: &tonic::transport::Channel) -> Self {
+        Self { orchestrator_crypto_client: OrchestratorCryptoClient::create(orchestrator_channel) }
     }
 }
 
@@ -129,14 +110,8 @@ pub struct InstanceSigner {
 }
 
 impl InstanceSigner {
-    pub async fn create() -> anyhow::Result<Self> {
-        Ok(Self {
-            orchestrator_crypto_client: Arc::new(
-                OrchestratorCryptoClient::create()
-                    .await
-                    .context("couldn't create Orchestrator crypto client")?,
-            ),
-        })
+    pub fn create(channel: &tonic::transport::channel::Channel) -> Self {
+        Self { orchestrator_crypto_client: Arc::new(OrchestratorCryptoClient::create(channel)) }
     }
 }
 

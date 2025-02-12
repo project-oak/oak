@@ -1,5 +1,5 @@
 //
-// Copyright 2024 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-pub mod crypto;
-pub mod handler;
-pub mod orchestrator_client;
-pub mod standalone;
-
-// Re-export structs so that they are available at the top level of the SDK.
-pub use crypto::InstanceEncryptionKeyHandle;
-pub use orchestrator_client::OrchestratorClient;
+pub use orchestrator_channel::default_orchestrator_channel;

@@ -20,7 +20,7 @@ use std::{
     num::{NonZeroU16, NonZeroU32},
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use clap::Parser;
 use oak_containers_agent::{
     metrics::{MetricsConfig, OakObserver},
@@ -36,6 +36,7 @@ use oak_proto_rust::oak::functions::config::{
     application_config::CommunicationChannel, ApplicationConfig, HandlerType,
     TcpCommunicationChannel, WasmtimeConfig,
 };
+use oak_sdk_containers::default_orchestrator_channel;
 use prost::Message;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
@@ -125,13 +126,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
 
-    let mut client =
-        OrchestratorClient::create().await.context("couldn't create Orchestrator client")?;
-    let encryption_key_handle = Box::new(
-        InstanceEncryptionKeyHandle::create()
-            .await
-            .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?,
-    );
+    let orchestrator_channel =
+        default_orchestrator_channel().await.context("failed to create channel to orchestrator")?;
+
+    let mut client = OrchestratorClient::create(&orchestrator_channel);
+    let encryption_key_handle =
+        Box::new(InstanceEncryptionKeyHandle::create(&orchestrator_channel));
 
     // To be used when connecting trusted app to orchestrator.
     let application_config = {
