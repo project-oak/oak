@@ -897,7 +897,7 @@
         .map(|(event_policy, event, event_endorsement)| {
             event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
                 <span class="comment">// TODO: b/366186091 - Use Rust error types for failed attestation.
-                </span>EventAttestationResults {},
+                </span>EventAttestationResults { ..Default::default() },
             )
         })
         .collect::&lt;Vec&lt;EventAttestationResults&gt;&gt;();

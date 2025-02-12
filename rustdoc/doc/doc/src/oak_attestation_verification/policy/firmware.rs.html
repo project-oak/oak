@@ -121,7 +121,7 @@
             .context(<span class="string">"stage0 measurement values failed verification"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// TODO: b/356631062 - Return detailed attestation results.
-        </span><span class="prelude-val">Ok</span>(EventAttestationResults {})
+        </span><span class="prelude-val">Ok</span>(EventAttestationResults { ..Default::default() })
     }
 }
 </code></pre></div></section></main></body></html>

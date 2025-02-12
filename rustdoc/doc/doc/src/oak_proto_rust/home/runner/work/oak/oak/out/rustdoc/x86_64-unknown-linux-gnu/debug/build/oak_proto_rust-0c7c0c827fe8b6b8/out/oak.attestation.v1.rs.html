@@ -1505,6 +1505,15 @@
 <a href="#1505" id="1505">1505</a>
 <a href="#1506" id="1506">1506</a>
 <a href="#1507" id="1507">1507</a>
+<a href="#1508" id="1508">1508</a>
+<a href="#1509" id="1509">1509</a>
+<a href="#1510" id="1510">1510</a>
+<a href="#1511" id="1511">1511</a>
+<a href="#1512" id="1512">1512</a>
+<a href="#1513" id="1513">1513</a>
+<a href="#1514" id="1514">1514</a>
+<a href="#1515" id="1515">1515</a>
+<a href="#1516" id="1516">1516</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with:
 /// &lt;https://github.com/project-oak/oak/tree/main/snp_measurement&gt;
@@ -2539,7 +2548,16 @@
 /// TODO: b/366419879 - Implement descriptive per-event attestation results.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>EventAttestationResults {}
+</span><span class="kw">pub struct </span>EventAttestationResults {
+    <span class="doccomment">/// Map of artifacts extracted from current event.
+    /// An example of an artifact could be a encryption public key recorded in the
+    /// event and signed by the evidence.
+    </span><span class="attr">#[prost(btree_map = <span class="string">"string, bytes"</span>, tag = <span class="string">"1"</span>)]
+    </span><span class="kw">pub </span>artifacts: ::prost::alloc::collections::BTreeMap&lt;
+        ::prost::alloc::string::String,
+        ::prost::alloc::vec::Vec&lt;u8&gt;,
+    &gt;,
+}
 <span class="doccomment">/// Specifies a temporal range of validity for an endorsement.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

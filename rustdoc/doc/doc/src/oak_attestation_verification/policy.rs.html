@@ -21,6 +21,13 @@
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -44,4 +51,11 @@
 <span class="kw">pub mod </span>kernel;
 <span class="kw">pub mod </span>platform;
 <span class="kw">pub mod </span>system;
+
+<span class="doccomment">/// Public key used by the client to establish an HPKE session with the enclave.
+</span><span class="kw">pub const </span>ENCRYPTION_PUBLIC_KEY_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"oak-encryption-public-key:X25519"</span>;
+<span class="doccomment">/// Public key used to verify artifacts signed by the enclave.
+</span><span class="kw">pub const </span>SIGNING_PUBLIC_KEY_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"oak-signing-public-key:ecdsa-p256"</span>;
+<span class="doccomment">/// Public key used to verify that the Noise handshake transcript signature.
+</span><span class="kw">pub const </span>SESSION_BINDING_PUBLIC_KEY_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"oak-session-binding-public-key:ecdsa-p256"</span>;
 </code></pre></div></section></main></body></html>
