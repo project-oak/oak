@@ -73,6 +73,7 @@ rust_library(
         ":oak_session_ffi_types",
         "//oak_attestation_types",
         "//oak_proto_rust",
+        "//oak_sdk/common:oak_sdk_common",
         "@oak_crates_index//:prost",
     ],
 )
@@ -86,6 +87,7 @@ rust_library(
         "//oak_attestation_types",
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
+        "//oak_sdk/common:oak_sdk_common",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",

@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_attestation_types::{attester::SimpleAttester, endorser::SimpleEndorser};
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+use oak_sdk_common::{InstanceAttester, InstanceEndorser};
 use oak_session_ffi_config::{FfiAttester, FfiEndorser};
 use oak_session_ffi_types::{BytesView, Error};
 use prost::Message;
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn new_simple_attester(
 ) -> ErrorOrFfiAttester {
     match Evidence::decode(evidence_proto_bytes.as_slice()) {
         Ok(evidence) => {
-            ErrorOrFfiAttester::ok(FfiAttester::new(Box::new(SimpleAttester::new(evidence))))
+            ErrorOrFfiAttester::ok(FfiAttester::new(Box::new(InstanceAttester::new(evidence))))
         }
         Err(e) => ErrorOrFfiAttester::err(format!("failed to decode evidence proto: {e:?}")),
     }
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn new_simple_endorser(
 ) -> ErrorOrFfiEndorser {
     match Endorsements::decode(endorsements_proto_bytes.as_slice()) {
         Ok(endorsements) => {
-            ErrorOrFfiEndorser::ok(FfiEndorser::new(Box::new(SimpleEndorser::new(endorsements))))
+            ErrorOrFfiEndorser::ok(FfiEndorser::new(Box::new(InstanceEndorser::new(endorsements))))
         }
         Err(e) => ErrorOrFfiEndorser::err(format!("failed to decode evidence proto: {e:?}")),
     }

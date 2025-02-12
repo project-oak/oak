@@ -34,25 +34,3 @@ pub trait Attester: Send + Sync {
     /// function.
     fn quote(&self) -> anyhow::Result<Evidence>;
 }
-
-/// A SimpleAttester simply quotes the evidence that it is built with.
-// #[derive(Clone)]
-pub struct SimpleAttester {
-    evidence: Evidence,
-}
-
-impl SimpleAttester {
-    pub fn new(evidence: Evidence) -> Self {
-        Self { evidence }
-    }
-}
-
-impl Attester for SimpleAttester {
-    fn extend(&mut self, _encoded_event: &[u8]) -> anyhow::Result<()> {
-        anyhow::bail!("Evidence extension not supported.");
-    }
-
-    fn quote(&self) -> anyhow::Result<Evidence> {
-        Ok(self.evidence.clone())
-    }
-}

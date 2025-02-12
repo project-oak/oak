@@ -24,7 +24,6 @@ package(
 rust_library(
     name = "oak_containers_sdk",
     srcs = [
-        "src/attestation.rs",
         "src/crypto.rs",
         "src/handler.rs",
         "src/lib.rs",
