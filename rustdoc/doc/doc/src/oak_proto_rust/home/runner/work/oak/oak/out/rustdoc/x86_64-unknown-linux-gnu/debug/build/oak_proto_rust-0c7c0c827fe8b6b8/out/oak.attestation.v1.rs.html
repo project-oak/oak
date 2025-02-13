@@ -1509,11 +1509,6 @@
 <a href="#1509" id="1509">1509</a>
 <a href="#1510" id="1510">1510</a>
 <a href="#1511" id="1511">1511</a>
-<a href="#1512" id="1512">1512</a>
-<a href="#1513" id="1513">1513</a>
-<a href="#1514" id="1514">1514</a>
-<a href="#1515" id="1515">1515</a>
-<a href="#1516" id="1516">1516</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with:
 /// &lt;https://github.com/project-oak/oak/tree/main/snp_measurement&gt;
@@ -1609,11 +1604,6 @@
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>EventLog {
-    <span class="doccomment">/// TODO: b/333748757 - Remove 'events' once 'encoded_events' is in google3.
-    /// Deprecated: Use encoded_events instead.
-    </span><span class="attr">#[deprecated]
-    #[prost(message, repeated, tag = <span class="string">"1"</span>)]
-    </span><span class="kw">pub </span>events: ::prost::alloc::vec::Vec&lt;Event&gt;,
     <span class="doccomment">/// Holds serialized instances of the the \[`Event`\] message. The serialized
     /// form is used instead of `repeated Event events` as proto serialization is
     /// non-deterministic and attestation evidence contains signatures over the
