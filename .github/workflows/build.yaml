@@ -168,6 +168,12 @@ jobs:
           gsutil cp "${binary_path}" "gs://${bucket}/${gcs_binary_path}"
           gsutil cp "${provenance_path}" "gs://${bucket}/${gcs_provenance_path}"
 
+          scripts/publish \
+            "${binary_path}" \
+            "${provenance_path}" \
+            "sha1:${GITHUB_SHA}" \
+            "${package_name}"
+
           curl --fail \
             --request POST \
             --header 'Content-Type: application/json' \

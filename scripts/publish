@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# Writes a pair of binary and GitHub attestation to discoverability storage,
+# including updating the search index. Needs `gsutil` and storage.object.create
+# (create only) or storage.object.user (create+overwrite) permission on the
+# GCS buckets. In the latter case, mtimes will be updated on rewrite.
+#
+set -o errexit
+set -o nounset
+set -o pipefail
+
+readonly FBUCKET=oak-files  # File bucket on GCS
+readonly IBUCKET=oak-index  # Index bucket on GCS
+
+# ID of index to access binaries by commit hash and package name.
+readonly BINARY_FOR_COMMIT=6
+
+# ID of index to access GitHub attestations by commit hash and package name.
+readonly PROV_FOR_COMMIT=7
+
+# ID of index to access GitHub attestations by binary hash.
+readonly PROV_FOR_BINARY=12
+
+usage_and_exit() {
+  >&2 echo "Usage: $0 <binary_path> <prov_path> sha1:<commit_hash> <package_name>"
+  exit 1
+}
+
+copy_file() {
+  gsutil cp "$1" "$2"
+}
+
+# Uploads a file and returns its SHA2_256 hash.
+upload_file() {
+  file="$1"
+  hash="sha2-256:$(sha256sum "${file}" | cut -d " " -f 1)"
+  copy_file "${file}" "gs://${FBUCKET}/${hash}"
+  echo "${hash}"
+}
+
+publish() {
+  binary_path="$1"
+  provenance_path="$2"
+  commit_hash="$3"
+  package_name="$4"
+
+  bhash_path=$(mktemp)
+  phash_path=$(mktemp)
+  upload_file "${binary_path}" > "${bhash_path}"
+  upload_file "${provenance_path}" > "${phash_path}"
+  bhash=$(cat "${bhash_path}")
+
+  copy_file \
+    "${bhash_path}" \
+    "gs://${IBUCKET}/${BINARY_FOR_COMMIT}/${commit_hash}/${package_name}"
+  copy_file \
+    "${phash_path}" \
+    "gs://${IBUCKET}/${PROV_FOR_COMMIT}/${commit_hash}/${package_name}"
+  copy_file \
+    "${phash_path}" \
+    "gs://${IBUCKET}/${PROV_FOR_BINARY}/${bhash}"
+}
+
+set -o xtrace
+if [[ $# != 4 ]]; then
+  usage_and_exit
+fi
+publish "$1" "$2" "$3" "$4"
