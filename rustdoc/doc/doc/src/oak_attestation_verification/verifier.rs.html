@@ -452,6 +452,45 @@
 <a href="#452" id="452">452</a>
 <a href="#453" id="453">453</a>
 <a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -470,11 +509,18 @@
 
 </span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
-</span><span class="kw">use </span>alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
+</span><span class="kw">use </span>alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
+<span class="kw">use </span>hashbrown::HashSet;
 <span class="kw">use </span>itertools::izip;
 <span class="kw">use </span>oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
@@ -604,6 +650,9 @@
             milliseconds_since_epoch,
         )
         .context(<span class="string">"couldn't verify event log"</span>)<span class="question-mark">?</span>;
+
+        verify_event_artifacts_uniqueness(<span class="kw-2">&amp;</span>event_attestation_results)
+            .context(<span class="string">"couldn't verify event artifacts ID uniqueness"</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// TODO: b/366419879 - Combine per-event attestation results.
         </span><span class="attr">#[allow(deprecated)]
@@ -902,6 +951,35 @@
         })
         .collect::&lt;Vec&lt;EventAttestationResults&gt;&gt;();
     <span class="prelude-val">Ok</span>(event_attestation_results)
+}
+
+<span class="doccomment">/// Verifies that artifacts in all events have unique IDs.
+</span><span class="kw">fn </span>verify_event_artifacts_uniqueness(
+    event_attestation_results: <span class="kw-2">&amp;</span>[EventAttestationResults],
+) -&gt; anyhow::Result&lt;()&gt; {
+    event_attestation_results.iter().try_fold(HashSet::new(), |id_set, event| {
+        <span class="kw">let </span>updated_id_set = event.artifacts.keys().try_fold(id_set, |<span class="kw-2">mut </span>global_id_set, id| {
+            <span class="kw">if </span>global_id_set.insert(id) {
+                <span class="prelude-val">Ok</span>(global_id_set)
+            } <span class="kw">else </span>{
+                <span class="macro">anyhow::bail!</span>(<span class="string">"artifact ID `{}` is duplicated in multiple events"</span>, id)
+            }
+        })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>::&lt;HashSet&lt;<span class="kw-2">&amp;</span>String&gt;, anyhow::Error&gt;(updated_id_set)
+    })<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/// Returns a reference to the event artifact from `attestation_results` with a
+/// given `artifact_id`.
+</span><span class="kw">pub fn </span>get_event_artifact&lt;<span class="lifetime">'a</span>&gt;(
+    attestation_results: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>AttestationResults,
+    artifact_id: <span class="kw-2">&amp;</span>str,
+) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Vec&lt;u8&gt;&gt; {
+    attestation_results
+        .event_attestation_results
+        .iter()
+        .find_map(|event| event.artifacts.get(artifact_id))
 }
 
 <span class="attr">#[cfg(test)]

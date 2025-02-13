@@ -86,12 +86,6 @@
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -111,7 +105,6 @@
 </span><span class="kw">use </span>alloc::{
     collections::BTreeMap,
     string::{String, ToString},
-    vec,
     vec::Vec,
 };
 
@@ -128,9 +121,7 @@
 <span class="kw">use crate</span>::{
     compare::compare_container_layer_measurement_digests,
     expect::acquire_container_event_expected_values,
-    policy::{
-        ENCRYPTION_PUBLIC_KEY_NAME, SESSION_BINDING_PUBLIC_KEY_NAME, SIGNING_PUBLIC_KEY_NAME,
-    },
+    policy::{ENCRYPTION_PUBLIC_KEY_ID, SESSION_BINDING_PUBLIC_KEY_ID, SIGNING_PUBLIC_KEY_ID},
     util::decode_event_proto,
 };
 
@@ -171,13 +162,10 @@
         compare_container_layer_measurement_digests(<span class="kw-2">&amp;</span>event, <span class="kw-2">&amp;</span>expected_values)
             .context(<span class="string">"couldn't verify container event"</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>artifacts = <span class="macro">vec!</span>[
-            (ENCRYPTION_PUBLIC_KEY_NAME.to_string(), event.encryption_public_key.to_vec()),
-            (SIGNING_PUBLIC_KEY_NAME.to_string(), event.signing_public_key.to_vec()),
-            (
-                SESSION_BINDING_PUBLIC_KEY_NAME.to_string(),
-                event.session_binding_public_key.to_vec(),
-            ),
+        <span class="kw">let </span>artifacts = [
+            (ENCRYPTION_PUBLIC_KEY_ID.to_string(), event.encryption_public_key.to_vec()),
+            (SIGNING_PUBLIC_KEY_ID.to_string(), event.signing_public_key.to_vec()),
+            (SESSION_BINDING_PUBLIC_KEY_ID.to_string(), event.session_binding_public_key.to_vec()),
         ]
         .into_iter()
         .collect::&lt;BTreeMap&lt;String, Vec&lt;u8&gt;&gt;&gt;();

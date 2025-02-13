@@ -50,6 +50,25 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -71,7 +90,10 @@
 
 </span><span class="kw">use </span>alloc::boxed::Box;
 
-<span class="kw">use </span>anyhow::{anyhow, Error};
+<span class="kw">use </span>anyhow::{anyhow, Context, Error};
+<span class="kw">use </span>oak_attestation_verification::{
+    policy::SESSION_BINDING_PUBLIC_KEY_ID, verifier::get_event_artifact,
+};
 <span class="kw">use </span>oak_crypto::verifier::Verifier;
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::AttestationResults;
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
@@ -99,6 +121,22 @@
             .clone();
         <span class="prelude-val">Ok</span>(Box::new(VerifyingKey::from_sec1_bytes(verifying_key.as_slice()).map_err(|err| {
             <span class="macro">anyhow!</span>(<span class="string">"couldn't create a verifying key from the signing key in the evidence: {}"</span>, err)
+        })<span class="question-mark">?</span>))
+    }
+}
+
+<span class="kw">pub struct </span>DefaultBindingKeyExtractor;
+
+<span class="kw">impl </span>KeyExtractor <span class="kw">for </span>DefaultBindingKeyExtractor {
+    <span class="kw">fn </span>extract_verifying_key(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        attestation_results: <span class="kw-2">&amp;</span>AttestationResults,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Verifier&gt;, Error&gt; {
+        <span class="kw">let </span>session_binding_public_key =
+            get_event_artifact(attestation_results, SESSION_BINDING_PUBLIC_KEY_ID)
+                .context(<span class="string">"couldn't find session binding key"</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Box::new(VerifyingKey::from_sec1_bytes(session_binding_public_key.as_slice()).map_err(|err| {
+            <span class="macro">anyhow!</span>(<span class="string">"couldn't create a verifying key from the session binding public key in the evidence: {}"</span>, err)
         })<span class="question-mark">?</span>))
     }
 }
