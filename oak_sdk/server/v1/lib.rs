@@ -1,5 +1,5 @@
 //
-// Copyright 2024 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-use oak_sdk_server_v1::ApplicationHandler;
+mod oak_application_context;
+mod tonic;
 
-/// The actual business logic for the echo application.
-pub struct EchoHandler;
-
-#[async_trait::async_trait]
-impl ApplicationHandler for EchoHandler {
-    async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-        Ok(request_bytes.to_vec())
-    }
-}
+pub use crate::{
+    oak_application_context::{ApplicationHandler, OakApplicationContext},
+    tonic::{oak_application, OakApplicationStream},
+};

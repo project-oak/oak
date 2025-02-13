@@ -22,13 +22,13 @@
 use std::{pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Context};
-use oak_containers_sdk::{ApplicationHandler, OakSessionContext};
 use oak_hello_world_proto::oak::containers::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{
     PlaintextMessage, RequestWrapper, SessionRequest, SessionResponse,
 };
+use oak_sdk_server_v1::{ApplicationHandler, OakApplicationContext};
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     ServerSession, Session,
@@ -38,18 +38,18 @@ use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct EnclaveApplicationImplementation {
-    oak_session_context: Arc<OakSessionContext>,
+    oak_application_context: Arc<OakApplicationContext>,
     // Needed while we implement noise inline.
     application_handler: Arc<Box<dyn ApplicationHandler>>,
 }
 
 impl EnclaveApplicationImplementation {
     pub fn new(
-        oak_session_context: OakSessionContext,
+        oak_application_context: OakApplicationContext,
         application_handler: Box<dyn ApplicationHandler>,
     ) -> Self {
         Self {
-            oak_session_context: Arc::new(oak_session_context),
+            oak_application_context: Arc::new(oak_application_context),
             application_handler: Arc::new(application_handler),
         }
     }
@@ -103,7 +103,7 @@ impl ServerSessionHelpers for ServerSession {
 
 #[tonic::async_trait]
 impl EnclaveApplication for EnclaveApplicationImplementation {
-    type LegacySessionStream = oak_containers_sdk::tonic::OakSessionStream;
+    type LegacySessionStream = oak_sdk_server_v1::OakApplicationStream;
     type OakSessionStream =
         Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
     type PlaintextSessionStream =
@@ -113,7 +113,7 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<RequestWrapper>>,
     ) -> Result<tonic::Response<Self::LegacySessionStream>, tonic::Status> {
-        oak_containers_sdk::tonic::oak_session(self.oak_session_context.clone(), request).await
+        oak_sdk_server_v1::oak_application(self.oak_application_context.clone(), request).await
     }
 
     async fn oak_session(
@@ -173,7 +173,7 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
 
 pub async fn create(
     listener: TcpListener,
-    oak_session_context: OakSessionContext,
+    oak_session_context: OakApplicationContext,
     application_handler: Box<dyn ApplicationHandler>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()

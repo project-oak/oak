@@ -22,11 +22,11 @@
 use std::{pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Context};
-use oak_containers_sdk::ApplicationHandler;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_sdk_server_v1::ApplicationHandler;
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     ServerSession, Session,

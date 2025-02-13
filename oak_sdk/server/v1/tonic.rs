@@ -18,18 +18,18 @@ use std::{pin::Pin, sync::Arc};
 use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
 use tokio_stream::{Stream, StreamExt};
 
-use crate::oak_session_context::OakSessionContext;
+use crate::oak_application_context::OakApplicationContext;
 
 /// Helper for handling streaming requests presented by a tonic server
 /// implementation.
 
-pub type OakSessionStream =
+pub type OakApplicationStream =
     Pin<Box<dyn Stream<Item = Result<ResponseWrapper, tonic::Status>> + Send + 'static>>;
 
-pub async fn oak_session(
-    session_context: Arc<OakSessionContext>,
+pub async fn oak_application(
+    application_context: Arc<OakApplicationContext>,
     request: tonic::Request<tonic::Streaming<RequestWrapper>>,
-) -> Result<tonic::Response<OakSessionStream>, tonic::Status> {
+) -> Result<tonic::Response<OakApplicationStream>, tonic::Status> {
     let mut request_stream = request.into_inner();
 
     let response_stream = async_stream::try_stream! {
@@ -37,12 +37,12 @@ pub async fn oak_session(
             let request_wrapper = request
                 .map_err(|e| tonic::Status::internal(format!("failed to read request from stream: {e:?}")))?;
 
-            yield session_context
+            yield application_context
                 .handle_request(&request_wrapper)
                 .await
                 .map_err(|e| tonic::Status::internal(format!("failed to handle request: {e:?}")))?;
         }
     };
 
-    Ok(tonic::Response::new(Box::pin(response_stream) as OakSessionStream))
+    Ok(tonic::Response::new(Box::pin(response_stream) as OakApplicationStream))
 }

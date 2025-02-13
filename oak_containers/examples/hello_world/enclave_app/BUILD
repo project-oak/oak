@@ -37,6 +37,7 @@ rust_library(
         "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
+        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
@@ -61,6 +62,7 @@ rust_test(
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
@@ -76,6 +78,7 @@ rust_binary(
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
         "//oak_containers_sdk",
+        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",

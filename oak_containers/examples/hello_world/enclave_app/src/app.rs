@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_containers_sdk::ApplicationHandler;
+use oak_sdk_server_v1::ApplicationHandler;
 
 /// The actual business logic for the hello world application.
 pub struct HelloWorldApplicationHandler {

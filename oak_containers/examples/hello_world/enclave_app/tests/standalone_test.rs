@@ -19,9 +19,10 @@ use anyhow::{Context, Result};
 use futures::channel::mpsc;
 use oak_client::{client::OakClient, verifier::InsecureAttestationVerifier};
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_sdk::{standalone::StandaloneOrchestrator, OakSessionContext};
+use oak_containers_sdk::standalone::StandaloneOrchestrator;
 use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_sdk_server_v1::OakApplicationContext;
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     Session,
@@ -44,7 +45,7 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
         addr,
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
-            OakSessionContext::new(
+            OakApplicationContext::new(
                 Box::new(encryption_key_handle),
                 endorsed_evidence,
                 Box::new(

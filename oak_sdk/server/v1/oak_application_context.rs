@@ -26,24 +26,24 @@ use oak_proto_rust::oak::{
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// An Oak trusted application will write an implementation of
-/// `ApplicationHandler` that accepts a serialized request (including di)
+/// `V1ApplicationHandler` that accepts a serialized request (including di)
 #[async_trait::async_trait]
 pub trait ApplicationHandler: Send + Sync {
     async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-/// The state needed to handle one streaming Oak crypto session.
+/// The state needed to handle one streaming Oak crypto instance.
 ///
 /// This structure contains the server-implementation-independent functionality
 /// for encryption, and holds the instance of the class that actually implements
 /// the application logic.
-pub struct OakSessionContext {
+pub struct OakApplicationContext {
     encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     endorsed_evidence: EndorsedEvidence,
     application_handler: Box<dyn ApplicationHandler>,
 }
 
-impl OakSessionContext {
+impl OakApplicationContext {
     pub fn new(
         encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         endorsed_evidence: EndorsedEvidence,

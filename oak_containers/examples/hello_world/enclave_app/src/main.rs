@@ -16,7 +16,8 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_containers_sdk::{InstanceEncryptionKeyHandle, OakSessionContext, OrchestratorClient};
+use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
+use oak_sdk_server_v1::OakApplicationContext;
 use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
@@ -48,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let join_handle =
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
-            OakSessionContext::new(
+            OakApplicationContext::new(
                 Box::new(encryption_key_handle),
                 endorsed_evidence,
                 Box::new(

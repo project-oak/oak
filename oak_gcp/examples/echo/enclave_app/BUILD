@@ -32,10 +32,10 @@ rust_library(
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
         "//oak_proto_rust",
+        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
