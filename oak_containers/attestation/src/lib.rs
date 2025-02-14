@@ -18,6 +18,7 @@ extern crate alloc;
 use alloc::{string::ToString, vec};
 
 use anyhow::Context;
+use bytes::Buf;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use oak_crypto::{
@@ -33,7 +34,7 @@ use oak_proto_rust::oak::{
 use prost::Message;
 
 /// Measures the system image and returns a corresponding event log entry.
-pub fn create_system_layer_event(system_image: &[u8]) -> Event {
+pub fn create_system_layer_event<B: Buf>(system_image: B) -> Event {
     let digest = oak_attestation::MeasureDigest::measure_digest(system_image);
     Event {
         tag: "stage1".to_string(),
@@ -46,9 +47,9 @@ pub fn create_system_layer_event(system_image: &[u8]) -> Event {
 
 /// Creates a container event that includes image bytes and configuration
 /// measurements and public keys used by the container.
-pub fn create_container_event(
-    container_bytes: &[u8],
-    config_bytes: &[u8],
+pub fn create_container_event<A: Buf, B: Buf>(
+    container_bytes: A,
+    config_bytes: B,
     instance_public_keys: &InstancePublicKeys,
 ) -> Event {
     let container_digest = oak_attestation::MeasureDigest::measure_digest(container_bytes);

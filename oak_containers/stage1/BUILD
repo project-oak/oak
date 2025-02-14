@@ -33,6 +33,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:futures-util",
         "@oak_crates_index//:nix",

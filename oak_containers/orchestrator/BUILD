@@ -51,6 +51,7 @@ rust_library(
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:ciborium",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:coset",

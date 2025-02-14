@@ -32,6 +32,7 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:ciborium",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:p256",

@@ -192,7 +192,7 @@ impl<'a> StandaloneBuilder<'a> {
         // Add container event and add it to the event log.
         let container_event = oak_containers_attestation::create_container_event(
             application_image,
-            &application_config,
+            &application_config[..],
             &instance_public_keys,
         );
         attester

@@ -21,12 +21,13 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use bytes::Buf;
 use nix::unistd::execve;
 use tar::Archive;
 use xz2::read::XzDecoder;
 
-pub async fn extract(buf: &[u8], dst: &Path) -> Result<()> {
-    let decoder = XzDecoder::new(buf);
+pub async fn extract<B: Buf>(buf: B, dst: &Path) -> Result<()> {
+    let decoder = XzDecoder::new(buf.reader());
     let mut archive = Archive::new(decoder);
     archive.unpack(dst).map_err(|e| anyhow!(e))
 }

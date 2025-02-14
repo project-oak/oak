@@ -20,12 +20,13 @@ use std::{
 };
 
 use anyhow::Context;
+use bytes::Buf;
 use nix::unistd::{Gid, Uid};
 use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
 use tokio_util::sync::CancellationToken;
 
-pub async fn run(
-    container_bundle: &[u8],
+pub async fn run<B: Buf>(
+    container_bundle: B,
     container_dir: &Path,
     runtime_uid: Uid,
     runtime_gid: Gid,
@@ -34,7 +35,7 @@ pub async fn run(
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
-    let mut archive = tar::Archive::new(container_bundle);
+    let mut archive = tar::Archive::new(container_bundle.reader());
     archive.unpack(container_dir)?;
 
     for entry in walkdir::WalkDir::new(container_dir) {

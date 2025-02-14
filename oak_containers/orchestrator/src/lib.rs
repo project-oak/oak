@@ -104,8 +104,8 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
     // Create a container event and add it to the event log.
     let mut attester: A = crate::dice::load_stage1_dice_data()?;
     let container_event = oak_containers_attestation::create_container_event(
-        &container_bundle,
-        &application_config,
+        &container_bundle[..],
+        &application_config[..],
         &instance_public_keys,
     );
     attester
@@ -188,7 +188,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
             cancellation_token.clone(),
         ),
         crate::container_runtime::run(
-            &container_bundle,
+            &container_bundle[..],
             &args.container_dir,
             user.uid,
             user.gid,
