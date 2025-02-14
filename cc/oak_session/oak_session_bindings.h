@@ -153,6 +153,7 @@ struct ErrorOrFfiEndorser {
 };
 
 struct SigningKey;
+struct IdentityKey;
 
 extern "C" {
 
@@ -167,6 +168,10 @@ extern SessionConfigBuilder* session_config_builder_add_peer_verifier(
     SessionConfigBuilder*, BytesView, FfiAttestationVerifier);
 extern SessionConfigBuilder* session_config_builder_add_session_binder(
     SessionConfigBuilder*, BytesView, SigningKey*);
+extern SessionConfigBuilder* session_config_builder_set_self_private_key(
+    SessionConfigBuilder*, IdentityKey*);
+extern SessionConfigBuilder* session_config_builder_set_peer_static_public_key(
+    SessionConfigBuilder*, BytesView);
 extern RustBytes new_fake_evidence(BytesView, BytesView);
 extern ErrorOrFfiAttester new_simple_attester(BytesView);
 extern RustBytes new_fake_endorsements(BytesView);
@@ -176,6 +181,9 @@ extern FfiAttestationVerifier new_fake_attestation_verifier(BytesView,
 extern SigningKey* new_random_signing_key();
 extern RustBytes signing_key_verifying_key_bytes(SigningKey*);
 extern void free_signing_key(SigningKey*);
+
+extern IdentityKey* new_identity_key();
+extern ErrorOrRustBytes identity_key_get_public_key(IdentityKey*);
 
 extern SessionConfig* session_config_builder_build(SessionConfigBuilder*);
 

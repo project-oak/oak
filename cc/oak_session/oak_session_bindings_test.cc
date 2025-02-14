@@ -145,7 +145,56 @@ SessionConfig* TestConfigAttestedNNClient() {
   return session_config_builder_build(session_config_builder);
 }
 
-TEST(OakSessionBindingsTest, TestHandshake) {
+SessionConfig* TestConfigUnattestedNKClient(BytesView public_key) {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_UNATTESTED,
+                                           HANDSHAKE_TYPE_NOISE_NK);
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << static_cast<absl::string_view>(result.error->message);
+  }
+  auto session_config_builder = result.result;
+
+  session_config_builder = session_config_builder_set_peer_static_public_key(
+      session_config_builder, public_key);
+
+  return session_config_builder_build(session_config_builder);
+}
+
+SessionConfig* TestConfigUnattestedNKServer(IdentityKey* identity_key) {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_UNATTESTED,
+                                           HANDSHAKE_TYPE_NOISE_NK);
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << static_cast<absl::string_view>(result.error->message);
+  }
+  auto session_config_builder = result.result;
+
+  session_config_builder = session_config_builder_set_self_private_key(
+      session_config_builder, identity_key);
+
+  return session_config_builder_build(session_config_builder);
+}
+
+SessionConfig* TestConfigUnattestedKK(BytesView peer_public_key,
+                                      IdentityKey* self_identity_key) {
+  auto result = new_session_config_builder(ATTESTATION_TYPE_UNATTESTED,
+                                           HANDSHAKE_TYPE_NOISE_KK);
+  if (result.error != nullptr) {
+    LOG(FATAL) << "Failed to create session config builder"
+               << static_cast<absl::string_view>(result.error->message);
+  }
+  auto session_config_builder = result.result;
+
+  session_config_builder = session_config_builder_set_self_private_key(
+      session_config_builder, self_identity_key);
+
+  session_config_builder = session_config_builder_set_peer_static_public_key(
+      session_config_builder, peer_public_key);
+
+  return session_config_builder_build(session_config_builder);
+}
+
+TEST(OakSessionBindingsTest, TestNNHandshake) {
   ErrorOrServerSession server_session_result =
       new_server_session(TestConfigUnattestedNN());
   ASSERT_THAT(server_session_result, IsResult());
@@ -157,6 +206,56 @@ TEST(OakSessionBindingsTest, TestHandshake) {
 
   DoHandshake(server_session, client_session);
 
+  free_server_session(server_session);
+  free_client_session(client_session);
+}
+
+TEST(OakSessionBindingsTest, TestNKHandshake) {
+  IdentityKey* identity_key = new_identity_key();
+  ErrorOrRustBytes public_key = identity_key_get_public_key(identity_key);
+  ASSERT_THAT(public_key, IsResult());
+
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNKServer(identity_key));
+  ASSERT_THAT(server_session_result, IsResult());
+  ServerSession* server_session = server_session_result.result;
+  ErrorOrClientSession client_session_result = new_client_session(
+      TestConfigUnattestedNKClient(BytesView(*(public_key.result))));
+  ASSERT_THAT(client_session_result, IsResult());
+  ClientSession* client_session = client_session_result.result;
+
+  DoHandshake(server_session, client_session);
+
+  free_rust_bytes(public_key.result);
+  free_server_session(server_session);
+  free_client_session(client_session);
+}
+
+TEST(OakSessionBindingsTest, TestKKHandshake) {
+  IdentityKey* client_identity_key = new_identity_key();
+  IdentityKey* server_identity_key = new_identity_key();
+  ErrorOrRustBytes client_public_key =
+      identity_key_get_public_key(client_identity_key);
+  ASSERT_THAT(client_public_key, IsResult());
+  ErrorOrRustBytes server_public_key =
+      identity_key_get_public_key(server_identity_key);
+  ASSERT_THAT(server_public_key, IsResult());
+
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedKK(
+          BytesView(*(client_public_key.result)), server_identity_key));
+  ASSERT_THAT(server_session_result, IsResult());
+  ServerSession* server_session = server_session_result.result;
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedKK(
+          BytesView(*(server_public_key.result)), client_identity_key));
+  ASSERT_THAT(client_session_result, IsResult());
+  ClientSession* client_session = client_session_result.result;
+
+  DoHandshake(server_session, client_session);
+
+  free_rust_bytes(client_public_key.result);
+  free_rust_bytes(server_public_key.result);
   free_server_session(server_session);
   free_client_session(client_session);
 }

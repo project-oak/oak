@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use oak_crypto::identity_key::IdentityKey;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     session::{ClientSession, ServerSession},
@@ -20,16 +21,17 @@ use oak_session::{
 use oak_session_ffi_attestation::{new_simple_attester, new_simple_endorser};
 use oak_session_ffi_client_session as client_ffi;
 use oak_session_ffi_config::{
-    self as config_ffi, session_config_builder_add_peer_verifier,
-    session_config_builder_add_self_attester, session_config_builder_add_self_endorser,
-    session_config_builder_add_session_binder,
+    self as config_ffi, identity_key_get_public_key, new_identity_key,
+    session_config_builder_add_peer_verifier, session_config_builder_add_self_attester,
+    session_config_builder_add_self_endorser, session_config_builder_add_session_binder,
+    session_config_builder_set_peer_static_public_key, session_config_builder_set_self_private_key,
 };
 use oak_session_ffi_server_session as server_ffi;
 use oak_session_ffi_testing::{
     free_signing_key, new_fake_attestation_verifier, new_fake_endorsements, new_fake_evidence,
     new_random_signing_key, signing_key_verifying_key_bytes,
 };
-use oak_session_ffi_types::{free_rust_bytes_contents, BytesView};
+use oak_session_ffi_types::{free_rust_bytes, free_rust_bytes_contents, BytesView};
 use prost::Message;
 
 macro_rules! assert_no_error {
@@ -44,7 +46,7 @@ macro_rules! assert_no_error {
 }
 
 #[test]
-fn test_handshake() {
+fn test_nn_handshake() {
     let client_session_ptr = create_client_session(create_unattested_nn_session_config());
     let server_session_ptr = create_server_session(create_unattested_nn_session_config());
 
@@ -52,6 +54,51 @@ fn test_handshake() {
 
     assert!(unsafe { client_ffi::client_is_open(client_session_ptr) });
     assert!(unsafe { server_ffi::server_is_open(server_session_ptr) });
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
+}
+
+#[test]
+fn test_nk_handshake() {
+    let identity_key = new_identity_key();
+    let client_session_ptr =
+        create_client_session(create_unattested_nk_client_session_config(identity_key));
+    let server_session_ptr =
+        create_server_session(create_unattested_nk_server_session_config(identity_key));
+
+    unsafe { do_handshake(client_session_ptr, server_session_ptr) };
+
+    assert!(unsafe { client_ffi::client_is_open(client_session_ptr) });
+    assert!(unsafe { server_ffi::server_is_open(server_session_ptr) });
+    unsafe { client_ffi::free_client_session(client_session_ptr) };
+    unsafe { server_ffi::free_server_session(server_session_ptr) };
+}
+
+#[test]
+fn test_kk_handshake() {
+    let client_identity_key = new_identity_key();
+    let client_pk_result = unsafe { identity_key_get_public_key(client_identity_key) };
+    assert_no_error!(client_pk_result.error);
+
+    let server_identity_key = new_identity_key();
+    let server_pk_result = unsafe { identity_key_get_public_key(server_identity_key) };
+    assert_no_error!(server_pk_result.error);
+
+    let client_session_ptr = create_client_session(create_unattested_kk_session_config(
+        (unsafe { *server_pk_result.result }).as_bytes_view(),
+        client_identity_key,
+    ));
+    let server_session_ptr = create_server_session(create_unattested_kk_session_config(
+        (unsafe { *client_pk_result.result }).as_bytes_view(),
+        server_identity_key,
+    ));
+
+    unsafe { do_handshake(client_session_ptr, server_session_ptr) };
+
+    assert!(unsafe { client_ffi::client_is_open(client_session_ptr) });
+    assert!(unsafe { server_ffi::server_is_open(server_session_ptr) });
+    unsafe { free_rust_bytes(client_pk_result.result) };
+    unsafe { free_rust_bytes(server_pk_result.result) };
     unsafe { client_ffi::free_client_session(client_session_ptr) };
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
@@ -243,6 +290,69 @@ fn create_unattested_nn_session_config() -> *mut oak_session::config::SessionCon
     );
     assert_no_error!(session_config_builder.error);
     unsafe { config_ffi::session_config_builder_build(session_config_builder.result) }
+}
+
+fn create_unattested_nk_client_session_config(
+    identity_key: *const IdentityKey,
+) -> *mut oak_session::config::SessionConfig {
+    let session_config_builder_result = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_UNATTESTED,
+        config_ffi::HANDSHAKE_TYPE_NOISE_NK,
+    );
+    assert_no_error!(session_config_builder_result.error);
+    let mut session_config_builder = session_config_builder_result.result;
+
+    let public_key_result = unsafe { identity_key_get_public_key(identity_key) };
+    assert_no_error!(public_key_result.error);
+
+    session_config_builder = unsafe {
+        session_config_builder_set_peer_static_public_key(
+            session_config_builder,
+            (*public_key_result.result).as_bytes_view(),
+        )
+    };
+
+    unsafe { free_rust_bytes(public_key_result.result) }
+    unsafe { config_ffi::session_config_builder_build(session_config_builder) }
+}
+
+fn create_unattested_nk_server_session_config(
+    identity_key: *mut IdentityKey,
+) -> *mut oak_session::config::SessionConfig {
+    let session_config_builder_result = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_UNATTESTED,
+        config_ffi::HANDSHAKE_TYPE_NOISE_NK,
+    );
+    assert_no_error!(session_config_builder_result.error);
+    let mut session_config_builder = session_config_builder_result.result;
+
+    session_config_builder = unsafe {
+        session_config_builder_set_self_private_key(session_config_builder, identity_key)
+    };
+
+    unsafe { config_ffi::session_config_builder_build(session_config_builder) }
+}
+
+fn create_unattested_kk_session_config(
+    peer_public_key: BytesView,
+    self_identity_key: *mut IdentityKey,
+) -> *mut oak_session::config::SessionConfig {
+    let session_config_builder_result = config_ffi::new_session_config_builder(
+        config_ffi::ATTESTATION_TYPE_UNATTESTED,
+        config_ffi::HANDSHAKE_TYPE_NOISE_KK,
+    );
+    assert_no_error!(session_config_builder_result.error);
+    let mut session_config_builder = session_config_builder_result.result;
+
+    session_config_builder = unsafe {
+        session_config_builder_set_self_private_key(session_config_builder, self_identity_key)
+    };
+
+    session_config_builder = unsafe {
+        session_config_builder_set_peer_static_public_key(session_config_builder, peer_public_key)
+    };
+
+    unsafe { config_ffi::session_config_builder_build(session_config_builder) }
 }
 
 fn create_attested_nn_server_session_config() -> *mut oak_session::config::SessionConfig {

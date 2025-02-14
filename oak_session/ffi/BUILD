@@ -105,6 +105,7 @@ rust_test(
         ":oak_session_ffi_server_session",
         ":oak_session_ffi_testing",
         ":oak_session_ffi_types",
+        "//oak_crypto",
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:prost",

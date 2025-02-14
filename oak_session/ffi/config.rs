@@ -36,13 +36,14 @@ use std::ffi::c_void;
 
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
+use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
     handshake::HandshakeType,
     session_binding::SignatureBinderBuilder,
 };
-use oak_session_ffi_types::{BytesView, Error};
+use oak_session_ffi_types::{BytesView, Error, ErrorOrRustBytes};
 use p256::ecdsa::SigningKey;
 
 /// Create a new `SessionConfigBuilder` for use in FFI;
@@ -250,6 +251,61 @@ pub unsafe extern "C" fn session_config_builder_add_session_binder(
         Box::new(SignatureBinderBuilder::default().signer(Box::new(signing_key)).build().unwrap()),
     );
     Box::into_raw(Box::new(next_builder))
+}
+
+/// Call set_peer_static_public_key on the provided builder.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * public_key is a valid, properly aligned BytesView.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_set_peer_static_public_key(
+    builder: *mut SessionConfigBuilder,
+    public_key: BytesView,
+) -> *mut SessionConfigBuilder {
+    let next_builder = Box::from_raw(builder).set_peer_static_public_key(public_key.as_slice());
+    Box::into_raw(Box::new(next_builder))
+}
+
+/// Call set_self_private_key on the provided builder.
+///
+/// This function consumes the provided IdentityKey, reclaiming ownership on the
+/// Rust side.
+///
+/// # Safety
+///
+/// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
+/// * identity is a valid, properly aligned, acquired from a suitable source.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_builder_set_self_private_key(
+    builder: *mut SessionConfigBuilder,
+    identity_key_ptr: *mut IdentityKey,
+) -> *mut SessionConfigBuilder {
+    let identity_key = Box::from_raw(identity_key_ptr);
+    let next_builder = Box::from_raw(builder).set_self_private_key(identity_key);
+    Box::into_raw(Box::new(next_builder))
+}
+
+/// Create a new IdentityKey instance.
+#[no_mangle]
+pub extern "C" fn new_identity_key() -> *mut IdentityKey {
+    Box::into_raw(Box::new(IdentityKey::generate()))
+}
+
+/// Call get_public_key on the provided IdentityKey.
+///
+/// # Safety
+///
+/// * identity_key is valid, properly aligned, acquired from a suitable source.
+#[no_mangle]
+pub unsafe extern "C" fn identity_key_get_public_key(
+    identity_key: *const IdentityKey,
+) -> ErrorOrRustBytes {
+    match (*identity_key).get_public_key() {
+        Ok(ik) => ErrorOrRustBytes::ok(ik.into_boxed_slice()),
+        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+    }
 }
 
 #[repr(C)]
