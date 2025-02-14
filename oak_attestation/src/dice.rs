@@ -195,7 +195,7 @@ impl Attester for DiceAttester {
         let (signing_key, verifying_key) = generate_ecdsa_key_pair();
 
         // Generate a claim for CWT which contains the event digest.
-        let event_digest = MeasureDigest::measure_digest(&encoded_event);
+        let event_digest = MeasureDigest::measure_digest(encoded_event);
         let event_claim = (
             ClaimName::PrivateUse(oak_dice::cert::EVENT_ID),
             Value::Map(vec![(

@@ -49,14 +49,36 @@ pub trait ApplicationKeysAttester {
 }
 
 pub trait MeasureDigest {
-    fn measure_digest(&self) -> RawDigest;
+    fn measure_digest(self) -> RawDigest;
 }
 
-impl MeasureDigest for &[u8] {
-    fn measure_digest(&self) -> RawDigest {
+impl<T: bytes::Buf> MeasureDigest for T {
+    fn measure_digest(mut self) -> RawDigest {
         let mut digest = sha2::Sha256::default();
-        digest.update(self);
+        while self.remaining() > 0 {
+            let chunk = self.chunk();
+            digest.update(chunk);
+            self.advance(chunk.len());
+        }
         let digest_bytes: [u8; 32] = digest.finalize().into();
         RawDigest { sha2_256: digest_bytes.to_vec(), ..Default::default() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bytes::Buf;
+
+    use super::*;
+
+    #[test]
+    fn test_digest_equivalency() {
+        let buf1 = [1u8, 2, 3, 4, 5];
+        let digest1 = buf1.measure_digest();
+
+        let buf2 = [1u8, 2, 3].chain(&[4u8, 5][..]);
+        let digest2 = buf2.measure_digest();
+
+        assert_eq!(digest1, digest2);
     }
 }

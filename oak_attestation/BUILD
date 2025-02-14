@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
@@ -35,6 +35,7 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:ciborium",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:hex",
@@ -44,4 +45,9 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:zeroize",
     ],
+)
+
+rust_test(
+    name = "oak_attestation_tests",
+    crate = ":oak_attestation",
 )
