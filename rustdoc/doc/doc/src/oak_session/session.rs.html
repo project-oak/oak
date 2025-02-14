@@ -485,6 +485,7 @@
 <a href="#485" id="485">485</a>
 <a href="#486" id="486">486</a>
 <a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -508,6 +509,7 @@
     boxed::Box,
     collections::{BTreeMap, VecDeque},
     string::String,
+    sync::Arc,
 };
 <span class="kw">use </span>core::mem;
 
@@ -610,7 +612,7 @@
 <span class="doccomment">/// Client-side secure attested session entrypoint.
 </span><span class="kw">pub struct </span>ClientSession {
     step: Step&lt;ClientAttestationProvider, ClientHandshaker&gt;,
-    binding_key_extractors: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
+    binding_key_extractors: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
     attestation_result: <span class="prelude-ty">Option</span>&lt;AttestationSuccess&gt;,
     outgoing_requests: VecDeque&lt;SessionRequest&gt;,
     incoming_responses: VecDeque&lt;SessionResponse&gt;,
@@ -778,7 +780,7 @@
 <span class="comment">// Server-side secure attested session entrypoint.
 </span><span class="kw">pub struct </span>ServerSession {
     step: Step&lt;ServerAttestationProvider, ServerHandshaker&gt;,
-    binding_key_extractors: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
+    binding_key_extractors: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
     <span class="comment">// encryptor is initialized once the handshake is completed and the session becomes open
     </span>attestation_result: <span class="prelude-ty">Option</span>&lt;AttestationSuccess&gt;,
     outgoing_responses: VecDeque&lt;SessionResponse&gt;,
@@ -948,7 +950,7 @@
 }
 
 <span class="kw">fn </span>verify_session_binding(
-    binding_key_extractors: <span class="kw-2">&amp;</span>BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
+    binding_key_extractors: <span class="kw-2">&amp;</span>BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
     attestation: <span class="kw-2">&amp;</span>AttestationSuccess,
     bindings: <span class="kw-2">&amp;</span>BTreeMap&lt;String, SessionBinding&gt;,
     handshake_hash: <span class="kw-2">&amp;</span>[u8],

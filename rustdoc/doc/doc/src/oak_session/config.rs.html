@@ -223,6 +223,64 @@
 <a href="#223" id="223">223</a>
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -239,7 +297,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 <span class="kw">use </span>anyhow::Error;
 <span class="kw">use </span>oak_attestation_types::{attester::Attester, endorser::Endorser};
@@ -260,7 +318,7 @@
     <span class="kw">pub </span>attestation_provider_config: AttestationProviderConfig,
     <span class="kw">pub </span>handshaker_config: HandshakerConfig,
     <span class="kw">pub </span>encryptor_config: EncryptorConfig,
-    <span class="kw">pub </span>binding_key_extractors: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
+    <span class="kw">pub </span>binding_key_extractors: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>KeyExtractor&gt;&gt;,
 }
 
 <span class="kw">impl </span>SessionConfig {
@@ -326,7 +384,20 @@
     ///
     /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-attester&gt;
     </span><span class="kw">pub fn </span>add_self_attester(<span class="kw-2">mut </span><span class="self">self</span>, attester_id: String, attester: Box&lt;<span class="kw">dyn </span>Attester&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.attestation_provider_config.self_attesters.insert(attester_id, attester);
+        <span class="self">self</span>.config.attestation_provider_config.self_attesters.insert(attester_id, attester.into());
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Add an Attester but retain ownership of the object.
+    </span><span class="kw">pub fn </span>add_self_attester_ref(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        attester: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Attester&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .self_attesters
+            .insert(attester_id, attester.clone());
         <span class="self">self
     </span>}
 
@@ -336,7 +407,20 @@
     ///
     /// &lt;https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr&gt;
     </span><span class="kw">pub fn </span>add_self_endorser(<span class="kw-2">mut </span><span class="self">self</span>, endorser_id: String, endorser: Box&lt;<span class="kw">dyn </span>Endorser&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">self</span>.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser);
+        <span class="self">self</span>.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser.into());
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Add an Endorser but retain ownership of the object
+    </span><span class="kw">pub fn </span>add_self_endorser_ref(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        endorser_id: String,
+        endorser: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Endorser&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .self_endorsers
+            .insert(endorser_id, endorser.clone());
         <span class="self">self
     </span>}
 
@@ -354,10 +438,26 @@
         <span class="self">self</span>.config
             .attestation_provider_config
             .peer_verifiers
-            .insert(attester_id.clone(), verifier);
+            .insert(attester_id.clone(), verifier.into());
         <span class="self">self</span>.config
             .binding_key_extractors
-            .insert(attester_id, Box::new(DefaultSigningKeyExtractor {}));
+            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Add an Attestation Verifier but retain ownership of the object.
+    </span><span class="kw">pub fn </span>add_peer_verifier_ref(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>AttestationVerifier&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.clone());
+        <span class="self">self</span>.config
+            .binding_key_extractors
+            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
         <span class="self">self
     </span>}
 
@@ -378,8 +478,24 @@
         <span class="self">self</span>.config
             .attestation_provider_config
             .peer_verifiers
-            .insert(attester_id.clone(), verifier);
-        <span class="self">self</span>.config.binding_key_extractors.insert(attester_id, key_extractor);
+            .insert(attester_id.clone(), verifier.into());
+        <span class="self">self</span>.config.binding_key_extractors.insert(attester_id, key_extractor.into());
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Add an Attestation Verifier with the custom key extractor but retain
+    /// ownership of the objects.
+    </span><span class="kw">pub fn </span>add_peer_verifier_with_key_extractor_ref(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        attester_id: String,
+        verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>AttestationVerifier&gt;,
+        key_extractor: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>KeyExtractor&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.clone());
+        <span class="self">self</span>.config.binding_key_extractors.insert(attester_id, key_extractor.clone());
         <span class="self">self
     </span>}
 
@@ -426,9 +542,9 @@
 <span class="attr">#[allow(dead_code)]
 </span><span class="kw">pub struct </span>AttestationProviderConfig {
     <span class="kw">pub </span>attestation_type: AttestationType,
-    <span class="kw">pub </span>self_attesters: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
-    <span class="kw">pub </span>self_endorsers: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>Endorser&gt;&gt;,
-    <span class="kw">pub </span>peer_verifiers: BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
+    <span class="kw">pub </span>self_attesters: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>Attester&gt;&gt;,
+    <span class="kw">pub </span>self_endorsers: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>Endorser&gt;&gt;,
+    <span class="kw">pub </span>peer_verifiers: BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
     <span class="kw">pub </span>attestation_aggregator: Box&lt;<span class="kw">dyn </span>AttestationAggregator&gt;,
 }
 

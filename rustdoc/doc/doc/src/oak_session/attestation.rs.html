@@ -357,9 +357,9 @@
 //! handles remote attestation between two parties.
 
 </span><span class="kw">use </span>alloc::{
-    boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 <span class="kw">use </span>core::fmt::Display;
@@ -649,7 +649,7 @@
 }
 
 <span class="kw">fn </span>combine_attestation_results(
-    verifiers: <span class="kw-2">&amp;</span>BTreeMap&lt;String, Box&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
+    verifiers: <span class="kw-2">&amp;</span>BTreeMap&lt;String, Arc&lt;<span class="kw">dyn </span>AttestationVerifier&gt;&gt;,
     attested_evidence: <span class="kw-2">&amp;</span>BTreeMap&lt;String, EndorsedEvidence&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;String, AttestationResults&gt;, Error&gt; {
     <span class="kw">let </span>verifiable_evidence = verifiers
