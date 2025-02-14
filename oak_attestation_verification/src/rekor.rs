@@ -19,7 +19,7 @@
 
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use serde::Deserialize;
@@ -29,9 +29,10 @@ use time::OffsetDateTime;
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa, verify_timestamp};
 
-/// Struct representing a Rekor LogEntry.
-/// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
-#[derive(Debug, Deserialize, PartialEq)]
+/// Struct representing a Rekor LogEntry. See
+/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>
+/// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntry {
     /// We cannot directly use the type `Body` here, since body is
@@ -111,7 +112,7 @@ pub struct GenericSignature {
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct PublicKey {
-    /// Base64 content of a public key.
+    /// Base64-encoded public key.
     pub content: String,
 }
 
@@ -119,7 +120,7 @@ pub struct PublicKey {
 /// verification object in Rekor also contains an inclusion proof. Since we
 /// currently don't verify the inclusion proof in the client, it is omitted from
 /// this struct.
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntryVerification {
     // Base64-encoded signature over the body, integratedTime, logID, and logIndex.
@@ -127,144 +128,52 @@ pub struct LogEntryVerification {
     pub signed_entry_timestamp: String,
 }
 
-/// Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
-/// LogEntry.
-///
-/// This bundle can be verified using the public key from Rekor. The public key
-/// can be obtained from the `/api/v1/log/publicKey` Rest API. For
-/// `sigstore.dev`, it is a PEM-encoded x509/PKIX public key.
-pub struct RekorSignatureBundle {
-    /// Canonicalized JSON representation, based on RFC 8785 rules, of a subset
-    /// of a Rekor LogEntry fields that are signed to generate
-    /// `signedEntryTimestamp` (also a field in the Rekor LogEntry). These
-    /// fields include body, integratedTime, logID and logIndex.
-    pub canonicalized: Vec<u8>,
-
-    /// The signature over the canonicalized JSON document.
-    pub signature: Vec<u8>,
-}
-
-/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as
-/// described in <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>.
-impl TryFrom<&LogEntry> for RekorSignatureBundle {
-    type Error = anyhow::Error;
-
-    fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
-        // Canonicalized JSON document that is signed; note that verification is
-        // omitted. Canonicalization should follow the RFC 8785 rules. We
-        // hardcode the canonical serialization because serialization with
-        // serde_json requires std; if we get the serialization wrong (e.g.,
-        // because a string contain characters requiring special escaping), the
-        // signature will fail to match. Thus, this should result in incorrectly
-        // rejecting some valid signature bundles, not incorrectly accepting valid ones.
-        anyhow::ensure!(!log_entry.body.contains('"'));
-        anyhow::ensure!(!log_entry.log_id.contains('"'));
-        let canonicalized = format!(
-            r#"{{"body":"{body}","integratedTime":{time},"logID":"{id}","logIndex":{index}}}"#,
-            body = &log_entry.body,
-            time = log_entry.integrated_time,
-            id = &log_entry.log_id,
-            index = log_entry.log_index
-        );
-
-        // Extract the signature from the LogEntry.
-        let sig_base64 = log_entry
-            .verification
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
-            .signed_entry_timestamp
-            .clone();
-        let signature = BASE64_STANDARD
-            .decode(sig_base64)
-            .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {}", error))?;
-
-        Ok(Self { canonicalized: canonicalized.as_bytes().to_vec(), signature })
-    }
-}
-
 /// Verifies a Rekor log entry by key set.
 pub fn verify_rekor_log_entry(
-    log_entry: &[u8],
+    serialized_log_entry: &[u8],
     rekor_key_set: &VerifyingKeySet,
     serialized_endorsement: &[u8],
     now_utc_millis: i64,
 ) -> anyhow::Result<()> {
-    if !rekor_key_set.keys.iter().any(|k| verify_rekor_signature(log_entry, &k.raw).is_ok()) {
+    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
+
+    if !rekor_key_set.keys.iter().any(|k| verify_rekor_signature(&log_entry, &k.raw).is_ok()) {
         anyhow::bail!("could not verify rekor signature");
     }
 
     // If the TimestampReferenceValues field is set, we need to validate the time
     // the Rekor log was integrated.
     if let Some(signed_timestamp) = &rekor_key_set.signed_timestamp {
-        let integrated_timestamp = get_rekor_log_entry_integrated_time(log_entry)?;
-        verify_timestamp(now_utc_millis, &integrated_timestamp, signed_timestamp)?;
+        let integrated_timestamp = parse_rekor_log_entry_integrated_time(&log_entry)?;
+        verify_timestamp(now_utc_millis, &integrated_timestamp, signed_timestamp)
+            .context("verifying rekor integrate timestamp")?;
     }
 
-    let body = get_rekor_log_entry_body(log_entry)?;
+    let body = parse_rekor_log_entry_body(&log_entry)?;
     verify_rekor_body(&body, serialized_endorsement)
 }
 
 /// Verifies a Rekor LogEntry. This includes verifying:
 ///
 /// 1. the signature in `signedEntryTimestamp` using Rekor's public key,
-/// 1. the signature in `body.RekordObj.signature` using the endorser's public
+/// 2. the signature in `body.RekordObj.signature` using the endorser's public
 ///    key,
-/// 1. that the content of the body equals `endorsement`.
+/// 3. that the content of the body equals `endorsement`.
 pub fn verify_rekor_log_entry_ecdsa(
-    log_entry: &[u8],
+    serialized_log_entry: &[u8],
     rekor_public_key: &[u8],
     serialized_endorsement: &[u8],
 ) -> anyhow::Result<()> {
-    verify_rekor_signature(log_entry, rekor_public_key)?;
+    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
 
-    let body = get_rekor_log_entry_body(log_entry)?;
+    verify_rekor_signature(&log_entry, rekor_public_key)?;
+
+    let body = parse_rekor_log_entry_body(&log_entry)?;
     verify_rekor_body(&body, serialized_endorsement)
 }
 
-/// Parses the given bytes into a Rekor `LogEntry` object, and returns its
-/// `body` parsed into an instance of `Body`.
-pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
-    let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).map_err(|error| {
-            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
-        })?;
-    let entry = parsed.values().next().context("no entry in the map")?;
-
-    // Parse base64-encoded entry.body into an instance of Body.
-    let body_bytes: Vec<u8> = BASE64_STANDARD
-        .decode(entry.body.clone())
-        .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {}", error))?;
-
-    serde_json::from_slice(&body_bytes)
-        .map_err(|error| anyhow::anyhow!("couldn't parse bytes into a Body object: {}", error))
-}
-
-fn get_rekor_log_entry_integrated_time(log_entry: &[u8]) -> anyhow::Result<OffsetDateTime> {
-    let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).map_err(|error| {
-            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
-        })?;
-    let entry = parsed.values().next().context("no entry in the map")?;
-    let unix_timestamp: i64 = entry.integrated_time.try_into().unwrap();
-
-    OffsetDateTime::from_unix_timestamp(unix_timestamp).map_err(|e| anyhow!(e))
-}
-
-/// Parses a blob into a Rekor log entry and verifies the signature in
-/// `signedEntryTimestamp`` using Rekor's public key.
-pub fn verify_rekor_signature(log_entry: &[u8], rekor_public_key: &[u8]) -> anyhow::Result<()> {
-    let signature_bundle = rekor_signature_bundle(log_entry)?;
-
-    verify_signature_ecdsa(
-        &signature_bundle.signature,
-        &signature_bundle.canonicalized,
-        rekor_public_key,
-    )
-    .context("couldn't verify signedEntryTimestamp of the Rekor LogEntry")
-}
-
 /// Verifies the signature in the body over the contents.
-pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<()> {
+fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<()> {
     if body.spec.signature.format != "x509" {
         anyhow::bail!(
             "unsupported signature format: {}; only x509 is supported",
@@ -307,12 +216,67 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
         .context("couldn't verify signature over the endorsement")
 }
 
-fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
-    let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).map_err(|error| {
-            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
-        })?;
-    let entry = parsed.values().next().context("no entry in the map")?;
-
-    RekorSignatureBundle::try_from(entry)
+fn verify_rekor_signature(log_entry: &LogEntry, rekor_public_key: &[u8]) -> anyhow::Result<()> {
+    let json = parse_json(log_entry)?;
+    let signature = parse_signature(log_entry)?;
+    verify_signature_ecdsa(&signature, &json, rekor_public_key).context("verifying rekor signature")
 }
+
+pub fn parse_rekor_log_entry(log_entry: &[u8]) -> anyhow::Result<LogEntry> {
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry)
+        .map_err(|error| anyhow::anyhow!("couldn't parse log entry bytes: {error}"))?;
+    let log_entry = parsed.values().next().context("unexpected empty map")?;
+    Ok((*log_entry).clone())
+}
+
+// Parse base64-encoded entry body into structs.
+pub fn parse_rekor_log_entry_body(log_entry: &LogEntry) -> anyhow::Result<Body> {
+    let body_bytes: Vec<u8> = BASE64_STANDARD
+        .decode(log_entry.body.clone())
+        .map_err(|error| anyhow::anyhow!("couldn't decode base64 signature: {error}"))?;
+
+    serde_json::from_slice(&body_bytes)
+        .map_err(|error| anyhow::anyhow!("couldn't parse log entry body: {error}"))
+}
+
+fn parse_rekor_log_entry_integrated_time(log_entry: &LogEntry) -> anyhow::Result<OffsetDateTime> {
+    let unix_timestamp: i64 = log_entry.integrated_time.try_into().unwrap();
+    OffsetDateTime::from_unix_timestamp(unix_timestamp).map_err(|e| anyhow::anyhow!(e))
+}
+
+/// JSON representation, canonicalized based on RFC 8785, of the subset of
+/// log entry fields that are signed to generate `signedEntryTimestamp`.
+fn parse_json(log_entry: &LogEntry) -> anyhow::Result<Vec<u8>> {
+    // We hardcode the canonical serialization because serialization with
+    // serde_json requires std; if we get the serialization wrong (e.g.,
+    // because a string contain characters requiring special escaping), the
+    // signature will fail to match. Thus, this should result in incorrectly
+    // rejecting some valid signature bundles, not incorrectly accepting valid ones.
+    anyhow::ensure!(!log_entry.body.contains('"'), "unexpected quotes in log entry body");
+    anyhow::ensure!(!log_entry.log_id.contains('"'), "unexpected quotes in log entry ID");
+    let json = format!(
+        r#"{{"body":"{body}","integratedTime":{time},"logID":"{id}","logIndex":{index}}}"#,
+        body = &log_entry.body,
+        time = log_entry.integrated_time,
+        id = &log_entry.log_id,
+        index = log_entry.log_index
+    );
+    Ok(json.as_bytes().to_vec())
+}
+
+/// Returns the signature over the JSON obtained by `parse_json()`.
+fn parse_signature(log_entry: &LogEntry) -> anyhow::Result<Vec<u8>> {
+    let sig_base64 = log_entry
+        .verification
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
+        .signed_entry_timestamp
+        .clone();
+    let signature = BASE64_STANDARD
+        .decode(sig_base64)
+        .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {error}"))?;
+    Ok(signature)
+}
+
+#[cfg(test)]
+mod tests;

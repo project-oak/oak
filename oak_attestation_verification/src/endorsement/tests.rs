@@ -26,7 +26,6 @@ use crate::{
         get_digest, parse_statement, validate_statement, verify_binary_endorsement,
         verify_endorser_public_key_ecdsa,
     },
-    rekor::{verify_rekor_log_entry_ecdsa, verify_rekor_signature},
     util::convert_pem_to_raw,
 };
 
@@ -72,25 +71,6 @@ fn load_testdata() -> TestData {
         convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
 
     TestData { endorsement, signature, log_entry, endorser_public_key, rekor_public_key }
-}
-
-#[test]
-fn test_verify_rekor_signature_success() {
-    let testdata = load_testdata();
-    let result = verify_rekor_signature(&testdata.log_entry, &testdata.rekor_public_key);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_verify_rekor_log_entry_success() {
-    let testdata = load_testdata();
-
-    let result = verify_rekor_log_entry_ecdsa(
-        &testdata.log_entry,
-        &testdata.rekor_public_key,
-        &testdata.endorsement,
-    );
-    assert!(result.is_ok(), "{:?}", result);
 }
 
 #[test]

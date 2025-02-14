@@ -36,7 +36,10 @@ use serde::Serialize;
 use time::OffsetDateTime;
 
 use crate::{
-    rekor::{get_rekor_log_entry_body, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa},
+    rekor::{
+        parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry,
+        verify_rekor_log_entry_ecdsa,
+    },
     util::{
         convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa,
         UnixTimestampMillis,
@@ -272,13 +275,13 @@ pub fn verify_endorser_public_key(
 /// Verifies that the endorser public key coincides with the one contained in
 /// the attestation.
 pub fn verify_endorser_public_key_ecdsa(
-    log_entry: &[u8],
+    serialized_log_entry: &[u8],
     endorser_public_key: &[u8],
 ) -> anyhow::Result<()> {
     // TODO(#4231): Currently, we only check that the public keys are the same.
     // Should be updated to support verifying rolling keys.
-
-    let body = get_rekor_log_entry_body(log_entry).context("getting rekor log entry body")?;
+    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
+    let body = parse_rekor_log_entry_body(&log_entry).context("getting rekor log entry body")?;
 
     let actual_pem_vec =
         BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {

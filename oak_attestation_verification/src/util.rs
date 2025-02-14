@@ -17,7 +17,7 @@
 use alloc::{string::String, vec, vec::Vec};
 use core::cmp::Ordering;
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -131,7 +131,7 @@ pub fn verify_timestamp(
         let not_before_absolute_time = OffsetDateTime::UNIX_EPOCH
             + Duration::new(not_before_absolute.seconds, not_before_absolute.nanos);
         if *timestamp < not_before_absolute_time {
-            bail!(
+            anyhow::bail!(
                 "Timestamp is too early: timestamp = {:?}, must not be before = {:?}",
                 *timestamp,
                 not_before_absolute_time
@@ -145,7 +145,7 @@ pub fn verify_timestamp(
         let offset = Duration::new(not_before_relative.seconds, not_before_relative.nanos);
         let current_time = OffsetDateTime::UNIX_EPOCH + Duration::milliseconds(now_utc_millis);
         if *timestamp < current_time + offset {
-            bail!(
+            anyhow::bail!(
                 "Timestamp is out of range: timestamp = {:?}, range [{:?}, {:?}]",
                 *timestamp,
                 current_time + offset,
