@@ -19,10 +19,10 @@ use anyhow::{Context, Result};
 use futures::channel::mpsc;
 use oak_client::{client::OakClient, verifier::InsecureAttestationVerifier};
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_sdk::standalone::StandaloneOrchestrator;
 use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_sdk_server_v1::OakApplicationContext;
+use oak_sdk_standalone::Standalone;
 use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     Session,
@@ -30,32 +30,33 @@ use oak_session::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
+const APPLICATION_CONFIG: &[u8] = b"fake_config";
+
 async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()>>)> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let orchestrator = StandaloneOrchestrator::default();
-    let encryption_key_handle = orchestrator.get_instance_encryption_key_handle();
-
-    let endorsed_evidence = orchestrator.get_endorsed_evidence();
-    let application_config = orchestrator.get_application_config();
+    let standalone = Standalone::builder()
+        .application_config(APPLICATION_CONFIG.to_vec())
+        .build()
+        .expect("failed to create Oak standalone elements");
 
     Ok((
         addr,
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
             OakApplicationContext::new(
-                Box::new(encryption_key_handle),
-                endorsed_evidence,
+                Box::new(standalone.encryption_key_handle()),
+                standalone.endorsed_evidence(),
                 Box::new(
                     oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
-                        application_config: application_config.clone(),
+                        application_config: APPLICATION_CONFIG.to_vec(),
                     },
                 ),
             ),
             Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
-                application_config,
+                application_config: APPLICATION_CONFIG.to_vec()
             }),
         )),
     ))
@@ -90,9 +91,10 @@ async fn test_legacy() {
     let mut oak_client = OakClient::create(transport, &attestation_verifier).await.unwrap();
 
     // Send single request, see the response
+    let app_config_len = APPLICATION_CONFIG.len();
     assert_eq!(
         String::from_utf8(oak_client.invoke(b"standalone user").await.unwrap()).unwrap(),
-        "Hello from the enclave, standalone user! Btw, the app has a config with a length of 4 bytes."
+        format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
     );
 }
 
@@ -199,8 +201,9 @@ async fn test_noise() {
     let decrypted_response =
         client_session.decrypt_response(&response).expect("failed to decrypt response");
 
+    let app_config_len = APPLICATION_CONFIG.len();
     assert_eq!(
         String::from_utf8(decrypted_response).unwrap(),
-        "Hello from the enclave, standalone user! Btw, the app has a config with a length of 4 bytes."
+        format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
     );
 }

@@ -16,7 +16,6 @@
 pub mod crypto;
 pub mod handler;
 pub mod orchestrator_client;
-pub mod standalone;
 
 // Re-export structs so that they are available at the top level of the SDK.
 pub use crypto::InstanceEncryptionKeyHandle;

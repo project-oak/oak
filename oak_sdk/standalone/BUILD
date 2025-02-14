@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -22,40 +22,36 @@ package(
 )
 
 rust_library(
-    name = "oak_containers_sdk",
+    name = "oak_sdk_standalone",
     srcs = [
-        "src/crypto.rs",
-        "src/handler.rs",
-        "src/lib.rs",
-        "src/orchestrator_client.rs",
-    ],
-    proc_macro_deps = [
-        "@oak_crates_index//:async-trait",
+        "standalone.rs",
     ],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
-        "//oak_containers/attestation:oak_containers_attestation",
+        "//oak_containers/attestation",
         "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "//oak_sdk/containers:oak_sdk_containers",
-        "//oak_session",
+        "//oak_sdk/common:oak_sdk_common",
         "//stage0_dice",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:async-stream",
-        "@oak_crates_index//:log",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
     ],
 )
 
-rust_test(
-    name = "oak_containers_sdk_test",
-    crate = ":oak_containers_sdk",
+rust_library(
+    name = "ffi",
+    testonly = True,
+    srcs = [
+        "ffi/standalone_c.rs",
+    ],
+    deps = [
+        ":oak_sdk_standalone",
+        "//oak_crypto",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
+    ],
 )

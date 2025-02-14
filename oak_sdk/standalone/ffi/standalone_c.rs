@@ -20,8 +20,8 @@
 //! any gaps we have between our current C++ and Rust featureset.
 use std::os::raw::{c_uchar, c_void};
 
-use oak_containers_sdk::standalone::StandaloneOrchestrator;
 use oak_crypto::encryption_key::EncryptionKey;
+use oak_sdk_standalone::Standalone;
 use prost::Message;
 
 /// C bindings for generating standalone endorsed evidence.
@@ -67,12 +67,12 @@ pub unsafe extern "C" fn standalone_endorsed_evidence(
     let public_key_bytes =
         std::slice::from_raw_parts((*public_key).data, (*public_key).len).to_vec();
 
-    let orchestrator = StandaloneOrchestrator::builder()
+    let endorsed_evidence = Standalone::builder()
         .encryption_key_pair(Some((private_key, public_key_bytes)))
         .build()
-        .expect("failed to build standalone orchestrator");
+        .expect("failed to build standalone orchestrator")
+        .endorsed_evidence();
 
-    let endorsed_evidence = orchestrator.get_endorsed_evidence();
     let serialized_endorsed_evidence = Message::encode_to_vec(&endorsed_evidence);
 
     let ffi_evidence = Bytes {

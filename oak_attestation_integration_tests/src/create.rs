@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use oak_containers_sdk::standalone::StandaloneOrchestrator;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, kernel_binary_reference_value, reference_values,
@@ -27,6 +26,7 @@ use oak_proto_rust::oak::{
     session::v1::EndorsedEvidence,
     RawDigest,
 };
+use oak_sdk_standalone::Standalone;
 use sha2::Digest;
 
 /// Creates reference values that match the supplied digests and images
@@ -133,17 +133,13 @@ pub async fn oak_containers_standalone_endorsed_evidence_with_matching_reference
         application_image,
         &application_config,
     );
-    let endorsed_evidence = {
-        let orchestrator = StandaloneOrchestrator::builder()
-            .stage0_measurements(stage0_measurements)
-            .stage1_system_image(stage1_system_image)
-            .application_image(application_image)
-            .application_config(application_config)
-            .build()
-            .expect("failed to create StandaloneOrchestrator");
+    let standalone = Standalone::builder()
+        .stage0_measurements(stage0_measurements)
+        .stage1_system_image(stage1_system_image)
+        .application_image(application_image)
+        .application_config(application_config)
+        .build()
+        .expect("failed to create Standalone");
 
-        orchestrator.get_endorsed_evidence()
-    };
-
-    (endorsed_evidence, reference_values)
+    (standalone.endorsed_evidence(), reference_values)
 }

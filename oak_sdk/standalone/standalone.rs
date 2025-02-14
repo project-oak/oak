@@ -1,5 +1,5 @@
 //
-// Copyright 2024 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,17 +27,14 @@ use anyhow::{Context, Result};
 use oak_attestation::{dice::DiceAttester, ApplicationKeysAttester};
 use oak_attestation_types::attester::Attester;
 use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
-use oak_crypto::{
-    encryption_key::{generate_encryption_key_pair, AsyncEncryptionKeyHandle, EncryptionKey},
-    hpke::RecipientContext,
-};
+use oak_crypto::encryption_key::{generate_encryption_key_pair, EncryptionKey};
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence, Stage0Measurements},
-    crypto::v1::Signature,
+    attestation::v1::{endorsements, Endorsements, Stage0Measurements},
     session::v1::EndorsedEvidence,
 };
-use p256::ecdsa::{signature::Signer, SigningKey, VerifyingKey};
+use oak_sdk_common::StaticEncryptionKeyHandle;
+use p256::ecdsa::{SigningKey, VerifyingKey};
 use prost::Message;
 
 /// Default values for StandaloneOrchestrator to measure
@@ -45,18 +42,34 @@ const DEFAULT_STAGE1_SYSTEM_IMAGE: &[u8] = &[];
 const DEFAULT_APPLICATION_IMAGE: &[u8] = &[];
 const DEFAULT_APPLICATION_CONFIG: &[u8] = &[1, 2, 3, 4];
 
-pub struct StandaloneOrchestrator {
-    instance_private_keys: oak_containers_attestation::InstanceKeys,
-    evidence: Evidence,
-    application_config: Vec<u8>,
+/// The components needed to run an Oak Standalone instance
+pub struct Standalone {
+    endorsed_evidence: EndorsedEvidence,
+    encryption_key: EncryptionKey,
 }
 
-pub struct KeyPair {
-    pub private: InstanceKeys,
-    pub public: InstancePublicKeys,
+impl Standalone {
+    fn new(endorsed_evidence: EndorsedEvidence, encryption_key: EncryptionKey) -> Self {
+        Self { endorsed_evidence, encryption_key }
+    }
+
+    pub fn builder<'a>() -> StandaloneBuilder<'a> {
+        StandaloneBuilder::new()
+    }
+
+    /// The EndorsedEvidence that the instance can use for attestation.
+    pub fn endorsed_evidence(&self) -> EndorsedEvidence {
+        self.endorsed_evidence.clone()
+    }
+
+    /// The encryption key that the application can use to construct a new
+    /// server encryptor.
+    pub fn encryption_key_handle(&self) -> StaticEncryptionKeyHandle {
+        StaticEncryptionKeyHandle::new(self.encryption_key.clone())
+    }
 }
 
-pub struct StandaloneOrchestratorBuilder<'a> {
+pub struct StandaloneBuilder<'a> {
     stage0_measurements: Stage0Measurements,
     stage1_system_image: &'a [u8],
     application_image: &'a [u8],
@@ -68,15 +81,21 @@ pub struct StandaloneOrchestratorBuilder<'a> {
 
 macro_rules! builder_param {
     ($name:ident: $type:ty) => {
-        pub fn $name(mut self, value: $type) -> StandaloneOrchestratorBuilder<'a> {
+        pub fn $name(mut self, value: $type) -> StandaloneBuilder<'a> {
             self.$name = value;
             self
         }
     };
 }
 
-impl<'a> StandaloneOrchestratorBuilder<'a> {
-    pub fn build(self) -> Result<StandaloneOrchestrator> {
+impl<'a> Default for StandaloneBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> StandaloneBuilder<'a> {
+    pub fn build(self) -> Result<Standalone> {
         let encryption_key_pair = match self.encryption_key_pair {
             Some((public, private)) => (public, private),
             None => generate_encryption_key_pair(),
@@ -92,7 +111,7 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
             None => generate_ecdsa_key_pair(),
         };
 
-        StandaloneOrchestrator::create(
+        Self::create(
             self.stage0_measurements,
             self.stage1_system_image,
             self.application_image,
@@ -110,17 +129,9 @@ impl<'a> StandaloneOrchestratorBuilder<'a> {
     builder_param!(encryption_key_pair: Option<(EncryptionKey, Vec<u8>)>);
     builder_param!(signing_key_pair: Option<(SigningKey, VerifyingKey)>);
     builder_param!(session_binding_key_pair: Option<(SigningKey, VerifyingKey)>);
-}
 
-impl Default for StandaloneOrchestrator {
-    fn default() -> Self {
-        Self::builder().build().expect("Failed to create default StandaloneOrchestrator")
-    }
-}
-
-impl StandaloneOrchestrator {
-    pub fn builder<'a>() -> StandaloneOrchestratorBuilder<'a> {
-        StandaloneOrchestratorBuilder {
+    pub fn new() -> StandaloneBuilder<'a> {
+        StandaloneBuilder {
             stage0_measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(
             ),
             stage1_system_image: DEFAULT_STAGE1_SYSTEM_IMAGE,
@@ -132,7 +143,7 @@ impl StandaloneOrchestrator {
         }
     }
 
-    pub fn create(
+    fn create(
         root_layer_event: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
         stage1_system_image: &[u8],
         application_image: &[u8],
@@ -140,7 +151,7 @@ impl StandaloneOrchestrator {
         encryption_key_pair: (EncryptionKey, Vec<u8>),
         signing_key_pair: (SigningKey, VerifyingKey),
         session_binding_key_pair: (SigningKey, VerifyingKey),
-    ) -> Result<Self> {
+    ) -> Result<Standalone> {
         let (encryption_key, encryption_public_key) = encryption_key_pair;
         let (signing_key, signing_public_key) = signing_key_pair;
         let (session_binding_key, session_binding_public_key) = session_binding_key_pair;
@@ -202,22 +213,8 @@ impl StandaloneOrchestrator {
             None,
         )?;
 
-        Ok(Self { instance_private_keys, evidence, application_config })
-    }
-
-    pub fn get_instance_encryption_key_handle(&self) -> StandaloneInstanceEncryptionKeyHandle {
-        StandaloneInstanceEncryptionKeyHandle {
-            encryption_key: self.instance_private_keys.encryption_key.clone(),
-        }
-    }
-
-    pub fn get_instance_signer(&self) -> StandaloneInstanceSigner {
-        StandaloneInstanceSigner { signing_key: self.instance_private_keys.signing_key.clone() }
-    }
-
-    pub fn get_endorsed_evidence(&self) -> EndorsedEvidence {
-        EndorsedEvidence {
-            evidence: Some(self.evidence.clone()),
+        Ok(Standalone::new(EndorsedEvidence {
+            evidence: Some(evidence.clone()),
             endorsements: Some(Endorsements {
                 r#type: Some(endorsements::Type::OakContainers(
                     oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
@@ -230,36 +227,6 @@ impl StandaloneOrchestrator {
                 // TODO: b/375137648 - Populate `events` proto field.
                 ..Default::default()
             }),
-        }
-    }
-
-    pub fn get_application_config(&self) -> Vec<u8> {
-        self.application_config.clone()
-    }
-}
-
-pub struct StandaloneInstanceEncryptionKeyHandle {
-    encryption_key: EncryptionKey,
-}
-
-#[async_trait::async_trait]
-impl AsyncEncryptionKeyHandle for StandaloneInstanceEncryptionKeyHandle {
-    async fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        self.encryption_key.generate_recipient_context(encapsulated_public_key).await
-    }
-}
-
-pub struct StandaloneInstanceSigner {
-    signing_key: p256::ecdsa::SigningKey,
-}
-
-#[async_trait::async_trait(?Send)]
-impl crate::crypto::Signer for StandaloneInstanceSigner {
-    async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
-        let signature: p256::ecdsa::Signature = self.signing_key.sign(message);
-        Ok(Signature { signature: signature.to_vec() })
+        }, instance_private_keys.encryption_key))
     }
 }

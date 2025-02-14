@@ -22,11 +22,13 @@ package(
 )
 
 rust_library(
-    name = "oak_sdk_common",
-    srcs = ["lib.rs"],
+    name = "encryption_key_handle",
+    srcs = ["encryption_key_handle.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
     deps = [
-        "//oak_sdk/common/attestation:oak_static_attester",
-        "//oak_sdk/common/attestation:oak_static_endorser",
-        "//oak_sdk/common/crypto:encryption_key_handle",
+        "//oak_crypto",
+        "@oak_crates_index//:anyhow",
     ],
 )

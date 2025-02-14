@@ -14,5 +14,6 @@
 // limitations under the License.
 //
 
+pub use encryption_key_handle::StaticEncryptionKeyHandle;
 pub use oak_static_attester::StaticAttester;
 pub use oak_static_endorser::StaticEndorser;
