@@ -50,11 +50,18 @@ message SignResponse {
   oak.crypto.v1.Signature signature = 1;
 }
 
+message BindSessionRequest {
+  // Session handshake transcript.
+  bytes transcript = 1;
+}
+
+message BindSessionResponse {
+  oak.crypto.v1.Signature signature = 1;
+}
+
 // RPC service that is exposed to an enclave application and allows it to:
 // - Encrypt/decrypt messages
 // - Sign arbitrary data
-
-// TODO(#4504): Implement data signing.
 service OrchestratorCrypto {
   // Derives session keys for decrypting client requests and encrypting enclave
   // responses.
@@ -62,4 +69,7 @@ service OrchestratorCrypto {
       returns (DeriveSessionKeysResponse) {}
   // Signs the provided message using the hardware rooted signing key.
   rpc Sign(SignRequest) returns (SignResponse) {}
+  // Signs the provided session handshake transcript using the hardware rooted
+  // session binding key.
+  rpc BindSession(BindSessionRequest) returns (BindSessionResponse) {}
 }
