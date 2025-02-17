@@ -79,6 +79,10 @@ pub struct BindSessionRequest {
     /// Session handshake transcript.
     #[prost(bytes = "vec", tag = "1")]
     pub transcript: ::prost::alloc::vec::Vec<u8>,
+    /// Additional data that will be signed alongside the transcript.
+    /// I.e. it could be an info string used to prevent confused deputy problems.
+    #[prost(bytes = "vec", tag = "2")]
+    pub additional_data: ::prost::alloc::vec::Vec<u8>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

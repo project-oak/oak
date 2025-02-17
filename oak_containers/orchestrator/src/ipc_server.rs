@@ -120,7 +120,7 @@ impl OrchestratorCrypto for CryptoService {
         let signature = Signature {
             signature: <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
                 &self.instance_keys.session_binding_key,
-                &request.transcript,
+                [request.transcript, request.additional_data].concat().as_slice(),
             ),
         };
         Ok(tonic::Response::new(BindSessionResponse { signature: Some(signature) }))

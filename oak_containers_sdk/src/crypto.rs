@@ -20,9 +20,12 @@ use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient;
 use oak_proto_rust::oak::{
-    containers::v1::{DeriveSessionKeysRequest, KeyOrigin, SignRequest},
+    containers::v1::{BindSessionRequest, DeriveSessionKeysRequest, KeyOrigin, SignRequest},
     crypto::v1::{SessionKeys, Signature},
 };
+use oak_session::session_binding::SessionBinder;
+
+const SESSION_BINDER_INFO_STRING: &str = "oak-session-binding-key";
 
 struct OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel>,
@@ -62,6 +65,24 @@ impl OrchestratorCryptoClient {
             .into_inner()
             .signature
             .context("signature was not provided by the Orchestrator")
+    }
+
+    async fn bind_session(
+        &self,
+        transcript: &[u8],
+        additional_data: &[u8],
+    ) -> anyhow::Result<Signature> {
+        self.inner
+            // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
+            .clone()
+            .bind_session(BindSessionRequest {
+                transcript: transcript.to_vec(),
+                additional_data: additional_data.to_vec(),
+            })
+            .await?
+            .into_inner()
+            .signature
+            .context("session binding was not provided by the Orchestrator")
     }
 }
 
@@ -129,6 +150,34 @@ impl oak_crypto::signer::Signer for InstanceSigner {
             // Since there's no way to return the error, logging and returning an empty response is
             // preferable to panicking.
             .inspect_err(|err| log::error!("OrchestratorCryptoClient signing failed: {:?}", err))
+            .unwrap_or_default()
+            .signature
+    }
+}
+
+#[derive(Clone)]
+pub struct InstanceSessionBinder {
+    orchestrator_crypto_client: Arc<OrchestratorCryptoClient>,
+}
+
+impl InstanceSessionBinder {
+    async fn bind_session(&self, transcript: &[u8]) -> anyhow::Result<Signature> {
+        self.orchestrator_crypto_client
+            .bind_session(transcript, SESSION_BINDER_INFO_STRING.as_bytes())
+            .await
+    }
+}
+
+// TODO: b/397193509 - Use `async` in the Session SDK.
+impl SessionBinder for InstanceSessionBinder {
+    fn bind(&self, bound_data: &[u8]) -> Vec<u8> {
+        tokio::runtime::Handle::current()
+            .block_on(self.bind_session(bound_data))
+            // Since there's no way to return the error, logging and returning an empty response is
+            // preferable to panicking.
+            .inspect_err(|err| {
+                log::error!("OrchestratorCryptoClient session binding failed: {:?}", err)
+            })
             .unwrap_or_default()
             .signature
     }

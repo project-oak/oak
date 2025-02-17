@@ -53,6 +53,9 @@ message SignResponse {
 message BindSessionRequest {
   // Session handshake transcript.
   bytes transcript = 1;
+  // Additional data that will be signed alongside the transcript.
+  // I.e. it could be an info string used to prevent confused deputy problems.
+  bytes additional_data = 2;
 }
 
 message BindSessionResponse {
