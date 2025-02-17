@@ -57,6 +57,10 @@ pub const PUBLIC_KEY_SIZE: usize = 256;
 pub const CERTIFICATE_SIZE: usize = 1024;
 
 /// The name of the kernel command-line parameter that is used to send the
+/// physical address of the serialized attestation data.
+pub const ATTESTATION_DATA_CMDLINE_PARAM: &str = "oak-attestation-data";
+
+/// The name of the kernel command-line parameter that is used to send the
 /// physical address of the Stage 0 DICE data struct.
 pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
 
