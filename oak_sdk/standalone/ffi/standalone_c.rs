@@ -18,9 +18,10 @@
 //!
 //! This is not a comprehensive set of SDK functionality; it's just to bridge
 //! any gaps we have between our current C++ and Rust featureset.
-use std::os::raw::{c_uchar, c_void};
+use std::os::raw::c_void;
 
 use oak_crypto::encryption_key::EncryptionKey;
+use oak_ffi_bytes::BytesView;
 use oak_sdk_standalone::Standalone;
 use prost::Message;
 
@@ -49,46 +50,34 @@ use prost::Message;
 #[no_mangle]
 pub unsafe extern "C" fn standalone_endorsed_evidence(
     callback_context: *mut c_void,
-    private_key: *const Bytes,
-    public_key: *const Bytes,
-    callback: unsafe extern "C" fn(callback_context: *mut c_void, data: *const Bytes),
+    private_key: BytesView,
+    public_key: BytesView,
+    callback: unsafe extern "C" fn(callback_context: *mut c_void, data: BytesView),
 ) -> bool {
     // Read private key from args.
     // We need to copy it because `deserialize` will zero out the bytes, but we do
     // not want to clear out the C++ caller's private key.
     // This private key isn't really needed at all; so we could refactor this later
     // to avoid passing it at all.
-    let mut private_key_bytes =
-        std::slice::from_raw_parts((*private_key).data, (*private_key).len).to_vec();
-    let private_key = EncryptionKey::deserialize(private_key_bytes.as_mut_slice())
+    let mut private_key_bytes = private_key.as_slice().to_vec();
+    let private_key = EncryptionKey::deserialize(&mut private_key_bytes)
         .expect("Failed ot deserialize private key");
 
     // Read public key from args.
-    let public_key_bytes =
-        std::slice::from_raw_parts((*public_key).data, (*public_key).len).to_vec();
+    let public_key_bytes = public_key.as_slice();
 
     let endorsed_evidence = Standalone::builder()
-        .encryption_key_pair(Some((private_key, public_key_bytes)))
+        .encryption_key_pair(Some((private_key, public_key_bytes.to_vec())))
         .build()
         .expect("failed to build standalone orchestrator")
         .endorsed_evidence();
 
     let serialized_endorsed_evidence = Message::encode_to_vec(&endorsed_evidence);
 
-    let ffi_evidence = Bytes {
-        data: serialized_endorsed_evidence.as_ptr(),
-        len: serialized_endorsed_evidence.len(),
-    };
+    let ffi_evidence = BytesView::new_from_slice(serialized_endorsed_evidence.as_slice());
     unsafe {
-        callback(callback_context, &ffi_evidence);
+        callback(callback_context, ffi_evidence);
     }
 
     true
-}
-
-/// A basic wrapper around C-provided bytes of known length.
-#[repr(C)]
-pub struct Bytes {
-    pub data: *const c_uchar,
-    pub len: usize,
 }

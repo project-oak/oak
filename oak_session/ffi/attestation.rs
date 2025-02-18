@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use oak_ffi_bytes::BytesView;
+use oak_ffi_error::Error;
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use oak_sdk_common::{StaticAttester, StaticEndorser};
 use oak_session_ffi_config::{FfiAttester, FfiEndorser};
-use oak_session_ffi_types::{BytesView, Error};
 use prost::Message;
 
 #[repr(C)]

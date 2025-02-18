@@ -27,14 +27,15 @@ pub struct BytesView {
 }
 
 impl BytesView {
+    /// Create a new instance wrapping the provided data of the specified
+    /// length.
     pub fn new(data: *const u8, len: usize) -> BytesView {
         BytesView { data, len }
     }
 
+    /// Create a new instance wrapping the provided slice.
     pub fn new_from_slice(slice: &[u8]) -> BytesView {
-        let data = slice.as_ptr();
-        let len = slice.len();
-        BytesView { data, len }
+        BytesView::new(slice.as_ptr(), slice.len())
     }
 
     /// Return a `std::slice` representation of this [`BytesView`] instance.
@@ -82,65 +83,6 @@ impl RustBytes {
     }
 }
 
-/// A simple type representing an error. It contains only a message, containing
-/// a stringified representation of a Rust error.
-#[repr(C)]
-pub struct Error {
-    message: RustBytes,
-}
-
-impl Error {
-    /// Create a new instance containing the provided [`message`].
-    pub fn new(message: impl AsRef<str>) -> Error {
-        Error { message: RustBytes::new(message.as_ref().as_bytes().to_vec().into_boxed_slice()) }
-    }
-
-    pub fn new_raw(message: impl AsRef<str>) -> *mut Error {
-        Box::into_raw(Box::new(Error::new(message)))
-    }
-
-    pub fn message(&self) -> &RustBytes {
-        &self.message
-    }
-}
-
-/// A type that will contain *either* a result (RustBytes) type, or an error
-/// type.
-#[repr(C)]
-pub struct ErrorOrRustBytes {
-    pub result: *const RustBytes,
-    pub error: *const Error,
-}
-
-impl ErrorOrRustBytes {
-    /// Create a new instance with the `error` field populated with a newly
-    /// created Error instance.
-    pub fn err(msg: impl AsRef<str>) -> ErrorOrRustBytes {
-        ErrorOrRustBytes { result: std::ptr::null_mut(), error: Error::new_raw(msg) }
-    }
-
-    pub fn ok(bytes: Box<[u8]>) -> ErrorOrRustBytes {
-        ErrorOrRustBytes {
-            result: Box::into_raw(Box::new(RustBytes::new(bytes))),
-            error: std::ptr::null_mut(),
-        }
-    }
-
-    pub fn null() -> ErrorOrRustBytes {
-        ErrorOrRustBytes { result: std::ptr::null_mut(), error: std::ptr::null_mut() }
-    }
-
-    /// Return the result [`RustBytes`] as a slice. No ownership changes.
-    ///
-    /// # Safety
-    ///
-    /// The `result` field contains a non-null, valid, aligned pointer to a
-    /// valid [`RustBytes`] instance.
-    pub unsafe fn result_slice(&self) -> &[u8] {
-        (*self.result).as_slice()
-    }
-}
-
 ///  Return ownership of the [`RustBytes`] pointer back to Rust, where
 /// it will be  dropped and all related memory released, including the allocated
 /// contents.
@@ -170,18 +112,4 @@ pub unsafe extern "C" fn free_rust_bytes(bytes: *const RustBytes) {
 #[no_mangle]
 pub unsafe extern "C" fn free_rust_bytes_contents(bytes: RustBytes) {
     drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
-}
-
-///  Return ownership of the [`Error`] pointer to Rust, where it will be
-///  dropped and all related memory released.
-///
-///  # Safety
-///
-///  * The provided [`Error`] pointer is non-null, valid, and properly aligned.
-///  * The [`Bytes`] representing the error message is valid.
-///  * The pointer should not be used anymore after calling this function.
-#[no_mangle]
-pub unsafe extern "C" fn free_error(error: *const Error) {
-    free_rust_bytes_contents((*error).message);
-    drop(Box::from_raw(error as *mut Error));
 }

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use oak_crypto::identity_key::IdentityKey;
+use oak_ffi_bytes::{free_rust_bytes, free_rust_bytes_contents, BytesView};
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     session::{ClientSession, ServerSession},
@@ -31,7 +32,6 @@ use oak_session_ffi_testing::{
     free_signing_key, new_fake_attestation_verifier, new_fake_endorsements, new_fake_evidence,
     new_random_signing_key, signing_key_verifying_key_bytes,
 };
-use oak_session_ffi_types::{free_rust_bytes, free_rust_bytes_contents, BytesView};
 use prost::Message;
 
 macro_rules! assert_no_error {
@@ -133,8 +133,8 @@ fn test_client_encrypt_server_decrypt() {
     assert_no_error!(decrypted_result.error);
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
-    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
-    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
+    unsafe { free_rust_bytes(decrypted_result.result) };
+    unsafe { free_rust_bytes(encrypted_result.result) };
     unsafe { client_ffi::free_client_session(client_session_ptr) };
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
@@ -168,8 +168,8 @@ fn test_server_encrypt_client_decrypt() {
     assert_no_error!(decrypted_result.error);
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
-    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
-    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
+    unsafe { free_rust_bytes(encrypted_result.result) };
+    unsafe { free_rust_bytes(decrypted_result.result) };
     unsafe { client_ffi::free_client_session(client_session_ptr) };
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
@@ -204,8 +204,8 @@ fn test_client_encrypt_server_decrypt_with_attestation() {
     assert_eq!(decrypted_result.error, std::ptr::null_mut());
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
-    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
-    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
+    unsafe { free_rust_bytes(decrypted_result.result) };
+    unsafe { free_rust_bytes(encrypted_result.result) };
     unsafe { client_ffi::free_client_session(client_session_ptr) };
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
@@ -239,8 +239,8 @@ fn test_server_encrypt_client_decrypt_with_attestation() {
     assert_no_error!(decrypted_result.error);
 
     assert_eq!(unsafe { (*decrypted_result.result).as_slice() }, message);
-    unsafe { oak_session_ffi_types::free_rust_bytes(encrypted_result.result) };
-    unsafe { oak_session_ffi_types::free_rust_bytes(decrypted_result.result) };
+    unsafe { free_rust_bytes(encrypted_result.result) };
+    unsafe { free_rust_bytes(decrypted_result.result) };
     unsafe { client_ffi::free_client_session(client_session_ptr) };
     unsafe { server_ffi::free_server_session(server_session_ptr) };
 }
@@ -260,7 +260,7 @@ unsafe fn do_handshake(
                 (*init.result).as_bytes_view(),
             );
             assert_no_error!(result);
-            unsafe { oak_session_ffi_types::free_rust_bytes(init.result) };
+            unsafe { free_rust_bytes(init.result) };
         }
 
         if !(*server_session_ptr).is_open() {
@@ -275,7 +275,7 @@ unsafe fn do_handshake(
                     (*init_resp.result).as_bytes_view(),
                 );
                 assert_no_error!(put_result);
-                unsafe { oak_session_ffi_types::free_rust_bytes(init_resp.result) };
+                unsafe { free_rust_bytes(init_resp.result) };
             }
         }
     }

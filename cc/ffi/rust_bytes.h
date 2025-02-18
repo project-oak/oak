@@ -14,35 +14,36 @@
  * limitations under the License.
  */
 
+#include <string>
 #include <utility>
 
 #include "absl/strings/string_view.h"
-#include "cc/oak_session/oak_session_bindings.h"
+#include "cc/ffi/bytes_bindings.h"
 
 #ifndef CC_OAK_SESSION_RUST_BYTES_H_
 #define CC_OAK_SESSION_RUST_BYTES_H_
 
-namespace oak::session {
+namespace oak::ffi {
 
 // A wrapper around Rust-allocated byte sequences.
 //
 // This type wraps a heap-allocated sequence of bytes (a boxed slice) that Rust
 // has provided to C++ code for usage for an indeterminate amount of time.
 //
-// This wraper class takes care to ensure that the Rust memory is freed once the
-// C++ code is finished using it.
+// This wrapper class takes care to ensure that the Rust memory is freed once
+// the C++ code is finished using it.
 //
 // The type contains convenience conversions to make it easy to convert it to an
 // `absl::string_view` for use in cases where that parameter type is expected.
 //
 // If you want to take ownership of the memory, you can copy it into a
-// `std::string` using the explict `std::string` conversion operator provided.
+// `std::string` using the explicit `std::string` conversion operator provided.
 //
 // The type has move semantics similar to a std::unique_ptr - you can move
 // ownership around, but there can only be one owner at a time.
 class RustBytes {
  public:
-  explicit RustBytes(bindings::RustBytes* ffi_rust_bytes)
+  explicit RustBytes(ffi::bindings::RustBytes* ffi_rust_bytes)
       : ffi_rust_bytes_(ffi_rust_bytes) {}
 
   RustBytes(const RustBytes&) = delete;
@@ -65,7 +66,7 @@ class RustBytes {
     // When move occurs, we reset the source to nullptr; so of course don't try
     // to free that.
     if (ffi_rust_bytes_ != nullptr) {
-      bindings::free_rust_bytes(ffi_rust_bytes_);
+      ffi::bindings::free_rust_bytes(ffi_rust_bytes_);
     }
   }
 
@@ -87,13 +88,13 @@ class RustBytes {
   }
 
  private:
-  bindings::RustBytes* ffi_rust_bytes_;
+  ffi::bindings::RustBytes* ffi_rust_bytes_;
 };
 
 inline bool operator==(const RustBytes& lhs, absl::string_view rhs) {
   return static_cast<absl::string_view>(lhs) == rhs;
 }
 
-}  // namespace oak::session
+}  // namespace oak::ffi
 
 #endif  // CC_OAK_SESSION_RUST_BYTES_H_

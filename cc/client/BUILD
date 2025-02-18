@@ -85,8 +85,8 @@ cc_library(
     srcs = ["session_client.cc"],
     hdrs = ["session_client.h"],
     deps = [
+        "//cc/ffi:rust_bytes",
         "//cc/oak_session:client_session",
-        "//cc/oak_session:rust_bytes",
         "//cc/oak_session/channel",
         "//cc/utils/status",
         "//proto/session:session_cc_proto",
@@ -101,8 +101,8 @@ cc_test(
     srcs = ["session_client_test.cc"],
     deps = [
         ":session_client",
+        "//cc/ffi:rust_bytes",
         "//cc/oak_session:client_session",
-        "//cc/oak_session:rust_bytes",
         "//cc/oak_session:server_session",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:status_matchers",

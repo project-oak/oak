@@ -41,8 +41,8 @@ cc_test(
     srcs = ["session_server_test.cc"],
     deps = [
         ":session_server",
+        "//cc/ffi:rust_bytes",
         "//cc/oak_session:client_session",
-        "//cc/oak_session:rust_bytes",
         "//cc/oak_session:server_session",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:status_matchers",

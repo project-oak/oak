@@ -20,8 +20,8 @@
 
 #include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
-#include "cc/oak_session/rust_bytes.h"
 #include "cc/oak_session/server_session.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -99,7 +99,7 @@ TEST(OakSessionClientTest, CreatedSessionCanSend) {
 
   std::string test_send_msg = "Testing Send";
   ASSERT_THAT((*channel)->Send(test_send_msg), IsOk());
-  absl::StatusOr<std::optional<session::RustBytes>> test_send_read_back =
+  absl::StatusOr<std::optional<ffi::RustBytes>> test_send_read_back =
       server_session_ptr->ReadToRustBytes();
   EXPECT_THAT(test_send_read_back, IsOkAndHolds(Optional(Eq(test_send_msg))));
 }

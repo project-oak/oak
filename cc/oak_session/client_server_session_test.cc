@@ -18,8 +18,8 @@
 
 #include "absl/status/status_matchers.h"
 #include "absl/strings/string_view.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
-#include "cc/oak_session/rust_bytes.h"
 #include "cc/oak_session/server_session.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -30,6 +30,7 @@ namespace {
 
 using ::absl_testing::IsOk;
 using ::absl_testing::IsOkAndHolds;
+using ::oak::ffi::RustBytes;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;

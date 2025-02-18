@@ -19,23 +19,19 @@
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "cc/crypto/hpke/recipient_context.h"
+#include "cc/ffi/bytes_bindings.h"
 #include "proto/session/messages.pb.h"
-
-/// Bytes passed to Rust or received from Rust.
-struct Bytes {
-  const char* data;
-  uint64_t len;
-};
-
-extern "C" {
-extern bool standalone_endorsed_evidence(void*, Bytes*, Bytes*,
-                                         bool (*f)(void*, const Bytes*));
-}
 
 namespace oak::containers::sdk::standalone {
 
-using oak::crypto::KeyPair;
-using oak::session::v1::EndorsedEvidence;
+using ::oak::crypto::KeyPair;
+using ::oak::ffi::bindings::BytesView;
+using ::oak::session::v1::EndorsedEvidence;
+
+extern "C" {
+extern bool standalone_endorsed_evidence(void*, BytesView, BytesView,
+                                         bool (*f)(void*, const BytesView));
+}
 
 namespace {
 /// This is the callback that we pass to the Rust code.
@@ -44,10 +40,10 @@ namespace {
 /// however we need, but anything we want to hold onto needs to be copied.
 ///
 /// The context object is a pointer to the EndorsedEvidence to populate.
-bool DeserializeEndorsedEvidence(void* evidence, const Bytes* data) {
-  LOG(INFO) << "trying to interpret proto data of size " << data->len;
+bool DeserializeEndorsedEvidence(void* evidence, const BytesView data) {
+  LOG(INFO) << "trying to interpret proto data of size " << data.len;
   bool result = (static_cast<EndorsedEvidence*>(evidence))
-                    ->ParseFromArray(data->data, data->len);
+                    ->ParseFromArray(data.data, data.len);
   LOG(INFO) << "Conversion successful?" << result;
   return result;
 }
@@ -56,12 +52,10 @@ bool DeserializeEndorsedEvidence(void* evidence, const Bytes* data) {
 
 absl::StatusOr<EndorsedEvidence> GetEndorsedEvidence(const KeyPair& key_pair) {
   EndorsedEvidence evidence;
-  Bytes private_key = {.data = key_pair.private_key.data(),
-                       .len = key_pair.private_key.size()};
-  Bytes public_key = {.data = key_pair.public_key.data(),
-                      .len = key_pair.public_key.size()};
+  BytesView private_key = BytesView(key_pair.private_key);
+  BytesView public_key = BytesView(key_pair.public_key);
 
-  if (!standalone_endorsed_evidence(&evidence, &private_key, &public_key,
+  if (!standalone_endorsed_evidence(&evidence, private_key, public_key,
                                     DeserializeEndorsedEvidence)) {
     return absl::InternalError("Failed to get endorsed evidence");
   }

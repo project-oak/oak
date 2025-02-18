@@ -22,9 +22,11 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/error_bindings.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
-#include "cc/oak_session/rust_bytes.h"
 #include "proto/session/session.pb.h"
 
 namespace oak::session {
@@ -35,7 +37,7 @@ absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create(
       bindings::new_server_session(config);
 
   if (result.error != nullptr) {
-    return bindings::ErrorIntoStatus(result.error);
+    return ffi::bindings::ErrorIntoStatus(result.error);
   }
 
   return absl::WrapUnique(new ServerSession(result.result));
@@ -52,17 +54,17 @@ bool ServerSession::IsOpen() { return bindings::server_is_open(rust_session_); }
 absl::Status ServerSession::PutIncomingMessage(
     const v1::SessionRequest& request) {
   const std::string request_bytes = request.SerializeAsString();
-  bindings::Error* error = bindings::server_put_incoming_message(
-      rust_session_, bindings::BytesView(request_bytes));
-  return bindings::ErrorIntoStatus(error);
+  ffi::bindings::Error* error = bindings::server_put_incoming_message(
+      rust_session_, ffi::bindings::BytesView(request_bytes));
+  return ffi::bindings::ErrorIntoStatus(error);
 }
 
 absl::StatusOr<std::optional<v1::SessionResponse>>
 ServerSession::GetOutgoingMessage() {
-  const bindings::ErrorOrRustBytes result =
+  const ffi::bindings::ErrorOrRustBytes result =
       bindings::server_get_outgoing_message(rust_session_);
   if (result.error != nullptr) {
-    return bindings::ErrorIntoStatus(result.error);
+    return ffi::bindings::ErrorIntoStatus(result.error);
   }
 
   if (result.result == nullptr) {
@@ -75,7 +77,7 @@ ServerSession::GetOutgoingMessage() {
         "Failed to parse GetOutoingMessage result bytes as SessionResponse");
   }
 
-  free_rust_bytes(result.result);
+  ffi::bindings::free_rust_bytes(result.result);
   return response;
 }
 
@@ -85,17 +87,17 @@ absl::Status ServerSession::Write(
 }
 
 absl::Status ServerSession::Write(absl::string_view unencrypted_request) {
-  bindings::Error* error = bindings::server_write(
-      rust_session_, bindings::BytesView(unencrypted_request));
+  ffi::bindings::Error* error = bindings::server_write(
+      rust_session_, ffi::bindings::BytesView(unencrypted_request));
 
-  return bindings::ErrorIntoStatus(error);
+  return ffi::bindings::ErrorIntoStatus(error);
 }
 
 absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
-  const bindings::ErrorOrRustBytes result =
+  const ffi::bindings::ErrorOrRustBytes result =
       bindings::server_read(rust_session_);
   if (result.error != nullptr) {
-    return bindings::ErrorIntoStatus(result.error);
+    return ffi::bindings::ErrorIntoStatus(result.error);
   }
 
   if (result.result == nullptr) {
@@ -105,22 +107,22 @@ absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
   v1::PlaintextMessage plaintext_message_result;
   plaintext_message_result.set_plaintext(*result.result);
 
-  bindings::free_rust_bytes(result.result);
+  ffi::bindings::free_rust_bytes(result.result);
   return plaintext_message_result;
 }
 
-absl::StatusOr<std::optional<RustBytes>> ServerSession::ReadToRustBytes() {
-  const bindings::ErrorOrRustBytes result =
+absl::StatusOr<std::optional<ffi::RustBytes>> ServerSession::ReadToRustBytes() {
+  const ffi::bindings::ErrorOrRustBytes result =
       bindings::server_read(rust_session_);
   if (result.error != nullptr) {
-    return bindings::ErrorIntoStatus(result.error);
+    return ffi::bindings::ErrorIntoStatus(result.error);
   }
 
   if (result.result == nullptr) {
     return std::nullopt;
   }
 
-  return RustBytes(result.result);
+  return ffi::RustBytes(result.result);
 }
 
 ServerSession::~ServerSession() {

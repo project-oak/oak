@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
+use oak_ffi_bytes::BytesView;
+use oak_ffi_error::{Error, ErrorOrRustBytes};
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest};
 use oak_session::{
     config::SessionConfig,
     session::{ServerSession, Session},
     ProtocolEngine,
 };
-use oak_session_ffi_types::{BytesView, Error, ErrorOrRustBytes};
 use prost::Message;
 
 ///  Create a new [`ServerSession`] instance for FFI usage.

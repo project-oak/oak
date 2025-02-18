@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-#include "cc/oak_session/oak_session_bindings.h"
+#include "cc/ffi/bytes_bindings.h"
 
-#include <string>
+#include <iostream>
 
-#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 
-namespace oak::session::bindings {
+namespace oak::ffi::bindings {
 
 BytesView::BytesView(absl::string_view bytes)
     : data(bytes.data()), len(bytes.size()) {}
@@ -33,14 +32,4 @@ std::ostream& operator<<(std::ostream& stream, const BytesView& bytes) {
   return stream;
 }
 
-absl::Status ErrorIntoStatus(bindings::Error* error) {
-  if (error == nullptr) {
-    return absl::OkStatus();
-  }
-  absl::Status status =
-      absl::Status(absl::StatusCode::kInternal, error->message);
-  free_error(error);
-  return status;
-}
-
-}  // namespace oak::session::bindings
+}  // namespace oak::ffi::bindings

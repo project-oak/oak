@@ -20,25 +20,16 @@ package(
 )
 
 cc_library(
-    name = "rust_bytes",
-    hdrs = ["rust_bytes.h"],
-    deps = [
-        ":oak_session_bindings",
-        "@com_google_absl//absl/strings:string_view",
-    ],
-)
-
-cc_library(
     name = "oak_session_bindings",
-    srcs = ["oak_session_bindings.cc"],
     hdrs = ["oak_session_bindings.h"],
     deps = [
+        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:error_bindings",
         "//oak_session/ffi:oak_session_ffi_attestation",
         "//oak_session/ffi:oak_session_ffi_client_session",
         "//oak_session/ffi:oak_session_ffi_config",
         "//oak_session/ffi:oak_session_ffi_server_session",
         "//oak_session/ffi:oak_session_ffi_testing",
-        "//oak_session/ffi:oak_session_ffi_types",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:string_view",
     ],
@@ -50,6 +41,8 @@ cc_test(
     tags = ["asan"],
     deps = [
         ":oak_session_bindings",
+        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:error_bindings",
         "//cc/oak_session/testing:matchers",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
@@ -65,7 +58,9 @@ cc_library(
     deps = [
         ":config",
         ":oak_session_bindings",
-        ":rust_bytes",
+        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:error_bindings",
+        "//cc/ffi:rust_bytes",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -80,7 +75,9 @@ cc_library(
     deps = [
         ":config",
         ":oak_session_bindings",
-        ":rust_bytes",
+        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:error_bindings",
+        "//cc/ffi:rust_bytes",
         "//proto/session:session_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -94,8 +91,8 @@ cc_test(
     tags = ["asan"],
     deps = [
         ":client_session",
-        ":rust_bytes",
         ":server_session",
+        "//cc/ffi:rust_bytes",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",

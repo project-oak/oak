@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use anyhow::Result;
+use oak_ffi_bytes::{BytesView, RustBytes};
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results, ApplicationKeys, AttestationResults, Endorsements, EventLog, Evidence,
@@ -22,7 +23,6 @@ use oak_proto_rust::oak::{
     Variant,
 };
 use oak_session_ffi_config::FfiAttestationVerifier;
-use oak_session_ffi_types::{BytesView, RustBytes};
 use p256::ecdsa::SigningKey;
 use prost::Message;
 use rand_core::OsRng;

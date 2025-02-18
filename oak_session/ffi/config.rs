@@ -37,13 +37,14 @@ use std::ffi::c_void;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
+use oak_ffi_bytes::BytesView;
+use oak_ffi_error::{Error, ErrorOrRustBytes};
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
     handshake::HandshakeType,
     session_binding::SignatureBinderBuilder,
 };
-use oak_session_ffi_types::{BytesView, Error, ErrorOrRustBytes};
 use p256::ecdsa::SigningKey;
 
 /// Create a new `SessionConfigBuilder` for use in FFI;

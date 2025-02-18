@@ -20,9 +20,9 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
-#include "cc/oak_session/rust_bytes.h"
 #include "proto/session/session.pb.h"
 
 #ifndef CC_OAK_SESSION_CLIENT_SESSION_H_
@@ -63,7 +63,7 @@ class ClientSession {
   // This returns a wrapper around the Rust bytes generated from the library. It
   // can be cast to an absl::string_view for read-only usage, otherwise it
   // should be copied (for example, by creating a std::string from it.)
-  absl::StatusOr<std::optional<RustBytes>> ReadToRustBytes();
+  absl::StatusOr<std::optional<ffi::RustBytes>> ReadToRustBytes();
 
  private:
   explicit ClientSession(bindings::ClientSession* rust_session)

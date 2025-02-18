@@ -27,7 +27,8 @@ rust_library(
         "server_session.rs",
     ],
     deps = [
-        ":oak_session_ffi_types",
+        "//oak_ffi:oak_ffi_bytes",
+        "//oak_ffi:oak_ffi_error",
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:prost",
@@ -40,7 +41,8 @@ rust_library(
         "client_session.rs",
     ],
     deps = [
-        ":oak_session_ffi_types",
+        "//oak_ffi:oak_ffi_bytes",
+        "//oak_ffi:oak_ffi_error",
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:prost",
@@ -51,18 +53,14 @@ rust_library(
     name = "oak_session_ffi_config",
     srcs = ["config.rs"],
     deps = [
-        ":oak_session_ffi_types",
         "//oak_attestation_types",
         "//oak_attestation_verification_types",
         "//oak_crypto",
+        "//oak_ffi:oak_ffi_bytes",
+        "//oak_ffi:oak_ffi_error",
         "//oak_session",
         "@oak_crates_index//:p256",
     ],
-)
-
-rust_library(
-    name = "oak_session_ffi_types",
-    srcs = ["types.rs"],
 )
 
 rust_library(
@@ -70,8 +68,9 @@ rust_library(
     srcs = ["attestation.rs"],
     deps = [
         ":oak_session_ffi_config",
-        ":oak_session_ffi_types",
         "//oak_attestation_types",
+        "//oak_ffi:oak_ffi_bytes",
+        "//oak_ffi:oak_ffi_error",
         "//oak_proto_rust",
         "//oak_sdk/common:oak_sdk_common",
         "@oak_crates_index//:prost",
@@ -83,9 +82,9 @@ rust_library(
     srcs = ["testing.rs"],
     deps = [
         ":oak_session_ffi_config",
-        ":oak_session_ffi_types",
         "//oak_attestation_types",
         "//oak_attestation_verification_types",
+        "//oak_ffi:oak_ffi_bytes",
         "//oak_proto_rust",
         "//oak_sdk/common:oak_sdk_common",
         "@oak_crates_index//:anyhow",
@@ -104,8 +103,8 @@ rust_test(
         ":oak_session_ffi_config",
         ":oak_session_ffi_server_session",
         ":oak_session_ffi_testing",
-        ":oak_session_ffi_types",
         "//oak_crypto",
+        "//oak_ffi:oak_ffi_bytes",
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:prost",

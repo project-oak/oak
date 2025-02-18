@@ -23,7 +23,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
-#include "cc/oak_session/rust_bytes.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/utils/status/status.h"
 #include "proto/session/session.pb.h"
 
@@ -105,7 +105,7 @@ class OakSessionChannel {
           put_result, "Failed to put incoming request onto state machine");
     }
 
-    absl::StatusOr<std::optional<RustBytes>> decrypted_message =
+    absl::StatusOr<std::optional<ffi::RustBytes>> decrypted_message =
         session_->ReadToRustBytes();
 
     if (!decrypted_message.ok()) {
