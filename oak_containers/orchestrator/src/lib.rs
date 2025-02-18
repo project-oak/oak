@@ -187,8 +187,9 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
             group_keys.context("group keys were not provisioned")?,
             cancellation_token.clone(),
         ),
-        crate::container_runtime::run(
-            &container_bundle[..],
+        // Explicitly convert the Vec into `bytes::Bytes` to pass ownership into `run`.
+        crate::container_runtime::run::<bytes::Bytes>(
+            container_bundle.into(),
             &args.container_dir,
             user.uid,
             user.gid,

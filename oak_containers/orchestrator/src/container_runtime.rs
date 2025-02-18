@@ -35,8 +35,13 @@ pub async fn run<B: Buf>(
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
-    let mut archive = tar::Archive::new(container_bundle.reader());
-    archive.unpack(container_dir)?;
+
+    // Ensure that the archive, with the reader and bundle, go out of scope so that
+    // we don't accidentally keep a copy of the container bundle around in memory.
+    {
+        let mut archive = tar::Archive::new(container_bundle.reader());
+        archive.unpack(container_dir)?;
+    }
 
     for entry in walkdir::WalkDir::new(container_dir) {
         let entry = entry?;
