@@ -14,7 +14,6 @@
 // limitations under the License.
 
 pub mod crypto;
-pub mod handler;
 pub mod orchestrator_client;
 
 // Re-export structs so that they are available at the top level of the SDK.

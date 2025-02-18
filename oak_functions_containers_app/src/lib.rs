@@ -23,8 +23,7 @@ use std::{
 
 use anyhow::Context;
 use oak_containers_agent::metrics::OakObserver;
-use oak_containers_sdk::handler::AsyncEncryptionHandler;
-use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
+use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, encryptor::ServerEncryptor};
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
 use oak_proto_rust::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -129,28 +128,27 @@ where
             )
         })?;
 
-        AsyncEncryptionHandler::create(self.encryption_key_handle.clone(), |r| async {
-            // Wrap the invocation result (which may be an Error) into a micro RPC Response
-            // wrapper protobuf, and encode that as bytes.
-            let response_result: Result<Vec<u8>, micro_rpc::Status> =
-                instance.handle_user_request(r);
-            let response: micro_rpc::ResponseWrapper = response_result.into();
-            response.encode_to_vec()
-        })
-        .invoke(&encrypted_request)
-        .await
-        .map(
-            #[allow(clippy::needless_update)]
-            |encrypted_response| {
-                tonic::Response::new(InvokeResponse {
-                    encrypted_response: Some(encrypted_response),
-                    ..Default::default()
-                })
-            },
-        )
-        .map_err(|err| {
-            tonic::Status::internal(format!("couldn't call handle_user_request handler: {:?}", err))
-        })
+        let (server_encryptor, request, _associated_data) =
+            ServerEncryptor::decrypt_async(&encrypted_request, self.encryption_key_handle.as_ref())
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("couldn't decrypt request: {err:?}"))
+                })?;
+
+        let response_result: Result<Vec<u8>, micro_rpc::Status> =
+            instance.handle_user_request(request);
+        let response: micro_rpc::ResponseWrapper = response_result.into();
+        let response_vec = response.encode_to_vec();
+
+        // Encrypt and serialize response.
+        // The resulting decryptor for consequent requests is discarded because we don't
+        // expect another message from the stream.
+        let encrypted_response =
+            server_encryptor.encrypt(&response_vec, oak_crypto::EMPTY_ASSOCIATED_DATA).map_err(
+                |err| tonic::Status::internal(format!("couldn't encrypt resposne: {err:?}")),
+            )?;
+
+        Ok(tonic::Response::new(InvokeResponse { encrypted_response: Some(encrypted_response) }))
     }
 
     async fn extend_next_lookup_data(
