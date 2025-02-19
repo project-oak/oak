@@ -34,8 +34,8 @@ use oak_proto_rust::oak::{
 use prost::Message;
 
 /// Measures the system image and returns a corresponding event log entry.
-pub fn create_system_layer_event<B: Buf>(system_image: B) -> Event {
-    let digest = oak_attestation::MeasureDigest::measure_digest(system_image);
+pub fn create_system_layer_event<B: oak_attestation::MeasureDigest>(system_image: B) -> Event {
+    let digest = system_image.measure_digest();
     Event {
         tag: "stage1".to_string(),
         event: Some(prost_types::Any {

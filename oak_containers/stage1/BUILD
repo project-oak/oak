@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -52,4 +52,9 @@ rust_library(
 alias(
     name = "stage1",
     actual = ":oak_containers_stage1",
+)
+
+rust_test(
+    name = "oak_containers_stage1_tests",
+    crate = ":oak_containers_stage1",
 )

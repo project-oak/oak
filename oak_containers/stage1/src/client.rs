@@ -19,6 +19,8 @@ use oak_containers_channel::create_channel;
 use oak_grpc::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::{Channel, Uri};
 
+use crate::buffer::Buffer;
+
 pub struct LauncherClient {
     inner: GrpcLauncherClient<Channel>,
 }
@@ -29,7 +31,7 @@ impl LauncherClient {
         Ok(Self { inner })
     }
 
-    pub async fn get_oak_system_image(&mut self) -> Result<Vec<u8>> {
+    pub async fn get_oak_system_image(&mut self) -> Result<Buffer> {
         let mut stream = self
             .inner
             .get_oak_system_image(())
@@ -37,11 +39,11 @@ impl LauncherClient {
             .context("couldn't form streaming connection")?
             .into_inner();
 
-        let mut image_buf: Vec<u8> = Vec::new();
-        while let Some(mut load_response) =
+        let mut image_buf = Buffer::new();
+        while let Some(load_response) =
             stream.message().await.context("couldn't load message from stream")?
         {
-            image_buf.append(&mut load_response.image_chunk);
+            image_buf.push_back(load_response.image_chunk.into());
         }
 
         Ok(image_buf)

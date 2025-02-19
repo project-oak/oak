@@ -18,6 +18,7 @@
 #![feature(never_type)]
 
 mod attester;
+mod buffer;
 mod client;
 mod image;
 
@@ -119,11 +120,10 @@ pub async fn main<A: Attester + Serializable>(args: &Args) -> Result<(), Box<dyn
 
     // For safety we generate the DICE data for the next layer before processing the
     // compressed system image.
-    let system_image_event = oak_containers_attestation::create_system_layer_event(&buf[..]);
+    let system_image_event = oak_containers_attestation::create_system_layer_event(buf.clone());
     attester.extend(&system_image_event.encode_to_vec())?;
     let dice_data = attester.serialize();
-
-    image::extract(&buf[..], Path::new("/")).await.context("error loading the system image")?;
+    image::extract(buf, Path::new("/")).await.context("error loading the system image")?;
 
     // If the image didn't contain a `/etc/machine-id` file, create a placeholder
     // one that systemd will replace during startup. If you don't have that file
