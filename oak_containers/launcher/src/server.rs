@@ -19,6 +19,7 @@ use std::{
 };
 
 use anyhow::anyhow;
+use bytes::BytesMut;
 use futures::{FutureExt, Stream};
 use oak_grpc::oak::containers::{
     launcher_server::{Launcher, LauncherServer},
@@ -83,16 +84,16 @@ impl Launcher for LauncherServerImplementation {
     ) -> Result<Response<Self::GetOakSystemImageStream>, tonic::Status> {
         let system_image_file = tokio::fs::File::open(&self.system_image).await?;
 
-        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
         let mut reader = BufReader::new(system_image_file);
 
         let response_stream = async_stream::try_stream! {
             loop {
-                let bytes_read = reader.read(&mut buffer).await?;
+                let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+                let bytes_read = reader.read_buf(&mut buffer).await?;
 
                 if bytes_read > 0 {
                     yield GetImageResponse {
-                        image_chunk: buffer[..bytes_read].to_vec()
+                        image_chunk: buffer.freeze().slice(..bytes_read)
                     }
                 } else {
                     // the file has been fully read, there's nothing left to
@@ -111,16 +112,16 @@ impl Launcher for LauncherServerImplementation {
     ) -> Result<Response<Self::GetContainerBundleStream>, tonic::Status> {
         let container_bundle_file = tokio::fs::File::open(&self.container_bundle).await?;
 
-        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
         let mut reader = BufReader::new(container_bundle_file);
 
         let response_stream = async_stream::try_stream! {
             loop {
-                let bytes_read = reader.read(&mut buffer).await?;
+                let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+                let bytes_read = reader.read_buf(&mut buffer).await?;
 
                 if bytes_read > 0 {
                     yield GetImageResponse {
-                        image_chunk: buffer[..bytes_read].to_vec()
+                        image_chunk: buffer.freeze().slice(..bytes_read)
                     }
                 } else {
                     // the file has been fully read, there's nothing left to

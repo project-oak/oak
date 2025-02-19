@@ -55,7 +55,7 @@ impl LauncherClient {
         while let Some(load_response) =
             stream.message().await.context("couldn't load message from stream")?
         {
-            container_buf.push_back(load_response.image_chunk.into());
+            container_buf.push_back(load_response.image_chunk);
         }
 
         Ok(container_buf)

@@ -55,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed=CARGO_FEATURE_JSON");
 
     config.bytes(vec![
+        ".oak.containers.GetImageResponse".to_string(),
         ".oak.functions.LookupDataEntry".to_string(),
         ".oak.functions.ExtendNextLookupDataRequest".to_string(),
     ]);
