@@ -15,11 +15,9 @@
 //
 
 use anyhow::{Context, Result};
-use oak_containers_channel::create_channel;
+use oak_containers_channel::{buffer::Buffer, create_channel};
 use oak_grpc::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::{Channel, Uri};
-
-use crate::buffer::Buffer;
 
 pub struct LauncherClient {
     inner: GrpcLauncherClient<Channel>,

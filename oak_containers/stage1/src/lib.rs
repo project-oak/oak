@@ -18,7 +18,6 @@
 #![feature(never_type)]
 
 mod attester;
-mod buffer;
 mod client;
 mod image;
 

@@ -18,6 +18,8 @@ use tokio_vsock::{VsockAddr, VsockStream, VMADDR_CID_HOST};
 use tonic::transport::Channel;
 use tower::service_fn;
 
+pub mod buffer;
+
 pub async fn create_channel(addr: tonic::transport::Uri) -> anyhow::Result<Channel> {
     if addr.scheme_str() == Some("vsock") {
         let vsock_addr = get_vsock_addr(addr)?;

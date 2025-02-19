@@ -26,7 +26,7 @@ use bytes::{Buf, Bytes};
 ///
 /// This is similar to what bytes::Chain would achieve, but without the number
 /// of buffers leaking into the types.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Buffer {
     // VecDeque so that appends would be cheap; Bytes so that clone() would be (relatively) cheap.
     buffers: VecDeque<Bytes>,

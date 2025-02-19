@@ -8,10 +8,12 @@ package(
 rust_library(
     name = "oak_containers_channel",
     srcs = [
+        "src/buffer.rs",
         "src/lib.rs",
     ],
     deps = [
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:tokio-vsock",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",
