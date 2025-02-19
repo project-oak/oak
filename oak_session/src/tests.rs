@@ -551,7 +551,7 @@ fn session_nk_succeeds() {
         .build();
     let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
-        .set_self_private_key(identity_key)
+        .set_self_static_private_key(identity_key)
         .build();
     let mut server_session = ServerSession::create(server_config).unwrap();
     do_session_handshake(&mut client_session, &mut server_session);
@@ -571,7 +571,7 @@ fn session_nk_key_mismatch() {
         .build();
     let mut client_session = ClientSession::create(client_config).unwrap();
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
-        .set_self_private_key(identity_key2)
+        .set_self_static_private_key(identity_key2)
         .build();
     let mut server_session = ServerSession::create(server_config).unwrap();
     do_session_handshake(&mut client_session, &mut server_session);
@@ -613,7 +613,7 @@ fn test_session_sendable() {
 
     let identity_key = Box::new(IdentityKey::generate());
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
-        .set_self_private_key(identity_key)
+        .set_self_static_private_key(identity_key)
         .build();
     let server_session = ServerSession::create(server_config).unwrap();
     test(server_session);

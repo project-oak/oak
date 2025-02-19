@@ -279,12 +279,12 @@ pub unsafe extern "C" fn session_config_builder_set_peer_static_public_key(
 /// * builder is a valid, properly aligned pointer to a SessionConfigBuilder.
 /// * identity is a valid, properly aligned, acquired from a suitable source.
 #[no_mangle]
-pub unsafe extern "C" fn session_config_builder_set_self_private_key(
+pub unsafe extern "C" fn session_config_builder_set_self_static_private_key(
     builder: *mut SessionConfigBuilder,
     identity_key_ptr: *mut IdentityKey,
 ) -> *mut SessionConfigBuilder {
     let identity_key = Box::from_raw(identity_key_ptr);
-    let next_builder = Box::from_raw(builder).set_self_private_key(identity_key);
+    let next_builder = Box::from_raw(builder).set_self_static_private_key(identity_key);
     Box::into_raw(Box::new(next_builder))
 }
 

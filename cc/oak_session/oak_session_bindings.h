@@ -131,7 +131,7 @@ extern SessionConfigBuilder* session_config_builder_add_peer_verifier(
     SessionConfigBuilder*, ffi::bindings::BytesView, FfiAttestationVerifier);
 extern SessionConfigBuilder* session_config_builder_add_session_binder(
     SessionConfigBuilder*, ffi::bindings::BytesView, SigningKey*);
-extern SessionConfigBuilder* session_config_builder_set_self_private_key(
+extern SessionConfigBuilder* session_config_builder_set_self_static_private_key(
     SessionConfigBuilder*, IdentityKey*);
 extern SessionConfigBuilder* session_config_builder_set_peer_static_public_key(
     SessionConfigBuilder*, ffi::bindings::BytesView);

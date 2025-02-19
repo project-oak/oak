@@ -176,7 +176,7 @@ SessionConfig* TestConfigUnattestedNKServer(IdentityKey* identity_key) {
   }
   auto session_config_builder = result.result;
 
-  session_config_builder = session_config_builder_set_self_private_key(
+  session_config_builder = session_config_builder_set_self_static_private_key(
       session_config_builder, identity_key);
 
   return session_config_builder_build(session_config_builder);
@@ -192,7 +192,7 @@ SessionConfig* TestConfigUnattestedKK(BytesView peer_public_key,
   }
   auto session_config_builder = result.result;
 
-  session_config_builder = session_config_builder_set_self_private_key(
+  session_config_builder = session_config_builder_set_self_static_private_key(
       session_config_builder, self_identity_key);
 
   session_config_builder = session_config_builder_set_peer_static_public_key(

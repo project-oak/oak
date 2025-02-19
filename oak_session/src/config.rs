@@ -216,7 +216,7 @@ impl SessionConfigBuilder {
         self
     }
 
-    pub fn set_self_private_key(mut self, private_key: Box<dyn IdentityKeyHandle>) -> Self {
+    pub fn set_self_static_private_key(mut self, private_key: Box<dyn IdentityKeyHandle>) -> Self {
         if self.config.handshaker_config.self_static_private_key.is_none() {
             self.config.handshaker_config.self_static_private_key = Some(private_key);
         } else {

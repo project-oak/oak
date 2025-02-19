@@ -25,7 +25,8 @@ use oak_session_ffi_config::{
     self as config_ffi, identity_key_get_public_key, new_identity_key,
     session_config_builder_add_peer_verifier, session_config_builder_add_self_attester,
     session_config_builder_add_self_endorser, session_config_builder_add_session_binder,
-    session_config_builder_set_peer_static_public_key, session_config_builder_set_self_private_key,
+    session_config_builder_set_peer_static_public_key,
+    session_config_builder_set_self_static_private_key,
 };
 use oak_session_ffi_server_session as server_ffi;
 use oak_session_ffi_testing::{
@@ -327,7 +328,7 @@ fn create_unattested_nk_server_session_config(
     let mut session_config_builder = session_config_builder_result.result;
 
     session_config_builder = unsafe {
-        session_config_builder_set_self_private_key(session_config_builder, identity_key)
+        session_config_builder_set_self_static_private_key(session_config_builder, identity_key)
     };
 
     unsafe { config_ffi::session_config_builder_build(session_config_builder) }
@@ -345,7 +346,10 @@ fn create_unattested_kk_session_config(
     let mut session_config_builder = session_config_builder_result.result;
 
     session_config_builder = unsafe {
-        session_config_builder_set_self_private_key(session_config_builder, self_identity_key)
+        session_config_builder_set_self_static_private_key(
+            session_config_builder,
+            self_identity_key,
+        )
     };
 
     session_config_builder = unsafe {
