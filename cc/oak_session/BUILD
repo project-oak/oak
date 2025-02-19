@@ -93,6 +93,7 @@ cc_test(
         ":client_session",
         ":server_session",
         "//cc/ffi:rust_bytes",
+        "//cc/oak_session/testing:matchers",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",

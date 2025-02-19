@@ -16,11 +16,13 @@
 
 #include <string>
 
+#include "absl/log/log.h"
 #include "absl/status/status_matchers.h"
 #include "absl/strings/string_view.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"
+#include "cc/oak_session/testing/matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "proto/session/session.pb.h"
@@ -37,9 +39,85 @@ using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Optional;
 
-SessionConfig* TestConfig() {
+constexpr absl::string_view kFakeAttesterId = "fake_attester";
+constexpr absl::string_view kFakeEvent = "fake event";
+constexpr absl::string_view kFakePlatform = "fake platform";
+
+SessionConfig* TestConfigUnattestedNN() {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseNN)
+      .Build();
+}
+
+SessionConfig* TestConfigAttestedNNServer() {
+  auto signing_key = bindings::new_random_signing_key();
+  auto verifying_bytes = bindings::signing_key_verifying_key_bytes(signing_key);
+
+  auto fake_evidence =
+      bindings::new_fake_evidence(ffi::bindings::BytesView(verifying_bytes),
+                                  ffi::bindings::BytesView(kFakeEvent));
+  ffi::bindings::free_rust_bytes_contents(verifying_bytes);
+  auto attester =
+      bindings::new_simple_attester(ffi::bindings::BytesView(fake_evidence));
+  if (attester.error != nullptr) {
+    LOG(FATAL) << "Failed to create attester:"
+               << ffi::bindings::ErrorIntoStatus(attester.error);
+  }
+  ffi::bindings::free_rust_bytes_contents(fake_evidence);
+
+  auto fake_endorsements =
+      bindings::new_fake_endorsements(ffi::bindings::BytesView(kFakePlatform));
+  auto endorser = bindings::new_simple_endorser(
+      ffi::bindings::BytesView(fake_endorsements));
+  if (endorser.error != nullptr) {
+    LOG(FATAL) << "Failed to create attester:" << attester.error;
+  }
+
+  ffi::bindings::free_rust_bytes_contents(fake_endorsements);
+
+  auto builder = SessionConfigBuilder(AttestationType::kSelfUnidirectional,
+                                      HandshakeType::kNoiseNN)
+                     .AddSelfAttester(kFakeAttesterId, attester.result)
+                     .AddSelfEndorser(kFakeAttesterId, endorser.result)
+                     .AddSessionBinder(kFakeAttesterId, signing_key);
+
+  bindings::free_signing_key(signing_key);
+
+  return builder.Build();
+}
+
+SessionConfig* TestConfigAttestedNNClient() {
+  auto verifier = bindings::new_fake_attestation_verifier(
+      ffi::bindings::BytesView(kFakeEvent),
+      ffi::bindings::BytesView(kFakePlatform));
+
+  return SessionConfigBuilder(AttestationType::kSelfUnidirectional,
+                              HandshakeType::kNoiseNN)
+      .AddPeerVerifier(kFakeAttesterId, verifier)
+      .Build();
+}
+
+SessionConfig* TestConfigUnattestedNKClient(absl::string_view public_key) {
+  return SessionConfigBuilder(AttestationType::kUnattested,
+                              HandshakeType::kNoiseNK)
+      .SetPeerStaticPublicKey(public_key)
+      .Build();
+}
+
+SessionConfig* TestConfigUnattestedNKServer(
+    bindings::IdentityKey* identity_key) {
+  return SessionConfigBuilder(AttestationType::kUnattested,
+                              HandshakeType::kNoiseNK)
+      .SetSelfPrivateKey(identity_key)
+      .Build();
+}
+
+SessionConfig* TestConfigUnattestedKK(absl::string_view peer_public_key,
+                                      bindings::IdentityKey* self_private_key) {
+  return SessionConfigBuilder(AttestationType::kUnattested,
+                              HandshakeType::kNoiseKK)
+      .SetPeerStaticPublicKey(peer_public_key)
+      .SetSelfPrivateKey(self_private_key)
       .Build();
 }
 
@@ -66,16 +144,61 @@ void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
   EXPECT_THAT(server_session.IsOpen(), Eq(true));
 }
 
-TEST(ClientServerSessionTest, HandshakeSucceeds) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+TEST(ClientServerSessionTest, UnattestedNNHandshakeSucceeds) {
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 }
 
+TEST(ClientServerSessionTest, AttestedNNHandshakeSucceeds) {
+  auto client_session = ClientSession::Create(TestConfigAttestedNNClient());
+  auto server_session = ServerSession::Create(TestConfigAttestedNNServer());
+
+  DoHandshake(**client_session, **server_session);
+}
+
+TEST(ClientServerSessionTest, UnattestedNKHandshakeSucceeds) {
+  bindings::IdentityKey* identity_key = bindings::new_identity_key();
+  ffi::bindings::ErrorOrRustBytes public_key =
+      bindings::identity_key_get_public_key(identity_key);
+  ASSERT_THAT(public_key, IsResult());
+
+  auto client_session =
+      ClientSession::Create(TestConfigUnattestedNKClient(*public_key.result));
+  auto server_session =
+      ServerSession::Create(TestConfigUnattestedNKServer(identity_key));
+
+  DoHandshake(**client_session, **server_session);
+
+  ffi::bindings::free_rust_bytes(public_key.result);
+}
+
+TEST(ClientServerSessionTest, UnattestedKKHandshakeSucceeds) {
+  bindings::IdentityKey* client_identity_key = bindings::new_identity_key();
+  ffi::bindings::ErrorOrRustBytes client_public_key =
+      bindings::identity_key_get_public_key(client_identity_key);
+  ASSERT_THAT(client_public_key, IsResult());
+
+  bindings::IdentityKey* server_identity_key = bindings::new_identity_key();
+  ffi::bindings::ErrorOrRustBytes server_public_key =
+      bindings::identity_key_get_public_key(server_identity_key);
+  ASSERT_THAT(client_public_key, IsResult());
+
+  auto client_session = ClientSession::Create(
+      TestConfigUnattestedKK(*server_public_key.result, client_identity_key));
+  auto server_session = ServerSession::Create(
+      TestConfigUnattestedKK(*client_public_key.result, server_identity_key));
+
+  DoHandshake(**client_session, **server_session);
+
+  ffi::bindings::free_rust_bytes(client_public_key.result);
+  ffi::bindings::free_rust_bytes(server_public_key.result);
+}
+
 TEST(ClientServerSessionTest, AcceptEmptyOutgoingMessageResult) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -89,8 +212,8 @@ TEST(ClientServerSessionTest, AcceptEmptyOutgoingMessageResult) {
 }
 
 TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -104,8 +227,8 @@ TEST(ClientServerSessionTest, AcceptEmptyReadResult) {
 }
 
 TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -127,8 +250,8 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecrypt) {
 }
 
 TEST(ClientServerSessionTest, ClientEncryptServerDecryptRaw) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -148,8 +271,8 @@ TEST(ClientServerSessionTest, ClientEncryptServerDecryptRaw) {
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -171,8 +294,8 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecrypt) {
 }
 
 TEST(ClientServerSessionTest, ServerEncryptClientDecryptRaw) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -191,8 +314,8 @@ TEST(ClientServerSessionTest, ServerEncryptClientDecryptRaw) {
 }
 
 TEST(ClientServerSessionTest, ConvertsToStringView) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 
@@ -213,8 +336,8 @@ TEST(ClientServerSessionTest, ConvertsToStringView) {
 }
 
 TEST(ClientServerSessionTest, ConvertsToString) {
-  auto client_session = ClientSession::Create(TestConfig());
-  auto server_session = ServerSession::Create(TestConfig());
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
 

@@ -53,6 +53,17 @@ class SessionConfigBuilder {
                        HandshakeType handshake_type);
   SessionConfig* Build();
 
+  SessionConfigBuilder AddSelfAttester(absl::string_view attester_id,
+                                       bindings::FfiAttester attester);
+  SessionConfigBuilder AddSelfEndorser(absl::string_view endorser_id,
+                                       bindings::FfiEndorser attester);
+  SessionConfigBuilder AddPeerVerifier(
+      absl::string_view attester_id, bindings::FfiAttestationVerifier attester);
+  SessionConfigBuilder AddSessionBinder(absl::string_view attester_id,
+                                        bindings::SigningKey* binding_key);
+  SessionConfigBuilder SetSelfPrivateKey(bindings::IdentityKey* signing_key);
+  SessionConfigBuilder SetPeerStaticPublicKey(absl::string_view public_key);
+
  private:
   bindings::SessionConfigBuilder* builder_;
 };
