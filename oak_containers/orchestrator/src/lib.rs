@@ -104,7 +104,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
     // Create a container event and add it to the event log.
     let mut attester: A = crate::dice::load_stage1_dice_data()?;
     let container_event = oak_containers_attestation::create_container_event(
-        &container_bundle[..],
+        container_bundle.clone(),
         &application_config[..],
         &instance_public_keys,
     );
@@ -187,9 +187,8 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
             group_keys.context("group keys were not provisioned")?,
             cancellation_token.clone(),
         ),
-        // Explicitly convert the Vec into `bytes::Bytes` to pass ownership into `run`.
-        crate::container_runtime::run::<bytes::Bytes>(
-            container_bundle.into(),
+        crate::container_runtime::run(
+            container_bundle,
             &args.container_dir,
             user.uid,
             user.gid,
