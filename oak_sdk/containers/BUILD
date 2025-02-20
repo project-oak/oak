@@ -26,16 +26,50 @@ rust_library(
     srcs = ["lib.rs"],
     deps = [
         ":orchestrator_channel",
+        ":orchestrator_client",
+        ":orchestrator_crypto_client",
     ],
 )
 
 rust_library(
     name = "orchestrator_channel",
     srcs = ["orchestrator_channel.rs"],
+    visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",
+    ],
+)
+
+rust_library(
+    name = "orchestrator_crypto_client",
+    srcs = ["orchestrator_crypto_client.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    visibility = ["//oak_sdk:__subpackages__"],
+    deps = [
+        "//oak_crypto",
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_library(
+    name = "orchestrator_client",
+    srcs = ["orchestrator_client.rs"],
+    visibility = ["//oak_sdk:__subpackages__"],
+    deps = [
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:tonic",
     ],
 )

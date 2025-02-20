@@ -26,7 +26,6 @@ use oak_containers_agent::{
     metrics::{MetricsConfig, OakObserver},
     set_error_handler,
 };
-use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 #[cfg(feature = "native")]
 use oak_functions_containers_app::native_handler::NativeHandler;
@@ -36,7 +35,9 @@ use oak_proto_rust::oak::functions::config::{
     application_config::CommunicationChannel, ApplicationConfig, HandlerType,
     TcpCommunicationChannel, WasmtimeConfig,
 };
-use oak_sdk_containers::default_orchestrator_channel;
+use oak_sdk_containers::{
+    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
+};
 use prost::Message;
 use tokio::{
     io::{AsyncRead, AsyncWrite},

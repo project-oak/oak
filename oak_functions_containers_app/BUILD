@@ -31,7 +31,7 @@ LIB_DEPS = [
     "//oak_attestation",
     "//oak_containers/agent",
     "//oak_containers/orchestrator",
-    "//oak_containers_sdk",
+    "//oak_sdk/containers:oak_sdk_containers",
     "//oak_crypto",
     "//oak_debug_service",
     "//oak_functions_abi",
@@ -87,7 +87,7 @@ rust_library(
 APP_DEPS = [
     "//oak_containers/agent",
     "//oak_containers/orchestrator",
-    "//oak_containers_sdk",
+    "//oak_sdk/containers:oak_sdk_containers",
     "//oak_crypto",
     "//oak_proto_rust",
     "@oak_crates_index//:anyhow",
@@ -115,7 +115,6 @@ rust_binary(
     deps = APP_DEPS + [
         ":lib",
         "//oak_functions_service:lib_unrestricted",
-        "//oak_sdk/containers:oak_sdk_containers",
     ],
 )
 
@@ -129,7 +128,6 @@ rust_binary(
     deps = APP_DEPS + [
         ":lib_insecure",
         "//oak_functions_service:lib_insecure_unrestricted",
-        "//oak_sdk/containers:oak_sdk_containers",
     ],
 )
 

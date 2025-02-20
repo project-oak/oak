@@ -34,7 +34,6 @@ rust_library(
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
-        "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_sdk/server/v1:oak_sdk_server_v1",
@@ -58,7 +57,6 @@ rust_test(
         "//oak_client",
         "//oak_client/tonic:oak_client_tonic",
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
-        "//oak_containers_sdk",
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
@@ -78,7 +76,6 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
-        "//oak_containers_sdk",
         "//oak_sdk/containers:oak_sdk_containers",
         "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
