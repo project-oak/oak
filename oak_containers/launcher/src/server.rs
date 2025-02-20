@@ -87,19 +87,10 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(system_image_file);
 
         let response_stream = async_stream::try_stream! {
-            loop {
-                let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
-                let bytes_read = reader.read_buf(&mut buffer).await?;
-
-                if bytes_read > 0 {
-                    yield GetImageResponse {
-                        image_chunk: buffer.freeze().slice(..bytes_read)
-                    }
-                } else {
-                    // the file has been fully read, there's nothing left to
-                    // send
-                    break;
-                }
+            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+                yield GetImageResponse {
+                    image_chunk: buffer.freeze()
+                };
             }
         };
 
@@ -115,19 +106,10 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(container_bundle_file);
 
         let response_stream = async_stream::try_stream! {
-            loop {
-                let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
-                let bytes_read = reader.read_buf(&mut buffer).await?;
-
-                if bytes_read > 0 {
-                    yield GetImageResponse {
-                        image_chunk: buffer.freeze().slice(..bytes_read)
-                    }
-                } else {
-                    // the file has been fully read, there's nothing left to
-                    // send
-                    break;
-                }
+            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+                yield GetImageResponse {
+                    image_chunk: buffer.freeze()
+                };
             }
         };
 
