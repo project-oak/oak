@@ -61,7 +61,7 @@ trait ClientSessionHelper {
 
 impl ClientSessionHelper for oak_session::ClientSession {
     fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest> {
-        self.write(&PlaintextMessage { plaintext: request.to_vec() })
+        self.write(PlaintextMessage { plaintext: request.to_vec() })
             .context("couldn't write message to encrypt")?;
 
         self.get_outgoing_message()

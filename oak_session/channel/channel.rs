@@ -149,7 +149,7 @@ impl<
     /// the transport provided at construction.
     pub async fn send(&mut self, bytes: &[u8]) -> Result<(), TransportError> {
         self.session
-            .write(&PlaintextMessage { plaintext: bytes.to_vec() })
+            .write(PlaintextMessage { plaintext: bytes.to_vec() })
             .into_session_result("failed to write outgoing message")?;
 
         let outgoing_message: OutgoingMessage = self

@@ -202,7 +202,7 @@ pub unsafe extern "C" fn client_write(
 }
 
 fn safe_client_write(session: &mut ClientSession, plaintext_bytes_slice: &[u8]) -> *const Error {
-    match session.write(&PlaintextMessage { plaintext: plaintext_bytes_slice.to_vec() }) {
+    match session.write(PlaintextMessage { plaintext: plaintext_bytes_slice.to_vec() }) {
         Ok(()) => std::ptr::null(),
         Err(e) => Error::new_raw(e.to_string()),
     }

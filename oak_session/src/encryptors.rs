@@ -31,14 +31,14 @@ pub struct OrderedChannelEncryptor {
 }
 
 impl Encryptor for OrderedChannelEncryptor {
-    fn encrypt(&mut self, plaintext: &Payload) -> anyhow::Result<Payload> {
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Payload> {
         self.crypter
             .encrypt(plaintext.message.as_slice())
             .map(From::from)
             .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 
-    fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload> {
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Payload> {
         self.crypter
             .decrypt(ciphertext.message.as_slice())
             .map(From::from)
@@ -70,14 +70,14 @@ pub struct UnorderedChannelEncryptor {
 }
 
 impl Encryptor for UnorderedChannelEncryptor {
-    fn encrypt(&mut self, plaintext: &Payload) -> anyhow::Result<Payload> {
+    fn encrypt(&mut self, plaintext: Payload) -> anyhow::Result<Payload> {
         self.crypter
             .encrypt(plaintext.message.as_slice())
             .map(From::from)
             .map_err(|e| anyhow!("Encryption error: {e:#?}"))
     }
 
-    fn decrypt(&mut self, ciphertext: &Payload) -> anyhow::Result<Payload> {
+    fn decrypt(&mut self, ciphertext: Payload) -> anyhow::Result<Payload> {
         let nonce: [u8; NONCE_LEN] = ciphertext
             .nonce
             .as_ref()

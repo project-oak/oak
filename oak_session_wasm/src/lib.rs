@@ -66,8 +66,9 @@ impl WasmClientSession {
     /// in multiple outgoing protocol messages being created.
     #[wasm_bindgen]
     pub fn write(&mut self, plaintext: &[u8]) -> Result<(), JsValue> {
-        let plaintext_message = PlaintextMessage { plaintext: plaintext.to_vec() };
-        self.inner.write(&plaintext_message).map_err(|e| JsValue::from_str(&e.to_string()))
+        self.inner
+            .write(PlaintextMessage { plaintext: plaintext.to_vec() })
+            .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
     /// Attempts to find a message containing ciphertext in the queue of

@@ -63,7 +63,7 @@ pub trait Session: Send {
     ///
     /// This function can be called multiple times in a row, which will result
     /// in multiple outgoing protocol messages being created.
-    fn write(&mut self, plaintext: &PlaintextMessage) -> Result<(), Error>;
+    fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error>;
 
     /// Reads an encrypted message from the peer and decrypt it.
     ///
@@ -163,14 +163,14 @@ impl Session for ClientSession {
         matches!(self.step, Step::Open(_))
     }
 
-    fn write(&mut self, plaintext: &PlaintextMessage) -> Result<(), Error> {
+    fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
             Step::Open(encryptor) => {
                 let encrypted_message: EncryptedMessage = encryptor
-                    .encrypt(&plaintext.clone().into())
+                    .encrypt(plaintext.into())
                     .map(From::from)
                     .context("couldn't encrypt the supplied plaintext")?;
                 self.outgoing_requests.push_back(SessionRequest {
@@ -198,7 +198,7 @@ impl Session for ClientSession {
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(&encrypted_message.into())
+                            .decrypt(encrypted_message.into())
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))
@@ -340,14 +340,14 @@ impl Session for ServerSession {
         matches!(self.step, Step::Open(_))
     }
 
-    fn write(&mut self, plaintext: &PlaintextMessage) -> Result<(), Error> {
+    fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
             Step::Open(encryptor) => {
                 let encrypted_message: EncryptedMessage = encryptor
-                    .encrypt(&plaintext.clone().into())
+                    .encrypt(plaintext.into())
                     .map(From::from)
                     .context("couldn't encrypt the supplied plaintext")?;
                 self.outgoing_responses.push_back(SessionResponse {
@@ -375,7 +375,7 @@ impl Session for ServerSession {
                     };
                     Ok(Some(
                         encryptor
-                            .decrypt(&encrypted_message.into())
+                            .decrypt(encrypted_message.into())
                             .map(From::from)
                             .context("couldn't decrypt the supplied plaintext")?,
                     ))

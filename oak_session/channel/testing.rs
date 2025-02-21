@@ -114,7 +114,7 @@ impl<I: Send, O: Send, PS: ProtocolSession<I, O>> Transport for TestTransport<I,
         if self.peer_session.is_open() {
             let outgoing =
                 PlaintextMessage { plaintext: self.mock_peer_control.get_message_to_send() };
-            self.peer_session.write(&outgoing).expect("failed to write outgoing message");
+            self.peer_session.write(outgoing).expect("failed to write outgoing message");
         }
         self.peer_session
             .get_outgoing_message()

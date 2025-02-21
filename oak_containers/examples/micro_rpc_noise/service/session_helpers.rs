@@ -38,7 +38,7 @@ impl ServerSessionHelpers for ServerSession {
     }
 
     fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse> {
-        self.write(&PlaintextMessage { plaintext: response.to_vec() })
+        self.write(PlaintextMessage { plaintext: response.to_vec() })
             .context("failed to write response")?;
         self.get_outgoing_message()
             .context("failed get get encrypted response")?

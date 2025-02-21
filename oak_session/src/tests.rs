@@ -332,14 +332,14 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
 
     for message in test_messages() {
-        let ciphertext = encryptor_client.encrypt(&message.clone().into()).unwrap();
-        let plaintext = encryptor_server.decrypt(&ciphertext).unwrap();
+        let ciphertext = encryptor_client.encrypt(message.clone().into()).unwrap();
+        let plaintext = encryptor_server.decrypt(ciphertext).unwrap();
         assert_eq!(message, plaintext.into());
     }
 
     for message in test_messages() {
-        let ciphertext = encryptor_server.encrypt(&message.clone().into()).unwrap();
-        let plaintext = encryptor_client.decrypt(&ciphertext).unwrap();
+        let ciphertext = encryptor_server.encrypt(message.clone().into()).unwrap();
+        let plaintext = encryptor_client.decrypt(ciphertext).unwrap();
         assert_eq!(message, plaintext.into());
     }
 }
@@ -597,7 +597,7 @@ fn verify_session_message<I, O>(
     session2: &mut dyn ProtocolSession<O, I>,
     message: &PlaintextMessage,
 ) {
-    session1.write(message).unwrap();
+    session1.write(message.clone()).unwrap();
     let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
     session2.put_incoming_message(&outgoing_message).unwrap();
     assert_eq!(message, &session2.read().unwrap().unwrap());
@@ -630,8 +630,8 @@ fn test_unordered_encryptor_inorder_messages() {
 
     for message in test_messages() {
         let payload = Payload { message: message.plaintext.to_vec(), nonce: None, aad: None };
-        let encrypted_payload = replica_1.encrypt(&payload).unwrap();
-        let plaintext = replica_2.decrypt(&encrypted_payload).unwrap().message;
+        let encrypted_payload = replica_1.encrypt(payload).unwrap();
+        let plaintext = replica_2.decrypt(encrypted_payload).unwrap().message;
         assert_eq!(message.plaintext, plaintext);
     }
 }
@@ -647,17 +647,17 @@ fn test_unordered_encryptor_window_size_0() {
     let test_messages = test_messages();
 
     let encrypted_payload_1 = replica_1
-        .encrypt(&Payload { message: test_messages[0].plaintext.to_vec(), nonce: None, aad: None })
+        .encrypt(Payload { message: test_messages[0].plaintext.to_vec(), nonce: None, aad: None })
         .unwrap();
     let encrypted_payload_2 = replica_1
-        .encrypt(&Payload { message: test_messages[1].plaintext.to_vec(), nonce: None, aad: None })
+        .encrypt(Payload { message: test_messages[1].plaintext.to_vec(), nonce: None, aad: None })
         .unwrap();
 
     // Decrypt in reverse order
-    let plaintext_2 = replica_2.decrypt(&encrypted_payload_2).unwrap().message;
+    let plaintext_2 = replica_2.decrypt(encrypted_payload_2).unwrap().message;
     assert_eq!(test_messages[1].plaintext, plaintext_2);
     // Decrypting first message fails since it is from a lower nonce.
-    assert!(replica_2.decrypt(&encrypted_payload_1).is_err());
+    assert!(replica_2.decrypt(encrypted_payload_1).is_err());
 }
 
 fn clone_payload(payload: &Payload) -> Payload {
@@ -687,38 +687,38 @@ fn test_unordered_encryptor_window_size_3() {
     let mut encrypted_payloads = vec![];
     for item in test_messages {
         encrypted_payloads.push(
-            replica_1.encrypt(&Payload { message: item.to_vec(), nonce: None, aad: None }).unwrap(),
+            replica_1.encrypt(Payload { message: item.to_vec(), nonce: None, aad: None }).unwrap(),
         );
     }
 
     // Out-of-order decryption
     assert_eq!(
         test_messages[3],
-        replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).unwrap().message
+        replica_2.decrypt(clone_payload(&encrypted_payloads[3])).unwrap().message
     );
     // Decrypting messages within the window should be ok.
     assert_eq!(
         test_messages[1],
-        replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).unwrap().message
+        replica_2.decrypt(clone_payload(&encrypted_payloads[1])).unwrap().message
     );
     assert_eq!(
         test_messages[2],
-        replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).unwrap().message
+        replica_2.decrypt(clone_payload(&encrypted_payloads[2])).unwrap().message
     );
     // Replaying message should fail.
-    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[3])).is_err());
-    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[2])).is_err());
-    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[1])).is_err());
+    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[3])).is_err());
+    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[2])).is_err());
+    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[1])).is_err());
     // Decrypting messages outside the window should fail.
-    assert!(replica_2.decrypt(&clone_payload(&encrypted_payloads[0])).is_err());
+    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[0])).is_err());
 
     // Decrypt more messages in order.
     assert_eq!(
         test_messages[4],
-        replica_2.decrypt(&clone_payload(&encrypted_payloads[4])).unwrap().message
+        replica_2.decrypt(clone_payload(&encrypted_payloads[4])).unwrap().message
     );
     assert_eq!(
         test_messages[5],
-        replica_2.decrypt(&clone_payload(&encrypted_payloads[5])).unwrap().message
+        replica_2.decrypt(clone_payload(&encrypted_payloads[5])).unwrap().message
     );
 }

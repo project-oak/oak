@@ -156,7 +156,7 @@ extern "system" fn Java_com_google_oak_session_OakServerSession_nativeWrite(
         }
     };
 
-    if let Err(err) = session.write(&message) {
+    if let Err(err) = session.write(message) {
         oak_exception(env, "Error writing the data to the session", err);
     }
 }
