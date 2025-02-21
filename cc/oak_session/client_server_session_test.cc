@@ -108,7 +108,7 @@ SessionConfig* TestConfigUnattestedNKServer(
     bindings::IdentityKey* identity_key) {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseNK)
-      .SetSelfPrivateKey(identity_key)
+      .SetSelfStaticPrivateKey(identity_key)
       .Build();
 }
 
@@ -117,7 +117,7 @@ SessionConfig* TestConfigUnattestedKK(absl::string_view peer_public_key,
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseKK)
       .SetPeerStaticPublicKey(peer_public_key)
-      .SetSelfPrivateKey(self_private_key)
+      .SetSelfStaticPrivateKey(self_private_key)
       .Build();
 }
 

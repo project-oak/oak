@@ -61,7 +61,8 @@ class SessionConfigBuilder {
       absl::string_view attester_id, bindings::FfiAttestationVerifier attester);
   SessionConfigBuilder AddSessionBinder(absl::string_view attester_id,
                                         bindings::SigningKey* binding_key);
-  SessionConfigBuilder SetSelfPrivateKey(bindings::IdentityKey* signing_key);
+  SessionConfigBuilder SetSelfStaticPrivateKey(
+      bindings::IdentityKey* signing_key);
   SessionConfigBuilder SetPeerStaticPublicKey(absl::string_view public_key);
 
  private:

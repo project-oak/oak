@@ -68,9 +68,10 @@ SessionConfigBuilder SessionConfigBuilder::AddSessionBinder(
   return *this;
 }
 
-SessionConfigBuilder SessionConfigBuilder::SetSelfPrivateKey(
+SessionConfigBuilder SessionConfigBuilder::SetSelfStaticPrivateKey(
     bindings::IdentityKey* signing_key) {
-  builder_ = session_config_builder_set_self_private_key(builder_, signing_key);
+  builder_ =
+      session_config_builder_set_self_static_private_key(builder_, signing_key);
   return *this;
 }
 
