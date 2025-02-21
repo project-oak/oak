@@ -38,6 +38,11 @@ using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
 
+constexpr absl::string_view kClientKeyBytes =
+    "clientkeybytes12clientkeybytes34";
+constexpr absl::string_view kServerKeyBytes =
+    "serverkeybytes12serverkeybytes34";
+
 void DoHandshake(ServerSession* server_session, ClientSession* client_session) {
   while (!client_is_open(client_session) && !server_is_open(server_session)) {
     if (!client_is_open(client_session)) {
@@ -218,12 +223,15 @@ TEST(OakSessionBindingsTest, TestNNHandshake) {
 }
 
 TEST(OakSessionBindingsTest, TestNKHandshake) {
-  IdentityKey* identity_key = new_identity_key();
-  ErrorOrRustBytes public_key = identity_key_get_public_key(identity_key);
+  ErrorOrIdentityKey identity_key =
+      new_identity_key_from_bytes(BytesView(kServerKeyBytes));
+  ASSERT_THAT(identity_key, IsResult());
+  ErrorOrRustBytes public_key =
+      identity_key_get_public_key(identity_key.result);
   ASSERT_THAT(public_key, IsResult());
 
   ErrorOrServerSession server_session_result =
-      new_server_session(TestConfigUnattestedNKServer(identity_key));
+      new_server_session(TestConfigUnattestedNKServer(identity_key.result));
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
   ErrorOrClientSession client_session_result = new_client_session(
@@ -239,23 +247,27 @@ TEST(OakSessionBindingsTest, TestNKHandshake) {
 }
 
 TEST(OakSessionBindingsTest, TestKKHandshake) {
-  IdentityKey* client_identity_key = new_identity_key();
-  IdentityKey* server_identity_key = new_identity_key();
+  ErrorOrIdentityKey client_identity_key =
+      new_identity_key_from_bytes(BytesView(kClientKeyBytes));
+  ASSERT_THAT(client_identity_key, IsResult());
+  ErrorOrIdentityKey server_identity_key =
+      new_identity_key_from_bytes(BytesView(kServerKeyBytes));
+  ASSERT_THAT(server_identity_key, IsResult());
   ErrorOrRustBytes client_public_key =
-      identity_key_get_public_key(client_identity_key);
+      identity_key_get_public_key(client_identity_key.result);
   ASSERT_THAT(client_public_key, IsResult());
   ErrorOrRustBytes server_public_key =
-      identity_key_get_public_key(server_identity_key);
+      identity_key_get_public_key(server_identity_key.result);
   ASSERT_THAT(server_public_key, IsResult());
 
   ErrorOrServerSession server_session_result =
       new_server_session(TestConfigUnattestedKK(
-          BytesView(*(client_public_key.result)), server_identity_key));
+          BytesView(*(client_public_key.result)), server_identity_key.result));
   ASSERT_THAT(server_session_result, IsResult());
   ServerSession* server_session = server_session_result.result;
   ErrorOrClientSession client_session_result =
       new_client_session(TestConfigUnattestedKK(
-          BytesView(*(server_public_key.result)), client_identity_key));
+          BytesView(*(server_public_key.result)), client_identity_key.result));
   ASSERT_THAT(client_session_result, IsResult());
   ClientSession* client_session = client_session_result.result;
 
@@ -456,6 +468,8 @@ TEST(OakSessionBindingsTest, ErrorsAreReturned) {
   free_server_session(server_session);
   free_client_session(client_session);
 }
+
+TEST(OakSessionBindingsTest, IncorrectKeyLenReturnsError) {}
 
 }  // namespace
 }  // namespace oak::session::bindings

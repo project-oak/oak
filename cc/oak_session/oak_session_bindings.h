@@ -118,8 +118,12 @@ struct ErrorOrFfiEndorser {
 struct SigningKey;
 struct IdentityKey;
 
-extern "C" {
+struct ErrorOrIdentityKey {
+  IdentityKey* result;
+  ffi::bindings::Error* error;
+};
 
+extern "C" {
 // Corresponds to functions in oak_session/ffi/config.rs
 extern ErrorOrSessionConfigBuilder new_session_config_builder(uint32_t,
                                                               uint32_t);
@@ -147,6 +151,7 @@ extern ffi::bindings::RustBytes signing_key_verifying_key_bytes(SigningKey*);
 extern void free_signing_key(SigningKey*);
 
 extern IdentityKey* new_identity_key();
+extern ErrorOrIdentityKey new_identity_key_from_bytes(ffi::bindings::BytesView);
 extern ffi::bindings::ErrorOrRustBytes identity_key_get_public_key(
     IdentityKey*);
 

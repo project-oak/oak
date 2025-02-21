@@ -103,7 +103,11 @@ impl P256Scalar {
     pub fn generate() -> P256Scalar {
         let mut ret = [0u8; P256_SCALAR_LEN];
         rand_bytes(&mut ret);
-        P256Scalar { v: p256::Scalar::from_repr(ret.into()).unwrap() }
+        P256Scalar::from_bytes(ret)
+    }
+
+    pub fn from_bytes(bytes: [u8; P256_SCALAR_LEN]) -> P256Scalar {
+        P256Scalar { v: p256::Scalar::from_repr(bytes.into()).unwrap() }
     }
 
     pub fn compute_public_key(&self) -> [u8; P256_X962_LEN] {

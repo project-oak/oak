@@ -21,7 +21,7 @@ use alloc::vec::Vec;
 
 use anyhow::anyhow;
 
-use crate::noise_handshake::{p256_scalar_mult, P256Scalar};
+use crate::noise_handshake::{client::P256_SCALAR_LEN, p256_scalar_mult, P256Scalar};
 
 pub trait IdentityKeyHandle: Send {
     fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;
@@ -37,6 +37,10 @@ pub struct IdentityKey {
 impl IdentityKey {
     pub fn generate() -> Self {
         Self { private_key: P256Scalar::generate() }
+    }
+
+    pub fn from_bytes(bytes: [u8; P256_SCALAR_LEN]) -> Self {
+        Self { private_key: P256Scalar::from_bytes(bytes) }
     }
 }
 

@@ -36,7 +36,10 @@ use std::ffi::c_void;
 
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
-use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
+use oak_crypto::{
+    identity_key::{IdentityKey, IdentityKeyHandle},
+    noise_handshake::client::P256_SCALAR_LEN,
+};
 use oak_ffi_bytes::BytesView;
 use oak_ffi_error::{Error, ErrorOrRustBytes};
 use oak_session::{
@@ -294,6 +297,30 @@ pub extern "C" fn new_identity_key() -> *mut IdentityKey {
     Box::into_raw(Box::new(IdentityKey::generate()))
 }
 
+/// Create a new IdentityKey instance from the provided bytes.
+///
+/// If the functions succeeds,
+/// `ErrorOrIdentity::result` will contain a pointer to the
+/// [`IdentityKey`]. It should be freed by returning it to Rust via a function
+/// call that reclaims ownership.
+///
+/// In case of an error, `ErrorOrIdentityKey::error` will contain a poiner to
+/// an error, containing a string description of the Rust error encountered.
+/// The error should be freed with `oak_session_ffi_types::free_error`.
+///
+/// # Safety
+///
+/// * bytes is a valid, properly aligned pointer to a SessionConfigBuilder.
+#[no_mangle]
+pub unsafe extern "C" fn new_identity_key_from_bytes(bytes: BytesView) -> ErrorOrIdentityKey {
+    match <[u8; P256_SCALAR_LEN]>::try_from(bytes.as_slice()) {
+        Ok(bytes) => {
+            ErrorOrIdentityKey::ok(Box::into_raw(Box::new(IdentityKey::from_bytes(bytes))))
+        }
+        Err(e) => ErrorOrIdentityKey::err(e.to_string()),
+    }
+}
+
 /// Call get_public_key on the provided IdentityKey.
 ///
 /// # Safety
@@ -317,6 +344,22 @@ pub struct ErrorOrSessionConfigBuilder {
 
 impl ErrorOrSessionConfigBuilder {
     fn ok(result: *mut SessionConfigBuilder) -> Self {
+        Self { result, error: std::ptr::null() }
+    }
+
+    fn err(message: impl AsRef<str>) -> Self {
+        Self { result: std::ptr::null_mut(), error: Error::new_raw(message) }
+    }
+}
+
+#[repr(C)]
+pub struct ErrorOrIdentityKey {
+    pub result: *mut IdentityKey,
+    pub error: *const Error,
+}
+
+impl ErrorOrIdentityKey {
+    fn ok(result: *mut IdentityKey) -> Self {
         Self { result, error: std::ptr::null() }
     }
 
