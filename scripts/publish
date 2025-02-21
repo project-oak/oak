@@ -1,10 +1,14 @@
 #!/bin/bash
 #
 # Writes a pair of binary and GitHub attestation to discoverability storage,
-# including updating the search index. Needs `gsutil` and storage.object.create
-# (create only) or storage.object.user (create+overwrite) permission on the
-# GCS buckets. In the latter case, mtimes will be updated on rewrite.
+# including updating the search index.
 #
+# Needs `gsutil` and the cp-related permissions from
+# https://cloud.google.com/storage/docs/access-control/iam-gsutil:
+# storage.object.create will do, since we set noclobber on gsutil cp.
+# If a destination file already exists in a bucket then it will be ignored.
+# It would be nicer to update its mtime, but this is not possible with create
+# permission only.
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -27,7 +31,7 @@ usage_and_exit() {
 }
 
 copy_file() {
-  gsutil cp "$1" "$2"
+  gsutil cp -n "$1" "$2"
 }
 
 # Uploads a file and returns its SHA2_256 hash.
