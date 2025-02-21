@@ -21,9 +21,11 @@
 #include <string>
 #include <utility>
 
+#include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
 #include "absl/status/status_matchers.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/mutex.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"
@@ -35,6 +37,7 @@ namespace {
 
 using ::absl_testing::IsOk;
 using ::absl_testing::IsOkAndHolds;
+using ::absl_testing::StatusIs;
 using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Optional;
@@ -44,6 +47,10 @@ class TestTransport : public OakSessionServer::Channel::Transport {
   TestTransport(std::unique_ptr<session::ClientSession> client_session)
       : client_session_(std::move(client_session)) {}
   absl::Status Send(session::v1::SessionResponse&& request) override {
+    absl::MutexLock lock(&mtx_);
+    if (half_closed_) {
+      return absl::InternalError("Already half-closed.");
+    }
     return client_session_->PutIncomingMessage(request);
   }
   absl::StatusOr<session::v1::SessionRequest> Receive() override {
@@ -57,9 +64,15 @@ class TestTransport : public OakSessionServer::Channel::Transport {
     }
     return **msg;
   }
+  void HalfClose() override {
+    absl::MutexLock lock(&mtx_);
+    half_closed_ = true;
+  }
 
  private:
   std::unique_ptr<session::ClientSession> client_session_;
+  absl::Mutex mtx_;
+  bool half_closed_ ABSL_GUARDED_BY(mtx_) = false;
 };
 
 session::SessionConfig* TestSessionConfig() {
@@ -107,6 +120,20 @@ TEST(OakSessionServerTest, CreatedSessionCanSend) {
   absl::StatusOr<std::optional<ffi::RustBytes>> test_send_read_back =
       client_session_ptr->ReadToRustBytes();
   EXPECT_THAT(test_send_read_back, IsOkAndHolds(Optional(Eq(test_send_msg))));
+}
+
+TEST(OakSessionServerTest, HalfClosedSessionFailsToSend) {
+  auto client_session = session::ClientSession::Create(TestSessionConfig());
+  ASSERT_THAT(client_session, IsOk());
+  auto channel = OakSessionServer(TestSessionConfig)
+                     .NewChannel(std::make_unique<TestTransport>(
+                         std::move(*client_session)));
+
+  (*channel)->HalfClose();
+
+  std::string test_send_msg = "Testing Send";
+  EXPECT_THAT((*channel)->Send(test_send_msg),
+              StatusIs(absl::StatusCode::kInternal));
 }
 
 TEST(OakSessionServerTest, CreatedSessionCanReceive) {

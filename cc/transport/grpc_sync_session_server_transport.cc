@@ -18,6 +18,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/mutex.h"
 #include "cc/oak_session/server_session.h"
 #include "proto/session/session.pb.h"
 
@@ -25,6 +26,10 @@ namespace oak::transport {
 
 absl::Status GrpcSyncSessionServerTransport::Send(
     session::v1::SessionResponse&& message) {
+  absl::MutexLock lock(&mtx_);
+  if (half_closed_) {
+    return absl::InternalError("Already half-closed.");
+  }
   if (!stream_->Write(message)) {
     return absl::AbortedError("Failed to write outgoing message.");
   }
@@ -38,6 +43,11 @@ GrpcSyncSessionServerTransport::Receive() {
     return absl::AbortedError("Failed to read incoming message.");
   }
   return request;
+}
+
+void GrpcSyncSessionServerTransport::HalfClose() {
+  absl::MutexLock lock(&mtx_);
+  half_closed_ = true;
 }
 
 }  // namespace oak::transport

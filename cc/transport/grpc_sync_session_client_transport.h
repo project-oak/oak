@@ -17,8 +17,10 @@
 #ifndef CC_TRANSPORT_GRPC_SYNC_CLIENT_SESSION_TRANSPORT_H_
 #define CC_TRANSPORT_GRPC_SYNC_CLIENT_SESSION_TRANSPORT_H_
 
+#include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/mutex.h"
 #include "cc/client/session_client.h"
 #include "cc/oak_session/channel/oak_session_channel.h"
 #include "cc/oak_session/client_session.h"
@@ -40,11 +42,15 @@ class GrpcSyncSessionClientTransport
 
   absl::Status Send(session::v1::SessionRequest&& message) override;
   absl::StatusOr<session::v1::SessionResponse> Receive() override;
+  void HalfClose() override;
 
  private:
   std::unique_ptr<grpc::ClientReaderWriterInterface<
       session::v1::SessionRequest, session::v1::SessionResponse>>
       stream_;
+
+  absl::Mutex mtx_;
+  bool half_closed_ ABSL_GUARDED_BY(mtx_) = false;
 };
 
 }  // namespace oak::transport

@@ -18,6 +18,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/mutex.h"
 #include "cc/oak_session/client_session.h"
 #include "grpcpp/support/sync_stream.h"
 #include "proto/session/session.pb.h"
@@ -26,6 +27,10 @@ namespace oak::transport {
 
 absl::Status GrpcSyncSessionClientTransport::Send(
     session::v1::SessionRequest&& message) {
+  absl::MutexLock lock(&mtx_);
+  if (half_closed_) {
+    return absl::InternalError("Already half-closed.");
+  }
   if (!stream_->Write(message)) {
     return absl::AbortedError("Failed to write outgoing message.");
   }
@@ -39,6 +44,15 @@ GrpcSyncSessionClientTransport::Receive() {
     return absl::AbortedError("Failed to readin incoming message.");
   }
   return response;
+}
+
+void GrpcSyncSessionClientTransport::HalfClose() {
+  absl::MutexLock lock(&mtx_);
+  if (half_closed_) {
+    return;
+  }
+  stream_->WritesDone();
+  half_closed_ = true;
 }
 
 };  // namespace oak::transport

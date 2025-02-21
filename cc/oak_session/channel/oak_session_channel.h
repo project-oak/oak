@@ -47,12 +47,20 @@ class OakSessionChannel {
   class Transport {
    public:
     virtual ~Transport() = default;
+    // Any subsequent calls to Send() will fail with INTERNAL error after
+    // the transport is half-closed.
     virtual absl::Status Send(SendMessage&& message) = 0;
 
     // Implementations should block until a new message is available to return.
     // Blocking semantics, deadlines, etc should be defined by the particular
     // implementation.
     virtual absl::StatusOr<ReceiveMessage> Receive() = 0;
+
+    // Half closes the transport. Thread safe, idempotent, so safe to call
+    // multiple times. Expected that "this end" will no longer send messages to
+    // the "other end" after "this end" half-closed. Any subsequent calls to
+    // Send() by "this end" will fail with INTERNAL error after this point.
+    virtual void HalfClose() = 0;
   };
 
   OakSessionChannel(std::unique_ptr<Session> session,
@@ -60,6 +68,8 @@ class OakSessionChannel {
       : session_(std::move(session)), transport_(std::move(transport)) {}
 
   // Encrypt and send a message back to the other party.
+  // Any subsequent calls to Send() will fail with INTERNAL error after
+  // the channel is half-closed.
   absl::Status Send(absl::string_view unencrypted_message) {
     absl::Status write_result = session_->Write(unencrypted_message);
     if (!write_result.ok()) {
@@ -122,6 +132,10 @@ class OakSessionChannel {
 
     return std::string(**decrypted_message);
   }
+
+  // Half closes the channel. Similar behavior to the Transport::HalfClose()
+  // method.
+  void HalfClose() { transport_->HalfClose(); }
 
   // Create a new OakSessionChannel instance with the provided session and
   // transport.
