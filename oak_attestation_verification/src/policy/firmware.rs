@@ -17,7 +17,10 @@
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{BinaryReferenceValue, EventAttestationResults, FirmwareEndorsement},
+    attestation::v1::{
+        BinaryReferenceValue, EventAttestationResults, FirmwareEndorsement,
+        RootLayerReferenceValues,
+    },
     Variant,
 };
 
@@ -33,6 +36,21 @@ pub struct FirmwarePolicy {
 impl FirmwarePolicy {
     pub fn new(reference_values: &BinaryReferenceValue) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    // TODO: b/398859203 - Remove this function once old reference values have been
+    // updated.
+    pub fn from_root_layer_reference_values(
+        root_layer: &RootLayerReferenceValues,
+    ) -> anyhow::Result<Self> {
+        let firmware_reference_values = root_layer
+            .amd_sev
+            .as_ref()
+            .context("AMD SEV-SNP attestation report wasn't provided")?
+            .stage0
+            .as_ref()
+            .context("firmware measurement wasn't provided")?;
+        Ok(Self::new(firmware_reference_values))
     }
 }
 

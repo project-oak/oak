@@ -17,7 +17,10 @@
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults},
+    attestation::v1::{
+        AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults,
+        RootLayerReferenceValues,
+    },
     Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
@@ -37,6 +40,18 @@ pub struct AmdSevSnpPolicy {
 impl AmdSevSnpPolicy {
     pub fn new(reference_values: &AmdSevReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    // TODO: b/398859203 - Remove this function once old reference values have been
+    // updated.
+    pub fn from_root_layer_reference_values(
+        root_layer: &RootLayerReferenceValues,
+    ) -> anyhow::Result<Self> {
+        let platform_reference_values = root_layer
+            .amd_sev
+            .as_ref()
+            .context("AMD SEV-SNP attestation report wasn't provided")?;
+        Ok(Self::new(platform_reference_values))
     }
 }
 

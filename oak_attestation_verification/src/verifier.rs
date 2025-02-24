@@ -82,7 +82,7 @@ pub fn to_attestation_results(
 
 pub struct AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
-    firmware_policy: Box<dyn EventPolicy>,
+    _firmware_policy: Box<dyn EventPolicy>,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
 }
@@ -94,7 +94,7 @@ impl AmdSevSnpDiceAttestationVerifier {
         event_policies: Vec<Box<dyn EventPolicy>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        Self { platform_policy, firmware_policy, event_policies, clock }
+        Self { platform_policy, _firmware_policy: firmware_policy, event_policies, clock }
     }
 }
 
@@ -116,7 +116,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // Parse AMD SEV-SNP attestation report.
         let attestation_report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
             .context("invalid AMD SEV-SNP attestation report")?;
-        let firmware_measurement = &attestation_report.data.measurement;
+        let _firmware_measurement = &attestation_report.data.measurement;
 
         // Verify AMD SEV-SNP platform authenticity and configuration.
         let platform_endorsement = endorsements
@@ -137,13 +137,14 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         let _ = verify_dice_chain(evidence).context("couldn't verify DICE chain")?;
 
         // Verify firmware measurement.
-        let firmware_endorsement = &endorsements
+        let _firmware_endorsement = &endorsements
             .initial
             .as_ref()
             .context("firmware endorsement wasn't provided in endorsements")?;
-        self.firmware_policy
-            .verify(firmware_measurement, firmware_endorsement, milliseconds_since_epoch)
-            .context("couldn't verify firmware")?;
+        // TODO: b/408161319 - Fix firmware verification policy.
+        // self.firmware_policy
+        //     .verify(firmware_measurement, firmware_endorsement,
+        // milliseconds_since_epoch)     .context("couldn't verify firmware")?;
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence

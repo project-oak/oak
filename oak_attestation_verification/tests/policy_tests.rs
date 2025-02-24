@@ -14,14 +14,19 @@
 // limitations under the License.
 //
 
-use std::fs;
+use std::{fs, sync::Arc};
 
 use anyhow::Context;
-use oak_attestation_verification::policy::{
-    application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
-    kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
+use oak_attestation_verification::{
+    policy::{
+        application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
+        kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
+    },
+    verifier::AmdSevSnpDiceAttestationVerifier,
 };
-use oak_attestation_verification_types::policy::Policy;
+use oak_attestation_verification_types::{
+    policy::Policy, util::Clock, verifier::AttestationVerifier,
+};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -65,6 +70,14 @@ const CONTAINER_EVENT_INDEX: usize = 2;
 
 // Pretend the tests run at this time: 15 Jan 2025, 12:00 UTC.
 const MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
+
+struct TestClock;
+
+impl Clock for TestClock {
+    fn get_milliseconds_since_epoch(&self) -> i64 {
+        MILLISECONDS_SINCE_EPOCH
+    }
+}
 
 fn extract_attestation_report(evidence: &Evidence) -> anyhow::Result<&AttestationReport> {
     let root_layer =
@@ -272,6 +285,46 @@ fn oc_container_policy_verify_succeeds() {
 }
 
 #[test]
+fn oc_amd_sev_snp_verifier_succeeds() {
+    // Create platform and firmware policies.
+    // TODO: b/398859203 - Remove root layer reference values once old reference
+    // values have been updated.
+    let root_layer_reference_values = OC_REFERENCE_VALUES.root_layer.as_ref().unwrap();
+    let platform_policy =
+        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+    let firmware_policy =
+        FirmwarePolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+
+    // Create kernel policy.
+    let reference_values = OC_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
+    let kernel_policy = KernelPolicy::new(reference_values);
+
+    // Create system policy.
+    let event_reference_values = OC_REFERENCE_VALUES.system_layer.as_ref().unwrap();
+    let system_policy = SystemPolicy::new(event_reference_values);
+
+    // Create container policy.
+    // TODO: b/382550581 - Container reference values currently skip verification.
+    let event_reference_values = OC_REFERENCE_VALUES.container_layer.as_ref().unwrap();
+    let container_policy = ContainerPolicy::new(event_reference_values);
+
+    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+        vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
+
+    // Create verifier.
+    let verifier = AmdSevSnpDiceAttestationVerifier::new(
+        platform_policy,
+        Box::new(firmware_policy),
+        event_policies,
+        Arc::new(TestClock {}),
+    );
+    let result = verifier.verify(&OC_EVIDENCE, &OC_ENDORSEMENTS);
+
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
 fn rk_kernel_policy_verify_succeeds() {
     let reference_values = RK_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
     let policy = KernelPolicy::new(reference_values);
@@ -293,6 +346,42 @@ fn rk_application_policy_verify_succeeds() {
     let endorsement = &RK_ENDORSEMENTS.events[RK_APPLICATION_EVENT_INDEX];
 
     let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
+fn rk_amd_sev_snp_verifier_succeeds() {
+    // Create platform and firmware policies.
+    // TODO: b/398859203 - Remove root layer reference values once old reference
+    // values have been updated.
+    let root_layer_reference_values = RK_REFERENCE_VALUES.root_layer.as_ref().unwrap();
+    let platform_policy =
+        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+    let firmware_policy =
+        FirmwarePolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+
+    // Create kernel policy.
+    let reference_values = RK_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
+    let kernel_policy = KernelPolicy::new(reference_values);
+
+    // Create application policy.
+    // TODO: b/382550581 - Application reference values currently skip verification.
+    let reference_values = RK_REFERENCE_VALUES.application_layer.as_ref().unwrap();
+    let application_policy = ApplicationPolicy::new(reference_values);
+
+    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+        vec![Box::new(kernel_policy), Box::new(application_policy)];
+
+    // Create verifier.
+    let verifier = AmdSevSnpDiceAttestationVerifier::new(
+        platform_policy,
+        Box::new(firmware_policy),
+        event_policies,
+        Arc::new(TestClock {}),
+    );
+    let result = verifier.verify(&RK_EVIDENCE, &RK_ENDORSEMENTS);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
