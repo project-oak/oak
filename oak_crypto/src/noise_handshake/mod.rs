@@ -92,6 +92,11 @@ fn aes_gcm_256_encrypt(
     nonce: &[u8; NONCE_LEN],
     plaintext: &[u8],
 ) -> Result<Vec<u8>, Error> {
+    // The crypto library will include a small tag at the end after encrypting.
+    // We can avoid potential re-alloc in the crypto library by ensuring that
+    // there's enough space for the tag when we allocate the buffer here.
+    const ADDITIONAL_TAG_SPACE: usize = 32;
+
     const PADDING_GRANULARITY: usize = 32;
     static_assertions::const_assert!(PADDING_GRANULARITY < 256);
     static_assertions::const_assert!((PADDING_GRANULARITY & (PADDING_GRANULARITY - 1)) == 0);
@@ -113,7 +118,7 @@ fn aes_gcm_256_encrypt(
     // multiple of PADDED_GRANULARITY.
     padded_size = (padded_size + PADDING_GRANULARITY - 1) & !(PADDING_GRANULARITY - 1);
 
-    let mut padded_encrypt_data = Vec::with_capacity(padded_size);
+    let mut padded_encrypt_data = Vec::with_capacity(padded_size + ADDITIONAL_TAG_SPACE);
     padded_encrypt_data.extend_from_slice(plaintext);
     padded_encrypt_data.resize(padded_size, 0u8);
     let num_zeros = padded_size - plaintext.len() - 1;
