@@ -19,11 +19,53 @@
 extern crate alloc;
 
 pub use dice::LayerData;
-use oak_proto_rust::oak::{attestation::v1::Evidence, RawDigest};
+use oak_attestation_types::attester::Attester;
+use oak_proto_rust::oak::{
+    attestation::v1::{EventLog, Evidence},
+    RawDigest,
+};
 use p256::ecdsa::VerifyingKey;
 use sha2::Digest;
 
 pub mod dice;
+
+/// Attester that can build an Event Log but doesn't use attestation mechanisms
+/// to sign the events. Can be used for tests or for use-cases that don't have
+/// hardware-based attestation.
+#[derive(Default)]
+pub struct EventLogAttester {
+    evidence: Evidence,
+}
+
+impl EventLogAttester {
+    pub fn new() -> Self {
+        Self { evidence: Evidence::default() }
+    }
+}
+
+impl From<Evidence> for EventLogAttester {
+    fn from(evidence: Evidence) -> Self {
+        Self { evidence }
+    }
+}
+
+impl Attester for EventLogAttester {
+    /// Add an `encoded_event` to the [`EventLog`].
+    fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()> {
+        self.evidence
+            .event_log
+            .get_or_insert_with(EventLog::default)
+            .encoded_events
+            .push(encoded_event.to_vec());
+
+        Ok(())
+    }
+
+    /// Get [`Evidence`] with the Event Log built using the `extend` function.
+    fn quote(&self) -> anyhow::Result<Evidence> {
+        Ok(self.evidence.clone())
+    }
+}
 
 /// Deprecated trait that allow for explicitly adding application keys to the
 /// attestation evidence.
