@@ -126,6 +126,14 @@ pub struct InstanceSessionBinder {
 }
 
 impl InstanceSessionBinder {
+    pub fn create(orchestrator_channel: &tonic::transport::Channel) -> Self {
+        Self {
+            orchestrator_crypto_client: Arc::new(OrchestratorCryptoClient::create(
+                orchestrator_channel,
+            )),
+        }
+    }
+
     async fn bind_session(&self, transcript: &[u8]) -> anyhow::Result<Signature> {
         self.orchestrator_crypto_client
             .bind_session(transcript, SESSION_BINDER_INFO_STRING.as_bytes())
