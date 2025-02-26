@@ -196,7 +196,7 @@ pub fn serialize_container_layer_data(instance: &ContainerLayerData) -> serde_js
     let ContainerLayerData {
         bundle,
         config,
-        encryption_public_key,
+        hybrid_encryption_public_key,
         signing_public_key,
         session_binding_public_key,
     } = instance;
@@ -204,7 +204,7 @@ pub fn serialize_container_layer_data(instance: &ContainerLayerData) -> serde_js
     json!({
         "bundle":  bundle.as_ref().map(serialize_raw_digest),
         "config": config.as_ref().map(serialize_raw_digest),
-        "encryption_public_key": encryption_public_key,
+        "hybrid_encryption_public_key": hybrid_encryption_public_key,
         "signing_public_key": signing_public_key,
         "session_binding_public_key": session_binding_public_key,
     })

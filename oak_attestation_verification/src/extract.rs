@@ -490,7 +490,7 @@ fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerL
         bundle,
         config,
         // TODO: b/384476430 - Extract public keys from the event.
-        encryption_public_key: vec![],
+        hybrid_encryption_public_key: vec![],
         signing_public_key: vec![],
         session_binding_public_key: vec![],
     })
@@ -627,7 +627,7 @@ fn oak_containers_orchestrator_measurements_to_container_layer_data(
         bundle: measurements.container_image,
         config: measurements.config,
         // TODO: b/384476430 - Extract public keys from the event.
-        encryption_public_key: vec![],
+        hybrid_encryption_public_key: vec![],
         signing_public_key: vec![],
         session_binding_public_key: vec![],
     }

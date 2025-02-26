@@ -61,7 +61,7 @@ pub fn create_container_event<A: Buf, B: Buf>(
             value: oak_proto_rust::oak::attestation::v1::ContainerLayerData {
                 bundle: Some(container_digest),
                 config: Some(config_digest),
-                encryption_public_key: instance_public_keys.encryption_public_key.to_vec(),
+                hybrid_encryption_public_key: instance_public_keys.encryption_public_key.to_vec(),
                 signing_public_key: instance_public_keys
                     .signing_public_key
                     .to_sec1_bytes()
