@@ -55,6 +55,10 @@ class RustBytes {
       : ffi_rust_bytes_(std::exchange(other.ffi_rust_bytes_, nullptr)) {}
 
   RustBytes& operator=(RustBytes&& other) {
+    if (this == &other) return *this;
+    if (ffi_rust_bytes_ != nullptr) {
+      ffi::bindings::free_rust_bytes(ffi_rust_bytes_);
+    }
     // Take ownership of the underlying pointer, and null out the source
     // pointer so that we don't attempt to free it multiple times.
     ffi_rust_bytes_ = other.ffi_rust_bytes_;
