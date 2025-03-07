@@ -177,6 +177,13 @@ oak_client_android_app:
         bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
         artifacts
 
+oak_private_memory:
+    bazel build {{BAZEL_CONFIG_FLAG}} \
+        //oak_private_memory:private_memory_server
+    cp --force --preserve=timestamps --no-preserve=mode \
+        bazel-bin/oak_private_memory/private_memory_server \
+        artifacts
+
 wasm_crate name:
     cargo build --target=wasm32-unknown-unknown -p {{name}}
 
@@ -294,7 +301,7 @@ check-format:
 
 kokoro_build_binaries_rust: build_all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
     oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
-    oak_client_android_app
+    oak_client_android_app oak_private_memory
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh

@@ -31,6 +31,7 @@ function copy_binaries_to_placer() {
         artifacts/oak_restricted_kernel_wrapper_simple_io_channel_bin
         artifacts/stage0_bin
         artifacts/stage0_bin_tdx
+        artifacts/private_memory_server
     )
     readonly binary_names=(
         oak_containers_agent
@@ -53,6 +54,7 @@ function copy_binaries_to_placer() {
         oak_restricted_kernel_simple_io_init_rd_wrapper_bin
         stage0_bin
         stage0_bin_tdx
+        private_memory_server
     )
     for i in "${!binary_names[@]}"; do
         cp --preserve=timestamps \
