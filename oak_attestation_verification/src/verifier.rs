@@ -20,6 +20,7 @@ use alloc::{
     boxed::Box,
     format,
     string::{String, ToString},
+    sync::Arc,
     vec,
     vec::Vec,
 };
@@ -83,7 +84,7 @@ pub struct AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
     firmware_policy: Box<dyn EventPolicy>,
     event_policies: Vec<Box<dyn EventPolicy>>,
-    clock: Box<dyn Clock>,
+    clock: Arc<dyn Clock>,
 }
 
 impl AmdSevSnpDiceAttestationVerifier {
@@ -91,7 +92,7 @@ impl AmdSevSnpDiceAttestationVerifier {
         platform_policy: AmdSevSnpPolicy,
         firmware_policy: Box<dyn EventPolicy>,
         event_policies: Vec<Box<dyn EventPolicy>>,
-        clock: Box<dyn Clock>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self { platform_policy, firmware_policy, event_policies, clock }
     }
