@@ -16,6 +16,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient;
 use oak_proto_rust::oak::{
@@ -55,7 +56,6 @@ impl OrchestratorCryptoClient {
         Ok(context)
     }
 
-    #[allow(dead_code)]
     async fn sign(&self, key_origin: KeyOrigin, message: Vec<u8>) -> anyhow::Result<Signature> {
         self.inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
@@ -151,6 +151,41 @@ impl SessionBinder for InstanceSessionBinder {
             .inspect_err(|err| {
                 log::error!("OrchestratorCryptoClient session binding failed: {:?}", err)
             })
+            .unwrap_or_default()
+            .signature
+    }
+}
+
+#[async_trait(?Send)]
+pub trait Signer {
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
+}
+
+#[derive(Clone)]
+pub struct InstanceSigner {
+    orchestrator_crypto_client: Arc<OrchestratorCryptoClient>,
+}
+
+impl InstanceSigner {
+    pub fn create(channel: &tonic::transport::channel::Channel) -> Self {
+        Self { orchestrator_crypto_client: Arc::new(OrchestratorCryptoClient::create(channel)) }
+    }
+}
+
+#[async_trait(?Send)]
+impl Signer for InstanceSigner {
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
+        self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await
+    }
+}
+
+impl oak_crypto::signer::Signer for InstanceSigner {
+    fn sign(&self, message: &[u8]) -> Vec<u8> {
+        tokio::runtime::Handle::current()
+            .block_on(<Self as Signer>::sign(self, message))
+            // Since there's no way to return the error, logging and returning an empty response is
+            // preferable to panicking.
+            .inspect_err(|err| log::error!("OrchestratorCryptoClient signing failed: {:?}", err))
             .unwrap_or_default()
             .signature
     }
