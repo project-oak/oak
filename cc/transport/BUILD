@@ -121,8 +121,10 @@ cc_library(
         "//cc/server:session_server",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
     ],
 )
 
@@ -136,7 +138,9 @@ cc_library(
         "//cc/oak_session/channel",
         "//proto/session:session_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
     ],
 )

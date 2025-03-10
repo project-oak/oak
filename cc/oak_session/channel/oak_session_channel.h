@@ -60,7 +60,9 @@ class OakSessionChannel {
     // multiple times. Expected that "this end" will no longer send messages to
     // the "other end" after "this end" half-closed. Any subsequent calls to
     // Send() by "this end" will fail with INTERNAL error after this point.
-    virtual void HalfClose() = 0;
+    //
+    // This method has a default no-op implementation.
+    virtual void HalfClose() {}
   };
 
   OakSessionChannel(std::unique_ptr<Session> session,
