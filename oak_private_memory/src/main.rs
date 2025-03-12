@@ -14,6 +14,55 @@
 // limitations under the License.
 //
 
-fn main() {
-    println!("This is placeholder binary for private memory!");
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+use anyhow::Context;
+use oak_sdk_containers::{
+    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
+};
+use oak_sdk_server_v1::OakApplicationContext;
+use tokio::net::TcpListener;
+
+const ENCLAVE_APP_PORT: u16 = 8080;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Logging!");
+    let orchestrator_channel =
+        default_orchestrator_channel().await.context("failed to create orchestrator channel")?;
+
+    let mut orchestrator_client = OrchestratorClient::create(&orchestrator_channel);
+
+    let application_config = orchestrator_client
+        .get_application_config()
+        .await
+        .context("failed to get application config")?;
+
+    let endorsed_evidence = orchestrator_client
+        .get_endorsed_evidence()
+        .await
+        .context("failed to get endorsed evidence")?;
+
+    let encryption_key_handle = InstanceEncryptionKeyHandle::create(&orchestrator_channel);
+
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
+    let listener = TcpListener::bind(addr).await?;
+
+    let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
+        listener,
+        OakApplicationContext::new(
+            Box::new(encryption_key_handle),
+            endorsed_evidence,
+            Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+                application_config: application_config.clone(),
+            }),
+        ),
+        Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+            application_config,
+        }),
+    ));
+    orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
+    println!("Enclave hello world app now serving!");
+    join_handle.await??;
+    Ok(())
 }
