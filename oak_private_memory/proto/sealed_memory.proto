@@ -57,12 +57,28 @@ message InvalidRequestResponse {
   string error_message = 1;
 }
 
+message KeySyncRequest {
+  // The key should be a byte string of size 32 bytes (256 bits).
+  bytes data_encryption_key = 1;
+
+  // The ID of the user. Currently it has one to one mapping to the database.
+  // That is, each id has a unique database.
+  int64 uid = 2;
+}
+
+message KeySyncResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     AddMemoryRequest add_memory_request = 1;
     GetMemoriesRequest get_memories_request = 2;
     ResetMemoryRequest reset_memory_request = 3;
     // ...
+
+    KeySyncRequest key_sync_request = 5;
   }
 }
 
@@ -72,6 +88,8 @@ message SealedMemoryResponse {
     GetMemoriesResponse get_memories_response = 2;
     ResetMemoryResponse reset_memory_response = 3;
     InvalidRequestResponse invalid_request_response = 4;
+
+    KeySyncResponse key_sync_response = 5;
     // ...
   }
 }

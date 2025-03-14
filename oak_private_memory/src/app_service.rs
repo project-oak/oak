@@ -22,7 +22,7 @@ use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     ServerSession, Session,
 };
-use sealed_memory_proto::oak::private_memory::sealed_memory_service_server::{
+use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use tokio::net::TcpListener;

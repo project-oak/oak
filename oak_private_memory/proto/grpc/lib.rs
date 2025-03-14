@@ -13,19 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(not(feature = "bazel"))]
-    let included_protos = vec![std::path::PathBuf::from("../..")];
-    #[cfg(feature = "bazel")]
-    let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
-
-    let proto_paths = ["../../oak_private_memory/proto/sealed_memory.proto"];
-
-    let mut config = prost_build::Config::new();
-    config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
-
-    #[cfg(feature = "bazel")]
-    oak_proto_build_utils::fix_prost_derives()?;
-
-    Ok(())
+pub mod oak {
+    pub mod private_memory {
+        tonic::include_proto!("oak.private_memory");
+    }
 }

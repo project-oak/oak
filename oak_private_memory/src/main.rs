@@ -53,12 +53,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         OakApplicationContext::new(
             Box::new(encryption_key_handle),
             endorsed_evidence,
-            Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+            Box::new(private_memory_server_lib::app::SealedMemoryHandler {
                 application_config: application_config.clone(),
+                session_context: Default::default(),
             }),
         ),
-        Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+        Box::new(private_memory_server_lib::app::SealedMemoryHandler {
             application_config,
+            session_context: Default::default(),
         }),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;

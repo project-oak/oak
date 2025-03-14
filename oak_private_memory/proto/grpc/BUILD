@@ -14,21 +14,12 @@
 # limitations under the License.
 #
 
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
-)
-
-proto_library(
-    name = "sealed_memory_proto",
-    srcs = ["sealed_memory.proto"],
-    deps = [
-        "//proto/session:session_proto",
-    ],
 )
 
 cargo_build_script(
@@ -42,7 +33,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
-        ":sealed_memory.proto",
+        "//oak_private_memory/proto:sealed_memory.proto",
         "//proto:digest.proto",
         "//proto:variant.proto",
         "//proto/attestation:endorsement.proto",
@@ -66,7 +57,7 @@ cargo_build_script(
 )
 
 rust_library(
-    name = "sealed_memory_rust_proto",
+    name = "sealed_memory_grpc_proto",
     srcs = ["lib.rs"],
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",

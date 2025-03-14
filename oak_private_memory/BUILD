@@ -35,6 +35,7 @@ rust_library(
     deps = [
         "//oak_crypto",
         "//oak_private_memory/proto:sealed_memory_rust_proto",
+        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
         "//oak_proto_rust",
         "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
@@ -71,6 +72,7 @@ rust_test(
         "//oak_client/tonic:oak_client_tonic",
         "//oak_crypto",
         "//oak_private_memory/proto:sealed_memory_rust_proto",
+        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "//oak_sdk/server/v1:oak_sdk_server_v1",
@@ -79,6 +81,7 @@ rust_test(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],

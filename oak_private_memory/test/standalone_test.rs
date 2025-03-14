@@ -24,7 +24,11 @@ use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     Session,
 };
-use sealed_memory_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
+use prost::Message;
+use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
+use sealed_memory_rust_proto::oak::private_memory::{
+    sealed_memory_response, InvalidRequestResponse, SealedMemoryResponse,
+};
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
@@ -47,12 +51,14 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
             OakApplicationContext::new(
                 Box::new(standalone.encryption_key_handle()),
                 standalone.endorsed_evidence(),
-                Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+                Box::new(private_memory_server_lib::app::SealedMemoryHandler {
                     application_config: APPLICATION_CONFIG.to_vec(),
+                    session_context: Default::default(),
                 }),
             ),
-            Box::new(private_memory_server_lib::app::HelloWorldApplicationHandler {
+            Box::new(private_memory_server_lib::app::SealedMemoryHandler {
                 application_config: APPLICATION_CONFIG.to_vec(),
+                session_context: Default::default(),
             }),
         )),
     ))
@@ -161,9 +167,10 @@ async fn test_noise() {
     let decrypted_response =
         client_session.decrypt_response(&response).expect("failed to decrypt response");
 
-    let app_config_len = APPLICATION_CONFIG.len();
-    assert_eq!(
-        String::from_utf8(decrypted_response).unwrap(),
-        format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
-    );
+    let expected_response = SealedMemoryResponse {
+        response: Some(sealed_memory_response::Response::InvalidRequestResponse(
+            InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() },
+        )),
+    };
+    assert_eq!(decrypted_response, expected_response.encode_to_vec());
 }
