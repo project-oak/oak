@@ -27,7 +27,7 @@ use coset::{
 use hkdf::Hkdf;
 use p256::{
     ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey},
-    EncodedPoint, FieldBytes,
+    EncodedPoint, FieldBytes, U256,
 };
 use rand_core::OsRng;
 use sha2::Sha256;
@@ -205,6 +205,9 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
             }
         })
         .ok_or("x component of public key not found")?;
+    if x.len() != U256::BYTES {
+        return Err("x component of public key has an invalid length");
+    }
     let y = cose_key
         .params
         .iter()
@@ -217,7 +220,10 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
                 None
             }
         })
-        .ok_or("x component of public key not found")?;
+        .ok_or("y component of public key not found")?;
+    if y.len() != U256::BYTES {
+        return Err("y component of public key has an invalid length");
+    }
     let encoded_point = EncodedPoint::from_affine_coordinates(
         FieldBytes::from_slice(&x),
         FieldBytes::from_slice(&y),
