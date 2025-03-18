@@ -24,10 +24,13 @@ use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     Session,
 };
+use private_memory_server_lib::app::{RequestUnpacking, ResponsePacking};
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_response, InvalidRequestResponse, SealedMemoryResponse,
+    sealed_memory_response, AddMemoryRequest, AddMemoryResponse, GetMemoriesRequest,
+    GetMemoriesResponse, InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory,
+    SealedMemoryResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -120,8 +123,36 @@ impl ClientSessionHelper for oak_session::ClientSession {
     }
 }
 
+fn send_plantext_request<T: RequestUnpacking>(
+    sender: &mut mpsc::Sender<SessionRequest>,
+    client_session: &mut oak_session::ClientSession,
+    request: T,
+) {
+    let sealed_memory_request = request.into_request();
+    let encrypted_request = client_session
+        .encrypt_request(&sealed_memory_request.encode_to_vec())
+        .expect("failed to encrypt message");
+    sender.try_send(encrypted_request).expect("Could not send request to server");
+}
+
+async fn receive_plaintext_response<T: ResponsePacking>(
+    receiver: &mut tonic::Streaming<SessionResponse>,
+    client_session: &mut oak_session::ClientSession,
+) -> T {
+    let response =
+        receiver.message().await.expect("error getting response").expect("didn't get any repsonse");
+
+    let decrypted_response =
+        client_session.decrypt_response(&response).expect("failed to decrypt response");
+
+    T::from_response(
+        SealedMemoryResponse::decode(decrypted_response.as_ref()).expect("Not a valid response"),
+    )
+    .expect("A different type of request is parsed!")
+}
+
 #[tokio::test]
-async fn test_noise() {
+async fn test_noise_handshake() {
     // Start server
     let (addr, _join_handle) = start_server().await.unwrap();
 
@@ -173,4 +204,67 @@ async fn test_noise() {
         )),
     };
     assert_eq!(decrypted_response, expected_response.encode_to_vec());
+}
+
+#[tokio::test]
+async fn test_noise_add_get_memory() {
+    // Start server
+    let (addr, _join_handle) = start_server().await.unwrap();
+
+    let url = format!("http://{addr}");
+
+    println!("Connecting to test server on {}", url);
+
+    let channel = Channel::from_shared(url)
+        .context("couldn't create gRPC channel")
+        .unwrap()
+        .connect()
+        .await
+        .context("couldn't connect via gRPC channel")
+        .unwrap();
+
+    let mut client = SealedMemoryServiceClient::new(channel);
+
+    let (mut tx, rx) = mpsc::channel(10);
+
+    let mut response_stream =
+        client.invoke(rx).await.expect("couldn't send stream request").into_inner();
+
+    // We don't have a noise client impl yet, so we need to manage the session
+    // manually.
+    let mut client_session = oak_session::ClientSession::create(
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+    )
+    .expect("could not create client session");
+
+    client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
+
+    // Key sync
+    let key_sync_request = KeySyncRequest { data_encryption_key: b"key".to_vec(), uid: 234 };
+    send_plantext_request(&mut tx, &mut client_session, key_sync_request);
+
+    let _key_sync_response: KeySyncResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    let request = AddMemoryRequest {
+        memory: Some(Memory {
+            id: "".to_string(),
+            content: "this is a test".as_bytes().to_vec(),
+            tags: vec!["tag".to_string()],
+        }),
+    };
+    send_plantext_request(&mut tx, &mut client_session, request);
+
+    let add_memory_response: AddMemoryResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(add_memory_response.id, "0");
+
+    let request = GetMemoriesRequest { tag: "tag".to_string() };
+    send_plantext_request(&mut tx, &mut client_session, request);
+
+    let get_memories_response: GetMemoriesResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(get_memories_response.memories.len(), 1);
 }
