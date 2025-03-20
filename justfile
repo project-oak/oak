@@ -47,8 +47,7 @@ presubmit-full: \
     kokoro_build_binaries_rust \
     kokoro_verify_buildconfigs \
     oak_containers_tests \
-    kokoro_oak_containers \
-    kokoro_run_cargo_tests
+    kokoro_oak_containers
 
 format:
     bazel build {{BAZEL_CONFIG_FLAG}} linter && bazel-bin/linter/linter --fix
@@ -326,13 +325,6 @@ kokoro_oak_containers: oak_functions_containers_app_bundle_tar oak_containers_te
 # This is for use with the `oak-containers-test.sh` helper script for testing on the TDX machines.
 # Ask dingelish@ or jibbl@ for more info.
 oak_containers_tdx_testing: stage0_bin_tdx stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_containers_nvidia_system_image oak_containers_hello_world_container_bundle_tar oak_containers_launcher containers_placer_artifacts
-
-# This list should contain all crates that either are not yet bazelified.
-# b/357687528 - Bazelify oak_session_wasm
-cargo_test_packages_arg := "-p oak_session_wasm"
-
-kokoro_run_cargo_tests:
-    RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar {{cargo_test_packages_arg}}
 
 # --- End Kokoro CI Entry Points ---
 

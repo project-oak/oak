@@ -44,7 +44,6 @@ members = [
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
   "oak_session",
-  "oak_session_wasm",
   "oak_sev_snp_attestation_report",
   "stage0_dice",
   "oak_restricted_kernel_sdk_proc_macro",

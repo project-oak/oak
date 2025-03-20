@@ -16,9 +16,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use clap::Parser;
-use oak_containers_examples_hello_world_host_app::{
-    http_service, launcher_args::launcher_args, service,
-};
+use oak_containers_examples_hello_world_host_app::{launcher_args::launcher_args, service};
 use oak_file_utils::data_path;
 use tokio::net::TcpListener;
 
@@ -33,9 +31,6 @@ pub enum ServerType {
 #[group(skip)]
 
 pub struct Args {
-    #[arg(value_enum)]
-    pub server_type: ServerType,
-
     #[command(flatten)]
     pub launcher_args: oak_containers_launcher::Args,
 }
@@ -46,7 +41,6 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let args = {
         let mut args = Args {
-            server_type: ServerType::Grpc,
             launcher_args: launcher_args(data_path(
                 "oak_containers/examples/hello_world/enclave_app/bundle.tar",
             ))
@@ -63,8 +57,5 @@ async fn main() -> Result<(), anyhow::Error> {
 
     println!("SERVER ADDR {:?}", listener.local_addr());
 
-    match args.server_type {
-        ServerType::Rest => http_service::serve(listener, args.launcher_args).await,
-        ServerType::Grpc => service::create(listener, args.launcher_args).await,
-    }
+    service::create(listener, args.launcher_args).await
 }

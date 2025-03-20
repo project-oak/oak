@@ -28,10 +28,7 @@ use oak_client::{
     verifier::InsecureAttestationVerifier,
 };
 use oak_client_tonic::transport::GrpcStreamingTransport;
-use oak_containers_examples_hello_world_host_app::{
-    demo_transport::{self, DemoTransport},
-    launcher_args::launcher_args,
-};
+use oak_containers_examples_hello_world_host_app::launcher_args::launcher_args;
 use oak_containers_launcher::Args;
 use oak_hello_world_proto::oak::containers::example::host_application_client::HostApplicationClient;
 use tokio::net::TcpListener;
@@ -101,20 +98,6 @@ impl TransportCreator<GrpcStreamingTransport> for GrpcStreamingTransportCreator 
     }
 }
 
-struct DemoTransportCreator {}
-
-impl TransportCreator<DemoTransport> for DemoTransportCreator {
-    async fn create(listener: TcpListener, args: Args) -> DemoTransport {
-        let addr = listener.local_addr().expect("couldn't get server addr");
-        tokio::spawn(oak_containers_examples_hello_world_host_app::http_service::serve(
-            listener, args,
-        ));
-        let url = format!("http://{}:{}", addr.ip(), addr.port());
-        println!("Connecting to test REST server on {}", url);
-        demo_transport::DemoTransport::new(url)
-    }
-}
-
 fn rust_hello_world_bundle() -> PathBuf {
     oak_file_utils::data_path("oak_containers/examples/hello_world/enclave_app/bundle.tar")
 }
@@ -129,16 +112,6 @@ async fn hello_world_grpc_streaming() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn hello_world_http_post() {
-    run_hello_world_test::<DemoTransportCreator, _>(rust_hello_world_bundle()).await;
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cc_hello_world_grpc_streaming() {
     run_hello_world_test::<GrpcStreamingTransportCreator, _>(cc_hello_world_bundle()).await;
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn cc_hello_world_http_post() {
-    run_hello_world_test::<DemoTransportCreator, _>(cc_hello_world_bundle()).await;
 }

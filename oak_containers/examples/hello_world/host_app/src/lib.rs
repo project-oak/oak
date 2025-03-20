@@ -13,7 +13,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod demo_transport;
-pub mod http_service;
 pub mod launcher_args;
 pub mod service;
