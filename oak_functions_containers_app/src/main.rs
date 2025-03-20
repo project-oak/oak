@@ -117,7 +117,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // loop as if we create a RPC do do the debug logging, it'll mean the RPC
     // itself will generate more debug logs, which in turn will be sent via a
     // RPC, and the cycle continues.
-    stderrlog::new().module("oak_functions_service").verbosity(log::Level::Debug).init().unwrap();
+    env_logger::builder()
+        .filter_module("oak_functions_service", log::LevelFilter::Debug)
+        .try_init()?;
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr,

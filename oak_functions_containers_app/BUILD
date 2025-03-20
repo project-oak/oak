@@ -97,7 +97,7 @@ APP_DEPS = [
     "@oak_crates_index//:opentelemetry-otlp",
     "@oak_crates_index//:opentelemetry_sdk",
     "@oak_crates_index//:prost",
-    "@oak_crates_index//:stderrlog",
+    "@oak_crates_index//:env_logger",
     "@oak_crates_index//:tikv-jemallocator",
     "@oak_crates_index//:tonic",
     "@oak_crates_index//:tokio",

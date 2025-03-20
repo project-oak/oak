@@ -231,6 +231,7 @@ def _common_crates(std):
         "time": crate.spec(
             default_features = False,
             features = [
+                "macros",
                 "serde",
                 "parsing",
             ],
@@ -469,8 +470,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         features = ["futures-v0_3"],
         version = "0.3.1",
     ),
-    "simple_logger": crate.spec(version = "4.3.3"),
-    "stderrlog": crate.spec(version = "0.6.0"),
     "strum_macros": crate.spec(version = "0.25"),
     "syn": crate.spec(
         features = ["full"],

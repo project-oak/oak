@@ -1,5 +1,5 @@
 {
-  "checksum": "42e6ee7b31d192d1b784a8e30b6f366891d1e6fa7b3765b3fe845f126ec15894",
+  "checksum": "a95b852a2c77bb7a55cbdc2d02f47d8d8d76a5bc3979bc347e5553a86a81295b",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -3184,11 +3184,8 @@
             "android-tzdata",
             "clock",
             "iana-time-zone",
-            "js-sys",
             "now",
             "std",
-            "wasm-bindgen",
-            "wasmbind",
             "winapi",
             "windows-targets"
           ],
@@ -7080,10 +7077,6 @@
               "target": "signal_hook_tokio"
             },
             {
-              "id": "simple_logger 4.3.3",
-              "target": "simple_logger"
-            },
-            {
               "id": "snafu 0.8.2",
               "target": "snafu"
             },
@@ -7094,10 +7087,6 @@
             {
               "id": "static_assertions 1.1.0",
               "target": "static_assertions"
-            },
-            {
-              "id": "stderrlog 0.6.0",
-              "target": "stderrlog"
             },
             {
               "id": "strum 0.26.3",
@@ -22613,78 +22602,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "simple_logger 4.3.3": {
-      "name": "simple_logger",
-      "version": "4.3.3",
-      "package_url": "https://github.com/borntyping/rust-simple_logger",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/simple_logger/4.3.3/download",
-          "sha256": "8e7e46c8c90251d47d08b28b8a419ffb4aede0f87c2eea95e17d1d5bacbf3ef1"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "simple_logger",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "simple_logger",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "colored",
-            "colors",
-            "default",
-            "time",
-            "timestamps"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "colored 2.1.0",
-              "target": "colored"
-            },
-            {
-              "id": "log 0.4.21",
-              "target": "log"
-            },
-            {
-              "id": "time 0.3.36",
-              "target": "time"
-            }
-          ],
-          "selects": {
-            "cfg(windows)": [
-              {
-                "id": "windows-sys 0.48.0",
-                "target": "windows_sys"
-              }
-            ]
-          }
-        },
-        "edition": "2018",
-        "version": "4.3.3"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": "LICENSE"
-    },
     "slab 0.4.9": {
       "name": "slab",
       "version": "0.4.9",
@@ -23392,78 +23309,6 @@
         ],
         "edition": "2015",
         "version": "1.1.0"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "stderrlog 0.6.0": {
-      "name": "stderrlog",
-      "version": "0.6.0",
-      "package_url": "https://github.com/cardoe/stderrlog-rs",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/stderrlog/0.6.0/download",
-          "sha256": "61c910772f992ab17d32d6760e167d2353f4130ed50e796752689556af07dc6b"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "stderrlog",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "stderrlog",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "chrono",
-            "default",
-            "timestamps"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "chrono 0.4.38",
-              "target": "chrono"
-            },
-            {
-              "id": "is-terminal 0.4.12",
-              "target": "is_terminal"
-            },
-            {
-              "id": "log 0.4.21",
-              "target": "log"
-            },
-            {
-              "id": "termcolor 1.1.3",
-              "target": "termcolor"
-            },
-            {
-              "id": "thread_local 1.1.8",
-              "target": "thread_local"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.6.0"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -24567,56 +24412,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "termcolor 1.1.3": {
-      "name": "termcolor",
-      "version": "1.1.3",
-      "package_url": "https://github.com/BurntSushi/termcolor",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/termcolor/1.1.3/download",
-          "sha256": "bab24d30b911b2376f3a13cc2cd443142f0c81dda04c118693e35b3835757755"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "termcolor",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "termcolor",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [],
-          "selects": {
-            "cfg(windows)": [
-              {
-                "id": "winapi-util 0.1.8",
-                "target": "winapi_util"
-              }
-            ]
-          }
-        },
-        "edition": "2018",
-        "version": "1.1.3"
-      },
-      "license": "Unlicense OR MIT",
-      "license_ids": [
-        "MIT",
-        "Unlicense"
-      ],
-      "license_file": "LICENSE-MIT"
-    },
     "termtree 0.4.1": {
       "name": "termtree",
       "version": "0.4.1",
@@ -24780,58 +24575,6 @@
         },
         "edition": "2021",
         "version": "1.0.60"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "thread_local 1.1.8": {
-      "name": "thread_local",
-      "version": "1.1.8",
-      "package_url": "https://github.com/Amanieu/thread_local-rs",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/thread_local/1.1.8/download",
-          "sha256": "8b9ef9bad013ada3808854ceac7b46812a6465ba368859a37e2100283d2d719c"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "thread_local",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "thread_local",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "cfg-if 1.0.0",
-              "target": "cfg_if"
-            },
-            {
-              "id": "once_cell 1.19.0",
-              "target": "once_cell"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "1.1.8"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -33351,11 +33094,9 @@
     "sha2 0.10.8",
     "signal-hook 0.3.17",
     "signal-hook-tokio 0.3.1",
-    "simple_logger 4.3.3",
     "snafu 0.8.2",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",
-    "stderrlog 0.6.0",
     "strum 0.26.3",
     "strum_macros 0.25.3",
     "syn 2.0.58",
