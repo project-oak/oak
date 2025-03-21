@@ -74,26 +74,12 @@ jobs:
           set -o pipefail
           set -o xtrace
 
-          bucket=oak-bins
           package_name=rekor_cli_linux_amd64
           binary_path=/tmp/rekor-cli
           provenance_path=${{ steps.attest.outputs.bundle-path }}
 
-          gcs_binary_path="binary/${GITHUB_SHA}/${package_name}/binary"
-          gcs_provenance_path="provenance/${GITHUB_SHA}/${package_name}/attestation.jsonl"
-          binary_url="https://storage.googleapis.com/${bucket}/${gcs_binary_path}"
-          provenance_url="https://storage.googleapis.com/${bucket}/${gcs_provenance_path}"
-
-          gsutil cp "${binary_path}" "gs://${bucket}/${gcs_binary_path}"
-          gsutil cp "${provenance_path}" "gs://${bucket}/${gcs_provenance_path}"
-
-          curl --fail \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --data "{ \"url\": \"${binary_url}\" }" \
-            https://api.static.space/v1/snapshot
-          curl --fail \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --data "{ \"url\": \"${provenance_url}\" }" \
-            https://api.static.space/v1/snapshot
+          scripts/publish \
+            "${binary_path}" \
+            "${provenance_path}" \
+            "sha1:${GITHUB_SHA}" \
+            "${package_name}"

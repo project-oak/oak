@@ -46,17 +46,17 @@ jobs:
 
 ## Retrieving a previously built binary and provenance
 
-To download, the GCS bucket name as well as the package name and commit hash
-specifying the binary and its version are required. The GCS bucket name is
-almost always `oak-bins`, so it is hardwired below.
+To download, the SHA1 hash of the commit and the package name (the identifier of
+the binary) are needed.
 
 ### Step 1: Download the binary
 
 To download the binary, run the following on the command line.
 
 ```bash
-curl "https://storage.googleapis.com/oak-bins/binary/${COMMIT_HASH}/${PACKAGE_NAME}/binary"
---output binary
+readonly BINARY_FOR_COMMIT=6
+hash=$(curl "https://storage.googleapis.com/oak-index/${BINARY_FOR_COMMIT}/sha1:${commit_hash}/${package_name}")
+curl "https://storage.googleapis.com/oak-files/${hash}" --output binary
 ```
 
 ### Step 2: Download the provenance
@@ -64,7 +64,9 @@ curl "https://storage.googleapis.com/oak-bins/binary/${COMMIT_HASH}/${PACKAGE_NA
 To download the provenance, run the following on the command line.
 
 ```bash
-curl "https://storage.googleapis.com/oak-bins/provenance/${COMMIT_HASH}/${PACKAGE_NAME}/attestation.jsonl" --output attestation.jsonl
+readonly PROV_FOR_BINARY=12
+hash=$(curl "https://storage.googleapis.com/oak-index/${PROV_FOR_BINARY}/${hash}")
+curl "https://storage.googleapis.com/oak-files/${hash}" --output attestation.jsonl
 ```
 
 ### Step 3: Find the attestation in Rekor
