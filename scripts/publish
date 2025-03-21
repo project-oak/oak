@@ -36,20 +36,29 @@ copy_file() {
 
 # Uploads a file and returns its SHA2_256 hash.
 upload_file() {
-  file="$1"
-  hash="sha2-256:$(sha256sum "${file}" | cut -d " " -f 1)"
+  local file="$1"
+  local hash="sha2-256:$(sha256sum "${file}" | cut -d " " -f 1)"
   copy_file "${file}" "gs://${FBUCKET}/${hash}"
+
+  # static.space provides a long-term map from file hash to file URL.
+  local url="https://storage.googleapis.com/${FBUCKET}/${hash}"
+  curl --fail \
+    --request POST \
+    --header 'Content-Type: application/json' \
+    --data "{ \"url\": \"${url}\" }" \
+    https://api.static.space/v1/snapshot
+
   echo "${hash}"
 }
 
 publish() {
-  binary_path="$1"
-  provenance_path="$2"
-  commit_hash="$3"
-  package_name="$4"
+  local binary_path="$1"
+  local provenance_path="$2"
+  local commit_hash="$3"
+  local package_name="$4"
 
-  bhash_path=$(mktemp)
-  phash_path=$(mktemp)
+  local bhash_path=$(mktemp)
+  local phash_path=$(mktemp)
   upload_file "${binary_path}" > "${bhash_path}"
   upload_file "${provenance_path}" > "${phash_path}"
   bhash=$(cat "${bhash_path}")
