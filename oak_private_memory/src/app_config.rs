@@ -12,7 +12,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+use std::net::SocketAddr;
 
-pub mod app;
-pub mod app_config;
-pub mod app_service;
+use serde::{Deserialize, Serialize};
+
+/// The trusted sever configuration.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApplicationConfig {
+    pub database_service_host: SocketAddr,
+}

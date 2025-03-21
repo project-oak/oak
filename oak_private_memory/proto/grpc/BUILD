@@ -33,6 +33,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
+        "//oak_private_memory/proto:database.proto",
         "//oak_private_memory/proto:sealed_memory.proto",
         "//proto:digest.proto",
         "//proto:variant.proto",
@@ -64,6 +65,7 @@ rust_library(
     ],
     deps = [
         ":build",
+        "//oak_private_memory/proto:sealed_memory_rust_proto",
         "//oak_proto_rust",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",

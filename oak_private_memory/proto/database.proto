@@ -1,0 +1,68 @@
+//
+// Copyright 2025 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Private memory service definition: A memory consists of a datablob content
+// and one or more tags. The service allows users to add a tagged memory and get
+// the memories by tags.
+
+syntax = "proto3";
+
+package oak.private_memory;
+
+// A simple key value pair.
+message DataBlob {
+  int64 id = 1;
+  bytes encrypted_blob = 2;
+}
+
+message WriteDataBlobRequest {
+  DataBlob data_blob = 1;
+}
+
+message OpStatus {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message WriteDataBlobResponse {
+  OpStatus status = 1;
+}
+
+message ReadDataBlobRequest {
+  int64 id = 1;
+}
+
+message ReadDataBlobResponse {
+  OpStatus status = 1;
+  DataBlob data_blob = 2;
+}
+
+message ResetDatabaseRequest {}
+
+message ResetDatabaseResponse {
+  OpStatus status = 1;
+}
+
+// The untrusted database service that the trusted application can connect to.
+service SealedMemoryDatabaseService {
+  // Writes a data blob to the database.
+  rpc WriteDataBlob(WriteDataBlobRequest) returns (WriteDataBlobResponse) {}
+
+  // Reads a data blob from the database.
+  rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
+
+  // Resets the database. This is mainly used for testing.
+  rpc ResetDatabase(ResetDatabaseRequest) returns (ResetDatabaseResponse) {}
+}

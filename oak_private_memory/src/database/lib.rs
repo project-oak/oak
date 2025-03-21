@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod app;
-pub mod app_config;
-pub mod app_service;
+/// A database rpc server mainly for the test purpose.
+/// The private memory server needs to talk to a database
+/// service to persist the encrypted data.
+pub mod service;

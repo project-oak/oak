@@ -21,14 +21,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "bazel")]
     let included_protos = oak_proto_build_utils::get_common_proto_path("../../..");
 
-    let proto_paths = ["../../../oak_private_memory/proto/sealed_memory.proto"];
+    let proto_paths = [
+        "../../../oak_private_memory/proto/sealed_memory.proto",
+        "../../../oak_private_memory/proto/database.proto",
+    ];
     generate_grpc_code(
         &proto_paths,
         &included_protos,
         CodegenOptions {
             build_server: true,
             build_client: true,
-            extern_paths: vec![ExternPath::new(".oak", "::oak_proto_rust::oak")],
+            extern_paths: vec![
+                ExternPath::new(".oak", "::oak_proto_rust::oak"),
+                ExternPath::new(
+                    ".oak.private_memory",
+                    "::sealed_memory_rust_proto::oak::private_memory",
+                ),
+            ],
         },
     )?;
     Ok(())

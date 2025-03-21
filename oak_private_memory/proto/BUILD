@@ -25,7 +25,10 @@ package(
 
 proto_library(
     name = "sealed_memory_proto",
-    srcs = ["sealed_memory.proto"],
+    srcs = [
+        "database.proto",
+        "sealed_memory.proto",
+    ],
     deps = [
         "//proto/session:session_proto",
     ],
@@ -42,6 +45,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
+        ":database.proto",
         ":sealed_memory.proto",
         "//proto:digest.proto",
         "//proto:variant.proto",

@@ -19,7 +19,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "bazel")]
     let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
-    let proto_paths = ["../../oak_private_memory/proto/sealed_memory.proto"];
+    let proto_paths = [
+        "../../oak_private_memory/proto/sealed_memory.proto",
+        "../../oak_private_memory/proto/database.proto",
+    ];
 
     let mut config = prost_build::Config::new();
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");

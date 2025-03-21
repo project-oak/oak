@@ -24,7 +24,10 @@ use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     Session,
 };
-use private_memory_server_lib::app::{RequestUnpacking, ResponsePacking};
+use private_memory_server_lib::{
+    app::{RequestUnpacking, ResponsePacking},
+    app_config::ApplicationConfig,
+};
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -35,35 +38,50 @@ use sealed_memory_rust_proto::oak::private_memory::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
-const APPLICATION_CONFIG: &[u8] = b"fake_config";
-
-async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()>>)> {
+async fn start_server() -> Result<(
+    SocketAddr,
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+)> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
+    let db_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+    let db_listener = TcpListener::bind(db_addr).await?;
+    let db_addr = db_listener.local_addr()?;
+
+    let application_config = ApplicationConfig { database_service_host: db_addr };
+
+    let application_config_vec = serde_json::to_vec(&application_config)?;
+
     let standalone = Standalone::builder()
-        .application_config(APPLICATION_CONFIG.to_vec())
+        .application_config(application_config_vec.clone())
         .build()
         .expect("failed to create Oak standalone elements");
 
     Ok((
         addr,
+        db_addr,
         tokio::spawn(private_memory_server_lib::app_service::create(
             listener,
             OakApplicationContext::new(
                 Box::new(standalone.encryption_key_handle()),
                 standalone.endorsed_evidence(),
-                Box::new(private_memory_server_lib::app::SealedMemoryHandler {
-                    application_config: APPLICATION_CONFIG.to_vec(),
-                    session_context: Default::default(),
-                }),
+                Box::new(
+                    private_memory_server_lib::app::SealedMemoryHandler::new(
+                        &application_config_vec,
+                    )
+                    .await,
+                ),
             ),
-            Box::new(private_memory_server_lib::app::SealedMemoryHandler {
-                application_config: APPLICATION_CONFIG.to_vec(),
-                session_context: Default::default(),
-            }),
+            Box::new(
+                private_memory_server_lib::app::SealedMemoryHandler::new(&application_config_vec)
+                    .await,
+            ),
         )),
+        tokio::spawn(private_memory_database_server_lib::service::create(db_listener)),
     ))
 }
 
@@ -154,7 +172,7 @@ async fn receive_plaintext_response<T: ResponsePacking>(
 #[tokio::test]
 async fn test_noise_handshake() {
     // Start server
-    let (addr, _join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
 
     let url = format!("http://{addr}");
 
@@ -209,7 +227,7 @@ async fn test_noise_handshake() {
 #[tokio::test]
 async fn test_noise_add_get_memory() {
     // Start server
-    let (addr, _join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
 
     let url = format!("http://{addr}");
 

@@ -15,16 +15,20 @@
 
 use std::collections::HashMap;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use oak_sdk_server_v1::ApplicationHandler;
 use prost::Message;
+use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse,
     GetMemoriesRequest, GetMemoriesResponse, InvalidRequestResponse, KeySyncRequest,
-    KeySyncResponse, Memory, ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest,
-    SealedMemoryResponse,
+    KeySyncResponse, Memory, ReadDataBlobRequest, ResetMemoryRequest, ResetMemoryResponse,
+    SealedMemoryRequest, SealedMemoryResponse,
 };
 use tokio::sync::{Mutex, MutexGuard};
+use tonic::transport::Channel;
+
+use crate::app_config::ApplicationConfig;
 
 type MemoryId = u64;
 #[derive(Default)]
@@ -87,8 +91,33 @@ pub enum MessageType {
 
 /// The actual business logic for the hello world application.
 pub struct SealedMemoryHandler {
-    pub application_config: Vec<u8>,
+    pub application_config: ApplicationConfig,
     pub session_context: Mutex<Option<UserSessionContext>>,
+    pub database_service_client: Mutex<SealedMemoryDatabaseServiceClient<Channel>>,
+}
+
+impl SealedMemoryHandler {
+    pub async fn new(application_config_bytes: &[u8]) -> Self {
+        let application_config: ApplicationConfig =
+            serde_json::from_slice(application_config_bytes).expect("Invalid application config");
+        let db_addr = application_config.database_service_host;
+        let db_url = format!("http://{db_addr}");
+        let db_channel = Channel::from_shared(db_url)
+            .context("couldn't create database channel")
+            .unwrap()
+            .connect()
+            .await
+            .context("couldn't connect via database channel")
+            .unwrap();
+
+        let db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
+
+        Self {
+            application_config,
+            session_context: Default::default(),
+            database_service_client: Mutex::new(db_client),
+        }
+    }
 }
 
 impl SealedMemoryHandler {
@@ -295,6 +324,19 @@ impl ApplicationHandler for SealedMemoryHandler {
             .into_response();
             return Ok(self.serialize_response(&response));
         }
+
+        // For test purpose. Will be removed soon
+        let db_request = ReadDataBlobRequest::default();
+        let db_response = self
+            .database_service_client
+            .lock()
+            .await
+            .read_data_blob(db_request)
+            .await
+            .expect("Received response")
+            .into_inner();
+        println!("db response {:#?}", db_response);
+
         let request = request.unwrap().request.expect("The request should not empty!");
         let response = match request {
             sealed_memory_request::Request::KeySyncRequest(request) => {
@@ -306,7 +348,8 @@ impl ApplicationHandler for SealedMemoryHandler {
             sealed_memory_request::Request::GetMemoriesRequest(request) => {
                 self.get_memories_handler(request).await?.into_response()
             }
-            _ => SealedMemoryResponse::default(),
+            _ => InvalidRequestResponse { error_message: "Unhandled request types".into() }
+                .into_response(),
         };
 
         Ok(self.serialize_response(&response))

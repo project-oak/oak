@@ -25,9 +25,33 @@ package(
 )
 
 rust_library(
+    name = "private_memory_database_server_lib",
+    srcs = [
+        "src/database/lib.rs",
+        "src/database/service.rs",
+    ],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    deps = [
+        "//oak_crypto",
+        "//oak_private_memory/proto:sealed_memory_rust_proto",
+        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
+        "//oak_proto_rust",
+        "//oak_sdk/server/v1:oak_sdk_server_v1",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_library(
     name = "private_memory_server_lib",
     srcs = [
         "src/app.rs",
+        "src/app_config.rs",
         "src/app_service.rs",
         "src/lib.rs",
     ],
@@ -43,6 +67,8 @@ rust_library(
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
@@ -67,6 +93,7 @@ rust_test(
     srcs = ["test/standalone_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        ":private_memory_database_server_lib",
         ":private_memory_server_lib",
         "//oak_client",
         "//oak_client/tonic:oak_client_tonic",
@@ -82,6 +109,7 @@ rust_test(
         "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
