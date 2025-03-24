@@ -156,7 +156,7 @@ impl SessionBinder for InstanceSessionBinder {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 pub trait Signer {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature>;
 }
@@ -172,7 +172,7 @@ impl InstanceSigner {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl Signer for InstanceSigner {
     async fn sign(&self, message: &[u8]) -> anyhow::Result<Signature> {
         self.orchestrator_crypto_client.sign(KeyOrigin::Instance, message.to_vec()).await

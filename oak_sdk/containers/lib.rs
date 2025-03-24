@@ -17,5 +17,5 @@
 pub use orchestrator_channel::default_orchestrator_channel;
 pub use orchestrator_client::OrchestratorClient;
 pub use orchestrator_crypto_client::{
-    InstanceEncryptionKeyHandle, InstanceSessionBinder, InstanceSigner,
+    InstanceEncryptionKeyHandle, InstanceSessionBinder, InstanceSigner, Signer,
 };
