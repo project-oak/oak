@@ -54,9 +54,19 @@ the binary) are needed.
 To download the binary, run the following on the command line.
 
 ```bash
+fetch_file() {
+  local hash="$1"
+  local path="$2"
+  curl --fail "https://storage.googleapis.com/oak-files/${hash}" --output "${path}"
+  local actual_hash="sha2-256:$(sha256sum "${path}" | cut -d " " -f 1)"
+  if [[ "${hash}" != "${actual_hash}" ]]; then
+    exit 1
+  fi
+}
+
 readonly BINARY_FOR_COMMIT=6
 hash=$(curl "https://storage.googleapis.com/oak-index/${BINARY_FOR_COMMIT}/sha1:${commit_hash}/${package_name}")
-curl "https://storage.googleapis.com/oak-files/${hash}" --output binary
+fetch_file "${hash}" binary
 ```
 
 ### Step 2: Download the provenance
@@ -66,7 +76,7 @@ To download the provenance, run the following on the command line.
 ```bash
 readonly PROV_FOR_BINARY=12
 hash=$(curl "https://storage.googleapis.com/oak-index/${PROV_FOR_BINARY}/${hash}")
-curl "https://storage.googleapis.com/oak-files/${hash}" --output attestation.jsonl
+fetch_file "${hash}" attestation.jsonl
 ```
 
 ### Step 3: Find the attestation in Rekor

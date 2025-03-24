@@ -42,6 +42,18 @@ usage_and_exit() {
   exit 1
 }
 
+# Fetches a file from the files bucket and double checks the hash.
+fetch_file() {
+  local hash="$1"
+  local path="$2"
+  curl --fail --silent --output "${path}" "${FILES_PREFIX}/${hash}"
+  local actual_hash="sha2-256:$(sha256sum "${path}" | cut -d " " -f 1)"
+  if [[ "${hash}" != "${actual_hash}" ]]; then
+    >&2 echo "Digest mismatch for ${path}: expected ${hash}, got ${actual_hash}"
+    exit 1
+  fi
+}
+
 download() {
   local binary_hash="$1"
   local dir="$2"
@@ -54,17 +66,11 @@ download() {
   logentry_hash=$(curl --fail --silent \
       "${INDEX_PREFIX}/${LOGENTRY_FOR_ENDORSEMENT}/${endorsement_hash}" || echo "")
 
-  curl --fail --silent --output "${dir}/binary" "${FILES_PREFIX}/${binary_hash}"
-  curl --fail --silent --output \
-      "${dir}/endorsement.json" \
-      "${FILES_PREFIX}/${endorsement_hash}"
-  curl --fail --silent --output \
-      "${dir}/endorsement.json.sig" \
-      "${FILES_PREFIX}/${signature_hash}"
+  fetch_file "${binary_hash}" "${dir}/binary"
+  fetch_file "${endorsement_hash}" "${dir}/endorsement.json"
+  fetch_file "${signature_hash}" "${dir}/endorsement.json.sig"
   if [[ -n "${logentry_hash}" ]]; then
-    curl --fail --silent --output \
-        "${dir}/logentry.json" \
-        "${FILES_PREFIX}/${logentry_hash}"
+    fetch_file "${logentry_hash}" "${dir}/logentry.json"
   fi
 }
 
