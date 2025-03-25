@@ -54,6 +54,7 @@ message WasmtimeConfig {
   // https://docs.rs/wasmtime/latest/wasmtime/struct.PoolingAllocationConfig.html
   // for a description of the various fields.
   message PoolingAllocationConfig {
+    reserved 17, 18, 19;
     optional uint32 max_unused_warm_slots = 1;
     optional uint64 linear_memory_keep_resident = 2;
     optional uint64 table_keep_resident = 3;
@@ -70,10 +71,6 @@ message WasmtimeConfig {
     optional uint32 max_tables_per_module = 14;
     optional uint32 table_elements = 15;
     optional uint32 max_memories_per_module = 16;
-    optional uint64 memory_pages = 17;
-    // Will set to `auto` if enabled.
-    optional bool memory_protection_keys = 18;
-    optional uint64 max_memory_protection_keys = 19;
   }
 
   // If specified, switches to a pooling allocation strategy. If not specified,

@@ -552,7 +552,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "pooling-allocator",
             "runtime",
         ],
-        version = "21.0.2",
+        version = "25.0.3",
     ),
     "which": crate.spec(version = "5.0.0"),
     "xz2": crate.spec(version = "0.1.7"),

@@ -87,13 +87,6 @@ pub mod wasmtime_config {
         pub table_elements: ::core::option::Option<u32>,
         #[prost(uint32, optional, tag = "16")]
         pub max_memories_per_module: ::core::option::Option<u32>,
-        #[prost(uint64, optional, tag = "17")]
-        pub memory_pages: ::core::option::Option<u64>,
-        /// Will set to `auto` if enabled.
-        #[prost(bool, optional, tag = "18")]
-        pub memory_protection_keys: ::core::option::Option<bool>,
-        #[prost(uint64, optional, tag = "19")]
-        pub max_memory_protection_keys: ::core::option::Option<u64>,
     }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

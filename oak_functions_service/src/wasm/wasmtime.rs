@@ -434,17 +434,9 @@ impl WasmtimeHandler {
                     max_core_instance_size as usize,
                     max_tables_per_module,
                     table_elements,
-                    max_memories_per_module,
-                    memory_pages,
-                    max_memory_protection_keys as usize
+                    max_memories_per_module
                 ]
             );
-            if let Some(mpk) = pooling_config_proto.memory_protection_keys {
-                if mpk {
-                    pooling_config.memory_protection_keys(wasmtime::MpkEnabled::Auto);
-                }
-            }
-
             config
                 .allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(pooling_config));
         }
