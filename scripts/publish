@@ -46,7 +46,7 @@ upload_file() {
     --request POST \
     --header 'Content-Type: application/json' \
     --data "{ \"url\": \"${url}\" }" \
-    https://api.static.space/v1/snapshot
+    https://api.static.space/v1/snapshot > /dev/null 2>&1
 
   echo "${hash}"
 }
