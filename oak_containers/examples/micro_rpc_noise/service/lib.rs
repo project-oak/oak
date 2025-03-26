@@ -59,7 +59,7 @@ impl TrustedApplication for TrustedApplicationService {
         if self.server_session.is_open() {
             let bytes = self
                 .server_session
-                .decrypt_request(&request)
+                .decrypt_request(request)
                 .map_err(|e| micro_rpc_err!("Failed to decrypt: {e}"))?;
             let response = micro_rpc_noise_application::handle(&bytes)
                 .map_err(|e| micro_rpc_err!("Application failed: {e}"))?;
@@ -71,7 +71,7 @@ impl TrustedApplication for TrustedApplicationService {
         } else {
             let response = self
                 .server_session
-                .init_session(&request)
+                .init_session(request)
                 .map_err(|e| micro_rpc_err!("Init message handling failed: {e}"))?;
 
             match response {

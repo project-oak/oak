@@ -132,7 +132,7 @@ fn safe_client_put_incoming_message(
         Err(e) => return Error::new_raw(e.to_string()),
     };
 
-    let result = session.put_incoming_message(&session_response);
+    let result = session.put_incoming_message(session_response);
 
     match result {
         Ok(_) => std::ptr::null(),

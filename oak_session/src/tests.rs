@@ -133,13 +133,13 @@ fn attestation_verification_succeeds() {
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
     assert!(server_attestation_provider
-        .put_incoming_message(&attest_request.unwrap().unwrap())
+        .put_incoming_message(attest_request.unwrap().unwrap())
         .is_ok());
 
     let attest_response = server_attestation_provider.get_outgoing_message();
     assert!(attest_response.is_ok());
     assert!(client_attestation_provider
-        .put_incoming_message(&attest_response.unwrap().unwrap(),)
+        .put_incoming_message(attest_response.unwrap().unwrap(),)
         .is_ok());
 
     client_attestation_provider.take_attestation_result().unwrap().unwrap();
@@ -192,13 +192,13 @@ fn attestation_verification_fails() {
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert!(attest_request.is_ok());
     assert!(server_attestation_provider
-        .put_incoming_message(&attest_request.unwrap().unwrap())
+        .put_incoming_message(attest_request.unwrap().unwrap())
         .is_ok());
 
     let attest_response = server_attestation_provider.get_outgoing_message();
     assert!(attest_response.is_ok());
     assert!(client_attestation_provider
-        .put_incoming_message(&attest_response.unwrap().unwrap(),)
+        .put_incoming_message(attest_response.unwrap().unwrap(),)
         .is_ok());
 
     let client_attestation_result = client_attestation_provider.take_attestation_result().unwrap();
@@ -312,15 +312,15 @@ fn process_nn_handshake() {
 fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: ServerHandshaker) {
     let request = client_handshaker.get_outgoing_message().unwrap().unwrap();
     server_handshaker
-        .put_incoming_message(&request)
+        .put_incoming_message(request)
         .expect("Failed to process the incoming message from the client");
     let response = server_handshaker.get_outgoing_message().unwrap().unwrap();
     client_handshaker
-        .put_incoming_message(&response)
+        .put_incoming_message(response)
         .expect("Failed to process the response from the server");
     if let Some(followup) = client_handshaker.get_outgoing_message().unwrap() {
         server_handshaker
-            .put_incoming_message(&followup)
+            .put_incoming_message(followup)
             .expect("Failed to process the follow up from the client");
     }
     let session_keys_client = client_handshaker.take_session_keys().unwrap();
@@ -516,15 +516,15 @@ fn session_fails_with_attestation_binding_fail() {
 
     // Attestation succeeds
     let attest_request = client_session.get_outgoing_message().unwrap().unwrap();
-    server_session.put_incoming_message(&attest_request).unwrap();
+    server_session.put_incoming_message(attest_request).unwrap();
     let attest_response = server_session.get_outgoing_message().unwrap().unwrap();
-    client_session.put_incoming_message(&attest_response).unwrap();
+    client_session.put_incoming_message(attest_response).unwrap();
 
     // Handshake fails
     let handshake_request = client_session.get_outgoing_message().unwrap().unwrap();
-    server_session.put_incoming_message(&handshake_request).unwrap();
+    server_session.put_incoming_message(handshake_request).unwrap();
     let handshake_response = server_session.get_outgoing_message().unwrap().unwrap();
-    assert!(client_session.put_incoming_message(&handshake_response).is_err());
+    assert!(client_session.put_incoming_message(handshake_response).is_err());
 }
 
 #[test]
@@ -580,9 +580,9 @@ fn session_nk_key_mismatch() {
 fn do_session_handshake(client_session: &mut ClientSession, server_session: &mut ServerSession) {
     while !client_session.is_open() || !server_session.is_open() {
         let request = client_session.get_outgoing_message().unwrap().unwrap();
-        server_session.put_incoming_message(&request).unwrap();
+        server_session.put_incoming_message(request).unwrap();
         if let Some(response) = server_session.get_outgoing_message().unwrap() {
-            client_session.put_incoming_message(&response).unwrap();
+            client_session.put_incoming_message(response).unwrap();
         }
     }
 }
@@ -599,7 +599,7 @@ fn verify_session_message<I, O>(
 ) {
     session1.write(message.clone()).unwrap();
     let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
-    session2.put_incoming_message(&outgoing_message).unwrap();
+    session2.put_incoming_message(outgoing_message).unwrap();
     assert_eq!(message, &session2.read().unwrap().unwrap());
 }
 

@@ -105,7 +105,7 @@ fn safe_server_put_incoming_message(
         Err(e) => return Error::new_raw(e.to_string()),
     };
 
-    let result = (*session).put_incoming_message(&request);
+    let result = (*session).put_incoming_message(request);
 
     match result {
         Ok(_) => std::ptr::null(),

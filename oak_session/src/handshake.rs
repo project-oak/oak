@@ -191,13 +191,13 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &HandshakeResponse,
+        incoming_message: HandshakeResponse,
     ) -> anyhow::Result<Option<()>> {
         if self.handshake_result.is_some() {
             // The handshake result is ready - no other messages expected.
             return Ok(None);
         }
-        match incoming_message.r#handshake_type.as_ref() {
+        match incoming_message.r#handshake_type {
             Some(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
                 let handshake_result = self
                     .handshake_initiator
@@ -206,7 +206,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
                     .map(|(handshake_hash, crypter)| HandshakeResult {
                         session_keys: crypter.into(),
                         handshake_hash: handshake_hash.to_vec(),
-                        session_bindings: incoming_message.attestation_bindings.clone(),
+                        session_bindings: incoming_message.attestation_bindings,
                     })?;
                 if !self.session_binders.is_empty() {
                     self.followup_message = Some(HandshakeRequest {
@@ -290,7 +290,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &HandshakeRequest,
+        incoming_message: HandshakeRequest,
     ) -> anyhow::Result<Option<()>> {
         if self.handshake_result.is_some() {
             // The handshake result is ready - no other messages expected.
@@ -300,10 +300,10 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
             self.handshake_result = Some(HandshakeResult {
                 session_keys: noise_response.crypter.into(),
                 handshake_hash: noise_response.handshake_hash.to_vec(),
-                session_bindings: incoming_message.attestation_bindings.clone(),
+                session_bindings: incoming_message.attestation_bindings,
             });
         } else {
-            let noise_response = match incoming_message.r#handshake_type.as_ref() {
+            let noise_response = match incoming_message.r#handshake_type {
                 Some(handshake_request::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
                     match self.handshake_type {
                         HandshakeType::NoiseKN => core::unimplemented!(),

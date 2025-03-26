@@ -87,6 +87,15 @@ impl From<&NoiseHandshakeMessage> for NoiseMessage {
     }
 }
 
+impl From<NoiseHandshakeMessage> for NoiseMessage {
+    fn from(value: NoiseHandshakeMessage) -> Self {
+        NoiseMessage {
+            ephemeral_public_key: value.ephemeral_public_key,
+            ciphertext: value.ciphertext,
+        }
+    }
+}
+
 fn aes_gcm_256_encrypt(
     key: &[u8; SYMMETRIC_KEY_LEN],
     nonce: &[u8; NONCE_LEN],

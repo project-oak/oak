@@ -55,7 +55,7 @@ pub trait ProtocolEngine<I, O> {
     /// - `Ok(None)`: No incoming messages were expected
     /// - `Ok(Some(()))`: An incoming message was accepted by the state-machine
     /// - `Err`: Protocol error
-    fn put_incoming_message(&mut self, incoming_message: &I) -> anyhow::Result<Option<()>>;
+    fn put_incoming_message(&mut self, incoming_message: I) -> anyhow::Result<Option<()>>;
 
     /// Creates a next message that needs to be sent to the peer.
     ///

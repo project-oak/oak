@@ -65,7 +65,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomin
         }
     };
 
-    match session.put_incoming_message(&incoming_message) {
+    match session.put_incoming_message(incoming_message) {
         Ok(result) => result.is_some() as jboolean,
         Err(err) => {
             oak_exception(env, "Error processing the incoming message", err);

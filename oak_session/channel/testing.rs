@@ -100,7 +100,7 @@ impl<I: Send, O: Send, PS: ProtocolSession<I, O>> Transport for TestTransport<I,
     type Error = anyhow::Error;
 
     async fn send(&mut self, message: Self::OutgoingMessage) -> anyhow::Result<()> {
-        self.peer_session.put_incoming_message(&message)?;
+        self.peer_session.put_incoming_message(message)?;
         if self.peer_session.is_open() {
             let received = self.peer_session.read().expect("failed to read a server message");
             if let Some(received) = received {

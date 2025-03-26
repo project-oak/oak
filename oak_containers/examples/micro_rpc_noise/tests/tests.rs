@@ -43,14 +43,14 @@ fn basic_request_test() {
         .expect("Failed to send request via microRPC")
         .expect("Empty response");
     let response =
-        client_session.decrypt_response(&encrypted_response).expect("Failed to decrypt response");
+        client_session.decrypt_response(encrypted_response).expect("Failed to decrypt response");
     assert_eq!(response, b"Hello from application, Micro RPC Noise Test!");
 }
 
 /// These session helpers should eventually move into the SDK.
 trait ClientSessionHelper {
     fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest>;
-    fn decrypt_response(&mut self, session_response: &SessionResponse) -> anyhow::Result<Vec<u8>>;
+    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>>;
     fn init_session<T: micro_rpc::Transport>(
         &mut self,
         client: &mut TrustedApplicationClient<T>,
@@ -69,7 +69,7 @@ impl ClientSessionHelper for oak_session::ClientSession {
             .ok_or_else(|| anyhow::anyhow!("no encrypted request"))
     }
 
-    fn decrypt_response(&mut self, session_response: &SessionResponse) -> anyhow::Result<Vec<u8>> {
+    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>> {
         self.put_incoming_message(session_response)
             .context("failed to put response for decryption")?;
 
@@ -94,8 +94,7 @@ impl ClientSessionHelper for oak_session::ClientSession {
         let init_response =
             client.oak_session(&init_request).expect("failed to send initialization request")?;
 
-        self.put_incoming_message(&init_response)
-            .context("error putting init_response response")?;
+        self.put_incoming_message(init_response).context("error putting init_response response")?;
 
         anyhow::ensure!(self.is_open());
         Ok(())

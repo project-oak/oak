@@ -96,15 +96,15 @@ pub fn do_handshake(
 ) {
     let request = client_handshaker.get_outgoing_message().unwrap().unwrap();
     server_handshaker
-        .put_incoming_message(&request)
+        .put_incoming_message(request)
         .expect("Failed to process the incoming message from the client");
     let response = server_handshaker.get_outgoing_message().unwrap().unwrap();
     client_handshaker
-        .put_incoming_message(&response)
+        .put_incoming_message(response)
         .expect("Failed to process the response from the server");
     if let Some(followup) = client_handshaker.get_outgoing_message().unwrap() {
         server_handshaker
-            .put_incoming_message(&followup)
+            .put_incoming_message(followup)
             .expect("Failed to process the follow up from the client");
     }
 }

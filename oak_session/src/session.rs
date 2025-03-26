@@ -242,11 +242,11 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &SessionResponse,
+        incoming_message: SessionResponse,
     ) -> Result<Option<()>, Error> {
-        match (incoming_message.response.as_ref(), &mut self.step) {
+        match (incoming_message, &mut self.step) {
             (
-                Some(Response::AttestResponse(attest_message)),
+                SessionResponse { response: Some(Response::AttestResponse(attest_message)) },
                 Step::Attestation { attester, .. },
             ) => {
                 attester.put_incoming_message(attest_message)?.ok_or(anyhow!(
@@ -260,9 +260,10 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 Ok(Some(()))
             }
             (
-                Some(Response::HandshakeResponse(handshake_message)),
+                SessionResponse { response: Some(Response::HandshakeResponse(handshake_message)) },
                 Step::Handshake { handshaker, .. },
             ) => {
+                let bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
@@ -271,7 +272,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     verify_session_binding(
                         &self.binding_key_extractors,
                         attestation_result,
-                        &handshake_message.attestation_bindings,
+                        &bindings,
                         handshaker.get_handshake_hash()?.as_slice(),
                     )?;
                 }
@@ -280,8 +281,11 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 }
                 Ok(Some(()))
             }
-            (Some(Response::EncryptedMessage(_)), Step::Open(_)) => {
-                self.incoming_responses.push_back(incoming_message.clone());
+            (
+                im @ SessionResponse { response: Some(Response::EncryptedMessage(_)) },
+                Step::Open(_),
+            ) => {
+                self.incoming_responses.push_back(im);
                 Ok(Some(()))
             }
             (_, _) => Err(anyhow!("unexpected content of session response")),
@@ -422,10 +426,13 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &SessionRequest,
+        incoming_message: SessionRequest,
     ) -> Result<Option<()>, Error> {
-        match (incoming_message.request.as_ref(), &mut self.step) {
-            (Some(Request::AttestRequest(attest_message)), Step::Attestation { attester, .. }) => {
+        match (incoming_message, &mut self.step) {
+            (
+                SessionRequest { request: Some(Request::AttestRequest(attest_message)) },
+                Step::Attestation { attester, .. },
+            ) => {
                 attester.put_incoming_message(attest_message)?.ok_or(anyhow!(
                     "invalid session state: attest message received but attester doesn't expect
                      any"
@@ -433,9 +440,10 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 Ok(Some(()))
             }
             (
-                Some(Request::HandshakeRequest(handshake_message)),
+                SessionRequest { request: Some(Request::HandshakeRequest(handshake_message)) },
                 Step::Handshake { handshaker, .. },
             ) => {
+                let bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
@@ -445,15 +453,18 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                         verify_session_binding(
                             &self.binding_key_extractors,
                             attestation_result,
-                            &handshake_message.attestation_bindings,
+                            &bindings,
                             handshaker.get_handshake_hash()?.as_slice(),
                         )?;
                     }
                 }
                 Ok(Some(()))
             }
-            (Some(Request::EncryptedMessage(_)), Step::Open(_)) => {
-                self.incoming_requests.push_back(incoming_message.clone());
+            (
+                im @ SessionRequest { request: Some(Request::EncryptedMessage(_)) },
+                Step::Open(_),
+            ) => {
+                self.incoming_requests.push_back(im);
                 Ok(Some(()))
             }
             (_, _) => Err(anyhow!("unexpected content of session response")),

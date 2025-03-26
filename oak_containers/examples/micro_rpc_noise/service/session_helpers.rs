@@ -19,16 +19,16 @@ use oak_session::{ProtocolEngine, ServerSession, Session};
 
 /// These session helpers should eventually move into the SDK.
 pub trait ServerSessionHelpers {
-    fn decrypt_request(&mut self, session_request: &SessionRequest) -> anyhow::Result<Vec<u8>>;
+    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>>;
     fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse>;
     fn init_session(
         &mut self,
-        session_request: &SessionRequest,
+        session_request: SessionRequest,
     ) -> anyhow::Result<Option<SessionResponse>>;
 }
 
 impl ServerSessionHelpers for ServerSession {
-    fn decrypt_request(&mut self, session_request: &SessionRequest) -> anyhow::Result<Vec<u8>> {
+    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>> {
         self.put_incoming_message(session_request).context("failed to put request")?;
         Ok(self
             .read()
@@ -47,7 +47,7 @@ impl ServerSessionHelpers for ServerSession {
 
     fn init_session(
         &mut self,
-        session_request: &SessionRequest,
+        session_request: SessionRequest,
     ) -> anyhow::Result<Option<SessionResponse>> {
         self.put_incoming_message(session_request).context("failed to put request")?;
         self.get_outgoing_message().context("failed to get outgoing messge")

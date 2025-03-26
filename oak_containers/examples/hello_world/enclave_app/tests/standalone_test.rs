@@ -101,7 +101,7 @@ async fn test_legacy() {
 #[async_trait::async_trait]
 trait ClientSessionHelper {
     fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest>;
-    fn decrypt_response(&mut self, session_response: &SessionResponse) -> anyhow::Result<Vec<u8>>;
+    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>>;
     async fn init_session(
         &mut self,
         send_request: &mut mpsc::Sender<SessionRequest>,
@@ -120,7 +120,7 @@ impl ClientSessionHelper for oak_session::ClientSession {
             .ok_or_else(|| anyhow::anyhow!("no encrypted request"))
     }
 
-    fn decrypt_response(&mut self, session_response: &SessionResponse) -> anyhow::Result<Vec<u8>> {
+    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>> {
         self.put_incoming_message(session_response)
             .context("failed to put response for decryption")?;
 
@@ -146,7 +146,7 @@ impl ClientSessionHelper for oak_session::ClientSession {
             if let Some(init_response) =
                 receive_response.message().await.context("failed to receive response")?
             {
-                self.put_incoming_message(&init_response)
+                self.put_incoming_message(init_response)
                     .context("error putting init_response response")?;
             }
         }
@@ -199,7 +199,7 @@ async fn test_noise() {
         .expect("didn't get any repsonse");
 
     let decrypted_response =
-        client_session.decrypt_response(&response).expect("failed to decrypt response");
+        client_session.decrypt_response(response).expect("failed to decrypt response");
 
     let app_config_len = APPLICATION_CONFIG.len();
     assert_eq!(

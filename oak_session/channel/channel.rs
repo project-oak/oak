@@ -176,7 +176,7 @@ impl<
             .into_transport_result("failed to receive on transport")?;
 
         self.session
-            .put_incoming_message(&incoming_message)
+            .put_incoming_message(incoming_message)
             .into_session_result("failed to put incoming message")?;
 
         self.session
@@ -219,7 +219,7 @@ where
             .map_err(|e| Error::new_transport_error(e, "failed to receive init response"))?;
 
         session
-            .put_incoming_message(&init_response)
+            .put_incoming_message(init_response)
             .map_err(|e| Error::new_session_error(e, "failed to accept init response"))?;
     }
 
@@ -244,7 +244,7 @@ where
             .map_err(|e| Error::new_transport_error(e, "failed to receive init request"))?;
 
         session
-            .put_incoming_message(&incoming_init_request)
+            .put_incoming_message(incoming_init_request)
             .map_err(|e| Error::new_session_error(e, "failed to accept init request"))?;
 
         if session.is_open() {

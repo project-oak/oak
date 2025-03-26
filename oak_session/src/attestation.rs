@@ -201,7 +201,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &AttestResponse,
+        incoming_message: AttestResponse,
     ) -> anyhow::Result<Option<()>> {
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
@@ -284,7 +284,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
 
     fn put_incoming_message(
         &mut self,
-        incoming_message: &AttestRequest,
+        incoming_message: AttestRequest,
     ) -> anyhow::Result<Option<()>> {
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.

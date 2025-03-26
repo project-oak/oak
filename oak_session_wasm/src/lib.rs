@@ -97,7 +97,7 @@ impl WasmClientSession {
             .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
         self.inner
-            .put_incoming_message(&session_response)
+            .put_incoming_message(session_response)
             .map(|opt_result| {
                 opt_result
                     .map(|_| PutIncomingMessageResult::Success)

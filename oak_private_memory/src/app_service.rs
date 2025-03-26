@@ -59,16 +59,16 @@ impl<T> IntoTonicResult<T> for anyhow::Result<T> {
 }
 
 trait ServerSessionHelpers {
-    fn decrypt_request(&mut self, session_request: &SessionRequest) -> anyhow::Result<Vec<u8>>;
+    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>>;
     fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse>;
     fn init_session(
         &mut self,
-        session_request: &SessionRequest,
+        session_request: SessionRequest,
     ) -> anyhow::Result<Option<SessionResponse>>;
 }
 
 impl ServerSessionHelpers for ServerSession {
-    fn decrypt_request(&mut self, session_request: &SessionRequest) -> anyhow::Result<Vec<u8>> {
+    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>> {
         self.put_incoming_message(session_request).context("failed to put request")?;
         Ok(self
             .read()
@@ -87,7 +87,7 @@ impl ServerSessionHelpers for ServerSession {
 
     fn init_session(
         &mut self,
-        session_request: &SessionRequest,
+        session_request: SessionRequest,
     ) -> anyhow::Result<Option<SessionResponse>> {
         self.put_incoming_message(session_request).context("failed to put request")?;
         self.get_outgoing_message().context("failed to get outgoing messge")
@@ -115,14 +115,14 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
             while let Some(request) = request_stream.next().await {
                 let session_request = request?;
                 if server_session.is_open() {
-                    let decrypted_request = server_session.decrypt_request(&session_request)
+                    let decrypted_request = server_session.decrypt_request(session_request)
                         .into_tonic_result("failed to decrypt request")?;
                     let plaintext_response = application_handler.handle(&decrypted_request).await
                         .into_tonic_result("application failed")?;
                     yield server_session.encrypt_response(&plaintext_response)
                         .into_tonic_result("failed to encrypt response")?;
 
-                } else if let Some(response) = server_session.init_session(&session_request)
+                } else if let Some(response) = server_session.init_session(session_request)
                         .into_tonic_result("failed process handshake")? {
                             yield response;
                 }
