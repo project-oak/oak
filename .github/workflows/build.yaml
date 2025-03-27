@@ -77,8 +77,6 @@ jobs:
           df --human-readable
           sudo apt clean
           df --human-readable
-          docker rmi $(docker image ls --all --quiet)
-          df --human-readable
           rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
           df --human-readable
 
