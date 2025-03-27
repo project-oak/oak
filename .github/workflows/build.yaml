@@ -42,7 +42,7 @@ jobs:
       attestations: write
       contents: read
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       # Needed for GCS upload.
@@ -71,7 +71,7 @@ jobs:
           df --human-readable
           sudo apt-get remove --yes \
               '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
-              hhvm google-chrome-stable firefox powershell
+              google-chrome-stable firefox powershell
           df --human-readable
           sudo apt-get autoremove --yes
           df --human-readable
