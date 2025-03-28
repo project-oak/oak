@@ -16,7 +16,7 @@
 
 use alloc::vec::Vec;
 
-pub trait Signer: Send {
+pub trait Signer: Send + Sync {
     fn sign(&self, message: &[u8]) -> Vec<u8>;
 }
 

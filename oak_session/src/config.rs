@@ -247,7 +247,16 @@ impl SessionConfigBuilder {
         attester_id: String,
         session_binder: Box<dyn SessionBinder>,
     ) -> Self {
-        self.config.handshaker_config.session_binders.insert(attester_id, session_binder);
+        self.config.handshaker_config.session_binders.insert(attester_id, session_binder.into());
+        self
+    }
+
+    pub fn add_session_binder_ref(
+        mut self,
+        attester_id: String,
+        session_binder: &Arc<dyn SessionBinder>,
+    ) -> Self {
+        self.config.handshaker_config.session_binders.insert(attester_id, session_binder.clone());
         self
     }
 
@@ -275,7 +284,7 @@ pub struct HandshakerConfig {
     pub peer_static_public_key: Option<Vec<u8>>,
     // Session binders to bind the handshake hash to the previously received attestation data,
     // keyed by the attestation type.
-    pub session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
+    pub session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
 }
 
 pub struct EncryptorConfig {

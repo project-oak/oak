@@ -17,7 +17,7 @@
 //! This module provides an implementation of the Handshaker, which
 //! handles cryptographic handshake and secure session creation.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::convert::TryInto;
 
 use anyhow::{anyhow, Context, Error};
@@ -102,7 +102,7 @@ pub trait Handshaker: Send {
 /// Client-side Handshaker that initiates the crypto handshake with the server.
 pub struct ClientHandshaker {
     handshake_initiator: HandshakeInitiator,
-    session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
+    session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
     initial_message: Option<HandshakeRequest>,
     followup_message: Option<HandshakeRequest>,
     handshake_result: Option<HandshakeResult>,
@@ -242,7 +242,7 @@ pub struct ServerHandshaker {
     handshake_type: HandshakeType,
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
     peer_public_key: Option<Vec<u8>>,
-    session_binders: BTreeMap<String, Box<dyn SessionBinder>>,
+    session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
     client_binding_expected: bool,
     noise_response: Option<Response>,
     handshake_response: Option<HandshakeResponse>,
