@@ -834,6 +834,15 @@ pub struct SignedEndorsement {
     #[serde(with = "crate::base64data")]
     pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
 }
+/// Tink endorsement consists of a single Tink signature over the endorsed
+/// evidence.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct TinkEndorsement {
+    /// Serialized signature generated with a structured Tink keyset.
+    #[prost(bytes = "vec", tag = "1")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
+}
 /// A Transparent Release endorsement for a binary which includes the actual
 /// endorsement, a signature over it, and optionally a transparency log entry.
 /// Don't use this message in new code, use `SignedEndorsement` instead.

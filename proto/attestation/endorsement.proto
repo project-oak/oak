@@ -69,6 +69,13 @@ message SignedEndorsement {
   bytes rekor_log_entry = 3;
 }
 
+// Tink endorsement consists of a single Tink signature over the endorsed
+// evidence.
+message TinkEndorsement {
+  // Serialized signature generated with a structured Tink keyset.
+  bytes signature = 1;
+}
+
 // A Transparent Release endorsement for a binary which includes the actual
 // endorsement, a signature over it, and optionally a transparency log entry.
 // Don't use this message in new code, use `SignedEndorsement` instead.
