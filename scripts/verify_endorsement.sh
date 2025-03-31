@@ -86,6 +86,17 @@ list_all_endorsements() {
   local now=$(now_timestamp)
   local tmp_path=$(mktemp)
   for endorsement_hash in ${endorsement_hashes}; do
+    # Only proceed when the key used to lookup coincides with the key used
+    # to make the signature.
+    local signature_hash=$(curl --fail --silent \
+        "${INDEX_PREFIX}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
+    local actual_pk_hash=$(curl --fail --silent \
+        "${INDEX_PREFIX}/${PK_FOR_SIGNATURE}/${signature_hash}")
+    if [[ "${pk_hash}" != "${actual_pk_hash}" ]]; then
+      >&2 echo "Key digest mismatch: expected ${pk_hash}, got ${actual_pk_hash}"
+      exit 1
+    fi
+
     echo "${endorsement_hash}"
     fetch_file "${endorsement_hash}" "${tmp_path}"
     local endorsement=$(cat "${tmp_path}")
@@ -102,12 +113,12 @@ download() {
   local endorsement_hash="$1"
   local dir="$2"
 
-  signature_hash=$(curl --fail --silent \
+  local signature_hash=$(curl --fail --silent \
       "${INDEX_PREFIX}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
-  pk_hash=$(curl --fail --silent \
+  local pk_hash=$(curl --fail --silent \
       "${INDEX_PREFIX}/${PK_FOR_SIGNATURE}/${signature_hash}")
   # The log entry may not exist, in which case we set it to empty.
-  logentry_hash=$(curl --fail --silent \
+  local logentry_hash=$(curl --fail --silent \
       "${INDEX_PREFIX}/${LOGENTRY_FOR_ENDORSEMENT}/${endorsement_hash}" || echo "")
 
   fetch_file "${endorsement_hash}" "${dir}/endorsement.json"
