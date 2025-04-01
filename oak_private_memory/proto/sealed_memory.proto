@@ -71,13 +71,24 @@ message KeySyncResponse {
   string error_message = 2;
 }
 
+message GetMemoryByIdRequest {
+  string id = 1;
+}
+
+message GetMemoryByIdResponse {
+  // If the memory is found, the success field is true. Otherwise, the success
+  // field is false and the memory field is empty.
+  bool success = 1;
+  Memory memory = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     AddMemoryRequest add_memory_request = 1;
     GetMemoriesRequest get_memories_request = 2;
     ResetMemoryRequest reset_memory_request = 3;
     // Reserved 4 so the request and response have the same field numbers.
-    // GetMemoryByIdRequest get_memory_by_id_request = 5;
+    GetMemoryByIdRequest get_memory_by_id_request = 5;
 
     KeySyncRequest key_sync_request = 6;
   }
@@ -89,7 +100,7 @@ message SealedMemoryResponse {
     GetMemoriesResponse get_memories_response = 2;
     ResetMemoryResponse reset_memory_response = 3;
     InvalidRequestResponse invalid_request_response = 4;
-    // GetMemoryByIdResponse get_memory_by_id_response = 5;
+    GetMemoryByIdResponse get_memory_by_id_response = 5;
 
     KeySyncResponse key_sync_response = 6;
     // ...

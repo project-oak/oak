@@ -32,8 +32,9 @@ use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     sealed_memory_response, AddMemoryRequest, AddMemoryResponse, GetMemoriesRequest,
-    GetMemoriesResponse, InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory,
-    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryResponse,
+    GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse,
+    KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest, ResetMemoryResponse,
+    SealedMemoryResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -286,6 +287,18 @@ async fn test_noise_add_get_reset_memory() {
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
     assert_eq!(get_memories_response.memories.len(), 1);
+
+    let request = GetMemoryByIdRequest { id: add_memory_response.id };
+    send_plantext_request(&mut tx, &mut client_session, request);
+
+    let get_memory_by_id_response: GetMemoryByIdResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert!(get_memory_by_id_response.memory.is_some());
+    assert_eq!(
+        get_memories_response.memories[0].encode_to_vec(),
+        get_memory_by_id_response.memory.unwrap().encode_to_vec()
+    );
 
     let request = ResetMemoryRequest::default();
     send_plantext_request(&mut tx, &mut client_session, request);

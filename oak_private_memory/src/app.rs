@@ -21,16 +21,16 @@ use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse,
-    GetMemoriesRequest, GetMemoriesResponse, InvalidRequestResponse, KeySyncRequest,
-    KeySyncResponse, Memory, ReadDataBlobRequest, ResetMemoryRequest, ResetMemoryResponse,
-    SealedMemoryRequest, SealedMemoryResponse,
+    GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
+    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, ReadDataBlobRequest,
+    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
 };
 use tokio::sync::{Mutex, MutexGuard};
 use tonic::transport::Channel;
 
 use crate::app_config::ApplicationConfig;
 
-type MemoryId = u64;
+type MemoryId = String;
 #[derive(Default)]
 pub struct Database {
     inner: HashMap<MemoryId, Memory>,
@@ -53,20 +53,25 @@ impl Database {
 trait MemoryInterface {
     fn add_memory(&mut self, memory: Memory) -> Option<MemoryId>;
     fn get_memories_by_tag(&self, tag: String) -> Vec<Memory>;
+    fn get_memory_by_id(&self, id: MemoryId) -> Option<Memory>;
     #[allow(dead_code)]
     fn reset_memory(&mut self) -> bool;
 }
 
 impl MemoryInterface for Database {
     fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
-        let memory_id = self.inner.len() as MemoryId;
-        memory.id = memory_id.to_string();
-        self.add_blob(memory_id, memory);
+        let memory_id = self.inner.len().to_string();
+        memory.id = memory_id.clone();
+        self.add_blob(memory_id.clone(), memory);
         Some(memory_id)
     }
 
     fn get_memories_by_tag(&self, tag: String) -> Vec<Memory> {
         self.inner.clone().into_values().filter(|v| v.tags.contains(&tag)).collect()
+    }
+
+    fn get_memory_by_id(&self, id: MemoryId) -> Option<Memory> {
+        self.get_blob(id)
     }
 
     fn reset_memory(&mut self) -> bool {
@@ -182,6 +187,22 @@ impl SealedMemoryHandler {
         }
     }
 
+    pub async fn get_memory_by_id_handler(
+        &self,
+        request: GetMemoryByIdRequest,
+    ) -> anyhow::Result<GetMemoryByIdResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
+        if let Some(context) = context {
+            let database = &mut context.database;
+            let memory = database.get_memory_by_id(request.id);
+            let success = memory.is_some();
+            Ok(GetMemoryByIdResponse { memory, success })
+        } else {
+            bail!("You need to call key sync first")
+        }
+    }
+
     pub async fn reset_memory_handler(
         &self,
         _request: ResetMemoryRequest,
@@ -270,11 +291,13 @@ impl_packing!(Request => AddMemoryRequest);
 impl_packing!(Request => GetMemoriesRequest);
 impl_packing!(Request => ResetMemoryRequest);
 impl_packing!(Request => KeySyncRequest);
+impl_packing!(Request => GetMemoryByIdRequest);
 impl_packing!(Response => AddMemoryResponse);
 impl_packing!(Response => GetMemoriesResponse);
 impl_packing!(Response => ResetMemoryResponse);
 impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
+impl_packing!(Response => GetMemoryByIdResponse);
 
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
@@ -317,6 +340,9 @@ impl ApplicationHandler for SealedMemoryHandler {
             }
             sealed_memory_request::Request::ResetMemoryRequest(request) => {
                 self.reset_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
+                self.get_memory_by_id_handler(request).await?.into_response()
             }
         };
 
