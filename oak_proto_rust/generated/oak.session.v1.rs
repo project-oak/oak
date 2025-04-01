@@ -1,5 +1,8 @@
 /// Endorsed evidence contains an attestation evidence provided by the enclave
 /// and the corresponding attestation endorsements provided by the hostlib.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EndorsedEvidence {
@@ -74,6 +77,9 @@ pub mod response_wrapper {
     }
 }
 /// Request message for the remote attestation.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct AttestRequest {
@@ -85,6 +91,9 @@ pub struct AttestRequest {
     >,
 }
 /// Response message for the remote attestation.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct AttestResponse {
@@ -97,12 +106,16 @@ pub struct AttestResponse {
 }
 /// Noise handshake message containing fields for all handshake patterns.
 /// <<http://www.noiseprotocol.org/noise.html#handshake-patterns>>
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct NoiseHandshakeMessage {
     /// Noise Protocol ephemeral public key 'e'.
     /// <<http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>>
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub ephemeral_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Noise Protocol static public key 's'.
     /// <<http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>>
@@ -111,23 +124,32 @@ pub struct NoiseHandshakeMessage {
     /// encrypted with the chaining key to hide peer's identity.
     /// <<http://www.noiseprotocol.org/noise.html#handshake-patterns>>
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub static_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Payload encrypted with the current chaining key.
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
 }
 /// Message that binds the Noise session (and optionally other data) to the
 /// Attestation Evidence.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionBinding {
     /// Representation the serialized message cryptographically bound to the
     /// handshake and the associated data (e.g., a signature).
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub binding: ::prost::alloc::vec::Vec<u8>,
 }
 /// Request message for the crypto handshake request needed to establish a set of
 /// session keys.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct HandshakeRequest {
@@ -138,10 +160,13 @@ pub struct HandshakeRequest {
         SessionBinding,
     >,
     #[prost(oneof = "handshake_request::HandshakeType", tags = "1")]
+    #[serde(flatten)]
     pub handshake_type: ::core::option::Option<handshake_request::HandshakeType>,
 }
 /// Nested message and enum types in `HandshakeRequest`.
 pub mod handshake_request {
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
     pub enum HandshakeType {
@@ -151,6 +176,9 @@ pub mod handshake_request {
 }
 /// Response message for the crypto handshake request needed to establish a set
 /// of session keys.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct HandshakeResponse {
@@ -161,10 +189,13 @@ pub struct HandshakeResponse {
         SessionBinding,
     >,
     #[prost(oneof = "handshake_response::HandshakeType", tags = "1")]
+    #[serde(flatten)]
     pub handshake_type: ::core::option::Option<handshake_response::HandshakeType>,
 }
 /// Nested message and enum types in `HandshakeResponse`.
 pub mod handshake_response {
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
     pub enum HandshakeType {
@@ -173,17 +204,26 @@ pub mod handshake_response {
     }
 }
 /// Message for encrypted data exchange after a secure session is established.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EncryptedMessage {
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", optional, tag = "2")]
+    #[serde(with = "crate::base64data::option_bytes")]
     pub associated_data: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(bytes = "vec", optional, tag = "3")]
+    #[serde(with = "crate::base64data::option_bytes")]
     pub nonce: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
 }
 /// Message with decrypted content (not to be transmitted over the wire).
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct PlaintextMessage {
@@ -193,14 +233,20 @@ pub struct PlaintextMessage {
 /// Request message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
 /// attestation, handshake and encrypted data exchange.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionRequest {
     #[prost(oneof = "session_request::Request", tags = "1, 2, 3")]
+    #[serde(flatten)]
     pub request: ::core::option::Option<session_request::Request>,
 }
 /// Nested message and enum types in `SessionRequest`.
 pub mod session_request {
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
     pub enum Request {
@@ -223,6 +269,9 @@ pub mod session_request {
 ///   This shouldn't be used for general session ID needs; for example, to track
 ///   sessions that span multiple servers. In that case, create your own
 ///   ID-containing envelope, place that inside the encrypted message.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionRequestWithSessionId {
@@ -236,14 +285,20 @@ pub struct SessionRequestWithSessionId {
 /// Response message for the Oak protocol attested secure session.
 /// This message is a wrapper containing different message types including:
 /// attestation, handshake and encrypted data exchange.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionResponse {
     #[prost(oneof = "session_response::Response", tags = "1, 2, 3")]
+    #[serde(flatten)]
     pub response: ::core::option::Option<session_response::Response>,
 }
 /// Nested message and enum types in `SessionResponse`.
 pub mod session_response {
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
     pub enum Response {

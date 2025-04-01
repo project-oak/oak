@@ -16,6 +16,8 @@ prost = { workspace = true, default-features = false, features = [
   "prost-derive",
 ] }
 prost-types = { version = "*", default-features = false }
+serde = "*"
+base64 = ">= 0.21"
 
 [build-dependencies]
 prost-build = { workspace = true }

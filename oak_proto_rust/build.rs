@@ -59,6 +59,91 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ".oak.functions.LookupDataEntry".to_string(),
         ".oak.functions.ExtendNextLookupDataRequest".to_string(),
     ]);
+
+    let annotate_types = [
+        "oak.session.v1.AttestRequest",
+        "oak.session.v1.AttestResponse",
+        "oak.session.v1.NoiseHandshakeMessage",
+        "oak.session.v1.SessionBinding",
+        "oak.session.v1.HandshakeRequest",
+        "oak.session.v1.HandshakeResponse",
+        "oak.session.v1.EncryptedMessage",
+        "oak.session.v1.PlaintextMessage",
+        "oak.session.v1.SessionRequest",
+        "oak.session.v1.SessionRequestWithSessionId",
+        "oak.session.v1.SessionResponse",
+        "oak.session.v1.EndorsedEvidence",
+        "oak.attestation.v1.Evidence",
+        "oak.attestation.v1.Endorsements",
+        "oak.attestation.v1.ApplicationKeys",
+        "oak.attestation.v1.LayerEvidence",
+        "oak.attestation.v1.RootLayerEvidence",
+        "oak.attestation.v1.OakRestrictedKernelEndorsements",
+        "oak.attestation.v1.RootLayerEndorsements",
+        "oak.attestation.v1.KernelLayerEndorsements",
+        "oak.attestation.v1.ApplicationLayerEndorsements",
+        "oak.attestation.v1.TransparentReleaseEndorsement",
+        "oak.attestation.v1.SystemLayerEndorsements",
+        "oak.attestation.v1.ContainerLayerEndorsements",
+        "oak.attestation.v1.CBEndorsements",
+        "oak.attestation.v1.OakContainersEndorsements",
+        "oak.attestation.v1.SignedEndorsement",
+        "oak.attestation.v1.Signature",
+        "oak.attestation.v1.Endorsement",
+        "oak.attestation.v1.EventLog",
+        "oak.Variant",
+    ];
+
+    let oneof_field_names = [
+        "oak.session.v1.HandshakeRequest.handshake_type",
+        "oak.session.v1.HandshakeResponse.handshake_type",
+        "oak.session.v1.SessionRequest.request",
+        "oak.session.v1.SessionResponse.response",
+        "oak.attestation.v1.Endorsements.type",
+    ];
+    for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
+        config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");
+        config.type_attribute(message_type, "#[serde(rename_all = \"camelCase\")]");
+    }
+
+    for message_type in annotate_types.iter() {
+        config.type_attribute(message_type, "#[serde(default)]");
+    }
+
+    for message_type in oneof_field_names {
+        config.field_attribute(message_type, "#[serde(flatten)]");
+    }
+
+    let bytes_fields = [
+        "oak.session.v1.EncryptedMessage.ciphertext",
+        "oak.session.v1.NoiseHandshakeMessage.ephemeral_public_key",
+        "oak.session.v1.NoiseHandshakeMessage.static_public_key",
+        "oak.session.v1.NoiseHandshakeMessage.ciphertext",
+        "oak.session.v1.SessionBinding.binding",
+        "oak.attestation.v1.Signature.raw",
+        "oak.attestation.v1.Endorsement.serialized",
+        "oak.attestation.v1.Endorsement.subject",
+        "oak.attestation.v1.SignedEndorsement.rekor_log_entry",
+        "oak.attestation.v1.TransparentReleaseEndorsement.endorsement",
+        "oak.attestation.v1.TransparentReleaseEndorsement.subject",
+        "oak.attestation.v1.TransparentReleaseEndorsement.endorsement_signature",
+        "oak.attestation.v1.TransparentReleaseEndorsement.rekor_log_entry",
+        "oak.attestation.v1.RootLayerEndorsements.tee_certificate",
+        "oak.Variant.id",
+        "oak.Variant.value",
+    ];
+    for bytes_field in bytes_fields {
+        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
+    }
+
+    let optional_bytes_fields = [
+        "oak.session.v1.EncryptedMessage.associated_data",
+        "oak.session.v1.EncryptedMessage.nonce",
+    ];
+    for bytes_field in optional_bytes_fields {
+        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data::option_bytes\")]");
+    }
+
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.

@@ -2626,10 +2626,12 @@ dependencies = [
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
+ "base64 0.21.7",
  "pbjson-build",
  "prost",
  "prost-build",
  "prost-types",
+ "serde",
 ]
 
 [[package]]

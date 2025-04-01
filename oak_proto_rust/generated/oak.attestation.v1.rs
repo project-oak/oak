@@ -90,6 +90,9 @@ pub struct Event {
     pub event: ::core::option::Option<::prost_types::Any>,
 }
 /// A sequence of Events intended for inclusion in attestation evidence.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct EventLog {
@@ -104,6 +107,9 @@ pub struct EventLog {
 ///
 /// Since this layer is the initial layer for our architecture and it is
 /// measured during boot, its identity is represented by an attestation report.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct RootLayerEvidence {
@@ -123,6 +129,9 @@ pub struct RootLayerEvidence {
     pub eca_public_key: ::prost::alloc::vec::Vec<u8>,
 }
 /// DICE layer evidence containing a certificate signed by the previous layer.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct LayerEvidence {
@@ -136,6 +145,9 @@ pub struct LayerEvidence {
 /// Keys used by the application to derive encryption session keys and to sign
 /// arbitrary data. Each of the certificates contains the final layer's
 /// measurement as additional claims.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ApplicationKeys {
@@ -171,6 +183,9 @@ pub struct ApplicationKeys {
 ///
 /// The name is chosen to match the RATS terminology:
 /// <<https://datatracker.ietf.org/doc/html/rfc9334#name-evidence>>
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Evidence {
@@ -720,6 +735,9 @@ impl KeyType {
         }
     }
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsement {
@@ -729,10 +747,12 @@ pub struct Endorsement {
     /// The serialized endorsement, e.g. serialized JSON for an in-toto
     /// statement.
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub serialized: ::prost::alloc::vec::Vec<u8>,
     /// Can pass the endorsed subject when needed and when it is sufficiently
     /// small. In most use cases this field will remain empty.
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub subject: ::prost::alloc::vec::Vec<u8>,
 }
 /// Nested message and enum types in `Endorsement`.
@@ -778,6 +798,9 @@ pub mod endorsement {
         }
     }
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Signature {
@@ -788,9 +811,13 @@ pub struct Signature {
     /// The raw signature. The type and format of the key used to generate it
     /// can be inferred from `key_id`.
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub raw: ::prost::alloc::vec::Vec<u8>,
 }
 /// A signed endorsement which is optionally published.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SignedEndorsement {
@@ -804,12 +831,16 @@ pub struct SignedEndorsement {
     /// The Rekor log entry about the endorsement or empty if there is no log
     /// entry.
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
 }
 /// A Transparent Release endorsement for a binary which includes the actual
 /// endorsement, a signature over it, and optionally a transparency log entry.
 /// Don't use this message in new code, use `SignedEndorsement` instead.
 /// `SignedEndorsement` supersedes `TransparentReleaseEndorsement`.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct TransparentReleaseEndorsement {
@@ -817,19 +848,26 @@ pub struct TransparentReleaseEndorsement {
     /// The format is described here:
     /// <https://project-oak.github.io/oak/tr/endorsement/v1>
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub endorsement: ::prost::alloc::vec::Vec<u8>,
     /// The data hashed as endorsement subject can be inlined here when needed.
     /// Can be the binary or the attachment, depending on the usage specified
     /// in the endorsement.
     #[prost(bytes = "vec", tag = "4")]
+    #[serde(with = "crate::base64data")]
     pub subject: ::prost::alloc::vec::Vec<u8>,
     /// The signature for the endorsement.
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub endorsement_signature: ::prost::alloc::vec::Vec<u8>,
     /// The log entry as proof of inclusion of the endorsement statement in Rekor.
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct RootLayerEndorsements {
@@ -841,11 +879,15 @@ pub struct RootLayerEndorsements {
     /// the machine-specific VCEK certificate since the AMD Root Key (ARK) and
     /// AMD SEV Key (ASK) are long-lived.
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub tee_certificate: ::prost::alloc::vec::Vec<u8>,
     /// Endorsement of the Stage0 binary.
     #[prost(message, optional, tag = "2")]
     pub stage0: ::core::option::Option<TransparentReleaseEndorsement>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct KernelLayerEndorsements {
@@ -860,12 +902,18 @@ pub struct KernelLayerEndorsements {
     #[prost(message, optional, tag = "6")]
     pub acpi: ::core::option::Option<TransparentReleaseEndorsement>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SystemLayerEndorsements {
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<TransparentReleaseEndorsement>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ApplicationLayerEndorsements {
@@ -874,6 +922,9 @@ pub struct ApplicationLayerEndorsements {
     #[prost(message, optional, tag = "2")]
     pub configuration: ::core::option::Option<TransparentReleaseEndorsement>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ContainerLayerEndorsements {
@@ -882,6 +933,9 @@ pub struct ContainerLayerEndorsements {
     #[prost(message, optional, tag = "2")]
     pub configuration: ::core::option::Option<TransparentReleaseEndorsement>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct OakRestrictedKernelEndorsements {
@@ -892,6 +946,9 @@ pub struct OakRestrictedKernelEndorsements {
     #[prost(message, optional, tag = "3")]
     pub application_layer: ::core::option::Option<ApplicationLayerEndorsements>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct OakContainersEndorsements {
@@ -904,6 +961,9 @@ pub struct OakContainersEndorsements {
     #[prost(message, optional, tag = "4")]
     pub container_layer: ::core::option::Option<ContainerLayerEndorsements>,
 }
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct CbEndorsements {
@@ -972,6 +1032,9 @@ pub struct ContainerEndorsement {
 ///
 /// The name is chosen to match the RATS terminology:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct Endorsements {
@@ -989,11 +1052,14 @@ pub struct Endorsements {
     pub events: ::prost::alloc::vec::Vec<super::super::Variant>,
     /// TODO: b/380407219 - Remove this field once Oak clients switch to policies.
     #[prost(oneof = "endorsements::Type", tags = "1, 2, 3")]
+    #[serde(flatten)]
     pub r#type: ::core::option::Option<endorsements::Type>,
 }
 /// Nested message and enum types in `Endorsements`.
 pub mod endorsements {
     /// TODO: b/380407219 - Remove this field once Oak clients switch to policies.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
     pub enum Type {

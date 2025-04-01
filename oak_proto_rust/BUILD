@@ -16,12 +16,22 @@
 
 load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "either_platform")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
+)
+
+rust_test(
+    name = "oak_proto_serialization_test",
+    srcs = ["test/serde_test.rs"],
+    deps = [
+        ":oak_proto_rust",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
+    ],
 )
 
 rust_library(
@@ -38,8 +48,10 @@ rust_library(
     ]),
     deps = [
         ":build",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde",
     ],
 )
 
@@ -92,6 +104,7 @@ cargo_build_script(
     deps = [
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
+        "@oak_crates_index//:serde",
     ],
 )
 

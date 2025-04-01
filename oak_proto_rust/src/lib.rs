@@ -37,6 +37,7 @@ pub mod perftools {
     }
 }
 
+pub mod base64data;
 pub mod variant;
 
 pub mod oak {
