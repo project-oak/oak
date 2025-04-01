@@ -44,6 +44,10 @@ impl Database {
     pub fn get_blob(&self, id: MemoryId) -> Option<Memory> {
         self.inner.get(&id).cloned()
     }
+
+    pub fn reset(&mut self) {
+        self.inner.clear();
+    }
 }
 
 trait MemoryInterface {
@@ -178,11 +182,19 @@ impl SealedMemoryHandler {
         }
     }
 
-    pub fn reset_memory_handler(
+    pub async fn reset_memory_handler(
         &self,
         _request: ResetMemoryRequest,
     ) -> anyhow::Result<ResetMemoryResponse> {
-        Ok(ResetMemoryResponse::default())
+        let mut mutex_guard = self.session_context().await;
+        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
+        if let Some(context) = context {
+            let database = &mut context.database;
+            database.reset();
+            Ok(ResetMemoryResponse { success: true, ..Default::default() })
+        } else {
+            bail!("You need to call key sync first")
+        }
     }
 
     pub async fn key_sync_handler(
@@ -221,107 +233,48 @@ pub trait ResponsePacking {
         Self: Sized;
 }
 
-impl RequestUnpacking for KeySyncRequest {
-    fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-        match x.request {
-            Some(sealed_memory_request::Request::KeySyncRequest(request)) => Some(request),
-            _ => None,
-        }
-    }
-
-    fn into_request(self) -> SealedMemoryRequest {
-        SealedMemoryRequest { request: Some(sealed_memory_request::Request::KeySyncRequest(self)) }
-    }
-}
-
-impl RequestUnpacking for AddMemoryRequest {
-    fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-        match x.request {
-            Some(sealed_memory_request::Request::AddMemoryRequest(request)) => Some(request),
-            _ => None,
-        }
-    }
-
-    fn into_request(self) -> SealedMemoryRequest {
-        SealedMemoryRequest {
-            request: Some(sealed_memory_request::Request::AddMemoryRequest(self)),
-        }
-    }
-}
-
-impl RequestUnpacking for GetMemoriesRequest {
-    fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-        match x.request {
-            Some(sealed_memory_request::Request::GetMemoriesRequest(request)) => Some(request),
-            _ => None,
-        }
-    }
-
-    fn into_request(self) -> SealedMemoryRequest {
-        SealedMemoryRequest {
-            request: Some(sealed_memory_request::Request::GetMemoriesRequest(self)),
-        }
-    }
-}
-
-impl ResponsePacking for KeySyncResponse {
-    fn into_response(self) -> SealedMemoryResponse {
-        SealedMemoryResponse {
-            response: Some(sealed_memory_response::Response::KeySyncResponse(self)),
-        }
-    }
-    fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-        match x.response {
-            Some(sealed_memory_response::Response::KeySyncResponse(response)) => Some(response),
-            _ => None,
-        }
-    }
-}
-
-impl ResponsePacking for AddMemoryResponse {
-    fn into_response(self) -> SealedMemoryResponse {
-        SealedMemoryResponse {
-            response: Some(sealed_memory_response::Response::AddMemoryResponse(self)),
-        }
-    }
-
-    fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-        match x.response {
-            Some(sealed_memory_response::Response::AddMemoryResponse(response)) => Some(response),
-            _ => None,
-        }
-    }
-}
-
-impl ResponsePacking for GetMemoriesResponse {
-    fn into_response(self) -> SealedMemoryResponse {
-        SealedMemoryResponse {
-            response: Some(sealed_memory_response::Response::GetMemoriesResponse(self)),
-        }
-    }
-    fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-        match x.response {
-            Some(sealed_memory_response::Response::GetMemoriesResponse(response)) => Some(response),
-            _ => None,
-        }
-    }
-}
-
-impl ResponsePacking for InvalidRequestResponse {
-    fn into_response(self) -> SealedMemoryResponse {
-        SealedMemoryResponse {
-            response: Some(sealed_memory_response::Response::InvalidRequestResponse(self)),
-        }
-    }
-    fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-        match x.response {
-            Some(sealed_memory_response::Response::InvalidRequestResponse(response)) => {
-                Some(response)
+macro_rules! impl_packing {
+    (Request => $name:ident) => {
+        impl RequestUnpacking for $name {
+            fn from_request(x: SealedMemoryRequest) -> Option<Self> {
+                match x.request {
+                    Some(sealed_memory_request::Request::$name(request)) => Some(request),
+                    _ => None,
+                }
             }
-            _ => None,
+
+            fn into_request(self) -> SealedMemoryRequest {
+                SealedMemoryRequest { request: Some(sealed_memory_request::Request::$name(self)) }
+            }
         }
-    }
+    };
+
+    (Response => $name:ident) => {
+        impl ResponsePacking for $name {
+            fn from_response(x: SealedMemoryResponse) -> Option<Self> {
+                match x.response {
+                    Some(sealed_memory_response::Response::$name(response)) => Some(response),
+                    _ => None,
+                }
+            }
+
+            fn into_response(self) -> SealedMemoryResponse {
+                SealedMemoryResponse {
+                    response: Some(sealed_memory_response::Response::$name(self)),
+                }
+            }
+        }
+    };
 }
+impl_packing!(Request => AddMemoryRequest);
+impl_packing!(Request => GetMemoriesRequest);
+impl_packing!(Request => ResetMemoryRequest);
+impl_packing!(Request => KeySyncRequest);
+impl_packing!(Response => AddMemoryResponse);
+impl_packing!(Response => GetMemoriesResponse);
+impl_packing!(Response => ResetMemoryResponse);
+impl_packing!(Response => InvalidRequestResponse);
+impl_packing!(Response => KeySyncResponse);
 
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
@@ -362,8 +315,9 @@ impl ApplicationHandler for SealedMemoryHandler {
             sealed_memory_request::Request::GetMemoriesRequest(request) => {
                 self.get_memories_handler(request).await?.into_response()
             }
-            _ => InvalidRequestResponse { error_message: "Unhandled request types".into() }
-                .into_response(),
+            sealed_memory_request::Request::ResetMemoryRequest(request) => {
+                self.reset_memory_handler(request).await?.into_response()
+            }
         };
 
         Ok(self.serialize_response(&response))

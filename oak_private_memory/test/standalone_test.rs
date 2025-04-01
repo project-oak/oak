@@ -33,7 +33,7 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client:
 use sealed_memory_rust_proto::oak::private_memory::{
     sealed_memory_response, AddMemoryRequest, AddMemoryResponse, GetMemoriesRequest,
     GetMemoriesResponse, InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory,
-    SealedMemoryResponse,
+    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -226,7 +226,7 @@ async fn test_noise_handshake() {
 }
 
 #[tokio::test]
-async fn test_noise_add_get_memory() {
+async fn test_noise_add_get_reset_memory() {
     // Start server
     let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
 
@@ -286,4 +286,20 @@ async fn test_noise_add_get_memory() {
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
     assert_eq!(get_memories_response.memories.len(), 1);
+
+    let request = ResetMemoryRequest::default();
+    send_plantext_request(&mut tx, &mut client_session, request);
+
+    let reset_memory_response: ResetMemoryResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert!(reset_memory_response.success);
+
+    let request = GetMemoriesRequest { tag: "tag".to_string() };
+    send_plantext_request(&mut tx, &mut client_session, request);
+
+    let get_memories_response: GetMemoriesResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(get_memories_response.memories.len(), 0);
 }
