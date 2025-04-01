@@ -1394,6 +1394,16 @@ pub struct ApplicationKeysData {
     #[prost(bytes = "vec", tag = "3")]
     pub signing_public_key: ::prost::alloc::vec::Vec<u8>,
 }
+/// Event containing a public key used to verify that an encrypted session is
+/// bound to the enclave's evidence.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct SessionBindingPublicKeyData {
+    /// An ECDSA-P256 public key represented as a SEC1 encoded point:
+    /// <<https://www.secg.org/sec1-v2.pdf#page=16>>
+    #[prost(bytes = "vec", tag = "1")]
+    pub session_binding_public_key: ::prost::alloc::vec::Vec<u8>,
+}
 /// Values extracted from the evidence that represents an event.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

@@ -21,6 +21,7 @@ pub mod container;
 pub mod firmware;
 pub mod kernel;
 pub mod platform;
+pub mod session_binding_public_key;
 pub mod system;
 
 /// Public key used to verify that the Noise handshake transcript signature.

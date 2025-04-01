@@ -253,6 +253,14 @@ message ApplicationKeysData {
   bytes signing_public_key = 3;
 }
 
+// Event containing a public key used to verify that an encrypted session is
+// bound to the enclave's evidence.
+message SessionBindingPublicKeyData {
+  // An ECDSA-P256 public key represented as a SEC1 encoded point:
+  // <https://www.secg.org/sec1-v2.pdf#page=16>
+  bytes session_binding_public_key = 1;
+}
+
 // Values extracted from the evidence that represents an event.
 message EventData {
   // Measurement RawDigest of an event.
