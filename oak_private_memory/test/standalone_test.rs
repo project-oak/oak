@@ -38,6 +38,7 @@ use sealed_memory_rust_proto::oak::private_memory::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
+static TEST_KEY: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
 async fn start_server() -> Result<(
     SocketAddr,
     SocketAddr,
@@ -258,7 +259,7 @@ async fn test_noise_add_get_memory() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     // Key sync
-    let key_sync_request = KeySyncRequest { data_encryption_key: b"key".to_vec(), uid: 234 };
+    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
     send_plantext_request(&mut tx, &mut client_session, key_sync_request);
 
     let _key_sync_response: KeySyncResponse =

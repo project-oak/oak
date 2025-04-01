@@ -75,7 +75,7 @@ impl MemoryInterface for Database {
 #[derive(Default)]
 pub struct UserSessionContext {
     pub key: Vec<u8>,
-    pub uid: u64,
+    pub uid: i64,
     pub message_type: MessageType,
 
     pub database: Database,
@@ -141,6 +141,11 @@ impl SealedMemoryHandler {
         response.encode_to_vec()
     }
 
+    fn is_valid_key(key: &[u8]) -> bool {
+        // Only support 256-bit key for now.
+        key.len() == 32
+    }
+
     // Memory related handlers
 
     pub async fn add_memory_handler(
@@ -154,7 +159,7 @@ impl SealedMemoryHandler {
             let memory_id = database.add_memory(request.memory.unwrap()).unwrap();
             Ok(AddMemoryResponse { id: memory_id.to_string() })
         } else {
-            bail!("This is an error")
+            bail!("You need to call key sync first")
         }
     }
 
@@ -169,7 +174,7 @@ impl SealedMemoryHandler {
             let memories = database.get_memories_by_tag(request.tag);
             Ok(GetMemoriesResponse { memories })
         } else {
-            bail!("This is an error")
+            bail!("You need to call key sync first")
         }
     }
 
@@ -182,13 +187,22 @@ impl SealedMemoryHandler {
 
     pub async fn key_sync_handler(
         &self,
-        _request: KeySyncRequest,
+        request: KeySyncRequest,
     ) -> anyhow::Result<KeySyncResponse> {
+        const INVALID_UID: i64 = 0;
+        if request.data_encryption_key.is_empty() || request.uid == INVALID_UID {
+            bail!("uid or key not set in request");
+        }
+        let key = request.data_encryption_key;
+        let uid = request.uid;
+        if !Self::is_valid_key(&key) {
+            bail!("Not a valid key!");
+        }
         let mut mutex_guard = self.session_context().await;
         if mutex_guard.is_some() {
             bail!("already setup the session");
         }
-        *mutex_guard = Some(UserSessionContext::default());
+        *mutex_guard = Some(UserSessionContext { key, uid, ..Default::default() });
 
         Ok(KeySyncResponse::default())
     }
