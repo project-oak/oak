@@ -65,6 +65,7 @@ rust_library(
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
@@ -84,6 +85,7 @@ rust_binary(
         "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
     ],
 )

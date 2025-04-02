@@ -60,8 +60,13 @@ trait MemoryInterface {
 
 impl MemoryInterface for Database {
     fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
-        let memory_id = self.inner.len().to_string();
-        memory.id = memory_id.clone();
+        let memory_id = if memory.id.is_empty() {
+            let id = self.inner.len().to_string();
+            memory.id = id.clone();
+            id
+        } else {
+            memory.id.clone()
+        };
         self.add_blob(memory_id.clone(), memory);
         Some(memory_id)
     }
@@ -111,6 +116,7 @@ impl SealedMemoryHandler {
             serde_json::from_slice(application_config_bytes).expect("Invalid application config");
         let db_addr = application_config.database_service_host;
         let db_url = format!("http://{db_addr}");
+        log::debug!("Database addr {}", db_url);
         let db_channel = Channel::from_shared(db_url)
             .context("couldn't create database channel")
             .unwrap()
@@ -120,7 +126,6 @@ impl SealedMemoryHandler {
             .unwrap();
 
         let db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
-
         Self {
             application_config,
             session_context: Default::default(),

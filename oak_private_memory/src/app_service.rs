@@ -113,6 +113,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
+                log::debug!("Receive request!!");
                 let session_request = request?;
                 if server_session.is_open() {
                     let decrypted_request = server_session.decrypt_request(session_request)

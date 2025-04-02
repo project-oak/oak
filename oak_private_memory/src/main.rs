@@ -62,7 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
-    println!("Enclave hello world app now serving!");
+    log::info!("Private memory is now serving!");
     join_handle.await??;
+    log::debug!("Done!!");
     Ok(())
 }
