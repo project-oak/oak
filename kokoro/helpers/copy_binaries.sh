@@ -32,6 +32,7 @@ function copy_binaries_to_placer() {
         artifacts/stage0_bin
         artifacts/stage0_bin_tdx
         artifacts/private_memory_server
+        artifacts/private_memory_enclave_bundle.tar
     )
     readonly binary_names=(
         oak_containers_agent
@@ -55,6 +56,7 @@ function copy_binaries_to_placer() {
         stage0_bin
         stage0_bin_tdx
         private_memory_server
+        private_memory_enclave_app
     )
     for i in "${!binary_names[@]}"; do
         cp --preserve=timestamps \

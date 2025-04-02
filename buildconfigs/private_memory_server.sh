@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#githubBuildShell
   --command
   just
-  oak_private_memory
+  private_memory_server
 )
 
 export SUBJECT_PATHS=(
