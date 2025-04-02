@@ -20,20 +20,12 @@ package(
 )
 
 filegroup(
-    name = "deprecated_cb_attestation",
-    srcs = [
-        "cb_endorsement.binarypb",
-        "cb_evidence.binarypb",
-        "cb_reference_values.binarypb",
-    ],
-)
-
-filegroup(
     name = "cb_attestation",
     srcs = [
-        "cb_endorsements_20250124.binarypb",
-        "cb_evidence_20250124.binarypb",
-        "cb_reference_values_20250124.binarypb",
+        "cb_endorsements.binarypb",
+        "cb_evidence.binarypb",
+        "cb_evidence_software_rooted.binarypb",
+        "cb_reference_values.binarypb",
     ],
 )
 

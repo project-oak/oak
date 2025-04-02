@@ -203,17 +203,22 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .event_log
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
-        let event_endorsements = &endorsements.events;
-        let event_attestation_results = verify_event_log(
-            event_log,
-            event_endorsements,
-            self.event_policies.as_slice(),
-            milliseconds_since_epoch,
-        )
-        .context("couldn't verify event log")?;
+        let event_attestation_results = if !endorsements.events.is_empty() {
+            let event_endorsements = &endorsements.events;
+            let results = verify_event_log(
+                event_log,
+                event_endorsements,
+                self.event_policies.as_slice(),
+                milliseconds_since_epoch,
+            )
+            .context("couldn't verify event log")?;
 
-        verify_event_artifacts_uniqueness(&event_attestation_results)
-            .context("couldn't verify event artifacts ID uniqueness")?;
+            verify_event_artifacts_uniqueness(&results)
+                .context("couldn't verify event artifacts ID uniqueness")?;
+            results
+        } else {
+            Vec::new()
+        };
 
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
@@ -226,6 +231,105 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             event_attestation_results,
         })
     }
+}
+
+pub struct SoftwareRootedDiceAttestationVerifier {
+    clock: Arc<dyn Clock>,
+}
+
+impl SoftwareRootedDiceAttestationVerifier {
+    pub fn new(clock: Arc<dyn Clock>) -> Self {
+        Self { clock }
+    }
+}
+
+impl AttestationVerifier for SoftwareRootedDiceAttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        _endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        // Get current time.
+        let _milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+
+        // Verify DICE chain integrity.
+        // The output argument is ommited because last layer's certificate authority key
+        // is not used to sign anything.
+        let _ =
+            verify_software_rooted_dice_chain(evidence).context("couldn't verify DICE chain")?;
+
+        // TODO: b/366419879 - Combine per-event attestation results.
+        #[allow(deprecated)]
+        Ok(AttestationResults {
+            status: Status::Unspecified.into(),
+            reason: "".to_string(),
+            encryption_public_key: vec![],
+            signing_public_key: vec![],
+            extracted_evidence: None,
+            event_attestation_results: vec![],
+        })
+    }
+}
+
+/// Verifies signatures of the certificates in the DICE chain and returns last
+/// layer's Certificate Authority key if the verification is successful.
+pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<VerifyingKey> {
+    let root_layer_verifying_key = {
+        let first_layer_option = evidence.layers.first();
+        let first_layer =
+            first_layer_option.ok_or_else(|| anyhow::anyhow!("no first layer evidence"))?;
+        let cert = coset::CoseSign1::from_slice(&first_layer.eca_certificate)
+            .map_err(|_cose_err| anyhow::anyhow!("couldn't parse certificate"))?;
+        let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
+        let claims = ClaimsSet::from_slice(&payload)
+            .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
+        let cose_key = get_public_key_from_claims_set(&claims)
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("couldn't get a public key from claims")?;
+        cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?
+    };
+
+    // Sequentially verify the layers, eventually retrieving the verifying key of
+    // the last layer.
+    let last_layer_verifying_key = evidence
+        .layers
+        .iter()
+        .try_fold(root_layer_verifying_key, |previous_layer_verifying_key, current_layer| {
+            let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
+                .map_err(|_cose_err| anyhow::anyhow!("couldn't parse certificate"))?;
+            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                let sig = Signature::from_slice(signature)?;
+                previous_layer_verifying_key.verify(contents, &sig)
+            })
+            .map_err(|error| anyhow::anyhow!(error))?;
+            let payload = cert.payload.ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
+            let claims = ClaimsSet::from_slice(&payload)
+                .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
+            let cose_key = get_public_key_from_claims_set(&claims)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("couldn't get a public key from claims")?;
+            cose_key_to_verifying_key(&cose_key)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("couldn't convert cose key")
+        })
+        .context("couldn't verify DICE chain")?;
+
+    // Verify the event log claim for this layer if it exists. This is done for all
+    // layers here, since the event log is tied uniquely closely to the DICE chain.
+    if let Some(event_log) = &evidence.event_log {
+        let layers_to_check = if evidence.layers.is_empty() {
+            &evidence.layers
+        } else {
+            &evidence.layers[1..] // Slice from the second element (index 1) to
+                                  // the end
+        };
+        validate_that_event_log_is_captured_in_dice_layers(event_log, layers_to_check)
+            .context("events in log do not match the digests in the dice chain")?
+    } else {
+        anyhow::bail!("event log is not present in the evidence");
+    }
+
+    Ok(last_layer_verifying_key)
 }
 
 /// Verifies entire setup by forwarding to individual setup types.

@@ -34,14 +34,11 @@ use oak_attestation_verification_types::{
     verifier::AttestationVerifier,
 };
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement,
-        CbReferenceValues, Endorsements, Event, EventLog, Evidence, FirmwareEndorsement,
-        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
-        SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement, SkipVerification,
-    },
-    Variant,
+use oak_proto_rust::oak::attestation::v1::{
+    binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement,
+    CbReferenceValues, Endorsements, Event, EventLog, Evidence, FirmwareEndorsement,
+    OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+    SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement, SkipVerification,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
@@ -225,12 +222,8 @@ fn cb_dice_verify_succeeds() {
             _ => vec![],
         },
     };
-    let empty_variant: Variant = Variant::default();
-    let endorsements = Endorsements {
-        platform: Some(platform_endorsement.into()),
-        initial: Some(empty_variant),
-        ..Default::default()
-    };
+    let endorsements =
+        Endorsements { platform: Some(platform_endorsement.into()), ..Default::default() };
 
     let platform_reference_values =
         CB_REFERENCE_VALUES.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();

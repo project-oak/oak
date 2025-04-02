@@ -130,29 +130,28 @@ fn compare_cb_measurement_digests(
     values: &CbData,
     expected: &CbExpectedValues,
 ) -> anyhow::Result<()> {
-    compare_root_layer_measurement_digests(
-        values.root_layer.as_ref().context("no root layer evidence values")?,
-        expected.root_layer.as_ref().context("no root layer expected values")?,
-    )
-    .context("root layer verification failed")?;
+    // Compare root layer
+    if let (Some(values_root), Some(expected_root)) = (&values.root_layer, &expected.root_layer) {
+        compare_root_layer_measurement_digests(values_root, expected_root)
+            .context("root layer verification failed")?;
+    } else if values.root_layer.is_some() || expected.root_layer.is_some() {
+        return Err(anyhow::anyhow!("root layer mismatch"));
+    }
 
-    compare_event_measurement_digests(
-        values.kernel_layer.as_ref().context("no kernel layer evidence values")?,
-        expected.kernel_layer.as_ref().context("no kernel layer expected_values")?,
-    )
-    .context("kernel layer verification failed")?;
+    // Compare layers vector
+    if values.layers.len() != expected.layers.len() {
+        return Err(anyhow::anyhow!(
+            "Number of layers doesn't match: {} {}",
+            values.layers.len(),
+            expected.layers.len()
+        ));
+    }
+    for (value_layer, expected_layer) in values.layers.iter().zip(expected.layers.iter()) {
+        compare_event_measurement_digests(value_layer, expected_layer)
+            .context("layer verification failed")?;
+    }
 
-    compare_event_measurement_digests(
-        values.system_layer.as_ref().context("no system layer evidence values")?,
-        expected.system_layer.as_ref().context("no system layer expected_values")?,
-    )
-    .context("system layer verification failed")?;
-
-    compare_event_measurement_digests(
-        values.application_layer.as_ref().context("no application layer evidence values")?,
-        expected.application_layer.as_ref().context("no application layer expected_values")?,
-    )
-    .context("application layer verification failed")
+    Ok(())
 }
 
 fn compare_root_layer_measurement_digests(

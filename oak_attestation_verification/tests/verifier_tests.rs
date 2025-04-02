@@ -60,7 +60,7 @@ const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_v
 
 // CB attestation
 const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
-const CB_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/cb_endorsement.binarypb";
+const CB_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
 const CB_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/cb_reference_values.binarypb";
 

@@ -75,8 +75,6 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
 
     if let Some(event_log) = &evidence.event_log
         && !event_log.encoded_events.is_empty()
-        // TODO: b/365601149 - Remove this when bug is fixed.
-        && event_log.encoded_events.len() > 1
     {
         let decoded_events: Vec<Event> = event_log
             .encoded_events
@@ -124,9 +122,9 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     == Some("type.googleapis.com/oak.attestation.v1.ApplicationLayerData")
             {
                 EvidenceType::OakRestrictedKernel
-            // CB evidence has three layers; if it does not extracting the
-            // evidence will fail.
-            } else if decoded_events.len() == 3 {
+            // CB evidence has three layers or more; if it does not extracting
+            // the evidence will fail.
+            } else if decoded_events.len() >= 3 {
                 EvidenceType::CB
             } else {
                 anyhow::bail!("events indicate an unexpected evidence type");
@@ -222,28 +220,18 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     application_layer: Some(application_layer),
                 }))
             }
-            EvidenceType::CB => Ok(EvidenceValues::Cb(CbData {
-                root_layer,
-                kernel_layer: Some(EventData {
-                    event: Some(RawDigest {
-                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[0]).to_vec(),
-                        ..Default::default()
-                    }),
-                }),
-                system_layer: Some(EventData {
-                    event: Some(RawDigest {
-                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[1]).to_vec(),
-                        ..Default::default()
-                    }),
-                }),
-                application_layer: Some(EventData {
-                    event: Some(RawDigest {
-                        sha2_256: sha2::Sha256::digest(&event_log.encoded_events[2]).to_vec(),
-                        ..Default::default()
-                    }),
-                }),
-                ..Default::default()
-            })),
+            EvidenceType::CB => {
+                let mut layers = Vec::new();
+                for event in &event_log.encoded_events {
+                    layers.push(EventData {
+                        event: Some(RawDigest {
+                            sha2_256: sha2::Sha256::digest(event).to_vec(),
+                            ..Default::default()
+                        }),
+                    });
+                }
+                Ok(EvidenceValues::Cb(CbData { root_layer, layers, ..Default::default() }))
+            }
         }
     }
     // There's no eventlog, proceed to extract evidence using the existing logic.
@@ -310,39 +298,25 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                 _ => Err(anyhow::anyhow!("incorrect number of DICE layers for Oak Containers")),
             }
         } else {
-            match &evidence.layers[..] {
-                [kernel_layer, system_layer, application_layer] => {
-                    let kernel_layer = Some(
-                        extract_event_data(
-                            &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                                .context("couldn't parse CB kernel DICE layer certificate")?,
+            let layers = &evidence.layers;
+            {
+                let layer_results: Result<Vec<Option<EventData>>, anyhow::Error> = layers
+                    .iter()
+                    .map(|layer| {
+                        let extracted_data = extract_event_data(
+                            &claims_set_from_serialized_cert(&layer.eca_certificate)
+                                .context("couldn't parse CB DICE layer certificate")?,
                         )
-                        .context("couldn't extract kernel values")?,
-                    );
-                    let system_layer = Some(
-                        extract_event_data(
-                            &claims_set_from_serialized_cert(&system_layer.eca_certificate)
-                                .context("couldn't parse CB system DICE layer certificate")?,
-                        )
-                        .context("couldn't extract system values")?,
-                    );
-                    let application_layer = Some(
-                        extract_event_data(
-                            &claims_set_from_serialized_cert(&application_layer.eca_certificate)
-                                .context("couldn't parse CB application DICE layer certificate")?,
-                        )
-                        .context("couldn't extract application values")?,
-                    );
-
-                    Ok(EvidenceValues::Cb(CbData {
-                        root_layer,
-                        kernel_layer,
-                        system_layer,
-                        application_layer,
-                        ..Default::default()
-                    }))
-                }
-                _ => Err(anyhow::anyhow!("incorrect number of DICE layers for CB")),
+                        .context("couldn't extract layer values")?;
+                        Ok(Some(extracted_data))
+                    })
+                    .collect();
+                let layer_values: Vec<EventData> = layer_results?.into_iter().flatten().collect();
+                Ok(EvidenceValues::Cb(CbData {
+                    root_layer,
+                    layers: layer_values,
+                    ..Default::default()
+                }))
             }
         }
     }

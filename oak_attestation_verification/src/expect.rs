@@ -177,45 +177,30 @@ pub(crate) fn get_cb_expected_values(
     endorsements: &CbEndorsements,
     reference_values: &CbReferenceValues,
 ) -> anyhow::Result<CbExpectedValues> {
-    Ok(CbExpectedValues {
-        root_layer: Some(
+    let root_layer_expected = reference_values
+        .root_layer
+        .as_ref()
+        .map(|root_ref| {
             get_root_layer_expected_values(
                 now_utc_millis,
                 endorsements.root_layer.as_ref(),
-                reference_values.root_layer.as_ref().context("no root layer reference values")?,
+                root_ref,
             )
-            .context("getting root layer values")?,
-        ),
-        kernel_layer: Some(
-            acquire_event_expected_values(
-                now_utc_millis,
-                reference_values
-                    .kernel_layer
-                    .as_ref()
-                    .context("no kernel layer reference values")?,
-            )
-            .context("getting kernel layer values")?,
-        ),
-        system_layer: Some(
-            acquire_event_expected_values(
-                now_utc_millis,
-                reference_values
-                    .system_layer
-                    .as_ref()
-                    .context("no system layer reference values")?,
-            )
-            .context("getting system layer values")?,
-        ),
-        application_layer: Some(
-            acquire_event_expected_values(
-                now_utc_millis,
-                reference_values
-                    .application_layer
-                    .as_ref()
-                    .context("no application layer reference values")?,
-            )
-            .context("getting application layer values")?,
-        ),
+            .context("getting root layer values")
+        })
+        .transpose()?;
+
+    let layer_expected = reference_values
+        .layers
+        .iter()
+        .map(|layer_ref| {
+            acquire_event_expected_values(now_utc_millis, layer_ref).context("getting layer values")
+        })
+        .collect::<anyhow::Result<Vec<EventExpectedValues>>>()?;
+
+    Ok(CbExpectedValues {
+        root_layer: root_layer_expected,
+        layers: layer_expected,
         ..Default::default()
     })
 }
