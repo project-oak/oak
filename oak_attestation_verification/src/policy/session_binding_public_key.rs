@@ -22,7 +22,9 @@ use alloc::{
 
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{EventAttestationResults, SessionBindingPublicKeyData},
+    attestation::v1::{
+        EventAttestationResults, SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement,
+    },
     Variant,
 };
 
@@ -45,15 +47,17 @@ impl Policy<[u8]> for SessionBindingPublicKeyPolicy {
     fn verify(
         &self,
         encoded_event: &[u8],
-        _encoded_endorsement: &Variant,
+        encoded_endorsement: &Variant,
         _milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
             encoded_event,
         )?;
+        let _endorsement: Option<SessionBindingPublicKeyEndorsement> =
+            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
-        // TODO: b/399885537 - Verify that the key is signed by the CA.
+        // TODO: b/400984640 - Verify that the key is signed by the CA.
 
         let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
         if !event.session_binding_public_key.is_empty() {
@@ -61,6 +65,8 @@ impl Policy<[u8]> for SessionBindingPublicKeyPolicy {
                 SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
                 event.session_binding_public_key.to_vec(),
             );
+        } else {
+            anyhow::bail!("session binding public key not found")
         }
 
         // TODO: b/356631062 - Return detailed attestation results.

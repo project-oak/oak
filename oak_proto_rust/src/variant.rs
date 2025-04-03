@@ -18,7 +18,7 @@ use prost::Message;
 use crate::oak::{
     attestation::v1::{
         AmdSevSnpEndorsement, ApplicationEndorsement, ContainerEndorsement, FirmwareEndorsement,
-        KernelEndorsement, SystemEndorsement,
+        KernelEndorsement, SessionBindingPublicKeyEndorsement, SystemEndorsement,
     },
     Variant,
 };
@@ -49,6 +49,8 @@ const APPLICATION_ENDORSEMENT_ID: [u8; 16] =
     [232, 78, 215, 20, 102, 157, 67, 10, 166, 15, 138, 101, 30, 90, 85, 3];
 const CONTAINER_ENDORSEMENT_ID: [u8; 16] =
     [114, 151, 165, 31, 160, 93, 73, 161, 175, 219, 100, 205, 238, 7, 134, 45];
+const SESSION_BINDING_PUBLIC_KEY_ENDORSEMENT_ID: [u8; 16] =
+    [39, 60, 254, 29, 91, 201, 76, 245, 181, 200, 107, 195, 252, 140, 230, 166];
 
 fn try_into_message<M: Message + Default>(id: &[u8], variant: &Variant) -> Result<M, &'static str> {
     if variant.id != id {
@@ -100,6 +102,13 @@ impl TryFrom<&Variant> for ApplicationEndorsement {
     }
 }
 
+impl TryFrom<&Variant> for SessionBindingPublicKeyEndorsement {
+    type Error = &'static str;
+    fn try_from(value: &Variant) -> Result<Self, Self::Error> {
+        try_into_message(&SESSION_BINDING_PUBLIC_KEY_ENDORSEMENT_ID, value)
+    }
+}
+
 macro_rules! impl_try_from_variant_to_option {
     ($value_type:ty) => {
         impl TryFrom<&Variant> for Option<$value_type> {
@@ -118,6 +127,7 @@ impl_try_from_variant_to_option!(KernelEndorsement);
 impl_try_from_variant_to_option!(SystemEndorsement);
 impl_try_from_variant_to_option!(ContainerEndorsement);
 impl_try_from_variant_to_option!(ApplicationEndorsement);
+impl_try_from_variant_to_option!(SessionBindingPublicKeyEndorsement);
 
 impl From<AmdSevSnpEndorsement> for Variant {
     fn from(value: AmdSevSnpEndorsement) -> Self {
@@ -152,5 +162,14 @@ impl From<ContainerEndorsement> for Variant {
 impl From<ApplicationEndorsement> for Variant {
     fn from(value: ApplicationEndorsement) -> Self {
         Variant { id: APPLICATION_ENDORSEMENT_ID.to_vec(), value: value.encode_to_vec() }
+    }
+}
+
+impl From<SessionBindingPublicKeyEndorsement> for Variant {
+    fn from(value: SessionBindingPublicKeyEndorsement) -> Self {
+        Variant {
+            id: SESSION_BINDING_PUBLIC_KEY_ENDORSEMENT_ID.to_vec(),
+            value: value.encode_to_vec(),
+        }
     }
 }

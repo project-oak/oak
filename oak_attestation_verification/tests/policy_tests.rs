@@ -20,9 +20,11 @@ use anyhow::Context;
 use oak_attestation_verification::{
     policy::{
         application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
-        kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
+        kernel::KernelPolicy, platform::AmdSevSnpPolicy,
+        session_binding_public_key::SessionBindingPublicKeyPolicy, system::SystemPolicy,
+        SESSION_BINDING_PUBLIC_KEY_ID,
     },
-    verifier::AmdSevSnpDiceAttestationVerifier,
+    verifier::{AmdSevSnpDiceAttestationVerifier, EventLogVerifier},
 };
 use oak_attestation_verification_types::{
     policy::Policy, util::Clock, verifier::AttestationVerifier,
@@ -32,9 +34,10 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsements, kernel_binary_reference_value, reference_values,
         text_reference_value, AmdSevSnpEndorsement, BinaryReferenceValue, CbReferenceValues,
-        Endorsements, Evidence, FirmwareEndorsement, KernelBinaryReferenceValue,
+        Endorsements, Event, EventLog, Evidence, FirmwareEndorsement, KernelBinaryReferenceValue,
         KernelLayerReferenceValues, OakContainersReferenceValues,
-        OakRestrictedKernelReferenceValues, ReferenceValues, SkipVerification, TextReferenceValue,
+        OakRestrictedKernelReferenceValues, ReferenceValues, SessionBindingPublicKeyData,
+        SessionBindingPublicKeyEndorsement, SkipVerification, TextReferenceValue,
     },
     Variant,
 };
@@ -67,6 +70,8 @@ const KERNEL_EVENT_INDEX: usize = 0;
 const RK_APPLICATION_EVENT_INDEX: usize = 1;
 const SYSTEM_EVENT_INDEX: usize = 1;
 const CONTAINER_EVENT_INDEX: usize = 2;
+
+const TEST_SESSION_BINDING_PUBLIC_KEY: [u8; 4] = [0, 1, 2, 3];
 
 // Pretend the tests run at this time: 15 Jan 2025, 12:00 UTC.
 const MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
@@ -192,6 +197,46 @@ lazy_static::lazy_static! {
     static ref CB_EVIDENCE: Evidence = load_cb_evidence();
     static ref CB_ENDORSEMENTS: Endorsements = load_cb_endorsements();
     static ref CB_REFERENCE_VALUES: CbReferenceValues = load_cb_reference_values();
+}
+
+#[test]
+fn event_log_verifier_succeeds() {
+    let event = Event {
+        tag: "session_binding_key".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
+                .to_string(),
+            value: SessionBindingPublicKeyData {
+                session_binding_public_key: TEST_SESSION_BINDING_PUBLIC_KEY.to_vec(),
+            }
+            .encode_to_vec(),
+        }),
+    };
+    let evidence = Evidence {
+        event_log: Some(EventLog { encoded_events: vec![event.encode_to_vec()] }),
+        ..Default::default()
+    };
+
+    let endorsements = Endorsements {
+        events: vec![SessionBindingPublicKeyEndorsement::default().into()],
+        ..Default::default()
+    };
+    let policy = SessionBindingPublicKeyPolicy::new(&[]);
+
+    // Create verifier.
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
+    let result = verifier.verify(&evidence, &endorsements);
+
+    // TODO: b/356631062 - Verify detailed attestation results.
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+
+    // Check that the policy correctly extracts the public key.
+    let event_attestation_results = result.unwrap().event_attestation_results;
+    assert!(event_attestation_results.len() == 1);
+    let extracted_public_key =
+        event_attestation_results[0].artifacts.get(SESSION_BINDING_PUBLIC_KEY_ID);
+    assert!(extracted_public_key.is_some());
+    assert!(*extracted_public_key.unwrap() == TEST_SESSION_BINDING_PUBLIC_KEY);
 }
 
 #[test]

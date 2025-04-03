@@ -80,6 +80,58 @@ pub fn to_attestation_results(
     }
 }
 
+// Attestation verifier that only verifies the EventLog, i.e. it doesn't verify
+// the root attestation and doesn't check the DICE certificate chain.
+pub struct EventLogVerifier {
+    event_policies: Vec<Box<dyn EventPolicy>>,
+    clock: Arc<dyn Clock>,
+}
+
+impl EventLogVerifier {
+    pub fn new(event_policies: Vec<Box<dyn EventPolicy>>, clock: Arc<dyn Clock>) -> Self {
+        Self { event_policies, clock }
+    }
+}
+
+impl AttestationVerifier for EventLogVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        // Get current time.
+        let milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+
+        // Verify event log and event endorsements with corresponding policies.
+        let event_log = &evidence
+            .event_log
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
+        let event_endorsements = &endorsements.events;
+        let event_attestation_results = verify_event_log(
+            event_log,
+            event_endorsements,
+            self.event_policies.as_slice(),
+            milliseconds_since_epoch,
+        )
+        .context("couldn't verify event log")?;
+
+        verify_event_artifacts_uniqueness(&event_attestation_results)
+            .context("couldn't verify event artifacts ID uniqueness")?;
+
+        // TODO: b/366419879 - Combine per-event attestation results.
+        #[allow(deprecated)]
+        Ok(AttestationResults {
+            status: Status::Unspecified.into(),
+            reason: "".to_string(),
+            encryption_public_key: vec![],
+            signing_public_key: vec![],
+            extracted_evidence: None,
+            event_attestation_results,
+        })
+    }
+}
+
 pub struct AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
     _firmware_policy: Box<dyn EventPolicy>,
