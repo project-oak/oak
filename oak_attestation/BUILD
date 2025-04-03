@@ -30,7 +30,6 @@ rust_library(
         "//:x86_64-none-setting",
     ]),
     deps = [
-        "//micro_rpc",
         "//oak_attestation_types",
         "//oak_dice",
         "//oak_proto_rust",
