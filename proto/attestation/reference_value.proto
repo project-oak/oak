@@ -320,9 +320,11 @@ message OakContainersReferenceValues {
 
 message CBReferenceValues {
   RootLayerReferenceValues root_layer = 1;
+  // TODO: b/408010056 - Remove fields 2-4.
   EventReferenceValues kernel_layer = 2;
   EventReferenceValues system_layer = 3;
   EventReferenceValues application_layer = 4;
+  repeated EventReferenceValues layers = 5;
 }
 
 message ReferenceValues {

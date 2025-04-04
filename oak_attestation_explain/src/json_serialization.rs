@@ -258,13 +258,14 @@ pub fn serialize_cb_data(instance: &CbData) -> serde_json::Value {
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let CbData { root_layer, kernel_layer, system_layer, application_layer } = instance;
+    let CbData { root_layer, kernel_layer, system_layer, application_layer, layers } = instance;
 
     json!({
         "root_layer": root_layer.as_ref().map(serialize_root_layer_data),
         "kernel_layer":  kernel_layer.as_ref().map(serialize_event_data),
         "system_layer": system_layer.as_ref().map(serialize_event_data),
         "application_layer": application_layer.as_ref().map(serialize_event_data),
+        "layers": layers.iter().map(serialize_event_data).collect::<Vec<_>>(),
     })
 }
 
@@ -766,12 +767,14 @@ pub fn serialize_cb_reference_values(instance: &CbReferenceValues) -> serde_json
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let CbReferenceValues { root_layer, kernel_layer, system_layer, application_layer } = instance;
+    let CbReferenceValues { root_layer, kernel_layer, system_layer, application_layer, layers } =
+        instance;
     json!({
         "root_layer":  root_layer.as_ref().map(serialize_root_layer_reference_values),
         "kernel_layer": kernel_layer.as_ref().map(serialize_event_reference_values),
         "system_layer":  system_layer.as_ref().map(serialize_event_reference_values),
         "application_layer":  application_layer.as_ref().map(serialize_event_reference_values),
+        "layers": layers.iter().map(serialize_event_reference_values).collect::<Vec<_>>(),
     })
 }
 

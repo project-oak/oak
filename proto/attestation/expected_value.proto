@@ -164,9 +164,11 @@ message OakContainersExpectedValues {
 
 message CBExpectedValues {
   RootLayerExpectedValues root_layer = 1;
+  // TODO: b/408010056 - Remove fields 2-4.
   EventExpectedValues kernel_layer = 2;
   EventExpectedValues system_layer = 3;
   EventExpectedValues application_layer = 4;
+  repeated EventExpectedValues layers = 5;
 }
 
 message ExpectedValues {

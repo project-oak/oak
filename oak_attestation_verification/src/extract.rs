@@ -242,6 +242,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         ..Default::default()
                     }),
                 }),
+                ..Default::default()
             })),
         }
     }
@@ -338,6 +339,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         kernel_layer,
                         system_layer,
                         application_layer,
+                        ..Default::default()
                     }))
                 }
                 _ => Err(anyhow::anyhow!("incorrect number of DICE layers for CB")),

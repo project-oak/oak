@@ -216,6 +216,7 @@ pub(crate) fn get_cb_expected_values(
             )
             .context("getting application layer values")?,
         ),
+        ..Default::default()
     })
 }
 
