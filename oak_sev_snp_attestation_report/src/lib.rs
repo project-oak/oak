@@ -14,6 +14,10 @@
 //
 
 //! AMD SEV-SNP data structures for attestation reports.
+//!
+//! This is based on revision 1.57 of <https://www.amd.com/system/files/TechDocs/56860.pdf>
+//! Content-addressed link for the specific revision of the specification:
+//! <https://static.space/sha2-512:f2f8c5c8a41a682968944cc50000e28d189855cf0899205f41fa0073d9d0b4f2c0f83ebe8c7bf2614bfb66ced2ad24548696bf6b34be102d2959fcc11b500079>
 
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
@@ -25,7 +29,7 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// A signed attestation report.
 ///
-/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 of the specification.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReport {
@@ -63,12 +67,12 @@ impl AttestationReport {
 /// The number of bytes of custom data that can be included in the attestation
 /// report.
 ///
-/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 of the specification.
 pub const REPORT_DATA_SIZE: usize = 64;
 
 /// The data contained in an attestation report.
 ///
-/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 of the specification.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReportData {
@@ -136,7 +140,7 @@ pub struct AttestationReportData {
     pub cpuid_mod_id: u8,
     /// Stepping.
     pub cpuid_step: u8,
-    /// Reserved, must be zero.
+    /// Reserved.
     _reserved_0: [u8; 21],
     /// Identifier unique to the chip, unless the ID has been masked in
     /// configuration in which case it is all zeroes.
@@ -149,7 +153,7 @@ pub struct AttestationReportData {
     pub current_minor: u8,
     /// The major number of the current secure firmware ABI version.
     pub current_major: u8,
-    /// Reserved, must be zero.
+    /// Reserved.
     _reserved_1: u8,
     /// The build number of the committed secure firmware ABI version.
     pub committed_build: u8,
@@ -157,12 +161,12 @@ pub struct AttestationReportData {
     pub committed_minor: u8,
     /// The major number of the committed secure firmware ABI version.
     pub committed_major: u8,
-    /// Reserved, must be zero.
+    /// Reserved.
     _reserved_2: u8,
     /// The value of the current TCB version when the guest was launched or
     /// imported.
     pub launch_tcb: TcbVersion,
-    /// Reserved, must be zero.
+    /// Reserved.
     _reserved_3: [u8; 168],
 }
 
@@ -203,13 +207,7 @@ impl AttestationReportData {
     /// Checks that fields with specific expected values or ranges are valid and
     /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.version > 3 {
-            return Err("unsupported attestation report version");
-        }
         self.policy.validate()?;
-        self.current_tcb.validate()?;
-        self.reported_tcb.validate()?;
-        self.committed_tcb.validate()?;
         if self._reserved_4 != 0 {
             return Err("nonzero value in _reserved_4");
         }
@@ -237,12 +235,15 @@ bitflags! {
         const RAPL_DIS = (1 << 3);
         /// Indicates ciphertext hiding is enabled for the DRAM.
         const CIPHERTEXT_HIDING_DRAM_EN = (1 << 4);
+        /// Indicates that alias checking has completed since the last reboot.
+        /// Mitigation for CVE-2024-21944.
+        const ALIAS_CHECK_COMPLETE = (1 << 5);
     }
 }
 
 /// The signing algorithm used for the report signature.
 ///
-/// See Table 133 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 133 of the specification.
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningAlgorithm {
@@ -254,7 +255,7 @@ pub enum SigningAlgorithm {
 
 /// Key used to sign the attestation report.
 ///
-/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 of the specification.
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningKey {
@@ -266,7 +267,7 @@ pub enum SigningKey {
 
 /// The required policy for a guest to run.
 ///
-/// See Table 9 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 9 of the specification.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestPolicy {
@@ -305,7 +306,7 @@ impl GuestPolicy {
 
 /// The version of all the components in the Trusted Computing Base (TCB).
 ///
-/// See Table 3 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 3 of the specification.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct TcbVersion {
@@ -314,7 +315,7 @@ pub struct TcbVersion {
     pub boot_loader: u8,
     /// The current SVN of the PSP operating system.
     pub tee: u8,
-    /// Reserved, must be zero.
+    /// Reserved.
     _reserved: [u8; 4],
     /// The current SVN of the SNP firmware.
     pub snp: u8,
@@ -323,16 +324,6 @@ pub struct TcbVersion {
 }
 
 static_assertions::assert_eq_size!(TcbVersion, u64);
-
-impl TcbVersion {
-    /// Checks that the reserved bytes are all zero.
-    pub fn validate(&self) -> Result<(), &'static str> {
-        if self._reserved.iter().any(|&value| value != 0) {
-            return Err("nonzero value in _reserved");
-        }
-        Ok(())
-    }
-}
 
 bitflags! {
     /// Flags indicating allowed policy options.
@@ -353,7 +344,7 @@ bitflags! {
 
 /// An ECDSA signature.
 ///
-/// See Table 135 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 135 of the specification.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct EcdsaSignature {
