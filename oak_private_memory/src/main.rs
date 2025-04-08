@@ -21,13 +21,14 @@ use oak_sdk_containers::{
     default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
 };
 use oak_sdk_server_v1::OakApplicationContext;
+use println as debug;
 use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Logging!");
+    debug!("Logging!");
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create orchestrator channel")?;
 
@@ -57,13 +58,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 private_memory_server_lib::app::SealedMemoryHandler::new(&application_config).await,
             ),
         ),
-        Box::new(
-            private_memory_server_lib::app::SealedMemoryHandler::new(&application_config).await,
-        ),
+        private_memory_server_lib::app::SealedMemoryHandler::new(&application_config).await,
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
-    log::info!("Private memory is now serving!");
+    debug!("Private memory is now serving!");
     join_handle.await??;
-    log::debug!("Done!!");
+    debug!("Done!!");
     Ok(())
 }

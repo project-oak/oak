@@ -78,10 +78,7 @@ async fn start_server() -> Result<(
                     .await,
                 ),
             ),
-            Box::new(
-                private_memory_server_lib::app::SealedMemoryHandler::new(&application_config_vec)
-                    .await,
-            ),
+            private_memory_server_lib::app::SealedMemoryHandler::new(&application_config_vec).await,
         )),
         tokio::spawn(private_memory_database_server_lib::service::create(db_listener)),
     ))

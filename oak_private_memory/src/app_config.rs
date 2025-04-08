@@ -18,7 +18,7 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Serialize};
 
 /// The trusted sever configuration.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApplicationConfig {
     pub database_service_host: SocketAddr,
 }

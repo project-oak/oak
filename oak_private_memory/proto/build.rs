@@ -60,7 +60,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.field_attribute(message_type, "#[serde(flatten)]");
     }
 
-    let bytes_fields = ["oak.private_memory.content"];
+    let bytes_fields = [
+        "oak.private_memory.Memory.content",
+        "oak.private_memory.KeySyncRequest.data_encryption_key",
+    ];
     for bytes_field in bytes_fields {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
     }

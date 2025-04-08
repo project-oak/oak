@@ -25,10 +25,13 @@ use sealed_memory_rust_proto::oak::private_memory::{
     InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, ReadDataBlobRequest,
     ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
 };
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::{
+    runtime::Handle,
+    sync::{Mutex, MutexGuard},
+};
 use tonic::transport::Channel;
 
-use crate::app_config::ApplicationConfig;
+use crate::{app_config::ApplicationConfig, debug};
 
 type MemoryId = String;
 #[derive(Default)]
@@ -86,13 +89,13 @@ impl MemoryInterface for Database {
 }
 
 /// The state for each client connection.
-#[derive(Default)]
 pub struct UserSessionContext {
     pub key: Vec<u8>,
     pub uid: i64,
     pub message_type: MessageType,
 
     pub database: Database,
+    pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
 }
 
 // The message format for the plaintext.
@@ -107,30 +110,44 @@ pub enum MessageType {
 pub struct SealedMemoryHandler {
     pub application_config: ApplicationConfig,
     pub session_context: Mutex<Option<UserSessionContext>>,
-    pub database_service_client: Mutex<SealedMemoryDatabaseServiceClient<Channel>>,
+}
+
+impl Drop for SealedMemoryHandler {
+    fn drop(&mut self) {
+        let session_context = std::mem::take(&mut self.session_context);
+        // When this is called, we should perform cleanup routines like persisting
+        // the in memory database to disks.
+        Handle::current().spawn(async move {
+            // For test purpose. Will be removed soon
+            let db_request = ReadDataBlobRequest::default();
+            if let Some(db_service_client) = session_context.lock().await.as_mut() {
+                let db_response = db_service_client
+                    .database_service_client
+                    .read_data_blob(db_request)
+                    .await
+                    .expect("Received response")
+                    .into_inner();
+                debug!("db response {:#?}", db_response);
+            }
+        });
+    }
+}
+
+impl Clone for SealedMemoryHandler {
+    fn clone(&self) -> Self {
+        Self {
+            application_config: self.application_config.clone(),
+            session_context: Default::default(),
+        }
+    }
 }
 
 impl SealedMemoryHandler {
     pub async fn new(application_config_bytes: &[u8]) -> Self {
         let application_config: ApplicationConfig =
             serde_json::from_slice(application_config_bytes).expect("Invalid application config");
-        let db_addr = application_config.database_service_host;
-        let db_url = format!("http://{db_addr}");
-        log::debug!("Database addr {}", db_url);
-        let db_channel = Channel::from_shared(db_url)
-            .context("couldn't create database channel")
-            .unwrap()
-            .connect()
-            .await
-            .context("couldn't connect via database channel")
-            .unwrap();
 
-        let db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
-        Self {
-            application_config,
-            session_context: Default::default(),
-            database_service_client: Mutex::new(db_client),
-        }
+        Self { application_config, session_context: Default::default() }
     }
 }
 
@@ -160,8 +177,10 @@ impl SealedMemoryHandler {
                 }
             }
         } else if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
+            debug!("Request is in binary proto format");
             Some(request)
         } else if let Ok(request) = serde_json::from_slice::<SealedMemoryRequest>(request_bytes) {
+            debug!("Request is in json format {:?}", request);
             Some(request)
         } else {
             None
@@ -265,12 +284,31 @@ impl SealedMemoryHandler {
         if !Self::is_valid_key(&key) {
             bail!("Not a valid key!");
         }
+
+        let db_addr = self.application_config.database_service_host;
+        let db_url = format!("http://{db_addr}");
+        log::debug!("Database addr {}", db_url);
+        let db_channel = Channel::from_shared(db_url)
+            .context("couldn't create database channel")
+            .unwrap()
+            .connect()
+            .await
+            .context("couldn't connect via database channel")
+            .unwrap();
+
+        let db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
         let mut mutex_guard = self.session_context().await;
         if mutex_guard.is_some() {
             bail!("already setup the session");
         }
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
-        *mutex_guard = Some(UserSessionContext { key, uid, message_type, ..Default::default() });
+        *mutex_guard = Some(UserSessionContext {
+            key,
+            uid,
+            message_type,
+            database_service_client: db_client,
+            database: Database::default(),
+        });
 
         Ok(KeySyncResponse::default())
     }
@@ -346,18 +384,6 @@ impl ApplicationHandler for SealedMemoryHandler {
             InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
                 .into_response()
         } else {
-            // For test purpose. Will be removed soon
-            let db_request = ReadDataBlobRequest::default();
-            let db_response = self
-                .database_service_client
-                .lock()
-                .await
-                .read_data_blob(db_request)
-                .await
-                .expect("Received response")
-                .into_inner();
-            println!("db response {:#?}", db_response);
-
             let request = request.unwrap().request.expect("The request should not empty!");
             match request {
                 sealed_memory_request::Request::KeySyncRequest(request) => self

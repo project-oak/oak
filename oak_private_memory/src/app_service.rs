@@ -28,23 +28,22 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server:
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
+use crate::{app::SealedMemoryHandler, debug};
+
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct SealedMemoryServiceImplementation {
     #[allow(dead_code)]
     oak_application_context: Arc<OakApplicationContext>,
     // Needed while we implement noise inline.
-    application_handler: Arc<Box<dyn ApplicationHandler>>,
+    application_handler: crate::app::SealedMemoryHandler,
 }
 
 impl SealedMemoryServiceImplementation {
     pub fn new(
         oak_application_context: OakApplicationContext,
-        application_handler: Box<dyn ApplicationHandler>,
+        application_handler: SealedMemoryHandler,
     ) -> Self {
-        Self {
-            oak_application_context: Arc::new(oak_application_context),
-            application_handler: Arc::new(application_handler),
-        }
+        Self { oak_application_context: Arc::new(oak_application_context), application_handler }
     }
 }
 
@@ -113,7 +112,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
-                log::debug!("Receive request!!");
+                debug!("Receive request!!");
                 let session_request = request?;
                 if server_session.is_open() {
                     let decrypted_request = server_session.decrypt_request(session_request)
@@ -128,6 +127,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                             yield response;
                 }
             }
+            debug!("Enclave Stream finished");
         };
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::InvokeStream))
     }
@@ -136,7 +136,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
 pub async fn create(
     listener: TcpListener,
     oak_session_context: OakApplicationContext,
-    application_handler: Box<dyn ApplicationHandler>,
+    application_handler: SealedMemoryHandler,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
