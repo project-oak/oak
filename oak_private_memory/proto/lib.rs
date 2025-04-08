@@ -18,3 +18,19 @@ pub mod oak {
         tonic::include_proto!("oak.private_memory");
     }
 }
+
+pub mod base64data {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    extern crate alloc;
+    use alloc::{string::String, vec::Vec};
+
+    pub fn serialize<S: Serializer>(v: &[u8], s: S) -> Result<S::Ok, S::Error> {
+        let base64_str = STANDARD.encode(v);
+        String::serialize(&base64_str, s)
+    }
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
+        let base64_str = String::deserialize(d)?;
+        STANDARD.decode(base64_str.as_bytes()).map_err(serde::de::Error::custom)
+    }
+}

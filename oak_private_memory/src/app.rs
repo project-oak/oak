@@ -96,7 +96,7 @@ pub struct UserSessionContext {
 }
 
 // The message format for the plaintext.
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub enum MessageType {
     #[default]
     BinaryProto,
@@ -135,23 +135,51 @@ impl SealedMemoryHandler {
 }
 
 impl SealedMemoryHandler {
-    pub fn session_context_established(&self) -> bool {
-        self.session_context.blocking_lock().is_some()
+    pub async fn session_context_established(&self) -> bool {
+        self.session_context().await.is_some()
     }
 
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
         self.session_context.lock().await
     }
 
-    pub fn deserialize_request(&self, request_bytes: &[u8]) -> Option<SealedMemoryRequest> {
-        SealedMemoryRequest::decode(request_bytes).ok()
+    pub async fn get_message_type(&self) -> MessageType {
+        self.session_context().await.as_mut().unwrap().message_type
     }
 
-    pub fn is_binary_proto_request(&self, request_bytes: &[u8]) -> bool {
-        self.deserialize_request(request_bytes).is_some()
+    pub fn is_message_type_json(&self, request_bytes: &[u8]) -> bool {
+        serde_json::from_slice::<SealedMemoryRequest>(request_bytes).is_ok()
     }
 
-    pub fn serialize_response(&self, response: &SealedMemoryResponse) -> Vec<u8> {
+    pub async fn deserialize_request(&self, request_bytes: &[u8]) -> Option<SealedMemoryRequest> {
+        if self.session_context_established().await {
+            match self.get_message_type().await {
+                MessageType::BinaryProto => SealedMemoryRequest::decode(request_bytes).ok(),
+                MessageType::Json => {
+                    serde_json::from_slice::<SealedMemoryRequest>(request_bytes).ok()
+                }
+            }
+        } else if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
+            Some(request)
+        } else if let Ok(request) = serde_json::from_slice::<SealedMemoryRequest>(request_bytes) {
+            Some(request)
+        } else {
+            None
+        }
+    }
+
+    pub async fn serialize_response(&self, response: &SealedMemoryResponse) -> Vec<u8> {
+        if self.session_context_established().await {
+            match self.get_message_type().await {
+                MessageType::BinaryProto => {
+                    return response.encode_to_vec();
+                }
+                MessageType::Json => {
+                    return serde_json::to_vec(response).unwrap();
+                }
+            }
+        }
+        // Default to binary proto if the session is not established.
         response.encode_to_vec()
     }
 
@@ -226,6 +254,7 @@ impl SealedMemoryHandler {
     pub async fn key_sync_handler(
         &self,
         request: KeySyncRequest,
+        is_json: bool,
     ) -> anyhow::Result<KeySyncResponse> {
         const INVALID_UID: i64 = 0;
         if request.data_encryption_key.is_empty() || request.uid == INVALID_UID {
@@ -240,7 +269,8 @@ impl SealedMemoryHandler {
         if mutex_guard.is_some() {
             bail!("already setup the session");
         }
-        *mutex_guard = Some(UserSessionContext { key, uid, ..Default::default() });
+        let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
+        *mutex_guard = Some(UserSessionContext { key, uid, message_type, ..Default::default() });
 
         Ok(KeySyncResponse::default())
     }
@@ -311,46 +341,44 @@ impl ApplicationHandler for SealedMemoryHandler {
     /// deserialize into a proto, and dispatch to various handlers from
     /// there.
     async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let request = self.deserialize_request(request_bytes);
-        if request.is_none() {
-            let response: SealedMemoryResponse = InvalidRequestResponse {
-                error_message: "Invalid json or binary proto format".into(),
-            }
-            .into_response();
-            return Ok(self.serialize_response(&response));
-        }
+        let request = self.deserialize_request(request_bytes).await;
+        let response = if request.is_none() {
+            InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
+                .into_response()
+        } else {
+            // For test purpose. Will be removed soon
+            let db_request = ReadDataBlobRequest::default();
+            let db_response = self
+                .database_service_client
+                .lock()
+                .await
+                .read_data_blob(db_request)
+                .await
+                .expect("Received response")
+                .into_inner();
+            println!("db response {:#?}", db_response);
 
-        // For test purpose. Will be removed soon
-        let db_request = ReadDataBlobRequest::default();
-        let db_response = self
-            .database_service_client
-            .lock()
-            .await
-            .read_data_blob(db_request)
-            .await
-            .expect("Received response")
-            .into_inner();
-        println!("db response {:#?}", db_response);
-
-        let request = request.unwrap().request.expect("The request should not empty!");
-        let response = match request {
-            sealed_memory_request::Request::KeySyncRequest(request) => {
-                self.key_sync_handler(request).await?.into_response()
-            }
-            sealed_memory_request::Request::AddMemoryRequest(request) => {
-                self.add_memory_handler(request).await?.into_response()
-            }
-            sealed_memory_request::Request::GetMemoriesRequest(request) => {
-                self.get_memories_handler(request).await?.into_response()
-            }
-            sealed_memory_request::Request::ResetMemoryRequest(request) => {
-                self.reset_memory_handler(request).await?.into_response()
-            }
-            sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
-                self.get_memory_by_id_handler(request).await?.into_response()
+            let request = request.unwrap().request.expect("The request should not empty!");
+            match request {
+                sealed_memory_request::Request::KeySyncRequest(request) => self
+                    .key_sync_handler(request, self.is_message_type_json(request_bytes))
+                    .await?
+                    .into_response(),
+                sealed_memory_request::Request::AddMemoryRequest(request) => {
+                    self.add_memory_handler(request).await?.into_response()
+                }
+                sealed_memory_request::Request::GetMemoriesRequest(request) => {
+                    self.get_memories_handler(request).await?.into_response()
+                }
+                sealed_memory_request::Request::ResetMemoryRequest(request) => {
+                    self.reset_memory_handler(request).await?.into_response()
+                }
+                sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
+                    self.get_memory_by_id_handler(request).await?.into_response()
+                }
             }
         };
 
-        Ok(self.serialize_response(&response))
+        Ok(self.serialize_response(&response).await)
     }
 }
