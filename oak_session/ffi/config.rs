@@ -343,11 +343,11 @@ pub struct ErrorOrSessionConfigBuilder {
 }
 
 impl ErrorOrSessionConfigBuilder {
-    fn ok(result: *mut SessionConfigBuilder) -> Self {
+    pub fn ok(result: *mut SessionConfigBuilder) -> Self {
         Self { result, error: std::ptr::null() }
     }
 
-    fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl AsRef<str>) -> Self {
         Self { result: std::ptr::null_mut(), error: Error::new_raw(message) }
     }
 }
@@ -359,11 +359,11 @@ pub struct ErrorOrIdentityKey {
 }
 
 impl ErrorOrIdentityKey {
-    fn ok(result: *mut IdentityKey) -> Self {
+    pub fn ok(result: *mut IdentityKey) -> Self {
         Self { result, error: std::ptr::null() }
     }
 
-    fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl AsRef<str>) -> Self {
         Self { result: std::ptr::null_mut(), error: Error::new_raw(message) }
     }
 }
