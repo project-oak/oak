@@ -20,10 +20,11 @@ use oak_sdk_server_v1::ApplicationHandler;
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse,
+    sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse, DataBlob,
     GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
     InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, ReadDataBlobRequest,
     ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
+    WriteDataBlobRequest,
 };
 use tokio::{
     runtime::Handle,
@@ -31,10 +32,14 @@ use tokio::{
 };
 use tonic::transport::Channel;
 
-use crate::{app_config::ApplicationConfig, debug};
+use crate::{
+    app_config::ApplicationConfig,
+    debug,
+    encryption::{decrypt, encrypt, generate_nonce},
+};
 
 type MemoryId = String;
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Database {
     inner: HashMap<MemoryId, Memory>,
 }
@@ -51,6 +56,26 @@ impl Database {
     pub fn reset(&mut self) {
         self.inner.clear();
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct EncryptedDatablob {
+    pub nonce: Vec<u8>,
+    pub data: Vec<u8>,
+}
+
+fn encrypt_database(database: &Database, key: &[u8]) -> anyhow::Result<EncryptedDatablob> {
+    let nonce = generate_nonce();
+    let datablob = serde_json::to_vec(database)?;
+    let data = encrypt(key, &nonce, &datablob)?;
+    Ok(EncryptedDatablob { nonce, data })
+}
+
+fn decrypt_database(datablob: EncryptedDatablob, key: &[u8]) -> anyhow::Result<Database> {
+    let nonce = datablob.nonce;
+    let data = datablob.data;
+    let decrypted_data = decrypt(key, &nonce, &data)?;
+    Ok(serde_json::from_slice::<Database>(&decrypted_data)?)
 }
 
 trait MemoryInterface {
@@ -114,16 +139,30 @@ pub struct SealedMemoryHandler {
 
 impl Drop for SealedMemoryHandler {
     fn drop(&mut self) {
+        debug!("Dropping");
         let session_context = std::mem::take(&mut self.session_context);
         // When this is called, we should perform cleanup routines like persisting
         // the in memory database to disks.
         Handle::current().spawn(async move {
+            debug!("Enter");
             // For test purpose. Will be removed soon
-            let db_request = ReadDataBlobRequest::default();
-            if let Some(db_service_client) = session_context.lock().await.as_mut() {
-                let db_response = db_service_client
+            if let Some(user_context) = session_context.lock().await.as_mut() {
+                let database = encrypt_database(&user_context.database, &user_context.key);
+                if database.is_err() {
+                    debug!("Failed to serialize database");
+                    return;
+                }
+                let encrypted_datablob = serde_json::to_vec(&database.unwrap());
+                if encrypted_datablob.is_err() {
+                    debug!("Failed to serialize database");
+                    return;
+                }
+                let encrypted_datablob = encrypted_datablob.unwrap();
+                let data_blob =
+                    DataBlob { id: user_context.uid, encrypted_blob: encrypted_datablob };
+                let db_response = user_context
                     .database_service_client
-                    .read_data_blob(db_request)
+                    .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
                     .await
                     .expect("Received response")
                     .into_inner();
@@ -296,7 +335,28 @@ impl SealedMemoryHandler {
             .context("couldn't connect via database channel")
             .unwrap();
 
-        let db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
+        let mut db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
+        let db_response = db_client
+            .read_data_blob(ReadDataBlobRequest { id: uid })
+            .await
+            .expect("Load database failed!")
+            .into_inner();
+        let database = if let Some(status) = db_response.status {
+            if status.success && db_response.data_blob.is_some() {
+                let data_blob = db_response.data_blob.unwrap();
+                let encrypted_datablob =
+                    serde_json::from_slice::<EncryptedDatablob>(&data_blob.encrypted_blob)?;
+                let database = decrypt_database(encrypted_datablob, &key)?;
+                debug!("Loaded database successfully {}!!", serde_json::to_string(&database)?);
+                database
+            } else {
+                debug!("Failed to load database");
+                Database::default()
+            }
+        } else {
+            debug!("Failed to load database");
+            Database::default()
+        };
         let mut mutex_guard = self.session_context().await;
         if mutex_guard.is_some() {
             bail!("already setup the session");
@@ -307,7 +367,7 @@ impl SealedMemoryHandler {
             uid,
             message_type,
             database_service_client: db_client,
-            database: Database::default(),
+            database,
         });
 
         Ok(KeySyncResponse::default())
