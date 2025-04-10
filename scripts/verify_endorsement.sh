@@ -24,8 +24,9 @@
 set -e
 set -o pipefail
 
-readonly FILES_PREFIX=https://storage.googleapis.com/oak-files
-readonly INDEX_PREFIX=https://storage.googleapis.com/oak-index
+readonly DEFAULT_FBUCKET=oak-files
+readonly DEFAULT_IBUCKET=oak-index
+readonly URL_PREFIX=https://storage.googleapis.com
 
 # ID of index to retrieve signature hashes by endorsement hashes.
 readonly SIGNATURE_FOR_ENDORSEMENT=14
@@ -53,9 +54,10 @@ usage_and_exit() {
 
 # Fetches a file from the files bucket and double checks the hash.
 fetch_file() {
-  local hash="$1"
-  local path="$2"
-  curl --fail --silent --output "${path}" "${FILES_PREFIX}/${hash}"
+  local fbucket="$1"
+  local hash="$2"
+  local path="$3"
+  curl --fail --silent --output "${path}" "${URL_PREFIX}/${fbucket}/${hash}"
   local actual_hash="sha2-256:$(sha256sum "${path}" | cut -d " " -f 1)"
   if [[ "${hash}" != "${actual_hash}" ]]; then
     >&2 echo "Digest mismatch for ${path}: expected ${hash}, got ${actual_hash}"
@@ -79,26 +81,33 @@ now_timestamp() {
 }
 
 list_all_endorsements() {
-  local keyfile="$1"
+  local fbucket="$1"
+  local ibucket="$2"
+  local keyfile="$3"
+  local ibucket_prefix="${URL_PREFIX}/${ibucket}"
   local pk_hash="sha2-256:$(sha256sum "${keyfile}" | cut -d " " -f 1)"
-  local endorsement_hashes=$(curl --fail --silent \
-    "${INDEX_PREFIX}/${ENDORSEMENTS_FOR_PK}/${pk_hash}")
+
+  # We need to make sure failures of curl are fatal.
+  # See https://unix.stackexchange.com/questions/23026
+  local endorsement_hashes signature_hash actual_pk_hash
+  endorsement_hashes=$(curl --fail --silent \
+      "${ibucket_prefix}/${ENDORSEMENTS_FOR_PK}/${pk_hash}")
   local now=$(now_timestamp)
   local tmp_path=$(mktemp)
   for endorsement_hash in ${endorsement_hashes}; do
     # Only proceed when the key used to lookup coincides with the key used
     # to make the signature.
-    local signature_hash=$(curl --fail --silent \
-        "${INDEX_PREFIX}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
-    local actual_pk_hash=$(curl --fail --silent \
-        "${INDEX_PREFIX}/${PK_FOR_SIGNATURE}/${signature_hash}")
+    signature_hash=$(curl --fail --silent \
+        "${ibucket_prefix}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
+    actual_pk_hash=$(curl --fail --silent \
+        "${ibucket_prefix}/${PK_FOR_SIGNATURE}/${signature_hash}")
     if [[ "${pk_hash}" != "${actual_pk_hash}" ]]; then
       >&2 echo "Key digest mismatch: expected ${pk_hash}, got ${actual_pk_hash}"
       exit 1
     fi
 
     echo "${endorsement_hash}"
-    fetch_file "${endorsement_hash}" "${tmp_path}"
+    fetch_file "${fbucket}" "${endorsement_hash}" "${tmp_path}"
     local endorsement=$(cat "${tmp_path}")
     read -r subject_name subject_hash not_after <<< \
         "$(echo "${endorsement}" | python3 -c "${JSON_PARSER}")"
@@ -110,22 +119,26 @@ list_all_endorsements() {
 }
 
 download() {
-  local endorsement_hash="$1"
-  local dir="$2"
+  local fbucket="$1"
+  local ibucket="$2"
+  local endorsement_hash="$3"
+  local dir="$4"
+  local ibucket_prefix="${URL_PREFIX}/${ibucket}"
 
-  local signature_hash=$(curl --fail --silent \
-      "${INDEX_PREFIX}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
-  local pk_hash=$(curl --fail --silent \
-      "${INDEX_PREFIX}/${PK_FOR_SIGNATURE}/${signature_hash}")
+  local signature_hash pk_hash
+  signature_hash=$(curl --fail --silent \
+      "${ibucket_prefix}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
+  pk_hash=$(curl --fail --silent \
+      "${ibucket_prefix}/${PK_FOR_SIGNATURE}/${signature_hash}")
   # The log entry may not exist, in which case we set it to empty.
   local logentry_hash=$(curl --fail --silent \
-      "${INDEX_PREFIX}/${LOGENTRY_FOR_ENDORSEMENT}/${endorsement_hash}" || echo "")
+      "${ibucket_prefix}/${LOGENTRY_FOR_ENDORSEMENT}/${endorsement_hash}" || echo "")
 
-  fetch_file "${endorsement_hash}" "${dir}/endorsement.json"
-  fetch_file "${signature_hash}" "${dir}/endorsement.json.sig"
-  fetch_file "${pk_hash}" "${dir}/endorser_public_key.pem"
+  fetch_file "${fbucket}" "${endorsement_hash}" "${dir}/endorsement.json"
+  fetch_file "${fbucket}" "${signature_hash}" "${dir}/endorsement.json.sig"
+  fetch_file "${fbucket}" "${pk_hash}" "${dir}/endorser_public_key.pem"
   if [[ -n "${logentry_hash}" ]]; then
-    fetch_file "${logentry_hash}" "${dir}/logentry.json"
+    fetch_file "${fbucket}" "${logentry_hash}" "${dir}/logentry.json"
   fi
 }
 
@@ -146,29 +159,43 @@ verify() {
 }
 
 download_verify() {
-  local endorsement_hash="$1"
+  local fbucket="$1"
+  local ibucket="$2"
+  local endorsement_hash="$3"
 
   local dir=$(mktemp -d)
   >&2 echo "ls -la ${dir}"
-  download "${endorsement_hash}" "${dir}"
+  download "${fbucket}" "${ibucket}" "${endorsement_hash}" "${dir}"
   ls -la "${dir}" 1>&2
   verify "${dir}"
 }
 
 trap usage_and_exit ERR # When shift fails
+fbucket="${DEFAULT_FBUCKET}"
+ibucket="${DEFAULT_IBUCKET}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --fbucket)
+      shift
+      fbucket="$1"
+      shift
+      ;;
+    --ibucket)
+      shift
+      ibucket="$1"
+      shift
+      ;;
     --key_file)
       shift
       keyfile="$1"
       shift
-      list_all_endorsements "${keyfile}"
+      list_all_endorsements "${fbucket}" "${ibucket}" "${keyfile}"
       ;;
     --endorsement_hash)
       shift
       endorsement_hash="$1"
       shift
-      download_verify "${endorsement_hash}"
+      download_verify "${fbucket}" "${ibucket}" "${endorsement_hash}"
       ;;
     *)
       usage_and_exit
