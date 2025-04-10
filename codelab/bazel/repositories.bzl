@@ -1,5 +1,5 @@
 #
-# Copyright 2025 The Project Oak Authors
+# Copyright 2024 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,25 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""Functions to load Oak dependencies."""
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//bazel/tools/umoci:umoci_toolchain.bzl", "register_umoci_toolchain")
 
-package(
-    default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
-)
-
-rust_binary(
-    name = "enclave_app",
-    srcs = glob(["src/*.rs"]),
-    platform = "@oak//:x86_64-unknown-none",
-    rustc_flags = [
-        "--codegen=link-arg=-zmax-page-size=0x200000",
-    ],
-    deps = [
-        "//service",
-        "@oak//micro_rpc",
-        "@oak//oak_restricted_kernel_sdk",
-        "@oak_crates_index//:serde",
-    ],
-)
+# buildifier: disable=unnamed-macro
+def oak_toolchain_repositories(oak_workspace_name = None):
+    """Downloads dependencies and registers toolchains used by Oak rules."""
+    register_umoci_toolchain(name = "umoci_toolchain", oak_workspace_name = oak_workspace_name)

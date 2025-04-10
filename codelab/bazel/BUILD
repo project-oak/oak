@@ -1,5 +1,5 @@
 #
-# Copyright 2025 The Project Oak Authors
+# Copyright 2024 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,24 +14,4 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
-
-package(
-    default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
-)
-
-rust_binary(
-    name = "enclave_app",
-    srcs = glob(["src/*.rs"]),
-    platform = "@oak//:x86_64-unknown-none",
-    rustc_flags = [
-        "--codegen=link-arg=-zmax-page-size=0x200000",
-    ],
-    deps = [
-        "//service",
-        "@oak//micro_rpc",
-        "@oak//oak_restricted_kernel_sdk",
-        "@oak_crates_index//:serde",
-    ],
-)
+package(licenses = ["notice"])
