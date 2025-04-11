@@ -32,6 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/containers/hostlib_key_provisioning.proto",
         "../proto/containers/interfaces.proto",
         "../proto/containers/orchestrator_crypto.proto",
+        "../proto/crypto/certificate.proto",
         "../proto/crypto/crypto.proto",
         "../proto/digest.proto",
         "../proto/variant.proto",

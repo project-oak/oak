@@ -80,6 +80,7 @@ cargo_build_script(
         "//proto/containers:hostlib_key_provisioning.proto",
         "//proto/containers:interfaces.proto",
         "//proto/containers:orchestrator_crypto.proto",
+        "//proto/crypto:certificate.proto",
         "//proto/crypto:crypto.proto",
         "//proto/key_provisioning:key_provisioning.proto",
         "//proto/micro_rpc:options.proto",

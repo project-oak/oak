@@ -25,6 +25,24 @@ package(
 )
 
 proto_library(
+    name = "certificate_proto",
+    srcs = ["certificate.proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "certificate_cc_proto",
+    deps = [":certificate_proto"],
+)
+
+java_proto_library(
+    name = "certificate_java_proto",
+    deps = [":certificate_proto"],
+)
+
+proto_library(
     name = "crypto_proto",
     srcs = ["crypto.proto"],
 )
@@ -42,6 +60,9 @@ java_proto_library(
 build_test(
     name = "build_test",
     targets = [
+        ":certificate_proto",
+        ":certificate_cc_proto",
+        ":certificate_java_proto",
         ":crypto_proto",
         ":crypto_cc_proto",
         ":crypto_java_proto",

@@ -39,6 +39,7 @@ pub mod perftools {
 
 pub mod attestation;
 pub mod base64data;
+pub mod certificate;
 pub mod variant;
 
 pub mod oak {
