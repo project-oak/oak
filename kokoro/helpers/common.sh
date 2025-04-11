@@ -33,6 +33,10 @@ function kokoro_cleanup() {
       ./bazel-out \
       ./bazel-testlogs \
       ./bazel-workspace \
+      ./oak_private_memory/bazel-bin \
+      ./oak_private_memory/bazel-out \
+      ./oak_private_memory/bazel-testlogs \
+      ./oak_private_memory/bazel-oak_private_memory \
       ./codelab/bazel-out \
       ./codelab/bazel-bin \
       ./codelab/bazel-testlogs \

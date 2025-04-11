@@ -12,17 +12,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+use std::{env, path::Path};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(not(feature = "bazel"))]
-    let included_protos = vec![std::path::PathBuf::from("../..")];
-    #[cfg(feature = "bazel")]
-    let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
+    let oak_proto_path_env = "OAK_PROTO_PATH";
+    let val = env::var(oak_proto_path_env).unwrap();
+    let path = Path::new(&val);
+    let path_str = path.parent().unwrap().parent().unwrap().parent().unwrap();
 
-    let proto_paths = [
-        "../../oak_private_memory/proto/sealed_memory.proto",
-        "../../oak_private_memory/proto/database.proto",
-    ];
+    #[cfg(not(feature = "bazel"))]
+    let mut included_protos = vec![std::path::PathBuf::from("..")];
+    #[cfg(feature = "bazel")]
+    let mut included_protos = oak_proto_build_utils::get_common_proto_path("..");
+
+    included_protos.push(path_str.to_path_buf());
+
+    let proto_paths = ["../proto/sealed_memory.proto", "../proto/database.proto"];
 
     let mut config = prost_build::Config::new();
 

@@ -1,0 +1,201 @@
+#
+# Copyright 2025 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+workspace(name = "oak_private_memory")
+
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# The `name` argument in all `http_archive` rules should be equal to the
+# WORKSPACE name of the corresponding library.
+
+git_repository(
+    name = "oak",
+    commit = "0568da108dc751efb0c79d992cf231e245ee2526",  # 2025-04-10
+    remote = "https://github.com/project-oak/oak.git",
+)
+
+# Bazel rules for building OCI images and runtime bundles.
+http_archive(
+    name = "rules_oci",
+    sha256 = "56d5499025d67a6b86b2e6ebae5232c72104ae682b5a21287770bd3bf0661abf",
+    strip_prefix = "rules_oci-1.7.5",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.5/rules_oci-v1.7.5.tar.gz",
+)
+
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "LATEST_ZOT_VERSION", "oci_register_toolchains")
+
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
+    zot_version = LATEST_ZOT_VERSION,
+)
+
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+oci_pull(
+    name = "distroless_cc_debian12",
+    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
+    image = "gcr.io/distroless/cc-debian12",
+    platforms = ["linux/amd64"],
+)
+
+load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
+
+register_expand_template_toolchains()
+
+load("@oak//bazel:repositories.bzl", "oak_toolchain_repositories")
+
+oak_toolchain_repositories()
+
+SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
+
+http_archive(
+    name = "oak_cc_toolchain_sysroot",
+    build_file = "@oak//:toolchain/sysroot.BUILD",
+    sha256 = SYSROOT_SHA256,
+    url = "https://storage.googleapis.com/oak-bins/sysroot/" + SYSROOT_SHA256 + ".tar.xz",
+)
+
+http_archive(
+    name = "aspect_gcc_toolchain",
+    patches = [
+        "@oak//:third_party/aspect-gcc.patch",
+    ],
+    sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
+    strip_prefix = "gcc-toolchain-0.4.2",
+    urls = [
+        "https://github.com/aspect-build/gcc-toolchain/archive/refs/tags/0.4.2.tar.gz",
+    ],
+)
+
+load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
+
+gcc_toolchain_dependencies()
+
+load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64",
+    # Prevents aspect_gcc from rendering -nostdinc flag. Needed to compile wasmtime.
+    # See b/352306808#comment25.
+    extra_cflags = [
+        "-B%workspace%/bin",
+    ],
+    # Manually override ldflags and includes to paths we know exist in our sysroot.
+    # These are based on https://github.com/f0rmiga/gcc-toolchain/blob/36e3e1f430871b539ce9261f53491564aa91c170/sysroot/flags.bzl,
+    # just adjusted for our environment.
+    extra_ldflags = [
+        "-B%workspace%/bin",
+        "-B%sysroot%/usr/lib/x86_64-linux-gnu",
+        "-B%sysroot%/lib64/x86_64-linux-gnu",
+        "-L%sysroot%/lib64/x86_64-linux-gnu",
+        "-L%sysroot%/usr/lib/x86_64-linux-gnu",
+        "-L%sysroot%/lib/gcc/x86_64-linux-gnu/12",
+    ],
+    includes = [
+        # Order matters here! Don't let it get sorted.
+        "%sysroot%/lib/gcc/x86_64-linux-gnu/12/include",
+        "%sysroot%/usr/include/x86_64-linux-gnu",
+        "%sysroot%/usr/include/c++/12",
+        "%sysroot%/usr/include/x86_64-linux-gnu/c++/12/",
+        "%sysroot%/usr/include",
+    ],
+    # sha256 of the compiler package
+    sha256 = "5d515f6e4b311d7636a3cf600cd02fde7d0beb0a2f143df4921ff5a61cbaebcb",
+    # what prefix to strip from the compiler package
+    strip_prefix = "x86-64-v3--glibc--stable-2024.02-1",
+    # Use the sysroot which is effectively our system image for consistency.
+    sysroot = "@oak_cc_toolchain_sysroot//:sysroot",
+    # target_compatible_with defaults to os:linux.
+    target_arch = ARCHS.x86_64,
+    # Which compiler to use: this is GCC 12, just as in Debian.
+    # Note: v4 compiler requires AVX512. But recent AMD workstation processor
+    # e.g. 5995WX does not support AVX512. We have to use v3 which is more
+    # friendly to AMD users.
+    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64-v3/tarballs/x86-64-v3--glibc--stable-2024.02-1.tar.bz2",
+)
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64_unknown_none",
+    extra_ldflags = ["-nostdlib"],
+    target_arch = ARCHS.x86_64,
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+    ],
+)
+
+load("@oak//bazel/rust:deps.bzl", "load_rust_repositories")
+
+load_rust_repositories()
+
+load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
+
+setup_rust_dependencies()
+
+load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
+
+create_oak_crate_repositories(
+    cargo_lockfile = "//:Cargo.bazel.lock",
+    lockfile = "//:cargo-bazel-lock.json",
+    no_std_cargo_lockfile = "//:Cargo_no_std.bazel.lock",
+    no_std_lockfile = "//:cargo-no-std-bazel-lock.json",
+    no_std_no_avx_cargo_lockfile = "//:Cargo_no_std_no_avx.bazel.lock",
+    no_std_no_avx_lockfile = "//:cargo-no-std-no-avx-bazel-lock.json",
+)
+
+load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
+
+load_oak_crate_repositories()
+
+# Bits of Oak depend on gRPC and Java(!), thus these. There are no direct uses
+# of either in this code, however.
+
+http_archive(
+    name = "com_github_grpc_grpc",
+    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
+    strip_prefix = "grpc-1.62.0",
+    urls = [
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
+    ],
+)
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+
+grpc_extra_deps()
+
+http_archive(
+    name = "io_grpc_grpc_java",
+    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
+    strip_prefix = "grpc-java-1.56.0",
+    urls = [
+        # Java gRPC v1.56.0 (2023-06-21).
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
+    ],
+)
+
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()

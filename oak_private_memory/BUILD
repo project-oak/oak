@@ -14,13 +14,12 @@
 # limitations under the License.
 #
 
+load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "oci_runtime_bundle")
 
 package(
-    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
@@ -32,11 +31,11 @@ rust_library(
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        "//oak_crypto",
-        "//oak_private_memory/proto:sealed_memory_rust_proto",
-        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
-        "//oak_proto_rust",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_crypto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:prost",
@@ -58,12 +57,12 @@ rust_library(
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        "//oak_crypto",
-        "//oak_private_memory/proto:sealed_memory_rust_proto",
-        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
-        "//oak_proto_rust",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
-        "//oak_session",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_crypto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
+        "@oak//oak_session",
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
@@ -83,9 +82,9 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":private_memory_server_lib",
-        "//oak_sdk/containers:oak_sdk_containers",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
-        "//oak_session",
+        "@oak//oak_sdk/containers:oak_sdk_containers",
+        "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
+        "@oak//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
@@ -99,16 +98,16 @@ rust_test(
     deps = [
         ":private_memory_database_server_lib",
         ":private_memory_server_lib",
-        "//oak_client",
-        "//oak_client/tonic:oak_client_tonic",
-        "//oak_crypto",
-        "//oak_private_memory/proto:sealed_memory_rust_proto",
-        "//oak_private_memory/proto/grpc:sealed_memory_grpc_proto",
-        "//oak_proto_rust",
-        "//oak_proto_rust/grpc",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
-        "//oak_sdk/standalone:oak_sdk_standalone",
-        "//oak_session",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_client",
+        "@oak//oak_client/tonic:oak_client_tonic",
+        "@oak//oak_crypto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_proto_rust/grpc",
+        "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
+        "@oak//oak_sdk/standalone:oak_sdk_standalone",
+        "@oak//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",

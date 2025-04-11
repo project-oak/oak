@@ -19,7 +19,7 @@ load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -30,7 +30,7 @@ proto_library(
         "sealed_memory.proto",
     ],
     deps = [
-        "//proto/session:session_proto",
+        "@oak//proto/session:session_proto",
     ],
 )
 
@@ -42,29 +42,30 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
         "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
+        "OAK_PROTO_PATH": "$(location @oak//proto/session:session.proto)",
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         ":database.proto",
         ":sealed_memory.proto",
-        "//proto:digest.proto",
-        "//proto:variant.proto",
-        "//proto/attestation:endorsement.proto",
-        "//proto/attestation:eventlog.proto",
-        "//proto/attestation:evidence.proto",
-        "//proto/crypto:crypto.proto",
-        "//proto/session:messages.proto",
-        "//proto/session:service_streaming.proto",
-        "//proto/session:session.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
+        "@oak//proto:digest.proto",
+        "@oak//proto:variant.proto",
+        "@oak//proto/attestation:endorsement.proto",
+        "@oak//proto/attestation:eventlog.proto",
+        "@oak//proto/attestation:evidence.proto",
+        "@oak//proto/crypto:crypto.proto",
+        "@oak//proto/session:messages.proto",
+        "@oak//proto/session:service_streaming.proto",
+        "@oak//proto/session:session.proto",
     ],
     tools = [
         "@com_google_protobuf//:protoc",
     ],
     deps = [
-        "//oak_grpc_utils",
-        "//oak_proto_build_utils",
+        "@oak//oak_grpc_utils",
+        "@oak//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
         "@oak_crates_index//:serde",
     ],
@@ -78,7 +79,7 @@ rust_library(
     ],
     deps = [
         ":build",
-        "//oak_proto_rust",
+        "@oak//oak_proto_rust",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",

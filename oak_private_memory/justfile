@@ -1,0 +1,9 @@
+presubmit: format clippy
+
+format:
+    bazel build --config=rustfmt //:private_memory_server
+
+clippy:
+    bazel build --keep_going --config=clippy "$@" //:private_memory_server
+
+

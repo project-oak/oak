@@ -39,7 +39,8 @@ presubmit: \
     build-and-test \
     clippy-ci \
     cargo-audit \
-    cargo-udeps
+    cargo-udeps \
+    private_memory_presubmit
 
 presubmit-full: \
     presubmit \
@@ -176,20 +177,23 @@ oak_client_android_app:
         bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
         artifacts
 
+private_memory_presubmit:
+    cd oak_private_memory && just presubmit
+
 oak_private_memory:  private_memory_server private_memory_enclave_bundle
 
 private_memory_server:
-    bazel build {{BAZEL_CONFIG_FLAG}} \
-        //oak_private_memory:private_memory_server
+    cd oak_private_memory && bazel build \
+        //:private_memory_server
     cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_private_memory/private_memory_server \
+        oak_private_memory/bazel-bin/private_memory_server \
         artifacts
 
 private_memory_enclave_bundle:
-    bazel build {{BAZEL_CONFIG_FLAG}} \
-        //oak_private_memory:bundle.tar
+    cd oak_private_memory && bazel build \
+        //:bundle.tar
     cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_private_memory/bundle.tar \
+        oak_private_memory/bazel-bin/bundle.tar \
         artifacts/private_memory_enclave_bundle.tar
 
 wasm_crate name:
