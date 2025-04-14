@@ -1,4 +1,7 @@
-presubmit: format clippy
+presubmit: format clippy test
+
+test:
+    bazel test //:standalone_test
 
 format:
     bazel build --config=rustfmt //:private_memory_server

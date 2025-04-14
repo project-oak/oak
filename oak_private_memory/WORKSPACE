@@ -24,7 +24,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 git_repository(
     name = "oak",
-    commit = "0568da108dc751efb0c79d992cf231e245ee2526",  # 2025-04-10
+    commit = "b7f420ae5ab506517ec64fe14e57f2b4ade9cb13",  # 2025-04-14
     remote = "https://github.com/project-oak/oak.git",
 )
 
