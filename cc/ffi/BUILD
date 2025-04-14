@@ -36,3 +36,9 @@ cc_library(
         "@com_google_absl//absl/strings:string_view",
     ],
 )
+
+cc_library(
+    name = "cxx_string",
+    srcs = ["cxx_string.cc"],
+    hdrs = ["cxx_string.h"],
+)

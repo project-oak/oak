@@ -48,6 +48,8 @@ struct BytesView {
 
   explicit BytesView(absl::string_view bytes);
   explicit BytesView(RustBytes bytes);
+
+  operator absl::string_view() { return absl::string_view(data, len); }
 };
 
 extern "C" {

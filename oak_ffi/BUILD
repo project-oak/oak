@@ -14,11 +14,22 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
+)
+
+cc_library(
+    name = "cxx_string_test_foreign",
+    srcs = ["cxx_string_test_foreign.cc"],
+    hdrs = ["cxx_string_test_foreign.h"],
+    deps = [
+        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:cxx_string",
+        "@com_google_absl//absl/strings",
+    ],
 )
 
 rust_library(
@@ -30,4 +41,19 @@ rust_library(
     name = "oak_ffi_error",
     srcs = ["error.rs"],
     deps = [":oak_ffi_bytes"],
+)
+
+rust_library(
+    name = "cxx_string",
+    srcs = ["cxx_string.rs"],
+)
+
+rust_test(
+    name = "cxx_string_test",
+    crate = ":cxx_string",
+    deps = [
+        ":cxx_string_test_foreign",
+        ":oak_ffi_bytes",
+        "//cc/ffi:cxx_string",
+    ],
 )
