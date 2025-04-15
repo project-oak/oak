@@ -262,30 +262,26 @@ def _common_crates(std):
 
 # Annotations for the no_std crates index.
 OAK_NO_STD_ANNOTATIONS = {
-    "linked_list_allocator": [crate.annotation(
-        # overflow-checks are disabled for release builds, and for some reason Restricted Kernel
-        # hits them in dev builds.  Let's disable them everywhere.
-        rustc_flags = ["-C", "overflow-checks=false"],
-    )],
 }
 
 # Crates for the no_std crates index. Crates that are used in all crate indexes
 # should instead be added to _common_crates.
-OAK_NO_STD_CRATES = _common_crates(std = False) | {
+OAK_NO_STD_CRATES = {
     "virtio-drivers": crate.spec(version = "0.7.3"),
 }
 
 # Annotations for the no_std no-AVX crates index.
 OAK_NO_STD_NO_AVX_ANNOTATIONS = {
-    "sha2": [crate.annotation(
-        # Crate feature needed for SHA2 to build if AVX is not enabled.
-        crate_features = ["force-soft"],
-    )],
 }
 
 # Crates for the no_std no-AVX (no-alloc) crates index. Crates that are used in
 # all crate indexes should instead be added to _common_crates.
-OAK_NO_STD_NO_AVX_CRATES = _common_crates(std = False)
+OAK_NO_STD_NO_AVX_CRATES = {
+    "zeroize": crate.spec(
+        features = ["derive"],
+        version = "1.7.0",
+    ),
+}
 
 # Annotations for the std crates index.
 OAK_STD_ANNOTATIONS = {

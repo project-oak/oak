@@ -178,20 +178,16 @@ oak_client_android_app:
         artifacts
 
 private_memory_presubmit:
-    cd oak_private_memory && just presubmit
+    cd oak_private_memory && nix develop --command just presubmit
 
 oak_private_memory:  private_memory_server private_memory_enclave_bundle
 
-private_memory_server:
-    cd oak_private_memory && bazel build \
-        //:private_memory_server
+private_memory_server: private_memory_presubmit
     cp --force --preserve=timestamps --no-preserve=mode \
         oak_private_memory/bazel-bin/private_memory_server \
         artifacts
 
-private_memory_enclave_bundle:
-    cd oak_private_memory && bazel build \
-        //:bundle.tar
+private_memory_enclave_bundle: private_memory_presubmit
     cp --force --preserve=timestamps --no-preserve=mode \
         oak_private_memory/bazel-bin/bundle.tar \
         artifacts/private_memory_enclave_bundle.tar

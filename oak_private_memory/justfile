@@ -1,4 +1,8 @@
-presubmit: format clippy test
+presubmit: format clippy test build
+
+build:
+    bazel build //:private_memory_server
+    bazel build //:bundle.tar
 
 test:
     bazel test //:standalone_test
