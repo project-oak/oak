@@ -59,7 +59,10 @@ java_proto_library(
 proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
-    deps = ["//proto:variant_proto"],
+    deps = [
+        "//proto:variant_proto",
+        "//proto/crypto:certificate_proto",
+    ],
 )
 
 cc_proto_library(

@@ -26,6 +26,7 @@ rust_library(
     name = "oak_crypto",
     srcs = glob([
         "src/*.rs",
+        "src/certificate/*.rs",
         "src/hpke/*.rs",
         "src/noise_handshake/*.rs",
     ]),

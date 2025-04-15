@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,5 @@
 // limitations under the License.
 //
 
-#![no_std]
-
-extern crate alloc;
-extern crate static_assertions;
-
-#[cfg(test)]
-extern crate std;
-
-pub mod certificate;
-pub mod encryption_key;
-pub mod encryptor;
-pub mod hpke;
-pub mod identity_key;
-pub mod noise_handshake;
-pub mod signer;
-#[cfg(test)]
-mod tests;
-pub mod verifier;
-
-pub const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
+pub mod certificate_authority;
+pub mod certificate_verifier;

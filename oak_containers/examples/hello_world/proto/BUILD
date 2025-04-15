@@ -63,6 +63,7 @@ cargo_build_script(
         "//proto/attestation:endorsement.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",
+        "//proto/crypto:certificate.proto",
         "//proto/crypto:crypto.proto",
         "//proto/session:messages.proto",
         "//proto/session:service_streaming.proto",

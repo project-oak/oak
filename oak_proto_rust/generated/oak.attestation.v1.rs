@@ -846,6 +846,15 @@ pub struct TinkEndorsement {
     #[prost(bytes = "vec", tag = "1")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
+/// Endorsement containing a certificate that signs one of the enclave public
+/// keys. The public key is specified by the certificate itself.
+/// Certificate is represented as a \[`oak.crypto.v1.Certificate`\] proto message.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct CertificateAuthorityEndorsement {
+    #[prost(message, optional, tag = "1")]
+    pub certificate: ::core::option::Option<super::super::crypto::v1::Certificate>,
+}
 /// A Transparent Release endorsement for a binary which includes the actual
 /// endorsement, a signature over it, and optionally a transparency log entry.
 /// Don't use this message in new code, use `SignedEndorsement` instead.
@@ -1043,7 +1052,7 @@ pub struct ContainerEndorsement {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionBindingPublicKeyEndorsement {
-    #[prost(oneof = "session_binding_public_key_endorsement::Type", tags = "1")]
+    #[prost(oneof = "session_binding_public_key_endorsement::Type", tags = "1, 2")]
     pub r#type: ::core::option::Option<session_binding_public_key_endorsement::Type>,
 }
 /// Nested message and enum types in `SessionBindingPublicKeyEndorsement`.
@@ -1056,6 +1065,10 @@ pub mod session_binding_public_key_endorsement {
         /// <<https://developers.google.com/tink>>
         #[prost(message, tag = "1")]
         TinkEndorsement(super::TinkEndorsement),
+        /// Certificate created by the certificate authority that signs the session
+        /// binding public key.
+        #[prost(message, tag = "2")]
+        CertificateAuthorityEndorsement(super::CertificateAuthorityEndorsement),
     }
 }
 /// This message contains statements that some entity (e.g. a hardware provider)

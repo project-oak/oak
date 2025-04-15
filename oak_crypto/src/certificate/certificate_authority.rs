@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,17 @@
 // limitations under the License.
 //
 
-#![no_std]
+use oak_proto_rust::oak::crypto::v1::Certificate;
 
-extern crate alloc;
-extern crate static_assertions;
+use crate::signer::Signer;
 
-#[cfg(test)]
-extern crate std;
+pub struct CertificateAuthority<S: Signer> {
+    _signer: S,
+}
 
-pub mod certificate;
-pub mod encryption_key;
-pub mod encryptor;
-pub mod hpke;
-pub mod identity_key;
-pub mod noise_handshake;
-pub mod signer;
-#[cfg(test)]
-mod tests;
-pub mod verifier;
-
-pub const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
+impl<S: Signer> CertificateAuthority<S> {
+    pub fn generate_certificate(&self, _message: &[u8]) -> anyhow::Result<Certificate> {
+        // TODO: b/412607530 - Implement certificate generation in Rust.
+        Err(anyhow::Error::msg("Not implemented"))
+    }
+}
