@@ -119,6 +119,10 @@ pub mod oak {
         }
     }
 
+    pub mod packages {
+        include_proto!("oak.packages");
+    }
+
     pub mod restricted_kernel {
         include_proto!("oak.restricted_kernel");
     }
