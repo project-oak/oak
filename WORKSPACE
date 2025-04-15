@@ -467,3 +467,23 @@ nix_kernel_repo(
     bzImage_sha256 = "7f59a5462ca2926c62cb75db5e5050cb997d03729a96160742388e515b95cd30",
     bzImage_vanilla_sha256 = "a22f0d328990704ef8f1aa2b3a629a426f9949e6887dab5e35b1e338a9a79b9a",
 )
+
+# Tink C++
+# https://github.com/tink-crypto/tink-cc
+http_archive(
+    name = "com_github_tink_crypto_tink_cc",
+    sha256 = "363ce671ab5ce0b24f279d3647185597a25f407c3608db007315f79f151f436b",
+    strip_prefix = "tink-cc-2.3.0",
+    urls = [
+        # Tink v2.3.0 release
+        "https://github.com/tink-crypto/tink-cc/archive/refs/tags/v2.3.0.zip",
+    ],
+)
+
+load("@com_github_tink_crypto_tink_cc//:tink_cc_deps.bzl", "tink_cc_deps")
+
+tink_cc_deps()
+
+load("@com_github_tink_crypto_tink_cc//:tink_cc_deps_init.bzl", "tink_cc_deps_init")
+
+tink_cc_deps_init()
