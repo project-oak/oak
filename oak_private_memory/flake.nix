@@ -71,8 +71,6 @@
                 cargo-nextest
                 cargo-udeps
                 cargo-vet
-                protobuf
-                buf # utility to convert binary protobuf to json; for breaking change detection.
                 systemd
                 qemu_kvm
                 python312

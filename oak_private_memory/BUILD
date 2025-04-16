@@ -82,12 +82,22 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":private_memory_server_lib",
+        "@icing",
         "@oak//oak_sdk/containers:oak_sdk_containers",
         "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
         "@oak//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+cc_binary(
+    name = "icing_porting_test",
+    srcs = ["test/icing_porting_test.cc"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "@icing",
     ],
 )
 

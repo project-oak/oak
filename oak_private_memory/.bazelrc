@@ -1,7 +1,7 @@
 # Bazel defaults.
 
 # Should not be needed after Bazel 7.0 is released.
-common --incompatible_enable_cc_toolchain_resolution
+#common --incompatible_enable_cc_toolchain_resolution
 
 # Build C++ targets using C++17.
 # <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>

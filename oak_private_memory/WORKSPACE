@@ -19,6 +19,9 @@ workspace(name = "oak_private_memory")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# sysroot from the oak repo.
+# As we are actually doing cross-compilation: Build on our dev host but run in
+# the vm + container, we need the sysroot of the execution env for the llvm toolchain.
 SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
 
 http_archive(
@@ -53,10 +56,21 @@ load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
 llvm_register_toolchains()
 
 http_archive(
+    name = "rules_java",
+    sha256 = "6d8c6d5cd86fed031ee48424f238fa35f33abc9921fd97dd4ae1119a29fc807f",
+    urls = [
+        "https://github.com/bazelbuild/rules_java/releases/download/8.6.3/rules_java-8.6.3.tar.gz",
+    ],
+)
+
+load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
+
+rules_java_dependencies()
+
+http_archive(
     name = "com_google_protobuf",
-    sha256 = "63150aba23f7a90fd7d87bdf514e459dd5fe7023fdde01b56ac53335df64d4bd",
-    strip_prefix = "protobuf-29.2",
-    url = "https://github.com/protocolbuffers/protobuf/releases/download/v29.2/protobuf-29.2.tar.gz",
+    strip_prefix = "protobuf-30.2",
+    url = "https://github.com/protocolbuffers/protobuf/releases/download/v30.2/protobuf-30.2.tar.gz",
 )
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
@@ -170,4 +184,45 @@ http_archive(
     sha256 = "91d29f7ddd9eedda896cfde88c9c96d796e217061195843511f403090d2248ca",
     strip_prefix = "cxx-1.0.157",
     url = "https://github.com/dtolnay/cxx/archive/refs/tags/1.0.157.tar.gz",
+)
+
+http_archive(
+    name = "rules_foreign_cc",
+    sha256 = "8e5605dc2d16a4229cb8fbe398514b10528553ed4f5f7737b663fdd92f48e1c2",
+    strip_prefix = "rules_foreign_cc-0.13.0",
+    url = "https://github.com/bazel-contrib/rules_foreign_cc/releases/download/0.13.0/rules_foreign_cc-0.13.0.tar.gz",
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+# This sets up some common toolchains for building targets. For more details, please see
+# https://bazelbuild.github.io/rules_foreign_cc/0.13.0/flatten.html#rules_foreign_cc_dependencies
+rules_foreign_cc_dependencies()
+
+http_archive(
+    name = "bazel_features",
+    sha256 = "2f057dd02098a106095ea291b4344257398a059eadb2c74cc470de0f9664dccd",
+    strip_prefix = "bazel_features-1.28.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.28.0/bazel_features-v1.28.0.tar.gz",
+)
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
+
+http_archive(
+    name = "icu",
+    build_file = "@//third_party/icu:icu.BUILD",
+    # Remove the BUILD files because it will prevent configure_make to find
+    # the files in directories containing the BUILD files.
+    patch_cmds = ["cd source && find . -type f -name \"BUILD.bazel\" -delete"],
+    strip_prefix = "icu",
+    urls = ["https://github.com/unicode-org/icu/releases/download/release-73-1/icu4c-73_1-src.tgz"],
+)
+
+git_repository(
+    name = "icing",
+    build_file = "@//third_party/icing:BUILD.bazel",
+    commit = "11b17218f88add0986ecfe7f04062dd0bc97bebe",  # 2025-04-14
+    remote = "https://android.googlesource.com/platform/external/icing",
 )

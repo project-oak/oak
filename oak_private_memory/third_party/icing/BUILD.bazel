@@ -1,0 +1,103 @@
+#
+# Copyright 2025 The Project Oak Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(default_visibility = ["//visibility:public"])
+
+proto_library(
+    name = "icing_proto",
+    srcs = glob(["proto/**/*.proto"]),
+    strip_import_prefix = "proto",
+)
+
+cc_proto_library(
+    name = "icing_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":icing_proto"],
+)
+
+# Using example from https://github.com/hlopko/bazel-jni-example/blob/main/tools/jni/BUILD
+genrule(
+    name = "copy_link_jni_md_header",
+    srcs = ["@bazel_tools//tools/jdk:jni_md_header-linux"],
+    outs = ["jni_md.h"],
+    cmd = "cp -f $< $@",
+)
+
+genrule(
+    name = "copy_link_jni_header",
+    srcs = ["@bazel_tools//tools/jdk:jni_header"],
+    outs = ["jni.h"],
+    cmd = "cp -f $< $@",
+)
+
+cc_library(
+    name = "copy_jni_hdr_lib",
+    hdrs = [
+        ":copy_link_jni_header",
+        ":copy_link_jni_md_header",
+    ],
+    includes = ["."],
+)
+
+cc_library(
+    name = "icing",
+    # Use glob to find sources, applying exclusions similar to CMake's FILTER
+    srcs = glob(
+        ["icing/**/*.cc"],
+        exclude = [
+            # Exclude test files (approximating the CMake regex)
+            "icing/monkey_test/**",
+            "icing/**/*test*.cc",  # Files with 'test' anywhere in the name
+            "icing/**/*_test.cc",  # Common test naming convention
+            # Exclude benchmark files
+            "icing/**/*_benchmark.cc",
+            # Exclude specific directories
+            "icing/helpers/icu/**/*.cc",
+            "icing/testing/**/*.cc",
+            "icing/tokenization/reverse_jni/**/*.cc",
+            "icing/transform/map/**/*.cc",
+            "icing/transform/simple/**/*.cc",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "icing/**/*.h",
+            "icing/portable/equals-proto.h",
+        ],
+        exclude = [
+            # Exclude test files
+            "icing/**/*test*.h",
+            "icing/**/*_test.h",
+            # Exclude specific directories
+            "icing/helpers/icu/**/*.h",
+            "icing/testing/**/*.h",
+            "icing/tokenization/reverse_jni/**/*.cc",
+            "icing/transform/map/**/*.h",
+            "icing/transform/simple/**/*.h",
+        ],
+    ),
+    includes = [
+        ".",  # For includes relative to the library's root (like CMAKE_CURRENT_SOURCE_DIR)
+    ],
+    deps = [
+        ":copy_jni_hdr_lib",
+        ":icing_cc_proto",
+        "@icu//:common",
+    ],
+)

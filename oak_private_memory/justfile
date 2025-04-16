@@ -3,6 +3,7 @@ presubmit: format clippy test build
 build:
     bazel build //:private_memory_server
     bazel build //:bundle.tar
+    bazel run //:icing_porting_test
     # FFI related
     bazel build //src/cxx_example:demo
 
