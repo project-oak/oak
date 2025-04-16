@@ -29,7 +29,7 @@ cc_library(
         "//cc/crypto:encryption_key",
         "//cc/crypto:server_encryptor",
         "//cc/crypto/hpke:recipient_context",
-        "//cc/ffi:bytes_bindings",
+        "//cc/ffi:bytes_view",
         "//oak_sdk/standalone:ffi",
         "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/log",

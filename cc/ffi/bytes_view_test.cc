@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Project Oak Authors
+ * Copyright 2025 The Project Oak Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-#include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 
-#include <iostream>
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
-#include "absl/strings/string_view.h"
+namespace oak::ffi {
+namespace {
 
-namespace oak::ffi::bindings {
+using ::testing::Eq;
 
-BytesView::BytesView(absl::string_view bytes)
-    : data(bytes.data()), len(bytes.size()) {}
+absl::string_view AcceptsStringView(absl::string_view sv) { return sv; }
 
-BytesView::BytesView(RustBytes bytes) : data(bytes.data), len(bytes.len) {}
+TEST(BytesViewTest, BytesViewCoercesToStringView) {
+  std::string str = "Some string";
+  bindings::BytesView bytes_view(str);
 
-std::ostream& operator<<(std::ostream& stream, const BytesView& bytes) {
-  stream << absl::string_view(bytes.data, bytes.len);
-  return stream;
-}
-
-}  // namespace oak::ffi::bindings
+  EXPECT_THAT(AcceptsStringView(bytes_view), Eq(str));
+}  // namespace
+}  // namespace
+}  // namespace oak::ffi

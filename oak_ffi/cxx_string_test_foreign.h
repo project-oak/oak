@@ -17,7 +17,7 @@
 #ifndef OAK_FFI_CXX_STRING_TEST_FOREIGN_H_
 #define OAK_FFI_CXX_STRING_TEST_FOREIGN_H_
 
-#include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/cxx_string.h"
 
 // A simple test function to test returning CxxString to Rust.

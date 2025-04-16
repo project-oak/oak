@@ -20,6 +20,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/config.h"
 #include "proto/session/session.pb.h"

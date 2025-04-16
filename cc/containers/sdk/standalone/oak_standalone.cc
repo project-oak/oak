@@ -19,7 +19,7 @@
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "cc/crypto/hpke/recipient_context.h"
-#include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 #include "proto/session/messages.pb.h"
 
 namespace oak::containers::sdk::standalone {

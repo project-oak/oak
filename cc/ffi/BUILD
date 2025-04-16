@@ -9,10 +9,19 @@ package(
 
 cc_library(
     name = "bytes_bindings",
-    srcs = ["bytes_bindings.cc"],
-    hdrs = ["bytes_bindings.h"],
+    hdrs = [
+        "bytes_bindings.h",
+    ],
     deps = [
         "//oak_ffi:oak_ffi_bytes",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)
+
+cc_library(
+    name = "bytes_view",
+    hdrs = ["bytes_view.h"],
+    deps = [
         "@com_google_absl//absl/strings:string_view",
     ],
 )
@@ -41,4 +50,17 @@ cc_library(
     name = "cxx_string",
     srcs = ["cxx_string.cc"],
     hdrs = ["cxx_string.h"],
+)
+
+cc_test(
+    name = "bytes_view_test",
+    srcs = ["bytes_view_test.cc"],
+    deps = [
+        ":bytes_view",
+        # Without this dependency, we see linker errors, with allocator-related symbols not being present.
+        # If we uncomment this dependency, everything builds and links. But what is this actually adding
+        # that's not present in :bytes_bindings?
+        #":error_bindings",
+        "@com_google_googletest//:gtest_main",
+    ],
 )

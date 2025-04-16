@@ -24,7 +24,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/cxx_string.h"
 
 extern "C" oak::ffi::CxxString create_test_string(

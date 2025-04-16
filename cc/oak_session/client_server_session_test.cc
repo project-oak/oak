@@ -19,6 +19,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status_matchers.h"
 #include "absl/strings/string_view.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"

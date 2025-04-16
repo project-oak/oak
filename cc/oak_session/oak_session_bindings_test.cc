@@ -20,6 +20,7 @@
 
 #include "absl/log/log.h"
 #include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/error_bindings.h"
 #include "cc/oak_session/testing/matchers.h"
 #include "gmock/gmock.h"

@@ -27,6 +27,7 @@ cc_library(
     hdrs = ["cxx_string_test_foreign.h"],
     deps = [
         "//cc/ffi:bytes_bindings",
+        "//cc/ffi:bytes_view",
         "//cc/ffi:cxx_string",
         "@com_google_absl//absl/strings",
     ],

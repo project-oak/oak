@@ -24,6 +24,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/ffi/error_bindings.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/oak_session_bindings.h"

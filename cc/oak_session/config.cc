@@ -18,6 +18,7 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
+#include "cc/ffi/bytes_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
 
 namespace oak::session {
