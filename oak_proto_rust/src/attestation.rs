@@ -18,5 +18,4 @@
 /// Attestation type where the session binding key is signed by a key known to
 /// the client.
 #[allow(dead_code)]
-pub const SIGNATURE_BASED_ATTESTATION_ID: [u8; 16] =
-    [81, 54, 249, 225, 240, 173, 71, 33, 181, 68, 99, 119, 220, 60, 71, 3];
+pub const SIGNATURE_BASED_ATTESTATION_ID: &str = "95553023-358f-4f8c-b75c-e6e185cc05ca";
