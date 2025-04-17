@@ -73,7 +73,7 @@ ServerSession::GetOutgoingMessage() {
   }
 
   v1::SessionResponse response;
-  if (!response.ParseFromString(*result.result)) {
+  if (!response.ParseFromArray(result.result->data, result.result->len)) {
     return absl::InternalError(
         "Failed to parse GetOutoingMessage result bytes as SessionResponse");
   }
@@ -106,7 +106,8 @@ absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
   }
 
   v1::PlaintextMessage plaintext_message_result;
-  plaintext_message_result.set_plaintext(*result.result);
+  plaintext_message_result.set_plaintext(result.result->data,
+                                         result.result->len);
 
   ffi::bindings::free_rust_bytes(result.result);
   return plaintext_message_result;
