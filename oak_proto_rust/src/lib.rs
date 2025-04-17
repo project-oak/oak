@@ -37,6 +37,7 @@ pub mod perftools {
     }
 }
 
+pub mod attestation;
 pub mod base64data;
 pub mod variant;
 
