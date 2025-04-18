@@ -444,7 +444,11 @@ impl ApplicationHandler for SealedMemoryHandler {
             InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
                 .into_response()
         } else {
-            let request = request.unwrap().request.expect("The request should not empty!");
+            let request = request.unwrap().request;
+            if request.is_none() {
+                bail!("The request is empty. The json format might be incorrect: the data type should strictly match.");
+            }
+            let request = request.unwrap();
             match request {
                 sealed_memory_request::Request::KeySyncRequest(request) => self
                     .key_sync_handler(request, self.is_message_type_json(request_bytes))
