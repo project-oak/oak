@@ -208,6 +208,7 @@ def _common_crates(std):
             features = ["derive"],
             version = "1.0.195",
         ),
+        "serde-aux": crate.spec(version = "4.6.0"),
         "serde_json": crate.spec(
             default_features = False,
             features = ["alloc"],

@@ -47,6 +47,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.GetMemoryByIdResponse",
     ];
 
+    // `u64` fields in js are encoded as string when serializing to Json, which
+    // matches the json proto spec. To solve this, we deserialize the field as a
+    // string and then parse it as a u64. If the field is passed as a u64, we
+    // simply return the number.
+    let u64_fields = ["oak.private_memory.KeySyncRequest.uid"];
+
+    for message_type in u64_fields {
+        config.field_attribute(message_type, "#[serde(deserialize_with = \"serde_aux::field_attributes::deserialize_number_from_string\")]");
+    }
+
     let oneof_field_names = [
         "oak.private_memory.SealedMemoryResponse.response",
         "oak.private_memory.SealedMemoryRequest.request",

@@ -453,6 +453,13 @@ async fn test_noise_add_get_reset_memory_as_json() {
 
     let get_memories_response: GetMemoriesResponse =
         receive_plaintext_response_as_json(&mut response_stream, &mut client_session).await;
-
     assert_eq!(get_memories_response.memories.len(), 0);
+}
+
+#[test]
+fn proto_serialization_test() {
+    let request = KeySyncRequest { uid: 12345678910, data_encryption_key: vec![1, 2, 3] };
+    let json_str = "{\"dataEncryptionKey\":\"AQID\",\"uid\":\"12345678910\"}";
+    let request_from_string_num = serde_json::from_str::<KeySyncRequest>(&json_str).unwrap();
+    assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
 }
