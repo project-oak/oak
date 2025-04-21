@@ -92,6 +92,10 @@ message SealedMemoryRequest {
 
     KeySyncRequest key_sync_request = 6;
   }
+
+  // Optional unique identifier for this request within the session.
+  // It is set by the clients.
+  int32 request_id = 50;
 }
 
 message SealedMemoryResponse {
@@ -105,6 +109,9 @@ message SealedMemoryResponse {
     KeySyncResponse key_sync_response = 6;
     // ...
   }
+
+  // Propagated from the request_id from the request.
+  int32 request_id = 50;
 }
 
 service SealedMemoryService {

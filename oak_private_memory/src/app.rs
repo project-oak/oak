@@ -398,7 +398,10 @@ macro_rules! impl_packing {
             }
 
             fn into_request(self) -> SealedMemoryRequest {
-                SealedMemoryRequest { request: Some(sealed_memory_request::Request::$name(self)) }
+                SealedMemoryRequest {
+                    request: Some(sealed_memory_request::Request::$name(self)),
+                    request_id: 0,
+                }
             }
         }
     };
@@ -415,6 +418,7 @@ macro_rules! impl_packing {
             fn into_response(self) -> SealedMemoryResponse {
                 SealedMemoryResponse {
                     response: Some(sealed_memory_response::Response::$name(self)),
+                    request_id: 0,
                 }
             }
         }
@@ -444,12 +448,14 @@ impl ApplicationHandler for SealedMemoryHandler {
             InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
                 .into_response()
         } else {
-            let request = request.unwrap().request;
+            let request = request.unwrap();
+            let request_id = request.request_id;
+            let request = request.request;
             if request.is_none() {
                 bail!("The request is empty. The json format might be incorrect: the data type should strictly match.");
             }
             let request = request.unwrap();
-            match request {
+            let mut response = match request {
                 sealed_memory_request::Request::KeySyncRequest(request) => self
                     .key_sync_handler(request, self.is_message_type_json(request_bytes))
                     .await?
@@ -466,7 +472,9 @@ impl ApplicationHandler for SealedMemoryHandler {
                 sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
                     self.get_memory_by_id_handler(request).await?.into_response()
                 }
-            }
+            };
+            response.request_id = request_id;
+            response
         };
 
         Ok(self.serialize_response(&response).await)

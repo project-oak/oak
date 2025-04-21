@@ -145,7 +145,17 @@ fn send_plantext_request<T: RequestUnpacking>(
     client_session: &mut oak_session::ClientSession,
     request: T,
 ) {
-    let sealed_memory_request = request.into_request();
+    send_plantext_request_with_id(sender, client_session, request, 0)
+}
+
+fn send_plantext_request_with_id<T: RequestUnpacking>(
+    sender: &mut mpsc::Sender<SessionRequest>,
+    client_session: &mut oak_session::ClientSession,
+    request: T,
+    request_id: i32,
+) {
+    let mut sealed_memory_request = request.into_request();
+    sealed_memory_request.request_id = request_id;
     let encrypted_request = client_session
         .encrypt_request(&sealed_memory_request.encode_to_vec())
         .expect("failed to encrypt message");
@@ -185,16 +195,26 @@ async fn receive_plaintext_response<T: ResponsePacking>(
     receiver: &mut tonic::Streaming<SessionResponse>,
     client_session: &mut oak_session::ClientSession,
 ) -> T {
+    receive_plaintext_response_with_id(receiver, client_session).await.0
+}
+
+async fn receive_plaintext_response_with_id<T: ResponsePacking>(
+    receiver: &mut tonic::Streaming<SessionResponse>,
+    client_session: &mut oak_session::ClientSession,
+) -> (T, i32) {
     let response =
         receiver.message().await.expect("error getting response").expect("didn't get any repsonse");
 
     let decrypted_response =
         client_session.decrypt_response(response).expect("failed to decrypt response");
+    let sealed_memory_response =
+        SealedMemoryResponse::decode(decrypted_response.as_ref()).expect("Not a valid response");
+    let request_id = sealed_memory_response.request_id;
 
-    T::from_response(
-        SealedMemoryResponse::decode(decrypted_response.as_ref()).expect("Not a valid response"),
+    (
+        T::from_response(sealed_memory_response).expect("A different type of request is parsed!"),
+        request_id,
     )
-    .expect("A different type of request is parsed!")
 }
 
 #[tokio::test]
@@ -248,6 +268,7 @@ async fn test_noise_handshake() {
         response: Some(sealed_memory_response::Response::InvalidRequestResponse(
             InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() },
         )),
+        request_id: 0,
     };
     assert_eq!(decrypted_response, expected_response.encode_to_vec());
 }
@@ -286,11 +307,13 @@ async fn test_noise_add_get_reset_memory() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     // Key sync
+    let request_id = 0xeadbeef;
     let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
-    send_plantext_request(&mut tx, &mut client_session, key_sync_request);
+    send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
 
-    let _key_sync_response: KeySyncResponse =
-        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+    let (_key_sync_response, return_id): (KeySyncResponse, i32) =
+        receive_plaintext_response_with_id(&mut response_stream, &mut client_session).await;
+    assert_eq!(request_id, return_id);
 
     let request = AddMemoryRequest {
         memory: Some(Memory {
