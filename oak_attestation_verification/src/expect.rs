@@ -198,11 +198,7 @@ pub(crate) fn get_cb_expected_values(
         })
         .collect::<anyhow::Result<Vec<EventExpectedValues>>>()?;
 
-    Ok(CbExpectedValues {
-        root_layer: root_layer_expected,
-        layers: layer_expected,
-        ..Default::default()
-    })
+    Ok(CbExpectedValues { root_layer: root_layer_expected, layers: layer_expected })
 }
 
 pub(crate) fn get_root_layer_expected_values(

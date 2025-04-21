@@ -285,10 +285,7 @@ message OakContainersData {
 // Values extracted from the evidence for a CB instance.
 message CbData {
   RootLayerData root_layer = 1;
-  // TODO: b/408010056 - Remove fields 2-4.
-  EventData kernel_layer = 2;
-  EventData system_layer = 3;
-  EventData application_layer = 4;
+  reserved 2, 3, 4;
   repeated EventData layers = 5;
 }
 

@@ -194,7 +194,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .as_ref()
             .context("firmware endorsement wasn't provided in endorsements")?;
         // TODO: b/408161319 - Fix firmware verification policy.
-        // self.firmware_policy
+        // let firmwate_attestation_result = self.firmware_policy
         //     .verify(firmware_measurement, firmware_endorsement,
         // milliseconds_since_epoch)     .context("couldn't verify firmware")?;
 
@@ -219,6 +219,8 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         } else {
             Vec::new()
         };
+        // TODO: b/408161319 - Fix firmware verification policy.
+        // event_attestation_results.push(firmwate_attestation_result);
 
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]

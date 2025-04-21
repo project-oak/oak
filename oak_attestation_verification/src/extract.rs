@@ -230,7 +230,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         }),
                     });
                 }
-                Ok(EvidenceValues::Cb(CbData { root_layer, layers, ..Default::default() }))
+                Ok(EvidenceValues::Cb(CbData { root_layer, layers }))
             }
         }
     }
@@ -312,11 +312,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     })
                     .collect();
                 let layer_values: Vec<EventData> = layer_results?.into_iter().flatten().collect();
-                Ok(EvidenceValues::Cb(CbData {
-                    root_layer,
-                    layers: layer_values,
-                    ..Default::default()
-                }))
+                Ok(EvidenceValues::Cb(CbData { root_layer, layers: layer_values }))
             }
         }
     }

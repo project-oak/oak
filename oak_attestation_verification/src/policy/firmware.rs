@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec::Vec,
+};
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
@@ -75,7 +81,15 @@ impl Policy<[u8]> for FirmwarePolicy {
         compare_measurement_digest(&initial_measurement, &expected_values)
             .context("stage0 measurement values failed verification")?;
 
+        // Add measurement of Stage0 to the artificts list.
+        const FIRMWARE_MEASUREMENT_ARTIFACT_KEY: &str = "firmware_measurement";
+        let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
+        artifacts.insert(
+            FIRMWARE_MEASUREMENT_ARTIFACT_KEY.to_string(),
+            initial_measurement.sha2_384.to_vec(),
+        );
+
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults { ..Default::default() })
+        Ok(EventAttestationResults { artifacts })
     }
 }

@@ -679,13 +679,6 @@ pub struct OakContainersReferenceValues {
 pub struct CbReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
-    /// TODO: b/408010056 - Remove fields 2-4.
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<EventReferenceValues>,
-    #[prost(message, optional, tag = "3")]
-    pub system_layer: ::core::option::Option<EventReferenceValues>,
-    #[prost(message, optional, tag = "4")]
-    pub application_layer: ::core::option::Option<EventReferenceValues>,
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventReferenceValues>,
 }
@@ -1478,13 +1471,6 @@ pub struct OakContainersData {
 pub struct CbData {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerData>,
-    /// TODO: b/408010056 - Remove fields 2-4.
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<EventData>,
-    #[prost(message, optional, tag = "3")]
-    pub system_layer: ::core::option::Option<EventData>,
-    #[prost(message, optional, tag = "4")]
-    pub application_layer: ::core::option::Option<EventData>,
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventData>,
 }
@@ -1688,13 +1674,6 @@ pub struct OakContainersExpectedValues {
 pub struct CbExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
-    /// TODO: b/408010056 - Remove fields 2-4.
-    #[prost(message, optional, tag = "2")]
-    pub kernel_layer: ::core::option::Option<EventExpectedValues>,
-    #[prost(message, optional, tag = "3")]
-    pub system_layer: ::core::option::Option<EventExpectedValues>,
-    #[prost(message, optional, tag = "4")]
-    pub application_layer: ::core::option::Option<EventExpectedValues>,
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventExpectedValues>,
 }
