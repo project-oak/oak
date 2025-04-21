@@ -3,6 +3,8 @@ presubmit: format clippy test build
 build:
     bazel build //:private_memory_server
     bazel build //:bundle.tar
+    # FFI related
+    bazel build //src/cxx_example:demo
 
 test:
     bazel test //:standalone_test

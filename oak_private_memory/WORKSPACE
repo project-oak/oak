@@ -162,3 +162,12 @@ http_archive(
 load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
 
 grpc_java_repositories()
+
+http_archive(
+    # Has to be `cxx.rs` as `cxx` hardcodes this name.
+    name = "cxx.rs",
+    patch_cmds = ["sed -i 's/@crates\\.io/@oak_crates_index/g' BUILD.bazel"],
+    sha256 = "91d29f7ddd9eedda896cfde88c9c96d796e217061195843511f403090d2248ca",
+    strip_prefix = "cxx-1.0.157",
+    url = "https://github.com/dtolnay/cxx/archive/refs/tags/1.0.157.tar.gz",
+)

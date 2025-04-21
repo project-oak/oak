@@ -332,6 +332,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "4.4.17",
     ),
+    "codespan-reporting": crate.spec(version = "0.12.0"),
     "colored": crate.spec(version = "2.1.0"),
     "command-fds": crate.spec(
         features = ["tokio"],
@@ -340,6 +341,9 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "command-group": crate.spec(version = "5.0.1"),
     "criterion": crate.spec(version = "0.5.1"),
     "criterion-macro": crate.spec(version = "0.4.0"),
+    "cxx": crate.spec(version = "1.0.157"),
+    "cxx-build": crate.spec(version = "1.0.157"),
+    "foldhash": crate.spec(version = "0.1.5"),
     "env_logger": crate.spec(version = "0.11.2"),
     "futures": crate.spec(version = "0.3.31"),
     "futures-util": crate.spec(version = "0.3.31"),
@@ -422,6 +426,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "pretty_assertions": crate.spec(version = "1.4.0"),
     "procfs": crate.spec(version = "0.16.0"),
+    "proc-macro2": crate.spec(version = "1.0.95"),
     "prost-build": crate.spec(version = "0.12.3"),
     "prost-derive": crate.spec(version = "0.12.4"),
     "prost-types": crate.spec(version = "0.12.3"),
@@ -440,6 +445,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.1.6",
     ),
     "rtnetlink": crate.spec(version = "0.14.1"),
+    "rustversion": crate.spec(version = "1.0.20"),
     "serde_yaml": crate.spec(version = "0.9.30"),
     "signal-hook": crate.spec(version = "0.3.17"),
     "signal-hook-tokio": crate.spec(
