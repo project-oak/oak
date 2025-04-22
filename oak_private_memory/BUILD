@@ -24,10 +24,10 @@ package(
 )
 
 rust_library(
-    name = "private_memory_database_server_lib",
+    name = "private_memory_test_database_server_lib",
     srcs = [
-        "src/database/lib.rs",
-        "src/database/service.rs",
+        "test/database/lib.rs",
+        "test/database/service.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
@@ -52,6 +52,7 @@ rust_library(
         "src/app.rs",
         "src/app_config.rs",
         "src/app_service.rs",
+        "src/database.rs",
         "src/encryption.rs",
         "src/lib.rs",
     ],
@@ -66,9 +67,11 @@ rust_library(
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:futures",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
@@ -106,8 +109,8 @@ rust_test(
     srcs = ["test/standalone_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
-        ":private_memory_database_server_lib",
         ":private_memory_server_lib",
+        ":private_memory_test_database_server_lib",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_client",

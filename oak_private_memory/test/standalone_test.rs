@@ -80,7 +80,7 @@ async fn start_server() -> Result<(
             ),
             private_memory_server_lib::app::SealedMemoryHandler::new(&application_config_vec).await,
         )),
-        tokio::spawn(private_memory_database_server_lib::service::create(db_listener)),
+        tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
     ))
 }
 
@@ -327,8 +327,6 @@ async fn test_noise_add_get_reset_memory() {
     let add_memory_response: AddMemoryResponse =
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(add_memory_response.id, "0");
-
     let request = GetMemoriesRequest { tag: "tag".to_string() };
     send_plantext_request(&mut tx, &mut client_session, request);
 
@@ -417,8 +415,6 @@ async fn test_noise_add_get_reset_memory_as_json() {
 
     let add_memory_response: AddMemoryResponse =
         receive_plaintext_response_as_json(&mut response_stream, &mut client_session).await;
-
-    assert_eq!(add_memory_response.id, "0");
 
     let request = GetMemoriesRequest { tag: "tag".to_string() };
     send_plantext_request_as_json(&mut tx, &mut client_session, request);
