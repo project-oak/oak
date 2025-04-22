@@ -44,7 +44,22 @@ impl BytesView {
     /// # Safety
     /// The instance contains a non-null, properly aligned, valid pointer.
     pub unsafe fn as_slice(&self) -> &[u8] {
-        std::slice::from_raw_parts(self.data, self.len)
+        if self.data.is_null() {
+            &[]
+        } else {
+            std::slice::from_raw_parts(self.data, self.len)
+        }
+    }
+
+    pub fn data(&self) -> *const u8 {
+        self.data
+    }
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 

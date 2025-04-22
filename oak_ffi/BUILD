@@ -58,3 +58,32 @@ rust_test(
         "//cc/ffi:cxx_string",
     ],
 )
+
+rust_library(
+    name = "absl_status",
+    srcs = ["absl_status.rs"],
+    deps = [
+        ":oak_ffi_bytes",
+        "//cc/ffi:absl_status",
+    ],
+)
+
+cc_library(
+    name = "absl_status_test_foreign",
+    srcs = ["absl_status_test_foreign.cc"],
+    deps = [
+        "//cc/ffi:absl_status",
+        "//cc/ffi:bytes_view",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+rust_test(
+    name = "absl_status_test",
+    crate = ":absl_status",
+    deps = [
+        ":absl_status_test_foreign",
+        ":oak_ffi_bytes",
+    ],
+)

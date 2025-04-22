@@ -64,3 +64,13 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "absl_status",
+    srcs = ["absl_status.cc"],
+    hdrs = ["absl_status.h"],
+    deps = [
+        ":bytes_view",
+        "@com_google_absl//absl/status",
+    ],
+)
