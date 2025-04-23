@@ -18,6 +18,7 @@
 #![feature(allocator_api)]
 extern crate alloc;
 mod accept_memory;
+mod attestation;
 mod hob;
 mod mmio;
 pub mod platform;

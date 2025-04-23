@@ -35,7 +35,7 @@ use oak_stage0::{
     Madt, Rsdp, RsdtEntryPairMut, BOOT_ALLOC,
 };
 use oak_tdx_guest::{
-    tdcall::{extend_rtmr, get_td_info, ExtensionBuffer, RtmrIndex},
+    tdcall::get_td_info,
     vmcall::{call_cpuid, msr_read, msr_write, tdvmcall_wbinvd},
 };
 use serial::Debug;
@@ -273,7 +273,7 @@ pub struct Tdx {}
 
 impl oak_stage0::Platform for Tdx {
     type Mmio<S: x86_64::structures::paging::page::PageSize> = Mmio;
-    type Attester = oak_attestation::dice::DiceAttester;
+    type Attester = crate::attestation::RtmrAttester;
 
     fn cpuid(leaf: u32) -> core::arch::x86_64::CpuidResult {
         call_cpuid(leaf, 0).unwrap()
@@ -292,10 +292,6 @@ impl oak_stage0::Platform for Tdx {
 
     fn early_initialize_platform() {
         show_td_info();
-        serial::debug!("early_initialize_platform");
-        let ri = RtmrIndex::Rtmr0;
-        let buf = ExtensionBuffer { data: *b"TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST" };
-        let _ = extend_rtmr(ri, buf);
         serial::debug!("early_initialize_platform completed");
     }
 
@@ -438,8 +434,7 @@ impl oak_stage0::Platform for Tdx {
         info!("populate_zero_page completed");
     }
     fn get_attester() -> Result<Self::Attester, &'static str> {
-        // TODO: b/367564134 - impl TDX attester using RTMRs.
-        oak_stage0::hal::base::Base::get_attester()
+        Ok(crate::attestation::RtmrAttester::default())
     }
     fn get_derived_key() -> Result<[u8; 32], &'static str> {
         // TODO: b/360488668 - impl get_derived_key
