@@ -210,6 +210,15 @@ struct Allocate {
 static_assertions::assert_eq_size!(Allocate, Pad);
 
 impl Allocate {
+    #[cfg(test)]
+    pub fn new<T: AsBytes + ?Sized>(file: &T, align: u32, zone: Zone) -> Self {
+        let mut cmd =
+            Self { file: [0; ROMFILE_LOADER_FILESZ], align, zone: zone as u8, _padding: [0; 60] };
+        cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
+
+        cmd
+    }
+
     pub fn file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
@@ -287,6 +296,21 @@ struct AddPointer {
 static_assertions::assert_eq_size!(AddPointer, Pad);
 
 impl AddPointer {
+    #[cfg(test)]
+    pub fn new<T: AsBytes + ?Sized>(dest_file: &T, src_file: &T, offset: u32, size: u8) -> Self {
+        let mut cmd = Self {
+            dest_file: [0; ROMFILE_LOADER_FILESZ],
+            src_file: [0; ROMFILE_LOADER_FILESZ],
+            offset,
+            size,
+            _padding: [0; 6],
+        };
+        cmd.dest_file[..dest_file.as_bytes().len()].copy_from_slice(dest_file.as_bytes());
+        cmd.src_file[..src_file.as_bytes().len()].copy_from_slice(src_file.as_bytes());
+
+        cmd
+    }
+
     pub fn dest_file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.dest_file).unwrap()
     }
@@ -346,6 +370,14 @@ struct AddChecksum {
 static_assertions::assert_eq_size!(AddChecksum, Pad);
 
 impl AddChecksum {
+    #[cfg(test)]
+    pub fn new<T: AsBytes + ?Sized>(file: &T, offset: u32, start: u32, length: u32) -> Self {
+        let mut cmd =
+            Self { file: [0; ROMFILE_LOADER_FILESZ], offset, start, length, _padding: [0; 54] };
+        cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
+
+        cmd
+    }
     pub fn file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
@@ -553,11 +585,54 @@ impl Default for Body {
     }
 }
 
+impl PartialEq for Body {
+    fn eq(&self, other: &Self) -> bool {
+        // Compare raw bytes.
+        // Safety: every byte sequence is valid as a u8 array.
+        unsafe { self.padding == other.padding }
+    }
+}
+
 #[repr(C)]
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 struct RomfileCommand {
     tag: u32,
     body: Body,
+}
+
+impl From<Allocate> for RomfileCommand {
+    fn from(allocate: Allocate) -> Self {
+        RomfileCommand { tag: CommandTag::Allocate as u32, body: Body { allocate } }
+    }
+}
+
+impl From<AddPointer> for RomfileCommand {
+    fn from(pointer: AddPointer) -> Self {
+        RomfileCommand { tag: CommandTag::AddPointer as u32, body: Body { pointer } }
+    }
+}
+
+impl From<AddChecksum> for RomfileCommand {
+    fn from(checksum: AddChecksum) -> Self {
+        RomfileCommand { tag: CommandTag::AddChecksum as u32, body: Body { checksum } }
+    }
+}
+
+impl Debug for RomfileCommand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        // Safety: we check the tags; if a tag is not recognized, you get the padding
+        // which accepts all values.
+        f.debug_struct("RomfileCommand")
+            .field("tag", &self.tag)
+            .field(
+                "body",
+                match &self.extract() {
+                    Ok(command) => command,
+                    Err(_) => unsafe { &self.body.padding },
+                },
+            )
+            .finish()
+    }
 }
 
 #[derive(Debug)]
@@ -748,4 +823,48 @@ fn print_system_data_table_entries<'a>(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_table_loader_interpretation() {
+        // Ideally we'd use the runfiles crate from rules_rust for this, but as we're on
+        // Bazel 6 we can't.
+        let runfiles = std::env::var_os("RUNFILES_DIR").map(std::path::PathBuf::from).unwrap();
+        let raw = std::fs::read(runfiles.join("oak/stage0/testdata/table_loader")).unwrap();
+        let commands = unsafe {
+            core::slice::from_raw_parts(
+                raw.as_ptr() as *const _ as *const RomfileCommand,
+                raw.len() / core::mem::size_of::<RomfileCommand>(),
+            )
+        };
+
+        let expected_commands: [RomfileCommand; 20] = [
+            Allocate::new("etc/acpi/rsdp", 16, Zone::FSeg).into(),
+            Allocate::new("etc/acpi/tables", 64, Zone::High).into(),
+            AddChecksum::new("etc/acpi/tables", 73, 64, 8293).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8393, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8397, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8497, 8).into(),
+            AddChecksum::new("etc/acpi/tables", 8366, 8357, 244).into(),
+            AddChecksum::new("etc/acpi/tables", 8610, 8601, 120).into(),
+            AddChecksum::new("etc/acpi/tables", 8730, 8721, 56).into(),
+            AddChecksum::new("etc/acpi/tables", 8786, 8777, 60).into(),
+            AddChecksum::new("etc/acpi/tables", 8846, 8837, 40).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8913, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8917, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8921, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8925, 4).into(),
+            AddPointer::new("etc/acpi/tables", "etc/acpi/tables", 8929, 4).into(),
+            AddChecksum::new("etc/acpi/tables", 8886, 8877, 56).into(),
+            AddPointer::new("etc/acpi/rsdp", "etc/acpi/tables", 16, 4).into(),
+            AddChecksum::new("etc/acpi/rsdp", 8, 0, 20).into(),
+            RomfileCommand::default(),
+        ];
+
+        assert_eq!(commands, &expected_commands[..]);
+    }
 }

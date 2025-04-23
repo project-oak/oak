@@ -68,4 +68,5 @@ rust_test(
     name = "stage0_test",
     size = "small",
     crate = ":stage0",
+    data = ["testdata/table_loader"],
 )

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
