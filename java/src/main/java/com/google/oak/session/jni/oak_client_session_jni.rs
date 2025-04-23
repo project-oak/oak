@@ -1,6 +1,5 @@
 // We are not actually no_std because the jni crate is pulling it in, but at
 // least this enforces that this lib isn't using anything from the std lib
-#![no_std]
 
 extern crate alloc;
 
@@ -13,10 +12,7 @@ use jni::{
     JNIEnv,
 };
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionResponse};
-use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ClientSession,
-    ProtocolEngine, Session,
-};
+use oak_session::{config::SessionConfigBuilder, ClientSession, ProtocolEngine, Session};
 use prost::Message;
 
 fn oak_exception<Error: Debug>(mut env: JNIEnv, message: &str, err: Error) {
@@ -25,13 +21,16 @@ fn oak_exception<Error: Debug>(mut env: JNIEnv, message: &str, err: Error) {
 }
 
 #[no_mangle]
-extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClientSessionUnattested(
+extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClientSession(
     env: JNIEnv,
     _class: JClass,
+    config_builder_ptr: jlong,
 ) -> jlong {
-    let config =
-        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    match ClientSession::create(config) {
+    // Safety: OakClientSession.java will only pass valid pointers.
+    let config_builder: Box<SessionConfigBuilder> =
+        unsafe { Box::from_raw(config_builder_ptr as *mut SessionConfigBuilder) };
+
+    match ClientSession::create(config_builder.build()) {
         Ok(session) => Box::into_raw(Box::new(session)) as jlong,
         Err(err) => {
             oak_exception(env, "Couldn't create a native session", err);
@@ -47,6 +46,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomin
     native_ptr: jlong,
     session_response_message: JByteArray,
 ) -> jboolean {
+    // Safety: OakClientSession.java will only pass valid pointers.
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
 
     let byte_array = match env.convert_byte_array(&session_response_message) {
@@ -80,6 +80,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetOutgoin
     _class: JClass,
     native_ptr: jlong,
 ) -> jbyteArray {
+    // Safety: OakClientSession.java will only pass valid pointers.
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
 
     match session.get_outgoing_message() {
@@ -104,6 +105,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeIsSessionO
     _class: JClass,
     native_ptr: jlong,
 ) -> jboolean {
+    // Safety: OakClientSession.java will only pass valid pointers.
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
     session.is_open() as jboolean
 }
@@ -114,6 +116,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeRead(
     _class: JClass,
     native_ptr: jlong,
 ) -> jbyteArray {
+    // Safety: OakClientSession.java will only pass valid pointers.
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
     match session.read() {
         Ok(Some(message)) => match env.byte_array_from_slice(message.encode_to_vec().as_slice()) {
@@ -138,6 +141,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
     native_ptr: jlong,
     message: JByteArray,
 ) {
+    // Safety: OakClientSession.java will only pass valid pointers.
     let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
 
     let byte_array = match env.convert_byte_array(&message) {
@@ -167,5 +171,6 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeClose(
     _class: JClass,
     native_ptr: jlong,
 ) {
+    // Safety: OakClientSession.java will only pass valid pointers.
     drop(unsafe { Box::from_raw(&mut *(native_ptr as *mut ClientSession)) });
 }

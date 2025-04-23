@@ -18,6 +18,9 @@ package com.google.oak.client
 
 import com.google.oak.services.OakSessionV1ServiceGrpc
 import com.google.oak.session.OakServerSession
+import com.google.oak.session.OakSessionConfigBuilder
+import com.google.oak.session.OakSessionConfigBuilder.AttestationType
+import com.google.oak.session.OakSessionConfigBuilder.HandshakeType
 import com.google.oak.session.v1.PlaintextMessage
 import com.google.oak.session.v1.SessionRequest
 import com.google.oak.session.v1.SessionResponse
@@ -40,7 +43,8 @@ class TestSessionServer : OakSessionV1ServiceGrpc.OakSessionV1ServiceImplBase() 
 
   init {
     OakServerSession.loadNativeLib()
-    session = OakServerSession.createServerUnattested()
+    session =
+      OakServerSession(OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN))
   }
 
   override fun stream(
