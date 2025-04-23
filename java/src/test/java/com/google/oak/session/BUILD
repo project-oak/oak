@@ -31,5 +31,6 @@ java_test(
         "//java/src/main/java/com/google/oak/session:session_config_builder",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
+        "@maven//:junit_junit",
     ],
 )
