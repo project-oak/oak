@@ -72,3 +72,19 @@ android_library(
         "@cose_lib",
     ],
 )
+
+java_library(
+    name = "attestation_verification_clock",
+    srcs = ["AttestationVerificationClock.java"],
+    deps = [
+        "//java/src/main/java/com/google/oak/remote_attestation/jni:oak_jni_attestation_verification_clock",
+    ],
+)
+
+android_library(
+    name = "attestation_verification_clock_android",
+    srcs = ["AttestationVerificationClock.java"],
+    deps = [
+        "//java/src/main/java/com/google/oak/remote_attestation/jni:oak_jni_attestation_verification_clock",
+    ],
+)
