@@ -41,6 +41,7 @@ cc_binary(
     linkshared = True,
     deps = [
         ":oak_client_session_rust",
+        ":oak_session_config_builder_rust",
     ],
 )
 
@@ -64,5 +65,26 @@ cc_binary(
     linkshared = True,
     deps = [
         ":oak_server_session_rust",
+        ":oak_session_config_builder_rust",
+    ],
+)
+
+rust_library(
+    name = "oak_session_config_builder_rust",
+    srcs = ["oak_session_config_builder_jni.rs"],
+    deps = [
+        "//oak_proto_rust",
+        "//oak_session",
+        "@oak_crates_index//:jni",
+        "@oak_crates_index//:prost",
+    ],
+    alwayslink = 1,
+)
+
+cc_binary(
+    name = "oak_session_config_builder_jni",
+    linkshared = True,
+    deps = [
+        ":oak_session_config_builder_rust",
     ],
 )
