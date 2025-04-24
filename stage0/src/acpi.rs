@@ -283,6 +283,15 @@ enum Zone {
     FSeg = 2,
 }
 
+trait Invoke<P: crate::Platform, F: Files> {
+    fn invoke(
+        &self,
+        files: &mut F,
+        fwcfg: &mut FwCfg<P>,
+        acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str>;
+}
+
 /// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
 /// (must be power of
 /// 2) and `zone` (can be HIGH or FSEG) requirements.
@@ -316,8 +325,10 @@ impl Allocate {
     pub fn zone(&self) -> Option<Zone> {
         Zone::from_repr(self.zone)
     }
+}
 
-    fn invoke<P: crate::Platform, F: Files>(
+impl<P: crate::Platform, F: Files> Invoke<P, F> for Allocate {
+    fn invoke(
         &self,
         files: &mut F,
         fwcfg: &mut FwCfg<P>,
@@ -388,8 +399,15 @@ impl AddPointer {
     pub fn src_file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.src_file).unwrap()
     }
+}
 
-    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+impl<P: crate::Platform, F: Files> Invoke<P, F> for AddPointer {
+    fn invoke(
+        &self,
+        files: &mut F,
+        _fwcfg: &mut FwCfg<P>,
+        _acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         let src_file_ptr = files.get_file(self.src_file())?.as_ptr();
         let dest_file = files.get_file_mut(self.dest_file())?;
 
@@ -452,7 +470,18 @@ impl AddChecksum {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
 
-    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+    fn checksum(buf: &[u8]) -> u8 {
+        buf.iter().fold(0, |checksum, &x| checksum.wrapping_add(x))
+    }
+}
+
+impl<P: crate::Platform, F: Files> Invoke<P, F> for AddChecksum {
+    fn invoke(
+        &self,
+        files: &mut F,
+        _fwcfg: &mut FwCfg<P>,
+        _acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
 
         if self.start as usize > file.len()
@@ -467,10 +496,6 @@ impl AddChecksum {
         let val = file.get_mut(self.offset as usize).unwrap();
         *val = val.wrapping_sub(checksum);
         Ok(())
-    }
-
-    fn checksum(buf: &[u8]) -> u8 {
-        buf.iter().fold(0, |checksum, &x| checksum.wrapping_add(x))
     }
 }
 
@@ -509,8 +534,15 @@ impl WritePointer {
     pub fn src_file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.src_file).unwrap()
     }
+}
 
-    fn invoke<F: Files>(&self, _files: &mut F) -> Result<(), &'static str> {
+impl<P: crate::Platform, F: Files> Invoke<P, F> for WritePointer {
+    fn invoke(
+        &self,
+        _files: &mut F,
+        _fwcfg: &mut FwCfg<P>,
+        _acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         log::debug!("{:?}", self);
         Err("COMMAND_WRITE_POINTER is not supported")
     }
@@ -572,8 +604,15 @@ impl AddPciHoles {
     pub fn file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
+}
 
-    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+impl<P: crate::Platform, F: Files> Invoke<P, F> for AddPciHoles {
+    fn invoke(
+        &self,
+        files: &mut F,
+        _fwcfg: &mut FwCfg<P>,
+        _acpi_digest: &mut Sha256,
+    ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
 
         if file.len() < self.pci_start_offset_32 as usize
@@ -696,38 +735,16 @@ impl Debug for RomfileCommand {
             .field("tag", &self.tag)
             .field(
                 "body",
-                match &self.extract() {
-                    Ok(command) => command,
-                    Err(_) => unsafe { &self.body.padding },
+                match self.tag() {
+                    Some(CommandTag::Allocate) => unsafe { &self.body.allocate },
+                    Some(CommandTag::AddPointer) => unsafe { &self.body.pointer },
+                    Some(CommandTag::AddChecksum) => unsafe { &self.body.checksum },
+                    Some(CommandTag::WritePointer) => unsafe { &self.body.wr_pointer },
+                    Some(CommandTag::AddPciHoles) => unsafe { &self.body.pci_holes },
+                    _ => unsafe { &self.body.padding },
                 },
             )
             .finish()
-    }
-}
-
-#[derive(Debug)]
-enum Command<'a> {
-    Allocate(&'a Allocate),
-    AddPointer(&'a AddPointer),
-    AddChecksum(&'a AddChecksum),
-    WritePointer(&'a WritePointer),
-    AddPciHoles(&'a AddPciHoles),
-}
-
-impl Command<'_> {
-    pub fn invoke<P: crate::Platform, F: Files>(
-        &self,
-        files: &mut F,
-        fwcfg: &mut FwCfg<P>,
-        acpi_digest: &mut Sha256,
-    ) -> Result<(), &'static str> {
-        match self {
-            Command::Allocate(allocate) => allocate.invoke(files, fwcfg, acpi_digest),
-            Command::AddPointer(add_pointer) => add_pointer.invoke(files),
-            Command::AddChecksum(add_checksum) => add_checksum.invoke(files),
-            Command::WritePointer(write_pointer) => write_pointer.invoke(files),
-            Command::AddPciHoles(add_pci_holes) => add_pci_holes.invoke(files),
-        }
     }
 }
 
@@ -735,27 +752,10 @@ impl RomfileCommand {
     fn tag(&self) -> Option<CommandTag> {
         CommandTag::from_repr(self.tag)
     }
+}
 
-    fn extract(&self) -> Result<Command<'_>, &'static str> {
-        // Safety: we extract the value out of the union based on the tag value, which
-        // is safe to do.
-        match self.tag() {
-            Some(CommandTag::Allocate) => Ok(Command::Allocate(unsafe { &self.body.allocate })),
-            Some(CommandTag::AddPointer) => Ok(Command::AddPointer(unsafe { &self.body.pointer })),
-            Some(CommandTag::AddChecksum) => {
-                Ok(Command::AddChecksum(unsafe { &self.body.checksum }))
-            }
-            Some(CommandTag::WritePointer) => {
-                Ok(Command::WritePointer(unsafe { &self.body.wr_pointer }))
-            }
-            Some(CommandTag::AddPciHoles) => {
-                Ok(Command::AddPciHoles(unsafe { &self.body.pci_holes }))
-            }
-            _ => Err("Invalid command tag in table-loader"),
-        }
-    }
-
-    fn invoke<P: crate::Platform, F: Files>(
+impl<P: crate::Platform, F: Files> Invoke<P, F> for RomfileCommand {
+    fn invoke(
         &self,
         files: &mut F,
         fwcfg: &mut FwCfg<P>,
@@ -773,7 +773,18 @@ impl RomfileCommand {
             });
             return Ok(());
         }
-        self.extract()?.invoke(files, fwcfg, acpi_digest)
+
+        // Safety: we extract the value out of the union based on the tag value, which
+        // is safe to do.
+        let command: &dyn Invoke<P, F> = match self.tag() {
+            Some(CommandTag::Allocate) => unsafe { &self.body.allocate },
+            Some(CommandTag::AddPointer) => unsafe { &self.body.pointer },
+            Some(CommandTag::AddChecksum) => unsafe { &self.body.checksum },
+            Some(CommandTag::WritePointer) => unsafe { &self.body.wr_pointer },
+            Some(CommandTag::AddPciHoles) => unsafe { &self.body.pci_holes },
+            _ => return Err("Invalid command tag in table-loader"),
+        };
+        command.invoke(files, fwcfg, acpi_digest)
     }
 }
 
