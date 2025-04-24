@@ -25,7 +25,7 @@ package com.google.oak.session;
  * as needed.
  */
 public class OakSessionConfigBuilder {
-  public void loadNativeLib() {
+  public static void loadNativeLib() {
     System.loadLibrary("oak_session_config_builder_jni");
   }
 
@@ -43,10 +43,14 @@ public class OakSessionConfigBuilder {
     NOISE_NN,
   }
 
-  private final long nativePtr;
+  private long nativePtr;
 
   public OakSessionConfigBuilder(AttestationType attestationType, HandshakeType handshakeType) {
-    this.nativePtr = nativeCreateConfigBuilder(attestationType.ordinal(), handshakeType.ordinal());
+    this(nativeCreateConfigBuilder(attestationType.ordinal(), handshakeType.ordinal()));
+  }
+
+  private OakSessionConfigBuilder(long nativePtr) {
+    this.nativePtr = nativePtr;
   }
 
   public long getNativePtr() {
