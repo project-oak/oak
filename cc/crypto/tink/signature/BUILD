@@ -44,6 +44,7 @@ cc_library(
         "@com_github_tink_crypto_tink_cc//tink:proto_keyset_format",
         "@com_github_tink_crypto_tink_cc//tink:public_key_verify",
         "@com_github_tink_crypto_tink_cc//tink/config:global_registry",
+        "@com_github_tink_crypto_tink_cc//tink/signature:signature_config",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:string_view",

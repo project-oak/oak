@@ -25,6 +25,7 @@
 #include "tink/keyset_handle.h"
 #include "tink/proto_keyset_format.h"
 #include "tink/public_key_verify.h"
+#include "tink/signature/signature_config.h"
 
 namespace oak::crypto::tink {
 
@@ -32,13 +33,20 @@ using ::crypto::tink::ConfigGlobalRegistry;
 using ::crypto::tink::KeysetHandle;
 using ::crypto::tink::ParseKeysetWithoutSecretFromProtoKeysetFormat;
 using ::crypto::tink::PublicKeyVerify;
+using ::crypto::tink::SignatureConfig;
 using ::oak::ffi::CxxString;
 using ::oak::util::status::Annotate;
 
 absl::Status VerifyTinkDigitalSignature(
     absl::string_view message, absl::string_view signature,
     absl::string_view proto_serialized_signer_public_keyset) {
-  // 1) Read keyset into tink object.
+  // 1) Register PublicKeyVerify primitives.
+  absl::Status status = SignatureConfig::Register();
+  if (!status.ok()) {
+    return Annotate(status, "Failed registering Tink signing primities.");
+  }
+
+  // 2) Read keyset into tink object.
   absl::StatusOr<KeysetHandle> keyset_handle =
       ParseKeysetWithoutSecretFromProtoKeysetFormat(
           proto_serialized_signer_public_keyset);
@@ -46,7 +54,7 @@ absl::Status VerifyTinkDigitalSignature(
     return Annotate(keyset_handle.status(), "Failed to parse keyset");
   }
 
-  // 2) Get the PublicKeyVerify primitive from the keyset handle.
+  // 3) Get the PublicKeyVerify primitive from the keyset handle.
   absl::StatusOr<std::unique_ptr<PublicKeyVerify>> public_key_verify =
       keyset_handle->GetPrimitive<crypto::tink::PublicKeyVerify>(
           ConfigGlobalRegistry());
@@ -55,7 +63,7 @@ absl::Status VerifyTinkDigitalSignature(
                     "Failed to get PublicKeyVerify primitive");
   }
 
-  // 3) Verify the signature.
+  // 4) Verify the signature.
   return (*public_key_verify)->Verify(signature, message);
 }
 }  // namespace oak::crypto::tink
