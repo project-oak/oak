@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -41,7 +42,6 @@ java_library(
         "OakClientSession.java",
     ],
     deps = [
-        "session_config_builder",
         ":exception",
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
         "//proto/session:session_java_proto",
@@ -56,7 +56,6 @@ android_library(
     ],
     deps = [
         ":exception_android",
-        ":session_config_builder_android",
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
@@ -70,7 +69,6 @@ java_library(
     ],
     deps = [
         ":exception",
-        ":session_config_builder",
         "//java/src/main/java/com/google/oak/session/jni:oak_server_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_java",
@@ -84,25 +82,8 @@ android_library(
     ],
     deps = [
         ":exception_android",
-        ":session_config_builder_android",
         "//java/src/main/java/com/google/oak/session/jni:oak_server_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
-    ],
-)
-
-java_library(
-    name = "session_config_builder",
-    srcs = ["OakSessionConfigBuilder.java"],
-    deps = [
-        "//java/src/main/java/com/google/oak/session/jni:oak_session_config_builder_jni",
-    ],
-)
-
-android_library(
-    name = "session_config_builder_android",
-    srcs = ["OakSessionConfigBuilder.java"],
-    deps = [
-        "//java/src/main/java/com/google/oak/session/jni:oak_session_config_builder_jni",
     ],
 )

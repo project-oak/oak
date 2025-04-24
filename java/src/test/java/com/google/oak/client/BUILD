@@ -54,7 +54,6 @@ kt_jvm_test(
     deps = [
         "//java/src/main/java/com/google/oak/client:session_client",
         "//java/src/main/java/com/google/oak/session:server_session",
-        "//java/src/main/java/com/google/oak/session:session_config_builder",
         "//java/src/main/java/com/google/oak/transport:grpc_session_v1_client_transport",
         "//java/src/main/java/com/google/oak/transport:session_transport",
         "//proto/services:session_v1_service_java_grpc",

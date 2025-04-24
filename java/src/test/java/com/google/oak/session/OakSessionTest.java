@@ -21,8 +21,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.session.OakSessionConfigBuilder.AttestationType;
-import com.google.oak.session.OakSessionConfigBuilder.HandshakeType;
 import com.google.oak.session.v1.PlaintextMessage;
 import com.google.oak.session.v1.SessionRequest;
 import com.google.oak.session.v1.SessionResponse;
@@ -49,10 +47,8 @@ public class OakSessionTest {
 
   @Before
   public void setUp() {
-    clientSession = new OakClientSession(
-        new OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN));
-    serverSession = new OakServerSession(
-        new OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN));
+    clientSession = OakClientSession.createClientUnattested();
+    serverSession = OakServerSession.createServerUnattested();
   }
 
   @After
