@@ -33,13 +33,15 @@ use oak_attestation_verification_types::{
     util::Clock,
     verifier::AttestationVerifier,
 };
+use oak_crypto::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement,
-        CbReferenceValues, Endorsements, Event, EventLog, Evidence, FirmwareEndorsement,
-        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
-        SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement, SkipVerification,
+        binary_reference_value, endorsements, reference_values,
+        session_binding_public_key_endorsement, AmdSevSnpEndorsement, CbReferenceValues,
+        Endorsements, Event, EventLog, Evidence, FirmwareEndorsement, OakContainersReferenceValues,
+        OakRestrictedKernelReferenceValues, ReferenceValues, SessionBindingPublicKeyData,
+        SessionBindingPublicKeyEndorsement, SkipVerification, TinkEndorsement,
     },
     Variant,
 };
@@ -83,6 +85,14 @@ struct TestClock;
 impl Clock for TestClock {
     fn get_milliseconds_since_epoch(&self) -> i64 {
         MILLISECONDS_SINCE_EPOCH
+    }
+}
+
+struct TestSignatureVerifier;
+
+impl Verifier for TestSignatureVerifier {
+    fn verify(&self, _message: &[u8], _signature: &[u8]) -> anyhow::Result<()> {
+        Ok(())
     }
 }
 
@@ -283,11 +293,15 @@ fn event_log_verifier_succeeds() {
         ..Default::default()
     };
 
-    let endorsements = Endorsements {
-        events: vec![SessionBindingPublicKeyEndorsement::default().into()],
-        ..Default::default()
+    let tink_endorsement = SessionBindingPublicKeyEndorsement {
+        r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
+            TinkEndorsement { signature: "tink_signature".as_bytes().to_vec() },
+        )),
     };
-    let policy = SessionBindingPublicKeyPolicy::new(&[]);
+    let endorsements = Endorsements { events: vec![tink_endorsement.into()], ..Default::default() };
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier { signature_verifier: TestSignatureVerifier {} };
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
     let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));

@@ -14,21 +14,12 @@
 // limitations under the License.
 //
 
-use oak_proto_rust::oak::crypto::v1::Certificate;
+extern crate alloc;
 
-use crate::verifier::Verifier;
+#[cfg(test)]
+extern crate std;
 
-#[derive(Clone)]
-pub struct CertificateVerifier<V: Verifier> {
-    pub signature_verifier: V,
-}
+pub mod signature_verifier;
 
-impl<V: Verifier> CertificateVerifier<V> {
-    pub fn verify(
-        &self,
-        _certificate: &Certificate,
-        _milliseconds_since_epoch: i64,
-    ) -> anyhow::Result<()> {
-        Err(anyhow::Error::msg("Not implemented"))
-    }
-}
+#[cfg(test)]
+pub mod tests;

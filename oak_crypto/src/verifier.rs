@@ -16,7 +16,7 @@
 
 use anyhow::Context;
 
-pub trait Verifier: Send {
+pub trait Verifier: Send + Sync {
     fn verify(&self, message: &[u8], signature: &[u8]) -> anyhow::Result<()>;
 }
 

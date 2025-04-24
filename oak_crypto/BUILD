@@ -23,6 +23,22 @@ package(
 )
 
 rust_library(
+    name = "oak_crypto_tink",
+    srcs = glob([
+        "src/tink/*.rs",
+    ]),
+    deps = [
+        ":oak_crypto",
+        "//cc/crypto/tink/signature:verification-ffi",
+        "//oak_ffi:cxx_string",
+        "//oak_ffi:oak_ffi_bytes",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:static_assertions",
+    ],
+)
+
+rust_library(
     name = "oak_crypto",
     srcs = glob([
         "src/*.rs",
@@ -65,5 +81,20 @@ rust_test(
     deps = [
         "@oak_crates_index//:hex",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+rust_test(
+    name = "oak_crypto_tink_test",
+    size = "small",
+    crate = ":oak_crypto_tink",
+    data =
+        [
+            "//cc/crypto/tink/signature/testdata:message",
+            "//cc/crypto/tink/signature/testdata:public_keyset",
+            "//cc/crypto/tink/signature/testdata:signature",
+        ],
+    deps = [
+        "//cc/ffi:cxx_string",
     ],
 )

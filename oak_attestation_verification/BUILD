@@ -33,6 +33,7 @@ rust_library(
     ]),
     deps = [
         "//oak_attestation_verification_types",
+        "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
@@ -99,6 +100,7 @@ rust_test_suite(
     deps = [
         ":oak_attestation_verification",
         "//oak_attestation_verification_types",
+        "//oak_crypto",
         "//oak_file_utils",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
@@ -119,6 +121,7 @@ rust_library(
     crate_features = ["regex"],
     deps = [
         "//oak_attestation_verification_types",
+        "//oak_crypto",
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
@@ -157,6 +160,7 @@ rust_test(
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
+        "//oak_crypto",
         "//oak_file_utils",
         "@oak_crates_index//:rand_core",
     ],
@@ -190,6 +194,7 @@ rust_test_suite(
     deps = [
         ":oak_attestation_verification_with_regex",
         "//oak_attestation_verification_types",
+        "//oak_crypto",
         "//oak_file_utils",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
