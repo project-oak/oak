@@ -28,6 +28,7 @@ use oak_attestation_types::{
 };
 use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
 use p256::ecdsa::VerifyingKey;
+use sha2::{Digest, Sha384};
 
 /// Attester that uses Runtime Measurement Registers (RTMRs) to provide
 /// integrity for the event log entries.
@@ -60,9 +61,19 @@ impl Attester for RtmrAttester {
             .encoded_events
             .push(encoded_event.to_vec());
         self.evidence.root_layer = None;
-        // TODO: b/380443519 - Extend RTMR2 with SHA2-256 digest of encoded event.
 
-        Ok(())
+        let digest = Sha384::digest(encoded_event);
+        // We extend RTMR2 for all event log entries.
+        //
+        // The `oak_configfs_tsm`` API is async but the Attester trait is not, so we
+        // have to find the current async runtime handle. `Handle::current` will
+        // panic if this is not run inside a tokio runtime. This should be OK,
+        // since it is only used from Stage 1 and the Orchestrator which both
+        // use `tokio_main`.
+        tokio::runtime::Handle::current()
+            .block_on(oak_configfs_tsm::extend(oak_configfs_tsm::RTMR::RTMR2, digest.into()))
+            .map(|_| ())
+            .context("couldn't extend RTMR2")
     }
 
     fn quote(&self) -> anyhow::Result<Evidence> {
