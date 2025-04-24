@@ -20,6 +20,7 @@
 // These data structures (and constants) are derived from
 // qemu/hw/acpi/bios-linker-loader.c that defines the interface.
 use core::{
+    alloc::Layout,
     cell::OnceCell,
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
@@ -68,20 +69,109 @@ const ROMFILE_LOADER_FILESZ: usize = 56;
 
 type RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
-fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
-    // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
-    // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
+/// A really simple virtual file system interface to store chunks of bytes by
+/// name, and access said chunks later by the name.
+trait Files {
+    /// Allocate a new file.
+    ///
+    /// This is similar to the normal `Allocator` API, but we may need to treat
+    /// files in different `zone`-s differently (e.g. allocate from different
+    /// pools of memory), so we can't just piggyback on the `Allocator` trait
+    /// directly.
+    ///
+    /// Alignment guarantees requested the layout are implementation-specific
+    /// (for example, if you use a non-static buffer of u8-s as the backing
+    /// store, we can't guarantee alignment as the data can be moved around
+    /// freely after allocation.)
+    ///
+    /// Returns an error if the file already exists.
+    fn allocate(
+        &mut self,
+        name: &CStr,
+        layout: Layout,
+        zone: Zone,
+    ) -> Result<&mut [u8], &'static str>;
 
-    // Safety: we do not have concurrent threads so accessing the static is safe,
-    // and even if Allocate has not been called yet, all values are valid for an
-    // [u8].
-    let name = name.to_str().map_err(|_| "invalid file name")?;
-    if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-        Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
-    } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-        Ok(unsafe { EBDA_MEM.assume_init_mut() })
-    } else {
-        Err("Unsupported file in table-loader")
+    /// Get a mutable reference to file contents, if such file exists.
+    fn get_file_mut(&mut self, name: &CStr) -> Result<&mut [u8], &'static str>;
+
+    /// Access the contents of the named file, if it exists.
+    fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str>;
+}
+
+/// Implementation for `Files` that just delegates to the existing EBDA space.
+struct EbdaFiles;
+
+impl Files for EbdaFiles {
+    fn allocate(
+        &mut self,
+        name: &CStr,
+        layout: Layout,
+        _zone: Zone,
+    ) -> Result<&mut [u8], &'static str> {
+        let name = name.to_str().map_err(|_| "invalid file name")?;
+
+        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
+            // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
+            // We don't really care which version we're dealing with, as long as the data
+            // structure is one of the two.
+            if layout.size() > size_of::<Rsdp>() || (layout.size() != 20 && layout.size() != 36) {
+                return Err("RSDP doesn't match expected size");
+            }
+
+            // Safety: we do not have concurrent threads so accessing the static is safe.
+            let buf = unsafe { RSDP.write(zeroed()) };
+
+            // Sanity checks.
+            if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
+                log::error!("RSDP address: {:p}", buf);
+                return Err("RSDP address is not within the first 1 KiB of EBDA");
+            }
+            if (buf as *const _ as u64) % layout.align() as u64 != 0 {
+                return Err("RSDP address not aligned properly");
+            }
+            Ok(buf.as_bytes_mut())
+        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
+            let ebda = Ebda::instance();
+            ebda.check_alignment(layout.align() as u32)?;
+            Ok(&mut ebda.ebda_buf)
+        } else {
+            Err("Unsupported file in table-loader")
+        }
+    }
+
+    fn get_file_mut(&mut self, name: &CStr) -> Result<&mut [u8], &'static str> {
+        // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
+        // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
+
+        // Safety: we do not have concurrent threads so accessing the static is safe,
+        // and even if Allocate has not been called yet, all values are valid for an
+        // [u8].
+        let name = name.to_str().map_err(|_| "invalid file name")?;
+        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
+            Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
+        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
+            Ok(unsafe { EBDA_MEM.assume_init_mut() })
+        } else {
+            Err("Unsupported file in table-loader")
+        }
+    }
+
+    fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str> {
+        // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
+        // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
+
+        // Safety: we do not have concurrent threads so accessing the static is safe,
+        // and even if Allocate has not been called yet, all values are valid for an
+        // [u8].
+        let name = name.to_str().map_err(|_| "invalid file name")?;
+        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
+            Ok(unsafe { RSDP.assume_init_ref().as_bytes() })
+        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
+            Ok(unsafe { EBDA_MEM.assume_init_ref() })
+        } else {
+            Err("Unsupported file in table-loader")
+        }
     }
 }
 
@@ -227,46 +317,26 @@ impl Allocate {
         Zone::from_repr(self.zone)
     }
 
-    fn invoke<P: crate::Platform>(
+    fn invoke<P: crate::Platform, F: Files>(
         &self,
+        files: &mut F,
         fwcfg: &mut FwCfg<P>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
-        let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
-        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
-            // We don't really care which version we're dealing with, as long as the data
-            // structure is one of the two.
-            if file.size() > size_of::<Rsdp>() || (file.size() != 20 && file.size() != 36) {
-                return Err("RSDP doesn't match expected size");
-            }
+        let layout = Layout::from_size_align(file.size(), self.align as usize)
+            .map_err(|_| "invalid file layout requested")?;
 
-            // Safety: we do not have concurrent threads so accessing the static is safe.
-            let buf = unsafe { RSDP.write(zeroed()) };
+        let buf = files.allocate(
+            self.file(),
+            layout,
+            self.zone().ok_or("Invalid file allocation zone")?,
+        )?;
 
-            // Sanity checks.
-            if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
-                log::error!("RSDP address: {:p}", buf);
-                return Err("RSDP address is not within the first 1 KiB of EBDA");
-            }
-            if (buf as *const _ as u64) % self.align as u64 != 0 {
-                return Err("RSDP address not aligned properly");
-            }
-
-            fwcfg.read_file(&file, buf.as_bytes_mut())?;
-            acpi_digest.update(buf.as_bytes());
-            Ok(())
-        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            let ebda = Ebda::instance();
-            ebda.check_alignment(self.align)?;
-            ebda.read_fwcfg(fwcfg, file)?;
-            acpi_digest.update(ebda.get_buf());
-            Ok(())
-        } else {
-            Err("Unsupported file in table-loader")
-        }
+        fwcfg.read_file(&file, buf)?;
+        acpi_digest.update(buf);
+        Ok(())
     }
 }
 
@@ -319,9 +389,9 @@ impl AddPointer {
         CStr::from_bytes_until_nul(&self.src_file).unwrap()
     }
 
-    fn invoke(&self) -> Result<(), &'static str> {
-        let dest_file = get_file(self.dest_file())?;
-        let src_file = get_file(self.src_file())?;
+    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+        let src_file_ptr = files.get_file(self.src_file())?.as_ptr();
+        let dest_file = files.get_file_mut(self.dest_file())?;
 
         if self.offset as usize + self.size as usize > dest_file.len() {
             return Err("Write for COMMAND_ADD_POINTER would overflow destination file");
@@ -334,7 +404,7 @@ impl AddPointer {
         pointer.as_bytes_mut()[..self.size as usize].copy_from_slice(
             &dest_file[self.offset as usize..(self.offset + self.size as u32) as usize],
         );
-        pointer += src_file.as_ptr() as u64;
+        pointer += src_file_ptr as u64;
         dest_file[self.offset as usize..(self.offset + self.size as u32) as usize]
             .copy_from_slice(&pointer.as_bytes()[..self.size as usize]);
 
@@ -382,8 +452,8 @@ impl AddChecksum {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
 
-    fn invoke(&self) -> Result<(), &'static str> {
-        let file = get_file(self.file())?;
+    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+        let file = files.get_file_mut(self.file())?;
 
         if self.start as usize > file.len()
             || (self.start + self.length) as usize > file.len()
@@ -440,7 +510,7 @@ impl WritePointer {
         CStr::from_bytes_until_nul(&self.src_file).unwrap()
     }
 
-    fn invoke(&self) -> Result<(), &'static str> {
+    fn invoke<F: Files>(&self, _files: &mut F) -> Result<(), &'static str> {
         log::debug!("{:?}", self);
         Err("COMMAND_WRITE_POINTER is not supported")
     }
@@ -503,8 +573,8 @@ impl AddPciHoles {
         CStr::from_bytes_until_nul(&self.file).unwrap()
     }
 
-    fn invoke(&self) -> Result<(), &'static str> {
-        let file = get_file(self.file())?;
+    fn invoke<F: Files>(&self, files: &mut F) -> Result<(), &'static str> {
+        let file = files.get_file_mut(self.file())?;
 
         if file.len() < self.pci_start_offset_32 as usize
             || file.len() - 4 < self.pci_start_offset_32 as usize
@@ -645,17 +715,18 @@ enum Command<'a> {
 }
 
 impl Command<'_> {
-    pub fn invoke<P: crate::Platform>(
+    pub fn invoke<P: crate::Platform, F: Files>(
         &self,
+        files: &mut F,
         fwcfg: &mut FwCfg<P>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         match self {
-            Command::Allocate(allocate) => allocate.invoke(fwcfg, acpi_digest),
-            Command::AddPointer(add_pointer) => add_pointer.invoke(),
-            Command::AddChecksum(add_checksum) => add_checksum.invoke(),
-            Command::WritePointer(write_pointer) => write_pointer.invoke(),
-            Command::AddPciHoles(add_pci_holes) => add_pci_holes.invoke(),
+            Command::Allocate(allocate) => allocate.invoke(files, fwcfg, acpi_digest),
+            Command::AddPointer(add_pointer) => add_pointer.invoke(files),
+            Command::AddChecksum(add_checksum) => add_checksum.invoke(files),
+            Command::WritePointer(write_pointer) => write_pointer.invoke(files),
+            Command::AddPciHoles(add_pci_holes) => add_pci_holes.invoke(files),
         }
     }
 }
@@ -684,8 +755,9 @@ impl RomfileCommand {
         }
     }
 
-    fn invoke<P: crate::Platform>(
+    fn invoke<P: crate::Platform, F: Files>(
         &self,
+        files: &mut F,
         fwcfg: &mut FwCfg<P>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
@@ -701,7 +773,7 @@ impl RomfileCommand {
             });
             return Ok(());
         }
-        self.extract()?.invoke(fwcfg, acpi_digest)
+        self.extract()?.invoke(files, fwcfg, acpi_digest)
     }
 }
 
@@ -734,7 +806,7 @@ pub fn build_acpi_tables<P: crate::Platform>(
     };
 
     for command in commands {
-        command.invoke(fwcfg, acpi_digest)?;
+        command.invoke(&mut EbdaFiles, fwcfg, acpi_digest)?;
     }
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
