@@ -25,6 +25,11 @@ proto_library(
     strip_import_prefix = "proto",
 )
 
+filegroup(
+   name = "icing_proto_srcs",
+   srcs = glob(["proto/**/*.proto"]),
+)
+
 cc_proto_library(
     name = "icing_cc_proto",
     visibility = ["//visibility:public"],

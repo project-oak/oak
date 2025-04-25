@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 load("@cxx.rs//tools/bazel:rust_cxx_bridge.bzl", "rust_cxx_bridge")
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     licenses = ["notice"],
@@ -23,32 +23,46 @@ package(
 rust_binary(
     name = "demo",
     srcs = ["main.rs"],
+    deps = [
+        ":icing_ffi_bridge",
+        "//src/icing/proto:icing_rust_proto",
+        "@cxx.rs//:cxx",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_library(
+    name = "icing_ffi_bridge",
+    srcs = ["ffi_bridge.rs"],
     edition = "2021",
     deps = [
         ":bridge",
-        ":mystring-sys",
+        ":ffi_wrapper-sys",
         "@cxx.rs//:cxx",
     ],
 )
 
 rust_cxx_bridge(
     name = "bridge",
-    src = "main.rs",
-    deps = [":mystring-include"],
+    src = "ffi_bridge.rs",
+    deps = [":ffi_wrapper-include"],
 )
 
 cc_library(
-    name = "mystring-sys",
-    srcs = ["mystring.cc"],
+    name = "ffi_wrapper-sys",
+    srcs = ["ffi_wrapper.cc"],
     linkstatic = True,
     deps = [
         ":bridge/include",
-        ":mystring-include",
+        ":ffi_wrapper-include",
     ],
 )
 
 cc_library(
-    name = "mystring-include",
-    hdrs = ["mystring.h"],
-    deps = ["@cxx.rs//:core"],
+    name = "ffi_wrapper-include",
+    hdrs = ["ffi_wrapper.h"],
+    deps = [
+        "@cxx.rs//:core",
+        "@icing",
+    ],
 )

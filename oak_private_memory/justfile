@@ -5,7 +5,7 @@ build:
     bazel build //:bundle.tar
     bazel run //:icing_porting_test
     # FFI related
-    bazel build //src/cxx_example:demo
+    bazel run //src/icing:demo
 
 test:
     bazel test //:standalone_test
