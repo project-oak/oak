@@ -47,6 +47,9 @@ rust_library(
 rust_library(
     name = "cxx_string",
     srcs = ["cxx_string.rs"],
+    deps = [
+        "//cc/ffi:cxx_string",
+    ],
 )
 
 rust_test(

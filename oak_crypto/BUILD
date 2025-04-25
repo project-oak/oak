@@ -94,7 +94,4 @@ rust_test(
             "//cc/crypto/tink/signature/testdata:public_keyset",
             "//cc/crypto/tink/signature/testdata:signature",
         ],
-    deps = [
-        "//cc/ffi:cxx_string",
-    ],
 )
