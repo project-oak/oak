@@ -26,9 +26,15 @@ use oak_attestation_types::{
     attester::Attester,
     util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
+use oak_proto_rust::oak::attestation::v1::{
+    DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
+};
 use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha384};
+
+/// For TDX attestation we don't need to bind any keys in the attestation
+/// report, so we pass empty additional data when requesting the quote.
+static QUOTE_DATA: [u8; 64] = [0u8; 64];
 
 /// Attester that uses Runtime Measurement Registers (RTMRs) to provide
 /// integrity for the event log entries.
@@ -65,7 +71,7 @@ impl Attester for RtmrAttester {
         let digest = Sha384::digest(encoded_event);
         // We extend RTMR2 for all event log entries.
         //
-        // The `oak_configfs_tsm`` API is async but the Attester trait is not, so we
+        // The `oak_configfs_tsm` API is async but the Attester trait is not, so we
         // have to find the current async runtime handle. `Handle::current` will
         // panic if this is not run inside a tokio runtime. This should be OK,
         // since it is only used from Stage 1 and the Orchestrator which both
@@ -77,8 +83,22 @@ impl Attester for RtmrAttester {
     }
 
     fn quote(&self) -> anyhow::Result<Evidence> {
-        // TODO: b/380443519 - Generate attestation report if it doesn't exist.
-        Ok(self.evidence.clone())
+        // The `oak_configfs_tsm` API is async but the Attester trait is not, so we
+        // have to find the current async runtime handle. `Handle::current` will
+        // panic if this is not run inside a tokio runtime. This should be OK,
+        // since this functions is only used from the Orchestrator which uses
+        // `tokio_main`.
+        let remote_attestation_report = tokio::runtime::Handle::current()
+            .block_on(oak_configfs_tsm::get_quote(QUOTE_DATA))
+            .context("couldn't get TDX quote")?;
+
+        let mut result = self.evidence.clone();
+        result.root_layer = Some(RootLayerEvidence {
+            platform: TeePlatform::IntelTdx as i32,
+            remote_attestation_report,
+            eca_public_key: Vec::default(),
+        });
+        Ok(result)
     }
 }
 
