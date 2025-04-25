@@ -15,40 +15,22 @@
 # limitations under the License.
 #
 
-# Lists and retrieves package metdata from discoverability storage and runs
-# endorsement verification on selected packages. This operates in terms of
+# Retrieves package metdata from discoverability storage and runs
+# endorsement verification on the selected package. This operates in terms of
 # endorsements only - actual binaries are not involved, but can still be
 # downloaded from the files bucket.
 #
-# Requires: curl, python3, sha256sum
+# Requires: curl, sha256sum
 set -e
 set -o pipefail
 
-readonly DEFAULT_FBUCKET=oak-files
-readonly DEFAULT_IBUCKET=oak-index
-readonly URL_PREFIX=https://storage.googleapis.com
-
-# ID of index to retrieve signature hashes by endorsement hashes.
-readonly SIGNATURE_FOR_ENDORSEMENT=14
-
-# ID of index to retrieve log entry hashes by endorsement hashes.
-readonly LOGENTRY_FOR_ENDORSEMENT=15
-
-# ID of index to retrieve the public key hash from the signature hash.
-readonly PK_FOR_SIGNATURE=16
-
-# ID of index to retrieve endorsement hashes by public key hashes.
-readonly ENDORSEMENTS_FOR_PK=21
-
-readonly NANOS_PER_DAY=$((24 * 3600 * 1000 * 1000 * 1000))
+# shellcheck source=verification/common.sh
+source "$(dirname "$0")/common.sh"
 
 usage_and_exit() {
   >&2 echo "Usage:"
-  >&2 echo "  $0 --key_file $HOME/public_key.pem"
   >&2 echo "  $0 --endorsement_hash sha2-256:0cb3e0457eae486ecbc42e553f1ec8327691ae836692e080a1aa191d29b2a121"
-  >&2 echo "These modes are mutually exclusive. The first mode lists endorsement"
-  >&2 echo "hashes that can go as input to the second mode."
-
+  >&2 echo "Verifies a binary package by endorsement hash."
   exit 1
 }
 
@@ -63,59 +45,6 @@ fetch_file() {
     >&2 echo "Digest mismatch for ${path}: expected ${hash}, got ${actual_hash}"
     exit 1
   fi
-}
-
-readonly JSON_PARSER="import sys, json
-e = json.load(sys.stdin)
-print(
-  e['subject'][0]['name'],
-  e['subject'][0]['digest']['sha256'],
-  e['predicate']['validity']['notAfter'])"
-
-timestamp() {
-  date "+%s%N" --date="$1"
-}
-
-now_timestamp() {
-  date "+%s%N"
-}
-
-list_all_endorsements() {
-  local fbucket="$1"
-  local ibucket="$2"
-  local keyfile="$3"
-  local ibucket_prefix="${URL_PREFIX}/${ibucket}"
-  local pk_hash="sha2-256:$(sha256sum "${keyfile}" | cut -d " " -f 1)"
-
-  # We need to make sure failures of curl are fatal.
-  # See https://unix.stackexchange.com/questions/23026
-  local endorsement_hashes signature_hash actual_pk_hash
-  endorsement_hashes=$(curl --fail --silent \
-      "${ibucket_prefix}/${ENDORSEMENTS_FOR_PK}/${pk_hash}")
-  local now=$(now_timestamp)
-  local tmp_path=$(mktemp)
-  for endorsement_hash in ${endorsement_hashes}; do
-    # Only proceed when the key used to lookup coincides with the key used
-    # to make the signature.
-    signature_hash=$(curl --fail --silent \
-        "${ibucket_prefix}/${SIGNATURE_FOR_ENDORSEMENT}/${endorsement_hash}")
-    actual_pk_hash=$(curl --fail --silent \
-        "${ibucket_prefix}/${PK_FOR_SIGNATURE}/${signature_hash}")
-    if [[ "${pk_hash}" != "${actual_pk_hash}" ]]; then
-      >&2 echo "Key digest mismatch: expected ${pk_hash}, got ${actual_pk_hash}"
-      exit 1
-    fi
-
-    echo "${endorsement_hash}"
-    fetch_file "${fbucket}" "${endorsement_hash}" "${tmp_path}"
-    local endorsement=$(cat "${tmp_path}")
-    read -r subject_name subject_hash not_after <<< \
-        "$(echo "${endorsement}" | python3 -c "${JSON_PARSER}")"
-    local days=$(( ($(timestamp "${not_after}") - now) / "${NANOS_PER_DAY}" ))
-    echo "    Subject name:   ${subject_name}"
-    echo "    Subject hash:   sha2-256:${subject_hash}"
-    echo "    Days remaining: ${days}"
-  done
 }
 
 download() {
@@ -184,12 +113,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ibucket="$1"
       shift
-      ;;
-    --key_file)
-      shift
-      keyfile="$1"
-      shift
-      list_all_endorsements "${fbucket}" "${ibucket}" "${keyfile}"
       ;;
     --endorsement_hash)
       shift
