@@ -16,8 +16,7 @@
 
 use icing::{
     ffi::*, persist_type, scoring_spec_proto::ranking_strategy, status_proto, term_match_type,
-    IcingSearchEngineOptions, InitializeResultProto, PutResultProto, ResultSpecProto,
-    ScoringSpecProto, SearchSpecProto, SetSchemaResultProto,
+    IcingSearchEngineOptions, ResultSpecProto, ScoringSpecProto, SearchSpecProto,
 };
 use prost::Message;
 use tempfile::tempdir;
@@ -42,40 +41,40 @@ mod tests {
     #[test]
     fn icing_basic_search_test() {
         let temp_dir = tempdir().unwrap();
-        let property_builder = CreatePropertyConfigBuilder();
+        let property_builder = create_property_config_builder();
         property_builder
-            .SetName("body".as_bytes())
-            .SetDataTypeString(2 /* TERM_MATCH_PREFIX */, 1 /* TOKENIZER_PLAIN */)
-            .SetCardinality(3 /* CARDINALITY_REQUIRED */);
+            .set_name("body".as_bytes())
+            .set_data_type_string(
+                term_match_type::Code::Prefix.into(),
+                1, /* TOKENIZER_PLAIN */
+            )
+            .set_cardinality(3 /* CARDINALITY_REQUIRED */);
 
-        let schema_type_builder = CreateSchemaTypeConfigBuilder();
-        schema_type_builder.SetType("Message".as_bytes()).AddProperty(&property_builder);
+        let schema_type_builder = create_schema_type_config_builder();
+        schema_type_builder.set_type("Message".as_bytes()).add_property(&property_builder);
 
-        let schema_builder = CreateSchemaBuilder();
-        schema_builder.AddType(&schema_type_builder);
-        let schema = schema_builder.Build();
+        let schema_builder = create_schema_builder();
+        schema_builder.add_type(&schema_type_builder);
+        let schema = schema_builder.build();
 
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
-        let icing_search_engine = CreateIcingSearchEngine(&options_bytes);
-        let result = icing_search_engine.Initialize();
-        let result_proto = InitializeResultProto::decode(result.as_slice()).unwrap();
+        let icing_search_engine = create_icing_search_engine(&options_bytes);
+        let result_proto = icing_search_engine.initialize();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result = icing_search_engine.SetSchema(schema.as_slice());
-        let result_proto = SetSchemaResultProto::decode(result.as_slice()).unwrap();
+        let result_proto = icing_search_engine.set_schema(&schema);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
-        let doc1 = CreateDocumentBuilder()
-            .SetKey("namespace".as_bytes(), &"uri1".as_bytes())
-            .SetSchema("Message".as_bytes())
-            .AddStringProperty("body".as_bytes(), "message body one".as_bytes())
-            .SetCreationTimestampMs(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .Build();
+        let doc1 = create_document_builder()
+            .set_key("namespace".as_bytes(), &"uri1".as_bytes())
+            .set_schema("Message".as_bytes())
+            .add_string_property("body".as_bytes(), "message body one".as_bytes())
+            .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
+            .build();
 
-        let result = icing_search_engine.Put(doc1.as_slice());
-        let result_proto = PutResultProto::decode(result.as_slice()).unwrap();
+        let result_proto = icing_search_engine.put(&doc1);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         let mut search_spec = SearchSpecProto::default();
@@ -86,7 +85,7 @@ mod tests {
         result_spec.num_per_page = Some(3);
 
         let search_result_proto =
-            icing_search_engine.Search(&search_spec, &get_default_scoring_spec(), &result_spec);
+            icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
         let next_page_token = search_result_proto.next_page_token();
         assert!(next_page_token == 0);
         // Using assert_eq! is generally preferred over assert! for equality checks
@@ -96,43 +95,42 @@ mod tests {
     #[test]
     fn icing_database_export_test() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir().unwrap();
-        let property_builder = CreatePropertyConfigBuilder();
+        let property_builder = create_property_config_builder();
         property_builder
-            .SetName("body".as_bytes())
-            .SetDataTypeString(2 /* TERM_MATCH_PREFIX */, 1 /* TOKENIZER_PLAIN */)
-            .SetCardinality(3 /* CARDINALITY_REQUIRED */);
+            .set_name("body".as_bytes())
+            .set_data_type_string(
+                term_match_type::Code::Prefix.into(),
+                1, /* TOKENIZER_PLAIN */
+            )
+            .set_cardinality(3 /* CARDINALITY_REQUIRED */);
 
-        let schema_type_builder = CreateSchemaTypeConfigBuilder();
-        schema_type_builder.SetType("Message".as_bytes()).AddProperty(&property_builder);
+        let schema_type_builder = create_schema_type_config_builder();
+        schema_type_builder.set_type("Message".as_bytes()).add_property(&property_builder);
 
-        let schema_builder = CreateSchemaBuilder();
-        schema_builder.AddType(&schema_type_builder);
-        let schema = schema_builder.Build();
-
+        let schema_builder = create_schema_builder();
+        schema_builder.add_type(&schema_type_builder);
+        let schema = schema_builder.build();
         // The original database.
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
-        let icing_search_engine = CreateIcingSearchEngine(&options_bytes);
-        let result = icing_search_engine.Initialize();
-        let result_proto = InitializeResultProto::decode(result.as_slice()).unwrap();
+        let icing_search_engine = create_icing_search_engine(&options_bytes);
+        let result_proto = icing_search_engine.initialize();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result = icing_search_engine.SetSchema(schema.as_slice());
-        let result_proto = SetSchemaResultProto::decode(result.as_slice()).unwrap();
+        let result_proto = icing_search_engine.set_schema(&schema);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
-        let doc1 = CreateDocumentBuilder()
-            .SetKey("namespace".as_bytes(), &"uri1".as_bytes())
-            .SetSchema("Message".as_bytes())
-            .AddStringProperty("body".as_bytes(), "message body one".as_bytes())
-            .SetCreationTimestampMs(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .Build();
+        let doc1 = create_document_builder()
+            .set_key("namespace".as_bytes(), &"uri1".as_bytes())
+            .set_schema("Message".as_bytes())
+            .add_string_property("body".as_bytes(), "message body one".as_bytes())
+            .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
+            .build();
 
-        let result = icing_search_engine.Put(doc1.as_slice());
-        let result_proto = PutResultProto::decode(result.as_slice()).unwrap();
+        let result_proto = icing_search_engine.put(&doc1);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
-        icing_search_engine.PersistToDisk(persist_type::Code::Full.into());
+        icing_search_engine.persist_to_disk(persist_type::Code::Full.into());
 
         let ground_truth_files =
             icing::IcingGroundTruthFiles::new(temp_dir.path().to_str().unwrap())?;
@@ -147,14 +145,12 @@ mod tests {
         let migrated_dir_str = migrated_temp_dir.path().to_str().unwrap();
         ground_truth_files.migrate(migrated_dir_str)?;
         let options_bytes = get_default_icing_options(migrated_dir_str).encode_to_vec();
-        let icing_search_engine = CreateIcingSearchEngine(&options_bytes);
-
-        let result = icing_search_engine.Initialize();
-        let result_proto = InitializeResultProto::decode(result.as_slice()).unwrap();
+        let icing_search_engine = create_icing_search_engine(&options_bytes);
+        // Initialize the engine with the migrated data.
+        let result_proto = icing_search_engine.initialize();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result = icing_search_engine.SetSchema(schema.as_slice());
-        let result_proto = SetSchemaResultProto::decode(result.as_slice()).unwrap();
+        let result_proto = icing_search_engine.set_schema(&schema);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         let mut search_spec = SearchSpecProto::default();
@@ -165,7 +161,7 @@ mod tests {
         result_spec.num_per_page = Some(3);
 
         let search_result_proto =
-            icing_search_engine.Search(&search_spec, &get_default_scoring_spec(), &result_spec);
+            icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
         let next_page_token = search_result_proto.next_page_token();
         assert!(next_page_token == 0);
         // Using assert_eq! is generally preferred over assert! for equality checks

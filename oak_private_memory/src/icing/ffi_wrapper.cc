@@ -33,7 +33,7 @@ std::string RustSliceToString(const rust::Slice<const uint8_t>& slice) {
   return std::string(reinterpret_cast<const char*>(slice.data()), slice.size());
 }
 
-std::unique_ptr<DocumentBuilder> CreateDocumentBuilder() {
+std::unique_ptr<DocumentBuilder> create_document_builder() {
   return std::make_unique<DocumentBuilder>();
 }
 
@@ -44,20 +44,20 @@ IcingSearchEngine::IcingSearchEngine(rust::Slice<const uint8_t> options) {
   inner_ = std::make_unique<icing::lib::IcingSearchEngine>(options_proto);
 }
 
-std::unique_ptr<IcingSearchEngine> CreateIcingSearchEngine(
+std::unique_ptr<IcingSearchEngine> create_icing_search_engine(
     rust::Slice<const uint8_t> options) {
   return std::make_unique<IcingSearchEngine>(options);
 }
 
-std::unique_ptr<SchemaTypeConfigBuilder> CreateSchemaTypeConfigBuilder() {
+std::unique_ptr<SchemaTypeConfigBuilder> create_schema_type_config_builder() {
   return std::make_unique<SchemaTypeConfigBuilder>();
 }
 
-std::unique_ptr<SchemaBuilder> CreateSchemaBuilder() {
+std::unique_ptr<SchemaBuilder> create_schema_builder() {
   return std::make_unique<SchemaBuilder>();
 }
 
-std::unique_ptr<PropertyConfigBuilder> CreatePropertyConfigBuilder() {
+std::unique_ptr<PropertyConfigBuilder> create_property_config_builder() {
   return std::make_unique<PropertyConfigBuilder>();
 }
 

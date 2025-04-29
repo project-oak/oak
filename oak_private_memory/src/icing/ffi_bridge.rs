@@ -22,35 +22,35 @@ mod ffi {
 
         type DocumentBuilder;
 
-        fn CreateDocumentBuilder() -> UniquePtr<DocumentBuilder>;
-        fn SetUri<'a>(&self, uri: &[u8]) -> &'a DocumentBuilder;
-        fn SetNamespace<'a>(&self, name_space: &[u8]) -> &'a DocumentBuilder;
-        fn SetKey<'a>(&self, name_space: &[u8], uri: &[u8]) -> &'a DocumentBuilder;
-        fn SetSchema<'a>(&self, schema: &[u8]) -> &'a DocumentBuilder;
-        fn AddStringProperty<'a>(&self, name: &[u8], value: &[u8]) -> &'a DocumentBuilder;
-        fn SetCreationTimestampMs<'a>(&self, creation_timestamp_ms: u64) -> &'a DocumentBuilder;
-        fn SetScore<'a>(&self, score: i32) -> &'a DocumentBuilder;
-        fn SetTtlMs<'a>(&self, ttl_ms: u64) -> &'a DocumentBuilder;
-        fn ClearProperties<'a>(&self) -> &'a DocumentBuilder;
-        fn Build(&self) -> UniquePtr<CxxVector<u8>>;
+        fn create_document_builder() -> UniquePtr<DocumentBuilder>;
+        fn set_uri<'a>(&self, uri: &[u8]) -> &'a DocumentBuilder;
+        fn set_namespace<'a>(&self, name_space: &[u8]) -> &'a DocumentBuilder;
+        fn set_key<'a>(&self, name_space: &[u8], uri: &[u8]) -> &'a DocumentBuilder;
+        fn set_schema<'a>(&self, schema: &[u8]) -> &'a DocumentBuilder;
+        fn add_string_property<'a>(&self, name: &[u8], value: &[u8]) -> &'a DocumentBuilder;
+        fn set_creation_timestamp_ms<'a>(&self, creation_timestamp_ms: u64) -> &'a DocumentBuilder;
+        fn set_score<'a>(&self, score: i32) -> &'a DocumentBuilder;
+        fn set_ttl_ms<'a>(&self, ttl_ms: u64) -> &'a DocumentBuilder;
+        fn clear_properties<'a>(&self) -> &'a DocumentBuilder;
+        fn build_impl(&self) -> UniquePtr<CxxVector<u8>>;
     }
 
     unsafe extern "C++" {
         include!("src/icing/ffi_wrapper.h");
 
         type IcingSearchEngine;
-        fn Initialize(&self) -> UniquePtr<CxxVector<u8>>;
-        fn SetSchema(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
-        fn Put(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
-        fn SearchImpl(
+        fn initialize_impl(&self) -> UniquePtr<CxxVector<u8>>;
+        fn set_schema_impl(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
+        fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>; // Renamed from put
+        fn search_impl(
             &self,
             search_spec: &[u8],
             scoring_spec: &[u8],
             result_spec: &[u8],
         ) -> UniquePtr<CxxVector<u8>>;
-        fn PersistToDisk(&self, persist_type: i32) -> UniquePtr<CxxVector<u8>>;
+        fn persist_to_disk(&self, persist_type: i32) -> UniquePtr<CxxVector<u8>>;
 
-        fn CreateIcingSearchEngine(options: &[u8]) -> UniquePtr<IcingSearchEngine>;
+        fn create_icing_search_engine(options: &[u8]) -> UniquePtr<IcingSearchEngine>;
     }
 
     unsafe extern "C++" {
@@ -58,46 +58,31 @@ mod ffi {
 
         type SchemaBuilder; // Corresponds to ffi::SchemaBuilder
 
-        fn CreateSchemaBuilder() -> UniquePtr<SchemaBuilder>;
+        fn create_schema_builder() -> UniquePtr<SchemaBuilder>;
 
-        fn AddType<'a>(
+        fn add_type<'a>(
             self: &'a SchemaBuilder,
             builder: &SchemaTypeConfigBuilder,
         ) -> &'a SchemaBuilder;
 
-        fn Build(self: &SchemaBuilder) -> UniquePtr<CxxVector<u8>>;
+        fn build_impl(self: &SchemaBuilder) -> UniquePtr<CxxVector<u8>>; // Renamed from build
     }
 
     unsafe extern "C++" {
         include!("src/icing/ffi_wrapper.h");
 
         type SchemaTypeConfigBuilder; // Corresponds to ffi::SchemaTypeConfigBuilder
-        fn CreateSchemaTypeConfigBuilder() -> UniquePtr<SchemaTypeConfigBuilder>;
-        fn SetType<'a>(
-            self: &'a SchemaTypeConfigBuilder,
-            type_name: &[u8],
-        ) -> &'a SchemaTypeConfigBuilder;
-        fn AddParentType<'a>(
-            self: &'a SchemaTypeConfigBuilder,
-            parent_type: &[u8],
-        ) -> &'a SchemaTypeConfigBuilder;
-        fn SetVersion<'a>(
-            self: &'a SchemaTypeConfigBuilder,
-            version: i32,
-        ) -> &'a SchemaTypeConfigBuilder;
-        fn SetDescription<'a>(
-            self: &'a SchemaTypeConfigBuilder,
-            description: &[u8],
-        ) -> &'a SchemaTypeConfigBuilder;
-        fn SetDatabase<'a>(
-            self: &'a SchemaTypeConfigBuilder,
-            database: &[u8],
-        ) -> &'a SchemaTypeConfigBuilder;
-        fn AddProperty<'a>(
-            self: &'a SchemaTypeConfigBuilder,
+        fn create_schema_type_config_builder() -> UniquePtr<SchemaTypeConfigBuilder>;
+        fn set_type<'a>(&'a self, type_name: &[u8]) -> &'a SchemaTypeConfigBuilder;
+        fn add_parent_type<'a>(&'a self, parent_type: &[u8]) -> &'a SchemaTypeConfigBuilder;
+        fn set_version<'a>(&'a self, version: i32) -> &'a SchemaTypeConfigBuilder;
+        fn set_description<'a>(&'a self, description: &[u8]) -> &'a SchemaTypeConfigBuilder;
+        fn set_database<'a>(&'a self, database: &[u8]) -> &'a SchemaTypeConfigBuilder;
+        fn add_property<'a>(
+            &'a self,
             property_builder: &PropertyConfigBuilder,
         ) -> &'a SchemaTypeConfigBuilder;
-        fn Build(self: &SchemaTypeConfigBuilder) -> UniquePtr<CxxVector<u8>>;
+        fn build(&self) -> UniquePtr<CxxVector<u8>>;
     }
 
     unsafe extern "C++" {
@@ -105,62 +90,84 @@ mod ffi {
 
         type PropertyConfigBuilder; // Corresponds to ffi::PropertyConfigBuilder
 
-        fn CreatePropertyConfigBuilder() -> UniquePtr<PropertyConfigBuilder>;
+        fn create_property_config_builder() -> UniquePtr<PropertyConfigBuilder>;
 
-        fn SetName<'a>(self: &'a PropertyConfigBuilder, name: &[u8]) -> &'a PropertyConfigBuilder;
+        fn set_name<'a>(&'a self, name: &[u8]) -> &'a PropertyConfigBuilder;
 
-        fn SetDataType<'a>(
-            self: &'a PropertyConfigBuilder,
-            data_type: i32,
-        ) -> &'a PropertyConfigBuilder;
+        fn set_data_type<'a>(&'a self, data_type: i32) -> &'a PropertyConfigBuilder;
 
-        fn SetDataTypeString<'a>(
-            self: &'a PropertyConfigBuilder,
+        fn set_data_type_string<'a>(
+            &'a self,
             match_type: i32,
             tokenizer: i32,
         ) -> &'a PropertyConfigBuilder;
 
-        fn SetDataTypeDocument<'a>(
-            self: &'a PropertyConfigBuilder,
+        fn set_data_type_document<'a>(
+            &'a self,
             schema_type: &[u8],
             index_nested_properties: bool,
         ) -> &'a PropertyConfigBuilder;
 
-        fn SetCardinality<'a>(
-            self: &'a PropertyConfigBuilder,
-            cardinality: i32,
-        ) -> &'a PropertyConfigBuilder;
+        fn set_cardinality<'a>(&'a self, cardinality: i32) -> &'a PropertyConfigBuilder;
 
-        fn SetDescription<'a>(
-            self: &'a PropertyConfigBuilder,
-            description: &[u8],
-        ) -> &'a PropertyConfigBuilder;
+        fn set_description<'a>(&'a self, description: &[u8]) -> &'a PropertyConfigBuilder;
 
-        fn Build(self: &PropertyConfigBuilder) -> UniquePtr<CxxVector<u8>>;
+        fn build(&self) -> UniquePtr<CxxVector<u8>>;
     }
 }
 
+// Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    scoring_spec_proto::ranking_strategy, status_proto, term_match_type, IcingSearchEngineOptions,
-    InitializeResultProto, PutResultProto, ResultSpecProto, ScoringSpecProto, SearchResultProto,
-    SearchSpecProto, SetSchemaResultProto,
+    DocumentProto, InitializeResultProto, PutResultProto, ResultSpecProto, SchemaProto,
+    ScoringSpecProto, SearchResultProto, SearchSpecProto, SetSchemaResultProto,
 };
 use prost::Message;
 
-#[allow(non_snake_case)]
+impl ffi::DocumentBuilder {
+    pub fn build(&self) -> DocumentProto {
+        let result = self.build_impl();
+        DocumentProto::decode(result.as_slice()).unwrap()
+    }
+}
+
+impl ffi::SchemaBuilder {
+    pub fn build(&self) -> SchemaProto {
+        let result = self.build_impl();
+        SchemaProto::decode(result.as_slice()).unwrap()
+    }
+}
+
 impl ffi::IcingSearchEngine {
-    pub fn Search(
+    pub fn initialize(&self) -> InitializeResultProto {
+        let result = self.initialize_impl();
+        InitializeResultProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn search(
         &self,
         search_spec: &SearchSpecProto,
         scoring_spec: &ScoringSpecProto,
         result_spec: &ResultSpecProto,
     ) -> SearchResultProto {
-        let result = self.SearchImpl(
+        let result = self.search_impl(
+            // Use the snake_case FFI function name
             &search_spec.encode_to_vec(),
             &scoring_spec.encode_to_vec(),
             &result_spec.encode_to_vec(),
         );
         SearchResultProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn set_schema(&self, schema: &SchemaProto) -> SetSchemaResultProto {
+        let schema_bytes = schema.encode_to_vec();
+        let result = self.set_schema_impl(&schema_bytes);
+        SetSchemaResultProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn put(&self, document: &DocumentProto) -> PutResultProto {
+        let document_bytes = document.encode_to_vec();
+        let result = self.put_impl(&document_bytes);
+        PutResultProto::decode(result.as_slice()).unwrap()
     }
 }

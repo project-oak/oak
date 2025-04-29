@@ -40,57 +40,57 @@ class DocumentBuilder {
  public:
   DocumentBuilder() : inner_(std::make_unique<icing::lib::DocumentBuilder>()) {}
 
-  const DocumentBuilder& SetNamespace(
+  const DocumentBuilder& set_namespace(
       rust::Slice<const uint8_t> name_space) const {
     inner_->SetNamespace(RustSliceToString(name_space));
     return *this;
   }
 
-  const DocumentBuilder& SetUri(rust::Slice<const uint8_t> uri) const {
+  const DocumentBuilder& set_uri(rust::Slice<const uint8_t> uri) const {
     inner_->SetUri(RustSliceToString(uri));
     return *this;
   }
 
-  const DocumentBuilder& SetKey(rust::Slice<const uint8_t> name_space,
-                                rust::Slice<const uint8_t> uri) const {
+  const DocumentBuilder& set_key(rust::Slice<const uint8_t> name_space,
+                                 rust::Slice<const uint8_t> uri) const {
     inner_->SetKey(RustSliceToString(name_space), RustSliceToString(uri));
     return *this;
   }
 
-  const DocumentBuilder& SetSchema(rust::Slice<const uint8_t> schema) const {
+  const DocumentBuilder& set_schema(rust::Slice<const uint8_t> schema) const {
     inner_->SetSchema(RustSliceToString(schema));
     return *this;
   }
 
-  const DocumentBuilder& SetCreationTimestampMs(
+  const DocumentBuilder& set_creation_timestamp_ms(
       uint64_t creation_timestamp_ms) const {
     inner_->SetCreationTimestampMs(creation_timestamp_ms);
     return *this;
   }
 
-  const DocumentBuilder& SetScore(int32_t score) const {
+  const DocumentBuilder& set_score(int32_t score) const {
     inner_->SetScore(score);
     return *this;
   }
 
-  const DocumentBuilder& AddStringProperty(
+  const DocumentBuilder& add_string_property(
       rust::Slice<const uint8_t> name, rust::Slice<const uint8_t> value) const {
     inner_->AddStringProperty(RustSliceToString(name),
                               RustSliceToString(value));
     return *this;
   }
 
-  const DocumentBuilder& SetTtlMs(uint64_t ttl_ms) const {
+  const DocumentBuilder& set_ttl_ms(uint64_t ttl_ms) const {
     inner_->SetTtlMs(ttl_ms);
     return *this;
   }
 
-  const DocumentBuilder& ClearProperties() const {
+  const DocumentBuilder& clear_properties() const {
     inner_->ClearProperties();
     return *this;
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Build() const {
+  std::unique_ptr<std::vector<uint8_t>> build_impl() const {
     auto built_proto = inner_->Build();
     return ProtoToVec(built_proto);
   }
@@ -99,19 +99,19 @@ class DocumentBuilder {
   std::unique_ptr<icing::lib::DocumentBuilder> inner_;
 };
 
-std::unique_ptr<DocumentBuilder> CreateDocumentBuilder();
+std::unique_ptr<DocumentBuilder> create_document_builder();
 
 class IcingSearchEngine {
  public:
   IcingSearchEngine(rust::Slice<const uint8_t> options);
 
-  std::unique_ptr<std::vector<uint8_t>> Initialize() const {
+  std::unique_ptr<std::vector<uint8_t>> initialize_impl() const {
     auto proto = inner_->Initialize();
     auto res = ProtoToVec(proto);
     return res;
   }
 
-  std::unique_ptr<std::vector<uint8_t>> SetSchema(
+  std::unique_ptr<std::vector<uint8_t>> set_schema_impl(
       rust::Slice<const uint8_t> schema) const {
     icing::lib::SchemaProto proto;
     std::string slice_str = RustSliceToString(schema);
@@ -119,7 +119,7 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->SetSchema(proto));
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Put(
+  std::unique_ptr<std::vector<uint8_t>> put_impl(
       rust::Slice<const uint8_t> document) const {
     icing::lib::DocumentProto proto;
     std::string slice_str = RustSliceToString(document);
@@ -128,7 +128,7 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Put(proto));
   }
 
-  std::unique_ptr<std::vector<uint8_t>> SearchImpl(
+  std::unique_ptr<std::vector<uint8_t>> search_impl(
       rust::Slice<const uint8_t> search_spec,
       rust::Slice<const uint8_t> scoring_spec,
       rust::Slice<const uint8_t> result_spec) const {
@@ -143,7 +143,8 @@ class IcingSearchEngine {
         inner_->Search(search_proto, scoring_proto, result_proto));
   }
 
-  std::unique_ptr<std::vector<uint8_t>> PersistToDisk(int persist_type) const {
+  std::unique_ptr<std::vector<uint8_t>> persist_to_disk(
+      int persist_type) const {
     return ProtoToVec(
         inner_->PersistToDisk((icing::lib::PersistType::Code)persist_type));
   }
@@ -152,7 +153,7 @@ class IcingSearchEngine {
   std::unique_ptr<icing::lib::IcingSearchEngine> inner_;
 };
 
-std::unique_ptr<IcingSearchEngine> CreateIcingSearchEngine(
+std::unique_ptr<IcingSearchEngine> create_icing_search_engine(
     rust::Slice<const uint8_t> options);
 
 class PropertyConfigBuilder {
@@ -160,26 +161,26 @@ class PropertyConfigBuilder {
   PropertyConfigBuilder()
       : inner_(std::make_unique<icing::lib::PropertyConfigBuilder>()) {}
 
-  const PropertyConfigBuilder& SetName(rust::Slice<const uint8_t> name) const {
+  const PropertyConfigBuilder& set_name(rust::Slice<const uint8_t> name) const {
     inner_->SetName(RustSliceToString(name));
     return *this;
   }
 
-  const PropertyConfigBuilder& SetDataType(int data_type) const {
+  const PropertyConfigBuilder& set_data_type(int data_type) const {
     inner_->SetDataType(
         (icing::lib::PropertyConfigProto_DataType_Code)data_type);
     return *this;
   }
 
-  const PropertyConfigBuilder& SetDataTypeString(int match_type,
-                                                 int tokenizer) const {
+  const PropertyConfigBuilder& set_data_type_string(int match_type,
+                                                    int tokenizer) const {
     inner_->SetDataTypeString(
         (icing::lib::TermMatchType_Code)match_type,
         (icing::lib::StringIndexingConfig_TokenizerType_Code)tokenizer);
     return *this;
   }
 
-  const PropertyConfigBuilder& SetDataTypeDocument(
+  const PropertyConfigBuilder& set_data_type_document(
       rust::Slice<const uint8_t> schema_type,
       bool index_nested_properties) const {
     inner_->SetDataTypeDocument(RustSliceToString(schema_type),
@@ -187,19 +188,19 @@ class PropertyConfigBuilder {
     return *this;
   }
 
-  const PropertyConfigBuilder& SetCardinality(int cardinality) const {
+  const PropertyConfigBuilder& set_cardinality(int cardinality) const {
     inner_->SetCardinality(
         (icing::lib::PropertyConfigProto_Cardinality_Code)cardinality);
     return *this;
   }
 
-  const PropertyConfigBuilder& SetDescription(
+  const PropertyConfigBuilder& set_description(
       rust::Slice<const uint8_t> description) const {
     inner_->SetDescription(RustSliceToString(description));
     return *this;
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Build() const {
+  std::unique_ptr<std::vector<uint8_t>> build() const {
     auto built_proto = inner_->Build();
     return ProtoToVec(built_proto);
   }
@@ -209,52 +210,52 @@ class PropertyConfigBuilder {
 };
 
 // Factory function
-std::unique_ptr<PropertyConfigBuilder> CreatePropertyConfigBuilder();
+std::unique_ptr<PropertyConfigBuilder> create_property_config_builder();
 
 class SchemaTypeConfigBuilder {
  public:
   SchemaTypeConfigBuilder()
       : inner_(std::make_unique<icing::lib::SchemaTypeConfigBuilder>()) {}
 
-  const SchemaTypeConfigBuilder& SetType(
+  const SchemaTypeConfigBuilder& set_type(
       rust::Slice<const uint8_t> type) const {
     inner_->SetType(RustSliceToString(type));
     return *this;
   }
 
-  const SchemaTypeConfigBuilder& AddParentType(
+  const SchemaTypeConfigBuilder& add_parent_type(
       rust::Slice<const uint8_t> parent_type) const {
     inner_->AddParentType(RustSliceToString(parent_type));
     return *this;
   }
 
-  const SchemaTypeConfigBuilder& SetVersion(int32_t version) const {
+  const SchemaTypeConfigBuilder& set_version(int32_t version) const {
     inner_->SetVersion(version);
     return *this;
   }
 
-  const SchemaTypeConfigBuilder& SetDescription(
+  const SchemaTypeConfigBuilder& set_description(
       rust::Slice<const uint8_t> description) const {
     inner_->SetDescription(RustSliceToString(description));
     return *this;
   }
 
-  const SchemaTypeConfigBuilder& SetDatabase(
+  const SchemaTypeConfigBuilder& set_database(
       rust::Slice<const uint8_t> database) const {
     inner_->SetDatabase(RustSliceToString(database));
     return *this;
   }
 
-  const SchemaTypeConfigBuilder& AddProperty(
+  const SchemaTypeConfigBuilder& add_property(
       const PropertyConfigBuilder& builder) const {
-    auto proto_str_ptr = builder.Build();
+    auto proto_str_ptr = builder.build();
     icing::lib::PropertyConfigProto proto;
     proto.ParseFromArray(proto_str_ptr->data(), proto_str_ptr->size());
     inner_->AddProperty(proto);
     return *this;
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Build() const {
+  std::unique_ptr<std::vector<uint8_t>> build() const {
     auto built_proto = inner_->Build();
     return ProtoToVec(built_proto);
   }
@@ -264,22 +265,22 @@ class SchemaTypeConfigBuilder {
 };
 
 // Factory function to create an ffi::SchemaTypeConfigBuilder instance
-std::unique_ptr<SchemaTypeConfigBuilder> CreateSchemaTypeConfigBuilder();
+std::unique_ptr<SchemaTypeConfigBuilder> create_schema_type_config_builder();
 
 class SchemaBuilder {
  public:
   SchemaBuilder() : inner_(std::make_unique<icing::lib::SchemaBuilder>()) {}
 
-  const SchemaBuilder& AddType(
+  const SchemaBuilder& add_type(
       const SchemaTypeConfigBuilder& config_builder) const {
-    auto proto_str_ptr = config_builder.Build();
+    auto proto_str_ptr = config_builder.build();
     icing::lib::SchemaTypeConfigProto proto;
     proto.ParseFromArray(proto_str_ptr->data(), proto_str_ptr->size());
     inner_->AddType(proto);
     return *this;
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Build() const {
+  std::unique_ptr<std::vector<uint8_t>> build_impl() const {
     auto built_proto = inner_->Build();
     return ProtoToVec(built_proto);
   }
@@ -288,7 +289,7 @@ class SchemaBuilder {
   std::unique_ptr<icing::lib::SchemaBuilder> inner_;
 };
 
-std::unique_ptr<SchemaBuilder> CreateSchemaBuilder();
+std::unique_ptr<SchemaBuilder> create_schema_builder();
 
 }  // namespace ffi
 }  // namespace private_memory
