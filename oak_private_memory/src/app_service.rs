@@ -139,10 +139,13 @@ pub async fn create(
     application_handler: SealedMemoryHandler,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
-        .add_service(SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
-            oak_session_context,
-            application_handler,
-        )))
+        .add_service(
+            SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
+                oak_session_context,
+                application_handler,
+            ))
+            .max_decoding_message_size(20 * 1024 * 1024), /* 20MB */
+        )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
