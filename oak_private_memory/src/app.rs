@@ -137,9 +137,12 @@ impl Drop for SealedMemoryHandler {
                     debug!("Failed to serialize database");
                     return;
                 }
+                let database = database.unwrap();
+                debug!("Saving db size: {}", database.data.len());
+                debug!("Saving nonce: {}", database.nonce.len());
                 let result = user_context
                     .database_service_client
-                    .add_blob(database.unwrap(), Some(user_context.uid))
+                    .add_blob(database, Some(user_context.uid))
                     .await;
                 debug!("db response {:#?}", result);
             }
@@ -315,9 +318,10 @@ impl SealedMemoryHandler {
             .unwrap();
 
         let mut db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
+        debug!("Trying to get datablob");
         let database = if let Ok(data_blob) = db_client.get_blob(&uid).await {
             let database = decrypt_database(data_blob, &key)?;
-            debug!("Loaded database successfully {}!!", serde_json::to_string(&database)?);
+            debug!("Loaded database successfully!!");
             database
         } else {
             MetaDatabase::default()

@@ -46,6 +46,7 @@ def _common_crates(std):
             default_features = False,
             features = ["alloc"],
         ),
+        "bincode": crate.spec(version = "2.0.1"),
         "bitflags": crate.spec(version = "2.4.1"),
         "bitvec": crate.spec(
             default_features = False,

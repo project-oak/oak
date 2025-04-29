@@ -67,6 +67,7 @@ rust_library(
         "@oak_crates_index//:aes-gcm",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:bincode",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",

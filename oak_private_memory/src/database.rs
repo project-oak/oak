@@ -17,6 +17,8 @@ use std::collections::HashMap;
 
 use anyhow::bail;
 use async_trait::async_trait;
+use bincode::{config, Decode, Encode};
+use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -44,7 +46,7 @@ pub type MemoryId = String;
 
 /// The essential database that stores all the meta information
 /// except the raw document content of a user.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Encode, Decode)]
 pub struct MetaDatabase {
     inner: HashMap<MemoryId, BlobId>,
 }
@@ -75,7 +77,7 @@ impl MemoryCache {
         // If not in cache, fetch from external DB
         let encrypted_blob = self.db_client.get_blob(blob_id).await?;
         let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
-        let memory: Memory = serde_json::from_slice(&decrypted_data)?;
+        let memory: Memory = Memory::decode(&*decrypted_data)?;
         self.content_cache.insert(*blob_id, memory.clone());
         Ok(memory)
     }
@@ -103,7 +105,7 @@ impl MemoryCache {
             for (blob_id, encrypted_blob) in missing_ids.iter().zip(encrypted_blobs.into_iter()) {
                 let decrypted_data =
                     decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
-                let memory: Memory = serde_json::from_slice(&decrypted_data)?;
+                let memory: Memory = Memory::decode(&*decrypted_data)?;
                 self.content_cache.insert(*blob_id, memory.clone());
                 results.insert(*blob_id, memory);
             }
@@ -115,7 +117,7 @@ impl MemoryCache {
 
     pub async fn add_memory(&mut self, memory: Memory) -> anyhow::Result<BlobId> {
         let blob_id: BlobId = rand::rng().random();
-        let memory_data = serde_json::to_vec(&memory)?;
+        let memory_data = memory.encode_to_vec();
         let nonce = generate_nonce();
         let encrypted_data = encrypt(&self.dek, &nonce, &memory_data)?;
         let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
@@ -135,7 +137,7 @@ impl MemoryCache {
 
         for memory in memories {
             let blob_id: BlobId = rand::rng().random();
-            let memory_data = serde_json::to_vec(memory)?;
+            let memory_data = memory.encode_to_vec();
             let nonce = generate_nonce();
             let encrypted_data = encrypt(&self.dek, &nonce, &memory_data)?;
             let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
@@ -191,7 +193,7 @@ impl MetaDatabase {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Encode, Decode, PartialEq, Debug)]
 pub struct EncryptedDatablob {
     pub nonce: Vec<u8>,
     pub data: Vec<u8>,
@@ -199,7 +201,7 @@ pub struct EncryptedDatablob {
 
 pub fn encrypt_database(database: &MetaDatabase, key: &[u8]) -> anyhow::Result<EncryptedDatablob> {
     let nonce = generate_nonce();
-    let datablob = serde_json::to_vec(database)?;
+    let datablob = bincode::encode_to_vec(database, config::standard())?;
     let data = encrypt(key, &nonce, &datablob)?;
     Ok(EncryptedDatablob { nonce, data })
 }
@@ -208,7 +210,8 @@ pub fn decrypt_database(datablob: EncryptedDatablob, key: &[u8]) -> anyhow::Resu
     let nonce = datablob.nonce;
     let data = datablob.data;
     let decrypted_data = decrypt(key, &nonce, &data)?;
-    Ok(serde_json::from_slice::<MetaDatabase>(&decrypted_data)?)
+    let (meta_db, _) = bincode::decode_from_slice(&decrypted_data, config::standard())?;
+    Ok(meta_db)
 }
 
 // Handlers for storing raw data blobs in the external database.
@@ -236,7 +239,10 @@ impl DataBlobHandler for ExternalDbClient {
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId> {
         let id = id.unwrap_or_else(|| rand::rng().random::<i64>());
-        let data_blob = DataBlob { id, encrypted_blob: serde_json::to_vec(&data_blob)? };
+        let data_blob = DataBlob {
+            id,
+            encrypted_blob: bincode::encode_to_vec(&data_blob, config::standard())?,
+        };
         let db_response = self
             .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
             .await
@@ -274,7 +280,9 @@ impl DataBlobHandler for ExternalDbClient {
         if let Some(status) = db_response.status {
             if status.success && db_response.data_blob.is_some() {
                 let data_blob = db_response.data_blob.unwrap();
-                return Ok(serde_json::from_slice::<EncryptedDatablob>(&data_blob.encrypted_blob)?);
+                let (data_blob, _): (EncryptedDatablob, usize) =
+                    bincode::decode_from_slice(&data_blob.encrypted_blob, config::standard())?;
+                return Ok(data_blob);
             }
         }
         bail!("Failed to read data blob");
