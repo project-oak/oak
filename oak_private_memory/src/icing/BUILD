@@ -14,19 +14,31 @@
 # limitations under the License.
 #
 load("@cxx.rs//tools/bazel:rust_cxx_bridge.bzl", "rust_cxx_bridge")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "demo",
-    srcs = ["main.rs"],
+rust_test(
+    name = "test",
+    srcs = ["test.rs"],
+    deps = [
+        ":icing",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tempfile",
+    ],
+)
+
+rust_library(
+    name = "icing",
+    srcs = ["lib.rs"],
     deps = [
         ":icing_ffi_bridge",
         "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bincode",
         "@oak_crates_index//:prost",
     ],
 )
@@ -38,7 +50,9 @@ rust_library(
     deps = [
         ":bridge",
         ":ffi_wrapper-sys",
+        "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
+        "@oak_crates_index//:prost",
     ],
 )
 

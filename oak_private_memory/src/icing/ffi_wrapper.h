@@ -128,7 +128,7 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Put(proto));
   }
 
-  std::unique_ptr<std::vector<uint8_t>> Search(
+  std::unique_ptr<std::vector<uint8_t>> SearchImpl(
       rust::Slice<const uint8_t> search_spec,
       rust::Slice<const uint8_t> scoring_spec,
       rust::Slice<const uint8_t> result_spec) const {

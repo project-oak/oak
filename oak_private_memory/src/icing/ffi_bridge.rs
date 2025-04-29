@@ -15,7 +15,7 @@
 //
 
 #[cxx::bridge(namespace = "oak::private_memory::ffi")]
-pub mod ffi {
+mod ffi {
     // C++ types and signatures exposed to Rust.
     unsafe extern "C++" {
         include!("src/icing/ffi_wrapper.h");
@@ -42,7 +42,7 @@ pub mod ffi {
         fn Initialize(&self) -> UniquePtr<CxxVector<u8>>;
         fn SetSchema(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn Put(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
-        fn Search(
+        fn SearchImpl(
             &self,
             search_spec: &[u8],
             scoring_spec: &[u8],
@@ -137,5 +137,30 @@ pub mod ffi {
         ) -> &'a PropertyConfigBuilder;
 
         fn Build(self: &PropertyConfigBuilder) -> UniquePtr<CxxVector<u8>>;
+    }
+}
+
+pub use ffi::*;
+use icing_rust_proto::icing::lib::{
+    scoring_spec_proto::ranking_strategy, status_proto, term_match_type, IcingSearchEngineOptions,
+    InitializeResultProto, PutResultProto, ResultSpecProto, ScoringSpecProto, SearchResultProto,
+    SearchSpecProto, SetSchemaResultProto,
+};
+use prost::Message;
+
+#[allow(non_snake_case)]
+impl ffi::IcingSearchEngine {
+    pub fn Search(
+        &self,
+        search_spec: &SearchSpecProto,
+        scoring_spec: &ScoringSpecProto,
+        result_spec: &ResultSpecProto,
+    ) -> SearchResultProto {
+        let result = self.SearchImpl(
+            &search_spec.encode_to_vec(),
+            &scoring_spec.encode_to_vec(),
+            &result_spec.encode_to_vec(),
+        );
+        SearchResultProto::decode(result.as_slice()).unwrap()
     }
 }
