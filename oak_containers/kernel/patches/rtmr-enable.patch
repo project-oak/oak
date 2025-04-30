@@ -1,7 +1,7 @@
-diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c linux-6.9.1-new-patch/arch/x86/coco/tdx/tdx.c
---- linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/arch/x86/coco/tdx/tdx.c	2024-11-25 09:38:08.146837959 -0800
-@@ -35,6 +35,7 @@
+diff '--color=auto' -u -r linux-6.12.25-orig/arch/x86/coco/tdx/tdx.c linux-6.12.25-patch/arch/x86/coco/tdx/tdx.c
+--- linux-6.12.25-orig/arch/x86/coco/tdx/tdx.c	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/arch/x86/coco/tdx/tdx.c	2025-04-30 13:23:51.658435923 +0000
+@@ -39,6 +39,7 @@
  /* TDX Module call error codes */
  #define TDCALL_RETURN_CODE(a)	((a) >> 32)
  #define TDCALL_INVALID_OPERAND	0xc0000100
@@ -9,7 +9,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c linux-6.9.1-n
  
  #define TDREPORT_SUBTYPE_0	0
  
-@@ -108,6 +109,41 @@
+@@ -140,6 +141,41 @@
  EXPORT_SYMBOL_GPL(tdx_mcall_get_report0);
  
  /**
@@ -51,9 +51,9 @@ diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/coco/tdx/tdx.c linux-6.9.1-n
   * tdx_hcall_get_quote() - Wrapper to request TD Quote using GetQuote
   *                         hypercall.
   * @buf: Address of the directly mapped shared kernel buffer which
-diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/shared/tdx.h linux-6.9.1-new-patch/arch/x86/include/asm/shared/tdx.h
---- linux-6.9.1-orig/arch/x86/include/asm/shared/tdx.h	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/arch/x86/include/asm/shared/tdx.h	2024-11-25 09:38:08.146837959 -0800
+diff '--color=auto' -u -r linux-6.12.25-orig/arch/x86/include/asm/shared/tdx.h linux-6.12.25-patch/arch/x86/include/asm/shared/tdx.h
+--- linux-6.12.25-orig/arch/x86/include/asm/shared/tdx.h	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/arch/x86/include/asm/shared/tdx.h	2025-04-30 13:23:51.658435923 +0000
 @@ -12,6 +12,7 @@
  
  /* TDX module Call Leaf IDs */
@@ -62,9 +62,9 @@ diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/shared/tdx.h lin
  #define TDG_VP_INFO			1
  #define TDG_VP_VEINFO_GET		3
  #define TDG_MR_REPORT			4
-diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/tdx.h linux-6.9.1-new-patch/arch/x86/include/asm/tdx.h
---- linux-6.9.1-orig/arch/x86/include/asm/tdx.h	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/arch/x86/include/asm/tdx.h	2024-11-25 09:38:08.146837959 -0800
+diff '--color=auto' -u -r linux-6.12.25-orig/arch/x86/include/asm/tdx.h linux-6.12.25-patch/arch/x86/include/asm/tdx.h
+--- linux-6.12.25-orig/arch/x86/include/asm/tdx.h	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/arch/x86/include/asm/tdx.h	2025-04-30 13:23:51.662436217 +0000
 @@ -64,6 +64,8 @@
  
  int tdx_mcall_get_report0(u8 *reportdata, u8 *tdreport);
@@ -74,13 +74,13 @@ diff '--color=auto' -u -r linux-6.9.1-orig/arch/x86/include/asm/tdx.h linux-6.9.
  u64 tdx_hcall_get_quote(u8 *buf, size_t size);
  
  #else
-diff '--color=auto' -u -r linux-6.9.1-orig/Documentation/ABI/testing/configfs-tsm linux-6.9.1-new-patch/Documentation/ABI/testing/configfs-tsm
---- linux-6.9.1-orig/Documentation/ABI/testing/configfs-tsm	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/Documentation/ABI/testing/configfs-tsm	2024-11-25 09:37:57.802757718 -0800
-@@ -80,3 +80,39 @@
- Description:
- 		(RO) Indicates the minimum permissible value that can be written
- 		to @privlevel.
+diff '--color=auto' -u -r linux-6.12.25-orig/Documentation/ABI/testing/configfs-tsm linux-6.12.25-patch/Documentation/ABI/testing/configfs-tsm
+--- linux-6.12.25-orig/Documentation/ABI/testing/configfs-tsm	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/Documentation/ABI/testing/configfs-tsm	2025-04-30 13:28:11.785519921 +0000
+@@ -143,3 +143,39 @@
+ 
+ 		See 'service_provider' for information on the format of the
+ 		service manifest version.
 +
 +What:		/sys/kernel/config/tsm/rtmrs/$name/digest
 +Date:		January, 2024
@@ -117,9 +117,9 @@ diff '--color=auto' -u -r linux-6.9.1-orig/Documentation/ABI/testing/configfs-ts
 +
 +		[1]: TCG PC Client Specific Platform Firmware Profile Specification
 +		https://trustedcomputinggroup.org/resource/pc-client-specific-platform-firmware-profile-specification/
-diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/Kconfig linux-6.9.1-new-patch/drivers/virt/coco/Kconfig
---- linux-6.9.1-orig/drivers/virt/coco/Kconfig	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/drivers/virt/coco/Kconfig	2024-11-25 09:37:57.802757718 -0800
+diff '--color=auto' -u -r linux-6.12.25-orig/drivers/virt/coco/Kconfig linux-6.12.25-patch/drivers/virt/coco/Kconfig
+--- linux-6.12.25-orig/drivers/virt/coco/Kconfig	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/drivers/virt/coco/Kconfig	2025-04-30 13:23:51.662436217 +0000
 @@ -5,6 +5,7 @@
  
  config TSM_REPORTS
@@ -128,9 +128,9 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/Kconfig linux-6.9.1
  	tristate
  
  source "drivers/virt/coco/efi_secret/Kconfig"
-diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest.c linux-6.9.1-new-patch/drivers/virt/coco/tdx-guest/tdx-guest.c
---- linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest.c	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/drivers/virt/coco/tdx-guest/tdx-guest.c	2024-11-25 09:38:17.362909465 -0800
+diff '--color=auto' -u -r linux-6.12.25-orig/drivers/virt/coco/tdx-guest/tdx-guest.c linux-6.12.25-patch/drivers/virt/coco/tdx-guest/tdx-guest.c
+--- linux-6.12.25-orig/drivers/virt/coco/tdx-guest/tdx-guest.c	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/drivers/virt/coco/tdx-guest/tdx-guest.c	2025-04-30 13:34:37.237818013 +0000
 @@ -17,6 +17,7 @@
  #include <linux/delay.h>
  #include <linux/tsm.h>
@@ -152,8 +152,8 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest
  /* struct tdx_quote_buf: Format of Quote request buffer.
   * @version: Quote format version, filled by TD.
   * @status: Status code of Quote request, filled by VMM.
-@@ -249,6 +256,75 @@
- 	return ret;
+@@ -269,6 +276,75 @@
+ 	return false;
  }
  
 +static int tdx_rtmr_extend(u32 index, const u8 *digest, size_t digest_size)
@@ -228,7 +228,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest
  static long tdx_guest_ioctl(struct file *file, unsigned int cmd,
  			    unsigned long arg)
  {
-@@ -278,9 +354,40 @@
+@@ -297,11 +373,42 @@
  };
  MODULE_DEVICE_TABLE(x86cpu, tdx_guest_ids);
  
@@ -264,14 +264,16 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tdx-guest/tdx-guest
  	.name = KBUILD_MODNAME,
 +	.capabilities = tdx_rtmr_cap,
  	.report_new = tdx_report_new,
+ 	.report_attr_visible = tdx_report_attr_visible,
+ 	.report_bin_attr_visible = tdx_report_bin_attr_visible,
 +	.rtmr_extend = tdx_rtmr_extend,
 +	.rtmr_read = tdx_rtmr_read
  };
  
  static int __init tdx_guest_init(void)
-diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-new-patch/drivers/virt/coco/tsm.c
---- linux-6.9.1-orig/drivers/virt/coco/tsm.c	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/drivers/virt/coco/tsm.c	2024-11-25 09:37:57.806757747 -0800
+diff '--color=auto' -u -r linux-6.12.25-orig/drivers/virt/coco/tsm.c linux-6.12.25-patch/drivers/virt/coco/tsm.c
+--- linux-6.12.25-orig/drivers/virt/coco/tsm.c	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/drivers/virt/coco/tsm.c	2025-04-30 13:38:26.654694791 +0000
 @@ -11,6 +11,7 @@
  #include <linux/module.h>
  #include <linux/cleanup.h>
@@ -281,7 +283,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
  static struct tsm_provider {
  	const struct tsm_ops *ops;
 @@ -50,6 +51,85 @@
- 	TSM_CERTS,
+ 	TSM_MANIFEST,
  };
  
 +/**
@@ -366,7 +368,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
  static struct tsm_report *to_tsm_report(struct config_item *cfg)
  {
  	struct tsm_report_state *state =
-@@ -339,6 +419,240 @@
+@@ -434,6 +514,240 @@
  	.ct_group_ops = &tsm_report_group_ops,
  };
  
@@ -607,7 +609,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
  static const struct config_item_type tsm_root_group_type = {
  	.ct_owner = THIS_MODULE,
  };
-@@ -353,10 +667,48 @@
+@@ -448,9 +762,47 @@
  	.su_mutex = __MUTEX_INITIALIZER(tsm_configfs.su_mutex),
  };
  
@@ -648,15 +650,14 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
 +	return 0;
 +}
 +
- int tsm_register(const struct tsm_ops *ops, void *priv,
- 		 const struct config_item_type *type)
+ int tsm_register(const struct tsm_ops *ops, void *priv)
  {
  	const struct tsm_ops *conflict;
 +	int rc;
  
- 	if (!type)
- 		type = &tsm_report_default_type;
-@@ -370,6 +722,10 @@
+ 	guard(rwsem_write)(&tsm_rwsem);
+ 	conflict = provider.ops;
+@@ -459,17 +811,41 @@
  		return -EBUSY;
  	}
  
@@ -666,8 +667,7 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
 +
  	provider.ops = ops;
  	provider.data = priv;
- 	provider.type = type;
-@@ -377,11 +733,31 @@
+ 	return 0;
  }
  EXPORT_SYMBOL_GPL(tsm_register);
  
@@ -698,17 +698,18 @@ diff '--color=auto' -u -r linux-6.9.1-orig/drivers/virt/coco/tsm.c linux-6.9.1-n
 +
  	provider.ops = NULL;
  	provider.data = NULL;
- 	provider.type = NULL;
-diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-patch/include/linux/tsm.h
---- linux-6.9.1-orig/include/linux/tsm.h	2024-05-17 03:18:09.000000000 -0700
-+++ linux-6.9.1-new-patch/include/linux/tsm.h	2024-11-25 09:37:14.354420689 -0800
-@@ -2,11 +2,13 @@
+ 	return 0;
+diff '--color=auto' -u -r linux-6.12.25-orig/include/linux/tsm.h linux-6.12.25-patch/include/linux/tsm.h
+--- linux-6.12.25-orig/include/linux/tsm.h	2025-04-25 08:48:08.000000000 +0000
++++ linux-6.12.25-patch/include/linux/tsm.h	2025-04-30 13:48:50.396529800 +0000
+@@ -2,12 +2,14 @@
  #ifndef __TSM_H
  #define __TSM_H
  
 +#include <crypto/hash_info.h>
  #include <linux/sizes.h>
  #include <linux/types.h>
+ #include <linux/uuid.h>
  
  #define TSM_INBLOB_MAX 64
  #define TSM_OUTBLOB_MAX SZ_32K
@@ -716,8 +717,8 @@ diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-p
  
  /*
   * Privilege level is a nested permission concept to allow confidential
-@@ -42,12 +44,44 @@
- 	u8 *auxblob;
+@@ -53,6 +55,31 @@
+ 	u8 *manifestblob;
  };
  
 +#define TSM_MAX_RTMR 32
@@ -746,6 +747,9 @@ diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-p
 +};
 +
  /**
+  * enum tsm_attr_index - index used to reference report attributes
+  * @TSM_REPORT_GENERATION: index of the report generation number attribute
+@@ -91,10 +118,17 @@
   * struct tsm_ops - attributes and operations for tsm instances
   * @name: tsm id reflected in /sys/kernel/config/tsm/report/$report/provider
   * @privlevel_floor: convey base privlevel for nested scenarios
@@ -755,6 +759,8 @@ diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-p
 - * (optional), return 0 on successful population, or -errno otherwise
 + *              (optional), return 0 on successful population, or -errno
 + *              otherwise
+  * @report_attr_visible: show or hide a report attribute entry
+  * @report_bin_attr_visible: show or hide a report binary attribute entry
 + * @rtmr_extend: Extend an RTMR with the provided digest.
 + *               Return 0 on successful extension, or -errno otherwise.
 + * @rtmr_read: Reads the value of an RTMR.
@@ -762,14 +768,16 @@ diff '--color=auto' -u -r linux-6.9.1-orig/include/linux/tsm.h linux-6.9.1-new-p
   *
   * Implementation specific ops, only one is expected to be registered at
   * a time i.e. only one of "sev-guest", "tdx-guest", etc.
-@@ -55,7 +89,10 @@
+@@ -102,9 +136,12 @@
  struct tsm_ops {
  	const char *name;
- 	const unsigned int privlevel_floor;
+ 	unsigned int privlevel_floor;
 +	const struct tsm_capabilities capabilities;
  	int (*report_new)(struct tsm_report *report, void *data);
+ 	bool (*report_attr_visible)(int n);
+ 	bool (*report_bin_attr_visible)(int n);
 +	int (*rtmr_extend)(u32 idx, const u8 *digest, size_t digest_size);
 +	ssize_t (*rtmr_read)(u32 idx, u8 *digest, size_t digest_size);
  };
  
- extern const struct config_item_type tsm_report_default_type;
+ int tsm_register(const struct tsm_ops *ops, void *priv);

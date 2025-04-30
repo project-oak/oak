@@ -24,10 +24,10 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          linux_kernel_version = "6.9.1";
+          linux_kernel_version = "6.12.25";
           linux_kernel_src = builtins.fetchurl {
             url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
-            sha256 = "01b414ba98fd189ecd544435caf3860ae2a790e3ec48f5aa70fdf42dc4c5c04a";
+            sha256 = "c8af780f6f613ca24622116e4c512a764335ab66e75c6643003c16e49a8e3b90";
           };
           linux_kernel_config = ./oak_containers/kernel/configs/${linux_kernel_version}/minimal.config;
           # Build the linux kernel for Oak Containers as a nix package, which simplifies
