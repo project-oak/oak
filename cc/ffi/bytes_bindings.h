@@ -31,7 +31,10 @@ namespace oak::ffi::bindings {
 // the documentation that it will re-claim ownership of the parameter.
 struct RustBytes {
   const char* data;
-  uint64_t len;
+
+  // Rust usize is not always the same as size_t, but always matches uintptr_t.
+  // https://internals.rust-lang.org/t/pre-rfc-usize-is-not-size-t/15369
+  uintptr_t len;
 
   operator absl::string_view() { return absl::string_view(data, len); }
 };

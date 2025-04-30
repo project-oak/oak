@@ -31,7 +31,9 @@ namespace oak::ffi::bindings {
 // Corresponds to BytesView struct in oak_session/ffi/types.rs
 struct BytesView {
   const char* data;
-  uint64_t len;
+  // Rust usize is not always the same as size_t, but always matches uintptr_t.
+  // https://internals.rust-lang.org/t/pre-rfc-usize-is-not-size-t/15369
+  uintptr_t len;
 
   explicit BytesView(absl::string_view bytes)
       : data(bytes.data()), len(bytes.size()) {}
