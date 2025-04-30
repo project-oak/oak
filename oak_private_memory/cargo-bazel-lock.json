@@ -1,5 +1,5 @@
 {
-  "checksum": "d25534cadaf3359b87cffc0f576618da39e922d0ad5361c7b79792fbc0c3e1b0",
+  "checksum": "2c12b1cb4d07b4ccdd31ed5547000e360f485e9d646c76342ede8e84bcbba6dd",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -5341,7 +5341,7 @@
               "target": "rayon"
             },
             {
-              "id": "regex 1.10.6",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -7304,6 +7304,10 @@
               "target": "goblin"
             },
             {
+              "id": "googletest 0.14.0",
+              "target": "googletest"
+            },
+            {
               "id": "hashbrown 0.14.5",
               "target": "hashbrown"
             },
@@ -7384,7 +7388,7 @@
               "target": "nix"
             },
             {
-              "id": "oci-spec 0.6.8",
+              "id": "oci-spec 0.6.7",
               "target": "oci_spec"
             },
             {
@@ -7488,7 +7492,7 @@
               "target": "rand_core"
             },
             {
-              "id": "regex 1.10.6",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -8306,7 +8310,7 @@
               "target": "log"
             },
             {
-              "id": "regex 1.10.6",
+              "id": "regex 1.11.1",
               "target": "regex"
             }
           ],
@@ -10578,6 +10582,125 @@
       "license": "MIT",
       "license_ids": [
         "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest 0.14.0": {
+      "name": "googletest",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest/0.14.0/download",
+          "sha256": "fbbb8bea2ac2741b1d5e1183896ad6a3f1e8e25e375ed5737a171e057cacd8a3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "googletest",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "num-traits 0.2.19",
+              "target": "num_traits"
+            },
+            {
+              "id": "regex 1.11.1",
+              "target": "regex"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "googletest_macro 0.14.0",
+              "target": "googletest_macro"
+            },
+            {
+              "id": "rustversion 1.0.20",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest_macro 0.14.0": {
+      "name": "googletest_macro",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest_macro/0.14.0/download",
+          "sha256": "672de67b4529abeb5c623913ca6de8a3031ab97dc105c58ab747199b084ab1bf"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "googletest_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.100",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
       ],
       "license_file": "LICENSE"
     },
@@ -16402,14 +16525,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "oci-spec 0.6.8": {
+    "oci-spec 0.6.7": {
       "name": "oci-spec",
-      "version": "0.6.8",
+      "version": "0.6.7",
       "package_url": "https://github.com/containers/oci-spec-rs",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/oci-spec/0.6.8/download",
-          "sha256": "3f5a3fe998d50101ae009351fec56d88a69f4ed182e11000e711068c2f5abf72"
+          "url": "https://static.crates.io/crates/oci-spec/0.6.7/download",
+          "sha256": "bdf88ddc01cc6bccbe1044adb6a29057333f523deadcb4953c011a73158cfa5e"
         }
       },
       "targets": [
@@ -16447,14 +16570,6 @@
               "target": "derive_builder"
             },
             {
-              "id": "once_cell 1.19.0",
-              "target": "once_cell"
-            },
-            {
-              "id": "regex 1.10.6",
-              "target": "regex"
-            },
-            {
               "id": "serde 1.0.219",
               "target": "serde"
             },
@@ -16487,7 +16602,7 @@
           ],
           "selects": {}
         },
-        "version": "0.6.8"
+        "version": "0.6.7"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -20030,7 +20145,7 @@
               "target": "prost_types"
             },
             {
-              "id": "regex 1.10.6",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -21169,14 +21284,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "regex 1.10.6": {
+    "regex 1.11.1": {
       "name": "regex",
-      "version": "1.10.6",
+      "version": "1.11.1",
       "package_url": "https://github.com/rust-lang/regex",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex/1.10.6/download",
-          "sha256": "4219d74c6b67a3654a9fbebc4b419e22126d13d2f3c4a07ee0cb61ff79a79619"
+          "url": "https://static.crates.io/crates/regex/1.11.1/download",
+          "sha256": "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
         }
       },
       "targets": [
@@ -21242,7 +21357,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.10.6"
+        "version": "1.11.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -35099,6 +35214,7 @@
     "futures-util 0.3.31",
     "getrandom 0.2.15",
     "goblin 0.8.2",
+    "googletest 0.14.0",
     "hashbrown 0.14.5",
     "hex 0.4.3",
     "hkdf 0.12.4",
@@ -35119,7 +35235,7 @@
     "maplit 1.0.2",
     "mockall 0.13.1",
     "nix 0.27.1",
-    "oci-spec 0.6.8",
+    "oci-spec 0.6.7",
     "once_cell 1.19.0",
     "opentelemetry 0.22.0",
     "opentelemetry-otlp 0.15.0",
@@ -35146,7 +35262,7 @@
     "rand 0.9.1",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
-    "regex 1.10.6",
+    "regex 1.11.1",
     "regex-lite 0.1.6",
     "rlsf 0.2.1",
     "rsa 0.9.8",

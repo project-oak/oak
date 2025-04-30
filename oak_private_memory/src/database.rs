@@ -12,10 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 use std::collections::HashMap;
 
-use anyhow::bail;
+use anyhow::{bail, ensure};
 use async_trait::async_trait;
 use bincode::{config, Decode, Encode};
 use prost::Message;
@@ -24,6 +23,7 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
 };
+use tempfile::tempdir;
 use tonic::transport::Channel;
 
 use crate::{
@@ -46,9 +46,245 @@ pub type MemoryId = String;
 
 /// The essential database that stores all the meta information
 /// except the raw document content of a user.
-#[derive(Default, Encode, Decode)]
-pub struct MetaDatabase {
-    inner: HashMap<MemoryId, BlobId>,
+///
+/// The current schema is
+/// {
+///   "memory_id": string, indexable
+///   "tags": repeated string, indexable
+///   "blob_id": string
+/// }
+/// Indexable fields are the ones that can be searched against.
+pub struct IcingMetaDatabase {
+    icing_search_engine: cxx::UniquePtr<icing::IcingSearchEngine>,
+    base_dir: String,
+}
+
+// `IcingMetaBase` is safe to send because it is behind a unique_ptr,
+// but it is unsafe to sync because that will allow concurrent write accesses
+// to the underlying icing database.
+unsafe impl Send for IcingMetaDatabase {}
+impl !Sync for IcingMetaDatabase {}
+
+const NAMESPACE_NAME: &str = "namespace";
+const SCHMA_NAME: &str = "Memory";
+const TAG_NAME: &str = "tag";
+const MEMORY_ID_NAME: &str = "memoryId";
+const BLOB_ID_NAME: &str = "blobId";
+
+impl IcingMetaDatabase {
+    /// Rebuild the icing database in `target_base_dir` given the content of the
+    /// ground truth files in `buffer`.
+    pub fn import(buffer: &[u8], target_base_dir: Option<&str>) -> anyhow::Result<Self> {
+        let base_dir_str = match target_base_dir {
+            Some(dir) => dir.to_string(),
+            _ => {
+                let temp_dir = tempdir()?;
+                temp_dir.path().to_str().unwrap().to_string()
+            }
+        };
+
+        // Decode the ground truth data
+        let ground_truth = icing::IcingGroundTruthFiles::decode_from_slice(buffer)?;
+
+        // Migrate the data to the target directory (this handles cleaning the
+        // directory)
+        ground_truth.migrate(&base_dir_str)?;
+
+        // Initialize Icing Search Engine from the migrated directory
+        let options_bytes = icing::get_default_icing_options(&base_dir_str).encode_to_vec();
+        let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
+        let result_proto = icing_search_engine.initialize();
+        if result_proto.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+            bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
+        }
+
+        Ok(Self { icing_search_engine, base_dir: base_dir_str })
+    }
+
+    /// Create a new icing database in `base_dir`. If there is already a icing
+    /// db in `base_dir`, the old one will be deleted.
+    pub fn new(base_dir: &str) -> anyhow::Result<Self> {
+        let schema_type_builder = icing::create_schema_type_config_builder();
+        schema_type_builder
+            .set_type(SCHMA_NAME.as_bytes())
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(TAG_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Repeated.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(MEMORY_ID_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Required.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(BLOB_ID_NAME.as_bytes())
+                    // We don't need to index blob id
+                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Required.into(),
+                    ),
+            );
+
+        let schema_builder = icing::create_schema_builder();
+        schema_builder.add_type(&schema_type_builder);
+        let schema = schema_builder.build();
+
+        let options_bytes = icing::get_default_icing_options(base_dir).encode_to_vec();
+        let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
+        let result_proto = icing_search_engine.initialize();
+        ensure!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+
+        let result_proto = icing_search_engine.set_schema(&schema);
+        ensure!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+
+        Ok(Self { icing_search_engine, base_dir: base_dir.to_string() })
+    }
+
+    pub fn add_memory(&mut self, memory: Memory, blob_id: BlobId) -> anyhow::Result<()> {
+        let memory_id = memory.id;
+        let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
+        let doc = icing::create_document_builder()
+            .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
+            .set_schema(SCHMA_NAME.as_bytes())
+            .add_string_property(TAG_NAME.as_bytes(), &tags)
+            .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
+            .add_int64_property(BLOB_ID_NAME.as_bytes(), blob_id)
+            .build();
+        let result = self.icing_search_engine.put(&doc);
+        if result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+            debug!("{:?}", result);
+        }
+        ensure!(result.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        Ok(())
+    }
+
+    pub fn get_memories_by_tag(&self, tag: String) -> anyhow::Result<Vec<BlobId>> {
+        let mut search_spec = icing::SearchSpecProto::default();
+        search_spec.query = Some(tag);
+        // Match exactly as defined in the schema for tags.
+        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
+        // Only search within the 'tag' property.
+        let mut filter = icing::TypePropertyMask::default();
+        filter.schema_type = Some(SCHMA_NAME.to_string());
+        filter.paths.push(TAG_NAME.to_string());
+        search_spec.type_property_filters.push(filter);
+
+        let mut result_spec = icing::ResultSpecProto::default();
+        // Request a large number to get all results in one go for simplicity.
+        // Consider pagination for very large datasets.
+        result_spec.num_per_page = Some(1000);
+        // Only retrieve the blob_id property.
+        let mut projection = icing::TypePropertyMask::default();
+        projection.schema_type = Some(SCHMA_NAME.to_string());
+        projection.paths.push(BLOB_ID_NAME.to_string());
+        result_spec.type_property_masks.push(projection);
+
+        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
+            &search_spec,
+            &icing::get_default_scoring_spec(), // Use default scoring for now
+            &result_spec,
+        );
+
+        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed: {:?}", search_result.status);
+        }
+
+        Ok(search_result
+            .results
+            .into_iter()
+            .filter_map(|doc_hit| {
+                doc_hit
+                    .document?
+                    .properties
+                    .into_iter()
+                    .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
+                    .int64_values
+                    .first()
+                    .cloned()
+            })
+            .collect::<Vec<_>>())
+    }
+
+    pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
+        let mut search_spec = icing::SearchSpecProto::default();
+        search_spec.query = Some(memory_id.to_string());
+        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
+
+        // Filter by schema type
+        let mut filter = icing::TypePropertyMask::default();
+        filter.schema_type = Some(SCHMA_NAME.to_string());
+        // Optionally, restrict the query to the memoryId property if the query syntax
+        // above isn't specific enough
+        filter.paths.push(MEMORY_ID_NAME.to_string());
+        search_spec.type_property_filters.push(filter);
+
+        let mut result_spec = icing::ResultSpecProto::default();
+        result_spec.num_per_page = Some(1); // We expect at most one result
+                                            // Only retrieve the blob_id property.
+        let mut projection = icing::TypePropertyMask::default();
+        projection.schema_type = Some(SCHMA_NAME.to_string());
+        projection.paths.push(BLOB_ID_NAME.to_string());
+        result_spec.type_property_masks.push(projection);
+
+        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
+            &search_spec,
+            &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
+            &result_spec,
+        );
+
+        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
+        }
+
+        // Extract the blob_id (int64) from the first result, if any
+        Ok(search_result.results.first().and_then(|doc_hit| {
+            doc_hit
+                .document
+                .as_ref()?
+                .properties
+                .iter()
+                .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
+                .int64_values
+                .first()
+                .cloned()
+        }))
+    }
+
+    pub fn export(&self) -> Vec<u8> {
+        self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
+        let blob = icing::IcingGroundTruthFiles::new(&self.base_dir)
+            .expect("Failed to read ground truth files from base_dir")
+            .encode_to_vec()
+            .expect("Export encoding failed");
+        debug!("Exporting icing db, len: {}", blob.len());
+        blob
+    }
+
+    pub fn reset(&self) {
+        self.icing_search_engine.reset();
+    }
+}
+
+impl Drop for IcingMetaDatabase {
+    fn drop(&mut self) {
+        self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
+    }
 }
 
 /// In memory cache for memories. When a memory is added, it is cached in
@@ -162,34 +398,17 @@ impl MemoryCache {
 /// then loads documents at request. The loaded documents will be then cached
 /// in memory.
 pub struct DatabaseWithCache {
-    database: MetaDatabase,
+    database: IcingMetaDatabase,
     pub cache: MemoryCache,
 }
 
 impl DatabaseWithCache {
-    pub fn new(database: MetaDatabase, dek: Vec<u8>, db_client: ExternalDbClient) -> Self {
+    pub fn new(database: IcingMetaDatabase, dek: Vec<u8>, db_client: ExternalDbClient) -> Self {
         Self { database, cache: MemoryCache::new(db_client, dek) }
     }
 
-    pub fn meta_db(&mut self) -> &mut MetaDatabase {
+    pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
         &mut self.database
-    }
-}
-
-impl MetaDatabase {
-    pub fn all_blob_ids(&self) -> Vec<BlobId> {
-        self.inner.values().cloned().collect()
-    }
-    pub fn add_memory(&mut self, id: MemoryId, blob_id: BlobId) -> bool {
-        self.inner.insert(id, blob_id).is_none()
-    }
-
-    pub fn get_blob_id_by_memory_id(&self, id: MemoryId) -> Option<BlobId> {
-        self.inner.get(&id).cloned()
-    }
-
-    pub fn reset(&mut self) {
-        self.inner.clear();
     }
 }
 
@@ -199,18 +418,24 @@ pub struct EncryptedDatablob {
     pub data: Vec<u8>,
 }
 
-pub fn encrypt_database(database: &MetaDatabase, key: &[u8]) -> anyhow::Result<EncryptedDatablob> {
+pub fn encrypt_database(
+    database: &IcingMetaDatabase,
+    key: &[u8],
+) -> anyhow::Result<EncryptedDatablob> {
     let nonce = generate_nonce();
-    let datablob = bincode::encode_to_vec(database, config::standard())?;
+    let datablob = database.export();
     let data = encrypt(key, &nonce, &datablob)?;
     Ok(EncryptedDatablob { nonce, data })
 }
 
-pub fn decrypt_database(datablob: EncryptedDatablob, key: &[u8]) -> anyhow::Result<MetaDatabase> {
+pub fn decrypt_database(
+    datablob: EncryptedDatablob,
+    key: &[u8],
+) -> anyhow::Result<IcingMetaDatabase> {
     let nonce = datablob.nonce;
     let data = datablob.data;
     let decrypted_data = decrypt(key, &nonce, &data)?;
-    let (meta_db, _) = bincode::decode_from_slice(&decrypted_data, config::standard())?;
+    let meta_db = IcingMetaDatabase::import(&decrypted_data, None)?; // Import to a temp dir by default
     Ok(meta_db)
 }
 
@@ -298,5 +523,106 @@ impl DataBlobHandler for ExternalDbClient {
         }
         let result = futures::future::join_all(result).await;
         result.into_iter().map(|x| x.map_err(anyhow::Error::msg)).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use googletest::prelude::*;
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[gtest]
+    fn basic_icing_search_test() -> anyhow::Result<()> {
+        let temp_dir = tempdir().unwrap();
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+
+        let mut memory = Memory::default();
+        memory.id = "Thisisanid".to_string();
+        memory.tags.push("the_tag".to_string());
+        let blob_id = 12345;
+        icing_database.add_memory(memory, blob_id)?;
+        let mut memory2 = Memory::default();
+        memory2.id = "Thisisanid2".to_string();
+        memory2.tags.push("the_tag".to_string());
+        let blob_id2 = 12346;
+        icing_database.add_memory(memory2, blob_id2)?;
+
+        let result = icing_database.get_memories_by_tag("the_tag".to_string()).unwrap();
+        expect_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_export_test() -> anyhow::Result<()> {
+        let temp_dir = tempdir().unwrap();
+        let base_dir = temp_dir.path().to_str().unwrap();
+        let mut icing_database = IcingMetaDatabase::new(base_dir)?;
+
+        let memory_id1 = "memory_id_export_1".to_string();
+        let blob_id1 = 654321;
+        let memory1 = Memory {
+            id: memory_id1.clone(),
+            tags: vec!["export_tag".to_string()],
+            ..Default::default()
+        };
+        icing_database.add_memory(memory1, blob_id1)?;
+
+        // Export the database
+        let exported_data = icing_database.export();
+        drop(icing_database); // Drop the original instance
+
+        // Import into a new directory (or the same one after cleaning)
+        let import_temp_dir = tempdir().unwrap();
+        let import_base_dir = import_temp_dir.path().to_str().unwrap();
+        let imported_database =
+            IcingMetaDatabase::import(&exported_data, Some(import_base_dir)).unwrap();
+
+        // Verify data exists in the imported database
+        expect_that!(
+            imported_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
+            eq(Some(blob_id1))
+        );
+        expect_that!(
+            imported_database.get_memories_by_tag("export_tag".to_string()).unwrap(),
+            unordered_elements_are![eq(&blob_id1)]
+        );
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
+        let temp_dir = tempdir().unwrap();
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+
+        let memory_id1 = "memory_id_1".to_string();
+        let blob_id1 = 54321;
+        let memory1 =
+            Memory { id: memory_id1.clone(), tags: vec!["tag1".to_string()], ..Default::default() };
+        icing_database.add_memory(memory1, blob_id1)?;
+
+        let memory_id2 = "memory_id_2".to_string();
+        let blob_id2 = 54322;
+        let memory2 =
+            Memory { id: memory_id2.clone(), tags: vec!["tag2".to_string()], ..Default::default() };
+        icing_database.add_memory(memory2, blob_id2)?;
+
+        // Test finding an existing blob ID
+        expect_that!(
+            icing_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
+            eq(Some(blob_id1))
+        );
+        // Test finding another existing blob ID
+        expect_that!(
+            icing_database.get_blob_id_by_memory_id(memory_id2).unwrap(),
+            eq(Some(blob_id2))
+        );
+        // Test finding a non-existent blob ID
+        expect_that!(
+            icing_database.get_blob_id_by_memory_id("non_existent_id".to_string()).unwrap(),
+            eq(None)
+        );
+        Ok(())
     }
 }

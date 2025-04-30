@@ -34,8 +34,8 @@ use tonic::transport::Channel;
 use crate::{
     app_config::ApplicationConfig,
     database::{
-        decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache, MemoryId,
-        MetaDatabase,
+        decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache,
+        IcingMetaDatabase, MemoryId,
     },
     debug,
 };
@@ -58,33 +58,23 @@ impl MemoryInterface for DatabaseWithCache {
         } else {
             memory.id.clone()
         };
-        let blob_id = self.cache.add_memory(memory).await.ok()?;
-        self.meta_db().add_memory(memory_id.clone(), blob_id);
+        let blob_id = self.cache.add_memory(memory.clone()).await.ok()?;
+        let _ = self.meta_db().add_memory(memory, blob_id);
         Some(memory_id)
     }
 
     async fn get_memories_by_tag(&mut self, tag: String) -> Vec<Memory> {
-        let all_blob_ids: Vec<BlobId> = self.meta_db().all_blob_ids();
+        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag).unwrap();
 
         if all_blob_ids.is_empty() {
             return Vec::new();
         }
 
-        // 2. Fetch all memories using the cache
-        match self.cache.get_memories_by_blob_ids(&all_blob_ids).await {
-            Ok(all_memories) => {
-                // 3. Filter by tag
-                all_memories.into_iter().filter(|m| m.tags.contains(&tag)).collect()
-            }
-            Err(e) => {
-                log::error!("Failed to fetch memories by blob IDs: {:?}", e);
-                Vec::new() // Return empty vec on error
-            }
-        }
+        self.cache.get_memories_by_blob_ids(&all_blob_ids).await.unwrap()
     }
 
     async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory> {
-        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id) {
+        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id).unwrap() {
             self.cache.get_memory_by_blob_id(&blob_id).await.ok()
         } else {
             None
@@ -324,7 +314,8 @@ impl SealedMemoryHandler {
             debug!("Loaded database successfully!!");
             database
         } else {
-            MetaDatabase::default()
+            let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
+            IcingMetaDatabase::new(&temp_path)?
         };
         let mut mutex_guard = self.session_context().await;
         if mutex_guard.is_some() {

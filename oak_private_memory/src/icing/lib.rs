@@ -21,12 +21,10 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use bincode::{config, Decode, Encode};
-pub use icing_rust_proto::icing::lib::*;
-
 // Rexport the ffi functions from the bridge.
-pub mod ffi {
-    pub use icing_ffi_bridge::*;
-}
+pub use icing_ffi_bridge::*;
+use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;
+pub use icing_rust_proto::icing::lib::*;
 
 const SCHEMA_PB_PATH: &str = "schema_dir/schema.pb";
 const OVERLAY_SCHEMA_PB_PATH: &str = "schema_dir/overlay_schema.pb";
@@ -149,4 +147,17 @@ impl IcingGroundTruthFiles {
         let (result, _) = bincode::decode_from_slice(buf, config::standard())?;
         Ok(result)
     }
+}
+
+pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
+    let mut icing_options = IcingSearchEngineOptions::default();
+    icing_options.enable_scorable_properties = Some(true);
+    icing_options.base_dir = Some(base_dir.to_string());
+    icing_options
+}
+
+pub fn get_default_scoring_spec() -> ScoringSpecProto {
+    let mut scoring_spec = ScoringSpecProto::default();
+    scoring_spec.rank_by = Some(ranking_strategy::Code::DocumentScore.into());
+    scoring_spec
 }

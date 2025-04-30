@@ -27,7 +27,8 @@ mod ffi {
         fn set_namespace<'a>(&self, name_space: &[u8]) -> &'a DocumentBuilder;
         fn set_key<'a>(&self, name_space: &[u8], uri: &[u8]) -> &'a DocumentBuilder;
         fn set_schema<'a>(&self, schema: &[u8]) -> &'a DocumentBuilder;
-        fn add_string_property<'a>(&self, name: &[u8], value: &[u8]) -> &'a DocumentBuilder;
+        fn add_string_property<'a>(&self, name: &[u8], value: &[&[u8]]) -> &'a DocumentBuilder;
+        fn add_int64_property<'a>(&self, name: &[u8], value: i64) -> &'a DocumentBuilder;
         fn set_creation_timestamp_ms<'a>(&self, creation_timestamp_ms: u64) -> &'a DocumentBuilder;
         fn set_score<'a>(&self, score: i32) -> &'a DocumentBuilder;
         fn set_ttl_ms<'a>(&self, ttl_ms: u64) -> &'a DocumentBuilder;
@@ -41,7 +42,8 @@ mod ffi {
         type IcingSearchEngine;
         fn initialize_impl(&self) -> UniquePtr<CxxVector<u8>>;
         fn set_schema_impl(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
-        fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>; // Renamed from put
+        fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
+        fn reset(&self) -> UniquePtr<CxxVector<u8>>;
         fn search_impl(
             &self,
             search_spec: &[u8],

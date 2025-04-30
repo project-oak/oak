@@ -46,6 +46,15 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "private_memory_test",
+    crate = ":private_memory_server_lib",
+    deps = [
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:tempfile",
+    ],
+)
+
 rust_library(
     name = "private_memory_server_lib",
     srcs = [
@@ -60,6 +69,8 @@ rust_library(
     deps = [
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
+        "//src/icing",
+        "@cxx.rs//:cxx",
         "@oak//oak_crypto",
         "@oak//oak_proto_rust",
         "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
@@ -75,6 +86,7 @@ rust_library(
         "@oak_crates_index//:rand",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
@@ -86,7 +98,6 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":private_memory_server_lib",
-        "@icing",
         "@oak//oak_sdk/containers:oak_sdk_containers",
         "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
         "@oak//oak_session",

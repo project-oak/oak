@@ -102,6 +102,7 @@ def _common_crates(std):
             ],
             version = "0.8.2",
         ),
+        "googletest": crate.spec(version = "0.14.0"),
         "hashbrown": crate.spec(
             default_features = False,
             version = "0.14.3",

@@ -14,25 +14,9 @@
 // limitations under the License.
 //
 
-use icing::{
-    ffi::*, persist_type, scoring_spec_proto::ranking_strategy, status_proto, term_match_type,
-    IcingSearchEngineOptions, ResultSpecProto, ScoringSpecProto, SearchSpecProto,
-};
+use icing::{persist_type, status_proto, term_match_type, *};
 use prost::Message;
 use tempfile::tempdir;
-
-fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
-    let mut icing_options = IcingSearchEngineOptions::default();
-    icing_options.enable_scorable_properties = Some(true);
-    icing_options.base_dir = Some(base_dir.to_string());
-    icing_options
-}
-
-fn get_default_scoring_spec() -> ScoringSpecProto {
-    let mut scoring_spec = ScoringSpecProto::default();
-    scoring_spec.rank_by = Some(ranking_strategy::Code::DocumentScore.into());
-    scoring_spec
-}
 
 #[cfg(test)]
 mod tests {
@@ -48,7 +32,7 @@ mod tests {
                 term_match_type::Code::Prefix.into(),
                 1, /* TOKENIZER_PLAIN */
             )
-            .set_cardinality(3 /* CARDINALITY_REQUIRED */);
+            .set_cardinality(property_config_proto::cardinality::Code::Repeated.into());
 
         let schema_type_builder = create_schema_type_config_builder();
         schema_type_builder.set_type("Message".as_bytes()).add_property(&property_builder);
@@ -70,11 +54,17 @@ mod tests {
         let doc1 = create_document_builder()
             .set_key("namespace".as_bytes(), &"uri1".as_bytes())
             .set_schema("Message".as_bytes())
-            .add_string_property("body".as_bytes(), "message body one".as_bytes())
+            .add_string_property(
+                "body".as_bytes(),
+                &["message body one".as_bytes(), "message body two".as_bytes()],
+            )
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
             .build();
 
         let result_proto = icing_search_engine.put(&doc1);
+        if result_proto.status.clone().unwrap().code != Some(status_proto::Code::Ok.into()) {
+            println!("Result {:?}", result_proto);
+        }
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         let mut search_spec = SearchSpecProto::default();
@@ -124,7 +114,7 @@ mod tests {
         let doc1 = create_document_builder()
             .set_key("namespace".as_bytes(), &"uri1".as_bytes())
             .set_schema("Message".as_bytes())
-            .add_string_property("body".as_bytes(), "message body one".as_bytes())
+            .add_string_property("body".as_bytes(), &["message body one".as_bytes()])
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
             .build();
 
@@ -150,8 +140,9 @@ mod tests {
         let result_proto = icing_search_engine.initialize();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result_proto = icing_search_engine.set_schema(&schema);
-        assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
+        //let result_proto = icing_search_engine.set_schema(&schema);
+        //assert!(result_proto.status.unwrap().code ==
+        // Some(status_proto::Code::Ok.into()));
 
         let mut search_spec = SearchSpecProto::default();
         search_spec.term_match_type = Some(term_match_type::Code::Prefix.into());

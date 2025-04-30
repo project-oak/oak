@@ -17,6 +17,7 @@ load("@cxx.rs//tools/bazel:rust_cxx_bridge.bzl", "rust_cxx_bridge")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 

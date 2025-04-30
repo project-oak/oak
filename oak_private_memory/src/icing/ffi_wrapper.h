@@ -36,6 +36,40 @@ std::unique_ptr<std::vector<uint8_t>> ProtoToVec(ProtoT proto) {
   return result;
 }
 std::string RustSliceToString(const rust::Slice<const uint8_t>& slice);
+
+// The max number of argumets that can be passed in `AddStringProperty`.
+constexpr size_t kMaxValuesNum = 128;
+// Icing's DocumentBuilder has the following signature for AddStringProperty
+// ```
+// template <typename... V>
+// DocumentBuilder& AddStringProperty(std::string property_name,
+//                                    V... string_values) {
+// return AddStringProperty(std::move(property_name), {string_values...});
+// }
+// ```
+//
+// However, Rust doesn't support vardiac function calls. We need to use the
+// following template tricks to unpack a vector of string statically.
+//
+// To avoid infinite recursion, we bound the number of arguments by
+// `kMaxValuesNum`.
+template <typename BuilderType, typename... V>
+inline void RecursivelyAddString(
+    BuilderType& builder, std::string name,
+    rust::Slice<const rust::Slice<const uint8_t>> values, V... string_values) {
+  if (values.empty()) {
+    builder.AddStringProperty(name, string_values...);
+  } else {
+    std::string tail = RustSliceToString(values.back());
+    rust::Slice<const rust::Slice<const uint8_t>> new_values(values.data(),
+                                                             values.size() - 1);
+    if constexpr (sizeof...(V) < kMaxValuesNum) {
+      RecursivelyAddString(builder, std::move(name), new_values,
+                           std::move(tail), std::move(string_values)...);
+    }
+  }
+}
+
 class DocumentBuilder {
  public:
   DocumentBuilder() : inner_(std::make_unique<icing::lib::DocumentBuilder>()) {}
@@ -74,9 +108,15 @@ class DocumentBuilder {
   }
 
   const DocumentBuilder& add_string_property(
-      rust::Slice<const uint8_t> name, rust::Slice<const uint8_t> value) const {
-    inner_->AddStringProperty(RustSliceToString(name),
-                              RustSliceToString(value));
+      rust::Slice<const uint8_t> name,
+      rust::Slice<const rust::Slice<const uint8_t>> value) const {
+    RecursivelyAddString(*inner_, RustSliceToString(name), value);
+    return *this;
+  }
+
+  const DocumentBuilder& add_int64_property(rust::Slice<const uint8_t> name,
+                                            int64_t value) const {
+    inner_->AddInt64Property(RustSliceToString(name), value);
     return *this;
   }
 
@@ -107,6 +147,12 @@ class IcingSearchEngine {
 
   std::unique_ptr<std::vector<uint8_t>> initialize_impl() const {
     auto proto = inner_->Initialize();
+    auto res = ProtoToVec(proto);
+    return res;
+  }
+
+  std::unique_ptr<std::vector<uint8_t>> reset() const {
+    auto proto = inner_->Reset();
     auto res = ProtoToVec(proto);
     return res;
   }
