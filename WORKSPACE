@@ -464,8 +464,8 @@ load("//bazel/nix:kernel.bzl", "nix_kernel_repo")
 # Get the nix-built Kernels into our Bazel workspace, and verify the sha256
 nix_kernel_repo(
     name = "nix_kernels",
-    bzImage_sha256 = "fd3a5d66155906f6f12e68ad50149209edba6209a6d57881ef325d6151cc3038",
-    bzImage_vanilla_sha256 = "693b035cebece690843308fb0f885162cac28cd558c628b2d9f1ed54910a9a37",
+    bzImage_sha256 = "9e4dd5c5cebb4be3bea8747035979ab373b92124bbb9dcdef19325cea7116717",
+    bzImage_vanilla_sha256 = "1ce6de1a2c4885dbf6d445a5bac390e285a76104d52e5356501330b409aaf141",
 )
 
 # Tink C++
