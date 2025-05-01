@@ -26,6 +26,8 @@ pub use icing_ffi_bridge::*;
 use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;
 pub use icing_rust_proto::icing::lib::*;
 
+use crate::property_proto::VectorProto;
+
 const SCHEMA_PB_PATH: &str = "schema_dir/schema.pb";
 const OVERLAY_SCHEMA_PB_PATH: &str = "schema_dir/overlay_schema.pb";
 const SCHEMA_STORE_HEADER_PATH: &str = "schema_dir/schema_store_header";
@@ -160,4 +162,11 @@ pub fn get_default_scoring_spec() -> ScoringSpecProto {
     let mut scoring_spec = ScoringSpecProto::default();
     scoring_spec.rank_by = Some(ranking_strategy::Code::DocumentScore.into());
     scoring_spec
+}
+
+pub fn create_vector_proto(model_signature: &str, values: &[f32]) -> VectorProto {
+    VectorProto {
+        model_signature: Some(model_signature.to_string()),
+        values: values.to_vec(), // Convert the slice to a Vec<f32>
+    }
 }

@@ -28,6 +28,8 @@ mod ffi {
         fn set_key<'a>(&self, name_space: &[u8], uri: &[u8]) -> &'a DocumentBuilder;
         fn set_schema<'a>(&self, schema: &[u8]) -> &'a DocumentBuilder;
         fn add_string_property<'a>(&self, name: &[u8], value: &[&[u8]]) -> &'a DocumentBuilder;
+        fn add_vector_property_impl<'a>(&self, name: &[u8], value: &[&[u8]])
+            -> &'a DocumentBuilder;
         fn add_int64_property<'a>(&self, name: &[u8], value: i64) -> &'a DocumentBuilder;
         fn set_creation_timestamp_ms<'a>(&self, creation_timestamp_ms: u64) -> &'a DocumentBuilder;
         fn set_score<'a>(&self, score: i32) -> &'a DocumentBuilder;
@@ -98,6 +100,7 @@ mod ffi {
 
         fn set_data_type<'a>(&'a self, data_type: i32) -> &'a PropertyConfigBuilder;
 
+        fn set_data_type_vector(&self, data_type_vector: i32) -> &PropertyConfigBuilder;
         fn set_data_type_string<'a>(
             &'a self,
             match_type: i32,
@@ -121,8 +124,9 @@ mod ffi {
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    DocumentProto, InitializeResultProto, PutResultProto, ResultSpecProto, SchemaProto,
-    ScoringSpecProto, SearchResultProto, SearchSpecProto, SetSchemaResultProto,
+    property_proto::VectorProto, DocumentProto, InitializeResultProto, PutResultProto,
+    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
+    SetSchemaResultProto,
 };
 use prost::Message;
 
@@ -130,6 +134,13 @@ impl ffi::DocumentBuilder {
     pub fn build(&self) -> DocumentProto {
         let result = self.build_impl();
         DocumentProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn add_vector_property(&self, name: &[u8], values: &[VectorProto]) -> &Self {
+        let value_strs: Vec<Vec<u8>> = values.iter().map(|s| s.encode_to_vec()).collect();
+        let value_strs_ref: Vec<&[u8]> = value_strs.iter().map(|s| s.as_slice()).collect();
+        self.add_vector_property_impl(name, &value_strs_ref);
+        &self
     }
 }
 
@@ -173,3 +184,7 @@ impl ffi::IcingSearchEngine {
         PutResultProto::decode(result.as_slice()).unwrap()
     }
 }
+
+// Useful constants from icing
+
+pub const LIST_FILTER_QUERY_LANGUAGE_FEATURE: &str = "LIST_FILTER_QUERY_LANGUAGE";

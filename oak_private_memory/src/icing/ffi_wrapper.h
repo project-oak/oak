@@ -70,6 +70,24 @@ inline void RecursivelyAddString(
   }
 }
 
+template <typename BuilderType, typename... V>
+inline void RecursivelyAddVector(
+    BuilderType& builder, std::string name,
+    rust::Slice<const rust::Slice<const uint8_t>> values, V... proto_values) {
+  if (values.empty()) {
+    builder.AddVectorProperty(name, proto_values...);
+  } else {
+    icing::lib::PropertyProto::VectorProto proto;
+    proto.ParseFromArray(values.back().data(), values.back().size());
+    rust::Slice<const rust::Slice<const uint8_t>> new_values(values.data(),
+                                                             values.size() - 1);
+    if constexpr (sizeof...(V) < kMaxValuesNum) {
+      RecursivelyAddVector(builder, std::move(name), new_values,
+                           std::move(proto), std::move(proto_values)...);
+    }
+  }
+}
+
 class DocumentBuilder {
  public:
   DocumentBuilder() : inner_(std::make_unique<icing::lib::DocumentBuilder>()) {}
@@ -111,6 +129,13 @@ class DocumentBuilder {
       rust::Slice<const uint8_t> name,
       rust::Slice<const rust::Slice<const uint8_t>> value) const {
     RecursivelyAddString(*inner_, RustSliceToString(name), value);
+    return *this;
+  }
+
+  const DocumentBuilder& add_vector_property_impl(
+      rust::Slice<const uint8_t> name,
+      rust::Slice<const rust::Slice<const uint8_t>> value) const {
+    RecursivelyAddVector(*inner_, RustSliceToString(name), value);
     return *this;
   }
 
@@ -215,6 +240,13 @@ class PropertyConfigBuilder {
   const PropertyConfigBuilder& set_data_type(int data_type) const {
     inner_->SetDataType(
         (icing::lib::PropertyConfigProto_DataType_Code)data_type);
+    return *this;
+  }
+
+  const PropertyConfigBuilder& set_data_type_vector(int data_type) const {
+    inner_->SetDataTypeVector(
+        (icing::lib::EmbeddingIndexingConfig::EmbeddingIndexingType::Code)
+            data_type);
     return *this;
   }
 
