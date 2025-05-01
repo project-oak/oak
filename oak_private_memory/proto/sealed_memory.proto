@@ -23,10 +23,16 @@ package oak.private_memory;
 
 import "proto/session/session.proto";
 
+message Embedding {
+  string model_signature = 1;
+  repeated float values = 2;
+}
+
 message Memory {
   string id = 1;
   bytes content = 2;
   repeated string tags = 3;
+  repeated Embedding embeddings = 4;
 }
 
 message AddMemoryRequest {
@@ -82,6 +88,21 @@ message GetMemoryByIdResponse {
   Memory memory = 2;
 }
 
+message SearchMemoryRequest {
+  // If set, the server will return at most `limit` memories.
+  uint32 limit = 1;
+  repeated Embedding embedding_query = 2;
+}
+
+message SearchResult {
+  Memory memory = 1;
+  float score = 2;
+}
+
+message SearchMemoryResponse {
+  repeated SearchResult results = 1;
+}
+
 message SealedMemoryRequest {
   oneof request {
     AddMemoryRequest add_memory_request = 1;
@@ -91,6 +112,7 @@ message SealedMemoryRequest {
     GetMemoryByIdRequest get_memory_by_id_request = 5;
 
     KeySyncRequest key_sync_request = 6;
+    SearchMemoryRequest search_memory_request = 7;
   }
 
   // Optional unique identifier for this request within the session.
@@ -107,7 +129,7 @@ message SealedMemoryResponse {
     GetMemoryByIdResponse get_memory_by_id_response = 5;
 
     KeySyncResponse key_sync_response = 6;
-    // ...
+    SearchMemoryResponse search_memory_response = 7;
   }
 
   // Propagated from the request_id from the request.

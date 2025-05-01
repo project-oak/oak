@@ -45,6 +45,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.KeySyncResponse",
         "oak.private_memory.GetMemoryByIdRequest",
         "oak.private_memory.GetMemoryByIdResponse",
+        "oak.private_memory.SearchMemoryRequest",
+        "oak.private_memory.SearchMemoryResponse",
+        "oak.private_memory.Embedding",
+        "oak.private_memory.SearchResult",
     ];
 
     // `u64` fields in js are encoded as string when serializing to Json, which

@@ -31,10 +31,10 @@ use private_memory_server_lib::{
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_response, AddMemoryRequest, AddMemoryResponse, GetMemoriesRequest,
+    sealed_memory_response, AddMemoryRequest, AddMemoryResponse, Embedding, GetMemoriesRequest,
     GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse,
     KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest, ResetMemoryResponse,
-    SealedMemoryResponse,
+    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -320,6 +320,7 @@ async fn test_noise_add_get_reset_memory() {
             id: "".to_string(),
             content: "this is a test".as_bytes().to_vec(),
             tags: vec!["tag".to_string()],
+            ..Default::default()
         }),
     };
     send_plantext_request(&mut tx, &mut client_session, request);
@@ -409,6 +410,7 @@ async fn test_noise_add_get_reset_memory_as_json() {
             id: "".to_string(),
             content: "this is a test".as_bytes().to_vec(),
             tags: vec!["tag".to_string()],
+            ..Default::default()
         }),
     };
     send_plantext_request_as_json(&mut tx, &mut client_session, request);
@@ -458,4 +460,106 @@ fn proto_serialization_test() {
     let json_str = "{\"dataEncryptionKey\":\"AQID\",\"uid\":\"12345678910\"}";
     let request_from_string_num = serde_json::from_str::<KeySyncRequest>(&json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
+}
+
+#[tokio::test]
+async fn test_embedding_search() {
+    // Start server
+    let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
+
+    let url = format!("http://{addr}");
+
+    println!("Connecting to test server on {}", url);
+
+    let channel = Channel::from_shared(url)
+        .context("couldn't create gRPC channel")
+        .unwrap()
+        .connect()
+        .await
+        .context("couldn't connect via gRPC channel")
+        .unwrap();
+
+    let mut client = SealedMemoryServiceClient::new(channel);
+
+    let (mut tx, rx) = mpsc::channel(10);
+
+    let mut response_stream =
+        client.invoke(rx).await.expect("couldn't send stream request").into_inner();
+
+    // We don't have a noise client impl yet, so we need to manage the session
+    // manually.
+    let mut client_session = oak_session::ClientSession::create(
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+    )
+    .expect("could not create client session");
+
+    client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
+
+    // Key sync
+    let request_id = 0xeadbeef;
+    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
+    send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
+
+    let (_key_sync_response, return_id): (KeySyncResponse, i32) =
+        receive_plaintext_response_with_id(&mut response_stream, &mut client_session).await;
+    assert_eq!(request_id, return_id);
+
+    let embedding1 =
+        Embedding { model_signature: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] };
+    let embedding2 =
+        Embedding { model_signature: "test_model2".to_string(), values: vec![0.0, 1.0, 0.0] };
+    let request1 = AddMemoryRequest {
+        memory: Some(Memory {
+            id: "".to_string(),
+            content: "this is a test".as_bytes().to_vec(),
+            embeddings: vec![embedding1, embedding2],
+            ..Default::default()
+        }),
+    };
+    send_plantext_request(&mut tx, &mut client_session, request1);
+
+    let add_memory_response1: AddMemoryResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    let embedding3 =
+        Embedding { model_signature: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] };
+    let embedding4 =
+        Embedding { model_signature: "test_model".to_string(), values: vec![0.0, 1.0, 0.0] };
+    let request2 = AddMemoryRequest {
+        memory: Some(Memory {
+            id: "".to_string(),
+            content: "this is a test".as_bytes().to_vec(),
+            embeddings: vec![embedding3, embedding4],
+            ..Default::default()
+        }),
+    };
+    send_plantext_request(&mut tx, &mut client_session, request2);
+
+    let add_memory_response2: AddMemoryResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    let search_embedding =
+        Embedding { model_signature: "test_model".to_string(), values: vec![1.0, 1.0, 0.0] };
+    let search_request =
+        SearchMemoryRequest { embedding_query: vec![search_embedding], ..Default::default() };
+    send_plantext_request(&mut tx, &mut client_session, search_request);
+
+    let search_memory_response: SearchMemoryResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(search_memory_response.results.len(), 2);
+
+    // memory2 will have score [1.0, 0, 0] x [1.0, 1.0, 0] + [0.0, 1.0, 0.0] x [1.0,
+    // 1.0, 0.0] = 2.0 memory1 will have score [0.0, 1.0, 0.0] x [1.0, 1.0, 0.0]
+    // = 1.0
+    assert_eq!(search_memory_response.results[0].score, 2.0);
+    assert_eq!(search_memory_response.results[1].score, 1.0);
+    assert_eq!(
+        search_memory_response.results[0].memory.as_ref().unwrap().id,
+        add_memory_response2.id
+    );
+    assert_eq!(
+        search_memory_response.results[1].memory.as_ref().unwrap().id,
+        add_memory_response1.id
+    );
 }

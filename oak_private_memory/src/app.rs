@@ -20,10 +20,11 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse,
+    sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse, Embedding,
     GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
     InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest,
-    ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
+    ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse, SearchMemoryRequest,
+    SearchMemoryResponse, SearchResult,
 };
 use tokio::{
     runtime::Handle,
@@ -46,6 +47,7 @@ trait MemoryInterface {
     async fn get_memories_by_tag(&mut self, tag: String) -> Vec<Memory>;
     async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory>;
     async fn reset_memory(&mut self) -> bool;
+    async fn search_memory(&mut self, query: &[Embedding], limit: u32) -> Vec<SearchResult>;
 }
 
 #[async_trait]
@@ -84,6 +86,16 @@ impl MemoryInterface for DatabaseWithCache {
     async fn reset_memory(&mut self) -> bool {
         self.meta_db().reset();
         true
+    }
+
+    async fn search_memory(&mut self, query: &[Embedding], limit: u32) -> Vec<SearchResult> {
+        let (blob_ids, scores) = self.meta_db().embedding_search(query, limit).unwrap();
+        let memories = self.cache.get_memories_by_blob_ids(&blob_ids).await.unwrap();
+        memories
+            .into_iter()
+            .zip(scores.into_iter())
+            .map(|(memory, score)| SearchResult { memory: Some(memory), score })
+            .collect()
     }
 }
 
@@ -332,6 +344,24 @@ impl SealedMemoryHandler {
 
         Ok(KeySyncResponse::default())
     }
+
+    pub async fn search_memory_handler(
+        &self,
+        request: SearchMemoryRequest,
+    ) -> anyhow::Result<SearchMemoryResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
+        if let Some(context) = context {
+            let database = &mut context.database;
+            let embedding = request.embedding_query;
+            const MAX_RESULTS: u32 = 1000;
+            let limit = if request.limit == 0 { MAX_RESULTS } else { request.limit };
+            let results = database.search_memory(&embedding, limit).await;
+            Ok(SearchMemoryResponse { results })
+        } else {
+            bail!("You need to call key sync first")
+        }
+    }
 }
 
 pub trait RequestUnpacking {
@@ -389,12 +419,14 @@ impl_packing!(Request => GetMemoriesRequest);
 impl_packing!(Request => ResetMemoryRequest);
 impl_packing!(Request => KeySyncRequest);
 impl_packing!(Request => GetMemoryByIdRequest);
+impl_packing!(Request => SearchMemoryRequest);
 impl_packing!(Response => AddMemoryResponse);
 impl_packing!(Response => GetMemoriesResponse);
 impl_packing!(Response => ResetMemoryResponse);
 impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
 impl_packing!(Response => GetMemoryByIdResponse);
+impl_packing!(Response => SearchMemoryResponse);
 
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
@@ -431,6 +463,9 @@ impl ApplicationHandler for SealedMemoryHandler {
                 }
                 sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
                     self.get_memory_by_id_handler(request).await?.into_response()
+                }
+                sealed_memory_request::Request::SearchMemoryRequest(request) => {
+                    self.search_memory_handler(request).await?.into_response()
                 }
             };
             response.request_id = request_id;

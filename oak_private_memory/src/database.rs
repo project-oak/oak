@@ -21,7 +21,7 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
+    DataBlob, Embedding, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
 };
 use tempfile::tempdir;
 use tonic::transport::Channel;
@@ -70,6 +70,7 @@ const SCHMA_NAME: &str = "Memory";
 const TAG_NAME: &str = "tag";
 const MEMORY_ID_NAME: &str = "memoryId";
 const BLOB_ID_NAME: &str = "blobId";
+const EMBEDDING_NAME: &str = "embedding";
 
 impl IcingMetaDatabase {
     /// Rebuild the icing database in `target_base_dir` given the content of the
@@ -137,6 +138,13 @@ impl IcingMetaDatabase {
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Required.into(),
                     ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EMBEDDING_NAME.as_bytes())
+                    .set_data_type_vector(
+                        icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
+                    )
+                    .set_cardinality(icing::property_config_proto::cardinality::Code::Repeated.into())
             );
 
         let schema_builder = icing::create_schema_builder();
@@ -157,12 +165,18 @@ impl IcingMetaDatabase {
     pub fn add_memory(&mut self, memory: Memory, blob_id: BlobId) -> anyhow::Result<()> {
         let memory_id = memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
+        let embeddings: Vec<_> = memory
+            .embeddings
+            .iter()
+            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
+            .collect();
         let doc = icing::create_document_builder()
             .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
             .set_schema(SCHMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
             .add_int64_property(BLOB_ID_NAME.as_bytes(), blob_id)
+            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
             .build();
         let result = self.icing_search_engine.put(&doc);
         if result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
@@ -278,6 +292,88 @@ impl IcingMetaDatabase {
 
     pub fn reset(&self) {
         self.icing_search_engine.reset();
+    }
+
+    /// Search based on the document embedding `doc_embedding` (the ones that
+    /// users set when adding the memory) and search embedding
+    /// `search_embedding` (the one that set at search memory request).
+    /// The process is as follow:
+    /// 1. For each memory, we find all the document embeddings that matches the
+    ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
+    ///    ...]`.
+    /// 2. Perform a dot product on `search_embedding` and the matched
+    ///    `[doc1_embedding, ...]`, which gives
+    /// a list of scores `[score1, score2, ...]`.
+    /// 3. Sum the scores, and the corresponding memory has the final score
+    ///    `score_sum`.
+    /// 4. We repeat 1-3 for all memories, rank the memories by `score_sum`, and
+    ///    return the first `limit` ones
+    /// with highest scores.
+    pub fn embedding_search(
+        &self,
+        embedding: &[Embedding],
+        limit: u32,
+    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>)> {
+        let mut scoring_spec = icing::get_default_scoring_spec();
+        scoring_spec.rank_by = Some(
+            icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
+        );
+
+        // Caculate the sum of the scores of all matching embeddings.
+        const SUM_ALL_MATCHING_EMBEDDING: &str =
+            "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
+        scoring_spec.advanced_scoring_expression = Some(SUM_ALL_MATCHING_EMBEDDING.to_string());
+
+        let mut search_spec = icing::SearchSpecProto::default();
+        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
+        search_spec.embedding_query_metric_type =
+            Some(icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into());
+
+        search_spec.embedding_query_vectors = embedding
+            .iter()
+            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
+            .collect();
+
+        // Search the first embedding property, specified by `EMBEDDING_NAME`.
+        // Since we have only one embedding property, this is the one to go.
+        search_spec.query = Some("semanticSearch(getEmbeddingParameter(0))".to_string());
+        search_spec.enabled_features.push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
+
+        let mut result_spec = icing::ResultSpecProto::default();
+        result_spec.num_per_page = Some(limit.try_into().unwrap());
+
+        // We only need the `BlobId`.
+        let mut projection = icing::TypePropertyMask::default();
+        projection.schema_type = Some(SCHMA_NAME.to_string());
+        projection.paths.push(BLOB_ID_NAME.to_string());
+        result_spec.type_property_masks.push(projection);
+
+        let search_result: icing::SearchResultProto =
+            self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
+
+        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed for {:?}", search_result.status);
+        }
+
+        let scores: Vec<f32> =
+            search_result.results.iter().map(|x| x.score.unwrap() as _).collect();
+        let blob_ids: Vec<BlobId> = search_result
+            .results
+            .into_iter()
+            .filter_map(|doc_hit| {
+                doc_hit
+                    .document?
+                    .properties
+                    .into_iter()
+                    .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
+                    .int64_values
+                    .first()
+                    .cloned()
+            })
+            .collect::<Vec<_>>();
+        ensure!(blob_ids.len() == scores.len());
+        Ok((blob_ids, scores))
     }
 }
 
@@ -623,6 +719,58 @@ mod tests {
             icing_database.get_blob_id_by_memory_id("non_existent_id".to_string()).unwrap(),
             eq(None)
         );
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_embedding_search_test() -> anyhow::Result<()> {
+        let temp_dir = tempdir().unwrap();
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+
+        let memory_id1 = "memory_embed_1".to_string();
+        let blob_id1 = 98765;
+        let embedding1 = Embedding {
+            model_signature: "test_model".to_string(),
+            values: vec![1.0, 0.0, 0.0], // Vector pointing along x-axis
+        };
+        let memory1 = Memory {
+            id: memory_id1.clone(),
+            tags: vec!["embed_tag".to_string()],
+            embeddings: vec![embedding1.clone()],
+            ..Default::default()
+        };
+        icing_database.add_memory(memory1, blob_id1)?;
+
+        let memory_id2 = "memory_embed_2".to_string();
+        let blob_id2 = 98766;
+        let embedding2 = Embedding {
+            model_signature: "test_model".to_string(),
+            values: vec![0.0, 1.0, 0.0], // Vector pointing along y-axis
+        };
+        let memory2 = Memory {
+            id: memory_id2.clone(),
+            tags: vec!["embed_tag".to_string()],
+            embeddings: vec![embedding2.clone()],
+            ..Default::default()
+        };
+        icing_database.add_memory(memory2, blob_id2)?;
+
+        // Query embedding close to embedding1
+        let query_embedding =
+            Embedding { model_signature: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] };
+        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding.clone()], 2)?;
+
+        // Expect memory1 (blob_id1) to be the top result due to higher dot product
+        expect_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
+        // We could also assert on the score if needed, but ordering is often sufficient
+        expect_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
+
+        // Make sure the limit works
+        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding], 1)?;
+        // Expect memory1 (blob_id1) to be the top result due to higher dot product
+        expect_that!(blob_ids, elements_are![eq(&blob_id1)]);
+        // We could also assert on the score if needed, but ordering is often sufficient
+        expect_that!(scores.len(), eq(1));
         Ok(())
     }
 }
