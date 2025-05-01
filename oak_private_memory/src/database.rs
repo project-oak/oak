@@ -292,8 +292,11 @@ impl DataBlobHandler for ExternalDbClient {
         // TOOD: b/412698203 - Ideally we should have a rpc call that does batch get.
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {
-            result.push(self.get_blob(id).await?)
+            let mut client = self.clone();
+            let id = *id;
+            result.push(tokio::spawn(async move { client.get_blob(&id).await.unwrap() }));
         }
-        Ok(result)
+        let result = futures::future::join_all(result).await;
+        result.into_iter().map(|x| x.map_err(anyhow::Error::msg)).collect()
     }
 }
