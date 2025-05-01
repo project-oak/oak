@@ -20,7 +20,9 @@ use oak_attestation_types::{
     attester::Attester,
     util::{encode_length_delimited_proto, Serializable},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
+use oak_proto_rust::oak::attestation::v1::{
+    CertificateAuthority, DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
+};
 use oak_tdx_guest::tdcall::{extend_rtmr, ExtensionBuffer, RtmrIndex};
 use sha2::{Digest, Sha384};
 
@@ -31,9 +33,14 @@ pub struct RtmrAttester {
 impl Default for RtmrAttester {
     fn default() -> Self {
         let event_log = EventLog::default();
+        let root_layer = RootLayerEvidence {
+            platform: TeePlatform::IntelTdx as i32,
+            remote_attestation_report: Vec::default(),
+            eca_public_key: Vec::default(),
+        };
 
         let evidence = Evidence {
-            root_layer: None,
+            root_layer: Some(root_layer),
             layers: Vec::new(),
             application_keys: None,
             event_log: Some(event_log),
@@ -69,8 +76,10 @@ impl Serializable for RtmrAttester {
 
     fn serialize(self) -> Vec<u8> {
         // TODO: b/368023328 - Rename DiceData.
-        let attestation_data =
-            DiceData { evidence: Some(self.evidence), certificate_authority: None };
+        let attestation_data = DiceData {
+            evidence: Some(self.evidence),
+            certificate_authority: Some(CertificateAuthority { eca_private_key: Vec::default() }),
+        };
         encode_length_delimited_proto(&attestation_data)
     }
 }
