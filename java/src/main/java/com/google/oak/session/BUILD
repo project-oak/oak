@@ -43,7 +43,7 @@ java_library(
     deps = [
         "session_config_builder",
         ":exception",
-        "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
+        "//java/src/main/java/com/google/oak/session/jni/jvm:oak_client_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_java",
     ],
@@ -71,7 +71,7 @@ java_library(
     deps = [
         ":exception",
         ":session_config_builder",
-        "//java/src/main/java/com/google/oak/session/jni:oak_server_session_jni",
+        "//java/src/main/java/com/google/oak/session/jni/jvm:oak_server_session_jni",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//:protobuf_java",
     ],

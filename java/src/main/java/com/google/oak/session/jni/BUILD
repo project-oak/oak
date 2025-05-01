@@ -33,9 +33,6 @@ rust_library(
     alwayslink = 1,
 )
 
-# If you need to load this JNI from Java tests, you need to add:
-# jvm_flags = ["-Djava.library.path=third_party/oak/java/src/main/java/com/google/oak/session/jni:oak_client_session_jni"]
-# or whatever the path to this rule is from your repo. Note no leading "//".
 cc_binary(
     name = "oak_client_session_jni",
     linkshared = True,
@@ -57,9 +54,6 @@ rust_library(
     alwayslink = 1,
 )
 
-# If you need to load this JNI from Java tests, you need to add:
-# jvm_flags = ["-Djava.library.path=third_party/oak/java/src/main/java/com/google/oak/session/jni:oak_server_session_jni"]
-# or whatever the path to this rule is from your repo. Note no leading "//".
 cc_binary(
     name = "oak_server_session_jni",
     linkshared = True,
