@@ -20,9 +20,7 @@ use oak_attestation_types::{
     attester::Attester,
     util::{encode_length_delimited_proto, Serializable},
 };
-use oak_proto_rust::oak::attestation::v1::{
-    CertificateAuthority, DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
-};
+use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
 use oak_tdx_guest::tdcall::{extend_rtmr, ExtensionBuffer, RtmrIndex};
 use sha2::{Digest, Sha384};
 
@@ -32,19 +30,9 @@ pub struct RtmrAttester {
 
 impl Default for RtmrAttester {
     fn default() -> Self {
-        let event_log = EventLog::default();
-        let root_layer = RootLayerEvidence {
-            platform: TeePlatform::IntelTdx as i32,
-            remote_attestation_report: Vec::default(),
-            eca_public_key: Vec::default(),
-        };
+        let event_log = Some(EventLog::default());
 
-        let evidence = Evidence {
-            root_layer: Some(root_layer),
-            layers: Vec::new(),
-            application_keys: None,
-            event_log: Some(event_log),
-        };
+        let evidence = Evidence { event_log, ..Default::default() };
 
         Self { evidence }
     }
@@ -76,10 +64,29 @@ impl Serializable for RtmrAttester {
 
     fn serialize(self) -> Vec<u8> {
         // TODO: b/368023328 - Rename DiceData.
-        let attestation_data = DiceData {
-            evidence: Some(self.evidence),
-            certificate_authority: Some(CertificateAuthority { eca_private_key: Vec::default() }),
-        };
+        let attestation_data =
+            DiceData { evidence: Some(self.evidence), certificate_authority: None };
         encode_length_delimited_proto(&attestation_data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_attestation_types::util::try_decode_length_delimited_proto;
+    use zeroize::Zeroize;
+
+    use super::*;
+    #[test]
+    pub fn test_attestation_proto_to_struct() {
+        let attester = RtmrAttester::default();
+        let serialized_data: Vec<u8> = attester.serialize();
+        let mut attestation_data = try_decode_length_delimited_proto(&serialized_data).unwrap();
+        oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
+            .expect("couldn't create struct from proto");
+        // Zero out the copy of the private key in the proto that we just created if it
+        // exists.
+        if let Some(certificate_authority) = attestation_data.certificate_authority.as_mut() {
+            certificate_authority.eca_private_key.zeroize()
+        };
     }
 }

@@ -84,7 +84,7 @@ pub static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
 // Heap for short-term allocations. These allocations are not expected to
 // outlive Stage 0.
-#[cfg_attr(not(test), global_allocator)]
+#[cfg_attr(all(not(test), not(feature = "stage0_test")), global_allocator)]
 pub static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 /// We create an identity map for the first 1GiB of memory.
@@ -223,7 +223,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     attester.extend(&stage0_event[..]).expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 
-    let attestation_data: DiceData =
+    let mut attestation_data: DiceData =
         try_decode_length_delimited_proto(&serialized_attestation_data[..])
             .expect("couldn't decode attestation data");
 
@@ -231,12 +231,11 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         oak_stage0_dice::dice_data_proto_to_stage0_dice_data(&attestation_data)
             .expect("couldn't create attestation data struct");
 
-    // Zero out the copy of the private key in the proto that we just created.
-    attestation_data
-        .certificate_authority
-        .expect("no certificate authority")
-        .eca_private_key
-        .zeroize();
+    // Zero out the copy of the private key in the proto that we just created if it
+    // exists.
+    if let Some(certificate_authority) = attestation_data.certificate_authority.as_mut() {
+        certificate_authority.eca_private_key.zeroize()
+    };
 
     attestation_data_struct.layer_1_cdi.cdi[..].copy_from_slice(&cdi[..]);
     // Zero out the copy of the sealing CDIs.

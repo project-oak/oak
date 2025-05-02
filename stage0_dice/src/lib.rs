@@ -62,33 +62,24 @@ pub fn dice_data_proto_to_stage0_dice_data(
 ) -> Result<Stage0DiceData, &'static str> {
     let mut result = Stage0DiceData::new_zeroed();
     let evidence = attestation_data.evidence.as_ref().ok_or("no evidence")?;
-    let eca_private_key = attestation_data
-        .certificate_authority
-        .as_ref()
-        .ok_or("no certificate authority")?
-        .eca_private_key
-        .as_slice();
-
-    result.layer_1_certificate_authority.eca_private_key[..eca_private_key.len()]
-        .copy_from_slice(eca_private_key);
     result.magic = STAGE0_MAGIC;
-    let root_layer = evidence.root_layer.as_ref().ok_or("no root layer evidence")?;
-    result.root_layer_evidence.tee_platform = root_layer.platform as u64;
-    result
-        .root_layer_evidence
-        .set_remote_attestation_report(root_layer.remote_attestation_report.as_slice())?;
-    result.root_layer_evidence.set_eca_public_key(root_layer.eca_public_key.as_slice())?;
-    let stage1_eca_cert =
-        &evidence.layers.first().ok_or("stage1 layer dice data not found")?.eca_certificate[..];
-    result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
-        .copy_from_slice(stage1_eca_cert);
-    let stage1_eca_signing_key = &attestation_data
-        .certificate_authority
-        .as_ref()
-        .ok_or("no certificate authority")?
-        .eca_private_key[..];
-    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
-        .copy_from_slice(stage1_eca_signing_key);
+    if let Some(root_layer) = evidence.root_layer.as_ref() {
+        result.root_layer_evidence.tee_platform = root_layer.platform as u64;
+        result
+            .root_layer_evidence
+            .set_remote_attestation_report(root_layer.remote_attestation_report.as_slice())?;
+        result.root_layer_evidence.set_eca_public_key(root_layer.eca_public_key.as_slice())?;
+    }
+    if let Some(first_layer) = &evidence.layers.first() {
+        let stage1_eca_cert = first_layer.eca_certificate.as_slice();
+        result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
+            .copy_from_slice(stage1_eca_cert);
+    }
+    if let Some(certificate_authority) = attestation_data.certificate_authority.as_ref() {
+        let eca_private_key = certificate_authority.eca_private_key.as_slice();
+        result.layer_1_certificate_authority.eca_private_key[..eca_private_key.len()]
+            .copy_from_slice(eca_private_key);
+    }
     Ok(result)
 }
 

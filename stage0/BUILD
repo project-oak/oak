@@ -25,7 +25,54 @@ package(
 rust_library(
     name = "stage0",
     srcs = glob(["src/**"]),
-    crate_features = ["sev"],
+    crate_features = [
+        "sev",
+    ],
+    target_compatible_with = either_platform([
+        "//:x86_64-none-setting",
+        "//:x86_64-none-no_avx-setting",
+        "//:x86_64-linux-setting",  # Needed for unit testing.
+    ]),
+    deps = [
+        "//oak_attestation",
+        "//oak_attestation_types",
+        "//oak_core",
+        "//oak_dice",
+        "//oak_linux_boot_params",
+        "//oak_proto_rust",
+        "//oak_sev_guest",
+        "//oak_sev_snp_attestation_report",
+        "//sev_serial",
+        "//stage0_dice",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:elf",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:linked_list_allocator",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:spinning_top",
+        "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:strum",
+        "@oak_crates_index//:x86_64",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
+rust_library(
+    name = "stage0_for_test",
+    srcs = glob(["src/**"]),
+    crate_features = [
+        "sev",
+        "stage0_test",
+    ],
     target_compatible_with = either_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",

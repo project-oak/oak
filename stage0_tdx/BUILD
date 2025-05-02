@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -41,5 +41,37 @@ rust_library(
         "@oak_crates_index//:x86_64",
         "@oak_crates_index//:zerocopy",
         "@oak_crates_index//:zeroize",
+    ],
+)
+
+rust_library(
+    name = "stage0_tdx_for_test",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = {"@//stage0:stage0_for_test": "oak_stage0"},
+    deps = [
+        "//oak_attestation",
+        "//oak_attestation_types",
+        "//oak_dice",
+        "//oak_linux_boot_params",
+        "//oak_proto_rust",
+        "//oak_tdx_guest",
+        "//stage0:stage0_for_test",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:lock_api",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:spinning_top",
+        "@oak_crates_index//:x86_64",
+        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zeroize",
+    ],
+)
+
+rust_test(
+    name = "stage0_tdx_test",
+    size = "small",
+    crate = ":stage0_tdx_for_test",
+    deps = [
+        "//stage0_dice",
     ],
 )
