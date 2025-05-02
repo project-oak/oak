@@ -73,6 +73,25 @@ const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 
 impl IcingMetaDatabase {
+    /// Creates a ResultSpecProto projection to retrieve only the blob ids.
+    fn create_blob_id_projection() -> icing::TypePropertyMask {
+        let mut projection = icing::TypePropertyMask::default();
+        projection.schema_type = Some(SCHMA_NAME.to_string());
+        projection.paths.push(BLOB_ID_NAME.to_string());
+        projection
+    }
+
+    fn extract_blob_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<BlobId> {
+        search_result.results.iter().filter_map(Self::extract_blob_id_from_doc).collect::<Vec<_>>()
+    }
+
+    fn create_search_filter(path: &str) -> icing::TypePropertyMask {
+        let mut filter = icing::TypePropertyMask::default();
+        filter.schema_type = Some(SCHMA_NAME.to_string());
+        filter.paths.push(path.to_string());
+        filter
+    }
+
     /// Rebuild the icing database in `target_base_dir` given the content of the
     /// ground truth files in `buffer`.
     pub fn import(buffer: &[u8], target_base_dir: Option<&str>) -> anyhow::Result<Self> {
@@ -191,21 +210,13 @@ impl IcingMetaDatabase {
         search_spec.query = Some(tag);
         // Match exactly as defined in the schema for tags.
         search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
-        // Only search within the 'tag' property.
-        let mut filter = icing::TypePropertyMask::default();
-        filter.schema_type = Some(SCHMA_NAME.to_string());
-        filter.paths.push(TAG_NAME.to_string());
-        search_spec.type_property_filters.push(filter);
+        search_spec.type_property_filters.push(Self::create_search_filter(TAG_NAME));
 
         let mut result_spec = icing::ResultSpecProto::default();
         // Request a large number to get all results in one go for simplicity.
         // Consider pagination for very large datasets.
         result_spec.num_per_page = Some(1000);
-        // Only retrieve the blob_id property.
-        let mut projection = icing::TypePropertyMask::default();
-        projection.schema_type = Some(SCHMA_NAME.to_string());
-        projection.paths.push(BLOB_ID_NAME.to_string());
-        result_spec.type_property_masks.push(projection);
+        result_spec.type_property_masks.push(Self::create_blob_id_projection());
 
         let search_result: icing::SearchResultProto = self.icing_search_engine.search(
             &search_spec,
@@ -218,20 +229,7 @@ impl IcingMetaDatabase {
             bail!("Icing search failed: {:?}", search_result.status);
         }
 
-        Ok(search_result
-            .results
-            .into_iter()
-            .filter_map(|doc_hit| {
-                doc_hit
-                    .document?
-                    .properties
-                    .into_iter()
-                    .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
-                    .int64_values
-                    .first()
-                    .cloned()
-            })
-            .collect::<Vec<_>>())
+        Ok(Self::extract_blob_ids_from_search_result(search_result))
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
@@ -239,21 +237,11 @@ impl IcingMetaDatabase {
         search_spec.query = Some(memory_id.to_string());
         search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
 
-        // Filter by schema type
-        let mut filter = icing::TypePropertyMask::default();
-        filter.schema_type = Some(SCHMA_NAME.to_string());
-        // Optionally, restrict the query to the memoryId property if the query syntax
-        // above isn't specific enough
-        filter.paths.push(MEMORY_ID_NAME.to_string());
-        search_spec.type_property_filters.push(filter);
+        search_spec.type_property_filters.push(Self::create_search_filter(MEMORY_ID_NAME));
 
         let mut result_spec = icing::ResultSpecProto::default();
         result_spec.num_per_page = Some(1); // We expect at most one result
-                                            // Only retrieve the blob_id property.
-        let mut projection = icing::TypePropertyMask::default();
-        projection.schema_type = Some(SCHMA_NAME.to_string());
-        projection.paths.push(BLOB_ID_NAME.to_string());
-        result_spec.type_property_masks.push(projection);
+        result_spec.type_property_masks.push(Self::create_blob_id_projection());
 
         let search_result: icing::SearchResultProto = self.icing_search_engine.search(
             &search_spec,
@@ -267,17 +255,22 @@ impl IcingMetaDatabase {
         }
 
         // Extract the blob_id (int64) from the first result, if any
-        Ok(search_result.results.first().and_then(|doc_hit| {
-            doc_hit
-                .document
-                .as_ref()?
-                .properties
-                .iter()
-                .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
-                .int64_values
-                .first()
-                .cloned()
-        }))
+        Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
+    }
+
+    fn extract_blob_id_from_doc(
+        doc_hit: &icing::search_result_proto::ResultProto,
+    ) -> Option<BlobId> {
+        let blob_id_name = BLOB_ID_NAME.to_string();
+        doc_hit
+            .document
+            .as_ref()?
+            .properties
+            .iter()
+            .find(|prop| prop.name.as_ref() == Some(&blob_id_name))?
+            .int64_values
+            .first()
+            .cloned()
     }
 
     pub fn export(&self) -> Vec<u8> {
@@ -343,11 +336,7 @@ impl IcingMetaDatabase {
         result_spec.num_per_page = Some(limit.try_into().unwrap());
 
         // We only need the `BlobId`.
-        let mut projection = icing::TypePropertyMask::default();
-        projection.schema_type = Some(SCHMA_NAME.to_string());
-        projection.paths.push(BLOB_ID_NAME.to_string());
-        result_spec.type_property_masks.push(projection);
-
+        result_spec.type_property_masks.push(Self::create_blob_id_projection());
         let search_result: icing::SearchResultProto =
             self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
 
@@ -358,20 +347,7 @@ impl IcingMetaDatabase {
 
         let scores: Vec<f32> =
             search_result.results.iter().map(|x| x.score.unwrap() as _).collect();
-        let blob_ids: Vec<BlobId> = search_result
-            .results
-            .into_iter()
-            .filter_map(|doc_hit| {
-                doc_hit
-                    .document?
-                    .properties
-                    .into_iter()
-                    .find(|prop| prop.name == Some(BLOB_ID_NAME.to_string()))?
-                    .int64_values
-                    .first()
-                    .cloned()
-            })
-            .collect::<Vec<_>>();
+        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         ensure!(blob_ids.len() == scores.len());
         Ok((blob_ids, scores))
     }
@@ -400,16 +376,19 @@ impl MemoryCache {
         Self { db_client, dek, content_cache }
     }
 
+    async fn fetch_decrypt_decode_memory(&self, blob_id: &BlobId) -> anyhow::Result<Memory> {
+        let encrypted_blob = self.db_client.clone().get_blob(blob_id).await?;
+        let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
+        Ok(Memory::decode(&*decrypted_data)?)
+    }
+
     pub async fn get_memory_by_blob_id(&mut self, blob_id: &BlobId) -> anyhow::Result<Memory> {
         // Check cache first
         if let Some(memory) = self.content_cache.get(blob_id) {
             return Ok(memory.clone());
         }
-
         // If not in cache, fetch from external DB
-        let encrypted_blob = self.db_client.get_blob(blob_id).await?;
-        let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
-        let memory: Memory = Memory::decode(&*decrypted_data)?;
+        let memory = self.fetch_decrypt_decode_memory(blob_id).await?;
         self.content_cache.insert(*blob_id, memory.clone());
         Ok(memory)
     }
@@ -433,7 +412,6 @@ impl MemoryCache {
         // Fetch missing blobs from external DB if any
         if !missing_ids.is_empty() {
             let encrypted_blobs = self.db_client.get_blobs(&missing_ids).await?;
-            // Assuming get_blobs returns blobs in the same order as requested IDs
             for (blob_id, encrypted_blob) in missing_ids.iter().zip(encrypted_blobs.into_iter()) {
                 let decrypted_data =
                     decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
@@ -447,11 +425,17 @@ impl MemoryCache {
         Ok(blob_ids.iter().map(|id| results.remove(id).unwrap()).collect::<Vec<_>>())
     }
 
-    pub async fn add_memory(&mut self, memory: Memory) -> anyhow::Result<BlobId> {
-        let blob_id: BlobId = rand::rng().random();
+    /// Encodes and encrypts a memory, returning the blob and a generated nonce.
+    fn encode_encrypt_memory(&self, memory: &Memory) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let memory_data = memory.encode_to_vec();
         let nonce = generate_nonce();
         let encrypted_data = encrypt(&self.dek, &nonce, &memory_data)?;
+        Ok((encrypted_data, nonce))
+    }
+
+    pub async fn add_memory(&mut self, memory: Memory) -> anyhow::Result<BlobId> {
+        let blob_id: BlobId = rand::rng().random();
+        let (encrypted_data, nonce) = self.encode_encrypt_memory(&memory)?;
         let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
 
         // Store in external DB, explicitly providing the generated ID
@@ -468,10 +452,8 @@ impl MemoryCache {
         let mut encrypted_blobs = Vec::with_capacity(memories.len());
 
         for memory in memories {
+            let (encrypted_data, nonce) = self.encode_encrypt_memory(memory)?;
             let blob_id: BlobId = rand::rng().random();
-            let memory_data = memory.encode_to_vec();
-            let nonce = generate_nonce();
-            let encrypted_data = encrypt(&self.dek, &nonce, &memory_data)?;
             let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
 
             blob_ids.push(blob_id);
