@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+load("//bazel/jvm:defs.bzl", "oak_jvm_jni_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-cc_binary(
+oak_jvm_jni_library(
     name = "oak_client_session_jni",
     linkshared = True,
     deps = [
@@ -28,7 +29,7 @@ cc_binary(
     ],
 )
 
-cc_binary(
+oak_jvm_jni_library(
     name = "oak_server_session_jni",
     linkshared = True,
     deps = [

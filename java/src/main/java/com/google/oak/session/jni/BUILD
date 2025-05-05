@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//bazel/android:defs.bzl", "oak_android_jni_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -33,7 +34,7 @@ rust_library(
     alwayslink = 1,
 )
 
-cc_binary(
+oak_android_jni_library(
     name = "oak_client_session_jni",
     linkshared = True,
     deps = [
@@ -54,7 +55,7 @@ rust_library(
     alwayslink = 1,
 )
 
-cc_binary(
+oak_android_jni_library(
     name = "oak_server_session_jni",
     linkshared = True,
     deps = [
@@ -75,7 +76,7 @@ rust_library(
     alwayslink = 1,
 )
 
-cc_binary(
+oak_android_jni_library(
     name = "oak_session_config_builder_jni",
     linkshared = True,
     deps = [
