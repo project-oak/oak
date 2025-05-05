@@ -226,6 +226,12 @@ stage1_cpio:
         bazel-bin/oak_containers/stage1_bin/stage1.cpio \
         artifacts
 
+stage1_tdx_cpio:
+    bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/stage1_bin_tdx
+    cp --force --preserve=timestamps --no-preserve=mode \
+        bazel-bin/oak_containers/stage1_bin_tdx/stage1_tdx.cpio \
+        artifacts
+
 oak_containers_kernel:
     bazel build {{BAZEL_CONFIG_FLAG}} //oak_containers/kernel/...
     cp --force --preserve=timestamps \
@@ -324,7 +330,13 @@ kokoro_oak_containers: oak_functions_containers_app_bundle_tar oak_containers_te
 
 # This is for use with the `oak-containers-test.sh` helper script for testing on the TDX machines.
 # Ask dingelish@ or jibbl@ for more info.
-oak_containers_tdx_testing: stage0_bin_tdx stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_app_bundle_tar oak_containers_nvidia_system_image oak_containers_hello_world_container_bundle_tar oak_containers_launcher containers_placer_artifacts
+oak_containers_tdx_testing: stage0_bin_tdx stage1_tdx_cpio \
+    oak_containers_kernel \
+    oak_containers_tdx_system_image \
+    oak_functions_containers_app_bundle_tar \
+    oak_containers_nvidia_system_image \
+    oak_containers_hello_world_container_bundle_tar \
+    oak_containers_launcher containers_placer_artifacts
 
 # --- End Kokoro CI Entry Points ---
 
@@ -511,6 +523,12 @@ oak_containers_system_image:
     bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_system_image
     cp --force --preserve=timestamps \
         bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
+        artifacts
+
+oak_containers_tdx_system_image:
+    bazel build {{BAZEL_CONFIG_FLAG}} oak_containers/system_image:oak_containers_tdx_system_image
+    cp --force --preserve=timestamps \
+        bazel-bin/oak_containers/system_image/oak_containers_tdx_system_image.tar.xz \
         artifacts
 
 oak_containers_nvidia_system_image:

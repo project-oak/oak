@@ -50,7 +50,7 @@ genrule(
         "@oak_cc_toolchain_sysroot//:stage1_shared_libraries",
     ],
     outs = [
-        "stage1.cpio",
+        "stage1_tdx.cpio",
     ],
     cmd = """
         # Copy linker.
@@ -70,9 +70,9 @@ genrule(
         # Create the compressed CPIO archive.
         (cd $(RULEDIR)/root && find .) | sort | \
             cpio --create --owner=root:root --format=newc --verbose --reproducible \
-            --directory=$(RULEDIR)/root > $(RULEDIR)/stage1.cpio.tmp
-        strip-nondeterminism --type=cpio --timestamp=0 $(RULEDIR)/stage1.cpio.tmp
-        gzip --best --no-name $(RULEDIR)/stage1.cpio.tmp
-        mv $(RULEDIR)/stage1.cpio.tmp.gz $(RULEDIR)/stage1.cpio
+            --directory=$(RULEDIR)/root > $(RULEDIR)/stage1_tdx.cpio.tmp
+        strip-nondeterminism --type=cpio --timestamp=0 $(RULEDIR)/stage1_tdx.cpio.tmp
+        gzip --best --no-name $(RULEDIR)/stage1_tdx.cpio.tmp
+        mv $(RULEDIR)/stage1_tdx.cpio.tmp.gz $(RULEDIR)/stage1_tdx.cpio
     """,
 )
