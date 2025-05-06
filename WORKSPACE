@@ -164,6 +164,7 @@ maven_install(
         "com.google.flogger:flogger-system-backend:0.8",
         "com.google.flogger:google-extensions:0.8",
         "com.google.protobuf:protobuf-kotlin:3.18.0",
+        "javax.inject:javax.inject:1",
         "org.assertj:assertj-core:3.12.1",
         "org.bouncycastle:bcpkix-jdk18on:1.77",
         "org.bouncycastle:bcprov-jdk18on:1.77",
@@ -171,6 +172,7 @@ maven_install(
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3",
         "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3",
         "org.mockito:mockito-core:3.3.3",
+        "org.mockito.kotlin:mockito-kotlin:4.1.0",
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS + IO_GRPC_GRPC_KOTLIN_ARTIFACTS,
     generate_compat_repositories = True,
     override_targets = dict(
