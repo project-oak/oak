@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["derive_sealing_cdi","dice_data_proto_to_stage0_dice_data","encode_stage0_event","generate_initial_dice_data","mock_attestation_report","mock_derived_key"],"type":["DerivedKey"]};

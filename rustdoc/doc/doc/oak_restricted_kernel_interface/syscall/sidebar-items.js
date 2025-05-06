@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["exit","fsync","mmap","read","sys_exit","sys_fsync","sys_mmap","sys_read","sys_unstable_create_proccess","sys_unstable_switch_proccess","sys_write","unstable_create_proccess","unstable_switch_proccess","write"]};

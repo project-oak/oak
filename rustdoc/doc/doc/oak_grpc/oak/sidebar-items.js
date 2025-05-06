@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["containers","debug","functions","key_provisioning","session"]};

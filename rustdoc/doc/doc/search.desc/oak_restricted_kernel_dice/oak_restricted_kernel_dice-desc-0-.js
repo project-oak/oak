@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_restricted_kernel_dice", 0, "This crate contains the logic used by …\nA derived sealing key.\nGenerates attestation evidence for the ‘measurement’ …")

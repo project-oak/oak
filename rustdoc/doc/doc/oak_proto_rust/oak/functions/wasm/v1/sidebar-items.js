@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["BytesValue","LogRequest","LogResponse","LookupDataMultiRequest","LookupDataMultiResponse","LookupDataRequest","LookupDataResponse","ReadRequestRequest","ReadRequestResponse","TestRequest","TestResponse","WriteResponseRequest","WriteResponseResponse"]};

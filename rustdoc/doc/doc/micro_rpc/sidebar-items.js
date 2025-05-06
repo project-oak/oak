@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Result","StatusCode"],"fn":["async_client_invoke","client_invoke"],"macro":["format"],"mod":["response_wrapper"],"struct":["RequestWrapper","ResponseWrapper","Status","Vec"],"trait":["AsyncTransport","Transport"]};

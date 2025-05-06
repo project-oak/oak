@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ClientEncryptor","Payload","ServerEncryptor"],"trait":["Encryptor"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["container_runtime","dice","ipc_server","key_provisioning","launcher_client","logging"]};

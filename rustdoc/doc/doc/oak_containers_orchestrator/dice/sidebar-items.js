@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["load_stage1_dice_data"]};

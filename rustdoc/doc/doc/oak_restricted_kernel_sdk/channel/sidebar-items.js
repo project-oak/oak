@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["start_blocking_server"],"struct":["FileDescriptorChannel"],"trait":["Read","Write"]};

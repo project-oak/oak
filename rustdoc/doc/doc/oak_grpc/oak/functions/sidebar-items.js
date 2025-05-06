@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["oak_functions_client","oak_functions_server"]};

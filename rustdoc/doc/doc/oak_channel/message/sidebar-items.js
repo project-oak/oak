@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["BODY_OFFSET","INVOCATION_ID_OFFSET","INVOCATION_ID_SIZE","LENGTH_OFFSET","LENGTH_SIZE"],"struct":["RequestMessage","ResponseMessage"],"trait":["Message"],"type":["InvocationId","Length"]};

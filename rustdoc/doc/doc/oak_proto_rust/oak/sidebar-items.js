@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","containers","crypto","debug","functions","key_provisioning","restricted_kernel","session"],"struct":["HexDigest","RawDigest","Variant"]};
