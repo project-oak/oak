@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["extract_evidence","get_expected_values","to_attestation_results","verify","verify_dice_chain","verify_with_expected_values"]};
+window.SIDEBAR_ITEMS = {"fn":["get_event_artifact","to_attestation_results","verify","verify_dice_chain","verify_dice_chain_and_extract_evidence","verify_with_expected_values"],"struct":["AmdSevSnpDiceAttestationVerifier"]};

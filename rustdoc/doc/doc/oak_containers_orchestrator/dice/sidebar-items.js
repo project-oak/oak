@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_stage1_dice_data","measure_container_and_config"]};
+window.SIDEBAR_ITEMS = {"fn":["load_stage1_dice_data"]};

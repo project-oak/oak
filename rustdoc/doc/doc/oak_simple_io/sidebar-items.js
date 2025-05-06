@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_INPUT_BUFFER","DEFAULT_OUTPUT_BUFFER","INPUT_BUFFER_LENGTH","OUTPUT_BUFFER_LENGTH"],"struct":["BufferDescriptor","SimpleIo"],"trait":["Translator"]};

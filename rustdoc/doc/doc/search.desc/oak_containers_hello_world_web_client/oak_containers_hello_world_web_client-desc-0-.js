@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_containers_hello_world_web_client", 0, "This transport implements interfacing with a simple demo …\nReturns the argument unchanged.\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCalls <code>U::from(self)</code>.")

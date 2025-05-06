@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["launch"],"struct":["Instance","Params"],"trait":["GuestInstance"]};

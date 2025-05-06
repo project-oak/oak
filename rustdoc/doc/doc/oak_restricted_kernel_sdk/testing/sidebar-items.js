@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MockEncryptionKeyHandle","MockEvidenceProvider","MockSigner"]};
+window.SIDEBAR_ITEMS = {"struct":["MockAttester","MockEncryptionKeyHandle","MockSigner"]};

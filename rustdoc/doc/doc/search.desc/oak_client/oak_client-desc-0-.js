@@ -1,0 +1,1 @@
+searchState.loadedDescShard("oak_client", 0, "Client for connecting to Oak. Represents a Relying Party …\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nVerifier that doesn’t check the Evidence against …\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.")

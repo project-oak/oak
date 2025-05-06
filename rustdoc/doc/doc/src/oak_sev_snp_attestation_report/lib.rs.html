@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_snp_attestation_report/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_snp_attestation_report" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_sev_snp_attestation_report/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_sev_snp_attestation_report/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fecee23daa4e8a6d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_sev_snp_attestation_report" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (4ac7bcbaa 2024-09-04)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -358,6 +356,27 @@
 <a href="#356" id="356">356</a>
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -434,7 +453,7 @@
 </span><span class="kw">pub struct </span>AttestationReportData {
     <span class="doccomment">/// The version of the attestation report format.
     ///
-    /// This implementation is based on version 2.
+    /// This implementation is based on version 3.
     </span><span class="kw">pub </span>version: u32,
     <span class="doccomment">/// The guest security version number.
     </span><span class="kw">pub </span>guest_svn: u32,
@@ -460,13 +479,15 @@
     /// Use `AttestationReportData::get_platform_info` to try to convert this to
     /// a `PlatformInfo` biflag representation.
     </span><span class="kw">pub </span>platform_info: u64,
-    <span class="doccomment">/// The least significant bit indicates Whether the digest of the author key
-    /// is included in the report, all other bits are reserved and must be
-    /// zero.
-    ///
-    /// Use `AttestationReportData::get_author_key_en` to try to convert this to
-    /// an `AuthorKey` enum.
-    </span><span class="kw">pub </span>author_key_en: u64,
+    <span class="doccomment">/// Bit-packed field containing the following:
+    /// 31:5 -- reserved, MBZ
+    /// 4:2 -- SIGNING_KEY, key used to sign this report
+    /// 1 - MASK_CHIP_KEY
+    /// 0 - AUTHOR_KEY_EN
+    </span>key: u32,
+
+    <span class="doccomment">/// Reserved. Must be zero.
+    </span>_reserved_4: u32,
     <span class="doccomment">/// Guest-provided data. The custom data provided in the attestation
     /// request.
     </span><span class="kw">pub </span>report_data: [u8; REPORT_DATA_SIZE],
@@ -488,8 +509,14 @@
     <span class="doccomment">/// The reported TCB version that was used to generate the versioned chip
     /// endorsement key (VCEK) used to sign this report.
     </span><span class="kw">pub </span>reported_tcb: TcbVersion,
+    <span class="doccomment">/// Family ID (combined Extended Family ID and Family ID).
+    </span><span class="kw">pub </span>cpuid_fam_id: u8,
+    <span class="doccomment">/// Model (combined Extended Model and Model fields).
+    </span><span class="kw">pub </span>cpuid_mod_id: u8,
+    <span class="doccomment">/// Stepping.
+    </span><span class="kw">pub </span>cpuid_step: u8,
     <span class="doccomment">/// Reserved, must be zero.
-    </span>_reserved_0: [u8; <span class="number">24</span>],
+    </span>_reserved_0: [u8; <span class="number">21</span>],
     <span class="doccomment">/// Identifier unique to the chip, unless the ID has been masked in
     /// configuration in which case it is all zeroes.
     </span><span class="kw">pub </span>chip_id: [u8; <span class="number">64</span>],
@@ -521,16 +548,30 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(AttestationReportData, [u8; <span class="number">672</span>]);
 
 <span class="kw">impl </span>AttestationReportData {
-    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation if
-    /// possible.
-    </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PlatformInfo&gt; {
-        PlatformInfo::from_bits(<span class="self">self</span>.platform_info)
+    <span class="doccomment">/// Gets the platform info field as a `PlatformInfo` representation.
+    </span><span class="kw">pub fn </span>get_platform_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PlatformInfo {
+        <span class="comment">// The latest documentation defines only the lowest 5 bits, with the others
+        // reserved. We, however, have encountered the reserved bits being set in the
+        // wild; therefore, mask them out here.
+        </span>PlatformInfo::from_bits_truncate(<span class="self">self</span>.platform_info)
     }
 
-    <span class="doccomment">/// Gets the author key enabled field as an `AuthorKey` enum if possible.
-    </span><span class="kw">pub fn </span>get_author_key_en(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;AuthorKey&gt; {
-        AuthorKey::from_repr(<span class="self">self</span>.author_key_en)
+    <span class="comment">// Gets the key used to sign this report.
+    </span><span class="kw">pub fn </span>get_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningKey&gt; {
+        <span class="comment">// Only bits 2, 3, 4 are of interest, mask out the rest and shift.
+        </span>SigningKey::from_repr((<span class="self">self</span>.key &amp; <span class="number">0b11100</span>) &gt;&gt; <span class="number">2</span>)
     }
+
+    <span class="doccomment">/// Gets the value of MaskChipKey.
+    </span><span class="kw">pub fn </span>get_mask_chip_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.key &amp; <span class="number">0b10 </span>&gt; <span class="number">0
+    </span>}
+
+    <span class="doccomment">/// Returns the value of AUTHOR_KEY_EN, i.e. whether the author key digest
+    /// is included in the report.
+    </span><span class="kw">pub fn </span>has_author_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.key &amp; <span class="number">1 </span>&gt; <span class="number">0
+    </span>}
 
     <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if
     /// possible.
@@ -541,49 +582,46 @@
     <span class="doccomment">/// Checks that fields with specific expected values or ranges are valid and
     /// the reserved bytes are all zero.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
+        <span class="kw">if </span><span class="self">self</span>.version &gt; <span class="number">3 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"unsupported attestation report version"</span>);
+        }
         <span class="self">self</span>.policy.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.current_tcb.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.reported_tcb.validate()<span class="question-mark">?</span>;
         <span class="self">self</span>.committed_tcb.validate()<span class="question-mark">?</span>;
-        <span class="kw">if </span><span class="self">self</span>._reserved_0.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_0"</span>);
+        <span class="kw">if </span><span class="self">self</span>._reserved_4 != <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_4"</span>);
         }
-        <span class="kw">if </span><span class="self">self</span>._reserved_1 != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_1"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>._reserved_2 != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_2"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>._reserved_3.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"nonzero value in _reserved_3"</span>);
+        <span class="kw">if </span><span class="self">self</span>.get_signing_key().is_none() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid signing key setting"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.get_signature_algo().is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid signature algorithm"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>.get_platform_info().is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid platform info"</span>);
-        }
-        <span class="kw">if </span><span class="self">self</span>.get_author_key_en().is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"invalid value for author_key_en"</span>);
         }
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="macro">bitflags! </span>{
+<span class="macro">bitflags!</span> {
     <span class="doccomment">/// Information on the platform configuration.
     </span><span class="attr">#[derive(Default)]
     </span><span class="kw">pub struct </span>PlatformInfo: u64 {
-        <span class="doccomment">/// Indicates that simulatneous multi-threading (SMT) is enabled.
+        <span class="doccomment">/// Indicates that simultaneous multi-threading (SMT) is enabled.
         </span><span class="kw">const </span>SMT_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
         <span class="doccomment">/// Indicates that transparent secure memory encryption (TSME) is enabled.
         </span><span class="kw">const </span>TSME_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">1</span>);
+        <span class="doccomment">/// Indicates that the plaform is using error correcting codes for memory.
+        </span><span class="kw">const </span>ECC_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">2</span>);
+        <span class="doccomment">/// Indicates that the RAPL feature is disabled.
+        </span><span class="kw">const </span>RAPL_DIS = (<span class="number">1 </span>&lt;&lt; <span class="number">3</span>);
+        <span class="doccomment">/// Indicates ciphertext hiding is enabled for the DRAM.
+        </span><span class="kw">const </span>CIPHERTEXT_HIDING_DRAM_EN = (<span class="number">1 </span>&lt;&lt; <span class="number">4</span>);
     }
 }
 
 <span class="doccomment">/// The signing algorithm used for the report signature.
 ///
-/// See Table 117 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 133 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>SigningAlgorithm {
@@ -591,6 +629,18 @@
     </span>Invalid = <span class="number">0</span>,
     <span class="doccomment">/// ECDSA using curve P-384 with SHA-384.
     </span>EcdsaP384Sha384 = <span class="number">1</span>,
+}
+
+<span class="doccomment">/// Key used to sign the attestation report.
+///
+/// See Table 22 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+</span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
+#[repr(u32)]
+</span><span class="kw">pub enum </span>SigningKey {
+    VCEK = <span class="number">0</span>,
+    VLEK = <span class="number">1</span>,
+    <span class="comment">// Values 2 through 6 are reserved.
+    </span><span class="prelude-val">None </span>= <span class="number">7</span>,
 }
 
 <span class="doccomment">/// The required policy for a guest to run.
@@ -663,7 +713,7 @@
     }
 }
 
-<span class="macro">bitflags! </span>{
+<span class="macro">bitflags!</span> {
     <span class="doccomment">/// Flags indicating allowed policy options.
     </span><span class="attr">#[derive(Default)]
     </span><span class="kw">pub struct </span>PolicyFlags: u16 {
@@ -680,19 +730,9 @@
     }
 }
 
-<span class="doccomment">/// Whether the author key digest is included in the report.
-</span><span class="attr">#[derive(Debug, FromRepr)]
-#[repr(u64)]
-</span><span class="kw">pub enum </span>AuthorKey {
-    <span class="doccomment">/// The author key digest is not present.
-    </span>No = <span class="number">0</span>,
-    <span class="doccomment">/// The author key digest is present.
-    </span>Yes = <span class="number">1</span>,
-}
-
 <span class="doccomment">/// An ECDSA signature.
 ///
-/// See Table 119 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 135 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {

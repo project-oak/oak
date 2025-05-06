@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_crypto/src/noise_handshake/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_crypto" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oak_crypto/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_crypto/src/noise_handshake/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-fecee23daa4e8a6d.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oak_crypto" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (4ac7bcbaa 2024-09-04)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -283,6 +281,135 @@
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright 2024 Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -312,6 +439,7 @@
 <span class="kw">use </span>alloc::vec::Vec;
 
 <span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>hashbrown::HashSet;
 <span class="kw">use </span>oak_proto_rust::oak::{crypto::v1::SessionKeys, session::v1::NoiseHandshakeMessage};
 
 <span class="kw">use </span><span class="kw">crate</span>::noise_handshake::{
@@ -335,7 +463,7 @@
 }
 
 <span class="kw">impl </span>Nonce {
-    <span class="kw">pub fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
+    <span class="kw">pub fn </span>next_nonce(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;[u8; NONCE_LEN], Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.nonce &gt; MAX_SEQUENCE {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptFailed);
         }
@@ -343,6 +471,17 @@
         ret[NONCE_LEN - <span class="number">4</span>..].copy_from_slice(<span class="self">self</span>.nonce.to_be_bytes().as_slice());
         <span class="self">self</span>.nonce += <span class="number">1</span>;
         <span class="prelude-val">Ok</span>(ret)
+    }
+
+    <span class="comment">// Nonce must be `NONCE_LEN` bytes with the last 4 bytes holding the nonce value
+    // and the rest padded with 0.
+    </span><span class="kw">pub fn </span>get_nonce_value(nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN]) -&gt; <span class="prelude-ty">Result</span>&lt;u32, Error&gt; {
+        <span class="kw">if </span>!nonce.starts_with(<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; NONCE_LEN - <span class="number">4</span>]) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidNonce);
+        }
+        <span class="kw">let </span><span class="kw-2">mut </span>nonce_be_bytes = [<span class="number">0u8</span>; <span class="number">4</span>];
+        nonce_be_bytes.copy_from_slice(<span class="kw-2">&amp;</span>nonce[NONCE_LEN - <span class="number">4</span>..]);
+        <span class="prelude-val">Ok</span>(u32::from_be_bytes(nonce_be_bytes))
     }
 }
 
@@ -360,7 +499,64 @@
     }
 }
 
-<span class="kw">pub struct </span>Crypter {
+<span class="kw">fn </span>aes_gcm_256_encrypt(
+    key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN],
+    nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN],
+    plaintext: <span class="kw-2">&amp;</span>[u8],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
+    <span class="kw">const </span>PADDING_GRANULARITY: usize = <span class="number">32</span>;
+    <span class="macro">static_assertions::const_assert!</span>(PADDING_GRANULARITY &lt; <span class="number">256</span>);
+    <span class="macro">static_assertions::const_assert!</span>((PADDING_GRANULARITY &amp; (PADDING_GRANULARITY - <span class="number">1</span>)) == <span class="number">0</span>);
+
+    <span class="kw">let </span><span class="kw-2">mut </span>padded_size: usize = plaintext.len();
+    <span class="comment">// AES GCM is limited to encrypting 64GiB of data in a single AEAD invocation.
+    // 256MiB is just a sane upper limit on message size, which greatly exceeds
+    // the noise specified 64KiB, which will be too restrictive for our use cases.
+    </span><span class="kw">if </span>padded_size &gt; (<span class="number">1usize </span>&lt;&lt; <span class="number">28</span>) {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DataTooLarge(padded_size));
+    }
+    padded_size += <span class="number">1</span>; <span class="comment">// padding-length byte
+
+    // This is standard low-level bit manipulation to round up to the nearest
+    // multiple of PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a
+    // power of 2, so we compute the mask with !(PADDING_GRANULARITY - 1).
+    // If padded_size is not already a multiple of PADDING_GRANULARITY, then
+    // padded_size will not change.  Otherwise, it is rounded up to the next
+    // multiple of PADDED_GRANULARITY.
+    </span>padded_size = (padded_size + PADDING_GRANULARITY - <span class="number">1</span>) &amp; !(PADDING_GRANULARITY - <span class="number">1</span>);
+
+    <span class="kw">let </span><span class="kw-2">mut </span>padded_encrypt_data = Vec::with_capacity(padded_size);
+    padded_encrypt_data.extend_from_slice(plaintext);
+    padded_encrypt_data.resize(padded_size, <span class="number">0u8</span>);
+    <span class="kw">let </span>num_zeros = padded_size - plaintext.len() - <span class="number">1</span>;
+    padded_encrypt_data[padded_size - <span class="number">1</span>] = num_zeros <span class="kw">as </span>u8;
+
+    crypto_wrapper::aes_256_gcm_seal_in_place(key, nonce, <span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;mut </span>padded_encrypt_data);
+    <span class="prelude-val">Ok</span>(padded_encrypt_data)
+}
+
+<span class="kw">fn </span>aes_gcm_256_decrypt(
+    key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN],
+    nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN],
+    ciphertext: <span class="kw-2">&amp;</span>[u8],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
+    <span class="comment">// Aes256Gcm implements Aead in terms of AeadInPlace, so even if you remove the
+    // `Vec::from` here the underlying libraries will end up doing the copy anyway.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>plaintext =
+        crypto_wrapper::aes_256_gcm_open_in_place(key, nonce, <span class="kw-2">&amp;</span>[], Vec::from(ciphertext))
+            .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
+
+    <span class="comment">// Plaintext must have a padding byte, and the unpadded length must be
+    // at least one.
+    </span><span class="kw">if </span>plaintext.is_empty() || (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize) &gt;= plaintext.len() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptionPadding);
+    }
+    <span class="kw">let </span>unpadded_length = plaintext.len() - (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize);
+    plaintext.truncate(unpadded_length - <span class="number">1</span>);
+    <span class="prelude-val">Ok</span>(plaintext)
+}
+
+<span class="kw">pub struct </span>OrderedCrypter {
     read_key: [u8; SYMMETRIC_KEY_LEN],
     write_key: [u8; SYMMETRIC_KEY_LEN],
     read_nonce: Nonce,
@@ -368,9 +564,11 @@
 }
 
 <span class="doccomment">/// Utility for encrypting and decrypting traffic between the Noise endpoints.
+///
+/// This implementation guarantees message ordering.
 /// It is created by |respond| and configured with a key for each traffic
 /// direction.
-</span><span class="kw">impl </span>Crypter {
+</span><span class="kw">impl </span>OrderedCrypter {
     <span class="kw">fn </span>new(read_key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN], write_key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN]) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             read_key: <span class="kw-2">*</span>read_key,
@@ -381,73 +579,25 @@
     }
 
     <span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        <span class="kw">const </span>PADDING_GRANULARITY: usize = <span class="number">32</span>;
-        <span class="macro">static_assertions::const_assert!</span>(PADDING_GRANULARITY &lt; <span class="number">256</span>);
-        <span class="macro">static_assertions::const_assert!</span>((PADDING_GRANULARITY &amp; (PADDING_GRANULARITY - <span class="number">1</span>)) == <span class="number">0</span>);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>padded_size: usize = plaintext.len();
-        <span class="comment">// AES GCM is limited to encrypting 64GiB of data with the same key.
-        // TODO(#4917): in a follow-on CL, track total data per key and drop the
-        // connection after 64 GiB. 256MiB is just a sane upper limit on
-        // message size, which greatly exceeds the noise specified 64KiB, which
-        // will be too restrictive for our use cases.
-        </span><span class="kw">if </span>padded_size &gt; (<span class="number">1usize </span>&lt;&lt; <span class="number">28</span>) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DataTooLarge(padded_size));
-        }
-        padded_size += <span class="number">1</span>; <span class="comment">// padding-length byte
-        // This is standard low-level bit manipulation to round up to the nearest
-        // multiple of PADDING_GRANULARITY.  We know PADDING_GRANULARRITY is a
-        // power of 2, so we compute the mask with !(PADDING_GRANULARITY - 1).
-        // If padded_size is not already a multiple of PADDING_GRANULARITY, then
-        // padded_size will not change.  Otherwise, it is rounded up to the next
-        // multiple of PADDED_GRANULARITY.
-        </span>padded_size = (padded_size + PADDING_GRANULARITY - <span class="number">1</span>) &amp; !(PADDING_GRANULARITY - <span class="number">1</span>);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>padded_encrypt_data = Vec::with_capacity(padded_size);
-        padded_encrypt_data.extend_from_slice(plaintext);
-        padded_encrypt_data.resize(padded_size, <span class="number">0u8</span>);
-        <span class="kw">let </span>num_zeros = padded_size - plaintext.len() - <span class="number">1</span>;
-        padded_encrypt_data[padded_size - <span class="number">1</span>] = num_zeros <span class="kw">as </span>u8;
-
-        crypto_wrapper::aes_256_gcm_seal_in_place(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.write_key,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.write_nonce.next()<span class="question-mark">?</span>,
-            <span class="kw-2">&amp;</span>[],
-            <span class="kw-2">&amp;mut </span>padded_encrypt_data,
-        );
-        <span class="prelude-val">Ok</span>(padded_encrypt_data)
+        aes_gcm_256_encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.write_key, <span class="kw-2">&amp;</span><span class="self">self</span>.write_nonce.next_nonce()<span class="question-mark">?</span>, plaintext)
     }
 
     <span class="kw">pub fn </span>decrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ciphertext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        <span class="kw">let </span>plaintext = crypto_wrapper::aes_256_gcm_open_in_place(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.read_key,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.read_nonce.next()<span class="question-mark">?</span>,
-            <span class="kw-2">&amp;</span>[],
-            Vec::from(ciphertext),
-        )
-        .map_err(|<span class="kw">_</span>| Error::DecryptFailed)<span class="question-mark">?</span>;
-
-        <span class="comment">// Plaintext must have a padding byte, and the unpadded length must be
-        // at least one.
-        </span><span class="kw">if </span>plaintext.is_empty() || (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize) &gt;= plaintext.len() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::DecryptionPadding);
-        }
-        <span class="kw">let </span>unpadded_length = plaintext.len() - (plaintext[plaintext.len() - <span class="number">1</span>] <span class="kw">as </span>usize);
-        <span class="prelude-val">Ok</span>(Vec::from(<span class="kw-2">&amp;</span>plaintext[<span class="number">0</span>..unpadded_length - <span class="number">1</span>]))
+        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, <span class="kw-2">&amp;</span><span class="self">self</span>.read_nonce.next_nonce()<span class="question-mark">?</span>, ciphertext)
     }
 }
 
-<span class="kw">impl </span>From&lt;Crypter&gt; <span class="kw">for </span>SessionKeys {
-    <span class="kw">fn </span>from(value: Crypter) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;OrderedCrypter&gt; <span class="kw">for </span>SessionKeys {
+    <span class="kw">fn </span>from(value: OrderedCrypter) -&gt; <span class="self">Self </span>{
         SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;SessionKeys&gt; <span class="kw">for </span>Crypter {
+<span class="kw">impl </span>TryFrom&lt;SessionKeys&gt; <span class="kw">for </span>OrderedCrypter {
     <span class="kw">type </span>Error = anyhow::Error;
 
     <span class="kw">fn </span>try_from(sk: SessionKeys) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="prelude-val">Ok</span>(Crypter::new(
+        <span class="prelude-val">Ok</span>(OrderedCrypter::new(
             sk.response_key
                 .as_slice()
                 .try_into()
@@ -460,8 +610,114 @@
     }
 }
 
+<span class="doccomment">/// Modified impl of `OrderedCrypter` that explicitly ignores ordering.
+///
+/// It explicitly ignores message ordering but protects against replayed
+/// messages. This implementation ratchets messages upto a given `window_size`
+/// i.e. very old messages outside the given window will fail decryption.
+/// Messages within the allowed window will be decrypted in any order.
+/// Applications using this implementation must ensure they can handle
+/// re-ordered and dropped messages. This implementation is primarily meant for
+/// unreliable transport protocols such as UDP.
+</span><span class="kw">pub struct </span>UnorderedCrypter {
+    read_key: [u8; SYMMETRIC_KEY_LEN],
+    write_key: [u8; SYMMETRIC_KEY_LEN],
+    write_nonce: Nonce,
+    <span class="comment">// The current furthest read nonce seen so far.
+    </span>furthest_read_nonce: u32,
+    <span class="comment">// Window size to ratchet receiving nonces in order to avoid receiving
+    // nonces way too far in the past.
+    </span>window_size: u32,
+    <span class="comment">// Buffered read nonces with max capacity equivalent to `window_size` i.e.
+    // nonces lower than (`furthest_read_nonce` - `window_size`) will not be decrypted.
+    </span>buffered_read_nonces: HashSet&lt;u32&gt;,
+}
+
+<span class="kw">impl </span>UnorderedCrypter {
+    <span class="kw">pub fn </span>new(
+        read_key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN],
+        write_key: <span class="kw-2">&amp;</span>[u8; SYMMETRIC_KEY_LEN],
+        window_size: u32,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            read_key: <span class="kw-2">*</span>read_key,
+            write_key: <span class="kw-2">*</span>write_key,
+            write_nonce: Nonce { nonce: <span class="number">1 </span>},
+            furthest_read_nonce: <span class="number">0</span>,
+            window_size,
+            buffered_read_nonces: HashSet::with_capacity(window_size.try_into().unwrap()),
+        }
+    }
+
+    <span class="kw">fn </span>get_lowest_acceptable_read_nonce(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="kw">let </span><span class="kw-2">mut </span>lowest_acceptable_read_nonce = <span class="number">1</span>;
+        <span class="kw">if </span><span class="self">self</span>.furthest_read_nonce &gt; <span class="self">self</span>.window_size {
+            lowest_acceptable_read_nonce = <span class="self">self</span>.furthest_read_nonce - <span class="self">self</span>.window_size + <span class="number">1</span>;
+        }
+        lowest_acceptable_read_nonce
+    }
+
+    <span class="kw">pub fn </span>encrypt(<span class="kw-2">&amp;mut </span><span class="self">self</span>, plaintext: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;), Error&gt; {
+        <span class="kw">let </span>nonce = <span class="self">self</span>.write_nonce.next_nonce()<span class="question-mark">?</span>;
+        <span class="kw">let </span>encrypted_message = aes_gcm_256_encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.write_key, <span class="kw-2">&amp;</span>nonce, plaintext)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((encrypted_message, nonce.to_vec()))
+    }
+
+    <span class="kw">pub fn </span>decrypt(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        nonce: <span class="kw-2">&amp;</span>[u8; NONCE_LEN],
+        ciphertext: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
+        <span class="kw">let </span>nonce_value = Nonce::get_nonce_value(nonce)<span class="question-mark">?</span>;
+        <span class="kw">let </span>lowest_acceptable_nonce = <span class="self">self</span>.get_lowest_acceptable_read_nonce();
+        <span class="comment">// Nonce is way too far in the past, reject it.
+        </span><span class="kw">if </span>nonce_value &lt; lowest_acceptable_nonce {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidNonce);
+        }
+        <span class="comment">// Nonce is within the window, check for replayed nonces.
+        </span><span class="kw">else if </span>nonce_value &gt;= lowest_acceptable_nonce &amp;&amp; nonce_value &lt;= <span class="self">self</span>.furthest_read_nonce
+        {
+            <span class="kw">if </span><span class="self">self</span>.buffered_read_nonces.contains(<span class="kw-2">&amp;</span>nonce_value) {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ReplayedNonce);
+            }
+            <span class="self">self</span>.buffered_read_nonces.insert(nonce_value);
+        }
+        <span class="comment">// Nonce is greater than the furthest seen so far.
+        </span><span class="kw">else </span>{
+            <span class="self">self</span>.furthest_read_nonce = nonce_value;
+            <span class="comment">// Retain only buffered nonces in the new window span.
+            </span><span class="kw">let </span>new_lowest_acceptable_nonce = <span class="self">self</span>.get_lowest_acceptable_read_nonce();
+            <span class="self">self</span>.buffered_read_nonces.retain(|<span class="kw-2">&amp;</span>n| n &gt;= new_lowest_acceptable_nonce);
+            <span class="self">self</span>.buffered_read_nonces.insert(nonce_value);
+        }
+        aes_gcm_256_decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.read_key, nonce, ciphertext)
+    }
+}
+
+<span class="kw">impl </span>TryFrom&lt;(SessionKeys, u32)&gt; <span class="kw">for </span>UnorderedCrypter {
+    <span class="kw">type </span>Error = anyhow::Error;
+
+    <span class="kw">fn </span>try_from(sk_and_window_size: (SessionKeys, u32)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
+        <span class="prelude-val">Ok</span>(UnorderedCrypter::new(
+            sk_and_window_size
+                .<span class="number">0
+                </span>.response_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"unexpected format of the read key: {e:#?}"</span>))<span class="question-mark">?</span>,
+            sk_and_window_size
+                .<span class="number">0
+                </span>.request_key
+                .as_slice()
+                .try_into()
+                .map_err(|e| <span class="macro">anyhow!</span>(<span class="string">"unexpected format of the read key: {e:#?}"</span>))<span class="question-mark">?</span>,
+            sk_and_window_size.<span class="number">1</span>,
+        ))
+    }
+}
+
 <span class="kw">pub struct </span>Response {
-    <span class="kw">pub </span>crypter: Crypter,
+    <span class="kw">pub </span>crypter: OrderedCrypter,
     <span class="kw">pub </span>handshake_hash: [u8; SHA256_OUTPUT_LEN],
     <span class="kw">pub </span>response: NoiseMessage,
 }
@@ -492,7 +748,7 @@
     noise.mix_hash(<span class="kw-2">&amp;</span>[<span class="number">0</span>; <span class="number">1</span>]); <span class="comment">// Prologue
 
     </span>noise.mix_hash(in_message.ephemeral_public_key.as_slice());
-    noise.mix_key(<span class="kw-2">&amp;</span>in_message.ephemeral_public_key.as_slice());
+    noise.mix_key(in_message.ephemeral_public_key.as_slice());
     finish_response(<span class="kw-2">&amp;mut </span>noise, in_message)
 }
 
@@ -558,7 +814,7 @@
 
     <span class="kw">let </span>keys = noise.traffic_keys();
     <span class="prelude-val">Ok</span>(Response {
-        crypter: Crypter::new(<span class="kw-2">&amp;</span>keys.<span class="number">0</span>, <span class="kw-2">&amp;</span>keys.<span class="number">1</span>),
+        crypter: OrderedCrypter::new(<span class="kw-2">&amp;</span>keys.<span class="number">0</span>, <span class="kw-2">&amp;</span>keys.<span class="number">1</span>),
         handshake_hash: noise.handshake_hash(),
         response: NoiseMessage {
             ciphertext: response_ciphertext,

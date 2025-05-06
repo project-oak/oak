@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation_verification/src/util.rs`."><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation_verification" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_attestation_verification/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation_verification/src/util.rs`."><title>util.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fecee23daa4e8a6d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation_verification" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (4ac7bcbaa 2024-09-04)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -323,6 +321,161 @@
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -339,73 +492,68 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{string::String, vec::Vec};
-<span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
+</span><span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
+<span class="kw">use </span>core::cmp::Ordering;
 
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ecdsa::signature::Verifier;
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{KeyType, Signature, VerifyingKeySet},
+    attestation::v1::{
+        binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
+        reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
+        Digests, Event, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
+        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
+        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
+        SystemLayerReferenceValues, TextReferenceValue, Validity, VerifyingKeySet,
+    },
     HexDigest, RawDigest,
 };
+<span class="kw">use </span>p256::pkcs8::{der::Decode, DecodePublicKey};
+<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>prost_types::Any;
 <span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
+<span class="kw">use </span>time::OffsetDateTime;
 
-<span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">"-----BEGIN PUBLIC KEY-----"</span>;
-<span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">"-----END PUBLIC KEY-----"</span>;
+<span class="kw">use </span><span class="kw">crate</span>::endorsement;
 
-<span class="doccomment">/// Makes a plausible guess whether the public key is in PEM format.
-</span><span class="kw">pub fn </span>looks_like_pem(maybe_pem: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">let </span>p = maybe_pem.trim();
-    p.starts_with(PEM_HEADER) &amp;&amp; p.ends_with(PEM_FOOTER)
+<span class="kw">const </span>PUBLIC_KEY_PEM_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"PUBLIC KEY"</span>;
+
+<span class="doccomment">/// Converts a raw ASN.1 DER public key bytes to PEM with a "PUBLIC KEY" label.
+</span><span class="attr">#[allow(unused)]
+</span><span class="kw">pub fn </span>convert_raw_to_pem(asn1_der_public_key_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
+    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(asn1_der_public_key_bytes)
+        .expect(<span class="string">"public key bytes are not ASN.1 DER"</span>);
+    doc.to_pem(PUBLIC_KEY_PEM_LABEL, p256::pkcs8::LineEnding::LF).expect(<span class="string">"couldn't create pem"</span>)
 }
 
-<span class="doccomment">/// Converts a PEM key to raw. Will panic if it does not look like PEM.
+<span class="doccomment">/// Converts a PEM public key to raw ASN.1 DER bytes.
 </span><span class="kw">pub fn </span>convert_pem_to_raw(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span>stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect(<span class="string">"could not find expected header"</span>)
-        .strip_suffix(PEM_FOOTER)
-        .expect(<span class="string">"could not find expected footer"</span>);
-    <span class="kw">let </span>remove_newlines = stripped.replace(<span class="string">'\n'</span>, <span class="string">""</span>);
+    <span class="kw">let </span>(label, key) = p256::pkcs8::Document::from_pem(public_key_pem)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Couldn't interpret PEM: {e}"</span>))<span class="question-mark">?</span>;
 
-    BASE64_STANDARD.decode(remove_newlines).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
+    <span class="macro">anyhow::ensure!</span>(
+        label == PUBLIC_KEY_PEM_LABEL,
+        <span class="string">"PEM label {label} is not {PUBLIC_KEY_PEM_LABEL}"
+    </span>);
+
+    <span class="prelude-val">Ok</span>(key.into_vec())
 }
 
-<span class="doccomment">/// Converts a raw public key to PEM format.
-</span><span class="kw">pub fn </span>convert_raw_to_pem(public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>pem = String::from(PEM_HEADER);
-    <span class="kw">for </span>(i, c) <span class="kw">in </span>BASE64_STANDARD.encode(public_key).chars().enumerate() {
-        <span class="kw">if </span>i % <span class="number">64 </span>== <span class="number">0 </span>{
-            pem.push(<span class="string">'\n'</span>);
-        }
-        pem.push(c);
-    }
-    pem.push(<span class="string">'\n'</span>);
-    pem.push_str(PEM_FOOTER);
-    pem.push(<span class="string">'\n'</span>);
-    pem
-}
-
-<span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-</span><span class="kw">pub fn </span>convert_pem_to_verifying_key(
-    public_key_pem: <span class="kw-2">&amp;</span>str,
-) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem).map_err(|error| {
-        <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't parse pem as a p256::ecdsa::VerifyingKey: {}"</span>, error)
-    })
-}
-
-<span class="doccomment">/// Converts a raw public key to a verifying key.
+<span class="doccomment">/// Converts ASN.1 DER public key bytes to a [`p256::ecdsa::VerifyingKey`].
 </span><span class="kw">pub fn </span>convert_raw_to_verifying_key(
     public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    <span class="comment">// Need to figure out how to create a VerifyingKey without the PEM detour.
-    </span><span class="kw">let </span>public_key_pem = convert_raw_to_pem(public_key);
-    convert_pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
+    <span class="kw">let </span>doc = p256::pkcs8::Document::from_der(public_key)
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"Could not interpret bytes as ASN.1 DER: {e}"</span>))<span class="question-mark">?</span>;
+    p256::ecdsa::VerifyingKey::from_public_key_der(doc.as_bytes())
+        .map_err(|e| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't convert der to verifying key: {e}"</span>))
 }
 
-<span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the
+<span class="doccomment">/// Compares two ECDSA public keys.
+///
+/// Instead of comparing the bytes, we parse the
 /// bytes and compare p256 keys. Keys are considered equal if they are the same
 /// on the elliptic curve. This means that the keys could have different bytes,
 /// but still be the same key.
@@ -426,10 +574,10 @@
         .iter()
         .find(|k| k.key_id == signature.key_id)
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not find key id in key set"</span>))<span class="question-mark">?</span>;
-    <span class="kw">return match </span>key.r#type() {
+    <span class="kw">match </span>key.r#type() {
         KeyType::Undefined =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">"Undefined key type"</span>),
         KeyType::EcdsaP256Sha256 =&gt; verify_signature_ecdsa(<span class="kw-2">&amp;</span>signature.raw, contents, <span class="kw-2">&amp;</span>key.raw),
-    };
+    }
 }
 
 <span class="doccomment">/// Verifies the signature over the contents using the public key.
@@ -440,7 +588,8 @@
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>sig = ecdsa::Signature::from_der(signature)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid ASN.1 signature: {}"</span>, error))<span class="question-mark">?</span>;
-    <span class="kw">let </span>key = convert_raw_to_verifying_key(public_key)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key = convert_raw_to_verifying_key(public_key)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't convert public key: {error}"</span>))<span class="question-mark">?</span>;
 
     key.verify(contents, <span class="kw-2">&amp;</span>sig)
         .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"couldn't verify signature: {}"</span>, error))
@@ -477,10 +626,10 @@
 
 <span class="attr">#[derive(PartialEq)]
 </span><span class="kw">pub enum </span>MatchResult {
-    SAME = <span class="number">0</span>,
-    DIFFERENT = <span class="number">1</span>,
-    UNDECIDABLE = <span class="number">2</span>,
-    CONTRADICTORY = <span class="number">3</span>,
+    Same = <span class="number">0</span>,
+    Different = <span class="number">1</span>,
+    Undecidable = <span class="number">2</span>,
+    Contradictory = <span class="number">3</span>,
 }
 
 <span class="doccomment">/// Compares two digests instances for equality.
@@ -489,84 +638,48 @@
 /// If it is undesirable to include the weak sha1 hash in the decision simply
 /// remove it from either input.
 ///
-/// SAME if underlying binaries are the same, DIFFERENT if they differ.
-/// UNDECIDABLE if the constellation in the protos doesn't provide enough
-/// information, CONTRADICTORY if the constellation suggest same and different
-/// at the same time. UNDECIDABLE and CONTRADICTORY usually point to problems
-/// which are unlikely to be addressable at run time.
+/// [`Same`] if underlying binaries are the same, [`Different`] if they differ.
+/// [`Undecidable`] if the constellation in the protos doesn't provide enough
+/// information, [`Contradictory`] if the constellation suggest same and
+/// different at the same time. [`Undecidable`] and [`Contradictory`] usually
+/// point to problems which are unlikely to be addressable at run time.
 </span><span class="kw">pub fn </span>get_hex_digest_match(a: <span class="kw-2">&amp;</span>HexDigest, b: <span class="kw-2">&amp;</span>HexDigest) -&gt; MatchResult {
     <span class="kw">let </span><span class="kw-2">mut </span>same = <span class="number">0</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>different = <span class="number">0</span>;
 
-    <span class="kw">if </span>!a.psha2.is_empty() &amp;&amp; !b.psha2.is_empty() {
-        <span class="kw">if </span>a.psha2 == b.psha2 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>compare = |a: <span class="kw-2">&amp;</span>str, b: <span class="kw-2">&amp;</span>str| {
+        <span class="kw">if </span>!a.is_empty() &amp;&amp; !b.is_empty() {
+            <span class="kw">if </span>a == b {
+                same += <span class="number">1</span>;
+            } <span class="kw">else </span>{
+                different += <span class="number">1</span>;
+            }
         }
-    }
-    <span class="kw">if </span>!a.sha1.is_empty() &amp;&amp; !b.sha1.is_empty() {
-        <span class="kw">if </span>a.sha1 == b.sha1 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha2_256.is_empty() &amp;&amp; !b.sha2_256.is_empty() {
-        <span class="kw">if </span>a.sha2_256 == b.sha2_256 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha2_512.is_empty() &amp;&amp; !b.sha2_512.is_empty() {
-        <span class="kw">if </span>a.sha2_512 == b.sha2_512 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha3_512.is_empty() &amp;&amp; !b.sha3_512.is_empty() {
-        <span class="kw">if </span>a.sha3_512 == b.sha3_512 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha3_384.is_empty() &amp;&amp; !b.sha3_384.is_empty() {
-        <span class="kw">if </span>a.sha3_384 == b.sha3_384 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha3_256.is_empty() &amp;&amp; !b.sha3_256.is_empty() {
-        <span class="kw">if </span>a.sha3_256 == b.sha3_256 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha3_224.is_empty() &amp;&amp; !b.sha3_224.is_empty() {
-        <span class="kw">if </span>a.sha3_224 == b.sha3_224 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
-    <span class="kw">if </span>!a.sha2_384.is_empty() &amp;&amp; !b.sha2_384.is_empty() {
-        <span class="kw">if </span>a.sha2_384 == b.sha2_384 {
-            same += <span class="number">1</span>;
-        } <span class="kw">else </span>{
-            different += <span class="number">1</span>;
-        }
-    }
+    };
+
+    compare(<span class="kw-2">&amp;</span>a.psha2, <span class="kw-2">&amp;</span>b.psha2);
+    compare(<span class="kw-2">&amp;</span>a.sha1, <span class="kw-2">&amp;</span>b.sha1);
+    compare(<span class="kw-2">&amp;</span>a.sha2_256, <span class="kw-2">&amp;</span>b.sha2_256);
+    compare(<span class="kw-2">&amp;</span>a.sha2_512, <span class="kw-2">&amp;</span>b.sha2_512);
+    compare(<span class="kw-2">&amp;</span>a.sha3_512, <span class="kw-2">&amp;</span>b.sha3_512);
+    compare(<span class="kw-2">&amp;</span>a.sha3_384, <span class="kw-2">&amp;</span>b.sha3_384);
+    compare(<span class="kw-2">&amp;</span>a.sha3_256, <span class="kw-2">&amp;</span>b.sha3_256);
+    compare(<span class="kw-2">&amp;</span>a.sha3_224, <span class="kw-2">&amp;</span>b.sha3_224);
+    compare(<span class="kw-2">&amp;</span>a.sha2_384, <span class="kw-2">&amp;</span>b.sha2_384);
 
     <span class="attr">#[allow(clippy::collapsible_else_if)]
     </span><span class="kw">if </span>same &gt; <span class="number">0 </span>{
-        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::CONTRADICTORY } <span class="kw">else </span>{ MatchResult::SAME }
+        <span class="kw">if </span>different &gt; <span class="number">0 </span>{
+            MatchResult::Contradictory
+        } <span class="kw">else </span>{
+            MatchResult::Same
+        }
     } <span class="kw">else </span>{
-        <span class="kw">if </span>different &gt; <span class="number">0 </span>{ MatchResult::DIFFERENT } <span class="kw">else </span>{ MatchResult::UNDECIDABLE }
+        <span class="kw">if </span>different &gt; <span class="number">0 </span>{
+            MatchResult::Different
+        } <span class="kw">else </span>{
+            MatchResult::Undecidable
+        }
     }
 }
 
@@ -577,23 +690,23 @@
 
 <span class="kw">pub fn </span>is_hex_digest_match(actual: <span class="kw-2">&amp;</span>HexDigest, expected: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>get_hex_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
+        MatchResult::Same =&gt; <span class="prelude-val">Ok</span>(()),
+        MatchResult::Different =&gt; {
             <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
         }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
-        MatchResult::CONTRADICTORY =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
+        MatchResult::Undecidable =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
+        MatchResult::Contradictory =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
     }
 }
 
 <span class="kw">pub fn </span>is_raw_digest_match(actual: <span class="kw-2">&amp;</span>RawDigest, expected: <span class="kw-2">&amp;</span>RawDigest) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>get_raw_digest_match(actual, expected) {
-        MatchResult::SAME =&gt; <span class="prelude-val">Ok</span>(()),
-        MatchResult::DIFFERENT =&gt; {
+        MatchResult::Same =&gt; <span class="prelude-val">Ok</span>(()),
+        MatchResult::Different =&gt; {
             <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"mismatched digests: expected={expected:?} actual={actual:?}"</span>,))
         }
-        MatchResult::UNDECIDABLE =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
-        MatchResult::CONTRADICTORY =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
+        MatchResult::Undecidable =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"invalid digests"</span>)),
+        MatchResult::Contradictory =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(<span class="string">"hash collision"</span>)),
     }
 }
 
@@ -614,36 +727,231 @@
 
 <span class="doccomment">/// Converts hex digest to raw digest.
 </span><span class="kw">pub fn </span>hex_to_raw_digest(h: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;RawDigest&gt; {
+    <span class="kw">let </span>hex_decode = |field, name| {
+        hex::decode(field).map_err(|error| {
+            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field {name}: {error} (value {field})"</span>)
+        })
+    };
+
     <span class="kw">let </span>raw = RawDigest {
-        psha2: hex::decode(<span class="kw-2">&amp;</span>h.psha2).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field psha2: {} (value {})"</span>, error, h.psha2)
-        })<span class="question-mark">?</span>,
-        sha1: hex::decode(<span class="kw-2">&amp;</span>h.sha1).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha1: {} (value {})"</span>, error, h.sha1)
-        })<span class="question-mark">?</span>,
-        sha2_256: hex::decode(<span class="kw-2">&amp;</span>h.sha2_256).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha2_256: {} (value {})"</span>, error, h.sha2_256)
-        })<span class="question-mark">?</span>,
-        sha2_512: hex::decode(<span class="kw-2">&amp;</span>h.sha2_512).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha2_512: {} (value {})"</span>, error, h.sha2_512)
-        })<span class="question-mark">?</span>,
-        sha3_512: hex::decode(<span class="kw-2">&amp;</span>h.sha3_512).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha3_512: {} (value {})"</span>, error, h.sha3_512)
-        })<span class="question-mark">?</span>,
-        sha3_384: hex::decode(<span class="kw-2">&amp;</span>h.sha3_384).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha3_384: {} (value {})"</span>, error, h.sha3_384)
-        })<span class="question-mark">?</span>,
-        sha3_256: hex::decode(<span class="kw-2">&amp;</span>h.sha3_256).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha3_256: {} (value {})"</span>, error, h.sha3_256)
-        })<span class="question-mark">?</span>,
-        sha3_224: hex::decode(<span class="kw-2">&amp;</span>h.sha3_224).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha3_224: {} (value {})"</span>, error, h.sha3_224)
-        })<span class="question-mark">?</span>,
-        sha2_384: hex::decode(<span class="kw-2">&amp;</span>h.sha2_384).map_err(|error| {
-            <span class="macro">anyhow::anyhow!</span>(<span class="string">"could not decode field sha2_384: {} (value {})"</span>, error, h.sha2_384)
-        })<span class="question-mark">?</span>,
+        psha2: hex_decode(<span class="kw-2">&amp;</span>h.psha2, <span class="string">"psha2"</span>)<span class="question-mark">?</span>,
+        sha1: hex_decode(<span class="kw-2">&amp;</span>h.sha1, <span class="string">"sha1"</span>)<span class="question-mark">?</span>,
+        sha2_256: hex_decode(<span class="kw-2">&amp;</span>h.sha2_256, <span class="string">"sha2_256"</span>)<span class="question-mark">?</span>,
+        sha2_512: hex_decode(<span class="kw-2">&amp;</span>h.sha2_512, <span class="string">"sha2_512"</span>)<span class="question-mark">?</span>,
+        sha3_512: hex_decode(<span class="kw-2">&amp;</span>h.sha3_512, <span class="string">"sha3_512"</span>)<span class="question-mark">?</span>,
+        sha3_384: hex_decode(<span class="kw-2">&amp;</span>h.sha3_384, <span class="string">"sha3_384"</span>)<span class="question-mark">?</span>,
+        sha3_256: hex_decode(<span class="kw-2">&amp;</span>h.sha3_256, <span class="string">"sha3_256"</span>)<span class="question-mark">?</span>,
+        sha3_224: hex_decode(<span class="kw-2">&amp;</span>h.sha3_224, <span class="string">"sha3_224"</span>)<span class="question-mark">?</span>,
+        sha2_384: hex_decode(<span class="kw-2">&amp;</span>h.sha2_384, <span class="string">"sha2_384"</span>)<span class="question-mark">?</span>,
     };
 
     <span class="prelude-val">Ok</span>(raw)
 }
+
+<span class="kw">pub fn </span>reference_values_from_evidence(evidence: ExtractedEvidence) -&gt; ReferenceValues {
+    <span class="kw">let </span>r#type = <span class="kw">match </span>evidence.evidence_values.expect(<span class="string">"no evidence"</span>) {
+        EvidenceValues::OakRestrictedKernel(rk) =&gt; {
+            <span class="kw">let </span>application = rk.application_layer.expect(<span class="string">"no application layer evidence"</span>);
+            <span class="kw">let </span>config = application.config.expect(<span class="string">"no application config digest"</span>);
+            <span class="prelude-val">Some</span>(reference_values::Type::OakRestrictedKernel(OakRestrictedKernelReferenceValues {
+                root_layer: <span class="prelude-val">Some</span>(root_layer_reference_values_from_evidence(
+                    rk.root_layer.expect(<span class="string">"no root layer evidence"</span>),
+                )),
+                kernel_layer: <span class="prelude-val">Some</span>(kernel_layer_reference_values_from_evidence(
+                    rk.kernel_layer.expect(<span class="string">"no kernel layer evidence"</span>),
+                )),
+                application_layer: <span class="prelude-val">Some</span>(ApplicationLayerReferenceValues {
+                    binary: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                        r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                            digests: <span class="macro">vec!</span>[application
+                                .binary
+                                .expect(<span class="string">"no application binary digest"</span>)],
+                        })),
+                    }),
+                    <span class="comment">// We don't currently specify configuration values for Oak Containers
+                    // applications, so skip for now if the sha2_256 value is empty.
+                    </span>configuration: <span class="kw">if </span>config.sha2_256.is_empty() {
+                        <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                            r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Skip(SkipVerification {})),
+                        })
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                            r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                                digests: <span class="macro">vec!</span>[config],
+                            })),
+                        })
+                    },
+                }),
+            }))
+        }
+        EvidenceValues::OakContainers(oc) =&gt; {
+            <span class="kw">let </span>system = oc.system_layer.expect(<span class="string">"no system layer evidence"</span>);
+            <span class="kw">let </span>container = oc.container_layer.expect(<span class="string">"no container layer evidence"</span>);
+            <span class="prelude-val">Some</span>(reference_values::Type::OakContainers(OakContainersReferenceValues {
+                root_layer: <span class="prelude-val">Some</span>(root_layer_reference_values_from_evidence(
+                    oc.root_layer.expect(<span class="string">"no root layer evidence"</span>),
+                )),
+                kernel_layer: <span class="prelude-val">Some</span>(kernel_layer_reference_values_from_evidence(
+                    oc.kernel_layer.expect(<span class="string">"no kernel layer evidence"</span>),
+                )),
+                system_layer: <span class="prelude-val">Some</span>(SystemLayerReferenceValues {
+                    system_image: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                        r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                            digests: <span class="macro">vec!</span>[system.system_image.expect(<span class="string">"no system image digest"</span>)],
+                        })),
+                    }),
+                }),
+                container_layer: <span class="prelude-val">Some</span>(ContainerLayerReferenceValues {
+                    binary: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                        r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                            digests: <span class="macro">vec!</span>[container.bundle.expect(<span class="string">"no container bundle digest"</span>)],
+                        })),
+                    }),
+                    configuration: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                        r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                            digests: <span class="macro">vec!</span>[container.config.expect(<span class="string">"no container config digest"</span>)],
+                        })),
+                    }),
+                }),
+            }))
+        }
+        EvidenceValues::Cb(<span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">"not yet supported"</span>),
+        EvidenceValues::Standalone(<span class="kw">_</span>) =&gt; <span class="macro">panic!</span>(<span class="string">"not yet supported"</span>),
+    };
+    ReferenceValues { r#type }
+}
+
+<span class="kw">fn </span>root_layer_reference_values_from_evidence(
+    root_layer: RootLayerData,
+) -&gt; RootLayerReferenceValues {
+    <span class="kw">let </span>amd_sev = root_layer.report.clone().and_then(|report| <span class="kw">match </span>report {
+        Report::SevSnp(r) =&gt; <span class="prelude-val">Some</span>(AmdSevReferenceValues {
+            min_tcb_version: r.current_tcb,
+            stage0: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+                r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                    digests: <span class="macro">vec!</span>[RawDigest {
+                        sha2_384: r.initial_measurement,
+                        ..Default::default()
+                    }],
+                })),
+            }),
+            allow_debug: r.debug,
+        }),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    });
+    <span class="kw">let </span>intel_tdx = <span class="kw">if let </span><span class="prelude-val">Some</span>(Report::Tdx(<span class="kw">_</span>)) = root_layer.report.clone() {
+        <span class="macro">panic!</span>(<span class="string">"not yet supported"</span>);
+    } <span class="kw">else </span>{
+        <span class="prelude-val">None
+    </span>};
+    <span class="kw">let </span>insecure = root_layer.report.and_then(|report| <span class="kw">match </span>report {
+        Report::Fake(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(InsecureReferenceValues {}),
+        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+    });
+    RootLayerReferenceValues { amd_sev, intel_tdx, insecure }
+}
+
+<span class="kw">fn </span>kernel_layer_reference_values_from_evidence(
+    kernel_layer: KernelLayerData,
+) -&gt; KernelLayerReferenceValues {
+    <span class="attr">#[allow(deprecated)]
+    </span>KernelLayerReferenceValues {
+        kernel: <span class="prelude-val">Some</span>(KernelBinaryReferenceValue {
+            r#type: <span class="prelude-val">Some</span>(kernel_binary_reference_value::Type::Digests(KernelDigests {
+                image: <span class="prelude-val">Some</span>(Digests {
+                    digests: <span class="macro">vec!</span>[kernel_layer.kernel_image.expect(<span class="string">"no kernel image digest"</span>)],
+                }),
+                setup_data: <span class="prelude-val">Some</span>(Digests {
+                    digests: <span class="macro">vec!</span>[kernel_layer
+                        .kernel_setup_data
+                        .expect(<span class="string">"no kernel setup data digest"</span>)],
+                }),
+            })),
+        }),
+        kernel_cmd_line_text: <span class="prelude-val">Some</span>(TextReferenceValue {
+            r#type: <span class="prelude-val">Some</span>(text_reference_value::Type::StringLiterals(StringLiterals {
+                value: <span class="macro">vec!</span>[kernel_layer.kernel_raw_cmd_line.expect(<span class="string">"no kernel command-line"</span>)],
+            })),
+        }),
+        init_ram_fs: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+            r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                digests: <span class="macro">vec!</span>[kernel_layer.init_ram_fs.expect(<span class="string">"no initial ram disk digest"</span>)],
+            })),
+        }),
+        memory_map: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+            r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                digests: <span class="macro">vec!</span>[kernel_layer.memory_map.expect(<span class="string">"no memory map digest"</span>)],
+            })),
+        }),
+        acpi: <span class="prelude-val">Some</span>(BinaryReferenceValue {
+            r#type: <span class="prelude-val">Some</span>(binary_reference_value::Type::Digests(Digests {
+                digests: <span class="macro">vec!</span>[kernel_layer.acpi.expect(<span class="string">"no acpi digest"</span>)],
+            })),
+        }),
+    }
+}
+
+<span class="doccomment">/// Decodes a serialized event into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_event_proto&lt;M: Message + Default&gt;(
+    expected_type_url: <span class="kw-2">&amp;</span>str,
+    encoded_event: <span class="kw-2">&amp;</span>[u8],
+) -&gt; anyhow::Result&lt;M&gt; {
+    <span class="kw">let </span>event_proto = Event::decode(encoded_event)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">"failed to decode event: {}"</span>, error))<span class="question-mark">?</span>;
+    decode_protobuf_any::&lt;M&gt;(
+        expected_type_url,
+        event_proto.event.as_ref().context(<span class="string">"no event found in the `event` field"</span>)<span class="question-mark">?</span>,
+    )
+}
+
+<span class="doccomment">/// Decodes [`Any`] message into a specified [`Message`].
+</span><span class="kw">pub fn </span>decode_protobuf_any&lt;M: Message + Default&gt;(
+    expected_type_url: <span class="kw-2">&amp;</span>str,
+    message: <span class="kw-2">&amp;</span>Any,
+) -&gt; anyhow::Result&lt;M&gt; {
+    <span class="kw">if </span>message.type_url.as_str() != expected_type_url {
+        <span class="macro">anyhow::bail!</span>(
+            <span class="string">"expected message with type url: {}, found: {}"</span>,
+            expected_type_url,
+            message.type_url.as_str()
+        );
+    }
+    M::decode(message.value.as_ref()).map_err(|error| {
+        <span class="macro">anyhow::anyhow!</span>(
+            <span class="string">"couldn't decode `google.protobuf.Any` message into {}: {:?}"</span>,
+            expected_type_url,
+            error
+        )
+    })
+}
+
+<span class="doccomment">/// Return a milliseconds-since-the-epoch timestamp value.
+///
+/// Endorsement validity structures in our JSON-based endorsements use
+/// milliseconds resolution, but [`OffsetDateTime`] provides only seconds or
+/// nanoseconds since the epoch.
+///
+/// This bridges a convenience gap, and helps with readability of code that
+/// works with validity times.
+</span><span class="kw">pub trait </span>UnixTimestampMillis {
+    <span class="kw">fn </span>unix_timestamp_millis(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i64;
+}
+
+<span class="kw">impl </span>UnixTimestampMillis <span class="kw">for </span>OffsetDateTime {
+    <span class="kw">fn </span>unix_timestamp_millis(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; i64 {
+        <span class="self">self</span>.unix_timestamp() * <span class="number">1000
+    </span>}
+}
+
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>endorsement::Validity&gt; <span class="kw">for </span>Validity {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>endorsement::Validity) -&gt; Validity {
+        Validity {
+            not_before: value.not_before.unix_timestamp_millis(),
+            not_after: value.not_after.unix_timestamp_millis(),
+        }
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests;
 </code></pre></div></section></main></body></html>

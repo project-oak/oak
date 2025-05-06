@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DefaultBindingKeyExtractor","DefaultSigningKeyExtractor"],"trait":["KeyExtractor"]};

@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation/src/dice.rs`."><title>dice.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_attestation/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation/src/dice.rs`."><title>dice.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fecee23daa4e8a6d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (4ac7bcbaa 2024-09-04)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -366,34 +364,6 @@
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -414,42 +384,30 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>ciborium::Value;
-<span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable};
+<span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable, CoseKey};
+<span class="kw">use </span>oak_attestation_types::{
+    attester::Attester,
+    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+};
 <span class="kw">use </span>oak_dice::{
     cert::{
-        generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
+        cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
+        generate_kem_certificate, generate_signing_certificate,
         get_claims_set_from_certificate_bytes, SHA2_256_ID,
     },
     evidence::Stage0DiceData,
 };
-<span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{
-        ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
-        RootLayerEvidence, TeePlatform,
-    },
-    RawDigest,
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{
+    ApplicationKeys, CertificateAuthority, DiceData, EventLog, Evidence, LayerEvidence,
+    RootLayerEvidence, TeePlatform,
 };
 <span class="kw">use </span>p256::ecdsa::{SigningKey, VerifyingKey};
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>sha2::Digest;
 <span class="kw">use </span>zeroize::Zeroize;
 
-<span class="kw">use </span><span class="kw">crate</span>::attester::{Attester, Serializable};
-
-<span class="kw">pub trait </span>MeasureDigest {
-    <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest;
-}
-
-<span class="kw">impl </span>MeasureDigest <span class="kw">for </span><span class="kw-2">&amp;</span>[u8] {
-    <span class="kw">fn </span>measure_digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; RawDigest {
-        <span class="kw">let </span><span class="kw-2">mut </span>digest = sha2::Sha256::default();
-        digest.update(<span class="self">self</span>);
-        <span class="kw">let </span>digest_bytes: [u8; <span class="number">32</span>] = digest.finalize().into();
-        <span class="kw">let </span><span class="kw-2">mut </span>raw_digest = RawDigest::default();
-        raw_digest.sha2_256 = digest_bytes.to_vec();
-        raw_digest
-    }
-}
+<span class="attr">#[allow(deprecated)]
+</span><span class="kw">use </span><span class="kw">crate</span>::ApplicationKeysAttester;
+<span class="kw">use </span><span class="kw">crate</span>::MeasureDigest;
 
 <span class="doccomment">/// Holds additional claims and the encoded event for a DICE layer.
 </span><span class="kw">pub struct </span>LayerData {
@@ -465,62 +423,16 @@
     signing_key: SigningKey,
 }
 
-<span class="comment">// TODO: b/366141836 - Remove this implementation once all Oak clients have been
-// updated to the EventLog attestation.
-</span><span class="kw">impl </span>DiceAttester {
-    <span class="doccomment">/// Adds an additional layer of evidence to the DICE data.
-    ///
-    /// The evidence is in the form of a CWT certificate that contains the
-    /// `additional_claims` provided. Adding a layer generates a new ECA
-    /// private key for the layer and uses it to replace the existing
-    /// signing key. The CWT certificate contains the public key for this new
-    /// signing key.
-    </span><span class="kw">pub fn </span>add_layer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layer_data: LayerData) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="comment">// The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        </span><span class="kw">let </span>layer_evidence = <span class="self">self
-            </span>.evidence
-            .layers
-            .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence layers found"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-
-        <span class="comment">// The issuer for the next layer is the subject of the current last layer.
-        </span><span class="kw">let </span>issuer_id = claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>evidence = <span class="kw-2">&amp;mut </span><span class="self">self</span>.evidence;
-        <span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
-
-        <span class="kw">let </span>eca_certificate = generate_signing_certificate(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
-            issuer_id,
-            <span class="kw-2">&amp;</span>verifying_key,
-            layer_data.additional_claims,
-        )
-        .map_err(anyhow::Error::msg)
-        .context(<span class="string">"couldn't generate ECA certificate for the next layer"</span>)<span class="question-mark">?</span>;
-        evidence.layers.push(LayerEvidence {
-            eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)<span class="question-mark">?</span>,
-        });
-        <span class="comment">// Replacing the signing key will cause the previous signing key to be dropped,
-        // which will zero out its memory.
-        </span><span class="self">self</span>.signing_key = signing_key;
-        <span class="self">self</span>.evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
-        <span class="prelude-val">Ok</span>(())
-    }
-
+<span class="comment">// TODO: b/368030563 - Remove this implementation once all client library
+// instances use the applications keys from the event log.
+</span><span class="attr">#[allow(deprecated)]
+</span><span class="kw">impl </span>ApplicationKeysAttester <span class="kw">for </span>DiceAttester {
     <span class="doccomment">/// Adds the CWT certificates application keys to the DICE data.
     ///
     /// Since no additional evidence can be added after the application keys are
     /// added, this consumes DICE data, discards the signing key and returns
     /// the finalized evidence.
-    </span><span class="kw">pub fn </span>add_application_keys(
+    </span><span class="kw">fn </span>add_application_keys(
         <span class="self">self</span>,
         layer_data: LayerData,
         kem_public_key: <span class="kw-2">&amp;</span>[u8],
@@ -606,12 +518,6 @@
             group_encryption_public_key_certificate,
             group_signing_public_key_certificate,
         });
-
-        evidence
-            .event_log
-            .get_or_insert_with(EventLog::default)
-            .encoded_events
-            .push(layer_data.encoded_event);
         <span class="prelude-val">Ok</span>(evidence)
     }
 }
@@ -619,18 +525,37 @@
 <span class="kw">impl </span>Attester <span class="kw">for </span>DiceAttester {
     <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// The last evidence layer contains the certificate for the current signing key.
-        // Since the builder contains an existing signing key there must be at
-        // least one layer of evidence that contains the certificate.
-        </span><span class="kw">let </span>layer_evidence = <span class="self">self
+        // Since the builder contains an existing signing key there must be at least one
+        // layer of evidence that contains the certificate, or a root layer that is
+        // bound to the attestation report.
+        </span><span class="kw">let </span>issuer_id = <span class="kw">match </span><span class="self">self
             </span>.evidence
             .layers
             .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no evidence layers found"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
-            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-
-        <span class="comment">// The issuer for the next layer is the subject of the current last layer.
-        </span><span class="kw">let </span>issuer_id = claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))<span class="question-mark">?</span>;
+            .map(|last| {
+                get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>last.eca_certificate)
+                    .map_err(anyhow::Error::msg)
+            })
+            .transpose()<span class="question-mark">?
+            </span>.map(|claims_set| {
+                claims_set.subject.ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no subject in certificate"</span>))
+            })
+            .transpose()<span class="question-mark">?
+        </span>{
+            <span class="prelude-val">Some</span>(issuer_id) =&gt; issuer_id,
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>root_layer = <span class="self">self
+                    </span>.evidence
+                    .root_layer
+                    .as_ref()
+                    .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">"no root layer evidence"</span>))<span class="question-mark">?</span>;
+                <span class="kw">let </span>cose_key = CoseKey::from_slice(root_layer.eca_public_key.as_slice())
+                    .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+                <span class="kw">let </span>verifying_key =
+                    cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+                hex::encode(derive_verifying_key_id(<span class="kw-2">&amp;</span>verifying_key))
+            }
+        };
 
         <span class="comment">// Generate a signing key for the next layer.
         </span><span class="kw">let </span>(signing_key, verifying_key) = generate_ecdsa_key_pair();
@@ -678,8 +603,8 @@
 
 <span class="kw">impl </span>Serializable <span class="kw">for </span>DiceAttester {
     <span class="kw">fn </span>deserialize(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>dice_data = DiceData::decode_length_delimited(bytes)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">"couldn't parse DICE data: {:?}"</span>, error))<span class="question-mark">?</span>;
+        <span class="kw">let </span>dice_data: DiceData =
+            try_decode_length_delimited_proto(bytes).context(<span class="string">"couldn't parse DICE data: {:?}"</span>)<span class="question-mark">?</span>;
         dice_data.try_into()
     }
 
@@ -690,7 +615,16 @@
                 eca_private_key: <span class="self">self</span>.signing_key.to_bytes().as_slice().into(),
             }),
         };
-        dice_data.encode_length_delimited_to_vec()
+        <span class="kw">let </span>result = encode_length_delimited_proto(<span class="kw-2">&amp;</span>dice_data);
+
+        <span class="comment">// Zero out the ECA private key in the proto.
+        </span>dice_data
+            .certificate_authority
+            .expect(<span class="string">"no certificate authority"</span>)
+            .eca_private_key
+            .zeroize();
+
+        result
     }
 }
 
@@ -710,7 +644,7 @@
             certificate_authority.eca_private_key.zeroize();
         }
 
-        <span class="prelude-val">Ok</span>(DiceAttester { evidence: evidence.clone(), signing_key: signing_key.clone() })
+        <span class="prelude-val">Ok</span>(DiceAttester { evidence: evidence.clone(), signing_key })
     }
 }
 
@@ -746,11 +680,19 @@
     }
 }
 
-<span class="kw">pub fn </span>evidence_to_proto(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;Evidence&gt; {
+<span class="kw">pub fn </span>evidence_and_event_log_to_proto(
+    value: oak_dice::evidence::Evidence,
+    encoded_event_log: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt;,
+) -&gt; anyhow::Result&lt;Evidence&gt; {
     <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
     <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
     <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
-    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log: <span class="prelude-val">None </span>})
+    <span class="kw">let </span>event_log = encoded_event_log
+        .map(EventLog::decode)
+        .transpose()
+        .map_err(anyhow::Error::msg)
+        .context(<span class="string">"couldn't decode event log"</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(Evidence { root_layer, layers, application_keys, event_log })
 }
 
 <span class="kw">fn </span>root_layer_evidence_to_proto(

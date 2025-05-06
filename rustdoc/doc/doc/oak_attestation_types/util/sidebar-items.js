@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["encode_length_delimited_proto","try_decode_length_delimited_proto"],"trait":["Serializable"]};

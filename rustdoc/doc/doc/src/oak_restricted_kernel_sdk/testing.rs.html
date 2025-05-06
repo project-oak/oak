@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel_sdk/src/testing.rs`."><title>testing.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (11f32b73e 2024-01-31)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
-            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
-    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oak_restricted_kernel_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_restricted_kernel_sdk/src/testing.rs`."><title>testing.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fecee23daa4e8a6d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_restricted_kernel_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (4ac7bcbaa 2024-09-04)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -169,6 +167,26 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -190,26 +208,28 @@
 
 </span><span class="kw">use </span>alloc::vec::Vec;
 
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation::dice::{evidence_and_event_log_to_proto, DiceAttester};
+<span class="kw">use </span>oak_attestation_types::{
+    attester::Attester,
+    util::{try_decode_length_delimited_proto, Serializable},
+};
 <span class="kw">use </span>oak_crypto::{
     encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
+    signer::Signer,
 };
-<span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
+<span class="kw">use </span>oak_dice::evidence::{RestrictedKernelDiceData, Stage0DiceData, TeePlatform};
 <span class="kw">use </span>oak_proto_rust::oak::{
-    attestation::v1::{ApplicationLayerData, EventLog},
-    crypto::v1::Signature,
+    attestation::v1::{ApplicationLayerData, EventLog, Evidence},
     RawDigest,
 };
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>prost::Message;
 
-<span class="kw">use crate</span>::{
-    alloc::string::ToString,
-    attestation::{DiceWrapper, EvidenceProvider},
-    crypto::Signer,
-};
+<span class="kw">use crate</span>::{alloc::string::ToString, attestation::DiceWrapper};
 
-<span class="macro">lazy_static::lazy_static! </span>{
+<span class="macro">lazy_static::lazy_static!</span> {
   <span class="kw">static </span><span class="kw-2">ref </span>MOCK_DICE_WRAPPER: anyhow::Result&lt;DiceWrapper&gt; = {
       <span class="kw">let </span>(dice_data, encoded_event_log) = get_mock_dice_data_and_event_log();
       <span class="kw">let </span><span class="kw-2">mut </span>dice_wrapper: DiceWrapper = dice_data.try_into()<span class="question-mark">?</span>;
@@ -220,27 +240,39 @@
 
 <span class="kw">fn </span>get_mock_dice_data_and_event_log() -&gt; (RestrictedKernelDiceData, Vec&lt;u8&gt;) {
     <span class="kw">let </span>(<span class="kw-2">mut </span>mock_event_log, stage0_dice_data): (EventLog, Stage0DiceData) = {
-        <span class="kw">let </span><span class="kw-2">mut </span>mock_stage0_measurements = oak_stage0_dice::Measurements::default();
-        <span class="kw">let </span>(mock_event_log, stage0_event_sha2_256_digest) = oak_stage0_dice::generate_event_log(
-            mock_stage0_measurements.kernel_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.acpi_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.memory_map_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.ram_disk_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.setup_data_sha2_256_digest.to_vec(),
-            mock_stage0_measurements.cmdline.clone(),
+        <span class="kw">let </span>stage0_event = oak_stage0_dice::encode_stage0_event(
+            oak_proto_rust::oak::attestation::v1::Stage0Measurements::default(),
         );
-        mock_stage0_measurements.event_sha2_256_digest = stage0_event_sha2_256_digest;
-        <span class="kw">let </span>(stage0_dice_data, <span class="kw">_</span>) = oak_stage0_dice::generate_dice_data(
-            <span class="kw-2">&amp;</span>mock_stage0_measurements,
-            oak_stage0_dice::mock_attestation_report,
-            oak_stage0_dice::mock_derived_key,
-            TeePlatform::None,
-            EventLog::default(),
-        );
+
+        <span class="kw">let </span>mock_event_log = {
+            <span class="kw">let </span><span class="kw-2">mut </span>base = oak_proto_rust::oak::attestation::v1::EventLog::default();
+            base.encoded_events.push(stage0_event.to_vec());
+            base
+        };
+
+        <span class="kw">let </span>stage0_dice_data = {
+            <span class="kw">let </span><span class="kw-2">mut </span>dice_attester: DiceAttester = oak_stage0_dice::generate_initial_dice_data(
+                oak_stage0_dice::mock_attestation_report,
+                TeePlatform::None,
+            )
+            .expect(<span class="string">"couldn't generate initial DICE data"</span>)
+            .try_into()
+            .expect(<span class="string">"couldn't convert dice data to an attester"</span>);
+
+            dice_attester.extend(<span class="kw-2">&amp;</span>stage0_event).expect(<span class="string">"couldn't extend attester evidence"</span>);
+
+            oak_stage0_dice::dice_data_proto_to_stage0_dice_data(
+                <span class="kw-2">&amp;</span>try_decode_length_delimited_proto(dice_attester.serialize().as_slice())
+                    .expect(<span class="string">"couldn't decode attestation data"</span>),
+            )
+            .expect(<span class="string">"couldn't create attestation data struct"</span>)
+        };
+
         (mock_event_log, stage0_dice_data)
     };
 
     <span class="kw">let </span>application_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
+    <span class="kw">let </span>config_digest = oak_restricted_kernel_dice::DigestSha2_256::default();
     <span class="kw">let </span>application_event = oak_proto_rust::oak::attestation::v1::Event {
         tag: <span class="string">"application_layer"</span>.to_string(),
         event: <span class="prelude-val">Some</span>(prost_types::Any {
@@ -250,7 +282,10 @@
                     sha2_256: application_digest.to_vec(),
                     ..RawDigest::default()
                 }),
-                config: <span class="prelude-val">None</span>,
+                config: <span class="prelude-val">Some</span>(RawDigest {
+                    sha2_256: config_digest.to_vec(),
+                    ..RawDigest::default()
+                }),
             }
             .encode_to_vec(),
         }),
@@ -259,7 +294,6 @@
     mock_event_log.encoded_events.push(encoded_application_event.clone());
     <span class="kw">let </span>dice_data = oak_restricted_kernel_dice::generate_dice_data(
         stage0_dice_data,
-        <span class="kw-2">&amp;</span>oak_restricted_kernel_dice::DigestSha2_256::default(),
         <span class="kw-2">&amp;</span>oak_restricted_kernel_dice::measure_digest_sha2_256(<span class="kw-2">&amp;</span>encoded_application_event),
     );
     (dice_data, mock_event_log.encode_to_vec())
@@ -282,8 +316,8 @@
 }
 
 <span class="kw">impl </span>Signer <span class="kw">for </span>MockSigner {
-    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Signature&gt; {
-        <span class="prelude-val">Ok</span>(&lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message))
+    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt; {
+        &lt;SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(<span class="self">self</span>.key, message)
     }
 }
 
@@ -312,30 +346,34 @@
     }
 }
 
-<span class="doccomment">/// [`EvidenceProvider`] implementation that exposes mock evidence.
-</span><span class="kw">pub struct </span>MockEvidenceProvider {
-    evidence: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Evidence,
-    encoded_event_log: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8],
+<span class="doccomment">/// [`Attester`] implementation that exposes mock evidence.
+</span><span class="kw">pub struct </span>MockAttester {
+    evidence: Evidence,
 }
 
-<span class="kw">impl </span>MockEvidenceProvider {
+<span class="kw">impl </span>MockAttester {
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        MOCK_DICE_WRAPPER.as_ref().map_err(anyhow::Error::msg).map(|d| MockEvidenceProvider {
-            evidence: <span class="kw-2">&amp;</span>d.evidence,
-            encoded_event_log: <span class="kw-2">&amp;</span>d
-                .encoded_event_log
-                .as_ref()
-                .expect(<span class="string">"mock dice wrapper contains event log"</span>),
-        })
+        <span class="kw">let </span>evidence = MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                <span class="comment">// TODO: b/368022950 - Remove dependency on `oak_attestation` once Restricted
+                // Kernel uses Protobuf for the Evidence.
+                </span>evidence_and_event_log_to_proto(d.evidence.clone(), d.encoded_event_log.as_deref())
+                    .context(<span class="string">"couldn't convert evidence to proto"</span>)
+            })
+            .context(<span class="string">"couldn't get evidence"</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(MockAttester { evidence })
     }
 }
 
-<span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>MockEvidenceProvider {
-    <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence {
-        <span class="self">self</span>.evidence
+<span class="kw">impl </span>Attester <span class="kw">for </span>MockAttester {
+    <span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _encoded_event: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="macro">anyhow::bail!</span>(<span class="string">"mock attester doesn't support extending the evidence"</span>);
     }
-    <span class="kw">fn </span>get_encoded_event_log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.encoded_event_log)
+
+    <span class="kw">fn </span>quote(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Evidence&gt; {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.evidence.clone())
     }
 }
 </code></pre></div></section></main></body></html>
