@@ -62,7 +62,7 @@ pub struct Args {
     pub event_log: PhysAddr,
 }
 
-pub async fn main<A: Attester + Serializable>(args: &Args) -> Result<(), Box<dyn Error>> {
+pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(), Box<dyn Error>> {
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
     }
@@ -120,7 +120,15 @@ pub async fn main<A: Attester + Serializable>(args: &Args) -> Result<(), Box<dyn
     // For safety we generate the DICE data for the next layer before processing the
     // compressed system image.
     let system_image_event = oak_containers_attestation::create_system_layer_event(buf.clone());
-    attester.extend(&system_image_event.encode_to_vec())?;
+    let encoded_event = system_image_event.encode_to_vec();
+    // Spawn the `extend`` operation on a separate thread to support cases where we
+    // have async attesters.
+    let attester = tokio::runtime::Handle::current()
+        .spawn_blocking(move || {
+            attester.extend(&encoded_event)?;
+            Ok::<A, anyhow::Error>(attester)
+        })
+        .await??;
     let dice_data = attester.serialize();
     image::extract(buf, Path::new("/")).await.context("error loading the system image")?;
 

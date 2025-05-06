@@ -54,7 +54,8 @@ struct Args {
 }
 
 #[allow(deprecated)]
-pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> anyhow::Result<()> {
+pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static>(
+) -> anyhow::Result<()> {
     crate::logging::setup()?;
 
     let args = Args::parse();
@@ -108,15 +109,24 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
         &application_config[..],
         &instance_public_keys,
     );
-    attester
-        .extend(&container_event.encode_to_vec())
-        .context("couldn't add container event to the evidence")?;
+    let encoded_event = container_event.encode_to_vec();
+    // Spawn the `extend`` operation on a separate thread to support cases where we
+    // have async attesters.
+    let attester = tokio::runtime::Handle::current()
+        .spawn_blocking(move || {
+            attester
+                .extend(&encoded_event)
+                .context("couldn't add container event to the evidence")?;
+            Ok::<A, anyhow::Error>(attester)
+        })
+        .await??;
 
     // Add the container event to the DICE chain.
-    let container_layer = oak_containers_attestation::create_container_dice_layer(&container_event);
     let evidence = {
         #[cfg(feature = "application_keys")]
         {
+            let container_layer =
+                oak_containers_attestation::create_container_dice_layer(&container_event);
             attester.add_application_keys(
                 container_layer,
                 &instance_public_keys.encryption_public_key,
@@ -131,7 +141,9 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable>() -> any
         }
         #[cfg(not(feature = "application_keys"))]
         {
-            attester.quote()?
+            // Spawn the `quote`` operation on a separate thread to support cases where we
+            // have async attesters.
+            tokio::runtime::Handle::current().spawn_blocking(move || attester.quote()).await??
         }
     };
     // Send the attestation evidence to the Hostlib.
