@@ -1,5 +1,5 @@
 {
-  "checksum": "9f7fad2a39449d23756af510d74cf3e1134e9544b45a9f95702ff1ee6650abe2",
+  "checksum": "aea3eed7a3987893b9186d47f2d8c21a508c45c57a309a3a122d1d2b5dc04f82",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1362,15 +1362,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -1478,15 +1478,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -1549,15 +1549,15 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -1848,7 +1848,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -1961,7 +1961,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -3622,15 +3622,15 @@
               "target": "heck"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -5235,7 +5235,7 @@
               "target": "rayon"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -5308,11 +5308,11 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             }
           ],
@@ -6011,15 +6011,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6145,11 +6145,11 @@
               "target": "ident_case"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -6157,7 +6157,7 @@
               "target": "strsim"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6208,11 +6208,11 @@
               "target": "darling_core"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6386,15 +6386,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6570,15 +6570,15 @@
               "target": "darling"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6637,7 +6637,7 @@
               "target": "derive_builder_core"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -6921,6 +6921,10 @@
               "target": "goblin"
             },
             {
+              "id": "googletest 0.14.0",
+              "target": "googletest"
+            },
+            {
               "id": "hashbrown 0.14.3",
               "target": "hashbrown"
             },
@@ -7085,7 +7089,7 @@
               "target": "prost_types"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -7101,7 +7105,7 @@
               "target": "rand_core"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -7169,7 +7173,7 @@
               "target": "strum"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -7918,7 +7922,7 @@
               "target": "log"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             }
           ],
@@ -8087,15 +8091,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -9275,15 +9279,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -9694,11 +9698,11 @@
               "target": "proc_macro_error"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -9962,11 +9966,11 @@
               "target": "log"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
@@ -10044,6 +10048,125 @@
       "license": "MIT",
       "license_ids": [
         "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest 0.14.0": {
+      "name": "googletest",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest/0.14.0/download",
+          "sha256": "fbbb8bea2ac2741b1d5e1183896ad6a3f1e8e25e375ed5737a171e057cacd8a3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "googletest",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "num-traits 0.2.18",
+              "target": "num_traits"
+            },
+            {
+              "id": "regex 1.11.1",
+              "target": "regex"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "googletest_macro 0.14.0",
+              "target": "googletest_macro"
+            },
+            {
+              "id": "rustversion 1.0.20",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest_macro 0.14.0": {
+      "name": "googletest_macro",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest_macro/0.14.0/download",
+          "sha256": "672de67b4529abeb5c623913ca6de8a3031ab97dc105c58ab747199b084ab1bf"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "googletest_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.101",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
       ],
       "license_file": "LICENSE"
     },
@@ -12157,7 +12280,7 @@
               "target": "memchr"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
@@ -14477,15 +14600,15 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -16648,7 +16771,7 @@
               "target": "itertools"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
@@ -16656,11 +16779,11 @@
               "target": "proc_macro2_diagnostics"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -17279,15 +17402,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -18513,11 +18636,11 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -18646,11 +18769,11 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -18744,11 +18867,11 @@
               "target": "build_script_build"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             }
           ],
@@ -18781,14 +18904,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "proc-macro2 1.0.79": {
+    "proc-macro2 1.0.95": {
       "name": "proc-macro2",
-      "version": "1.0.79",
+      "version": "1.0.95",
       "package_url": "https://github.com/dtolnay/proc-macro2",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/proc-macro2/1.0.79/download",
-          "sha256": "e835ff2298f5721608eb1a980ecaee1aef2c132bf95ecc026a11b7bf3c01c02e"
+          "url": "https://static.crates.io/crates/proc-macro2/1.0.95/download",
+          "sha256": "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
         }
       },
       "targets": [
@@ -18836,7 +18959,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "build_script_build"
             },
             {
@@ -18847,7 +18970,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.79"
+        "version": "1.0.95"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -18916,7 +19039,7 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
@@ -18924,11 +19047,11 @@
               "target": "build_script_build"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -19278,11 +19401,11 @@
               "target": "prost_types"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -19345,15 +19468,15 @@
               "target": "itertools"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -19546,14 +19669,14 @@
       ],
       "license_file": "LICENSE-MIT.md"
     },
-    "quote 1.0.35": {
+    "quote 1.0.40": {
       "name": "quote",
-      "version": "1.0.35",
+      "version": "1.0.40",
       "package_url": "https://github.com/dtolnay/quote",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/quote/1.0.35/download",
-          "sha256": "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+          "url": "https://static.crates.io/crates/quote/1.0.40/download",
+          "sha256": "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
         }
       },
       "targets": [
@@ -19585,14 +19708,14 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.35"
+        "version": "1.0.40"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20251,14 +20374,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "regex 1.10.4": {
+    "regex 1.11.1": {
       "name": "regex",
-      "version": "1.10.4",
+      "version": "1.11.1",
       "package_url": "https://github.com/rust-lang/regex",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex/1.10.4/download",
-          "sha256": "c117dbdfde9c8308975b6a18d71f3f385c89461f7b3fb054288ecf2a2058ba4c"
+          "url": "https://static.crates.io/crates/regex/1.11.1/download",
+          "sha256": "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
         }
       },
       "targets": [
@@ -20282,6 +20405,7 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "perf",
             "perf-backtrack",
             "perf-cache",
@@ -20290,7 +20414,14 @@
             "perf-literal",
             "perf-onepass",
             "std",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment"
           ],
           "selects": {}
         },
@@ -20305,18 +20436,18 @@
               "target": "memchr"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.10.4"
+        "version": "1.11.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20325,14 +20456,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "regex-automata 0.4.6": {
+    "regex-automata 0.4.9": {
       "name": "regex-automata",
-      "version": "0.4.6",
+      "version": "0.4.9",
       "package_url": "https://github.com/rust-lang/regex/tree/master/regex-automata",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex-automata/0.4.6/download",
-          "sha256": "86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
+          "url": "https://static.crates.io/crates/regex-automata/0.4.9/download",
+          "sha256": "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
         }
       },
       "targets": [
@@ -20371,7 +20502,15 @@
             "perf-literal-substring",
             "std",
             "syntax",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment",
+            "unicode-word-boundary"
           ],
           "selects": {}
         },
@@ -20386,14 +20525,14 @@
               "target": "memchr"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.4.6"
+        "version": "0.4.9"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20448,14 +20587,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "regex-syntax 0.8.3": {
+    "regex-syntax 0.8.5": {
       "name": "regex-syntax",
-      "version": "0.8.3",
+      "version": "0.8.5",
       "package_url": "https://github.com/rust-lang/regex/tree/master/regex-syntax",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex-syntax/0.8.3/download",
-          "sha256": "adad44e29e4c806119491a7f06f03de4d1af22c3a680dd47f1e6e179439d1f56"
+          "url": "https://static.crates.io/crates/regex-syntax/0.8.5/download",
+          "sha256": "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
         }
       },
       "targets": [
@@ -20479,13 +20618,21 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "std",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment"
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.8.3"
+        "version": "0.8.5"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -21522,14 +21669,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "rustversion 1.0.14": {
+    "rustversion 1.0.20": {
       "name": "rustversion",
-      "version": "1.0.14",
+      "version": "1.0.20",
       "package_url": "https://github.com/dtolnay/rustversion",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rustversion/1.0.14/download",
-          "sha256": "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+          "url": "https://static.crates.io/crates/rustversion/1.0.20/download",
+          "sha256": "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
         }
       },
       "targets": [
@@ -21566,14 +21713,14 @@
         "deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.14"
+        "version": "1.0.20"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -21803,15 +21950,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -22147,15 +22294,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -23011,15 +23158,15 @@
               "target": "heck"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -23633,15 +23780,15 @@
               "target": "heck"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -23651,7 +23798,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -23701,15 +23848,15 @@
               "target": "heck"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -23719,7 +23866,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -23819,11 +23966,11 @@
               "target": "base64"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -24050,11 +24197,11 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -24086,14 +24233,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "syn 2.0.58": {
+    "syn 2.0.101": {
       "name": "syn",
-      "version": "2.0.58",
+      "version": "2.0.101",
       "package_url": "https://github.com/dtolnay/syn",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/syn/2.0.58/download",
-          "sha256": "44cfb93f38070beee36b3fef7d4f5a16f27751d94b187b666a5cc5e9b0d30687"
+          "url": "https://static.crates.io/crates/syn/2.0.101/download",
+          "sha256": "8ce2b7fc941b3a24138a0a7cf8e858bfc6a992e7978a068a5c760deb0ed43caf"
         }
       },
       "targets": [
@@ -24136,11 +24283,11 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -24151,7 +24298,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.0.58"
+        "version": "2.0.101"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -24756,15 +24903,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -25411,15 +25558,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -26161,7 +26308,7 @@
               "target": "prettyplease"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
@@ -26169,11 +26316,11 @@
               "target": "prost_build"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -26676,15 +26823,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -26914,7 +27061,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -27755,15 +27902,15 @@
               "target": "once_cell"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -27815,7 +27962,7 @@
         "deps": {
           "common": [
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
@@ -27867,15 +28014,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -28841,15 +28988,15 @@
               "target": "anyhow"
             },
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             },
             {
@@ -29495,15 +29642,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -32436,7 +32583,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -32742,15 +32889,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -32856,15 +33003,15 @@
         "deps": {
           "common": [
             {
-              "id": "proc-macro2 1.0.79",
+              "id": "proc-macro2 1.0.95",
               "target": "proc_macro2"
             },
             {
-              "id": "quote 1.0.35",
+              "id": "quote 1.0.40",
               "target": "quote"
             },
             {
-              "id": "syn 2.0.58",
+              "id": "syn 2.0.101",
               "target": "syn"
             }
           ],
@@ -33258,6 +33405,7 @@
     "futures-util 0.3.31",
     "getrandom 0.2.12",
     "goblin 0.8.2",
+    "googletest 0.14.0",
     "hashbrown 0.14.3",
     "hex 0.4.3",
     "hkdf 0.12.4",
@@ -33300,11 +33448,11 @@
     "prost-build 0.12.3",
     "prost-derive 0.12.4",
     "prost-types 0.12.3",
-    "quote 1.0.35",
+    "quote 1.0.40",
     "rand 0.8.5",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
-    "regex 1.10.4",
+    "regex 1.11.1",
     "regex-lite 0.1.6",
     "ring 0.17.14",
     "rlsf 0.2.1",
@@ -33322,7 +33470,7 @@
     "static_assertions 1.1.0",
     "strum 0.26.3",
     "strum_macros 0.25.3",
-    "syn 2.0.58",
+    "syn 2.0.101",
     "syslog 6.1.1",
     "tar 0.4.40",
     "temp-env 0.3.6",
