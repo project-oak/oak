@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_and_serialize_random_entries"]};

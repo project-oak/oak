@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_encryption_key_pair"],"struct":["EncryptionKey"],"trait":["AsyncEncryptionKeyHandle","EncryptionKeyHandle"]};

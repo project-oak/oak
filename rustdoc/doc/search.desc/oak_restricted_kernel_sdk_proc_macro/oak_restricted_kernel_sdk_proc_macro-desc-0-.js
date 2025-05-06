@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_restricted_kernel_sdk_proc_macro", 0, "")

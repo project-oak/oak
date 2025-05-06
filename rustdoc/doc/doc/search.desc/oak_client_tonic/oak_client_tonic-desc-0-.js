@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_client_tonic", 0, "A Transport implementation that uses a single gRPC …\nReturns the argument unchanged.\nCalls <code>U::from(self)</code>.\nCreate a new GrpcStreamingTransport.")

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["launcher_client","launcher_server","orchestrator_client","orchestrator_server","v1"]};

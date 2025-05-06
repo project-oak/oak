@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["basic_framed","message","server"],"trait":["Channel","Read","Write"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","config","dice_attestation","encryptors","handshake","key_extractor","session","session_binding"],"trait":["ProtocolEngine"]};

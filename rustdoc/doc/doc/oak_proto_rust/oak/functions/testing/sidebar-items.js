@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["lookup_request"],"struct":["EchoAndPanicRequest","EchoAndPanicResponse","LookupRequest","LookupResponse"]};

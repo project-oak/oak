@@ -1,1 +1,0 @@
-searchState.loadedDescShard("key_value_lookup", 0, "Oak Functions key / value lookup example.")

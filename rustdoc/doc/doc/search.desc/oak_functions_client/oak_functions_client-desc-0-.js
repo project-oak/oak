@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_functions_client", 0, "Returns the argument unchanged.\nCalls <code>U::from(self)</code>.")

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["UNSTABLE_SYSCALL_SPACE"],"enum":["Syscall"],"struct":["MmapFlags","MmapProtection"]};

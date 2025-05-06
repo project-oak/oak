@@ -1,1 +1,0 @@
-searchState.loadedDescShard("oak_attestation_explain", 0, "Provides human readable explanations for attestation data.\nProvides human readable explanations for a layer of an …\nConcise title, eg. “Oak Containers Stack in a AMD …")
