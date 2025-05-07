@@ -35,29 +35,45 @@ use oak_proto_rust::oak::{
 
 use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
+#[derive(Debug, PartialEq)]
 pub struct AttestationSuccess {
     // Results from individual verifiers keyed by the attestation type ID.
     pub attestation_results: BTreeMap<String, AttestationResults>,
 }
-#[derive(Debug)]
+
+#[derive(Debug, PartialEq)]
 pub struct AttestationFailure {
     pub reason: String,
     // Per verifier error messages (keyed by the attestation type ID).
     pub error_messages: BTreeMap<String, String>,
 }
 
+impl AttestationFailure {
+    pub fn new(reason: &str) -> Self {
+        AttestationFailure { reason: reason.to_string(), error_messages: BTreeMap::new() }
+    }
+
+    pub fn with_error_messages(reason: &str, error_messages: BTreeMap<String, String>) -> Self {
+        Self { reason: reason.to_string(), error_messages }
+    }
+}
+
 impl Display for AttestationFailure {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "Attestation failure: {}. Errors from individual verifiers: {}",
-            self.reason,
-            self.error_messages
-                .iter()
-                .map(|(id, error)| format!("Verifier ID: {}, error: {}", id, error))
-                .collect::<Vec<String>>()
-                .join(";")
-        )
+        if self.error_messages.is_empty() {
+            write!(f, "Attestation failure: {}", self.reason)
+        } else {
+            write!(
+                f,
+                "Attestation failure: {}. Errors from individual verifiers: {}",
+                self.reason,
+                self.error_messages
+                    .iter()
+                    .map(|(id, error)| format!("Verifier ID: {}, error: {}", id, error))
+                    .collect::<Vec<String>>()
+                    .join(";\n")
+            )
+        }
     }
 }
 
@@ -78,7 +94,7 @@ impl From<AttestationFailure> for Error {
 ///
 /// When configuring the Client: "Self" is the Client and "Peer" is the Server.
 /// When configuring the Server: "Self" is the Server and "Peer" is the Client.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AttestationType {
     /// Both parties attest each other.
     Bidirectional,
@@ -220,7 +236,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                 Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
                     .map_err(AttestationFailure::from),
             ),
-            AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
+            AttestationType::Unattested => return Err(anyhow!("no attestation message expected")),
         };
         Ok(Some(()))
     }
@@ -303,7 +319,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                 Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
                     .map_err(AttestationFailure::from),
             ),
-            AttestationType::Unattested => return Err(anyhow!("no attestation message expected'")),
+            AttestationType::Unattested => return Err(anyhow!("no attestation message expected")),
         };
         Ok(Some(()))
     }

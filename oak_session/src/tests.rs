@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, vec::Vec};
 
+use googletest::prelude::*;
 use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
@@ -33,11 +34,8 @@ use rand_core::OsRng;
 
 use crate::{
     alloc::string::ToString,
-    attestation::{
-        AttestationProvider, AttestationType, ClientAttestationProvider,
-        DefaultAttestationAggregator, ServerAttestationProvider,
-    },
-    config::{AttestationProviderConfig, HandshakerConfig, SessionConfig},
+    attestation::AttestationType,
+    config::{HandshakerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
     handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
     session_binding::SignatureBinderBuilder,
@@ -51,11 +49,6 @@ fn test_messages() -> Vec<PlaintextMessage> {
         PlaintextMessage { plaintext: vec![] },
     ]
 }
-
-const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
-const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
-const UNMATCHED_ATTESTER_ID: &str = "UNMATCHED_ATTESTER_ID";
-const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
 
 // Since [`Attester`], [`Endorser`] and [`AttestationVerifier`] are external
 // traits, we have to use `mock!` instead of `[automock]` and define a test
@@ -85,161 +78,6 @@ mock! {
             endorsements: &Endorsements,
         ) -> anyhow::Result<AttestationResults>;
     }
-}
-
-#[test]
-fn attestation_verification_succeeds() {
-    let client_config = AttestationProviderConfig {
-        attestation_type: AttestationType::Bidirectional,
-        self_attesters: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
-        ]),
-        self_endorsers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
-        ]),
-        peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
-        ]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
-    };
-    let server_config = AttestationProviderConfig {
-        attestation_type: AttestationType::Bidirectional,
-        self_attesters: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
-        ]),
-        self_endorsers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
-        ]),
-        peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
-        ]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
-    };
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config).unwrap();
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config).unwrap();
-
-    let attest_request = client_attestation_provider.get_outgoing_message();
-    assert!(attest_request.is_ok());
-    assert!(server_attestation_provider
-        .put_incoming_message(attest_request.unwrap().unwrap())
-        .is_ok());
-
-    let attest_response = server_attestation_provider.get_outgoing_message();
-    assert!(attest_response.is_ok());
-    assert!(client_attestation_provider
-        .put_incoming_message(attest_response.unwrap().unwrap(),)
-        .is_ok());
-
-    client_attestation_provider.take_attestation_result().unwrap().unwrap();
-    server_attestation_provider.take_attestation_result().unwrap().unwrap();
-}
-
-#[test]
-fn attestation_verification_fails() {
-    let client_config = AttestationProviderConfig {
-        attestation_type: AttestationType::Bidirectional,
-        self_attesters: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
-        ]),
-        self_endorsers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
-        ]),
-        peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
-        ]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
-    };
-    let server_config = AttestationProviderConfig {
-        attestation_type: AttestationType::Bidirectional,
-        self_attesters: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_attester()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_attester()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_attester()),
-        ]),
-        self_endorsers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_mock_endorser()),
-            (UNMATCHED_ATTESTER_ID.to_string(), create_mock_endorser()),
-        ]),
-        peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_passing_mock_verifier()),
-        ]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
-    };
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config).unwrap();
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config).unwrap();
-
-    let attest_request = client_attestation_provider.get_outgoing_message();
-    assert!(attest_request.is_ok());
-    assert!(server_attestation_provider
-        .put_incoming_message(attest_request.unwrap().unwrap())
-        .is_ok());
-
-    let attest_response = server_attestation_provider.get_outgoing_message();
-    assert!(attest_response.is_ok());
-    assert!(client_attestation_provider
-        .put_incoming_message(attest_response.unwrap().unwrap(),)
-        .is_ok());
-
-    let client_attestation_result = client_attestation_provider.take_attestation_result().unwrap();
-    assert!(client_attestation_result.is_err());
-    let server_attestation_result = server_attestation_provider.take_attestation_result().unwrap();
-    assert!(server_attestation_result.is_err());
-}
-
-fn create_mock_attester() -> Arc<dyn Attester> {
-    let mut attester = MockTestAttester::new();
-    attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
-    Arc::new(attester)
-}
-
-fn create_mock_endorser() -> Arc<dyn Endorser> {
-    let mut endorser = MockTestEndorser::new();
-    endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
-    Arc::new(endorser)
-}
-
-fn create_passing_mock_verifier() -> Arc<dyn AttestationVerifier> {
-    let mut verifier = MockTestAttestationVerifier::new();
-    verifier.expect_verify().returning(|_, _| {
-        Ok(AttestationResults {
-            status: attestation_results::Status::Success.into(),
-            ..Default::default()
-        })
-    });
-    Arc::new(verifier)
-}
-
-fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
-    let mut verifier = MockTestAttestationVerifier::new();
-    verifier.expect_verify().returning(|_, _| {
-        Ok(AttestationResults {
-            status: attestation_results::Status::GenericFailure.into(),
-            reason: String::from("Mock failure"),
-            ..Default::default()
-        })
-    });
-    Arc::new(verifier)
 }
 
 #[test]
@@ -325,22 +163,22 @@ fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: 
     }
     let session_keys_client = client_handshaker.take_session_keys().unwrap();
     let session_keys_server = server_handshaker.take_session_keys().unwrap();
-    assert_eq!(session_keys_client.request_key, session_keys_server.response_key);
-    assert_eq!(session_keys_server.request_key, session_keys_client.response_key);
+    assert_that!(session_keys_client.request_key, eq(&session_keys_server.response_key));
+    assert_that!(session_keys_server.request_key, eq(&session_keys_client.response_key));
 
     let mut encryptor_client: OrderedChannelEncryptor = session_keys_client.try_into().unwrap();
     let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
 
     for message in test_messages() {
         let ciphertext = encryptor_client.encrypt(message.clone().into()).unwrap();
-        let plaintext = encryptor_server.decrypt(ciphertext).unwrap();
-        assert_eq!(message, plaintext.into());
+        let plaintext: PlaintextMessage = encryptor_server.decrypt(ciphertext).unwrap().into();
+        assert_that!(message, eq(&plaintext));
     }
 
     for message in test_messages() {
         let ciphertext = encryptor_server.encrypt(message.clone().into()).unwrap();
-        let plaintext = encryptor_client.decrypt(ciphertext).unwrap();
-        assert_eq!(message, plaintext.into());
+        let plaintext: PlaintextMessage = encryptor_client.decrypt(ciphertext).unwrap().into();
+        assert_that!(message, eq(&plaintext));
     }
 }
 
@@ -524,7 +362,7 @@ fn session_fails_with_attestation_binding_fail() {
     let handshake_request = client_session.get_outgoing_message().unwrap().unwrap();
     server_session.put_incoming_message(handshake_request).unwrap();
     let handshake_response = server_session.get_outgoing_message().unwrap().unwrap();
-    assert!(client_session.put_incoming_message(handshake_response).is_err());
+    assert_that!(client_session.put_incoming_message(handshake_response), err(anything()));
 }
 
 #[test]
@@ -599,8 +437,9 @@ fn verify_session_message<I, O>(
 ) {
     session1.write(message.clone()).unwrap();
     let outgoing_message = session1.get_outgoing_message().unwrap().unwrap();
-    session2.put_incoming_message(outgoing_message).unwrap();
-    assert_eq!(message, &session2.read().unwrap().unwrap());
+    assert_that!(session2.put_incoming_message(outgoing_message), ok(some(())));
+    let decrypted_message = session2.read().unwrap().unwrap();
+    assert_that!(decrypted_message, eq(message));
 }
 
 #[test]
@@ -632,7 +471,7 @@ fn test_unordered_encryptor_inorder_messages() {
         let payload = Payload { message: message.plaintext.to_vec(), nonce: None, aad: None };
         let encrypted_payload = replica_1.encrypt(payload).unwrap();
         let plaintext = replica_2.decrypt(encrypted_payload).unwrap().message;
-        assert_eq!(message.plaintext, plaintext);
+        assert_that!(message.plaintext, eq(&plaintext));
     }
 }
 
@@ -655,9 +494,9 @@ fn test_unordered_encryptor_window_size_0() {
 
     // Decrypt in reverse order
     let plaintext_2 = replica_2.decrypt(encrypted_payload_2).unwrap().message;
-    assert_eq!(test_messages[1].plaintext, plaintext_2);
+    assert_that!(test_messages[1].plaintext, eq(&plaintext_2));
     // Decrypting first message fails since it is from a lower nonce.
-    assert!(replica_2.decrypt(encrypted_payload_1).is_err());
+    assert_that!(replica_2.decrypt(encrypted_payload_1).is_err(), eq(true));
 }
 
 fn clone_payload(payload: &Payload) -> Payload {
@@ -692,33 +531,23 @@ fn test_unordered_encryptor_window_size_3() {
     }
 
     // Out-of-order decryption
-    assert_eq!(
-        test_messages[3],
-        replica_2.decrypt(clone_payload(&encrypted_payloads[3])).unwrap().message
-    );
+    let plaintext_3 = replica_2.decrypt(clone_payload(&encrypted_payloads[3])).unwrap();
+    assert_that!(test_messages[3], eq(&plaintext_3.message));
     // Decrypting messages within the window should be ok.
-    assert_eq!(
-        test_messages[1],
-        replica_2.decrypt(clone_payload(&encrypted_payloads[1])).unwrap().message
-    );
-    assert_eq!(
-        test_messages[2],
-        replica_2.decrypt(clone_payload(&encrypted_payloads[2])).unwrap().message
-    );
+    let plaintext_1 = replica_2.decrypt(clone_payload(&encrypted_payloads[1])).unwrap();
+    assert_that!(test_messages[1], eq(&plaintext_1.message));
+    let plaintext_2 = replica_2.decrypt(clone_payload(&encrypted_payloads[2])).unwrap();
+    assert_that!(test_messages[2], eq(&plaintext_2.message));
     // Replaying message should fail.
-    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[3])).is_err());
-    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[2])).is_err());
-    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[1])).is_err());
+    assert_that!(replica_2.decrypt(clone_payload(&encrypted_payloads[3])).is_err(), eq(true));
+    assert_that!(replica_2.decrypt(clone_payload(&encrypted_payloads[2])).is_err(), eq(true));
+    assert_that!(replica_2.decrypt(clone_payload(&encrypted_payloads[1])).is_err(), eq(true));
     // Decrypting messages outside the window should fail.
-    assert!(replica_2.decrypt(clone_payload(&encrypted_payloads[0])).is_err());
+    assert_that!(replica_2.decrypt(clone_payload(&encrypted_payloads[0])).is_err(), eq(true));
 
     // Decrypt more messages in order.
-    assert_eq!(
-        test_messages[4],
-        replica_2.decrypt(clone_payload(&encrypted_payloads[4])).unwrap().message
-    );
-    assert_eq!(
-        test_messages[5],
-        replica_2.decrypt(clone_payload(&encrypted_payloads[5])).unwrap().message
-    );
+    let plaintext_4 = replica_2.decrypt(clone_payload(&encrypted_payloads[4])).unwrap();
+    assert_that!(test_messages[4], eq(&plaintext_4.message));
+    let plaintext_5 = replica_2.decrypt(clone_payload(&encrypted_payloads[5])).unwrap();
+    assert_that!(test_messages[5], eq(&plaintext_5.message));
 }

@@ -46,7 +46,22 @@ rust_test(
     name = "oak_session_tests",
     crate = ":oak_session",
     deps = [
+        "@oak_crates_index//:googletest",
         "@oak_crates_index//:mockall",
         "@oak_crates_index//:rand_core",
+    ],
+)
+
+rust_test(
+    name = "attestation_tests",
+    srcs = ["tests/attestation.rs"],
+    deps = [
+        ":oak_session",
+        "//oak_attestation_types",
+        "//oak_attestation_verification_types",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:mockall",
     ],
 )
