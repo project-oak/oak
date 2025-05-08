@@ -297,6 +297,7 @@ fn event_log_verifier_succeeds() {
         r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
             TinkEndorsement { signature: "tink_signature".as_bytes().to_vec() },
         )),
+        ..Default::default()
     };
     let endorsements = Endorsements { events: vec![tink_endorsement.into()], ..Default::default() };
     let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =

@@ -1052,9 +1052,16 @@ pub struct ContainerEndorsement {
 }
 /// Endorsement for a public key used to verify that an encrypted session is
 /// bound to the enclave's evidence.
+/// Next ID: 4
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct SessionBindingPublicKeyEndorsement {
+    /// Certificate created by the certificate authority that signs the session
+    /// binding public key. If this field is not populated, use the oneof
+    /// tink_endorsement field.
+    /// TODO: b/417151897 - Rename this field to certificate_authority_endorsement.
+    #[prost(message, optional, tag = "3")]
+    pub ca_endorsement: ::core::option::Option<CertificateAuthorityEndorsement>,
     #[prost(oneof = "session_binding_public_key_endorsement::Type", tags = "1, 2")]
     pub r#type: ::core::option::Option<session_binding_public_key_endorsement::Type>,
 }
@@ -1070,6 +1077,9 @@ pub mod session_binding_public_key_endorsement {
         TinkEndorsement(super::TinkEndorsement),
         /// Certificate created by the certificate authority that signs the session
         /// binding public key.
+        /// DEPRECATED: This field should not be used. Use the Certificate
+        /// certificate_authority field to read the certificate authority
+        /// endorsement.
         #[prost(message, tag = "2")]
         CertificateAuthorityEndorsement(super::CertificateAuthorityEndorsement),
     }

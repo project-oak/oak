@@ -201,6 +201,7 @@ message ContainerEndorsement {
 
 // Endorsement for a public key used to verify that an encrypted session is
 // bound to the enclave's evidence.
+// Next ID: 4
 message SessionBindingPublicKeyEndorsement {
   oneof type {
     // Certificate authority signature over the session binding public key
@@ -209,8 +210,17 @@ message SessionBindingPublicKeyEndorsement {
     TinkEndorsement tink_endorsement = 1;
     // Certificate created by the certificate authority that signs the session
     // binding public key.
-    CertificateAuthorityEndorsement certificate_authority_endorsement = 2;
+    // DEPRECATED: This field should not be used. Use the Certificate
+    // certificate_authority field to read the certificate authority
+    // endorsement.
+    CertificateAuthorityEndorsement certificate_authority_endorsement = 2
+        [deprecated = true];
   }
+  // Certificate created by the certificate authority that signs the session
+  // binding public key. If this field is not populated, use the oneof
+  // tink_endorsement field.
+  // TODO: b/417151897 - Rename this field to certificate_authority_endorsement.
+  CertificateAuthorityEndorsement ca_endorsement = 3;
 }
 
 // This message contains statements that some entity (e.g. a hardware provider)
