@@ -95,17 +95,6 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         .read_into_attester()?
     };
 
-    // Unmount /sys and /dev as they are no longer needed.
-    umount("/sys").context("failed to unmount /sys")?;
-    umount("/dev").context("failed to unmount /dev")?;
-
-    // switch_root(8) magic
-    chdir("/rootfs").context("failed to chdir to /rootfs")?;
-    mount(Some("/rootfs"), "/", None::<&str>, MsFlags::MS_MOVE, None::<&str>)
-        .context("failed to move /rootfs to /")?;
-    chroot(".").context("failed to chroot to .")?;
-    chdir("/").context("failed to chdir to /")?;
-
     let mut client = LauncherClient::new(args.launcher_addr.clone())
         .await
         .context("error creating the launcher client")?;
@@ -130,6 +119,18 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         })
         .await??;
     let dice_data = attester.serialize();
+
+    // Unmount /sys and /dev as they are no longer needed.
+    umount("/sys").context("failed to unmount /sys")?;
+    umount("/dev").context("failed to unmount /dev")?;
+
+    // switch_root(8) magic
+    chdir("/rootfs").context("failed to chdir to /rootfs")?;
+    mount(Some("/rootfs"), "/", None::<&str>, MsFlags::MS_MOVE, None::<&str>)
+        .context("failed to move /rootfs to /")?;
+    chroot(".").context("failed to chroot to .")?;
+    chdir("/").context("failed to chdir to /")?;
+
     image::extract(buf, Path::new("/")).await.context("error loading the system image")?;
 
     // If the image didn't contain a `/etc/machine-id` file, create a placeholder
