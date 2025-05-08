@@ -28,6 +28,7 @@ rust_library(
         ":orchestrator_channel",
         ":orchestrator_client",
         ":orchestrator_crypto_client",
+        "//oak_containers/agent:oak_containers_agent",
     ],
 )
 

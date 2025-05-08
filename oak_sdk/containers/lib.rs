@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+pub use oak_containers_agent::metrics::{
+    init_metrics, MeterInstrument, MetricsConfig, OakObserver,
+};
 pub use orchestrator_channel::default_orchestrator_channel;
 pub use orchestrator_client::OrchestratorClient;
 pub use orchestrator_crypto_client::{
