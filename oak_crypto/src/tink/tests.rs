@@ -14,28 +14,24 @@
 // limitations under the License.
 
 use oak_crypto::verifier::Verifier;
+use oak_file_utils::data_path;
 
 use crate::signature_verifier::SignatureVerifier;
 
-const MESSAGE_PATH: &str = "oak/cc/crypto/tink/signature/testdata/message";
-const SIGNATURE_PATH: &str = "oak/cc/crypto/tink/signature/testdata/signature";
-const KEYSET_PATH: &str = "oak/cc/crypto/tink/signature/testdata/public_keyset";
+const MESSAGE_PATH: &str = "cc/crypto/tink/signature/testdata/message";
+const SIGNATURE_PATH: &str = "cc/crypto/tink/signature/testdata/signature";
+const KEYSET_PATH: &str = "cc/crypto/tink/signature/testdata/public_keyset";
 
 #[test]
 fn test_signature_verifier_success() {
     // Read the message, signature, and public keyset.
-    let message_file_path = format!("{}/{}", std::env::var("TEST_SRCDIR").unwrap(), MESSAGE_PATH);
-    let message = std::fs::read(&message_file_path);
+    let message = std::fs::read(data_path(MESSAGE_PATH));
     assert!(message.is_ok());
 
-    let signature_file_path =
-        format!("{}/{}", std::env::var("TEST_SRCDIR").unwrap(), SIGNATURE_PATH);
-    let signature = std::fs::read(&signature_file_path);
+    let signature = std::fs::read(data_path(SIGNATURE_PATH));
     assert!(signature.is_ok());
 
-    let public_keyset_file_path =
-        format!("{}/{}", std::env::var("TEST_SRCDIR").unwrap(), KEYSET_PATH);
-    let public_keyset = std::fs::read(&public_keyset_file_path);
+    let public_keyset = std::fs::read(data_path(KEYSET_PATH));
     assert!(public_keyset.is_ok());
 
     // Pass the variables to the SignatureVerifier function.
@@ -50,14 +46,10 @@ fn test_signature_verifier_fail() {
     // Read the message, signature, and public keyset.
     let message = "Some Unsigned Message";
 
-    let signature_file_path =
-        format!("{}/{}", std::env::var("TEST_SRCDIR").unwrap(), SIGNATURE_PATH);
-    let signature = std::fs::read(&signature_file_path);
+    let signature = std::fs::read(data_path(SIGNATURE_PATH));
     assert!(signature.is_ok());
 
-    let public_keyset_file_path =
-        format!("{}/{}", std::env::var("TEST_SRCDIR").unwrap(), KEYSET_PATH);
-    let public_keyset = std::fs::read(&public_keyset_file_path);
+    let public_keyset = std::fs::read(data_path(KEYSET_PATH));
     assert!(public_keyset.is_ok());
 
     // Pass the variables to the SignatureVerifier function.

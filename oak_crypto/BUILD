@@ -94,4 +94,7 @@ rust_test(
             "//cc/crypto/tink/signature/testdata:public_keyset",
             "//cc/crypto/tink/signature/testdata:signature",
         ],
+    deps = [
+        "//oak_file_utils",
+    ],
 )
