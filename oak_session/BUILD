@@ -65,3 +65,18 @@ rust_test(
         "@oak_crates_index//:mockall",
     ],
 )
+
+rust_test(
+    name = "session_tests",
+    srcs = ["tests/session_tests.rs"],
+    deps = [
+        ":oak_session",
+        "//oak_attestation_types",
+        "//oak_attestation_verification_types",
+        "//oak_crypto",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:mockall",
+    ],
+)
