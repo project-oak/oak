@@ -358,7 +358,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "colored": crate.spec(version = "2.1.0"),
     "command-fds": crate.spec(
         features = ["tokio"],
-        version = "0.3.0",
+        version = "=0.3.0",
     ),
     "command-group": crate.spec(version = "5.0.1"),
     "criterion": crate.spec(version = "0.5.1"),
