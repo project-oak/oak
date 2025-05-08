@@ -15,7 +15,6 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_test")
-load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     licenses = ["notice"],
@@ -40,36 +39,4 @@ java_test(
         "@com_google_protobuf//:protobuf_javalite",
         "@maven//:junit_junit",
     ],
-)
-
-kt_jvm_library(
-    name = "session_client_test_lib",
-    testonly = True,
-    srcs = [
-        "OakSessionClientTest.kt",
-    ],
-    deps = [
-        "//java/src/main/java/com/google/oak/client:session_client",
-        "//java/src/main/java/com/google/oak/session:server_session",
-        "//java/src/main/java/com/google/oak/session:session_config_builder",
-        "//java/src/main/java/com/google/oak/transport:grpc_session_v1_client_transport",
-        "//proto/services:session_v1_service_java_grpc",
-        "//proto/session:session_java_proto",
-        "@com_google_protobuf//:protobuf_java",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//inprocess",
-        "@io_grpc_grpc_java//stub",
-        "@maven//:junit_junit",
-        "@maven//:org_jetbrains_kotlin_kotlin_test",
-        "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
-        "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_test",
-    ],
-)
-
-java_test(
-    name = "session_client_test",
-    # Remove this after the copybara modifications on session_client_test are removed.
-    srcs = ["Empty.java"],
-    test_class = "com.google.oak.client.OakSessionClientTest",
-    runtime_deps = [":session_client_test_lib"],
 )

@@ -15,7 +15,6 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
-load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -97,32 +96,5 @@ java_library(
     srcs = ["ApiKeyInterceptor.java"],
     deps = [
         "@io_grpc_grpc_java//api",
-    ],
-)
-
-kt_jvm_library(
-    name = "session_transport",
-    srcs = [
-        "SessionTransport.kt",
-    ],
-    deps = [
-    ],
-)
-
-kt_jvm_library(
-    name = "grpc_session_v1_client_transport",
-    srcs = [
-        "GrpcSessionV1ClientTransport.kt",
-    ],
-    runtime_deps = [
-        "@maven//:com_google_flogger_flogger_system_backend",
-    ],
-    deps = [
-        ":session_transport",
-        "//proto/services:session_v1_service_kt_grpc",
-        "//proto/session:session_java_proto",
-        "@io_grpc_grpc_java//api",
-        "@maven//:com_google_flogger_google_extensions",
-        "@maven//:org_jetbrains_kotlinx_kotlinx_coroutines_core",
     ],
 )
