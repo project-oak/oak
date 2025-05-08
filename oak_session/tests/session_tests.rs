@@ -285,16 +285,69 @@ fn pairwise_nn_self_peer_broken() -> anyhow::Result<()> {
     );
 
     assert_that!(server_session.put_incoming_message(attest_request), ok(some(())));
+    let attest_response = server_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the server outgoing message")
+        .expect("No server outgoing message was produced");
+    assert_that!(
+        attest_response,
+        matches_pattern!(SessionResponse {
+            response: some(matches_pattern!(Response::AttestResponse(anything())))
+        }),
+        "The first message sent by the server is an attestation response"
+    );
+    assert_that!(client_session.put_incoming_message(attest_response), ok(some(())));
 
-    // This is a demo of the broken case where a self-unidirectional server does not
-    // complete attestation correctly.
+    let handshake_request = client_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client outgoing message")
+        .expect("No client outgoing message was produced");
+    assert_that!(
+        handshake_request,
+        matches_pattern!(SessionRequest {
+            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
+        }),
+        "The message sent by the client is a handshake request"
+    );
+    assert_that!(server_session.put_incoming_message(handshake_request), ok(some(())));
 
-    // The server has received an attestation request, but it is not sending a
-    // response.
-    assert_that!(server_session.get_outgoing_message(), err(anything()));
+    let handshake_response = server_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the server outgoing message")
+        .expect("No server outgoing message was produced");
+    assert_that!(
+        handshake_response,
+        matches_pattern!(SessionResponse {
+            response: some(matches_pattern!(Response::HandshakeResponse(anything())))
+        }),
+        "The message sent by the server is a handshake response"
+    );
+    assert_that!(client_session.put_incoming_message(handshake_response), ok(some(())));
 
-    // The client is expecting a response and has no message to send yet.
-    assert_that!(client_session.get_outgoing_message(), err(anything()));
+    let handshake_followup = client_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client followup message")
+        .expect("No client followup message was produced");
+    assert_that!(
+        client_session.is_open(),
+        eq(true),
+        "Getting the client followup message should make the session open"
+    );
+
+    assert_that!(
+        handshake_followup,
+        matches_pattern!(SessionRequest {
+            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
+        }),
+        "The message sent by the client is a handshake request"
+    );
+    assert_that!(server_session.put_incoming_message(handshake_followup), ok(some(())));
+    assert_that!(server_session.get_outgoing_message(), ok(none()));
+
+    assert_that!(client_session.is_open(), eq(true));
+    assert_that!(server_session.is_open(), eq(true));
+
+    invoke_hello_world(&mut client_session, &mut server_session);
 
     Ok(())
 }

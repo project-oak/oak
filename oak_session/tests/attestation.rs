@@ -327,7 +327,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
 }
 
 #[googletest::test]
-fn peer_attested_server_accepts_request_provides_no_response() -> anyhow::Result<()> {
+fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()> {
     let server_config = AttestationProviderConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
@@ -353,8 +353,10 @@ fn peer_attested_server_accepts_request_provides_no_response() -> anyhow::Result
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     let attest_response = server_attestation_provider.get_outgoing_message();
-    assert_that!(attest_response, ok(none()));
-    assert_that!(server_attestation_provider.take_attestation_result(), some(ok(anything())));
+    assert_that!(
+        attest_response,
+        ok(some(eq(&AttestResponse { endorsed_evidence: BTreeMap::from([]) })))
+    );
 
     Ok(())
 }

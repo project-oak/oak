@@ -277,7 +277,11 @@ impl ServerAttestationProvider {
                             .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
                     })
                 }
-                AttestationType::PeerUnidirectional | AttestationType::Unattested => None,
+                // Servers must respond to the request even if they are not providing evidence.
+                AttestationType::PeerUnidirectional => {
+                    Some(AttestResponse { endorsed_evidence: BTreeMap::new() })
+                }
+                AttestationType::Unattested => None,
             },
             config,
             attestation_result: None,
