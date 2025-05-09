@@ -32,6 +32,11 @@ use crate::{
     util::{self, UnixTimestampMillis},
 };
 
+// Same as raw_digest_from_contents, but emits hex encoded digest formats.
+fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
+    util::raw_to_hex_digest(&util::raw_digest_from_contents(contents))
+}
+
 #[test]
 fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
@@ -83,12 +88,13 @@ fn test_get_stage0_expected_values_validity() {
     // Create the firmware attachement. This is what contains the *actual* digests
     // to verify.
     let mut configs = BTreeMap::<i32, HexDigest>::new();
-    let measured_content = b"Just some abitrary content";
-    let content_digests = util::raw_digest_from_contents(measured_content);
-    let hex_digest = util::raw_to_hex_digest(&content_digests);
+    let original_content = b"Just some arbitrary content";
+    let measured_content = b"Just some different arbitrary content";
+    let measured_digest = util::raw_digest_from_contents(measured_content);
     let num_cpus = 2;
-    configs.insert(num_cpus, hex_digest);
-    let subject = FirmwareAttachment { configs };
+    configs.insert(num_cpus, util::raw_to_hex_digest(&measured_digest));
+    let subject =
+        FirmwareAttachment { binary: Some(hex_digest_from_contents(original_content)), configs };
     let serialized_subject = subject.encode_to_vec();
 
     // Now create the endorsement, containing the subject. The *endorsement*
@@ -123,7 +129,7 @@ fn test_get_stage0_expected_values_validity() {
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 validity: Some(endorsement_validity.into()),
-                digests: vec![content_digests],
+                digests: vec![measured_digest],
             })),
         }
     );
@@ -133,13 +139,16 @@ fn test_get_stage0_expected_values_validity() {
 fn test_get_kernel_expected_values_validity() {
     // Create the kernel attachement. This is what contains the *actual* digests
     // to verify.
+    let bz_image = b"Just some abitrary bzImage";
     let measured_image = b"Just some abitrary kernel image";
     let measured_setup = b"Just some abitrary kernel setup";
-    let image_digests = util::raw_digest_from_contents(measured_image);
-    let setup_digests = util::raw_digest_from_contents(measured_setup);
+    let bz_image_digest = hex_digest_from_contents(bz_image);
+    let image_digest = util::raw_digest_from_contents(measured_image);
+    let setup_digest = util::raw_digest_from_contents(measured_setup);
     let subject = KernelAttachment {
-        image: Some(util::raw_to_hex_digest(&image_digests)),
-        setup_data: Some(util::raw_to_hex_digest(&setup_digests)),
+        bz_image: Some(bz_image_digest),
+        image: Some(util::raw_to_hex_digest(&image_digest)),
+        setup_data: Some(util::raw_to_hex_digest(&setup_digest)),
     };
     let serialized_subject = subject.encode_to_vec();
 
@@ -175,7 +184,7 @@ fn test_get_kernel_expected_values_validity() {
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 validity: Some(endorsement_validity.into()),
-                digests: vec![image_digests],
+                digests: vec![image_digest],
             })),
         })
     );
@@ -184,7 +193,7 @@ fn test_get_kernel_expected_values_validity() {
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 validity: Some(endorsement_validity.into()),
-                digests: vec![setup_digests],
+                digests: vec![setup_digest],
             })),
         })
     );

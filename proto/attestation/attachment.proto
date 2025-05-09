@@ -31,6 +31,11 @@ option java_package = "com.google.oak.attestation.v1";
 // are produced with:
 // https://github.com/project-oak/oak/tree/main/snp_measurement
 message FirmwareAttachment {
+  // Digest of the unmodified firmware-type binary. This field can remain
+  // empty for attestation verification. It is only needed if identifying
+  // the binary given the attachement is a requirement.
+  HexDigest binary = 2;
+
   // Maps number of vCPUs to measurement of the modified firmware binary.
   map<int32, HexDigest> configs = 1;
 }
@@ -39,6 +44,11 @@ message FirmwareAttachment {
 // Measurements are produced with:
 // https://github.com/project-oak/oak/tree/main/oak_kernel_measurement
 message KernelAttachment {
+  // Digest of the unmodified bzImage. This field can remain empty for
+  // attestation verification. It is only needed if identifying the
+  // bzImage given the attachement is a requirement.
+  HexDigest bz_image = 3;
+
   // Digest of the kernel image part of the bzImage.
   HexDigest image = 1;
 

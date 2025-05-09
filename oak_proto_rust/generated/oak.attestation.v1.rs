@@ -4,6 +4,11 @@
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct FirmwareAttachment {
+    /// Digest of the unmodified firmware-type binary. This field can remain
+    /// empty for attestation verification. It is only needed if identifying
+    /// the binary given the attachement is a requirement.
+    #[prost(message, optional, tag = "2")]
+    pub binary: ::core::option::Option<super::super::HexDigest>,
     /// Maps number of vCPUs to measurement of the modified firmware binary.
     #[prost(btree_map = "int32, message", tag = "1")]
     pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
@@ -14,6 +19,11 @@ pub struct FirmwareAttachment {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct KernelAttachment {
+    /// Digest of the unmodified bzImage. This field can remain empty for
+    /// attestation verification. It is only needed if identifying the
+    /// bzImage given the attachement is a requirement.
+    #[prost(message, optional, tag = "3")]
+    pub bz_image: ::core::option::Option<super::super::HexDigest>,
     /// Digest of the kernel image part of the bzImage.
     #[prost(message, optional, tag = "1")]
     pub image: ::core::option::Option<super::super::HexDigest>,
