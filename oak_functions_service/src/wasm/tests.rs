@@ -149,10 +149,7 @@ fn create_test_state() -> TestState {
     let api_factory =
         Arc::new(StdWasmApiFactory { lookup_data_manager: lookup_data_manager.clone() });
 
-    #[cfg(feature = "bazel")]
     let wasm_module_path = "oak_functions/examples/echo/echo.wasm";
-    #[cfg(not(feature = "bazel"))]
-    let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
 
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 

@@ -46,6 +46,7 @@ rust_test_suite(
     ],
     deps = [
         ":oak_functions_sdk",
+        "//oak_file_utils",
         "//oak_functions_abi",
         "//oak_functions_service:lib",
         "//oak_functions_test_utils",

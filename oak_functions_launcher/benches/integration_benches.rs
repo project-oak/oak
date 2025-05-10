@@ -23,6 +23,7 @@ use std::path::PathBuf;
 
 use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::encryptor::ClientEncryptor;
+use oak_file_utils::data_path;
 use oak_functions_launcher::LookupDataConfig;
 use oak_launcher_utils::launcher;
 use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
@@ -45,19 +46,18 @@ struct OakFunctionsTestConfig {
 /// invoking the Wasm module in the benchmark loop.
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let runtime = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
-
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
+        data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
+        data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: oak_functions_test_utils::STAGE0.clone(),
+        app_binary: Some(oak_functions_enclave_app_path),
+        bios_binary: data_path("stage0_bin/stage0_bin"),
         gdb: None,
-        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
+        initrd: oak_restricted_kernel_orchestrator_app_path,
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
@@ -139,12 +139,12 @@ fn bench_key_value_lookup(b: &mut Bencher) {
     // See https://github.com/rust-cli/env_logger/#in-tests.
     let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Trace).try_init();
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
     run_bench(
         b,
         &OakFunctionsTestConfig {
             wasm_path: wasm_path.into(),
-            lookup_data_path: oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
+            lookup_data_path: data_path("oak_functions_launcher/mock_lookup_data"),
             request: b"test_key".to_vec(),
             expected_response: b"test_value".to_vec(),
         },

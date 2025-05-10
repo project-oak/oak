@@ -25,10 +25,12 @@ rust_library(
     name = "oak_functions_test_utils",
     srcs = glob(["src/*.rs"]),
     crate_features = ["bazel"],
-    rustc_env = {
-        # TODO: b/351201245 - Remove when we stop using cargo to build protos.
-        "WORKSPACE_ROOT": ".",
-    },
+    data = [
+        "//oak_containers/stage1_bin",
+        "//oak_containers/system_image:oak_containers_system_image",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
     deps = [
         "//oak_client",
         "//oak_file_utils",

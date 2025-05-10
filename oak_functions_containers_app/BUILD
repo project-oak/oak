@@ -172,6 +172,7 @@ rust_test(
         "//oak_functions/examples/key_value_lookup",
     ],
     deps = [
+        "//oak_file_utils",
         "//oak_functions_service:lib",
         "@oak_crates_index//:tokio",
     ],

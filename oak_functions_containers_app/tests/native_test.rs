@@ -16,6 +16,7 @@
 
 use std::sync::Arc;
 
+use oak_file_utils::data_path;
 use oak_functions_service::{logger::StandaloneLogger, lookup::LookupDataManager};
 use tokio::fs;
 
@@ -28,13 +29,9 @@ async fn test_native_handler() {
 
     lookup_data_manager.finish_next_lookup_data();
 
-    let _library = fs::read(format!(
-        "{}/{}/cc/oak_functions/native_sdk/libkey_value_lookup.so",
-        std::env::var("TEST_SRCDIR").unwrap(),
-        std::env::var("TEST_WORKSPACE").unwrap(),
-    ))
-    .await
-    .expect("failed to read test library");
+    let _library = fs::read(data_path("cc/oak_functions/native_sdk/libkey_value_lookup.so"))
+        .await
+        .expect("failed to read test library");
 
     // This test fails right now because the library links in too many other
     // libraries.

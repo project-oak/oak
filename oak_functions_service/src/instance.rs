@@ -138,10 +138,7 @@ mod tests {
 
     #[test]
     fn test_extend_chunk() {
-        #[cfg(feature = "bazel")]
         let wasm_module_path = "oak_functions/examples/echo/echo.wasm";
-        #[cfg(not(feature = "bazel"))]
-        let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
 
         let wasm_module = std::fs::read(wasm_module_path).unwrap();
 
@@ -167,10 +164,7 @@ mod tests {
 
     #[test]
     fn test_extend_entries() {
-        #[cfg(feature = "bazel")]
         let wasm_module_path = "oak_functions/examples/echo/echo.wasm";
-        #[cfg(not(feature = "bazel"))]
-        let wasm_module_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
 
         let wasm_module = std::fs::read(wasm_module_path).unwrap();
 

@@ -17,6 +17,7 @@
 
 use std::{io::Write, time::Duration};
 
+use oak_file_utils::data_path;
 use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
 use oak_launcher_utils::launcher;
 use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
@@ -30,11 +31,11 @@ async fn test_launcher_key_value_lookup() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 
     let (mut _child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
-        &wasm_path,
-        oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+        wasm_path,
+        "oak_functions_launcher/mock_lookup_data",
     );
 
     // Wait for the server to start up.
@@ -52,11 +53,11 @@ async fn test_launcher_echo() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("echo");
+    let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
     let (_child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
-        &wasm_path,
-        oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+        wasm_path,
+        "oak_functions_launcher/mock_lookup_data",
     );
 
     // Wait for the server to start up.
@@ -85,18 +86,17 @@ async fn test_load_large_lookup_data() {
     }
 
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
-
+        data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
+        data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: oak_functions_test_utils::STAGE0.clone(),
+        app_binary: Some(oak_functions_enclave_app_path),
+        bios_binary: data_path("stage0_bin/stage0_bin"),
         gdb: None,
-        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
+        initrd: oak_restricted_kernel_orchestrator_app_path,
         memory_size: Some("2G".to_string()),
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
@@ -115,7 +115,7 @@ async fn test_load_large_lookup_data() {
         update_interval: None,
         max_chunk_size,
     };
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
     let (launched_instance, connector_handle, _) =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024)
             .await
@@ -158,18 +158,17 @@ async fn test_load_two_gib_lookup_data() {
     }
 
     let oak_restricted_kernel_orchestrator_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_orchestrator");
-
+        data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::rust_crate_enclave_out_path("oak_functions_enclave_app");
+        data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: oak_functions_test_utils::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
+        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: Some(oak_functions_enclave_app_path.into()),
-        bios_binary: oak_functions_test_utils::STAGE0.clone(),
+        app_binary: Some(oak_functions_enclave_app_path),
+        bios_binary: data_path("stage0_bin/stage0_bin"),
         gdb: None,
-        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
+        initrd: oak_restricted_kernel_orchestrator_app_path,
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
@@ -188,7 +187,7 @@ async fn test_load_two_gib_lookup_data() {
         update_interval: None,
         max_chunk_size,
     };
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
     let status =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
     assert!(status.is_ok());

@@ -914,10 +914,8 @@ mod tests {
 
     #[test]
     pub fn test_table_loader_interpretation() {
-        // Ideally we'd use the runfiles crate from rules_rust for this, but as we're on
-        // Bazel 6 we can't.
-        let runfiles = std::env::var_os("RUNFILES_DIR").map(std::path::PathBuf::from).unwrap();
-        let raw = std::fs::read(runfiles.join("oak/stage0/testdata/table_loader")).unwrap();
+        let raw = std::fs::read(oak_file_utils::data_path("stage0/testdata/table_loader"))
+            .expect("failed to read test data");
         let commands = unsafe {
             core::slice::from_raw_parts(
                 raw.as_ptr() as *const _ as *const RomfileCommand,

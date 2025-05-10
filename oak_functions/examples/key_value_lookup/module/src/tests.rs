@@ -33,7 +33,7 @@ async fn test_server() {
         return;
     }
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
         &oak_functions_test_utils::serialize_entries(hashmap! {
@@ -46,7 +46,7 @@ async fn test_server() {
 
     // TODO: b/349587445 - Use bazel variant once dependencies are bazelified.
     let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
-        &wasm_path,
+        wasm_path,
         lookup_data_file.path().to_str().unwrap(),
     );
 
@@ -82,7 +82,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let runtime =
         tokio::runtime::Builder::new_current_thread().enable_io().enable_time().build().unwrap();
 
-    let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path("key_value_lookup");
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
         &oak_functions_test_utils::serialize_entries(hashmap! {
@@ -94,7 +94,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     );
 
     let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
-        &wasm_path,
+        wasm_path,
         lookup_data_file.path().to_str().unwrap(),
     );
 

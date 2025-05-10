@@ -23,7 +23,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
     let (mut _output, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
             &wasm_path,
-            oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+            "oak_functions_launcher/mock_lookup_data",
             communication_channel,
         );
 
@@ -59,6 +59,7 @@ async fn test_launcher_key_value_lookup_network() {
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
+    env_logger::init();
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
@@ -69,7 +70,7 @@ async fn test_launcher_echo() {
     let (_background, port) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
             &wasm_path,
-            oak_functions_test_utils::MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+            "oak_functions_launcher/mock_lookup_data",
             "network",
         );
 

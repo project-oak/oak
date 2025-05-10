@@ -116,4 +116,7 @@ rust_test(
     size = "small",
     crate = ":stage0",
     data = ["testdata/table_loader"],
+    deps = [
+        "//oak_file_utils",
+    ],
 )
