@@ -15,15 +15,18 @@
 //
 
 //! This module provides traits that allow to bind the data to the session.
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use derive_builder::Builder;
 #[cfg(test)]
 use mockall::automock;
 use oak_crypto::{signer::Signer, verifier::Verifier};
+use oak_proto_rust::oak::attestation::v1::AttestationResults;
 
-// Trait that allows binding session to the arbitrary data
+use crate::key_extractor::KeyExtractor;
+
+/// Trait that allows binding session to the arbitrary data
 #[cfg_attr(test, automock)]
 pub trait SessionBinder: Send + Sync {
     fn bind(&self, bound_data: &[u8]) -> Vec<u8>;
@@ -44,8 +47,8 @@ impl SessionBinder for SignatureBinder {
     }
 }
 
-// Trait that allows verifying the binding between the session and the arbitrary
-// data.
+/// Trait that allows verifying the binding between the session and the
+/// arbitrary data.
 #[cfg_attr(test, automock)]
 pub trait SessionBindingVerifier: Send {
     fn verify_binding(&self, bound_data: &[u8], binding: &[u8]) -> Result<(), Error>;
@@ -64,6 +67,42 @@ impl SessionBindingVerifier for SignatureBindingVerifier {
     fn verify_binding(&self, bound_data: &[u8], binding: &[u8]) -> Result<(), Error> {
         self.verifier
             .verify([bound_data, self.additional_data.as_slice()].concat().as_slice(), binding)
+    }
+}
+
+/// Trait that allows constructing a binding verifier from the supplied
+/// attestation evidence.
+pub trait SessionBindingVerifierProvider: Send + Sync {
+    fn create_session_binding_verifier(
+        &self,
+        attestation_results: &AttestationResults,
+    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
+}
+
+/// An implementation of SessionBindingVerifierProvider that uses a key
+/// extractor to extract a binding key and create a SignatureBindingVerifier
+pub struct SignatureBindingVerifierProvider {
+    key_extractor: Arc<dyn KeyExtractor>,
+}
+
+impl SignatureBindingVerifierProvider {
+    pub fn new(key_extractor: Arc<dyn KeyExtractor>) -> Self {
+        Self { key_extractor }
+    }
+}
+
+impl SessionBindingVerifierProvider for SignatureBindingVerifierProvider {
+    fn create_session_binding_verifier(
+        &self,
+        attestation_results: &AttestationResults,
+    ) -> anyhow::Result<Box<dyn SessionBindingVerifier>> {
+        let verifying_key = self.key_extractor.extract_verifying_key(attestation_results)?;
+        Ok(Box::new(
+            SignatureBindingVerifierBuilder::default()
+                .verifier(verifying_key)
+                .build()
+                .map_err(|err| anyhow!("couldn't build SignatureBindingVerifier: {}", err))?,
+        ))
     }
 }
 

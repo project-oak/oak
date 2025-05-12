@@ -27,15 +27,16 @@ use crate::{
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
-    session_binding::SessionBinder,
+    session_binding::{
+        SessionBinder, SessionBindingVerifierProvider, SignatureBindingVerifierProvider,
+    },
 };
-
 #[allow(dead_code)]
 pub struct SessionConfig {
     pub attestation_provider_config: AttestationProviderConfig,
     pub handshaker_config: HandshakerConfig,
     pub encryptor_config: EncryptorConfig,
-    pub binding_key_extractors: BTreeMap<String, Arc<dyn KeyExtractor>>,
+    pub binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
 }
 
 impl SessionConfig {
@@ -84,13 +85,13 @@ impl SessionConfigBuilder {
         let encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        let binding_key_extractors = BTreeMap::new();
+        let binding_verifier_providers = BTreeMap::new();
 
         let config = SessionConfig {
             attestation_provider_config,
             handshaker_config,
             encryptor_config,
-            binding_key_extractors,
+            binding_verifier_providers,
         };
         Self { config }
     }
@@ -156,9 +157,12 @@ impl SessionConfigBuilder {
             .attestation_provider_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.into());
-        self.config
-            .binding_key_extractors
-            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
+        self.config.binding_verifier_providers.insert(
+            attester_id,
+            Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
+                DefaultSigningKeyExtractor {},
+            ))),
+        );
         self
     }
 
@@ -172,16 +176,19 @@ impl SessionConfigBuilder {
             .attestation_provider_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.clone());
-        self.config
-            .binding_key_extractors
-            .insert(attester_id, Arc::new(DefaultSigningKeyExtractor {}));
+        self.config.binding_verifier_providers.insert(
+            attester_id,
+            Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
+                DefaultSigningKeyExtractor {},
+            ))),
+        );
         self
     }
 
     /// Add an Attestation Verifier with the custom key extractor to extract the
     /// key to bind the attestation to the session. The verifier will verify
     /// Evidence and Endorsements from the peer's TEE, and the key extractor
-    /// will be used to extract the bindign key from the evidence. Verifier only
+    /// will be used to extract the binding key from the evidence. Verifier only
     /// verifies Evidence and Endorsements with with the same ID as the
     /// `attester_id`.
     ///
@@ -196,7 +203,10 @@ impl SessionConfigBuilder {
             .attestation_provider_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.into());
-        self.config.binding_key_extractors.insert(attester_id, key_extractor.into());
+        self.config.binding_verifier_providers.insert(
+            attester_id,
+            Arc::new(SignatureBindingVerifierProvider::new(key_extractor.into())),
+        );
         self
     }
 
@@ -212,7 +222,52 @@ impl SessionConfigBuilder {
             .attestation_provider_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.clone());
-        self.config.binding_key_extractors.insert(attester_id, key_extractor.clone());
+        self.config.binding_verifier_providers.insert(
+            attester_id,
+            Arc::new(SignatureBindingVerifierProvider::new(key_extractor.clone())),
+        );
+        self
+    }
+
+    /// Add an Attestation Verifier with the custom binding verifier provider to
+    /// extract the key to bind the attestation to the session. The verifier
+    /// will verify Evidence and Endorsements from the peer's TEE, and the
+    /// binding verifier provider will create an object that can ensure binding
+    /// between the evidence and the session. Verifier only verifies Evidence
+    /// and Endorsements with with the same ID as the `attester_id`.
+    ///
+    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+    pub fn add_peer_verifier_with_binding_verifier_provider(
+        mut self,
+        attester_id: String,
+        verifier: Box<dyn AttestationVerifier>,
+        binding_verifier_provider: Box<dyn SessionBindingVerifierProvider>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.into());
+        self.config
+            .binding_verifier_providers
+            .insert(attester_id, binding_verifier_provider.into());
+        self
+    }
+
+    /// Add an Attestation Verifier with the custom binding verifier provider
+    /// but retain ownership of the objects.
+    pub fn add_peer_verifier_with_binding_verifier_provider_ref(
+        mut self,
+        attester_id: String,
+        verifier: &Arc<dyn AttestationVerifier>,
+        binding_verifier_provider: &Arc<dyn SessionBindingVerifierProvider>,
+    ) -> Self {
+        self.config
+            .attestation_provider_config
+            .peer_verifiers
+            .insert(attester_id.clone(), verifier.clone());
+        self.config
+            .binding_verifier_providers
+            .insert(attester_id, binding_verifier_provider.clone());
         self
     }
 

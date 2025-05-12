@@ -27,9 +27,12 @@ use oak_proto_rust::oak::{
     },
 };
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType,
-    key_extractor::KeyExtractor, session_binding::SessionBinder, ClientSession, ProtocolEngine,
-    ServerSession, Session,
+    attestation::AttestationType,
+    config::SessionConfig,
+    handshake::HandshakeType,
+    key_extractor::KeyExtractor,
+    session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
+    ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
 // Since [`Attester`], [`Endorser`] and [`AttestationVerifier`] are external
@@ -86,6 +89,23 @@ mock! {
    }
 }
 
+mock! {
+    TestSessionBindingVerifier {}
+    impl SessionBindingVerifier for TestSessionBindingVerifier {
+        fn verify_binding(&self, bound_data: &[u8], binding: &[u8]) -> anyhow::Result<()>;
+    }
+}
+
+mock! {
+    TestSessionBindingVerifierProvider {}
+    impl SessionBindingVerifierProvider for TestSessionBindingVerifierProvider {
+        fn create_session_binding_verifier(
+            &self,
+            attestation_results: &AttestationResults,
+        ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
+    }
+}
+
 fn create_mock_attester() -> Box<dyn Attester> {
     let mut attester = MockTestAttester::new();
     attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
@@ -123,6 +143,20 @@ fn create_mock_key_extractor() -> Box<dyn KeyExtractor> {
         Ok(Box::new(verifier))
     });
     Box::new(key_extractor)
+}
+
+fn create_mock_session_binding_verifier() -> Box<dyn SessionBindingVerifier> {
+    let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
+    session_binding_verifier.expect_verify_binding().returning(|_, _| Ok(()));
+    Box::new(session_binding_verifier)
+}
+
+fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVerifierProvider> {
+    let mut session_binding_verifier_provider = MockTestSessionBindingVerifierProvider::new();
+    session_binding_verifier_provider
+        .expect_create_session_binding_verifier()
+        .returning(|_| Ok(create_mock_session_binding_verifier()));
+    Box::new(session_binding_verifier_provider)
 }
 
 const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
@@ -549,6 +583,86 @@ fn pairwise_nn_bidirectional_succeeds() -> anyhow::Result<()> {
     );
     assert_that!(server_session.put_incoming_message(handshake_followup), ok(some(())));
     assert_that!(server_session.get_outgoing_message(), ok(none()));
+
+    assert_that!(client_session.is_open(), eq(true));
+    assert_that!(server_session.is_open(), eq(true));
+
+    invoke_hello_world(&mut client_session, &mut server_session);
+
+    Ok(())
+}
+
+#[googletest::test]
+fn pairwise_nn_peer_self_succeeds_custom_session_binding_verifier() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_session_binding_verifier_provider(),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    let attest_request = client_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client outgoing message")
+        .expect("No client outgoing message was produced");
+    assert_that!(
+        attest_request,
+        matches_pattern!(SessionRequest {
+            request: some(matches_pattern!(Request::AttestRequest(anything())))
+        }),
+        "The first message sent by the client is an attestation request"
+    );
+    assert_that!(server_session.put_incoming_message(attest_request), ok(some(())));
+
+    let attest_response = server_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the server outgoing message")
+        .expect("No server outgoing message was produced");
+    assert_that!(
+        attest_response,
+        matches_pattern!(SessionResponse {
+            response: some(matches_pattern!(Response::AttestResponse(anything())))
+        }),
+        "The first message sent by the server is an attestation response"
+    );
+    assert_that!(client_session.put_incoming_message(attest_response), ok(some(())));
+
+    let handshake_request = client_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client outgoing message")
+        .expect("No client outgoing message was produced");
+    assert_that!(
+        handshake_request,
+        matches_pattern!(SessionRequest {
+            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
+        }),
+        "The message sent by the client is a handshake request"
+    );
+    assert_that!(server_session.put_incoming_message(handshake_request), ok(some(())));
+
+    let handshake_response = server_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the server outgoing message")
+        .expect("No server outgoing message was produced");
+    assert_that!(
+        handshake_response,
+        matches_pattern!(SessionResponse {
+            response: some(matches_pattern!(Response::HandshakeResponse(anything())))
+        }),
+        "The message sent by the server is a handshake response"
+    );
+    assert_that!(client_session.put_incoming_message(handshake_response), ok(some(())));
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
