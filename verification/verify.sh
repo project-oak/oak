@@ -80,11 +80,28 @@ verify() {
   )
   if [[ -f "${dir}/logentry.json" ]]; then
     opts+=(
-      --log_entry="${dir}/logentry.json"
+      --log-entry="${dir}/logentry.json"
     )
   fi
 
   bazel run //oak_attestation_verification:verify_endorsement -- "${opts[@]}"
+
+  # Consume transparency claims.
+  if grep -q "${PUBLISHED_CLAIM_TYPE}" "${dir}/endorsement.json"; then
+    echo "✅ Published"
+  else
+    echo "❌ Not published"
+  fi
+  if grep -q "${RUNNABLE_CLAIM_TYPE}" "${dir}/endorsement.json"; then
+    echo "✅ Runnable"
+  else
+    echo "❌ Not runnable"
+  fi
+  if grep -q "${OPEN_SOURCE_CLAIM_TYPE}" "${dir}/endorsement.json"; then
+    echo "✅ Open source"
+  else
+    echo "❌ Not open source"
+  fi
 }
 
 download_verify() {

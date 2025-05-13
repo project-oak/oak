@@ -37,6 +37,10 @@ readonly PK_FOR_SIGNATURE=16
 # ID of index to retrieve endorsement hashes by public key hashes.
 readonly ENDORSEMENTS_FOR_PK=21
 
+readonly PUBLISHED_CLAIM_TYPE="https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md"
+readonly RUNNABLE_CLAIM_TYPE="https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md"
+readonly OPEN_SOURCE_CLAIM_TYPE="https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md"
+
 # Fetches a file from the files bucket and double checks the hash.
 fetch_file() {
   local fbucket="$1"

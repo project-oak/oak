@@ -39,12 +39,14 @@ usage_and_exit() {
 
 readonly JSON_PARSER="import sys, json
 e = json.load(sys.stdin)
-claim_types = [claim['type'] for claim in e['predicate']['claims']]
+s = e['subject'][0]
+p = e['predicate']
+claim_types = []
+if 'claims' in p:
+  claim_types = [claim['type'] for claim in p['claims']]
 print(
-  e['subject'][0]['name'],
-  e['subject'][0]['digest']['sha256'],
-  e['predicate']['validity']['notAfter'],
-  ' '.join(claim_types))"
+    s['name'], s['digest']['sha256'],
+    p['validity']['notAfter'], ' '.join(claim_types))"
 
 timestamp() {
   date "+%s%N" --date="$1"
@@ -83,15 +85,19 @@ list_all_endorsements() {
     echo -e "${GREEN}${endorsement_hash}${COLOFF}"
     fetch_file "${fbucket}" "${endorsement_hash}" "${endorsement_path}"
     local endorsement=$(cat "${endorsement_path}")
-    declare -a claim_types
-    read -r subject_name subject_hash not_after claim_types <<< \
+    read -r subject_name subject_hash not_after claim_types_full <<< \
         "$(echo "${endorsement}" | python3 -c "${JSON_PARSER}")"
+    read -r -a claim_types <<< "${claim_types_full}"
     subject_hash="sha2-256:${subject_hash}"
     local days=$(( ($(timestamp "${not_after}") - now) / "${NANOS_PER_DAY}" ))
     echo "    Subject name:   ${subject_name}"
     echo "    Subject hash:   ${subject_hash}"
     echo "    Days remaining: ${days}"
-    echo "    Claims:         ${claim_types[*]}"
+    local claims_label="    Claims:         "
+    for claim in "${claim_types[@]}"; do
+      echo "${claims_label}${claim}"
+      claims_label="                    "
+    done
     if [[ " ${claim_types[*]} " =~ [[:space:]]${MPM_CLAIM_TYPE}[[:space:]] ]]; then
       local attachment_path=$(mktemp)
       fetch_file "${fbucket}" "${subject_hash}" "${attachment_path}"
