@@ -308,6 +308,11 @@ impl SealedMemoryHandler {
             bail!("Not a valid key!");
         }
 
+        let mut mutex_guard = self.session_context().await;
+        if mutex_guard.is_some() {
+            bail!("already setup the session for {uid}");
+        }
+
         let db_addr = self.application_config.database_service_host;
         let db_url = format!("http://{db_addr}");
         log::debug!("Database addr {}", db_url);
@@ -329,10 +334,6 @@ impl SealedMemoryHandler {
             let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
             IcingMetaDatabase::new(&temp_path)?
         };
-        let mut mutex_guard = self.session_context().await;
-        if mutex_guard.is_some() {
-            bail!("already setup the session");
-        }
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         *mutex_guard = Some(UserSessionContext {
             key: key.clone(),
