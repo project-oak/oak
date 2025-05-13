@@ -381,7 +381,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "jni": crate.spec(
         version = "0.21.1",
     ),
-    "libloading": crate.spec(version = "0.8.5"),
     "nix": crate.spec(
         features = [
             "fs",

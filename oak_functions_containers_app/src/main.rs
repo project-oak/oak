@@ -27,13 +27,11 @@ use oak_containers_agent::{
     set_error_handler,
 };
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
-#[cfg(feature = "native")]
-use oak_functions_containers_app::native_handler::NativeHandler;
 use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_proto_rust::oak::functions::config::{
-    application_config::CommunicationChannel, ApplicationConfig, HandlerType,
-    TcpCommunicationChannel, WasmtimeConfig,
+    application_config::CommunicationChannel, ApplicationConfig, TcpCommunicationChannel,
+    WasmtimeConfig,
 };
 use oak_sdk_containers::{
     default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
@@ -60,7 +58,6 @@ struct Args {
 
 async fn serve<S>(
     addr: S,
-    handler_type: HandlerType,
     handler_config: Option<WasmtimeConfig>,
     stream: Box<
         dyn tokio_stream::Stream<
@@ -79,26 +76,13 @@ where
 {
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
 
-    match handler_type {
-        HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-            app_serve::<WasmtimeHandler>(
-                stream,
-                encryption_key_handle,
-                observer,
-                handler_config.unwrap_or_default(),
-            )
-            .await
-        }
-        HandlerType::HandlerNative => {
-            if cfg!(feature = "native") {
-                app_serve::<NativeHandler>(stream, encryption_key_handle, observer, ()).await
-            } else {
-                panic!(
-                    "Application config specified `native` handler type, but this binary does not support that feature"
-                );
-            }
-        }
-    }
+    app_serve::<WasmtimeHandler>(
+        stream,
+        encryption_key_handle,
+        observer,
+        handler_config.unwrap_or_default(),
+    )
+    .await
 }
 
 #[tokio::main]
@@ -150,7 +134,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let handler_type = application_config.handler_type();
     let wasmtime_config = application_config.wasmtime_config;
     let communication_channel = application_config
         .communication_channel
@@ -164,7 +147,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let listener = TcpListener::bind(addr).await?;
             tokio::spawn(serve(
                 addr,
-                handler_type,
                 wasmtime_config,
                 Box::new(TcpListenerStream::new(listener)),
                 encryption_key_handle,
@@ -178,7 +160,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let listener = VsockListener::bind(addr)?;
             tokio::spawn(serve(
                 addr,
-                handler_type,
                 wasmtime_config,
                 Box::new(listener.incoming()),
                 encryption_key_handle,

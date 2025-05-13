@@ -137,9 +137,6 @@ pub enum HandlerType {
     HandlerUnspecified = 0,
     /// Use a wasm interpreter to load the module.
     HandlerWasm = 1,
-    /// Interpret the module as a native .so file. Only supported when running on
-    /// Oak Containers.
-    HandlerNative = 2,
 }
 impl HandlerType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -150,7 +147,6 @@ impl HandlerType {
         match self {
             HandlerType::HandlerUnspecified => "HANDLER_UNSPECIFIED",
             HandlerType::HandlerWasm => "HANDLER_WASM",
-            HandlerType::HandlerNative => "HANDLER_NATIVE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -158,7 +154,6 @@ impl HandlerType {
         match value {
             "HANDLER_UNSPECIFIED" => Some(Self::HandlerUnspecified),
             "HANDLER_WASM" => Some(Self::HandlerWasm),
-            "HANDLER_NATIVE" => Some(Self::HandlerNative),
             _ => None,
         }
     }

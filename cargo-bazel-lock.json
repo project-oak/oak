@@ -1,5 +1,5 @@
 {
-  "checksum": "7bed610ab9f19a8343c5d35292bee590733410c1f984af556b6c507ba06ec4bb",
+  "checksum": "a933b1066f23033a44d7a002c29f62ee0f461a1a565904ef675d74bfae592266",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -6973,10 +6973,6 @@
               "target": "lazy_static"
             },
             {
-              "id": "libloading 0.8.5",
-              "target": "libloading"
-            },
-            {
               "id": "libm 0.2.8",
               "target": "libm"
             },
@@ -13384,61 +13380,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "libloading 0.8.5": {
-      "name": "libloading",
-      "version": "0.8.5",
-      "package_url": "https://github.com/nagisa/rust_libloading/",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/libloading/0.8.5/download",
-          "sha256": "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "libloading",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "libloading",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [],
-          "selects": {
-            "cfg(unix)": [
-              {
-                "id": "cfg-if 1.0.0",
-                "target": "cfg_if"
-              }
-            ],
-            "cfg(windows)": [
-              {
-                "id": "windows-targets 0.52.4",
-                "target": "windows_targets"
-              }
-            ]
-          }
-        },
-        "edition": "2015",
-        "version": "0.8.5"
-      },
-      "license": "ISC",
-      "license_ids": [
-        "ISC"
-      ],
-      "license_file": "LICENSE"
     },
     "libm 0.2.8": {
       "name": "libm",
@@ -33418,7 +33359,6 @@
     "itertools 0.13.0",
     "jni 0.21.1",
     "lazy_static 1.4.0",
-    "libloading 0.8.5",
     "libm 0.2.8",
     "linked_list_allocator 0.10.5",
     "lock_api 0.4.11",

@@ -19,15 +19,13 @@ syntax = "proto3";
 package oak.functions.config;
 
 enum HandlerType {
+  reserved 2;
+
   // Defaults to WASM.
   HANDLER_UNSPECIFIED = 0;
 
   // Use a wasm interpreter to load the module.
   HANDLER_WASM = 1;
-
-  // Interpret the module as a native .so file. Only supported when running on
-  // Oak Containers.
-  HANDLER_NATIVE = 2;
 }
 
 message TcpCommunicationChannel {

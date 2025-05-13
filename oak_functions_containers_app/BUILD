@@ -39,7 +39,6 @@ LIB_DEPS = [
     "//oak_proto_rust/grpc",
     "@oak_crates_index//:anyhow",
     "@oak_crates_index//:http",
-    "@oak_crates_index//:libloading",
     "@oak_crates_index//:opentelemetry",
     "@oak_crates_index//:ouroboros",
     "@oak_crates_index//:prost",
@@ -55,9 +54,7 @@ LIB_DEPS = [
 
 LIB_SRCS = [
     "src/lib.rs",
-    "src/native_handler.rs",
     "tests/integration_test.rs",
-    "tests/native_test.rs",
 ]
 
 rust_library(
@@ -66,7 +63,6 @@ rust_library(
     compile_data = [":README.md"],
     crate_features = [
         "deny_sensitive_logging",
-        "native",
     ],
     crate_name = "oak_functions_containers_app",
     deps = LIB_DEPS + ["//oak_functions_service:lib_unrestricted"],
@@ -78,7 +74,6 @@ rust_library(
     compile_data = [":README.md"],
     crate_features = [
         "allow_sensitive_logging",
-        "native",
     ],
     crate_name = "oak_functions_containers_app",
     deps = LIB_DEPS + ["//oak_functions_service:lib_insecure_unrestricted"],
@@ -110,7 +105,6 @@ rust_binary(
     srcs = ["src/main.rs"],
     crate_features = [
         "deny_sensitive_logging",
-        "native",
     ],
     deps = APP_DEPS + [
         ":lib",
@@ -123,7 +117,6 @@ rust_binary(
     srcs = ["src/main.rs"],
     crate_features = [
         "allow_sensitive_logging",
-        "native",
     ],
     deps = APP_DEPS + [
         ":lib_insecure",
@@ -160,21 +153,6 @@ rust_test(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
-    ],
-)
-
-rust_test(
-    name = "oak_functions_containers_app_native_test",
-    size = "large",
-    srcs = ["tests/native_test.rs"],
-    data = [
-        "//cc/oak_functions/native_sdk:key_value_lookup",
-        "//oak_functions/examples/key_value_lookup",
-    ],
-    deps = [
-        "//oak_file_utils",
-        "//oak_functions_service:lib",
-        "@oak_crates_index//:tokio",
     ],
 )
 
