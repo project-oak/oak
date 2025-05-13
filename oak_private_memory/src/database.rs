@@ -91,6 +91,9 @@ impl IcingMetaDatabase {
         filter.paths.push(path.to_string());
         filter
     }
+    pub fn base_dir(&self) -> String {
+        self.base_dir.clone()
+    }
 
     /// Rebuild the icing database in `target_base_dir` given the content of the
     /// ground truth files in `buffer`.
@@ -355,7 +358,10 @@ impl IcingMetaDatabase {
 
 impl Drop for IcingMetaDatabase {
     fn drop(&mut self) {
-        self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
+        match std::fs::remove_dir_all(&self.base_dir) {
+            Ok(()) => debug!("Successfully removed the icing directory."),
+            Err(e) => debug!("Failed to remove the icing directory, {}", e),
+        }
     }
 }
 
@@ -649,7 +655,10 @@ mod tests {
 
         // Export the database
         let exported_data = icing_database.export();
+        let base_dir_str = icing_database.base_dir();
+        let base_dir = std::path::Path::new(&base_dir_str);
         drop(icing_database); // Drop the original instance
+        expect_false!(base_dir.exists());
 
         // Import into a new directory (or the same one after cleaning)
         let import_temp_dir = tempdir().unwrap();
