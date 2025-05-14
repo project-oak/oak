@@ -107,7 +107,7 @@ rust_binary(
     ],
 )
 
-cc_binary(
+cc_test(
     name = "icing_porting_test",
     srcs = ["test/icing_porting_test.cc"],
     deps = [

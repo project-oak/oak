@@ -140,7 +140,7 @@ impl ffi::DocumentBuilder {
         let value_strs: Vec<Vec<u8>> = values.iter().map(|s| s.encode_to_vec()).collect();
         let value_strs_ref: Vec<&[u8]> = value_strs.iter().map(|s| s.as_slice()).collect();
         self.add_vector_property_impl(name, &value_strs_ref);
-        &self
+        self
     }
 }
 

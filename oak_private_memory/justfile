@@ -1,18 +1,9 @@
-presubmit: format clippy test build
+presubmit: style build-and-test
 
-build:
-    bazel build -c opt //:private_memory_server
-    bazel build -c opt //:bundle.tar
+build-and-test:
+    # For some reason, proto/... is broken.
+    bazel test  -c opt //...:all -- -//third_party/... -//proto/...
 
-test:
-    bazel run -c opt //:icing_porting_test
-    bazel test -c opt //src/...
-    bazel test  -c opt //:all
-
-format:
-    bazel build --config=rustfmt //:private_memory_server
-
-clippy:
-    bazel build --keep_going --config=clippy "$@" //:private_memory_server
-
-
+style:
+    # For some reason, proto/... is broken.
+    bazel build --keep_going --config=rustfmt --config=clippy "$@" //...:all -- -//third_party/... -//proto/...

@@ -21,8 +21,11 @@ configure_make(
         "@platforms//os:macos": [
             "ARFLAGS=\"-static -o\"",
             "MAKE=gnumake",
+            "-j$(nproc)",
         ],
-        "//conditions:default": [],
+        "//conditions:default": [
+            "-j$(nproc)",
+        ],
     }),
     configure_command = "source/configure",
     configure_in_place = True,

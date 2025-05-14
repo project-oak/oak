@@ -14,6 +14,8 @@
 // limitations under the License.
 
 pub mod icing {
+    // Don't lint generated code.
+    #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
     pub mod lib {
         tonic::include_proto!("icing.lib");
     }

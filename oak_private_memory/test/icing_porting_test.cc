@@ -22,6 +22,7 @@
 #include <string>
 #include <string_view>
 
+#include "gtest/gtest.h"
 #include "icing/document-builder.h"
 #include "icing/icing-search-engine.h"
 #include "icing/proto/debug.pb.h"
@@ -62,7 +63,7 @@ ScoringSpecProto GetDefaultScoringSpec() {
   return scoring_spec;
 }
 
-void gogo() {
+TEST(IcingPortingTest, TestIciing) {
   SchemaProto schema =
       SchemaBuilder()
           .AddType(SchemaTypeConfigBuilder().SetType("Message").AddProperty(
@@ -127,8 +128,3 @@ void gogo() {
 }
 }  // namespace lib
 }  // namespace icing
-
-int main(int argc, char** argv) {
-  icing::lib::gogo();
-  return 0;
-}

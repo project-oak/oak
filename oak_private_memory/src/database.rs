@@ -75,10 +75,10 @@ const EMBEDDING_NAME: &str = "embedding";
 impl IcingMetaDatabase {
     /// Creates a ResultSpecProto projection to retrieve only the blob ids.
     fn create_blob_id_projection() -> icing::TypePropertyMask {
-        let mut projection = icing::TypePropertyMask::default();
-        projection.schema_type = Some(SCHMA_NAME.to_string());
-        projection.paths.push(BLOB_ID_NAME.to_string());
-        projection
+        icing::TypePropertyMask {
+            schema_type: Some(SCHMA_NAME.to_string()),
+            paths: vec![BLOB_ID_NAME.to_string()],
+        }
     }
 
     fn extract_blob_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<BlobId> {
@@ -86,10 +86,10 @@ impl IcingMetaDatabase {
     }
 
     fn create_search_filter(path: &str) -> icing::TypePropertyMask {
-        let mut filter = icing::TypePropertyMask::default();
-        filter.schema_type = Some(SCHMA_NAME.to_string());
-        filter.paths.push(path.to_string());
-        filter
+        icing::TypePropertyMask {
+            schema_type: Some(SCHMA_NAME.to_string()),
+            paths: vec![path.to_string()],
+        }
     }
     pub fn base_dir(&self) -> String {
         self.base_dir.clone()
@@ -209,17 +209,21 @@ impl IcingMetaDatabase {
     }
 
     pub fn get_memories_by_tag(&self, tag: String) -> anyhow::Result<Vec<BlobId>> {
-        let mut search_spec = icing::SearchSpecProto::default();
-        search_spec.query = Some(tag);
-        // Match exactly as defined in the schema for tags.
-        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
-        search_spec.type_property_filters.push(Self::create_search_filter(TAG_NAME));
+        let search_spec = icing::SearchSpecProto {
+            query: Some(tag),
+            // Match exactly as defined in the schema for tags.
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            type_property_filters: vec![Self::create_search_filter(TAG_NAME)],
+            ..Default::default()
+        };
 
-        let mut result_spec = icing::ResultSpecProto::default();
-        // Request a large number to get all results in one go for simplicity.
-        // Consider pagination for very large datasets.
-        result_spec.num_per_page = Some(1000);
-        result_spec.type_property_masks.push(Self::create_blob_id_projection());
+        let result_spec = icing::ResultSpecProto {
+            // Request a large number to get all results in one go for simplicity.
+            // Consider pagination for very large datasets.
+            num_per_page: Some(1000),
+            type_property_masks: vec![Self::create_blob_id_projection()],
+            ..Default::default()
+        };
 
         let search_result: icing::SearchResultProto = self.icing_search_engine.search(
             &search_spec,
@@ -236,15 +240,18 @@ impl IcingMetaDatabase {
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
-        let mut search_spec = icing::SearchSpecProto::default();
-        search_spec.query = Some(memory_id.to_string());
-        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
+        let search_spec = icing::SearchSpecProto {
+            query: Some(memory_id.to_string()),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            type_property_filters: vec![Self::create_search_filter(MEMORY_ID_NAME)],
+            ..Default::default()
+        };
 
-        search_spec.type_property_filters.push(Self::create_search_filter(MEMORY_ID_NAME));
-
-        let mut result_spec = icing::ResultSpecProto::default();
-        result_spec.num_per_page = Some(1); // We expect at most one result
-        result_spec.type_property_masks.push(Self::create_blob_id_projection());
+        let result_spec = icing::ResultSpecProto {
+            num_per_page: Some(1), // We expect at most one result
+            type_property_masks: vec![Self::create_blob_id_projection()],
+            ..Default::default()
+        };
 
         let search_result: icing::SearchResultProto = self.icing_search_engine.search(
             &search_spec,
@@ -298,13 +305,12 @@ impl IcingMetaDatabase {
     ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
     ///    ...]`.
     /// 2. Perform a dot product on `search_embedding` and the matched
-    ///    `[doc1_embedding, ...]`, which gives
-    /// a list of scores `[score1, score2, ...]`.
+    ///    `[doc1_embedding, ...]`, which gives a list of scores `[score1,
+    ///    score2, ...]`.
     /// 3. Sum the scores, and the corresponding memory has the final score
     ///    `score_sum`.
     /// 4. We repeat 1-3 for all memories, rank the memories by `score_sum`, and
-    ///    return the first `limit` ones
-    /// with highest scores.
+    ///    return the first `limit` ones with highest scores.
     pub fn embedding_search(
         &self,
         embedding: &[Embedding],
@@ -320,23 +326,28 @@ impl IcingMetaDatabase {
             "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
         scoring_spec.advanced_scoring_expression = Some(SUM_ALL_MATCHING_EMBEDDING.to_string());
 
-        let mut search_spec = icing::SearchSpecProto::default();
-        search_spec.term_match_type = Some(icing::term_match_type::Code::ExactOnly.into());
-        search_spec.embedding_query_metric_type =
-            Some(icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into());
+        let search_spec = icing::SearchSpecProto {
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            embedding_query_metric_type: Some(
+                icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
+            ),
 
-        search_spec.embedding_query_vectors = embedding
-            .iter()
-            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
-            .collect();
+            embedding_query_vectors: embedding
+                .iter()
+                .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
+                .collect(),
 
-        // Search the first embedding property, specified by `EMBEDDING_NAME`.
-        // Since we have only one embedding property, this is the one to go.
-        search_spec.query = Some("semanticSearch(getEmbeddingParameter(0))".to_string());
-        search_spec.enabled_features.push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
+            // Search the first embedding property, specified by `EMBEDDING_NAME`.
+            // Since we have only one embedding property, this is the one to go.
+            query: Some("semanticSearch(getEmbeddingParameter(0))".to_string()),
+            enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
+            ..Default::default()
+        };
 
-        let mut result_spec = icing::ResultSpecProto::default();
-        result_spec.num_per_page = Some(limit.try_into().unwrap());
+        let mut result_spec = icing::ResultSpecProto {
+            num_per_page: Some(limit.try_into().unwrap()),
+            ..Default::default()
+        };
 
         // We only need the `BlobId`.
         result_spec.type_property_masks.push(Self::create_blob_id_projection());
@@ -365,11 +376,13 @@ impl Drop for IcingMetaDatabase {
     }
 }
 
-/// In memory cache for memories. When a memory is added, it is cached in
-/// `MemoryCache` and also persisted at disk. When a memory is fetched, if the
-/// memory is cached, it is returned directly from the cached. Otherwise, it
-/// will further fetched from the external storage.
-// TODO: b/412698203 - Add eviction to avoid OOM.
+/// In memory cache for memories.
+///
+/// When a memory is added, it is cached in `MemoryCache` and also persisted at
+/// disk. When a memory is fetched, if the memory is cached, it is returned
+/// directly from the cached. Otherwise, it will further fetched from the
+/// external storage.
+/// TODO: b/412698203 - Add eviction to avoid OOM.
 pub struct MemoryCache {
     db_client: ExternalDbClient,
     content_cache: HashMap<BlobId, Memory>,
@@ -622,14 +635,18 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
 
-        let mut memory = Memory::default();
-        memory.id = "Thisisanid".to_string();
-        memory.tags.push("the_tag".to_string());
+        let memory = Memory {
+            id: "Thisisanid".to_string(),
+            tags: vec!["the_tag".to_string()],
+            ..Default::default()
+        };
         let blob_id = 12345;
         icing_database.add_memory(memory, blob_id)?;
-        let mut memory2 = Memory::default();
-        memory2.id = "Thisisanid2".to_string();
-        memory2.tags.push("the_tag".to_string());
+        let memory2 = Memory {
+            id: "Thisisanid2".to_string(),
+            tags: vec!["the_tag".to_string()],
+            ..Default::default()
+        };
         let blob_id2 = 12346;
         icing_database.add_memory(memory2, blob_id2)?;
 

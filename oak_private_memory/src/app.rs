@@ -133,8 +133,7 @@ impl Drop for SealedMemoryHandler {
             debug!("Enter");
             // For test purpose. Will be removed soon
             if let Some(user_context) = session_context.lock().await.as_mut() {
-                let database =
-                    encrypt_database(&user_context.database.meta_db(), &user_context.key);
+                let database = encrypt_database(user_context.database.meta_db(), &user_context.key);
                 if database.is_err() {
                     debug!("Failed to serialize database");
                     return;

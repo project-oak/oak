@@ -57,7 +57,7 @@ mod tests {
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
         let doc1 = create_document_builder()
-            .set_key("namespace".as_bytes(), &"uri1".as_bytes())
+            .set_key("namespace".as_bytes(), "uri1".as_bytes())
             .set_schema("Message".as_bytes())
             .add_string_property(
                 "body".as_bytes(),
@@ -72,12 +72,13 @@ mod tests {
         }
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let mut search_spec = SearchSpecProto::default();
-        search_spec.term_match_type = Some(term_match_type::Code::Prefix.into());
-        search_spec.query = Some("one".to_string());
+        let search_spec = SearchSpecProto {
+            term_match_type: Some(term_match_type::Code::Prefix.into()),
+            query: Some("one".to_string()),
+            ..Default::default()
+        };
 
-        let mut result_spec = ResultSpecProto::default();
-        result_spec.num_per_page = Some(3);
+        let result_spec = ResultSpecProto { num_per_page: Some(3), ..Default::default() };
 
         let search_result_proto =
             icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
@@ -117,7 +118,7 @@ mod tests {
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
         let doc1 = create_document_builder()
-            .set_key("namespace".as_bytes(), &"uri1".as_bytes())
+            .set_key("namespace".as_bytes(), "uri1".as_bytes())
             .set_schema("Message".as_bytes())
             .add_string_property("body".as_bytes(), &["message body one".as_bytes()])
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
@@ -149,12 +150,13 @@ mod tests {
         //assert!(result_proto.status.unwrap().code ==
         // Some(status_proto::Code::Ok.into()));
 
-        let mut search_spec = SearchSpecProto::default();
-        search_spec.term_match_type = Some(term_match_type::Code::Prefix.into());
-        search_spec.query = Some("one".to_string());
+        let search_spec = SearchSpecProto {
+            term_match_type: Some(term_match_type::Code::Prefix.into()),
+            query: Some("one".to_string()),
+            ..Default::default()
+        };
 
-        let mut result_spec = ResultSpecProto::default();
-        result_spec.num_per_page = Some(3);
+        let result_spec = ResultSpecProto { num_per_page: Some(3), ..Default::default() };
 
         let search_result_proto =
             icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
@@ -257,22 +259,28 @@ mod tests {
         scoring_spec.advanced_scoring_expression =
             Some("sum(this.matchedSemanticScores(getEmbeddingParameter(0)))".to_string());
 
-        let mut search_spec = SearchSpecProto::default();
-        search_spec.term_match_type = Some(term_match_type::Code::ExactOnly.into());
-        search_spec.embedding_query_metric_type =
-            Some(search_spec_proto::embedding_query_metric_type::Code::DotProduct.into());
-        search_spec
-            .embedding_query_vectors
-            .push(create_vector_proto(model_sig, &[1.0, -1.0, -1.0, 1.0, -1.0]));
-        search_spec.query = Some("semanticSearch(getEmbeddingParameter(0), -1)".to_string());
-        search_spec.enabled_features.push(LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
-
-        let mut result_spec = ResultSpecProto::default();
-        result_spec.snippet_spec = Some(SnippetSpecProto {
-            num_to_snippet: Some(3),
-            num_matches_per_property: Some(5),
+        let search_spec = SearchSpecProto {
+            term_match_type: Some(term_match_type::Code::ExactOnly.into()),
+            embedding_query_metric_type: Some(
+                search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
+            ),
+            embedding_query_vectors: vec![create_vector_proto(
+                model_sig,
+                &[1.0, -1.0, -1.0, 1.0, -1.0],
+            )],
+            query: Some("semanticSearch(getEmbeddingParameter(0), -1)".to_string()),
+            enabled_features: vec![LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
-        });
+        };
+
+        let result_spec = ResultSpecProto {
+            snippet_spec: Some(SnippetSpecProto {
+                num_to_snippet: Some(3),
+                num_matches_per_property: Some(5),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
 
         // Perform Search and Assert Results
         let search_result = icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);

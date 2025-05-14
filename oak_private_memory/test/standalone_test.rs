@@ -39,7 +39,7 @@ use sealed_memory_rust_proto::oak::private_memory::{
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
-static TEST_KEY: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
+static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
 async fn start_server() -> Result<(
     SocketAddr,
     SocketAddr,
@@ -308,7 +308,7 @@ async fn test_noise_add_get_reset_memory() {
 
     // Key sync
     let request_id = 0xeadbeef;
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
+    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
     send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
 
     let (_key_sync_response, return_id): (KeySyncResponse, i32) =
@@ -399,7 +399,7 @@ async fn test_noise_add_get_reset_memory_as_json() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     // Key sync
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
+    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
     send_plantext_request_as_json(&mut tx, &mut client_session, key_sync_request);
 
     let _key_sync_response: KeySyncResponse =
@@ -458,7 +458,7 @@ async fn test_noise_add_get_reset_memory_as_json() {
 fn proto_serialization_test() {
     let request = KeySyncRequest { uid: 12345678910, data_encryption_key: vec![1, 2, 3] };
     let json_str = "{\"dataEncryptionKey\":\"AQID\",\"uid\":\"12345678910\"}";
-    let request_from_string_num = serde_json::from_str::<KeySyncRequest>(&json_str).unwrap();
+    let request_from_string_num = serde_json::from_str::<KeySyncRequest>(json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
 }
 
@@ -497,7 +497,7 @@ async fn test_embedding_search() {
 
     // Key sync
     let request_id = 0xeadbeef;
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_KEY.to_vec(), uid: 234 };
+    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
     send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
 
     let (_key_sync_response, return_id): (KeySyncResponse, i32) =

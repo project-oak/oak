@@ -33,8 +33,9 @@ const OVERLAY_SCHEMA_PB_PATH: &str = "schema_dir/overlay_schema.pb";
 const SCHEMA_STORE_HEADER_PATH: &str = "schema_dir/schema_store_header";
 const DOCUMENT_LOG_PATH: &str = "document_dir/document_log_v1";
 
-/// Contains all the ground truths files of an icing database,
-/// which can be used to rebuild the original database.
+/// Contains all the ground truths files of an icing database.
+///
+/// Can be used to rebuild the original database.
 /// It allows exporting an icing database as a byte array, so we can
 /// store it as a blob.
 #[derive(Default, Encode, Decode, PartialEq, Debug)]
@@ -142,7 +143,7 @@ impl IcingGroundTruthFiles {
     }
 
     pub fn encode_to_vec(&self) -> Result<Vec<u8>> {
-        Ok(bincode::encode_to_vec(&self, config::standard())?)
+        Ok(bincode::encode_to_vec(self, config::standard())?)
     }
 
     pub fn decode_from_slice(buf: &[u8]) -> Result<Self> {
@@ -152,16 +153,18 @@ impl IcingGroundTruthFiles {
 }
 
 pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
-    let mut icing_options = IcingSearchEngineOptions::default();
-    icing_options.enable_scorable_properties = Some(true);
-    icing_options.base_dir = Some(base_dir.to_string());
-    icing_options
+    IcingSearchEngineOptions {
+        enable_scorable_properties: Some(true),
+        base_dir: Some(base_dir.to_string()),
+        ..Default::default()
+    }
 }
 
 pub fn get_default_scoring_spec() -> ScoringSpecProto {
-    let mut scoring_spec = ScoringSpecProto::default();
-    scoring_spec.rank_by = Some(ranking_strategy::Code::DocumentScore.into());
-    scoring_spec
+    ScoringSpecProto {
+        rank_by: Some(ranking_strategy::Code::DocumentScore.into()),
+        ..Default::default()
+    }
 }
 
 pub fn create_vector_proto(model_signature: &str, values: &[f32]) -> VectorProto {
