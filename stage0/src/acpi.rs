@@ -175,6 +175,28 @@ impl Files for EbdaFiles {
     }
 }
 
+/// Interface for firmware functions that we need: namely, how to load the
+/// configuration files.
+///
+/// This is effectively a subset of the `FwCfg` API that we need for building
+/// tables.
+trait Firmware {
+    fn find(&mut self, name: &CStr) -> Option<DirEntry>;
+    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str>;
+}
+
+/// `FwCfg` is pretty much the canonical implementation of `Firmware` for our
+/// use cases.
+impl<P: crate::Platform> Firmware for FwCfg<P> {
+    fn find(&mut self, name: &CStr) -> Option<DirEntry> {
+        self.find(name)
+    }
+
+    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
+        self.read_file(file, buf)
+    }
+}
+
 /// A wrapper around EBDA memory with helpers to manage it.
 // TODO: b/380246359 - let Ebda wrap around both RSDP and the rest of EBDA.
 #[derive(Debug)]
@@ -283,11 +305,11 @@ enum Zone {
     FSeg = 2,
 }
 
-trait Invoke<P: crate::Platform, F: Files> {
+trait Invoke<FW: Firmware, F: Files> {
     fn invoke(
         &self,
         files: &mut F,
-        fwcfg: &mut FwCfg<P>,
+        fwcfg: &mut FW,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str>;
 }
@@ -327,11 +349,11 @@ impl Allocate {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for Allocate {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
     fn invoke(
         &self,
         files: &mut F,
-        fwcfg: &mut FwCfg<P>,
+        fwcfg: &mut FW,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
@@ -401,11 +423,11 @@ impl AddPointer {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for AddPointer {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPointer {
     fn invoke(
         &self,
         files: &mut F,
-        _fwcfg: &mut FwCfg<P>,
+        _fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let src_file_ptr = files.get_file(self.src_file())?.as_ptr();
@@ -475,11 +497,11 @@ impl AddChecksum {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for AddChecksum {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
     fn invoke(
         &self,
         files: &mut F,
-        _fwcfg: &mut FwCfg<P>,
+        _fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
@@ -536,11 +558,11 @@ impl WritePointer {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for WritePointer {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for WritePointer {
     fn invoke(
         &self,
         _files: &mut F,
-        _fwcfg: &mut FwCfg<P>,
+        _fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::debug!("{:?}", self);
@@ -606,11 +628,11 @@ impl AddPciHoles {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for AddPciHoles {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciHoles {
     fn invoke(
         &self,
         files: &mut F,
-        _fwcfg: &mut FwCfg<P>,
+        _fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
@@ -754,11 +776,11 @@ impl RomfileCommand {
     }
 }
 
-impl<P: crate::Platform, F: Files> Invoke<P, F> for RomfileCommand {
+impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
     fn invoke(
         &self,
         files: &mut F,
-        fwcfg: &mut FwCfg<P>,
+        fwcfg: &mut FW,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
@@ -776,7 +798,7 @@ impl<P: crate::Platform, F: Files> Invoke<P, F> for RomfileCommand {
 
         // Safety: we extract the value out of the union based on the tag value, which
         // is safe to do.
-        let command: &dyn Invoke<P, F> = match self.tag() {
+        let command: &dyn Invoke<FW, F> = match self.tag() {
             Some(CommandTag::Allocate) => unsafe { &self.body.allocate },
             Some(CommandTag::AddPointer) => unsafe { &self.body.pointer },
             Some(CommandTag::AddChecksum) => unsafe { &self.body.checksum },
