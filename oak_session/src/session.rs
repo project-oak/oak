@@ -132,22 +132,12 @@ pub struct ClientSession {
 impl ClientSession {
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
-            step: match config.attestation_provider_config.attestation_type {
-                AttestationType::Bidirectional
-                | AttestationType::SelfUnidirectional
-                | AttestationType::PeerUnidirectional => Step::Attestation {
-                    attester: ClientAttestationProvider::create(
-                        config.attestation_provider_config,
-                    )?,
-                    handshaker_provider: Box::new(ClientHandshakerBuilder {
-                        config: config.handshaker_config,
-                    }),
-                    encryptor_provider: config.encryptor_config.encryptor_provider,
-                },
-                AttestationType::Unattested => Step::Handshake {
-                    handshaker: ClientHandshaker::create(config.handshaker_config)?,
-                    encryptor_provider: config.encryptor_config.encryptor_provider,
-                },
+            step: Step::Attestation {
+                attester: ClientAttestationProvider::create(config.attestation_provider_config)?,
+                handshaker_provider: Box::new(ClientHandshakerBuilder {
+                    config: config.handshaker_config,
+                }),
+                encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
             attestation_result: None,
@@ -309,26 +299,13 @@ impl ServerSession {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional
         );
         Ok(Self {
-            step: match config.attestation_provider_config.attestation_type {
-                AttestationType::Bidirectional
-                | AttestationType::SelfUnidirectional
-                | AttestationType::PeerUnidirectional => Step::Attestation {
-                    attester: ServerAttestationProvider::create(
-                        config.attestation_provider_config,
-                    )?,
-                    handshaker_provider: Box::new(ServerHandshakerBuilder {
-                        config: config.handshaker_config,
-                        client_binding_expected,
-                    }),
-                    encryptor_provider: config.encryptor_config.encryptor_provider,
-                },
-                AttestationType::Unattested => Step::Handshake {
-                    handshaker: ServerHandshaker::new(
-                        config.handshaker_config,
-                        client_binding_expected,
-                    ),
-                    encryptor_provider: config.encryptor_config.encryptor_provider,
-                },
+            step: Step::Attestation {
+                attester: ServerAttestationProvider::create(config.attestation_provider_config)?,
+                handshaker_provider: Box::new(ServerHandshakerBuilder {
+                    config: config.handshaker_config,
+                    client_binding_expected,
+                }),
+                encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
             attestation_result: None,
@@ -466,7 +443,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 self.incoming_requests.push_back(im);
                 Ok(Some(()))
             }
-            (_, _) => Err(anyhow!("unexpected content of session response")),
+            (_, _) => Err(anyhow!("unexpected content of session request")),
         }
     }
 }

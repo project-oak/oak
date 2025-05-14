@@ -168,34 +168,26 @@ pub struct ClientAttestationProvider {
 impl ClientAttestationProvider {
     pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
         Ok(Self {
-            attest_request: match config.attestation_type {
-                AttestationType::Bidirectional | AttestationType::SelfUnidirectional => {
-                    Some(AttestRequest {
-                        endorsed_evidence: config
-                            .self_attesters
-                            .iter()
-                            .map(|(id, attester)| {
-                                let evidence = attester.quote()?;
-                                // Adds endorsements with corresponding ID.
-                                // Endorsements that don't have a corresponding Evidence will not be
-                                // added to the `EndorsedEvidence`.
-                                let endorsements = config
-                                    .self_endorsers
-                                    .get(id)
-                                    .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
-                                    .transpose()?;
-                                let endorsed_evidence =
-                                    EndorsedEvidence { evidence: Some(evidence), endorsements };
-                                Ok((id.clone(), endorsed_evidence))
-                            })
-                            .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+            attest_request: Some(AttestRequest {
+                endorsed_evidence: config
+                    .self_attesters
+                    .iter()
+                    .map(|(id, attester)| {
+                        let evidence = attester.quote()?;
+                        // Adds endorsements with corresponding ID.
+                        // Endorsements that don't have a corresponding Evidence will not be
+                        // added to the `EndorsedEvidence`.
+                        let endorsements = config
+                            .self_endorsers
+                            .get(id)
+                            .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                            .transpose()?;
+                        let endorsed_evidence =
+                            EndorsedEvidence { evidence: Some(evidence), endorsements };
+                        Ok((id.clone(), endorsed_evidence))
                     })
-                }
-                AttestationType::PeerUnidirectional => {
-                    Some(AttestRequest { endorsed_evidence: BTreeMap::new() })
-                }
-                AttestationType::Unattested => None,
-            },
+                    .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+            }),
             config,
             attestation_result: None,
         })
@@ -232,11 +224,10 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional => Some(
+            AttestationType::SelfUnidirectional | AttestationType::Unattested => Some(
                 Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
                     .map_err(AttestationFailure::from),
             ),
-            AttestationType::Unattested => return Err(anyhow!("no attestation message expected")),
         };
         Ok(Some(()))
     }
@@ -254,35 +245,26 @@ pub struct ServerAttestationProvider {
 impl ServerAttestationProvider {
     pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
         Ok(Self {
-            attest_response: match config.attestation_type {
-                AttestationType::Bidirectional | AttestationType::SelfUnidirectional => {
-                    Some(AttestResponse {
-                        endorsed_evidence: config
-                            .self_attesters
-                            .iter()
-                            .map(|(id, attester)| {
-                                let evidence = attester.quote()?;
-                                // Adds endorsements with corresponding ID.
-                                // Endorsements that don't have a corresponding Evidence will not be
-                                // added to the `EndorsedEvidence`.
-                                let endorsements = config
-                                    .self_endorsers
-                                    .get(id)
-                                    .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
-                                    .transpose()?;
-                                let endorsed_evidence =
-                                    EndorsedEvidence { evidence: Some(evidence), endorsements };
-                                Ok((id.clone(), endorsed_evidence))
-                            })
-                            .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+            attest_response: Some(AttestResponse {
+                endorsed_evidence: config
+                    .self_attesters
+                    .iter()
+                    .map(|(id, attester)| {
+                        let evidence = attester.quote()?;
+                        // Adds endorsements with corresponding ID.
+                        // Endorsements that don't have a corresponding Evidence will not be
+                        // added to the `EndorsedEvidence`.
+                        let endorsements = config
+                            .self_endorsers
+                            .get(id)
+                            .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                            .transpose()?;
+                        let endorsed_evidence =
+                            EndorsedEvidence { evidence: Some(evidence), endorsements };
+                        Ok((id.clone(), endorsed_evidence))
                     })
-                }
-                // Servers must respond to the request even if they are not providing evidence.
-                AttestationType::PeerUnidirectional => {
-                    Some(AttestResponse { endorsed_evidence: BTreeMap::new() })
-                }
-                AttestationType::Unattested => None,
-            },
+                    .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+            }),
             config,
             attestation_result: None,
         })
@@ -319,11 +301,10 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional => Some(
+            AttestationType::SelfUnidirectional | AttestationType::Unattested => Some(
                 Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
                     .map_err(AttestationFailure::from),
             ),
-            AttestationType::Unattested => return Err(anyhow!("no attestation message expected")),
         };
         Ok(Some(()))
     }

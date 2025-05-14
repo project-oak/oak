@@ -141,7 +141,7 @@ const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
 /// Tests that test either client or server side in isolation.
 
 #[googletest::test]
-fn unattested_client_attestation_provides_no_request() -> anyhow::Result<()> {
+fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> {
     let client_config = AttestationProviderConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
@@ -153,13 +153,16 @@ fn unattested_client_attestation_provides_no_request() -> anyhow::Result<()> {
     let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
 
     let attest_request = client_attestation_provider.get_outgoing_message();
-    assert_that!(attest_request, ok(none()));
+    assert_that!(
+        attest_request,
+        ok(some(matches_pattern!(AttestRequest { endorsed_evidence: empty() })))
+    );
 
     Ok(())
 }
 
 #[googletest::test]
-fn unattested_client_attestation_accepts_no_response() -> anyhow::Result<()> {
+fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
     let client_config = AttestationProviderConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
@@ -173,13 +176,13 @@ fn unattested_client_attestation_accepts_no_response() -> anyhow::Result<()> {
     let result = client_attestation_provider
         .put_incoming_message(AttestResponse { endorsed_evidence: BTreeMap::from([]) });
 
-    assert_that!(result, err(displays_as(eq("no attestation message expected"))));
+    assert_that!(result, ok(some(())));
 
     Ok(())
 }
 
 #[googletest::test]
-fn unattested_server_attestation_accepts_no_request() -> anyhow::Result<()> {
+fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
     let server_config = AttestationProviderConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
@@ -191,16 +194,13 @@ fn unattested_server_attestation_accepts_no_request() -> anyhow::Result<()> {
     let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
 
     let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
-    assert_that!(
-        server_attestation_provider.put_incoming_message(attest_request),
-        err(displays_as(eq("no attestation message expected")))
-    );
+    assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     Ok(())
 }
 
 #[googletest::test]
-fn unattested_server_attestation_provides_no_response() -> anyhow::Result<()> {
+fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
     let server_config = AttestationProviderConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
@@ -211,7 +211,10 @@ fn unattested_server_attestation_provides_no_response() -> anyhow::Result<()> {
 
     let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
 
-    assert_that!(server_attestation_provider.get_outgoing_message(), ok(none()));
+    assert_that!(
+        server_attestation_provider.get_outgoing_message(),
+        ok(some(matches_pattern!(AttestResponse { endorsed_evidence: empty() })))
+    );
 
     Ok(())
 }

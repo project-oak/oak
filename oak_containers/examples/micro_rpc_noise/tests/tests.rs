@@ -86,17 +86,19 @@ impl ClientSessionHelper for oak_session::ClientSession {
     where
         <T as micro_rpc::Transport>::Error: std::fmt::Debug,
     {
-        let init_request =
-            self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
-                || anyhow::anyhow!("no init message provided, but session not initialized"),
-            )?;
+        while !self.is_open() {
+            let init_request =
+                self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
+                    || anyhow::anyhow!("no init message provided, but session not initialized"),
+                )?;
 
-        let init_response =
-            client.oak_session(&init_request).expect("failed to send initialization request")?;
+            let init_response = client
+                .oak_session(&init_request)
+                .expect("failed to send initialization request")?;
 
-        self.put_incoming_message(init_response).context("error putting init_response response")?;
-
-        anyhow::ensure!(self.is_open());
+            self.put_incoming_message(init_response)
+                .context("error putting init_response response")?;
+        }
         Ok(())
     }
 }
