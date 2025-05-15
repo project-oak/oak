@@ -18,6 +18,7 @@ workspace(name = "oak_private_memory")
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
 
 # sysroot from the oak repo.
 # As we are actually doing cross-compilation: Build on our dev host but run in
@@ -77,10 +78,9 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
-git_repository(
+local_repository(
     name = "oak",
-    commit = "b7f420ae5ab506517ec64fe14e57f2b4ade9cb13",  # 2025-04-14
-    remote = "https://github.com/project-oak/oak.git",
+    path = "..",
 )
 
 # Bazel rules for building OCI images and runtime bundles.
