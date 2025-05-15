@@ -42,8 +42,8 @@ use crate::{
     },
     config::{EncryptorProvider, SessionConfig},
     handshake::{
-        ClientHandshaker, ClientHandshakerBuilder, Handshaker, HandshakerBuilder, ServerHandshaker,
-        ServerHandshakerBuilder,
+        ClientHandshaker, ClientHandshakerBuilder, HandshakeResult, Handshaker, HandshakerBuilder,
+        ServerHandshaker, ServerHandshakerBuilder,
     },
     session_binding::SessionBindingVerifierProvider,
     ProtocolEngine,
@@ -60,6 +60,10 @@ pub trait Session: Send {
     /// Session becomes ready once remote attestation and crypto handshake have
     /// been successfully finished.
     fn is_open(&self) -> bool;
+
+    /// Returns a ref to the handshake result if the handshake is complete,
+    /// otherwise returns None.
+    fn get_handshake_result_ref(&self) -> Option<&HandshakeResult>;
 
     /// Encrypts `plaintext` and send it to the peer.
     ///
@@ -111,7 +115,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
                     handshaker: handshaker_provider.build()?,
                 };
             }
-            Step::Handshake { handshaker, encryptor_provider } => {
+            Step::Handshake { mut handshaker, encryptor_provider } => {
                 *self = Step::Open(
                     encryptor_provider.provide_encryptor(handshaker.take_session_keys()?)?,
                 );
@@ -128,6 +132,7 @@ pub struct ClientSession {
     step: Step<ClientAttestationProvider, ClientHandshaker>,
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
     attestation_results: Option<BTreeMap<String, AttestationResults>>,
+    handshake_result: Option<HandshakeResult>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
 }
@@ -144,6 +149,7 @@ impl ClientSession {
             },
             binding_verifier_providers: config.binding_verifier_providers,
             attestation_results: None,
+            handshake_result: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
         })
@@ -153,6 +159,10 @@ impl ClientSession {
 impl Session for ClientSession {
     fn is_open(&self) -> bool {
         matches!(self.step, Step::Open(_))
+    }
+
+    fn get_handshake_result_ref(&self) -> Option<&HandshakeResult> {
+        self.handshake_result.as_ref()
     }
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
@@ -266,15 +276,17 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 ))?;
-                if let Some(attestation_results) = &self.attestation_results {
-                    verify_session_binding(
-                        &self.binding_verifier_providers,
-                        attestation_results,
-                        &bindings,
-                        handshaker.get_handshake_hash()?.as_slice(),
-                    )?;
-                }
                 if handshaker.is_handshake_complete() {
+                    let handshake_result = handshaker.take_handshake_result()?;
+                    if let Some(attestation_results) = &self.attestation_results {
+                        verify_session_binding(
+                            &self.binding_verifier_providers,
+                            attestation_results,
+                            &bindings,
+                            handshake_result.handshake_hash.as_slice(),
+                        )?;
+                    }
+                    self.handshake_result = Some(handshake_result);
                     self.step.next()?;
                 }
                 Ok(Some(()))
@@ -297,6 +309,7 @@ pub struct ServerSession {
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
     // encryptor is initialized once the handshake is completed and the session becomes open
     attestation_results: Option<BTreeMap<String, AttestationResults>>,
+    handshake_result: Option<HandshakeResult>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
 }
@@ -318,6 +331,7 @@ impl ServerSession {
             },
             binding_verifier_providers: config.binding_verifier_providers,
             attestation_results: None,
+            handshake_result: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
         })
@@ -327,6 +341,10 @@ impl ServerSession {
 impl Session for ServerSession {
     fn is_open(&self) -> bool {
         matches!(self.step, Step::Open(_))
+    }
+
+    fn get_handshake_result_ref(&self) -> Option<&HandshakeResult> {
+        self.handshake_result.as_ref()
     }
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
@@ -439,14 +457,16 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                      expect any"
                 ))?;
                 if handshaker.is_handshake_complete() {
+                    let handshake_result = handshaker.take_handshake_result()?;
                     if let Some(attestation_results) = &self.attestation_results {
                         verify_session_binding(
                             &self.binding_verifier_providers,
                             attestation_results,
                             &bindings,
-                            handshaker.get_handshake_hash()?.as_slice(),
+                            handshake_result.handshake_hash.as_slice(),
                         )?;
                     }
+                    self.handshake_result = Some(handshake_result);
                 }
                 Ok(Some(()))
             }
