@@ -27,14 +27,17 @@ use core::mem;
 
 use anyhow::{anyhow, Context, Error, Ok};
 use oak_crypto::encryptor::Encryptor;
-use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-    SessionBinding, SessionRequest, SessionResponse,
+use oak_proto_rust::oak::{
+    attestation::v1::AttestationResults,
+    session::v1::{
+        session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+        SessionBinding, SessionRequest, SessionResponse,
+    },
 };
 
 use crate::{
     attestation::{
-        AttestationProvider, AttestationSuccess, AttestationType, ClientAttestationProvider,
+        AttestationProvider, AttestationType, AttestationVerdict, ClientAttestationProvider,
         ServerAttestationProvider,
     },
     config::{EncryptorProvider, SessionConfig},
@@ -124,7 +127,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
 pub struct ClientSession {
     step: Step<ClientAttestationProvider, ClientHandshaker>,
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
-    attestation_result: Option<AttestationSuccess>,
+    attestation_results: Option<BTreeMap<String, AttestationResults>>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
 }
@@ -140,7 +143,7 @@ impl ClientSession {
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
-            attestation_result: None,
+            attestation_results: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
         })
@@ -242,9 +245,15 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: attest message received but attester doesn't expect
                      any"
                 ))?;
-                if let Some(attestation_result) = attester.take_attestation_result() {
-                    self.attestation_result = Some(attestation_result?);
-                    self.step.next()?;
+                match attester.take_attestation_result() {
+                    Some(AttestationVerdict::AttestationPassed { attestation_results }) => {
+                        self.attestation_results = Some(attestation_results);
+                        self.step.next()?;
+                    }
+                    Some(AttestationVerdict::AttestationFailed { .. }) => {
+                        return Err(anyhow!("attestation failed"));
+                    }
+                    None => {}
                 }
                 Ok(Some(()))
             }
@@ -257,10 +266,10 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 ))?;
-                if let Some(attestation_result) = &self.attestation_result {
+                if let Some(attestation_results) = &self.attestation_results {
                     verify_session_binding(
                         &self.binding_verifier_providers,
-                        attestation_result,
+                        attestation_results,
                         &bindings,
                         handshaker.get_handshake_hash()?.as_slice(),
                     )?;
@@ -287,7 +296,7 @@ pub struct ServerSession {
     step: Step<ServerAttestationProvider, ServerHandshaker>,
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
     // encryptor is initialized once the handshake is completed and the session becomes open
-    attestation_result: Option<AttestationSuccess>,
+    attestation_results: Option<BTreeMap<String, AttestationResults>>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
 }
@@ -308,7 +317,7 @@ impl ServerSession {
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
-            attestation_result: None,
+            attestation_results: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
         })
@@ -371,9 +380,15 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
         match &mut self.step {
             Step::Attestation { attester, .. } => {
                 if let Some(attest_message) = attester.get_outgoing_message()? {
-                    if let Some(attestation_result) = attester.take_attestation_result() {
-                        self.attestation_result = Some(attestation_result?);
-                        self.step.next()?;
+                    match attester.take_attestation_result() {
+                        Some(AttestationVerdict::AttestationPassed { attestation_results }) => {
+                            self.attestation_results = Some(attestation_results);
+                            self.step.next()?;
+                        }
+                        Some(AttestationVerdict::AttestationFailed { .. }) => {
+                            return Err(anyhow!("attestation failed"));
+                        }
+                        None => {}
                     }
                     Ok(Some(SessionResponse {
                         response: Some(Response::AttestResponse(attest_message)),
@@ -410,8 +425,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 Step::Attestation { attester, .. },
             ) => {
                 attester.put_incoming_message(attest_message)?.ok_or(anyhow!(
-                    "invalid session state: attest message received but attester doesn't expect
-                     any"
+                    "invalid session state: attest message received but attester doesn't expect any"
                 ))?;
                 Ok(Some(()))
             }
@@ -425,10 +439,10 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                      expect any"
                 ))?;
                 if handshaker.is_handshake_complete() {
-                    if let Some(attestation_result) = &self.attestation_result {
+                    if let Some(attestation_results) = &self.attestation_results {
                         verify_session_binding(
                             &self.binding_verifier_providers,
-                            attestation_result,
+                            attestation_results,
                             &bindings,
                             handshaker.get_handshake_hash()?.as_slice(),
                         )?;
@@ -450,11 +464,11 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 
 fn verify_session_binding(
     binding_verifier_providers: &BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
-    attestation: &AttestationSuccess,
+    attestation_results: &BTreeMap<String, AttestationResults>,
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
-    for (verifier_id, results) in &attestation.attestation_results {
+    for (verifier_id, results) in attestation_results {
         let binding_verifier = binding_verifier_providers
             .get(verifier_id)
             .ok_or(anyhow!(

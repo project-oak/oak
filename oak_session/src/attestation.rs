@@ -17,15 +17,9 @@
 //! This module provides an implementation of the Attestation Provider, which
 //! handles remote attestation between two parties.
 
-use alloc::{
-    collections::BTreeMap,
-    string::{String, ToString},
-    sync::Arc,
-    vec::Vec,
-};
-use core::fmt::Display;
+use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
-use anyhow::{anyhow, Context, Error, Ok};
+use anyhow::{Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
@@ -35,58 +29,10 @@ use oak_proto_rust::oak::{
 
 use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
-#[derive(Debug, PartialEq)]
-pub struct AttestationSuccess {
-    // Results from individual verifiers keyed by the attestation type ID.
-    pub attestation_results: BTreeMap<String, AttestationResults>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct AttestationFailure {
-    pub reason: String,
-    // Per verifier error messages (keyed by the attestation type ID).
-    pub error_messages: BTreeMap<String, String>,
-}
-
-impl AttestationFailure {
-    pub fn new(reason: &str) -> Self {
-        AttestationFailure { reason: reason.to_string(), error_messages: BTreeMap::new() }
-    }
-
-    pub fn with_error_messages(reason: &str, error_messages: BTreeMap<String, String>) -> Self {
-        Self { reason: reason.to_string(), error_messages }
-    }
-}
-
-impl Display for AttestationFailure {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if self.error_messages.is_empty() {
-            write!(f, "Attestation failure: {}", self.reason)
-        } else {
-            write!(
-                f,
-                "Attestation failure: {}. Errors from individual verifiers: {}",
-                self.reason,
-                self.error_messages
-                    .iter()
-                    .map(|(id, error)| format!("Verifier ID: {}, error: {}", id, error))
-                    .collect::<Vec<String>>()
-                    .join(";\n")
-            )
-        }
-    }
-}
-
-impl From<Error> for AttestationFailure {
-    fn from(value: Error) -> Self {
-        AttestationFailure { reason: value.to_string(), error_messages: BTreeMap::new() }
-    }
-}
-
-impl From<AttestationFailure> for Error {
-    fn from(value: AttestationFailure) -> Self {
-        anyhow!(value.to_string())
-    }
+#[derive(Debug)]
+pub enum AttestationVerdict {
+    AttestationPassed { attestation_results: BTreeMap<String, AttestationResults> },
+    AttestationFailed { reason: String, error_messages: BTreeMap<String, String> },
 }
 
 /// Configuration of the attestation behavior that the AttestationProvider will
@@ -112,8 +58,7 @@ pub trait AttestationProvider: Send {
     // attestation still is still pending the incoming peer's data. The result is
     // taken rather than copied since the results returned might be heavy and
     // contain cryptographic material.
-    fn take_attestation_result(&mut self)
-        -> Option<Result<AttestationSuccess, AttestationFailure>>;
+    fn take_attestation_result(&mut self) -> Option<AttestationVerdict>;
 }
 
 /// Aggregates the attestation result from multiple verifiers. Implementations
@@ -123,7 +68,7 @@ pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, AttestationResults>,
-    ) -> Result<AttestationSuccess, AttestationFailure>;
+    ) -> AttestationVerdict;
 }
 
 pub struct DefaultAttestationAggregator {}
@@ -132,27 +77,28 @@ impl AttestationAggregator for DefaultAttestationAggregator {
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, AttestationResults>,
-    ) -> Result<AttestationSuccess, AttestationFailure> {
+    ) -> AttestationVerdict {
         if results.is_empty() {
-            return Err(AttestationFailure {
-                reason: "No matching attestation results".to_string(),
+            return AttestationVerdict::AttestationFailed {
+                reason: String::from("No matching attestation results"),
                 error_messages: BTreeMap::new(),
-            });
-        };
+            };
+        }
         let failures: BTreeMap<&String, &AttestationResults> = results
             .iter()
             .filter(|(_, v)| v.status == attestation_results::Status::GenericFailure as i32)
             .collect();
         if !failures.is_empty() {
-            return Err(AttestationFailure {
-                reason: "Verification failed".to_string(),
+            AttestationVerdict::AttestationFailed {
+                reason: String::from("Verification failed"),
                 error_messages: failures
                     .iter()
                     .map(|(id, v)| ((*id).clone(), v.reason.clone()))
                     .collect(),
-            });
-        };
-        Ok(AttestationSuccess { attestation_results: results }).map_err(AttestationFailure::from)
+            }
+        } else {
+            AttestationVerdict::AttestationPassed { attestation_results: results }
+        }
     }
 }
 
@@ -162,7 +108,7 @@ impl AttestationAggregator for DefaultAttestationAggregator {
 pub struct ClientAttestationProvider {
     config: AttestationProviderConfig,
     attest_request: Option<AttestRequest>,
-    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
+    attestation_result: Option<AttestationVerdict>,
 }
 
 impl ClientAttestationProvider {
@@ -195,9 +141,7 @@ impl ClientAttestationProvider {
 }
 
 impl AttestationProvider for ClientAttestationProvider {
-    fn take_attestation_result(
-        &mut self,
-    ) -> Option<Result<AttestationSuccess, AttestationFailure>> {
+    fn take_attestation_result(&mut self) -> Option<AttestationVerdict> {
         self.attestation_result.take()
     }
 }
@@ -224,10 +168,9 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => Some(
-                Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
-                    .map_err(AttestationFailure::from),
-            ),
+            AttestationType::SelfUnidirectional | AttestationType::Unattested => {
+                Some(AttestationVerdict::AttestationPassed { attestation_results: BTreeMap::new() })
+            }
         };
         Ok(Some(()))
     }
@@ -239,7 +182,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
 pub struct ServerAttestationProvider {
     config: AttestationProviderConfig,
     attest_response: Option<AttestResponse>,
-    attestation_result: Option<Result<AttestationSuccess, AttestationFailure>>,
+    attestation_result: Option<AttestationVerdict>,
 }
 
 impl ServerAttestationProvider {
@@ -272,9 +215,7 @@ impl ServerAttestationProvider {
 }
 
 impl AttestationProvider for ServerAttestationProvider {
-    fn take_attestation_result(
-        &mut self,
-    ) -> Option<Result<AttestationSuccess, AttestationFailure>> {
+    fn take_attestation_result(&mut self) -> Option<AttestationVerdict> {
         self.attestation_result.take()
     }
 }
@@ -301,10 +242,9 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
                     )?,
                 ))
             }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => Some(
-                Ok(AttestationSuccess { attestation_results: BTreeMap::new() })
-                    .map_err(AttestationFailure::from),
-            ),
+            AttestationType::SelfUnidirectional | AttestationType::Unattested => {
+                Some(AttestationVerdict::AttestationPassed { attestation_results: BTreeMap::new() })
+            }
         };
         Ok(Some(()))
     }
