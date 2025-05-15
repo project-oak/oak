@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Provider
 import kotlin.jvm.optionals.getOrNull
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -74,6 +75,37 @@ class StreamObserverSessionClientTest {
     client.startSession(responseObserver) { fakeService.start(it) }
 
     done.get(10, TimeUnit.SECONDS)
+  }
+
+  @Test
+  fun client_startedSession_providesUnderlyingSession() {
+    val client = StreamObserverSessionClient(unattestedConfigProvider())
+    val serverConfig = unattestedConfig()
+    val fakeService = FakeService(serverConfig) { it }
+
+    val done = CompletableFuture<Void>()
+    val session = CompletableFuture<OakClientSession>()
+
+    val responseObserver =
+      object : OakSessionStreamObserver {
+        override fun onSessionOpen(clientRequests: StreamObserver<ByteString>) {
+          session.complete(
+            (clientRequests as StreamObserverSessionClient.ClientSessionAccess).oakClientSession
+          )
+          done.complete(null)
+        }
+
+        override fun onNext(response: ByteString) {}
+
+        override fun onError(t: Throwable) {}
+
+        override fun onCompleted() {}
+      }
+
+    client.startSession(responseObserver) { fakeService.start(it) }
+
+    done.get(10, TimeUnit.SECONDS)
+    assertTrue(session.get(10, TimeUnit.SECONDS).isOpen)
   }
 
   @Test

@@ -115,6 +115,20 @@ class StreamObserverSessionClient(
   }
 
   /**
+   * An interface for providing internal [OakClientSession].
+   *
+   * The [`onSessionOpen`] callback StreamObserver will also implement this interface, so if you
+   * really need to get access to the underlying session, you can cast the instance to this
+   * interface.
+   *
+   * This isn't normally needed, and is for advanced features.
+   */
+  interface ClientSessionAccess {
+    /** Get the underlying OakClientSession of the class implementing this. */
+    val oakClientSession: OakClientSession
+  }
+
+  /**
    * The ServerStream observer provided to the server to receive responses.
    *
    * This observer will handle the handshake sequence.
@@ -215,7 +229,9 @@ class StreamObserverSessionClient(
       oakClientSession: OakClientSession,
       toServer: StreamObserver<SessionRequest>,
     ): StreamObserver<ByteString> =
-      object : StreamObserver<ByteString> {
+      object : StreamObserver<ByteString>, ClientSessionAccess {
+        override val oakClientSession: OakClientSession = oakClientSession
+
         private var completed = false
 
         override fun onNext(clientRequest: ByteString) {
