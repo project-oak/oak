@@ -134,7 +134,7 @@ impl Files for EbdaFiles {
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             let ebda = Ebda::instance();
             ebda.check_alignment(layout.align() as u32)?;
-            Ok(&mut ebda.ebda_buf)
+            ebda.allocate(layout.size())
         } else {
             Err("Unsupported file in table-loader")
         }
