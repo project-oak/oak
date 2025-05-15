@@ -21,6 +21,7 @@ function copy_binaries_to_placer() {
         artifacts/oak_functions_containers_app_bundle_insecure.tar
         artifacts/rust_hello_world_enclave_bundle.tar
         artifacts/stage1.cpio
+        artifacts/stage1_tdx.cpio
         artifacts/enclave_apps/key_xor_test_app
         artifacts/client_app.apk
         artifacts/enclave_apps/oak_echo_enclave_app
@@ -45,6 +46,7 @@ function copy_binaries_to_placer() {
         oak_functions_insecure_container
         oak_containers_hello_world_container
         oak_containers_stage1
+        oak_containers_stage1_tdx
         key_xor_test_app
         oak_client_android_app
         oak_echo_enclave_app
