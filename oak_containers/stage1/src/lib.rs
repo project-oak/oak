@@ -83,6 +83,15 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
     mount(None::<&str>, "/sys", Some("sysfs"), MsFlags::empty(), None::<&str>)
         .context("error mounting /sys")?;
 
+    mount(
+        None::<&str>,
+        "/sys/kernel/config",
+        Some("configfs"),
+        MsFlags::MS_NOSUID | MsFlags::MS_NODEV | MsFlags::MS_NOEXEC,
+        None::<&str>,
+    )
+    .context("error mounting /sys/kernel/config")?;
+
     let mut attester = {
         // Safety: This will be the only instance of this struct.
         unsafe {
@@ -121,6 +130,7 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
     let dice_data = attester.serialize();
 
     // Unmount /sys and /dev as they are no longer needed.
+    umount("/sys/kernel/config").context("failed to unmount /sys/kernel/configfs")?;
     umount("/sys").context("failed to unmount /sys")?;
     umount("/dev").context("failed to unmount /dev")?;
 

@@ -55,7 +55,7 @@ impl ApplicationKeysAttester for RtmrAttester {
         _group_kem_public_key: Option<&[u8]>,
         _group_verifying_key: Option<&VerifyingKey>,
     ) -> anyhow::Result<Evidence> {
-        anyhow::bail!("Not implemented");
+        anyhow::bail!("add_application_keys for TDX is not implemented");
     }
 }
 

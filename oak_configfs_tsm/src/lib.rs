@@ -31,12 +31,10 @@ use tokio::{
     time::timeout,
 };
 
-pub struct Rtmrs {
-    visited: [bool; 4],
-}
+struct Rtmrs;
 
 static QUOTE_LOCK: Mutex<u64> = Mutex::const_new(0);
-static RTMR_LOCK: Mutex<Rtmrs> = Mutex::const_new(Rtmrs { visited: [false; 4] });
+static RTMR_LOCK: Mutex<Rtmrs> = Mutex::const_new(Rtmrs);
 
 /// Create a hardware quote for this confidential VM.
 ///
@@ -95,17 +93,20 @@ pub async fn extend(index: RTMR, data: [u8; 48]) -> anyhow::Result<Vec<u8>> {
     }
 
     // We assume that every access to config tsm rtmr requires this lock
-    let mut bm = RTMR_LOCK.lock().await;
+    let _ = RTMR_LOCK.lock().await;
 
     let dir = Path::new(RTMRS_CONFIGFS_PATH);
     let rtmr_dir: PathBuf = dir.join(format!("rtmrs{}", index as usize));
 
     // Create a directory for each RTMR and set up the index
-    if !bm.visited[index as usize] || !(try_exists(rtmr_dir.as_path()).await?) {
-        tokio::fs::create_dir(rtmr_dir.as_path()).await?;
-        bm.visited[index as usize] = true;
-        // Write to the index file.
-        write(rtmr_dir.as_path().join("index"), (index as usize).to_string().as_bytes()).await?;
+    if !(try_exists(rtmr_dir.as_path()).await?) {
+        // Stage1 creates the dir for RTMR2 and the dir exists after configfs
+        // is mounted again. So the create_dir can fail for 1 single time.
+        if tokio::fs::create_dir(rtmr_dir.as_path()).await.is_ok() {
+            // Write to the index file if the directory is created successfully.
+            write(rtmr_dir.as_path().join("index"), (index as usize).to_string().as_bytes())
+                .await?;
+        }
     }
 
     // The corresponding directory exists and index file is ready
