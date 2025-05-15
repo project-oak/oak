@@ -468,12 +468,22 @@ impl Debug for AddPointer {
 ///
 /// Checksum simply sums -X for each byte X in the range using 8-bit math (or in
 /// our case, we just sum together all the numbers and subtract in the end.)
+///
+/// See `bios_linker_loader_add_checksum()` in QEMU
+/// `hw/acpi/bios-linker-loader.c` for the best available documentation.
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct AddChecksum {
     file: RomfileName,
+    /// Location of the checksum to be patched within the file, relative to the
+    /// start of the file
     offset: u32,
+
+    /// Start of the data in the file to checksum, relative to the start of the
+    /// file
     start: u32,
+
+    /// Size of the data in the file to checksum, offset from `start`
     length: u32,
     _padding: [u8; 54],
 }
@@ -508,7 +518,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
 
         if self.start as usize > file.len()
             || (self.start + self.length) as usize > file.len()
-            || self.offset as usize > file.len()
+            || self.offset as usize >= file.len()
         {
             return Err("COMMAND_ADD_CHECKSUM invalid; read or write would overflow file");
         }
@@ -932,7 +942,69 @@ fn print_system_data_table_entries<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::BTreeMap, ffi::CString};
+
+    use googletest::prelude::*;
+
     use super::*;
+
+    struct TestFirmware;
+
+    impl Firmware for TestFirmware {
+        fn find(&mut self, _name: &CStr) -> Option<DirEntry> {
+            unimplemented!()
+        }
+
+        fn read_file(
+            &mut self,
+            _file: &DirEntry,
+            _buf: &mut [u8],
+        ) -> core::result::Result<usize, &'static str> {
+            unimplemented!()
+        }
+    }
+
+    #[derive(Default)]
+    struct TestFiles {
+        files: BTreeMap<CString, Box<[u8]>>,
+    }
+
+    impl Files for TestFiles {
+        fn allocate(
+            &mut self,
+            name: &CStr,
+            layout: Layout,
+            _zone: Zone,
+        ) -> core::result::Result<&mut [u8], &'static str> {
+            if layout.align() != align_of::<u8>() {
+                return Err("test allocator doesn't support alignments");
+            }
+            if self.files.contains_key(name) {
+                return Err("file already exists");
+            }
+
+            self.files.insert(name.to_owned(), vec![0; layout.size()].into_boxed_slice());
+
+            self.get_file_mut(name)
+        }
+
+        fn get_file_mut(&mut self, name: &CStr) -> core::result::Result<&mut [u8], &'static str> {
+            self.files.get_mut(name).map(AsMut::as_mut).ok_or("file not found")
+        }
+
+        fn get_file(&self, name: &CStr) -> core::result::Result<&[u8], &'static str> {
+            self.files.get(name).map(AsRef::as_ref).ok_or("file not found")
+        }
+    }
+
+    impl TestFiles {
+        fn new_file(&mut self, name: &CStr, contents: &[u8]) {
+            let new_file = self
+                .allocate(name, Layout::from_size_align(contents.len(), 1).unwrap(), Zone::FSeg)
+                .unwrap();
+            new_file.copy_from_slice(contents);
+        }
+    }
 
     #[test]
     pub fn test_table_loader_interpretation() {
@@ -969,5 +1041,68 @@ mod tests {
         ];
 
         assert_eq!(commands, &expected_commands[..]);
+    }
+
+    #[test]
+    pub fn test_add_checksum() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+
+        files.new_file(
+            c"test",
+            &[0xD4, 0x0A, 0x1B, 0x73, 0x0F, 0x3A, 0x0F, 0x41, 0x00, 0xA7, 0x0A, 0x14, 0x00],
+        );
+
+        AddChecksum::new("test", 12, 0, 12)
+            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .expect("failed to compute checksum");
+
+        assert_that!(
+            files.get_file(c"test"),
+            ok(eq(&[0xD4, 0x0A, 0x1B, 0x73, 0x0F, 0x3A, 0x0F, 0x41, 0x00, 0xA7, 0x0A, 0x14, 0x36]))
+        );
+    }
+
+    #[gtest]
+    pub fn test_add_checksum_simple() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+
+        // File does not exist.
+        expect_that!(
+            AddChecksum::new("test", 12, 0, 12).invoke(&mut files, &mut TestFirmware, &mut digest),
+            err(anything())
+        );
+
+        files.new_file(c"test", &[0x00, 0x00, 0x00, 0x00]);
+
+        // Offset past the end of file.
+        expect_that!(
+            AddChecksum::new("test", 4, 0, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            err(anything())
+        );
+
+        // Start past the end of file.
+        expect_that!(
+            AddChecksum::new("test", 3, 4, 1).invoke(&mut files, &mut TestFirmware, &mut digest),
+            err(anything())
+        );
+
+        // Offset would read beyond the file.
+        expect_that!(
+            AddChecksum::new("test", 0, 3, 2).invoke(&mut files, &mut TestFirmware, &mut digest),
+            err(anything())
+        );
+
+        // Finally, a basic success test (although we don't check the result)
+        expect_that!(
+            AddChecksum::new("test", 0, 1, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            ok(())
+        );
+
+        expect_that!(
+            AddChecksum::new("test", 3, 0, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            ok(())
+        );
     }
 }

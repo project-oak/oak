@@ -118,5 +118,6 @@ rust_test(
     data = ["testdata/table_loader"],
     deps = [
         "//oak_file_utils",
+        "@oak_crates_index//:googletest",
     ],
 )
