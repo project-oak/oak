@@ -437,7 +437,6 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPointer {
             return Err("Write for COMMAND_ADD_POINTER would overflow destination file");
         }
         if self.size > 8 || !self.size.is_power_of_two() {
-            log::debug!("size: {}", self.size);
             return Err("COMMAND_ADD_POINTER has invalid size");
         }
         let mut pointer = 0u64;
@@ -942,9 +941,11 @@ fn print_system_data_table_entries<'a>(
 
 #[cfg(test)]
 mod tests {
+    use core::slice;
     use std::{collections::BTreeMap, ffi::CString};
 
     use googletest::prelude::*;
+    use zeroize::Zeroize;
 
     use super::*;
 
@@ -964,9 +965,55 @@ mod tests {
         }
     }
 
+    enum TestFile {
+        /// File that is actually backed by a chunk of memory and can be read
+        /// from/written to.
+        BackedFile(Box<[u8]>),
+
+        /// Fake file: just a pointer. Potentially unsafe and must _only_ be
+        /// used to look at the address of the file and never dereferenced. This
+        /// "fake file" is needed to ensure predictable memory addresses (for
+        /// example, if we need to ensure that it's a 16-bit address).
+        FakeFile(*mut u8),
+    }
+
+    impl From<Box<[u8]>> for TestFile {
+        fn from(file: Box<[u8]>) -> Self {
+            TestFile::BackedFile(file)
+        }
+    }
+
+    impl AsRef<[u8]> for TestFile {
+        fn as_ref(&self) -> &[u8] {
+            match self {
+                TestFile::BackedFile(file) => file.as_ref(),
+                TestFile::FakeFile(ptr) => {
+                    // Safety: it is safe to read (or write) exactly zero bytes to that address.
+                    // That is, the slice will be empty, as reading or writing anything would be
+                    // unsafe.
+                    unsafe { slice::from_raw_parts(*ptr, 0) }
+                }
+            }
+        }
+    }
+
+    impl AsMut<[u8]> for TestFile {
+        fn as_mut(&mut self) -> &mut [u8] {
+            match self {
+                TestFile::BackedFile(file) => file.as_mut(),
+                TestFile::FakeFile(ptr) => {
+                    // Safety: it is safe to read (or write) exactly zero bytes to that address.
+                    // That is, the slice will be empty, as reading or writing anything would be
+                    // unsafe.
+                    unsafe { slice::from_raw_parts_mut(*ptr, 0) }
+                }
+            }
+        }
+    }
+
     #[derive(Default)]
     struct TestFiles {
-        files: BTreeMap<CString, Box<[u8]>>,
+        files: BTreeMap<CString, TestFile>,
     }
 
     impl Files for TestFiles {
@@ -983,7 +1030,7 @@ mod tests {
                 return Err("file already exists");
             }
 
-            self.files.insert(name.to_owned(), vec![0; layout.size()].into_boxed_slice());
+            self.files.insert(name.to_owned(), vec![0; layout.size()].into_boxed_slice().into());
 
             self.get_file_mut(name)
         }
@@ -1003,6 +1050,18 @@ mod tests {
                 .allocate(name, Layout::from_size_align(contents.len(), 1).unwrap(), Zone::FSeg)
                 .unwrap();
             new_file.copy_from_slice(contents);
+        }
+
+        fn new_file_ptr(
+            &mut self,
+            name: &CStr,
+            ptr: *mut u8,
+        ) -> core::result::Result<(), &'static str> {
+            if self.files.contains_key(name) {
+                return Err("file already exists");
+            }
+            self.files.insert(name.to_owned(), TestFile::FakeFile(ptr));
+            Ok(())
         }
     }
 
@@ -1104,5 +1163,54 @@ mod tests {
             AddChecksum::new("test", 3, 0, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
             ok(())
         );
+    }
+
+    #[gtest]
+    pub fn test_add_pointer() {
+        let mut files = TestFiles::default();
+        let mut digest = Sha256::default();
+
+        // Obviously we have no idea where exactly that file lands so we need to
+        // dynamically determine its location.
+        // The file size is 8 bytes, so it'll fit any 64-bit address.
+        files.new_file(c"test", &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        let address = files.get_file(c"test").unwrap().as_ptr() as usize;
+
+        // Check 1: can we just write our own address?
+        AddPointer::new("test", "test", 0, 8)
+            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .expect("failed to add pointer");
+
+        let expected = address.to_le_bytes();
+        expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
+
+        // Check 2: are offsets respected?
+        let offset: usize = 0x030201;
+        files.get_file_mut(c"test").unwrap().copy_from_slice(&offset.to_le_bytes());
+
+        let expected = (address + offset).to_le_bytes();
+        AddPointer::new("test", "test", 0, 8)
+            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .expect("failed to add pointer");
+        expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
+
+        let address: usize = 0xAABBCCDD;
+        files.new_file_ptr(c"32bit", address as *mut u8).unwrap();
+
+        // Check 3: store a most definitely 32-bit address and see that it works.
+        files.get_file_mut(c"test").unwrap().zeroize();
+        AddPointer::new("test", "32bit", 0, 8)
+            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .expect("failed to add pointer");
+        expect_that!(files.get_file(c"test"), ok(eq(&address.to_le_bytes()[..])));
+
+        // Check 4: write that address to just 4 bytes -- the last 4 bytes to make it
+        // complicated.
+        files.get_file_mut(c"test").unwrap().zeroize();
+        let expected: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0xDD, 0xCC, 0xBB, 0xAA];
+        AddPointer::new("test", "32bit", 4, 4)
+            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .expect("failed to add pointer");
+        expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
     }
 }
