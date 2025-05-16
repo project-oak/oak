@@ -85,7 +85,7 @@
                 autoconf
                 autogen
                 automake
-                bazel
+                bazel_7
                 bazel-buildtools
               ];
             };

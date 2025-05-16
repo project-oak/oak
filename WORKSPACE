@@ -22,82 +22,14 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 # The `name` argument in all `http_archive` rules should be equal to the
 # WORKSPACE name of the corresponding library.
 
-# Google Abseil.
-# https://github.com/abseil/abseil-cpp
-http_archive(
-    name = "com_google_absl",
-    sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
-    strip_prefix = "abseil-cpp-20240722.0",
-    urls = [
-        # Abseil LTS 20240116.1
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.tar.gz",
-    ],
-)
-
-# BoringSSL.
-# https://github.com/google/boringssl
-http_archive(
-    name = "bssl",
-    patch_args = ["-p1"],
-    patch_tool = "patch",
-    patches = ["//third_party/boringssl:boringssl.patch"],
-    sha256 = "a6d197fe3e5ad4d59dd5912a6ec9a8b69fc87f496ab11e05e7d0017b0ec70ecd",
-    strip_prefix = "boringssl-7a6e828dc53ba9a56bd49915f2a0780d63af97d2",
-    urls = [
-        # Head commit on 2024-07-25.
-        "https://github.com/google/boringssl/archive/7a6e828dc53ba9a56bd49915f2a0780d63af97d2.zip",
-    ],
-)
-
-# GoogleTest
-# https://github.com/google/googletest
-http_archive(
-    name = "com_google_googletest",
-    sha256 = "8c0ceafa3ea24bf78e3519b7846d99e76c45899aa4dac4d64e7dd62e495de9fd",
-    strip_prefix = "googletest-b514bdc898e2951020cbdca1304b75f5950d1f59",
-    urls = [
-        # Latest commit for version 1.13.0. This requires at least C++14.
-        "https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip",
-    ],
-)
-
-# GoogleBenchmark
-# https://github.com/google/benchmark
-http_archive(
-    name = "com_github_google_benchmark",
-    strip_prefix = "benchmark-1.9.1",
-    urls = [
-        "https://github.com/google/benchmark/archive/refs/tags/v1.9.1.zip",
-    ],
-)
-
-# C++ gRPC support.
-# https://github.com/grpc/grpc
-http_archive(
-    name = "com_github_grpc_grpc",
-    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
-    strip_prefix = "grpc-1.62.0",
-    urls = [
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
-    ],
-)
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-
-grpc_extra_deps()
-
 # Java gRPC support.
 # https://github.com/grpc/grpc-java
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "4a37fbdf88c8344e14a12bb261aa3eb1401fa47cfc312fb82260592aa993171a",
-    strip_prefix = "grpc-java-1.62.0",
+    sha256 = "524a3d687f06ffd1c6ab66dbbb5de5b9f6adaa662570aa56e553d86c2065eb31",
+    strip_prefix = "grpc-java-1.72.0",
     urls = [
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.62.0.tar.gz",
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.72.0.tar.gz",
     ],
 )
 
@@ -109,6 +41,7 @@ grpc_java_repositories()
 http_archive(
     name = "com_github_grpc_grpc_kotlin",
     repo_mapping = {"@io_bazel_rules_kotlin": "@rules_kotlin"},
+    sha256 = "cf7975a6edd62a3605f84636804d44e6755db6f7fde3d0e0ab8e1a2837c6e2b5",
     strip_prefix = "grpc-kotlin-1.4.2",
     url = "https://github.com/grpc/grpc-kotlin/archive/refs/tags/v1.4.2.tar.gz",
 )
@@ -122,27 +55,15 @@ load(
 
 grpc_kt_repositories()
 
-### --- Base Proto Support --- ###
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "63150aba23f7a90fd7d87bdf514e459dd5fe7023fdde01b56ac53335df64d4bd",
-    strip_prefix = "protobuf-29.2",
-    url = "https://github.com/protocolbuffers/protobuf/releases/download/v29.2/protobuf-29.2.tar.gz",
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
 # External Java rules.
 # https://github.com/bazelbuild/rules_jvm_external
 http_archive(
     name = "rules_jvm_external",
-    sha256 = "f86fd42a809e1871ca0aabe89db0d440451219c3ce46c58da240c7dcdc00125f",
-    strip_prefix = "rules_jvm_external-5.2",
+    sha256 = "a1e351607f04fed296ba33c4977d3fe2a615ed50df7896676b67aac993c53c18",
+    strip_prefix = "rules_jvm_external-6.7",
     urls = [
         # Rules Java v5.2 (2023-04-13).
-        "https://github.com/bazelbuild/rules_jvm_external/releases/download/5.2/rules_jvm_external-5.2.tar.gz",
+        "https://github.com/bazelbuild/rules_jvm_external/releases/download/6.7/rules_jvm_external-6.7.tar.gz",
     ],
 )
 
@@ -189,23 +110,6 @@ load("@maven//:compat.bzl", "compat_repositories")
 
 compat_repositories()
 
-# Bazel rules for Android applications.
-# https://github.com/bazelbuild/rules_android
-http_archive(
-    name = "build_bazel_rules_android",
-    sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
-    strip_prefix = "rules_android-0.1.1",
-    urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
-)
-
-load("@build_bazel_rules_android//android:rules.bzl", "android_sdk_repository")
-
-android_sdk_repository(
-    name = "androidsdk",
-    api_level = 30,
-    build_tools_version = "30.0.0",
-)
-
 http_archive(
     name = "rules_foreign_cc",
     sha256 = "5816f4198184a1e0e682d7e6b817331219929401e2f18358fac7f7b172737976",
@@ -219,27 +123,13 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
 
-http_archive(
-    name = "rules_kotlin",
-    sha256 = "d9898c3250e0442436eeabde4e194c30d6c76a4a97f517b18cefdfd4e345725a",
-    url = "https://github.com/bazelbuild/rules_kotlin/releases/download/v1.9.1/rules_kotlin-v1.9.1.tar.gz",
-)
-
-load("@rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories")
-
-kotlin_repositories()  # if you want the default. Otherwise see custom kotlinc distribution below
-
-load("@rules_kotlin//kotlin:core.bzl", "kt_register_toolchains")
-
-kt_register_toolchains()  # to use the default toolchain, otherwise see toolchains below
-
 # C++ CBOR support.
 # https://android.googlesource.com/platform/external/libcppbor
 git_repository(
     name = "libcppbor",
     build_file = "@//:third_party/google/libcppbor/BUILD",
-    # Head commit on 2023-12-04.
-    commit = "20d2be8672d24bfb441d075f82cc317d17d601f8",
+    # Head commit on 202505-09
+    commit = "b1b998be4ec447f3086e7fd6a7f78eaec66a1c45",
     patches = [
         "@//:third_party/google/libcppbor/remove_macro.patch",
         "@//:third_party/google/libcppbor/limits.patch",
@@ -360,78 +250,17 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/nvidia-base-image/" + NVIDIA_BASE_IMAGE_SHA256 + ".tar.xz",
 )
 
-# Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by
-# distroless images. The glibc version provided by nix may be too new.
-# This (currently) needs to be loaded after rules_oci because it defaults to using an older version
-# of aspect-build/bazel-lib.
-http_archive(
-    name = "aspect_gcc_toolchain",
-    patches = [
-        "@//:third_party/aspect-gcc.patch",
-    ],
-    sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
-    strip_prefix = "gcc-toolchain-0.4.2",
-    urls = [
-        "https://github.com/aspect-build/gcc-toolchain/archive/refs/tags/0.4.2.tar.gz",
-    ],
-)
+load("//bazel/llvm:deps.bzl", "load_llvm_repositories")
 
-load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
+load_llvm_repositories()
 
-gcc_toolchain_dependencies()
+load("//bazel/llvm:defs.bzl", "setup_llvm_toolchains")
 
-load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+setup_llvm_toolchains()
 
-gcc_register_toolchain(
-    name = "gcc_toolchain_x86_64",
-    # Prevents aspect_gcc from rendering -nostdinc flag. Needed to compile wasmtime.
-    # See b/352306808#comment25.
-    extra_cflags = [
-        "-B%workspace%/bin",
-    ],
-    # Manually override ldflags and includes to paths we know exist in our sysroot.
-    # These are based on https://github.com/f0rmiga/gcc-toolchain/blob/36e3e1f430871b539ce9261f53491564aa91c170/sysroot/flags.bzl,
-    # just adjusted for our environment.
-    extra_ldflags = [
-        "-B%workspace%/bin",
-        "-B%sysroot%/usr/lib/x86_64-linux-gnu",
-        "-B%sysroot%/lib64/x86_64-linux-gnu",
-        "-L%sysroot%/lib64/x86_64-linux-gnu",
-        "-L%sysroot%/usr/lib/x86_64-linux-gnu",
-        "-L%sysroot%/lib/gcc/x86_64-linux-gnu/12",
-    ],
-    includes = [
-        # Order matters here! Don't let it get sorted.
-        "%sysroot%/lib/gcc/x86_64-linux-gnu/12/include",
-        "%sysroot%/usr/include/x86_64-linux-gnu",
-        "%sysroot%/usr/include/c++/12",
-        "%sysroot%/usr/include/x86_64-linux-gnu/c++/12/",
-        "%sysroot%/usr/include",
-    ],
-    # sha256 of the compiler package
-    sha256 = "5d515f6e4b311d7636a3cf600cd02fde7d0beb0a2f143df4921ff5a61cbaebcb",
-    # what prefix to strip from the compiler package
-    strip_prefix = "x86-64-v3--glibc--stable-2024.02-1",
-    # Use the sysroot which is effectively our system image for consistency.
-    sysroot = "@oak_cc_toolchain_sysroot//:sysroot",
-    # target_compatible_with defaults to os:linux.
-    target_arch = ARCHS.x86_64,
-    # Which compiler to use: this is GCC 12, just as in Debian.
-    # Note: v4 compiler requires AVX512. But recent AMD workstation processor
-    # e.g. 5995WX does not support AVX512. We have to use v3 which is more
-    # friendly to AMD users.
-    url = "https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64-v3/tarballs/x86-64-v3--glibc--stable-2024.02-1.tar.bz2",
-)
+load("//bazel/llvm:reg.bzl", "register_llvm_toolchains")
 
-gcc_register_toolchain(
-    name = "gcc_toolchain_x86_64_unknown_none",  # Repository @gcc_toolchain_x86_64_unknown_none
-    extra_ldflags = ["-nostdlib"],
-    target_arch = ARCHS.x86_64,
-    target_compatible_with = [
-        "@platforms//cpu:x86_64",
-        "@platforms//os:none",
-    ],
-)
+register_llvm_toolchains()
 
 load("//bazel/rust:deps.bzl", "load_rust_repositories")
 
@@ -469,23 +298,3 @@ nix_kernel_repo(
     bzImage_sha256 = "9e4dd5c5cebb4be3bea8747035979ab373b92124bbb9dcdef19325cea7116717",
     bzImage_vanilla_sha256 = "1ce6de1a2c4885dbf6d445a5bac390e285a76104d52e5356501330b409aaf141",
 )
-
-# Tink C++
-# https://github.com/tink-crypto/tink-cc
-http_archive(
-    name = "com_github_tink_crypto_tink_cc",
-    sha256 = "363ce671ab5ce0b24f279d3647185597a25f407c3608db007315f79f151f436b",
-    strip_prefix = "tink-cc-2.3.0",
-    urls = [
-        # Tink v2.3.0 release
-        "https://github.com/tink-crypto/tink-cc/archive/refs/tags/v2.3.0.zip",
-    ],
-)
-
-load("@com_github_tink_crypto_tink_cc//:tink_cc_deps.bzl", "tink_cc_deps")
-
-tink_cc_deps()
-
-load("@com_github_tink_crypto_tink_cc//:tink_cc_deps_init.bzl", "tink_cc_deps_init")
-
-tink_cc_deps_init()

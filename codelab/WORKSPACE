@@ -16,47 +16,32 @@
 
 workspace(name = "enclave_app_starter")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 # The `name` argument in all `http_archive` rules should be equal to the
 # WORKSPACE name of the corresponding library.
 
-git_repository(
+# To use this in your repository:
+#git_repository(
+#    name = "oak",
+#    commit = "1da329d8cdfec7281eca1f35754358fd67c057fa",  # 2025-05-12
+#    remote = "https://github.com/project-oak/oak.git",
+#)
+
+local_repository(
     name = "oak",
-    commit = "c3f68a9b820fd12175e56120736ada7aa12bb598",  # 2025-01-14
-    remote = "https://github.com/project-oak/oak.git",
+    path = "..",
 )
 
-http_archive(
-    name = "aspect_gcc_toolchain",
-    sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
-    strip_prefix = "gcc-toolchain-0.4.2",
-    urls = [
-        "https://github.com/aspect-build/gcc-toolchain/archive/refs/tags/0.4.2.tar.gz",
-    ],
-)
+load("@oak//bazel/llvm:deps.bzl", "load_llvm_repositories")
 
-load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
+load_llvm_repositories()
 
-gcc_toolchain_dependencies()
+load("@oak//bazel/llvm:defs.bzl", "setup_llvm_toolchains")
 
-load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+setup_llvm_toolchains()
 
-gcc_register_toolchain(
-    name = "gcc_toolchain_x86_64",
-    target_arch = ARCHS.x86_64,
-)
+load("@oak//bazel/llvm:reg.bzl", "register_llvm_toolchains")
 
-gcc_register_toolchain(
-    name = "gcc_toolchain_x86_64_unknown_none",
-    extra_ldflags = ["-nostdlib"],
-    target_arch = ARCHS.x86_64,
-    target_compatible_with = [
-        "@platforms//cpu:x86_64",
-        "@platforms//os:none",
-    ],
-)
+register_llvm_toolchains()
 
 load("@oak//bazel/rust:deps.bzl", "load_rust_repositories")
 
@@ -80,37 +65,3 @@ create_oak_crate_repositories(
 load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
-
-# Bits of Oak depend on gRPC and Java(!), thus these. There are no direct uses
-# of either in this code, however.
-
-http_archive(
-    name = "com_github_grpc_grpc",
-    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
-    strip_prefix = "grpc-1.62.0",
-    urls = [
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
-    ],
-)
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-
-grpc_extra_deps()
-
-http_archive(
-    name = "io_grpc_grpc_java",
-    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
-    strip_prefix = "grpc-java-1.56.0",
-    urls = [
-        # Java gRPC v1.56.0 (2023-06-21).
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
-    ],
-)
-
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()

@@ -72,6 +72,14 @@ SECTIONS {
         *(.data .data.*)
     } : data
 
+    .got : {
+        *(.got .got.*)
+    } : data
+
+    .dynamic : {
+        *(.dynamic .dynamic.*)
+    } : data
+
     .bss : ALIGN(2M) {
         bss_start = .;
         *(.bss .bss.*)

@@ -171,8 +171,8 @@
                 autoconf
                 autogen
                 automake
-                jdk11_headless
-                bazel
+                jdk17_headless
+                bazel_7
                 androidSdk
                 bazel-buildtools
               ];

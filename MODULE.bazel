@@ -1,0 +1,51 @@
+###############################################################################
+# Bazel now uses Bzlmod by default to manage external dependencies.
+# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
+#
+# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
+###############################################################################
+# https://github.com/grpc/grpc
+bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
+
+# https://github.com/google/boringssl
+bazel_dep(name = "boringssl", version = "0.20250415.0")
+
+# https://github.com/google/protobuf
+bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
+
+# https://github.com/google/googletest
+bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
+
+# https://github.com/abseil/abseil-cpp
+bazel_dep(name = "abseil-cpp", version = "20250127.1", repo_name = "com_google_absl")
+
+# https://github.com/bazelbuild/rules_pkg
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+
+# https://github.com/google/benchmark
+bazel_dep(name = "google_benchmark", version = "1.9.1", repo_name = "com_github_google_benchmark")
+
+# https://github.com/tink-crypto/tink-cc
+bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_crypto_tink_cc")
+
+# https://github.com/bazel-contrib/rules_python
+bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+
+# Need ignore_root_user_error to run in docker container in CI
+python.toolchain(is_default = True, python_version = "3.11", ignore_root_user_error = True)
+
+bazel_dep(name = "rules_android", version = "0.6.1")
+
+remote_android_extensions = use_extension(
+    "@rules_android//bzlmod_extensions:android_extensions.bzl",
+    "remote_android_tools_extensions",
+)
+use_repo(remote_android_extensions, "android_gmaven_r8", "android_tools")
+
+android_sdk_repository_extension = use_extension("@rules_android//rules/android_sdk_repository:rule.bzl", "android_sdk_repository_extension")
+use_repo(android_sdk_repository_extension, "androidsdk")
+
+register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
+
+bazel_dep(name = "rules_kotlin", version = "2.1.4")

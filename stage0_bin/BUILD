@@ -34,13 +34,6 @@ rust_binary(
         "src/asm/ap_boot.s",
         "src/asm/reset_vector.s",
     ],
-    features = [
-        # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
-        "no_libstdcxx",
-
-        # The default link flags include dynamically linking -lm, which causes failures.
-        "-default_link_flags",
-    ],
     linker_script = ":layout.ld",
     platform = "//:x86_64-firmware",
     rustc_flags = [

@@ -26,7 +26,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     platform = "//:x86_64-unknown-none",
     rustc_flags = [
-        "--codegen=link-arg=-zmax-page-size=0x200000",
+        "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
     deps = [
         "//micro_rpc",

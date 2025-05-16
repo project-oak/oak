@@ -14,24 +14,10 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+"""Register the LLVM toolchain that Oak uses"""
 
-package(
-    default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
-)
+load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
 
-rust_binary(
-    name = "enclave_app",
-    srcs = glob(["src/*.rs"]),
-    platform = "@oak//:x86_64-unknown-none",
-    rustc_flags = [
-        "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
-    ],
-    deps = [
-        "//service",
-        "@oak//micro_rpc",
-        "@oak//oak_restricted_kernel_sdk",
-        "@oak_crates_index//:serde",
-    ],
-)
+def register_llvm_toolchains():
+    """Register the LLVM toolchain that Oak uses"""
+    llvm_register_toolchains()

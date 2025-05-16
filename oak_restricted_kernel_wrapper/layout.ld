@@ -106,6 +106,14 @@ SECTIONS {
         *(.data .data.*)
     } : data
 
+    .got : {
+        *(.got .got.*)
+    } : data
+
+    .dynamic : {
+        *(.dynamic .dynamic.*)
+    } : data
+
     .bss : ALIGN(4K) {
         *(.bss .bss.*)
     } : bss
@@ -120,4 +128,3 @@ SECTIONS {
         *(.eh_frame*)
     }
 }
-

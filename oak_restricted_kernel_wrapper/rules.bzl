@@ -39,7 +39,6 @@ def kernel_bzimage_and_measurements(name, payload, visibility = None):
             payload,
         ],
         crate_features = ["bazel"],  # TODO: b/333064338 remove.
-        features = ["no_libstdcxx"],  # See https://github.com/f0rmiga/gcc-toolchain/blob/0.4.2/docs/README.md
         linker_script = ":layout.ld",
         platform = "//:x86_64-unknown-none-noavx",
         rustc_env = {

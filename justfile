@@ -99,7 +99,7 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
-run_oak_functions_launcher wasm_path port lookup_data_path:
+run_oak_functions_launcher wasm_path port lookup_data_path: (restricted_kernel_bzimage_and_provenance_subjects "_virtio_console_channel")
     artifacts/oak_functions_launcher \
         --bios-binary=artifacts/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
@@ -356,7 +356,7 @@ wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatibl
 # The kokoro script build_test_and_copy_to_placer expects this recipe to
 # generate properly optimized and stripped binaries that it will then copy to
 # placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
-build-and-test: test-workspace std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan test-codelab
+build-and-test: std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan test-codelab test-workspace
 
 # The list of ASAN targets is currently constrained right now because:
 # * ASAN builds/tests are quite a bit slower

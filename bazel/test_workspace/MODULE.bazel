@@ -1,0 +1,13 @@
+###############################################################################
+# Bazel now uses Bzlmod by default to manage external dependencies.
+# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
+#
+# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
+###############################################################################
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "aspect_bazel_lib", version = "2.16.0")
+
+# https://github.com/google/protobuf
+bazel_dep(name = "protobuf", version = "29.2", repo_name = "com_google_protobuf")
+bazel_dep(name = "grpc", version = "1.71.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
