@@ -16,14 +16,7 @@
 
 use core::slice;
 
-use elf::{
-    abi::{PT_LOAD, R_X86_64_RELATIVE},
-    endian::{AnyEndian, LittleEndian},
-    file::Class,
-    relocation::RelaIterator,
-    segment::ProgramHeader,
-    ElfBytes,
-};
+use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 use x86_64::{
     structures::paging::{PageSize, Size1GiB, Size2MiB},
@@ -95,41 +88,6 @@ fn load_segment(
         }
     }
     Ok(())
-}
-
-/// Parses the relocation from the buffer and patches them based on the
-/// specified offset.
-pub fn patch_relocations(
-    buf: &[u8],
-    base_offset: VirtAddr,
-    data_start: VirtAddr,
-    data_end: VirtAddr,
-) -> Result<(), &'static str> {
-    // We assume that the relocations will be specified in the 64-bit RELA format.
-    // See <https://docs.oracle.com/cd/E23824_01/html/819-0690/chapter6-54839.html>
-    RelaIterator::new(LittleEndian, Class::ELF64, buf).try_for_each(|relocation| {
-        if relocation.r_type != R_X86_64_RELATIVE {
-            return Err("only R_X86_64_RELATIVE is currently supported");
-        }
-        if relocation.r_sym != 0 {
-            return Err("unexpected relocation symbol value found");
-        }
-        let target = base_offset + relocation.r_offset;
-        if target < data_start || target > data_end - core::mem::size_of::<u64>() {
-            return Err("relocation target is outside of the expected memory range");
-        }
-        if relocation.r_addend < 0 {
-            return Err("relocation points before the base offset");
-        }
-        // Safety: we have checked that the target falls in the expected memory range.
-        // We don't make any assumptions about the existing bytes and will only
-        // overwrite it, not read it. We rely on the linker to make sure the relocations
-        // point to valid locations that must be updated.
-        unsafe {
-            target.as_mut_ptr::<u64>().write((base_offset + (relocation.r_addend as u64)).as_u64());
-        }
-        Ok(())
-    })
 }
 
 /// Makes sure that a chunk of memory is valid

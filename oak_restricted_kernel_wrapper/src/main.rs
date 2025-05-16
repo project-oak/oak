@@ -20,47 +20,20 @@
 mod asm;
 mod elf;
 
-use core::{ffi::c_void, panic::PanicInfo};
+use core::panic::PanicInfo;
 
 use elf::parse_elf_file;
 use oak_linux_boot_params::BootParams;
 use x86_64::{
     instructions::{hlt, interrupts::int3},
-    structures::paging::{PageSize, Size4KiB},
     VirtAddr,
 };
-
-extern "C" {
-    // The start of the bootable code. We use this to determine the offset at which
-    // the wrapper binary was loaded into memory.
-    #[link_name = "boot_start"]
-    static BOOT_START: c_void;
-    // The start of the relocation information for the wrapper.
-    #[link_name = "rela_start"]
-    static RELA_START: c_void;
-    // The end of the relocation information for the wrapper.
-    #[link_name = "rela_end"]
-    static RELA_END: c_void;
-    // The start of the data section of the binary. We use this to make sure all
-    // relocations are done in writable data pages in memory.
-    #[link_name = "data_start"]
-    static DATA_START: c_void;
-    // The end of the data section of the binary. We use this to make sure all
-    // relocations are done in writable data pages in memory.
-    #[link_name = "data_end"]
-    static DATA_END: c_void;
-}
 
 /// Entry point for the 64-bit Rust code.
 ///
 /// We ignore the first parameter in the Linux boot protocol, which must be 0.
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
-    // Safety: we run this to patch all relocations before any other Rust code is
-    // executed.
-    unsafe {
-        patch_self_relocations();
-    }
     let payload = include_bytes!(env!("PAYLOAD_PATH"));
     let entry = parse_elf_file(payload, boot_params.e820_table(), boot_params.ramdisk());
     // Safety: we successfully parsed the ELF file and found the entry point for it.
@@ -89,45 +62,6 @@ unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
         in(reg) zero_page as u64,
         options(noreturn, att_syntax)
     );
-}
-
-/// Finds and patches the relocations within this binary.
-///
-/// #Safety
-///
-/// This function must be called before any rust code is executed that rely on
-/// the relocations that this is patching, otherwise dereferencing the unpatched
-/// relocations will lead to undefined behavior.
-///
-/// If this code panics it will cause undefined behavior since the panic unwind
-/// logic relies on the relocations, so instead of panicking abort will be
-/// called directly on any errors.
-unsafe fn patch_self_relocations() {
-    // Safety: we're not going to dereference any of the memory locations, we're
-    // just interested in the pointer addresses.
-    let (boot_start, rela_start, rela_end, data_start, data_end) = unsafe {
-        (
-            VirtAddr::from_ptr(&BOOT_START as *const _),
-            VirtAddr::from_ptr(&RELA_START as *const _),
-            VirtAddr::from_ptr(&RELA_END as *const _),
-            VirtAddr::from_ptr(&DATA_START as *const _),
-            VirtAddr::from_ptr(&DATA_END as *const _),
-        )
-    };
-    // The first 4KiB is used by the setup data in the extracted binary, so the
-    // effective offset for calculating relocations is 4KiB before BOOT_START.
-    let base_offset = boot_start - Size4KiB::SIZE;
-    if rela_end < rela_start {
-        abort();
-    }
-    let rela_size = (rela_end - rela_start) as usize;
-    // Safety: we rely on the correctness of the linker script to ensure that these
-    // addresses point to the valid relocation slice in memory.
-    let rela: &[u8] = unsafe { core::slice::from_raw_parts(rela_start.as_ptr(), rela_size) };
-    if elf::patch_relocations(rela, base_offset, data_start, data_end).is_err() {
-        // We can't continue if the relocations were not successful.
-        abort();
-    }
 }
 
 #[panic_handler]

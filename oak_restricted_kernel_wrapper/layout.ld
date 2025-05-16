@@ -82,7 +82,6 @@ SECTIONS {
 
     /* Start of the kernel proper. */
     .boot ALIGN(4K) : {
-        boot_start = .;
         FILL(0x00)
         /* The 64-bit entry point must be at offset 0x200 from the start of
          * kernel.
@@ -100,15 +99,11 @@ SECTIONS {
     } : rodata
 
     .rela.dyn : {
-        rela_start = .;
         *(.rela*)
-        rela_end = .;
     } : rodata
 
     .data ALIGN(4K) : {
-        data_start = .;
         *(.data .data.*)
-        data_end = .;
     } : data
 
     .bss : ALIGN(4K) {

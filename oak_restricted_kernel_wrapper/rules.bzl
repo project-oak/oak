@@ -25,7 +25,7 @@ _RK_WRAPPER_RUSTC_FLAGS = [
     "-C",
     "panic=abort",
     "-C",
-    "relocation-model=pie",
+    "relocation-model=dynamic-no-pic",
     "-C",
     "opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
 ]
