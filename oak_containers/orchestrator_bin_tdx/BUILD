@@ -24,10 +24,11 @@ package(
 rust_binary(
     name = "bin/oak_containers_orchestrator",
     srcs = ["src/main.rs"],
+    aliases = {"//oak_containers/orchestrator:oak_containers_orchestrator_no_application_keys": "oak_containers_orchestrator"},
     deps = [
         "//oak_attestation",
         "//oak_attestation_tdx",
-        "//oak_containers/orchestrator",
+        "//oak_containers/orchestrator:oak_containers_orchestrator_no_application_keys",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tikv-jemallocator",
         "@oak_crates_index//:tokio",

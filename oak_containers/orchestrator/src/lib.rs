@@ -84,7 +84,16 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
 
     // Generate application keys.
     let (instance_keys, instance_public_keys) = generate_instance_keys();
+    #[cfg(feature = "application_keys")]
     let (mut group_keys, group_public_keys) =
+        if key_provisioning_role == KeyProvisioningRole::Leader {
+            let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
+            (Some(Arc::new(group_keys)), Some(group_public_keys))
+        } else {
+            (None, None)
+        };
+    #[cfg(not(feature = "application_keys"))]
+    let (mut group_keys, _group_public_keys) =
         if key_provisioning_role == KeyProvisioningRole::Leader {
             let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
             (Some(Arc::new(group_keys)), Some(group_public_keys))
