@@ -46,10 +46,11 @@ pub enum HandshakeType {
 /// Struct that represents the data extracted from a successfully executed Noise
 /// handshake.
 pub struct HandshakeResult {
+    /// Keys to use with the established encrypted channel.
+    pub session_keys: SessionKeys,
     /// The hash of the data exchanged in the handshake.
     pub handshake_hash: Vec<u8>,
-    /// Bindings for the session, computed from the handshake hash by the other
-    /// party.
+    /// Bindings fo
     pub session_bindings: BTreeMap<String, SessionBinding>,
 }
 
@@ -85,11 +86,13 @@ impl HandshakerBuilder<ServerHandshaker> for ServerHandshakerBuilder {
 pub trait Handshaker: Send {
     /// Consume the session keys produced by the handshake. Returns error if the
     /// keys are not ready. Can only be called once.
-    fn take_session_keys(&mut self) -> Result<SessionKeys, Error>;
+    fn take_session_keys(self) -> Result<SessionKeys, Error>;
 
-    /// Gets the result of the completed handshake. Returns error if the
-    /// handshake is not complete. Can only be called once.
-    fn take_handshake_result(&mut self) -> Result<HandshakeResult, Error>;
+    /// Gets the hash of the completed handshake without consuming the stored
+    /// handshake results. This allows using the hash for binding independently
+    /// from creating the encrypted channel. Returns an error if the
+    /// handshake is not yet complete.
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error>;
 
     // Allows checking whether the handshake is complete without consuming the
     // produced results.
@@ -103,7 +106,6 @@ pub struct ClientHandshaker {
     initial_message: Option<HandshakeRequest>,
     followup_message: Option<HandshakeRequest>,
     handshake_result: Option<HandshakeResult>,
-    session_keys: Option<SessionKeys>,
 }
 
 impl ClientHandshaker {
@@ -155,22 +157,26 @@ impl ClientHandshaker {
             initial_message: Some(initial_message),
             followup_message: None,
             handshake_result: None,
-            session_keys: None,
         })
     }
 }
 
 impl Handshaker for ClientHandshaker {
-    fn take_session_keys(&mut self) -> Result<SessionKeys, Error> {
-        self.session_keys.take().ok_or(anyhow!("handshake is not complete"))
+    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    fn take_handshake_result(&mut self) -> Result<HandshakeResult, Error> {
-        self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
+        Ok(self
+            .handshake_result
+            .as_ref()
+            .ok_or(anyhow!("handshake is not complete"))?
+            .handshake_hash
+            .clone())
     }
 
     fn is_handshake_complete(&self) -> bool {
-        self.session_keys.is_some() && self.followup_message.is_none()
+        self.handshake_result.is_some() && self.followup_message.is_none()
     }
 }
 
@@ -187,21 +193,21 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
         &mut self,
         incoming_message: HandshakeResponse,
     ) -> anyhow::Result<Option<()>> {
-        if self.session_keys.is_some() {
-            // The session keys are ready - no other messages expected.
+        if self.handshake_result.is_some() {
+            // The handshake result is ready - no other messages expected.
             return Ok(None);
         }
         match incoming_message.r#handshake_type {
             Some(handshake_response::HandshakeType::NoiseHandshakeMessage(noise_message)) => {
-                let (handshake_hash, session_keys) = self
+                let handshake_result = self
                     .handshake_initiator
                     .process_response(&noise_message.into())
-                    .map_err(|e| anyhow!("Error processing response: {e:?}"))?;
-                let session_keys = session_keys.into();
-                let handshake_result = HandshakeResult {
-                    handshake_hash: handshake_hash.to_vec(),
-                    session_bindings: incoming_message.attestation_bindings,
-                };
+                    .map_err(|e| anyhow!("Error processing response: {e:?}"))
+                    .map(|(handshake_hash, crypter)| HandshakeResult {
+                        session_keys: crypter.into(),
+                        handshake_hash: handshake_hash.to_vec(),
+                        session_bindings: incoming_message.attestation_bindings,
+                    })?;
                 if !self.session_binders.is_empty() {
                     self.followup_message = Some(HandshakeRequest {
                         r#handshake_type: None,
@@ -220,8 +226,8 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
                             .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
                     });
                 }
+
                 self.handshake_result = Some(handshake_result);
-                self.session_keys = Some(session_keys);
                 Ok(Some(()))
             }
             None => Err(anyhow!("Missing handshake_type")),
@@ -241,7 +247,6 @@ pub struct ServerHandshaker {
     noise_response: Option<Response>,
     handshake_response: Option<HandshakeResponse>,
     handshake_result: Option<HandshakeResult>,
-    session_keys: Option<SessionKeys>,
 }
 
 impl ServerHandshaker {
@@ -255,22 +260,26 @@ impl ServerHandshaker {
             noise_response: None,
             handshake_response: None,
             handshake_result: None,
-            session_keys: None,
         }
     }
 }
 
 impl Handshaker for ServerHandshaker {
-    fn take_session_keys(&mut self) -> Result<SessionKeys, Error> {
-        self.session_keys.take().ok_or(anyhow!("handshake is not complete"))
+    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    fn take_handshake_result(&mut self) -> Result<HandshakeResult, Error> {
-        self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))
+    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
+        Ok(self
+            .handshake_result
+            .as_ref()
+            .ok_or(anyhow!("handshake is not complete"))?
+            .handshake_hash
+            .clone())
     }
 
     fn is_handshake_complete(&self) -> bool {
-        self.session_keys.is_some()
+        self.handshake_result.is_some()
     }
 }
 
@@ -283,13 +292,13 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
         &mut self,
         incoming_message: HandshakeRequest,
     ) -> anyhow::Result<Option<()>> {
-        if self.session_keys.is_some() {
+        if self.handshake_result.is_some() {
             // The handshake result is ready - no other messages expected.
             return Ok(None);
         }
         if let Some(noise_response) = self.noise_response.take() {
-            self.session_keys = Some(noise_response.crypter.into());
             self.handshake_result = Some(HandshakeResult {
+                session_keys: noise_response.crypter.into(),
                 handshake_hash: noise_response.handshake_hash.to_vec(),
                 session_bindings: incoming_message.attestation_bindings,
             });
@@ -352,8 +361,8 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
             if self.client_binding_expected {
                 self.noise_response = Some(noise_response);
             } else {
-                self.session_keys = Some(noise_response.crypter.into());
                 self.handshake_result = Some(HandshakeResult {
+                    session_keys: noise_response.crypter.into(),
                     handshake_hash: noise_response.handshake_hash.to_vec(),
                     session_bindings: BTreeMap::new(),
                 })
