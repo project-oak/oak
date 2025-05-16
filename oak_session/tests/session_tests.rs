@@ -226,6 +226,10 @@ fn pairwise_nn_unattested_succeeds() -> anyhow::Result<()> {
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
@@ -468,6 +472,10 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
@@ -568,6 +576,10 @@ fn pairwise_nn_self_peer_broken() -> anyhow::Result<()> {
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
@@ -671,6 +683,10 @@ fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
@@ -774,6 +790,10 @@ fn pairwise_nn_bidirectional_succeeds() -> anyhow::Result<()> {
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
@@ -854,6 +874,10 @@ fn pairwise_nn_peer_self_succeeds_custom_session_binding_verifier() -> anyhow::R
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
+    assert_that!(
+        server_session.get_session_metadata().unwrap().handshake_hash,
+        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+    );
 
     invoke_hello_world(&mut client_session, &mut server_session);
 

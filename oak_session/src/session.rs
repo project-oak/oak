@@ -22,6 +22,7 @@ use alloc::{
     collections::{BTreeMap, VecDeque},
     string::String,
     sync::Arc,
+    vec::Vec,
 };
 use core::mem;
 
@@ -48,6 +49,15 @@ use crate::{
     session_binding::SessionBindingVerifierProvider,
     ProtocolEngine,
 };
+
+/// Encapsulates metadata derived from a successfully established session that
+/// can be returned to the application.
+#[derive(Clone)]
+pub struct SessionMetadata {
+    /// Hash of the session handshake. Unique to the session, can be used by the
+    /// application for channel binding.
+    pub handshake_hash: Vec<u8>,
+}
 
 /// Trait that represents an end-to-end encrypted bidirectional streaming
 /// session between two peers.
@@ -77,6 +87,9 @@ pub trait Session: Send {
     /// - `Ok(Some(Vec<u8>))`: Successfully read plaintext bytes
     /// - `Err`: Protocol error
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error>;
+
+    /// Returns the session metadata, or error if the session is not yet open.
+    fn get_session_metadata(&self) -> Result<SessionMetadata, Error>;
 }
 
 /// Represents all data that is used for a particular session protocol step and
@@ -93,7 +106,7 @@ enum Step<AP: AttestationProvider, H: Handshaker> {
     /// Protocol step for performing the Noise handshake.
     Handshake { handshaker: H, encryptor_provider: Box<dyn EncryptorProvider> },
     /// Session is open and allows encrypted communication.
-    Open(Box<dyn Encryptor>),
+    Open { encryptor: Box<dyn Encryptor>, session_metadata: SessionMetadata },
     /// Invalid state. The session is only temporarily put into this state if
     /// the transition between steps cannot be performed atomically.
     Invalid,
@@ -112,14 +125,27 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
                 };
             }
             Step::Handshake { handshaker, encryptor_provider } => {
-                *self = Step::Open(
-                    encryptor_provider.provide_encryptor(handshaker.take_session_keys()?)?,
-                );
+                *self = Step::Open {
+                    session_metadata: SessionMetadata {
+                        handshake_hash: handshaker.get_handshake_hash()?,
+                    },
+                    encryptor: encryptor_provider
+                        .provide_encryptor(handshaker.take_session_keys()?)?,
+                };
             }
-            Step::Open(_) => return Err(anyhow!("there is no next step when the session is open")),
+            Step::Open { .. } => {
+                return Err(anyhow!("there is no next step when the session is open"))
+            }
             Step::Invalid => return Err(anyhow!("session is currently in an invalid state")),
         };
         Ok(())
+    }
+
+    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
+        match &self {
+            Step::Open { session_metadata, .. } => Ok(session_metadata.clone()),
+            _ => Err(anyhow!("the session is not open")),
+        }
     }
 }
 
@@ -152,7 +178,7 @@ impl ClientSession {
 
 impl Session for ClientSession {
     fn is_open(&self) -> bool {
-        matches!(self.step, Step::Open(_))
+        matches!(self.step, Step::Open { .. })
     }
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
@@ -160,7 +186,7 @@ impl Session for ClientSession {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
-            Step::Open(encryptor) => {
+            Step::Open { encryptor, .. } => {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
@@ -178,7 +204,7 @@ impl Session for ClientSession {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
-            Step::Open(encryptor) => match self.incoming_responses.pop_front() {
+            Step::Open { encryptor, .. } => match self.incoming_responses.pop_front() {
                 Some(response) => {
                     let encrypted_message = match response.response {
                         Some(Response::EncryptedMessage(encrypted_message)) => encrypted_message,
@@ -198,6 +224,10 @@ impl Session for ClientSession {
                 None => Ok(None),
             },
         }
+    }
+
+    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
+        self.step.get_session_metadata()
     }
 }
 
@@ -225,7 +255,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     }));
                 }
             }
-            Step::Open(_) => {}
+            Step::Open { .. } => {}
             Step::Invalid => return Err(anyhow!("session is in an invalid state")),
         }
 
@@ -281,7 +311,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
             }
             (
                 im @ SessionResponse { response: Some(Response::EncryptedMessage(_)) },
-                Step::Open(_),
+                Step::Open { .. },
             ) => {
                 self.incoming_responses.push_back(im);
                 Ok(Some(()))
@@ -326,7 +356,7 @@ impl ServerSession {
 
 impl Session for ServerSession {
     fn is_open(&self) -> bool {
-        matches!(self.step, Step::Open(_))
+        matches!(self.step, Step::Open { .. })
     }
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
@@ -334,7 +364,7 @@ impl Session for ServerSession {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
-            Step::Open(encryptor) => {
+            Step::Open { encryptor, .. } => {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
@@ -352,7 +382,7 @@ impl Session for ServerSession {
             Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
                 Err(anyhow!("the session is not open"))
             }
-            Step::Open(encryptor) => match self.incoming_requests.pop_front() {
+            Step::Open { encryptor, .. } => match self.incoming_requests.pop_front() {
                 Some(request) => {
                     let encrypted_message = match request.request {
                         Some(Request::EncryptedMessage(encrypted_message)) => encrypted_message,
@@ -372,6 +402,10 @@ impl Session for ServerSession {
                 None => Ok(None),
             },
         }
+    }
+
+    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
+        self.step.get_session_metadata()
     }
 }
 
@@ -410,7 +444,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                     Ok(None)
                 }
             }
-            Step::Open(_) => Ok(self.outgoing_responses.pop_front()),
+            Step::Open { .. } => Ok(self.outgoing_responses.pop_front()),
             Step::Invalid => Err(anyhow!("session is in an invalid state")),
         }
     }
@@ -452,7 +486,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
             }
             (
                 im @ SessionRequest { request: Some(Request::EncryptedMessage(_)) },
-                Step::Open(_),
+                Step::Open { .. },
             ) => {
                 self.incoming_requests.push_back(im);
                 Ok(Some(()))
