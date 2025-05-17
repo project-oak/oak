@@ -104,7 +104,11 @@ enum Step<AP: AttestationProvider, H: Handshaker> {
         encryptor_provider: Box<dyn EncryptorProvider>,
     },
     /// Protocol step for performing the Noise handshake.
-    Handshake { handshaker: H, encryptor_provider: Box<dyn EncryptorProvider> },
+    Handshake {
+        handshaker: H,
+        encryptor_provider: Box<dyn EncryptorProvider>,
+        attestation_results: BTreeMap<String, AttestationResults>,
+    },
     /// Session is open and allows encrypted communication.
     Open { encryptor: Box<dyn Encryptor>, session_metadata: SessionMetadata },
     /// Invalid state. The session is only temporarily put into this state if
@@ -118,13 +122,22 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
         // ensuring the memory safety because of the objects' lifetime.
         let old_state = mem::replace(self, Step::Invalid);
         match old_state {
-            Step::Attestation { attester: _, handshaker_provider, encryptor_provider } => {
+            Step::Attestation { attester, handshaker_provider, encryptor_provider } => {
+                let attestation_results = match attester.take_attestation_result()? {
+                    AttestationVerdict::AttestationPassed { attestation_results } => {
+                        attestation_results
+                    }
+                    AttestationVerdict::AttestationFailed { .. } => {
+                        return Err(anyhow!("attestation failed"));
+                    }
+                };
                 *self = Step::Handshake {
                     encryptor_provider,
                     handshaker: handshaker_provider.build()?,
+                    attestation_results,
                 };
             }
-            Step::Handshake { handshaker, encryptor_provider } => {
+            Step::Handshake { handshaker, encryptor_provider, .. } => {
                 *self = Step::Open {
                     session_metadata: SessionMetadata {
                         handshake_hash: handshaker.get_handshake_hash()?,
@@ -153,7 +166,6 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
 pub struct ClientSession {
     step: Step<ClientAttestationProvider, ClientHandshaker>,
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
-    attestation_results: Option<BTreeMap<String, AttestationResults>>,
     outgoing_requests: VecDeque<SessionRequest>,
     incoming_responses: VecDeque<SessionResponse>,
 }
@@ -169,7 +181,6 @@ impl ClientSession {
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
-            attestation_results: None,
             outgoing_requests: VecDeque::new(),
             incoming_responses: VecDeque::new(),
         })
@@ -183,9 +194,6 @@ impl Session for ClientSession {
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
-            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
-                Err(anyhow!("the session is not open"))
-            }
             Step::Open { encryptor, .. } => {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
@@ -196,14 +204,12 @@ impl Session for ClientSession {
                 });
                 Ok(())
             }
+            _ => Err(anyhow!("the session is not open")),
         }
     }
 
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error> {
         match &mut self.step {
-            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
-                Err(anyhow!("the session is not open"))
-            }
             Step::Open { encryptor, .. } => match self.incoming_responses.pop_front() {
                 Some(response) => {
                     let encrypted_message = match response.response {
@@ -223,6 +229,7 @@ impl Session for ClientSession {
                 }
                 None => Ok(None),
             },
+            _ => Err(anyhow!("the session is not open")),
         }
     }
 
@@ -275,35 +282,24 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     "invalid session state: attest message received but attester doesn't expect
                      any"
                 ))?;
-                match attester.take_attestation_result() {
-                    Some(AttestationVerdict::AttestationPassed { attestation_results }) => {
-                        self.attestation_results = Some(attestation_results);
-                        self.step.next()?;
-                    }
-                    Some(AttestationVerdict::AttestationFailed { .. }) => {
-                        return Err(anyhow!("attestation failed"));
-                    }
-                    None => {}
-                }
+                self.step.next()?;
                 Ok(Some(()))
             }
             (
                 SessionResponse { response: Some(Response::HandshakeResponse(handshake_message)) },
-                Step::Handshake { handshaker, .. },
+                Step::Handshake { handshaker, attestation_results, .. },
             ) => {
                 let bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
                 ))?;
-                if let Some(attestation_results) = &self.attestation_results {
-                    verify_session_binding(
-                        &self.binding_verifier_providers,
-                        attestation_results,
-                        &bindings,
-                        handshaker.get_handshake_hash()?.as_slice(),
-                    )?;
-                }
+                verify_session_binding(
+                    &self.binding_verifier_providers,
+                    attestation_results,
+                    &bindings,
+                    handshaker.get_handshake_hash()?.as_slice(),
+                )?;
                 if handshaker.is_handshake_complete() {
                     self.step.next()?;
                 }
@@ -326,7 +322,6 @@ pub struct ServerSession {
     step: Step<ServerAttestationProvider, ServerHandshaker>,
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
     // encryptor is initialized once the handshake is completed and the session becomes open
-    attestation_results: Option<BTreeMap<String, AttestationResults>>,
     outgoing_responses: VecDeque<SessionResponse>,
     incoming_requests: VecDeque<SessionRequest>,
 }
@@ -347,7 +342,6 @@ impl ServerSession {
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },
             binding_verifier_providers: config.binding_verifier_providers,
-            attestation_results: None,
             outgoing_responses: VecDeque::new(),
             incoming_requests: VecDeque::new(),
         })
@@ -361,9 +355,6 @@ impl Session for ServerSession {
 
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
-            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
-                Err(anyhow!("the session is not open"))
-            }
             Step::Open { encryptor, .. } => {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
@@ -374,14 +365,12 @@ impl Session for ServerSession {
                 });
                 Ok(())
             }
+            _ => Err(anyhow!("the session is not open")),
         }
     }
 
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error> {
         match &mut self.step {
-            Step::Attestation { .. } | Step::Handshake { .. } | Step::Invalid => {
-                Err(anyhow!("the session is not open"))
-            }
             Step::Open { encryptor, .. } => match self.incoming_requests.pop_front() {
                 Some(request) => {
                     let encrypted_message = match request.request {
@@ -401,6 +390,7 @@ impl Session for ServerSession {
                 }
                 None => Ok(None),
             },
+            _ => Err(anyhow!("the session is not open")),
         }
     }
 
@@ -414,16 +404,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
         match &mut self.step {
             Step::Attestation { attester, .. } => {
                 if let Some(attest_message) = attester.get_outgoing_message()? {
-                    match attester.take_attestation_result() {
-                        Some(AttestationVerdict::AttestationPassed { attestation_results }) => {
-                            self.attestation_results = Some(attestation_results);
-                            self.step.next()?;
-                        }
-                        Some(AttestationVerdict::AttestationFailed { .. }) => {
-                            return Err(anyhow!("attestation failed"));
-                        }
-                        None => {}
-                    }
+                    self.step.next()?;
                     Ok(Some(SessionResponse {
                         response: Some(Response::AttestResponse(attest_message)),
                     }))
@@ -465,7 +446,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
             }
             (
                 SessionRequest { request: Some(Request::HandshakeRequest(handshake_message)) },
-                Step::Handshake { handshaker, .. },
+                Step::Handshake { handshaker, attestation_results, .. },
             ) => {
                 let bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
@@ -473,14 +454,12 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                      expect any"
                 ))?;
                 if handshaker.is_handshake_complete() {
-                    if let Some(attestation_results) = &self.attestation_results {
-                        verify_session_binding(
-                            &self.binding_verifier_providers,
-                            attestation_results,
-                            &bindings,
-                            handshaker.get_handshake_hash()?.as_slice(),
-                        )?;
-                    }
+                    verify_session_binding(
+                        &self.binding_verifier_providers,
+                        attestation_results,
+                        &bindings,
+                        handshaker.get_handshake_hash()?.as_slice(),
+                    )?;
                 }
                 Ok(Some(()))
             }

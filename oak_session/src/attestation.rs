@@ -19,7 +19,7 @@
 
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
-use anyhow::{Context, Error, Ok};
+use anyhow::{anyhow, Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
@@ -29,9 +29,19 @@ use oak_proto_rust::oak::{
 
 use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
+/// The verdict of the attestation.
 #[derive(Debug)]
+#[must_use = "this `AttestationVerdict` may be an `AttestationFailed` variant, which should be handled"]
 pub enum AttestationVerdict {
+    /// The attestation was successful. The `attestation_results` map contains
+    /// the attestation results for each matched attester, keyed by the
+    /// attestation ID.
     AttestationPassed { attestation_results: BTreeMap<String, AttestationResults> },
+    /// The attestation failed.
+    /// The `reason` field contains a general error message about the failure.
+    /// The `error_messages` map contains detailed error messages for each
+    /// matched attester that failed verification, keyed by the attestation
+    /// ID.
     AttestationFailed { reason: String, error_messages: BTreeMap<String, String> },
 }
 
@@ -58,7 +68,7 @@ pub trait AttestationProvider: Send {
     // attestation still is still pending the incoming peer's data. The result is
     // taken rather than copied since the results returned might be heavy and
     // contain cryptographic material.
-    fn take_attestation_result(&mut self) -> Option<AttestationVerdict>;
+    fn take_attestation_result(self) -> Result<AttestationVerdict, Error>;
 }
 
 /// Aggregates the attestation result from multiple verifiers. Implementations
@@ -71,6 +81,15 @@ pub trait AttestationAggregator: Send {
     ) -> AttestationVerdict;
 }
 
+/// Default implementation of the AttestationAggregator.
+///
+/// This implementation requires the following:
+///  - At least one attestation result is present.
+///  - None of the present attestation results have a failure status.
+///
+/// Because combine_attestation_results() is implemented as the inner join of
+/// the peer verifiers and the received evidence, only the matching evidence
+/// will be used for the verification.
 pub struct DefaultAttestationAggregator {}
 
 impl AttestationAggregator for DefaultAttestationAggregator {
@@ -141,8 +160,8 @@ impl ClientAttestationProvider {
 }
 
 impl AttestationProvider for ClientAttestationProvider {
-    fn take_attestation_result(&mut self) -> Option<AttestationVerdict> {
-        self.attestation_result.take()
+    fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
+        self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 
@@ -215,8 +234,8 @@ impl ServerAttestationProvider {
 }
 
 impl AttestationProvider for ServerAttestationProvider {
-    fn take_attestation_result(&mut self) -> Option<AttestationVerdict> {
-        self.attestation_result.take()
+    fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
+        self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 

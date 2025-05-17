@@ -104,8 +104,8 @@ fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
 }
 
 struct AttestationExchangeResults {
-    client: Option<AttestationVerdict>,
-    server: Option<AttestationVerdict>,
+    client: anyhow::Result<AttestationVerdict>,
+    server: anyhow::Result<AttestationVerdict>,
 }
 
 fn do_attestation_exchange(
@@ -326,7 +326,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
         client_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -414,7 +414,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
 
     assert_that!(
         client_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -468,7 +468,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
 
     assert_that!(
         server_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -495,7 +495,7 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
 
         assert_that!(
             client_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
             })),
@@ -527,7 +527,7 @@ fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
 
         assert_that!(
             server_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
             })),
@@ -569,7 +569,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
         );
         assert_that!(
             client_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "Verification failed",
                 error_messages: eq(&BTreeMap::from([(
                     MATCHED_ATTESTER_ID1.to_string(),
@@ -614,7 +614,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
         );
         assert_that!(
             server_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "Verification failed",
                 error_messages: eq(&BTreeMap::from([(
                     MATCHED_ATTESTER_ID1.to_string(),
@@ -652,7 +652,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
         // This failure should mention what evidence is missing instead.
         assert_that!(
             client_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
             })),
@@ -687,7 +687,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
         // This failure should mention what evidence is missing instead.
         assert_that!(
             server_attestation_provider.take_attestation_result(),
-            some(matches_pattern!(AttestationVerdict::AttestationFailed {
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
             })),
@@ -734,7 +734,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
         client_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -776,7 +776,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
         server_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -815,15 +815,7 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
 
     assert_that!(
         client_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
-    );
-    // Now we have taken the result, so a third response would be accepted.
-    let accepted_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
-    assert_that!(client_attestation_provider.put_incoming_message(accepted_response), ok(some(())));
-    // Since the new response was missing evidence, it should be rejected.
-    assert_that!(
-        client_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -861,15 +853,7 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
 
     assert_that!(
         server_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
-    );
-    // Now we have taken the result, so a third response would be accepted.
-    let accepted_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
-    assert_that!(server_attestation_provider.put_incoming_message(accepted_request), ok(some(())));
-    // Since the new request was missing evidence, it should be rejected.
-    assert_that!(
-        server_attestation_provider.take_attestation_result(),
-        some(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -916,11 +900,11 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
 
     assert_that!(
         results.client,
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
     assert_that!(
         results.server,
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -965,11 +949,11 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
 
     assert_that!(
         results.client,
-        some(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
     );
     assert_that!(
         results.server,
-        some(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
     );
 
     Ok(())
@@ -1011,11 +995,11 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
 
     assert_that!(
         results.client,
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
     assert_that!(
         results.server,
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
     Ok(())
@@ -1054,11 +1038,11 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
 
     assert_that!(
         results.client,
-        some(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
     assert_that!(
         results.server,
-        some(matches_pattern!(AttestationVerdict::AttestationFailed {
+        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
             reason: "No matching attestation results",
             ..
         }))
