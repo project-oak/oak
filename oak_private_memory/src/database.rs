@@ -149,7 +149,7 @@ impl IcingMetaDatabase {
                         icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
                     )
                     .set_cardinality(
-                        icing::property_config_proto::cardinality::Code::Required.into(),
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
             )
             .add_property(
@@ -158,7 +158,7 @@ impl IcingMetaDatabase {
                     // We don't need to index blob id
                     .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
                     .set_cardinality(
-                        icing::property_config_proto::cardinality::Code::Required.into(),
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
             ).add_property(
                 icing::create_property_config_builder()
