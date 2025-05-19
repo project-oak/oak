@@ -2,6 +2,7 @@
 <!-- An HTML element is intentionally used since GitHub recommends this approach to handle different images in dark/light modes. Ref: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
 <!-- markdownlint-disable-next-line MD033 -->
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-containers-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"><img alt="Project Oak Containers Logo" src="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"></picture></h1>
+
 <!-- Oak Logo End -->
 
 # Encrypted Session SDK
@@ -13,6 +14,23 @@ devices or other Oak enclaves. This session is implemented using the
 with remote attestation. It offers features such as bidirectional attestation,
 streaming sessions, and endorsement/evidence client-side caching.
 
+## Key Features
+
+- **Attestation Verification:** The library allows validating the attestation
+  evidence signed by the hardware to ensure the authenticity and integrity of
+  the peer execution environment. Additionally the attestation verification
+  library provides the ability to rely on an attestation verification service
+  that acts as a certificate authority.
+- **Noise Handshake:** We rely on the Noise protocol framework to perform the
+  handshake and establish a secure communication channel between parties. A
+  number of [Noise Patterns](https://noiseexplorer.com/patterns/) are supported.
+- **Attestation-to-Handshake Binding:** Each party signs the handshake
+  transcript hash with the application keyset to bind the attestation to the
+  session.
+- **Support for unreliable transport:** The implementation can be adapted to
+  handle unstable connections (e.g., UDP) by incorporating sequence numbers,
+  nonce customization, and message duplication prevention mechanisms.
+
 ## Design
 
 The SDK comprises two interacting parties: the Client (initiator) and the Server
@@ -23,37 +41,138 @@ and `write` functions for data messages and
 `put_incoming_message`/`get_outgoing_message` functions for protocol messages
 that can be passed to the transport layer.
 
-The underlying implementation involves the `AttestationProvider` and
-`Handshaker` objects, which manage attestation and produce the session
-encryption key, respectively. The newly created session is bound to the supplied
-attested evidence using the handshake transcript hash and the public key that is
-included in the evidence by `SessionBinder` and then verified by the
-`SessionBindingVerifier`. Only after the bindings are verified the session
-becomes open and ready for communication. Once that happens, the `Encryptor`
-object handles the encryption and decryption of application messages.
+The Session object traverses through 3 distinct lifecycle states: `ATTEST`,
+`HANDSHAKE`, `OPEN`. The Session always starts in `ATTEST` state. Transition to
+the next state happens after a `put_incoming_message` or `get_outgoing_message`.
 
-To sum it up, the steps to establish the communication channel are:
+In a nutshell, the steps to establish the communication channel are:
 
-- Exchange of the attested evidence and its verification
+- Exchange of the endorsed attestation evidence and its verification
 - Noise Protocol handshake
 - Binding the session handshake transcript to the attested evidence
 - Session is open for secure communication
 
-## Key Features
+### Involved roles
 
-- **Attestation Verification:** The library retains attestation verification for
-  authentication, establishing the responder's identity and optionally the
-  initiator's identity through attestation. Attestation can be hardware rooted
-  or be based on some trusted certification authority.
-- **Noise Handshake:** We rely on the Noise protocol framework to perform the
-  handshake and establish a secure communication channel between parties. A
-  number of [Noise Patterns](https://noiseexplorer.com/patterns/) are supported.
-- **Attestation-to-Handshake Binding:** Each party signs the handshake
-  transcript hash with the application keyset to bind the attestation to the
-  session.
-- **Support for unreliable transport:** The implementation can be adapted to
-  handle unstable connections (e.g., UDP) by incorporating sequence numbers,
-  nonce customization, and message duplication prevention mechanisms.
+The underlying implementation involves a number of collaborating roles:
+
+- [`Attester`](/oak_attestation_types/src/attester.rs): supplies attestation
+  evidence.
+- [`Endorser`](/oak_attestation_types/src/endorser.rs): supplies an attestation
+  endorsement of the evidence provided by the `Attester`.
+- [`AttestationVerifier`](/oak_attestation_verification_types/src/verifier.rs):
+  consumes the attestation evidence and its endorsement verifying their
+  authenticity.
+- [`SessionBinder`](src/session_binding.rs): This creates a binding between the
+  supplied endorsed evidence and the session using the session handshake
+  transcript hash.
+- [`SessionBindingVerifier`](src/session_binding.rs): The binding of the
+  handshake hash is verified against the peer's own handshake hash.
+
+The Encrypted Session SDK supports the use of multiple concurrent attestation
+implementations under different `ATTESTATION_ID` keys. Each implementation is
+composed of one of each `Attester`, `Endorser`, `AttestationVerifier`,
+`SessionBinder` and `SessionBindingVerifier`.
+
+#### Attestation flow
+
+During the `ATTEST` step , the `AttestationProvider`, obtains endorsed evidence
+by calling the `Attester`/`Endorser` implementation. Conversely, it invokes the
+`AttestationVerifier` validation logic for any received evidence. When multiple
+attestations are supported, an additional `AttestationAggregator` role is used
+to combine them into a single pass/fail verdict.
+
+The following diagram depicts the interaction between the two attestation
+providers. The client is configured in `PeerUnidirectional` mode, and the server
+is configured in `SelfUnidirectional` mode. Only one mode of attestation is
+configured so there is no need for an `AttestationAggregator`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    box Client side
+        participant AV as AttestationVerifier
+        participant CAP as ClientAttestationProvider
+    end
+    box Server side
+        participant SAP as ServerAttestationProvider
+        participant A as Attester
+        participant E as Endorser
+    end
+
+    Note over CAP,SAP: Interaction is mediated by the Session<br/> and a lower-level transport, e.g., GRPC
+    CAP--)+SAP: attesattion request
+    SAP->>+A: quote()
+    A-->>-SAP: evidence
+    SAP->>+E: endorse(evidence)
+    E-->>-SAP: endorsements
+
+    SAP--)-CAP: attestation response (evidence, endorsements)
+
+    CAP->>AV: verify(evidence, endorsements)
+    AV-->>CAP: result
+
+    Note over CAP: Attestation result is<br/> passed to Handshaker
+```
+
+The following diagram contains the flow for bidirectional attestation flow. In
+bidirectional attestation both the client and the server produce endorsed
+evidence, and they both verify their peer's. The client transmits its evidence
+as part of the initial request to the server. The server only replies with its
+own evidence if it is able to verify the client attestation.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    box Client side
+        participant CAV as AttestationVerifier
+        participant CE as Endorser
+        participant CA as Attester
+        participant CAP as ClientAttestationProvider
+    end
+    box Server side
+        participant SAP as ServerAttestationProvider
+        participant SA as Attester
+        participant SE as Endorser
+        participant SAV as AttestationVerifier
+    end
+
+    Note over CAP,SAP: Interaction is mediated by the Session<br/> and a lower-level transport, e.g., GRPC
+    CAP->>+CA: quote()
+    CA-->>-CAP: client_evidence
+    CAP->>+CE: endorse(client_evidence)
+    CE-->>-CAP: client_endorsements
+
+    CAP--)+SAP: attesattion request (client_evidence, client_endorsements)
+
+    SAP->>SAV: verify(client_evidence, client_endorsements)
+    SAV-->>SAP: result
+    SAP->>+SA: quote()
+    SA-->>-SAP: server_evidence
+    SAP->>+SE: endorse(server_evidence)
+    SE-->>-SAP: server_endorsements
+
+    SAP--)-CAP: attestation response (server_evidence, server_endorsements)
+
+    CAP->>CAV: verify(server_evidence, server_endorsements)
+    CAV-->>CAP: result
+
+    Note over CAP, SAP: Attestation result is<br/> passed to Handshaker
+```
+
+#### Handshake flow
+
+During the `HANDSHAKE` step, the `Handshaker` initiates the Noise session
+proper. It uses the `SessionBinder` and `SessionBindingVerifier` once the
+session is established to create and verify the other end's bindings.
+
+#### Encryption flow
+
+Finally, once the session is in `OPEN` state, the `Encryptor` consumes the
+session key obtained by the `Handshaker`. This object handles the encryption and
+decryption of application messages.
 
 ## Getting Started
 
@@ -75,11 +194,11 @@ To use this library, follow these steps:
 
 ### Support for static pre-exchanged keys
 
-If one or both parties posess a static key where the public component is known
+If one or both parties possess a static key where the public component is known
 by its peer (perhaps through the use of PKI), it is possible to use it in the
 handshake by picking a Noise NK or KK scheme.
 
-### Support for custome encryptors
+### Support for custom encryptors
 
 The default `OrderedChannelEncryptor` includes consecutive nonces in the
 encrypted messages and so protects from replay, reorder and packet drop attacks.
