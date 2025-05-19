@@ -92,7 +92,7 @@ pub trait Handshaker: Send {
     /// handshake results. This allows using the hash for binding independently
     /// from creating the encrypted channel. Returns an error if the
     /// handshake is not yet complete.
-    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error>;
+    fn get_handshake_hash(&self) -> Result<&[u8], Error>;
 
     // Allows checking whether the handshake is complete without consuming the
     // produced results.
@@ -166,13 +166,12 @@ impl Handshaker for ClientHandshaker {
         Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
-        Ok(self
+    fn get_handshake_hash(&self) -> Result<&[u8], Error> {
+        Ok(&self
             .handshake_result
             .as_ref()
             .ok_or(anyhow!("handshake is not complete"))?
-            .handshake_hash
-            .clone())
+            .handshake_hash)
     }
 
     fn is_handshake_complete(&self) -> bool {
@@ -269,13 +268,12 @@ impl Handshaker for ServerHandshaker {
         Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    fn get_handshake_hash(&self) -> Result<Vec<u8>, Error> {
-        Ok(self
+    fn get_handshake_hash(&self) -> Result<&[u8], Error> {
+        Ok(&self
             .handshake_result
             .as_ref()
             .ok_or(anyhow!("handshake is not complete"))?
-            .handshake_hash
-            .clone())
+            .handshake_hash)
     }
 
     fn is_handshake_complete(&self) -> bool {

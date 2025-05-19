@@ -140,7 +140,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
             Step::Handshake { handshaker, encryptor_provider, .. } => {
                 *self = Step::Open {
                     session_metadata: SessionMetadata {
-                        handshake_hash: handshaker.get_handshake_hash()?,
+                        handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
                     },
                     encryptor: encryptor_provider
                         .provide_encryptor(handshaker.take_session_keys()?)?,
@@ -298,7 +298,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                     &self.binding_verifier_providers,
                     attestation_results,
                     &bindings,
-                    handshaker.get_handshake_hash()?.as_slice(),
+                    handshaker.get_handshake_hash()?,
                 )?;
                 if handshaker.is_handshake_complete() {
                     self.step.next()?;
@@ -458,7 +458,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                         &self.binding_verifier_providers,
                         attestation_results,
                         &bindings,
-                        handshaker.get_handshake_hash()?.as_slice(),
+                        handshaker.get_handshake_hash()?,
                     )?;
                 }
                 Ok(Some(()))
