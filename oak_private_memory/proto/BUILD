@@ -27,6 +27,7 @@ proto_library(
     name = "sealed_memory_proto",
     srcs = [
         "database.proto",
+        "internal.proto",
         "sealed_memory.proto",
     ],
     deps = [
@@ -47,6 +48,7 @@ cargo_build_script(
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         ":database.proto",
+        ":internal.proto",
         ":sealed_memory.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",

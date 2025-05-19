@@ -13,18 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod icing {
-    // Don't lint generated code.
-    #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
-    pub mod lib {
-        tonic::include_proto!("icing.lib");
-    }
-}
+// Private memory service definition: A memory consists of a datablob content
+// and one or more tags. The service allows users to add a tagged memory and get
+// the memories by tags.
 
-pub mod oak {
-    // Don't lint generated code.
-    #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
-    pub mod private_memory {
-        tonic::include_proto!("oak.private_memory");
-    }
+syntax = "proto3";
+
+package oak.private_memory;
+
+message EncryptedDataBlob {
+  bytes nonce = 1;
+  bytes data = 2;
 }

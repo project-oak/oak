@@ -18,12 +18,17 @@ use std::env;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let oak_proto_path_env = "OAK_PROTO_PATH";
     let env_var = env::var(oak_proto_path_env).unwrap();
-    let all_protos = env_var
+    let mut all_protos = env_var
         .split(" ")
         .map(|s| s.replace("external/icing/proto", "../../../../icing/proto"))
         .collect::<Vec<_>>();
 
-    let included_protos = vec![std::path::PathBuf::from("../../../../icing/proto")];
+    all_protos.push("../../../src/icing/proto/internal.proto".to_string());
+
+    let included_protos = vec![
+        std::path::PathBuf::from("../../../../icing/proto"),
+        std::path::PathBuf::from("../../.."),
+    ];
 
     let proto_paths = all_protos;
 

@@ -133,7 +133,7 @@ mod tests {
 
         // Check the serialization
         let transformed =
-            icing::IcingGroundTruthFiles::decode_from_slice(&ground_truth_files.encode_to_vec()?)?;
+            icing::IcingGroundTruthFiles::decode(&*ground_truth_files.encode_to_vec())?;
         assert_eq!(ground_truth_files, transformed);
 
         // Whether the database can be moved to a new directory.

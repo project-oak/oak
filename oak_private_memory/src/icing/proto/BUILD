@@ -14,12 +14,20 @@
 # limitations under the License.
 #
 
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
+)
+
+proto_library(
+    name = "icing_internal_proto",
+    srcs = [
+        "internal.proto",
+    ],
 )
 
 cargo_build_script(
@@ -33,6 +41,7 @@ cargo_build_script(
     },
     crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
+        ":internal.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
         "@icing//:icing_proto_srcs",

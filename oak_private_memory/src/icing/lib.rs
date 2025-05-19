@@ -20,11 +20,10 @@ use std::{
 };
 
 use anyhow::{bail, Context, Result};
-use bincode::{config, Decode, Encode};
 // Rexport the ffi functions from the bridge.
 pub use icing_ffi_bridge::*;
 use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;
-pub use icing_rust_proto::icing::lib::*;
+pub use icing_rust_proto::{icing::lib::*, oak::private_memory::IcingGroundTruthFiles};
 
 use crate::property_proto::VectorProto;
 
@@ -33,21 +32,15 @@ const OVERLAY_SCHEMA_PB_PATH: &str = "schema_dir/overlay_schema.pb";
 const SCHEMA_STORE_HEADER_PATH: &str = "schema_dir/schema_store_header";
 const DOCUMENT_LOG_PATH: &str = "document_dir/document_log_v1";
 
-/// Contains all the ground truths files of an icing database.
-///
-/// Can be used to rebuild the original database.
-/// It allows exporting an icing database as a byte array, so we can
-/// store it as a blob.
-#[derive(Default, Encode, Decode, PartialEq, Debug)]
-pub struct IcingGroundTruthFiles {
-    schema_pb: Vec<u8>,
-    overlay_schema_pb: Option<Vec<u8>>,
-    schema_store_header: Vec<u8>,
-    document_log: Vec<u8>,
+pub trait IcingGroundTruthFilesHelper {
+    fn new(base_dir: &str) -> Result<Self>
+    where
+        Self: Sized;
+    fn migrate(&self, new_path: &str) -> Result<()>;
 }
 
-impl IcingGroundTruthFiles {
-    pub fn new(base_dir: &str) -> Result<Self> {
+impl IcingGroundTruthFilesHelper for IcingGroundTruthFiles {
+    fn new(base_dir: &str) -> Result<Self> {
         let base_dir_path: PathBuf = base_dir.into();
         let base_path = base_dir_path.as_path();
         if !base_path.is_dir() {
@@ -79,33 +72,18 @@ impl IcingGroundTruthFiles {
         let document_log = fs::read(&document_log_path)
             .with_context(|| format!("Failed to read {}", document_log_path.display()))?;
 
-        let overlay_schema_pb =
-            if overlay_schema_pb_path.is_file() {
-                Some(fs::read(&overlay_schema_pb_path).with_context(|| {
-                    format!("Failed to read {}", overlay_schema_pb_path.display())
-                })?)
-            } else {
-                None
-            };
+        let overlay_schema_pb = if overlay_schema_pb_path.is_file() {
+            fs::read(&overlay_schema_pb_path)
+                .with_context(|| format!("Failed to read {}", overlay_schema_pb_path.display()))?
+        } else {
+            vec![]
+        };
 
         Ok(Self { schema_pb, overlay_schema_pb, schema_store_header, document_log })
     }
 
-    /// Helper function to create a subdirectory within the new base directory.
-    fn create_subdir(base_dir: &Path, subdir_name: &str) -> Result<()> {
-        fs::create_dir_all(base_dir.join(subdir_name))
-            .with_context(|| format!("Failed to create {} in {}", subdir_name, base_dir.display()))
-    }
-
-    /// Helper function to write data to a file within the new base directory.
-    fn write_file(base_dir: &Path, relative_path: &str, data: &[u8]) -> Result<()> {
-        let target_path = base_dir.join(relative_path);
-        fs::write(&target_path, data)
-            .with_context(|| format!("Failed to write {}", target_path.display()))
-    }
-
     /// Recreates the ground truth files in the specified new directory path.
-    pub fn migrate(&self, new_path: &str) -> Result<()> {
+    fn migrate(&self, new_path: &str) -> Result<()> {
         let new_base_dir = PathBuf::from(new_path);
 
         // Ensure the target path is empty by removing it if it exists
@@ -122,34 +100,36 @@ impl IcingGroundTruthFiles {
         }
 
         // Create base directory and subdirectories
-        Self::create_subdir(&new_base_dir, "schema_dir")?;
-        Self::create_subdir(&new_base_dir, "document_dir")?;
+        create_subdir(&new_base_dir, "schema_dir")?;
+        create_subdir(&new_base_dir, "document_dir")?;
 
         // Write schema_pb
-        Self::write_file(&new_base_dir, SCHEMA_PB_PATH, &self.schema_pb)?;
+        write_file(&new_base_dir, SCHEMA_PB_PATH, &self.schema_pb)?;
 
         // Write overlay_schema_pb if it exists
-        if let Some(overlay_data) = &self.overlay_schema_pb {
-            Self::write_file(&new_base_dir, OVERLAY_SCHEMA_PB_PATH, overlay_data)?;
+        if !self.overlay_schema_pb.is_empty() {
+            write_file(&new_base_dir, OVERLAY_SCHEMA_PB_PATH, &self.overlay_schema_pb)?;
         }
 
         // Write schema_store_header
-        Self::write_file(&new_base_dir, SCHEMA_STORE_HEADER_PATH, &self.schema_store_header)?;
+        write_file(&new_base_dir, SCHEMA_STORE_HEADER_PATH, &self.schema_store_header)?;
 
         // Write document_log
-        Self::write_file(&new_base_dir, DOCUMENT_LOG_PATH, &self.document_log)?;
+        write_file(&new_base_dir, DOCUMENT_LOG_PATH, &self.document_log)?;
 
         Ok(())
     }
+}
 
-    pub fn encode_to_vec(&self) -> Result<Vec<u8>> {
-        Ok(bincode::encode_to_vec(self, config::standard())?)
-    }
+fn create_subdir(base_dir: &Path, subdir_name: &str) -> Result<()> {
+    fs::create_dir_all(base_dir.join(subdir_name))
+        .with_context(|| format!("Failed to create {} in {}", subdir_name, base_dir.display()))
+}
 
-    pub fn decode_from_slice(buf: &[u8]) -> Result<Self> {
-        let (result, _) = bincode::decode_from_slice(buf, config::standard())?;
-        Ok(result)
-    }
+fn write_file(base_dir: &Path, relative_path: &str, data: &[u8]) -> Result<()> {
+    let target_path = base_dir.join(relative_path);
+    fs::write(&target_path, data)
+        .with_context(|| format!("Failed to write {}", target_path.display()))
 }
 
 pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {

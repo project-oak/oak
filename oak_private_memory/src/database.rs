@@ -16,12 +16,12 @@ use std::collections::HashMap;
 
 use anyhow::{bail, ensure};
 use async_trait::async_trait;
-use bincode::{config, Decode, Encode};
+use icing::IcingGroundTruthFilesHelper;
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, Embedding, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
+    DataBlob, Embedding, EncryptedDataBlob, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
 };
 use tempfile::tempdir;
 use tonic::transport::Channel;
@@ -107,7 +107,7 @@ impl IcingMetaDatabase {
         };
 
         // Decode the ground truth data
-        let ground_truth = icing::IcingGroundTruthFiles::decode_from_slice(buffer)?;
+        let ground_truth = icing::IcingGroundTruthFiles::decode(buffer)?;
 
         // Migrate the data to the target directory (this handles cleaning the
         // directory)
@@ -287,8 +287,7 @@ impl IcingMetaDatabase {
         self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
         let blob = icing::IcingGroundTruthFiles::new(&self.base_dir)
             .expect("Failed to read ground truth files from base_dir")
-            .encode_to_vec()
-            .expect("Export encoding failed");
+            .encode_to_vec();
         debug!("Exporting icing db, len: {}", blob.len());
         blob
     }
@@ -455,7 +454,7 @@ impl MemoryCache {
     pub async fn add_memory(&mut self, memory: Memory) -> anyhow::Result<BlobId> {
         let blob_id: BlobId = rand::rng().random();
         let (encrypted_data, nonce) = self.encode_encrypt_memory(&memory)?;
-        let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
+        let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
         // Store in external DB, explicitly providing the generated ID
         self.db_client.add_blob(encrypted_blob, Some(blob_id)).await?;
@@ -473,7 +472,7 @@ impl MemoryCache {
         for memory in memories {
             let (encrypted_data, nonce) = self.encode_encrypt_memory(memory)?;
             let blob_id: BlobId = rand::rng().random();
-            let encrypted_blob = EncryptedDatablob { nonce, data: encrypted_data };
+            let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
             blob_ids.push(blob_id);
             encrypted_blobs.push(encrypted_blob);
@@ -509,24 +508,18 @@ impl DatabaseWithCache {
     }
 }
 
-#[derive(Encode, Decode, PartialEq, Debug)]
-pub struct EncryptedDatablob {
-    pub nonce: Vec<u8>,
-    pub data: Vec<u8>,
-}
-
 pub fn encrypt_database(
     database: &IcingMetaDatabase,
     key: &[u8],
-) -> anyhow::Result<EncryptedDatablob> {
+) -> anyhow::Result<EncryptedDataBlob> {
     let nonce = generate_nonce();
     let datablob = database.export();
     let data = encrypt(key, &nonce, &datablob)?;
-    Ok(EncryptedDatablob { nonce, data })
+    Ok(EncryptedDataBlob { nonce, data })
 }
 
 pub fn decrypt_database(
-    datablob: EncryptedDatablob,
+    datablob: EncryptedDataBlob,
     key: &[u8],
 ) -> anyhow::Result<IcingMetaDatabase> {
     let nonce = datablob.nonce;
@@ -541,30 +534,27 @@ pub fn decrypt_database(
 pub trait DataBlobHandler {
     async fn add_blob(
         &mut self,
-        data_blob: EncryptedDatablob,
+        data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId>;
     async fn add_blobs(
         &mut self,
-        data_blobs: Vec<EncryptedDatablob>,
+        data_blobs: Vec<EncryptedDataBlob>,
         ids: Option<Vec<BlobId>>,
     ) -> anyhow::Result<Vec<BlobId>>;
-    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDatablob>;
-    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDatablob>>;
+    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob>;
+    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>>;
 }
 
 #[async_trait]
 impl DataBlobHandler for ExternalDbClient {
     async fn add_blob(
         &mut self,
-        data_blob: EncryptedDatablob,
+        data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId> {
         let id = id.unwrap_or_else(|| rand::rng().random::<i64>());
-        let data_blob = DataBlob {
-            id,
-            encrypted_blob: bincode::encode_to_vec(&data_blob, config::standard())?,
-        };
+        let data_blob = DataBlob { id, encrypted_blob: data_blob.encode_to_vec() };
         let db_response = self
             .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
             .await
@@ -576,7 +566,7 @@ impl DataBlobHandler for ExternalDbClient {
 
     async fn add_blobs(
         &mut self,
-        data_blobs: Vec<EncryptedDatablob>,
+        data_blobs: Vec<EncryptedDataBlob>,
         ids: Option<Vec<BlobId>>,
     ) -> anyhow::Result<Vec<BlobId>> {
         let mut result = Vec::with_capacity(data_blobs.len());
@@ -593,7 +583,7 @@ impl DataBlobHandler for ExternalDbClient {
         Ok(result)
     }
 
-    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDatablob> {
+    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob> {
         let db_response = self
             .read_data_blob(ReadDataBlobRequest { id: *id })
             .await
@@ -602,15 +592,14 @@ impl DataBlobHandler for ExternalDbClient {
         if let Some(status) = db_response.status {
             if status.success && db_response.data_blob.is_some() {
                 let data_blob = db_response.data_blob.unwrap();
-                let (data_blob, _): (EncryptedDatablob, usize) =
-                    bincode::decode_from_slice(&data_blob.encrypted_blob, config::standard())?;
+                let data_blob = EncryptedDataBlob::decode(&*data_blob.encrypted_blob)?;
                 return Ok(data_blob);
             }
         }
         bail!("Failed to read data blob");
     }
 
-    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDatablob>> {
+    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>> {
         // TOOD: b/412698203 - Ideally we should have a rpc call that does batch get.
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {

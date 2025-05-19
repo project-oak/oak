@@ -26,7 +26,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     included_protos.push(path_str.to_path_buf());
 
-    let proto_paths = ["../proto/sealed_memory.proto", "../proto/database.proto"];
+    let proto_paths =
+        ["../proto/sealed_memory.proto", "../proto/database.proto", "../proto/internal.proto"];
 
     let mut config = prost_build::Config::new();
 
