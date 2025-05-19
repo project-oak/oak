@@ -163,6 +163,11 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let kernel = unsafe { kernel::Kernel::try_load_kernel_image(&mut fwcfg) }.unwrap();
     let kernel_sha2_256_digest = kernel.measure();
 
+    // Grab 1 MB of memory for ACPI-related things, as not everything will fit into
+    // the EBDA. We want this space to be 1M in size, and to be as close to the 1GiB
+    // boundary as possible.
+    acpi::setup_high_allocator(&mut zero_page).unwrap();
+
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));

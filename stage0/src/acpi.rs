@@ -25,9 +25,10 @@ use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, size_of_val, zeroed, MaybeUninit},
-    ops::{Deref, Range},
+    ops::{Deref, DerefMut, Range},
 };
 
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use zerocopy::AsBytes;
@@ -37,24 +38,22 @@ use crate::{
         DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     fw_cfg::{DirEntry, FwCfg},
-    Madt,
+    Madt, ZeroPage,
 };
 
 /// Root System Descriptor Pointer.
 /// Not really a pointer but a structure (see https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp).#
 /// It's located in the first 1KiB of the EBDA.
-#[link_section = ".ebda.rsdp"]
+#[link_section = ".ebda"]
 static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
 
-/// EBDA (Extended Bios Data Area) size. Its size is 128KiB but we
-/// reserve the first 1KiB for the RSDP which we treat separately.
-pub const EBDA_SIZE: usize = 127 * 1024;
+// How much memory to reserve for ACPI tables in "high" memory. This does not
+// refer to EBDA any longer; clean this up.
+pub const EBDA_SIZE: usize = 0x10_0000;
 
-type EbdaMemT = [u8; EBDA_SIZE];
-
-/// EBDA (Extended Bios Data Area) raw memory.
-#[link_section = ".ebda"]
-static mut EBDA_MEM: MaybeUninit<EbdaMemT> = MaybeUninit::uninit();
+// Raw chunk of the "high" memory for ACPI tables. This should get replaced by a
+// proper allocator as part of clean-up.
+static mut EBDA_MEM: OnceCell<&'static mut [u8]> = OnceCell::new();
 
 static mut EBDA_INSTANCE: OnceCell<Ebda> = OnceCell::new();
 
@@ -151,7 +150,9 @@ impl Files for EbdaFiles {
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            Ok(unsafe { EBDA_MEM.assume_init_mut() })
+            unsafe { EBDA_MEM.get_mut() }
+                .map(DerefMut::deref_mut)
+                .ok_or("high memory for ACPI not initialized yet")
         } else {
             Err("Unsupported file in table-loader")
         }
@@ -168,7 +169,9 @@ impl Files for EbdaFiles {
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             Ok(unsafe { RSDP.assume_init_ref().as_bytes() })
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            Ok(unsafe { EBDA_MEM.assume_init_ref() })
+            unsafe { EBDA_MEM.get() }
+                .map(Deref::deref)
+                .ok_or("high memory for ACPI not initialized yet")
         } else {
             Err("Unsupported file in table-loader")
         }
@@ -214,9 +217,14 @@ impl Ebda {
             match EBDA_INSTANCE.get_mut() {
                 Some(ebda) => ebda,
                 None => {
-                    // Safety: EBDA_MEM accessed for write only from single thread BSP. This block
-                    // executes exactly once. Always a valid &[u8].
-                    let ebda = Self { ebda_buf: EBDA_MEM.assume_init_mut(), len_bytes: 0 };
+                    // Safety: Either the cell is initalized or we panic.
+                    let ebda = Self {
+                        ebda_buf: EBDA_MEM
+                            .get_mut()
+                            .expect("high memory for ACPI not initialized yet"),
+
+                        len_bytes: 0,
+                    };
                     EBDA_INSTANCE.set(ebda).unwrap();
                     EBDA_INSTANCE.get_mut().unwrap()
                 }
@@ -794,6 +802,36 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
         };
         command.invoke(files, fwcfg, acpi_digest)
     }
+}
+
+pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str> {
+    let mem_start = {
+        // Find a suitable 1M gap: we want it to be as close to the 1G mark as possible,
+        // but we may have less memory than that.
+        let entry = zero_page
+            .e820_table()
+            .iter()
+            .filter(|&entry| {
+                // We're only interested in (a) entries that are regular memory and (b) that
+                // start below the 1G mark, with enough space for a 1M chunk.
+                entry.entry_type() == Some(E820EntryType::RAM)
+                    && entry.addr() < (0x4000_0000 - EBDA_SIZE)
+                    && entry.size() >= EBDA_SIZE
+            })
+            .last()
+            .ok_or("could not find memory for ACPI tables")?;
+        let mem_end = core::cmp::min(0x4000_0000, entry.addr() + entry.size());
+        mem_end - EBDA_SIZE
+    };
+    // reserve the memory for ACPI tables
+    zero_page.insert_e820_entry(BootE820Entry::new(mem_start, EBDA_SIZE, E820EntryType::ACPI));
+
+    // Safety: the pointer should only be written once, and we're single threaded,
+    // and if it is nullptr any allocations would have panicked by now.
+    // TODO: b/409562112 - This should be replaced by a proper allocator instead of
+    // juggling raw pointers.
+    unsafe { EBDA_MEM.set(core::slice::from_raw_parts_mut(mem_start as *mut u8, EBDA_SIZE)) }
+        .map_err(|_| "high memory for ACPI tables already set")
 }
 
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
