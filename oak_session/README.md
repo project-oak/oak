@@ -168,6 +168,96 @@ During the `HANDSHAKE` step, the `Handshaker` initiates the Noise session
 proper. It uses the `SessionBinder` and `SessionBindingVerifier` once the
 session is established to create and verify the other end's bindings.
 
+The binding step has been merged with the Noise handshake flow to avoid one
+extra message in the case of attested servers. In the case of attested clients,
+the client has to send one extra "follow-up message" after the handshake proper,
+with the session bindings.
+
+The following diagram shows the handshake sequence. The client is configured in
+`PeerUnidirectional` mode, and the server is configured in `SelfUnidirectional`
+mode. Only one mode of attestation is configured.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    box Client side
+        participant CSV as SessionBindingVerifier
+        participant CN as Noise Protocol
+        participant CH as ClientHandshaker
+    end
+    box Server side
+        participant SH as ServerHandshaker
+        participant SN as Noise Protocol
+        participant SSB as SessionBinder
+    end
+
+    CH->>+CN: build_initial_message()
+    CN-->>-CH: noise_message
+
+    CH--)SH: handshake request (noise_message)
+    SH->>+SN: get_noise_response(noise_message)
+    SN-->>-SH: noise_response, handshake_hash, session_key
+
+    SH->>+SSB: bind(handshake_hash)
+    SSB-->>-SH: binding
+    SH--)CH: handshake response (noise_message, binding)
+
+    CH->>+CN: process_response (noise_message)
+    CN-->>-CH: handshake_hash, session_key
+    CH->>+CSV: verify_binding (binding)
+    CSV-->>-CH: result
+
+    Note over CH,SH: Session Keys are extracted<br/>and handed over to the Encryptor
+```
+
+The following diagram contains the flow for bidirectional attestation. In
+bidirectional attestation both the client and the server produce bindings, and
+the client has to send one more response to the server with its bindings.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    box Client side
+        participant CSV as SessionBindingVerifier
+        participant CSB as SessionBinder
+        participant CN as Noise Protocol
+        participant CH as ClientHandshaker
+    end
+    box Server side
+        participant SH as ServerHandshaker
+        participant SN as Noise Protocol
+        participant SSB as SessionBinder
+        participant SSV as SessionBindingVerifier
+    end
+
+    CH->>+CN: build_initial_message()
+    CN-->>-CH: noise_message
+
+    CH--)SH: handshake request (noise_message)
+    SH->>+SN: get_noise_response(noise_message)
+    SN-->>-SH: noise_response, handshake_hash, session_key
+
+    SH->>+SSB: bind(handshake_hash)
+    SSB-->>-SH: server_binding
+    SH--)CH: handshake response (noise_message, server_binding)
+
+    CH->>+CN: process_response (noise_message)
+    CN-->>-CH: handshake_hash, session_key
+    CH->>+CSV: verify_binding (server_binding)
+    CSV-->>-CH: result
+
+    CH->>+CSB: bind(hanshake_hash)
+    CSB-->>-CH: client_binding
+    CH--)SH: followup request (client_binding)
+
+    SH->>+SSV: verify(client_binding)
+    SSV-->>-SH: result
+
+    Note over CH,SH: Session Keys are extracted<br/>and handed over to the Encryptor
+```
+
 #### Encryption flow
 
 Finally, once the session is in `OPEN` state, the `Encryptor` consumes the
