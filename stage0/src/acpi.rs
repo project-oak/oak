@@ -224,18 +224,6 @@ impl Ebda {
         }
     }
 
-    /// Clears EBDA buffer then reads a file from fwcfg into it.
-    pub fn read_fwcfg<P: crate::Platform>(
-        &mut self,
-        fwcfg: &mut FwCfg<P>,
-        file: DirEntry,
-    ) -> Result<(), &'static str> {
-        self.clear();
-        let bytes_read: usize = fwcfg.read_file(&file, self.ebda_buf)?;
-        self.len_bytes = bytes_read;
-        Ok(())
-    }
-
     /// Allocates byte_count of memory on the EBDA and returns a slice to it.
     pub fn allocate(&mut self, byte_count: usize) -> Result<&mut [u8], &'static str> {
         let dest_base_ix = self.len_bytes;
@@ -258,10 +246,6 @@ impl Ebda {
         Ok(())
     }
 
-    pub fn get_buf(&self) -> &[u8] {
-        self.ebda_buf
-    }
-
     /// Returns true if addr is within EBDA address range.
     /// Convenience method for validations.
     pub fn contains_addr(&self, addr: usize) -> bool {
@@ -270,13 +254,6 @@ impl Ebda {
 
     pub fn contains_addr_range(&self, range: &Range<usize>) -> bool {
         self.contains_addr(range.start) && self.contains_addr(range.end)
-    }
-
-    fn clear(&mut self) {
-        for elem in self.ebda_buf.iter_mut() {
-            *elem = 0;
-        }
-        self.len_bytes = 0;
     }
 }
 
