@@ -99,6 +99,14 @@ filegroup(
     ],
 )
 
+# Example attestation evidence on Intel TDX for the Oak Containers stack.
+filegroup(
+    name = "oc_attestation_tdx",
+    srcs = [
+        "oc_evidence_tdx.binarypb",
+    ],
+)
+
 # A recent attestation triple for an Restricted Kernel stack.
 filegroup(
     name = "rk_attestation",
