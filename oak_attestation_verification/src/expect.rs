@@ -473,7 +473,7 @@ pub(crate) fn get_container_layer_expected_values(
     let config = Some(
         get_expected_measurement_digest(
             now_utc_millis,
-            endorsements.and_then(|value| value.binary.as_ref()),
+            endorsements.and_then(|value| value.configuration.as_ref()),
             reference_values.configuration.as_ref().context("container config reference value")?,
         )
         .context("getting container config values")?,
@@ -497,7 +497,7 @@ pub(crate) fn acquire_container_event_expected_values(
     let config = Some(
         acquire_expected_digests(
             now_utc_millis,
-            endorsement.and_then(|value| value.binary.as_ref()),
+            endorsement.and_then(|value| value.configuration.as_ref()),
             reference_values.configuration.as_ref().context("container config reference value")?,
         )
         .context("getting container config values")?,
