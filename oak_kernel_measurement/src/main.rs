@@ -30,6 +30,11 @@ struct Cli {
     kernel_setup_data_output: Option<PathBuf>,
     #[arg(long, help = "The location of output the extracted kernel image file to")]
     kernel_image_output: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Whether to skip the VMM modifications to the setup data when calculating the measurement"
+    )]
+    skip_setup_data_modifications: bool,
 }
 
 impl Cli {
@@ -41,7 +46,8 @@ impl Cli {
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
-    let kernel_info = Kernel::load(cli.kernel_path()).context("couldn't load kernel file")?;
+    let kernel_info = Kernel::load(cli.kernel_path(), cli.skip_setup_data_modifications)
+        .context("couldn't load kernel file")?;
     let mut kernel_hasher = Sha256::new();
     kernel_hasher.update(&kernel_info.kernel_image);
     println!("Kernel Image Measurement: sha2-256:{}", hex::encode(kernel_hasher.finalize()));
@@ -76,7 +82,7 @@ impl Kernel {
     ///
     /// See <https://github.com/qemu/qemu/blob/6630bc04bccadcf868165ad6bca5a964bb69b067/hw/i386/x86.c#L795>
     /// and <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html>
-    fn from_bz_image(bz_image: &[u8]) -> Self {
+    fn from_bz_image(bz_image: &[u8], skip_setup_data_modifications: bool) -> Self {
         // The number of 512 byte sectors -1 is stored at offset 0x1F1.
         let setup_sects = bz_image[0x1F1];
         // For backwards compatibility, if setup_sects is 0 it should be set to 4.
@@ -86,19 +92,22 @@ impl Kernel {
         // The kernel image is just everything after the setup data.
         let kernel_image = bz_image[setup_size..].to_vec();
         let mut setup_data = bz_image[..setup_size].to_vec();
-        // The VMM will modify some fields in the setup data header.
-        // The loader type will be set to `QEMU`.
-        setup_data[0x210] = 0xB0;
-        // The load flags will be updated to enable heap usage.
-        setup_data[0x211] |= 0x80;
-        // Set the default command_line location.
-        let default_cmd_line = 0x20000;
-        *u32::mut_from(&mut setup_data[0x228..0x22C]).expect("invalid slice for cmd_line") =
-            default_cmd_line;
-        // Set the offset to the end of the heap.
-        let default_setup = 0x10000;
-        *u16::mut_from(&mut setup_data[0x224..0x226]).expect("invalid slice for heap end ptr") =
-            (default_cmd_line - default_setup - 0x200) as u16;
+        if !skip_setup_data_modifications {
+            // The VMM will modify some fields in the setup data header.
+            // The loader type will be set to `QEMU`.
+            setup_data[0x210] = 0xB0;
+            // The load flags will be updated to enable heap usage.
+            setup_data[0x211] |= 0x80;
+            // Set the default command_line location.
+            let default_cmd_line = 0x20000;
+            *u32::mut_from(&mut setup_data[0x228..0x22C]).expect("invalid slice for cmd_line") =
+                default_cmd_line;
+            // Set the offset to the end of the heap.
+            let default_setup = 0x10000;
+            *u16::mut_from(&mut setup_data[0x224..0x226])
+                .expect("invalid slice for heap end ptr") =
+                (default_cmd_line - default_setup - 0x200) as u16;
+        }
 
         // The location and size of the initial RAM disk will depend on the actual
         // initial RAM disk. To have stable measurements Stage 0 will overwrite
@@ -107,17 +116,16 @@ impl Kernel {
         *u32::mut_from(&mut setup_data[0x218..0x21C]).expect("invalid slice for initrd location") =
             0;
         *u32::mut_from(&mut setup_data[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
-
         Self { setup_data, kernel_image }
     }
 
     /// Loads the bzImage-format kernel from the supplied path/
-    fn load(kernel_path: PathBuf) -> anyhow::Result<Self> {
+    fn load(kernel_path: PathBuf, skip_setup_data_modifications: bool) -> anyhow::Result<Self> {
         let kernel_bytes = std::fs::read(kernel_path).context("couldn't load kernel bzImage")?;
         log::debug!("Kernel size: {}", kernel_bytes.len());
         let mut hasher = Sha256::new();
         hasher.update(&kernel_bytes);
         log::info!("Kernel digest: sha256:{}", hex::encode(hasher.finalize()));
-        Ok(Self::from_bz_image(&kernel_bytes))
+        Ok(Self::from_bz_image(&kernel_bytes, skip_setup_data_modifications))
     }
 }
