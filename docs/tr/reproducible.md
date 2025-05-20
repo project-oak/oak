@@ -10,6 +10,7 @@ continuously monitored for regressions.
 | key_xor_test_app                                    | Yes             |                           |
 | oak_containers_kernel                               | Yes             |                           |
 | oak_containers_stage1                               | Yes             |                           |
+| oak_containers_stage1_tdx                           | Yes             |                           |
 | oak_containers_system_image                         | Yes             |                           |
 | oak_echo_enclave_app                                | Yes             |                           |
 | oak_echo_raw_enclave_app                            | Yes             |                           |
@@ -20,3 +21,4 @@ continuously monitored for regressions.
 | oak_restricted_kernel_simple_io_init_rd_wrapper_bin | Yes             |                           |
 | oak_orchestrator                                    | Yes             |                           |
 | stage0_bin                                          | Yes             |                           |
+| stage0_bin_tdx                                      | Yes             |                           |
