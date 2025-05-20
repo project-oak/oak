@@ -103,7 +103,7 @@ list_all_endorsements() {
       fetch_file "${fbucket}" "${subject_hash}" "${attachment_path}"
       # A very rough way to parse a proto, but good enough for a demo.
       local parsed=$(strings "${attachment_path}")
-      [[ "${parsed}" =~ ([a-z/_]+) ]] && pkg_name=${BASH_REMATCH[0]} || exit 2
+      [[ "${parsed}" =~ ([a-z/_-]+) ]] && pkg_name=${BASH_REMATCH[0]} || exit 2
       [[ "${parsed}" =~ ([0-9a-f_-]{46}) ]] && version_id=${BASH_REMATCH[0]} || exit 2
       echo -e "    MPM package name:    ${PURPLE}${pkg_name}${COLOFF}"
       echo -e "    MPM package version: ${PURPLE}${version_id}${COLOFF}"
