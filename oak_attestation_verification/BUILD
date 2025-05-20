@@ -30,6 +30,7 @@ rust_library(
         "//:x86_64-linux-setting",
         "//:x86_64-none-no_avx-setting",
         "//:x86_64-none-setting",
+        "//:wasm32-none-setting",
     ]),
     deps = [
         "//oak_attestation_verification_types",

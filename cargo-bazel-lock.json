@@ -1,5 +1,5 @@
 {
-  "checksum": "316485a42317bcfa3b630c1bb2a7072ff07014c9137788912c7eed7c7f63b6a7",
+  "checksum": "e7d6c5e8b4a7d008edf757ee4e7f0a0c54640dde761c1881931d44e474f7f0a4",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -408,7 +408,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "getrandom 0.2.12",
+              "id": "getrandom 0.2.16",
               "target": "getrandom"
             },
             {
@@ -6952,7 +6952,7 @@
               "target": "futures_util"
             },
             {
-              "id": "getrandom 0.2.12",
+              "id": "getrandom 0.2.16",
               "target": "getrandom"
             },
             {
@@ -7308,7 +7308,7 @@
               "target": "x509_cert"
             },
             {
-              "id": "x86_64 0.14.11",
+              "id": "x86_64 0.14.12",
               "target": "x86_64"
             },
             {
@@ -9639,14 +9639,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "getrandom 0.2.12": {
+    "getrandom 0.2.16": {
       "name": "getrandom",
-      "version": "0.2.12",
+      "version": "0.2.16",
       "package_url": "https://github.com/rust-random/getrandom",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/getrandom/0.2.12/download",
-          "sha256": "190092ea657667030ac6a35e305e62fc4dd69fd98ac98631e5d3a2b1575a12b5"
+          "url": "https://static.crates.io/crates/getrandom/0.2.16/download",
+          "sha256": "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
         }
       },
       "targets": [
@@ -9697,7 +9697,7 @@
           }
         },
         "edition": "2018",
-        "version": "0.2.12"
+        "version": "0.2.16"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20023,7 +20023,7 @@
         "deps": {
           "common": [
             {
-              "id": "getrandom 0.2.12",
+              "id": "getrandom 0.2.16",
               "target": "getrandom"
             }
           ],
@@ -20344,7 +20344,7 @@
         "deps": {
           "common": [
             {
-              "id": "getrandom 0.2.12",
+              "id": "getrandom 0.2.16",
               "target": "getrandom"
             },
             {
@@ -20870,7 +20870,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "getrandom 0.2.12",
+              "id": "getrandom 0.2.16",
               "target": "getrandom"
             },
             {
@@ -32724,14 +32724,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.14.11": {
+    "x86_64 0.14.12": {
       "name": "x86_64",
-      "version": "0.14.11",
+      "version": "0.14.12",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.14.11/download",
-          "sha256": "3b835097a84e4457323331ec5d6eb23d096066cbfb215d54096dcb4b2e85f500"
+          "url": "https://static.crates.io/crates/x86_64/0.14.12/download",
+          "sha256": "96cb6fd45bfeab6a5055c5bffdb08768bd0c069f1d946debe585bbb380a7c062"
         }
       },
       "targets": [
@@ -32791,7 +32791,7 @@
           ],
           "selects": {}
         },
-        "version": "0.14.11"
+        "version": "0.14.12"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -33611,7 +33611,7 @@
     "env_logger 0.11.3",
     "futures 0.3.31",
     "futures-util 0.3.31",
-    "getrandom 0.2.12",
+    "getrandom 0.2.16",
     "goblin 0.8.2",
     "googletest 0.14.0",
     "hashbrown 0.14.3",
@@ -33702,7 +33702,7 @@
     "wasmtime 25.0.3",
     "which 5.0.0",
     "x509-cert 0.2.5",
-    "x86_64 0.14.11",
+    "x86_64 0.14.12",
     "xz2 0.1.7",
     "zerocopy 0.7.32",
     "zeroize 1.7.0"

@@ -298,3 +298,16 @@ nix_kernel_repo(
     bzImage_sha256 = "9e4dd5c5cebb4be3bea8747035979ab373b92124bbb9dcdef19325cea7116717",
     bzImage_vanilla_sha256 = "1ce6de1a2c4885dbf6d445a5bac390e285a76104d52e5356501330b409aaf141",
 )
+
+http_archive(
+    name = "rules_rust_wasm_bindgen",
+    integrity = "sha256-U8G6x+xI985IxMHGqgBvJ1Fa3SrrBXJZNyJObgDsfOo=",
+    strip_prefix = "extensions/wasm_bindgen",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.61.0/rules_rust-0.61.0.tar.gz"],
+)
+
+load("@rules_rust_wasm_bindgen//:repositories.bzl", "rust_wasm_bindgen_dependencies", "rust_wasm_bindgen_register_toolchains")
+
+rust_wasm_bindgen_dependencies()
+
+rust_wasm_bindgen_register_toolchains()

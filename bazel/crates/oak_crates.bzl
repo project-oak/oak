@@ -89,7 +89,7 @@ def _common_crates(std):
         "getrandom": crate.spec(
             default_features = std,
             # rdrand is required to support x64_64-unknown-none.
-            features = [] if std else ["rdrand"],
+            features = [] if std else ["rdrand", "js"],
             version = "0.2.12",
         ),
         "goblin": crate.spec(
@@ -248,7 +248,7 @@ def _common_crates(std):
             features = ["pem"],
             version = "0.2.5",
         ),
-        "x86_64": crate.spec(version = "=0.14"),  #  0.15 does not support LowerHex formatting.
+        "x86_64": crate.spec(version = "=0.14.12"),  #  0.15 does not support LowerHex formatting.
         "zerocopy": crate.spec(
             default_features = False,
             features = ["derive"],
@@ -273,6 +273,9 @@ OAK_NO_STD_ANNOTATIONS = {
 # should instead be added to _common_crates.
 OAK_NO_STD_CRATES = _common_crates(std = False) | {
     "virtio-drivers": crate.spec(version = "0.7.3"),
+    # We have to use the exact version that `rules_rust` uses.
+    # If `rules_rust` in oak got updated, we also need to adjust the version.
+    "wasm-bindgen": crate.spec(version = "=0.2.100"),
 }
 
 # Annotations for the no_std no-AVX crates index.

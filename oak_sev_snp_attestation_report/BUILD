@@ -29,6 +29,7 @@ rust_library(
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
+        "//:wasm32-none-setting",
     ]),
     deps = [
         "@oak_crates_index//:bitflags",
