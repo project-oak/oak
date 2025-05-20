@@ -45,22 +45,18 @@ use crate::{
 /// Not really a pointer but a structure (see https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp).#
 /// It's located in the first 1KiB of the EBDA.
 #[link_section = ".ebda"]
-static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
+static mut EBDA: MaybeUninit<Rsdp> = MaybeUninit::uninit();
 
-// How much memory to reserve for ACPI tables in "high" memory. This does not
-// refer to EBDA any longer; clean this up.
-pub const EBDA_SIZE: usize = 0x10_0000;
+/// How much memory to reserve for ACPI tables in "high" memory.
+const HIGH_MEM_SIZE: usize = 0x10_0000;
 
 // Raw chunk of the "high" memory for ACPI tables. This should get replaced by a
 // proper allocator as part of clean-up.
-static mut EBDA_MEM: OnceCell<&'static mut [u8]> = OnceCell::new();
+static mut HIGH_MEM: OnceCell<&'static mut [u8]> = OnceCell::new();
 
-static mut EBDA_INSTANCE: OnceCell<Ebda> = OnceCell::new();
+static mut HIGH_MEM_ALLOC: OnceCell<Ebda> = OnceCell::new();
 
-// Safety: we include a nul byte at the end of the string, and that is the only
-// nul byte.
-const TABLE_LOADER_FILE_NAME: &CStr =
-    unsafe { CStr::from_bytes_with_nul_unchecked(b"etc/table-loader\0") };
+const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
 const RSDP_FILE_NAME_SUFFIX: &str = "acpi/rsdp";
 const ACPI_TABLES_FILE_NAME_SUFFIX: &str = "acpi/tables";
 
@@ -119,7 +115,7 @@ impl Files for EbdaFiles {
             }
 
             // Safety: we do not have concurrent threads so accessing the static is safe.
-            let buf = unsafe { RSDP.write(zeroed()) };
+            let buf = unsafe { EBDA.write(zeroed()) };
 
             // Sanity checks.
             if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
@@ -148,9 +144,9 @@ impl Files for EbdaFiles {
         // [u8].
         let name = name.to_str().map_err(|_| "invalid file name")?;
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
+            Ok(unsafe { EBDA.assume_init_mut().as_bytes_mut() })
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            unsafe { EBDA_MEM.get_mut() }
+            unsafe { HIGH_MEM.get_mut() }
                 .map(DerefMut::deref_mut)
                 .ok_or("high memory for ACPI not initialized yet")
         } else {
@@ -167,9 +163,9 @@ impl Files for EbdaFiles {
         // [u8].
         let name = name.to_str().map_err(|_| "invalid file name")?;
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            Ok(unsafe { RSDP.assume_init_ref().as_bytes() })
+            Ok(unsafe { EBDA.assume_init_ref().as_bytes() })
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            unsafe { EBDA_MEM.get() }
+            unsafe { HIGH_MEM.get() }
                 .map(Deref::deref)
                 .ok_or("high memory for ACPI not initialized yet")
         } else {
@@ -214,19 +210,19 @@ impl Ebda {
         // Safety: EBDA_INSTANCE accessed for write only from a single thread (BSP).
         // Read-only access from APs (assembly code).
         unsafe {
-            match EBDA_INSTANCE.get_mut() {
+            match HIGH_MEM_ALLOC.get_mut() {
                 Some(ebda) => ebda,
                 None => {
                     // Safety: Either the cell is initalized or we panic.
                     let ebda = Self {
-                        ebda_buf: EBDA_MEM
+                        ebda_buf: HIGH_MEM
                             .get_mut()
                             .expect("high memory for ACPI not initialized yet"),
 
                         len_bytes: 0,
                     };
-                    EBDA_INSTANCE.set(ebda).unwrap();
-                    EBDA_INSTANCE.get_mut().unwrap()
+                    HIGH_MEM_ALLOC.set(ebda).unwrap();
+                    HIGH_MEM_ALLOC.get_mut().unwrap()
                 }
             }
         }
@@ -815,22 +811,22 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
                 // We're only interested in (a) entries that are regular memory and (b) that
                 // start below the 1G mark, with enough space for a 1M chunk.
                 entry.entry_type() == Some(E820EntryType::RAM)
-                    && entry.addr() < (0x4000_0000 - EBDA_SIZE)
-                    && entry.size() >= EBDA_SIZE
+                    && entry.addr() < (0x4000_0000 - HIGH_MEM_SIZE)
+                    && entry.size() >= HIGH_MEM_SIZE
             })
             .last()
             .ok_or("could not find memory for ACPI tables")?;
         let mem_end = core::cmp::min(0x4000_0000, entry.addr() + entry.size());
-        mem_end - EBDA_SIZE
+        mem_end - HIGH_MEM_SIZE
     };
     // reserve the memory for ACPI tables
-    zero_page.insert_e820_entry(BootE820Entry::new(mem_start, EBDA_SIZE, E820EntryType::ACPI));
+    zero_page.insert_e820_entry(BootE820Entry::new(mem_start, HIGH_MEM_SIZE, E820EntryType::ACPI));
 
     // Safety: the pointer should only be written once, and we're single threaded,
     // and if it is nullptr any allocations would have panicked by now.
     // TODO: b/409562112 - This should be replaced by a proper allocator instead of
     // juggling raw pointers.
-    unsafe { EBDA_MEM.set(core::slice::from_raw_parts_mut(mem_start as *mut u8, EBDA_SIZE)) }
+    unsafe { HIGH_MEM.set(core::slice::from_raw_parts_mut(mem_start as *mut u8, HIGH_MEM_SIZE)) }
         .map_err(|_| "high memory for ACPI tables already set")
 }
 
@@ -867,7 +863,7 @@ pub fn build_acpi_tables<P: crate::Platform>(
     }
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
-    let rsdp = unsafe { RSDP.assume_init_mut() };
+    let rsdp = unsafe { EBDA.assume_init_mut() };
     rsdp.validate::<P>()?;
     log::info!("ACPI tables before finalizing:");
     debug_print_acpi_tables(rsdp)?;
