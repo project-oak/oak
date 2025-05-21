@@ -19,8 +19,10 @@
 
 // These data structures (and constants) are derived from
 // qemu/hw/acpi/bios-linker-loader.c that defines the interface.
+use alloc::{alloc::Global, boxed::Box, collections::BTreeMap, ffi::CString};
 use core::{
-    alloc::Layout,
+    alloc::{Allocator, Layout},
+    borrow::{Borrow, BorrowMut},
     cell::OnceCell,
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
@@ -92,6 +94,160 @@ trait Files {
 
     /// Access the contents of the named file, if it exists.
     fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str>;
+}
+
+/// Wrapper for a file, as they may come from different zones.
+enum File<'a, 'b, L: Allocator, H: Allocator> {
+    /// A file in `Zone::FSeg` (stored in the EBDA, e.g. the RSDP)
+    Low(Box<[u8], &'a L>),
+
+    /// A file in `Zone::High` (stored somewhwere else in memory)
+    High(Box<[u8], &'b H>),
+
+    #[cfg(test)]
+    /// Testing only: an arbitrary pointer. This is useful for cases when we
+    /// want predictable addresses and not be at the whim of the allocator. As
+    /// writing or reading from arbitrary pointers is unsafe, you'll only be
+    /// able to get zero-length slices as the backing store for this type of
+    /// file.
+    Fake(core::ptr::NonNull<u8>),
+}
+
+impl<'a, 'b, L: Allocator, H: Allocator> Deref for File<'a, 'b, L, H> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Low(file) => file,
+            Self::High(file) => file,
+            #[cfg(test)]
+            Self::Fake(data) => {
+                // Safety: any non-null pointer can be turned into a zero-length slice, as you
+                // can't read from or write to the resulting slice.
+                unsafe { core::slice::from_raw_parts(data.as_ref(), 0) }
+            }
+        }
+    }
+}
+
+impl<'a, 'b, L: Allocator, H: Allocator> DerefMut for File<'a, 'b, L, H> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Low(ref mut file) => file.borrow_mut(),
+            Self::High(ref mut file) => file.borrow_mut(),
+            #[cfg(test)]
+            Self::Fake(data) => {
+                // Safety: any non-null pointer can be turned into a zero-length slice, as you
+                // can't read from or write to the resulting slice.
+                unsafe { core::slice::from_raw_parts_mut(data.as_mut(), 0) }
+            }
+        }
+    }
+}
+
+/// Storage for files loaded by table_loader.
+///
+/// As files can be in two zones (`Zone::FSeg` and `Zone::High`) we take two
+/// allocators as parameters where the files will be allocated from,
+/// respectively.
+struct MemFiles<L: Allocator + 'static, H: Allocator + 'static> {
+    low_allocator: &'static L,
+    high_allocator: &'static H,
+    files: BTreeMap<CString, File<'static, 'static, L, H>>,
+}
+
+impl<L: Allocator + 'static, H: Allocator + 'static> MemFiles<L, H> {
+    pub const fn new(low_allocator: &'static L, high_allocator: &'static H) -> Self {
+        Self { low_allocator, high_allocator, files: BTreeMap::new() }
+    }
+
+    #[cfg(test)]
+    /// Testing only: store some contents in FSeg, and panic if allocation
+    /// fails.
+    fn new_file(&mut self, name: &CStr, contents: &[u8]) {
+        let new_file = self
+            .allocate(name, Layout::from_size_align(contents.len(), 1).unwrap(), Zone::FSeg)
+            .unwrap();
+        new_file.copy_from_slice(contents);
+    }
+
+    #[cfg(test)]
+    /// Testing only: store a fake entry.
+    fn new_file_ptr(
+        &mut self,
+        name: &CStr,
+        ptr: core::ptr::NonNull<u8>,
+    ) -> core::result::Result<(), &'static str> {
+        if self.files.contains_key(name) {
+            return Err("file already exists");
+        }
+        self.files.insert(name.into(), File::Fake(ptr));
+        Ok(())
+    }
+}
+
+/// By default you get a MemFiles that just uses the global allocator.
+impl Default for MemFiles<Global, Global> {
+    fn default() -> Self {
+        Self::new(&Global, &Global)
+    }
+}
+
+impl<L: Allocator + 'static, H: Allocator + 'static> Files for MemFiles<L, H> {
+    fn allocate(
+        &mut self,
+        name: &CStr,
+        layout: Layout,
+        zone: Zone,
+    ) -> Result<&mut [u8], &'static str> {
+        if self.files.contains_key(name) {
+            return Err("file already exists");
+        }
+
+        // These branches look similar, but each step is different because the different
+        // allocator used.
+        let file = match zone {
+            Zone::High => {
+                let mut mem = self
+                    .high_allocator
+                    .allocate_zeroed(layout)
+                    .map_err(|_| "failed to allocate memory for file")?;
+                // Safety: the pointer is not null (guaranteed by `NonNull`); the contents are
+                // zeroed and any alignment is valid for `u8`; there are no aliases to the
+                // memory location; we use the correct allocator for the `Box`.
+                let boxed = unsafe { Box::from_raw_in(mem.as_mut(), self.high_allocator) };
+                File::High(boxed)
+            }
+            Zone::FSeg => {
+                let mut mem = self
+                    .low_allocator
+                    .allocate_zeroed(layout)
+                    .map_err(|_| "failed to allocate memory for file")?;
+                // Safety: the pointer is not null (guaranteed by `NonNull`); the contents are
+                // zeroed and any alignment is valid for `u8`; there are no aliases to the
+                // memory location; we use the correct allocator for the `Box`.
+                let boxed = unsafe { Box::from_raw_in(mem.as_mut(), self.low_allocator) };
+                File::Low(boxed)
+            }
+        };
+
+        // Sanity check: make sure that the memory in the box is indeed correctly
+        // aligned.
+        assert!(file.as_ptr().align_offset(layout.align()) == 0);
+
+        self.files.insert(name.into(), file);
+        self.get_file_mut(name)
+    }
+
+    fn get_file_mut(&mut self, name: &CStr) -> Result<&mut [u8], &'static str> {
+        let file = self.files.get_mut(name).ok_or("file not found")?;
+        Ok(file.borrow_mut())
+    }
+
+    fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str> {
+        let file = self.files.get(name).ok_or("file not found")?;
+        Ok(file.borrow())
+    }
 }
 
 /// Implementation for `Files` that just delegates to the existing EBDA space.
@@ -952,8 +1108,7 @@ fn print_system_data_table_entries<'a>(
 
 #[cfg(test)]
 mod tests {
-    use core::slice;
-    use std::{collections::BTreeMap, ffi::CString};
+    use std::ptr::NonNull;
 
     use googletest::prelude::*;
     use zeroize::Zeroize;
@@ -976,105 +1131,7 @@ mod tests {
         }
     }
 
-    enum TestFile {
-        /// File that is actually backed by a chunk of memory and can be read
-        /// from/written to.
-        BackedFile(Box<[u8]>),
-
-        /// Fake file: just a pointer. Potentially unsafe and must _only_ be
-        /// used to look at the address of the file and never dereferenced. This
-        /// "fake file" is needed to ensure predictable memory addresses (for
-        /// example, if we need to ensure that it's a 16-bit address).
-        FakeFile(*mut u8),
-    }
-
-    impl From<Box<[u8]>> for TestFile {
-        fn from(file: Box<[u8]>) -> Self {
-            TestFile::BackedFile(file)
-        }
-    }
-
-    impl AsRef<[u8]> for TestFile {
-        fn as_ref(&self) -> &[u8] {
-            match self {
-                TestFile::BackedFile(file) => file.as_ref(),
-                TestFile::FakeFile(ptr) => {
-                    // Safety: it is safe to read (or write) exactly zero bytes to that address.
-                    // That is, the slice will be empty, as reading or writing anything would be
-                    // unsafe.
-                    unsafe { slice::from_raw_parts(*ptr, 0) }
-                }
-            }
-        }
-    }
-
-    impl AsMut<[u8]> for TestFile {
-        fn as_mut(&mut self) -> &mut [u8] {
-            match self {
-                TestFile::BackedFile(file) => file.as_mut(),
-                TestFile::FakeFile(ptr) => {
-                    // Safety: it is safe to read (or write) exactly zero bytes to that address.
-                    // That is, the slice will be empty, as reading or writing anything would be
-                    // unsafe.
-                    unsafe { slice::from_raw_parts_mut(*ptr, 0) }
-                }
-            }
-        }
-    }
-
-    #[derive(Default)]
-    struct TestFiles {
-        files: BTreeMap<CString, TestFile>,
-    }
-
-    impl Files for TestFiles {
-        fn allocate(
-            &mut self,
-            name: &CStr,
-            layout: Layout,
-            _zone: Zone,
-        ) -> core::result::Result<&mut [u8], &'static str> {
-            if layout.align() != align_of::<u8>() {
-                return Err("test allocator doesn't support alignments");
-            }
-            if self.files.contains_key(name) {
-                return Err("file already exists");
-            }
-
-            self.files.insert(name.to_owned(), vec![0; layout.size()].into_boxed_slice().into());
-
-            self.get_file_mut(name)
-        }
-
-        fn get_file_mut(&mut self, name: &CStr) -> core::result::Result<&mut [u8], &'static str> {
-            self.files.get_mut(name).map(AsMut::as_mut).ok_or("file not found")
-        }
-
-        fn get_file(&self, name: &CStr) -> core::result::Result<&[u8], &'static str> {
-            self.files.get(name).map(AsRef::as_ref).ok_or("file not found")
-        }
-    }
-
-    impl TestFiles {
-        fn new_file(&mut self, name: &CStr, contents: &[u8]) {
-            let new_file = self
-                .allocate(name, Layout::from_size_align(contents.len(), 1).unwrap(), Zone::FSeg)
-                .unwrap();
-            new_file.copy_from_slice(contents);
-        }
-
-        fn new_file_ptr(
-            &mut self,
-            name: &CStr,
-            ptr: *mut u8,
-        ) -> core::result::Result<(), &'static str> {
-            if self.files.contains_key(name) {
-                return Err("file already exists");
-            }
-            self.files.insert(name.to_owned(), TestFile::FakeFile(ptr));
-            Ok(())
-        }
-    }
+    type TestFiles = MemFiles<Global, Global>;
 
     #[test]
     pub fn test_table_loader_interpretation() {
@@ -1110,7 +1167,7 @@ mod tests {
             RomfileCommand::default(),
         ];
 
-        assert_eq!(commands, &expected_commands[..]);
+        assert_that!(commands, container_eq(expected_commands));
     }
 
     #[test]
@@ -1206,7 +1263,7 @@ mod tests {
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
 
         let address: usize = 0xAABBCCDD;
-        files.new_file_ptr(c"32bit", address as *mut u8).unwrap();
+        files.new_file_ptr(c"32bit", NonNull::new(address as *mut u8).unwrap()).unwrap();
 
         // Check 3: store a most definitely 32-bit address and see that it works.
         files.get_file_mut(c"test").unwrap().zeroize();
