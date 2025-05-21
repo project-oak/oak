@@ -16,6 +16,7 @@
 
 package com.google.oak.session;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -28,6 +29,7 @@ import com.google.oak.session.v1.SessionRequest;
 import com.google.oak.session.v1.SessionResponse;
 import com.google.protobuf.ByteString;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Optional;
 import org.junit.After;
 import org.junit.Before;
@@ -66,6 +68,27 @@ public class OakSessionTest {
     doHandshake();
     assertTrue(clientSession.isOpen());
     assertTrue(serverSession.isOpen());
+  }
+
+  @Test
+  public void testGetSessionBindingToken_matchingInfo_succeeds() throws Exception {
+    doHandshake();
+    byte[] clientSessionBindingToken = clientSession.getSessionBindingToken("info".getBytes());
+    byte[] serverSessionBindingToken = serverSession.getSessionBindingToken("info".getBytes());
+    assertTrue(clientSessionBindingToken.length > 0);
+    assertTrue(serverSessionBindingToken.length > 0);
+    assertArrayEquals(clientSessionBindingToken, serverSessionBindingToken);
+  }
+
+  @Test
+  public void testGetSessionBindingToken_misMatchingInfo_fails() throws Exception {
+    doHandshake();
+    byte[] clientSessionBindingToken = clientSession.getSessionBindingToken("info".getBytes());
+    byte[] serverSessionBindingToken =
+        serverSession.getSessionBindingToken("wrong info".getBytes());
+    assertTrue(clientSessionBindingToken.length > 0);
+    assertTrue(serverSessionBindingToken.length > 0);
+    assertFalse(Arrays.equals(clientSessionBindingToken, serverSessionBindingToken));
   }
 
   @Test

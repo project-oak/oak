@@ -92,6 +92,13 @@ public class OakClientSession implements AutoCloseable {
     nativeWrite(nativePtr, plaintext.toByteArray());
   }
 
+  public byte[] getSessionBindingToken(byte[] info) {
+    if (closed) {
+      throw new IllegalStateException("Session was closed");
+    }
+    return nativeGetSessionBindingToken(nativePtr, info);
+  }
+
   /**
    * Closes the underlying native session. Must be called in order to avoid a
    * dangerous dangling pointer since while the session is open the corresponding
@@ -117,6 +124,8 @@ public class OakClientSession implements AutoCloseable {
   private static native byte[] nativeRead(long nativePtr);
 
   private static native void nativeWrite(long nativePtr, byte[] plaintext);
+
+  private static native byte[] nativeGetSessionBindingToken(long nativePtr, byte[] info);
 
   private static native void nativeClose(long nativePtr);
 

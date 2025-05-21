@@ -166,6 +166,38 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
 }
 
 #[no_mangle]
+extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetSessionBindingToken(
+    env: JNIEnv,
+    _class: JClass,
+    native_ptr: jlong,
+    info_byte_array: JByteArray,
+) -> jbyteArray {
+    let session: &mut ClientSession = unsafe { &mut *(native_ptr as *mut ClientSession) };
+
+    let info = match env.convert_byte_array(&info_byte_array) {
+        Ok(info) => info,
+        Err(err) => {
+            oak_exception(env, "Error getting byte array elements", err);
+            return null_mut();
+        }
+    };
+
+    match session.get_session_binding_token(info.as_slice()) {
+        Ok(token) => match env.byte_array_from_slice(token.as_slice()) {
+            Ok(token) => token.into_raw(),
+            Err(err) => {
+                oak_exception(env, "Failed to create byte array", err);
+                null_mut()
+            }
+        },
+        Err(err) => {
+            oak_exception(env, "Failed to get session binding token", err);
+            null_mut()
+        }
+    }
+}
+
+#[no_mangle]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeClose(
     _env: JNIEnv,
     _class: JClass,
