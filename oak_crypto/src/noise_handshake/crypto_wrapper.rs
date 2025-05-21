@@ -18,6 +18,12 @@
 
 #![allow(clippy::result_unit_err)]
 
+/// This info is always included to the caller-provided info when creating a
+/// [`SessionBindingToken`], to ensure that we never just hash the unmodified
+/// handshake hash in the case were a caller provides empty info.
+/// Generated randomly with: `printf "%020lu\n" "0x$(openssl rand -hex 8)"`
+pub const MANDATORY_SESSION_BINDING_INFO: &[u8] = b"11947944922982068094";
+
 pub const NONCE_LEN: usize = 12;
 pub const SHA256_OUTPUT_LEN: usize = 32;
 pub const SYMMETRIC_KEY_LEN: usize = 32;
@@ -92,6 +98,28 @@ pub fn sha256_two_part(input1: &[u8], input2: &[u8]) -> [u8; SHA256_OUTPUT_LEN] 
     let mut ctx = sha2::Sha256::new();
     ctx.update(input1);
     ctx.update(input2);
+    ctx.finalize().into()
+}
+
+/// Compute a session token hash from the three provided elements.
+/// A session token is a unique token that's bound to an established noise
+/// session.
+///
+/// It's a hash computed from the provided `handshake_hash` along with a
+/// caller-provided `info` string. An additional hard-coded MANDATORY_INFO
+/// string is included to avoid the possiblity of hashing the handshake_hash
+/// alone.
+pub fn session_binding_token_hash(handshake_hash: &[u8], info: &[u8]) -> [u8; SHA256_OUTPUT_LEN] {
+    let info_hash = {
+        let mut ctx = sha2::Sha256::new();
+        ctx.update(info);
+        ctx.finalize()
+    };
+
+    let mut ctx = sha2::Sha256::new();
+    ctx.update(handshake_hash);
+    ctx.update(info_hash);
+    ctx.update(MANDATORY_SESSION_BINDING_INFO);
     ctx.finalize().into()
 }
 

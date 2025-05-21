@@ -514,8 +514,12 @@ fn do_handshake(
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
     assert_that!(
-        server_session.get_session_metadata().unwrap().handshake_hash,
-        eq(&client_session.get_session_metadata().unwrap().handshake_hash)
+        server_session.get_session_binding_token(b"info").unwrap().as_slice(),
+        eq(client_session.get_session_binding_token(b"info").unwrap().as_slice())
+    );
+    assert_that!(
+        server_session.get_session_binding_token(b"info").unwrap().as_slice(),
+        not(eq(client_session.get_session_binding_token(b"wrong info").unwrap().as_slice()))
     );
     Ok(())
 }

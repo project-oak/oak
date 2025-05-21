@@ -38,8 +38,8 @@ pub use crate::{
     identity_key::IdentityKeyHandle,
     noise_handshake::crypto_wrapper::{
         aes_256_gcm_open_in_place, aes_256_gcm_seal_in_place, ecdsa_verify, hkdf_sha256,
-        p256_scalar_mult, rand_bytes, sha256, sha256_two_part, EcdsaKeyPair, P256Scalar, NONCE_LEN,
-        P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
+        p256_scalar_mult, rand_bytes, session_binding_token_hash, sha256, sha256_two_part,
+        EcdsaKeyPair, P256Scalar, NONCE_LEN, P256_X962_LEN, SHA256_OUTPUT_LEN, SYMMETRIC_KEY_LEN,
     },
 };
 

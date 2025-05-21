@@ -27,7 +27,7 @@ use alloc::{
 use core::mem;
 
 use anyhow::{anyhow, Context, Error, Ok};
-use oak_crypto::encryptor::Encryptor;
+use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
 use oak_proto_rust::oak::{
     attestation::v1::AttestationResults,
     session::v1::{
@@ -50,13 +50,18 @@ use crate::{
     ProtocolEngine,
 };
 
-/// Encapsulates metadata derived from a successfully established session that
-/// can be returned to the application.
-#[derive(Clone)]
-pub struct SessionMetadata {
-    /// Hash of the session handshake. Unique to the session, can be used by the
-    /// application for channel binding.
-    pub handshake_hash: Vec<u8>,
+/// An identifier that uniquely identifies an established session channel.
+pub struct SessionBindingToken(Vec<u8>);
+
+impl SessionBindingToken {
+    pub fn new(handshake_hash: &[u8], info: &[u8]) -> Self {
+        let hash = session_binding_token_hash(handshake_hash, info);
+        Self(hash.to_vec())
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
+    }
 }
 
 /// Trait that represents an end-to-end encrypted bidirectional streaming
@@ -88,8 +93,8 @@ pub trait Session: Send {
     /// - `Err`: Protocol error
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error>;
 
-    /// Returns the session metadata, or error if the session is not yet open.
-    fn get_session_metadata(&self) -> Result<SessionMetadata, Error>;
+    /// Returns a unique token  bound to this session.
+    fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error>;
 }
 
 /// Represents all data that is used for a particular session protocol step and
@@ -110,7 +115,7 @@ enum Step<AP: AttestationProvider, H: Handshaker> {
         attestation_results: BTreeMap<String, AttestationResults>,
     },
     /// Session is open and allows encrypted communication.
-    Open { encryptor: Box<dyn Encryptor>, session_metadata: SessionMetadata },
+    Open { encryptor: Box<dyn Encryptor>, handshake_hash: Vec<u8> },
     /// Invalid state. The session is only temporarily put into this state if
     /// the transition between steps cannot be performed atomically.
     Invalid,
@@ -139,9 +144,7 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
             }
             Step::Handshake { handshaker, encryptor_provider, .. } => {
                 *self = Step::Open {
-                    session_metadata: SessionMetadata {
-                        handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
-                    },
+                    handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
                     encryptor: encryptor_provider
                         .provide_encryptor(handshaker.take_session_keys()?)?,
                 };
@@ -154,9 +157,9 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
         Ok(())
     }
 
-    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
+    fn get_session_binding_token(&self, info: &[u8]) -> Result<SessionBindingToken, Error> {
         match &self {
-            Step::Open { session_metadata, .. } => Ok(session_metadata.clone()),
+            Step::Open { handshake_hash, .. } => Ok(SessionBindingToken::new(handshake_hash, info)),
             _ => Err(anyhow!("the session is not open")),
         }
     }
@@ -233,8 +236,8 @@ impl Session for ClientSession {
         }
     }
 
-    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
-        self.step.get_session_metadata()
+    fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
+        self.step.get_session_binding_token(info_string)
     }
 }
 
@@ -394,8 +397,8 @@ impl Session for ServerSession {
         }
     }
 
-    fn get_session_metadata(&self) -> Result<SessionMetadata, Error> {
-        self.step.get_session_metadata()
+    fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
+        self.step.get_session_binding_token(info_string)
     }
 }
 
