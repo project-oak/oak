@@ -60,6 +60,11 @@ rust_library(
 
 rust_test(
     name = "unit_tests",
+    compile_data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:certs",
+    ],
     crate = ":oak_attestation_verification",
     crate_features = ["std"],
     data = [
@@ -149,6 +154,11 @@ rust_library(
 
 rust_test(
     name = "unit_tests_with_regex",
+    compile_data = [
+        "//oak_attestation_verification/data:amd_ark_certs",
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/testdata:certs",
+    ],
     crate = ":oak_attestation_verification_with_regex",
     crate_features = ["std"],
     data = [

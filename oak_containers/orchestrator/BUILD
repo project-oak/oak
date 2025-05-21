@@ -134,16 +134,21 @@ rust_library(
 
 rust_test(
     name = "oak_containers_orchestrator_test",
+    compile_data = [
+        "//oak_containers/orchestrator/testdata:cdi.json",
+        "//oak_containers/orchestrator/testdata:oci_spec_base.json",
+        "//oak_containers/orchestrator/testdata:oci_spec_target.json",
+    ],
     crate = ":oak_containers_orchestrator",
     crate_features = [
         "bazel",
         "application_keys",
     ],
     data = [
-        "//oak_containers/orchestrator/testdata:cdi.json",
-        "//oak_containers/orchestrator/testdata:oci_spec_base.json",
-        "//oak_containers/orchestrator/testdata:oci_spec_target.json",
         "//oak_containers/orchestrator/testdata:test_dice",
+    ],
+    deps = [
+        "//oak_file_utils",
     ],
 )
 

@@ -79,10 +79,11 @@ mod tests {
         const DICE_DATA_PATH: &str = "dice";
         const DICE_DATA_SIZE: usize = 2489;
 
-        #[cfg(feature = "bazel")]
-        fs::copy("oak_containers/orchestrator/testdata/test_dice", DICE_DATA_PATH).unwrap();
-        #[cfg(not(feature = "bazel"))]
-        fs::copy("testdata/test_dice", DICE_DATA_PATH).unwrap();
+        fs::copy(
+            oak_file_utils::data_path("oak_containers/orchestrator/testdata/test_dice"),
+            DICE_DATA_PATH,
+        )
+        .unwrap();
 
         load_stage1_dice_data_from_path::<DiceAttester>(DICE_DATA_PATH).unwrap();
         let mut file = OpenOptions::new().read(true).open(DICE_DATA_PATH).unwrap();

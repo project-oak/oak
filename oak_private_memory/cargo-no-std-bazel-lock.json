@@ -1,5 +1,5 @@
 {
-  "checksum": "4c785db778f3ce10621173df2e202884a034163c8afc8d06c9de233f5d3cf333",
+  "checksum": "14cb9c83fd1801ed275807898572e23a6eccbf49c6798e65591bc5c47ae7424e",
   "crates": {
     "bitflags 2.5.0": {
       "name": "bitflags",
@@ -225,6 +225,9 @@
       "build_script_attrs": {
         "compile_data_glob": [
           "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
         ],
         "data_glob": [
           "**"
@@ -605,5 +608,6 @@
   "direct_deps": [
     "virtio-drivers 0.7.3"
   ],
-  "direct_dev_deps": []
+  "direct_dev_deps": [],
+  "unused_patches": []
 }

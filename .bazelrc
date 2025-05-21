@@ -27,6 +27,11 @@ common --reuse_sandbox_directories
 # rebuilding the standard libraries for stage 0 and the restricted kernel wrapper.
 common --@rules_rust//rust/settings:toolchain_generated_sysroot=True
 
+# By default, rules_rust tries to make a lot of LTO flag decisions for you.
+# We have some nuanced requirements, so we set this flag to retain full
+# control. (See: https://github.com/bazelbuild/rules_rust/pull/3120)
+common --@rules_rust//rust/settings:lto=manual
+
 # Setup clippy aspect to run clippy automatically on all rust targets
 # See: https://bazelbuild.github.io/rules_rust/rust_clippy.html
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect

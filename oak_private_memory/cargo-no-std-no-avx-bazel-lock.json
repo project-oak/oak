@@ -1,5 +1,5 @@
 {
-  "checksum": "cc76022b2ead384225bf5f055c7c9f2077ecad7d8ffd3a97e3262d7a6be3b902",
+  "checksum": "f75e1d95152cf7604c825088e38cfe2860d40812e167227fdfe3aec430dcf138",
   "crates": {
     "direct-cargo-bazel-deps 0.0.1": {
       "name": "direct-cargo-bazel-deps",
@@ -108,6 +108,9 @@
       "build_script_attrs": {
         "compile_data_glob": [
           "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
         ],
         "data_glob": [
           "**"
@@ -417,5 +420,6 @@
   "direct_deps": [
     "zeroize 1.8.1"
   ],
-  "direct_dev_deps": []
+  "direct_dev_deps": [],
+  "unused_patches": []
 }
