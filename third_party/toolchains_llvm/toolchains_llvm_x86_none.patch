@@ -37,17 +37,17 @@ index 3a66da7..7bbd95f 100644
              "clang-wasm32",
              "wasm32",
 diff --git a/toolchain/internal/common.bzl b/toolchain/internal/common.bzl
-index 3a9fae2..85af734 100644
+index 3a9fae2..7d1c554 100644
 --- a/toolchain/internal/common.bzl
 +++ b/toolchain/internal/common.bzl
-@@ -13,6 +13,7 @@
- # limitations under the License.
- 
- SUPPORTED_TARGETS = [
+@@ -20,6 +20,7 @@ SUPPORTED_TARGETS = [
+     ("darwin", "aarch64"),
+     ("none", "wasm32"),
+     ("none", "wasm64"),
 +    ("none", "x86_64"),
-     ("linux", "x86_64"),
-     ("linux", "aarch64"),
-     ("linux", "armv7"),
+     ("wasip1", "wasm32"),
+     ("wasip1", "wasm64"),
+ ]
 @@ -118,7 +119,7 @@ def os(rctx):
  
      name = rctx.attr.exec_os
@@ -58,14 +58,23 @@ index 3a9fae2..85af734 100644
          else:
              fail("Unsupported value for exec_os: %s" % name)
 diff --git a/toolchain/internal/configure.bzl b/toolchain/internal/configure.bzl
-index 1f02e9f..d282641 100644
+index 1f02e9f..ce3a3ee 100644
 --- a/toolchain/internal/configure.bzl
 +++ b/toolchain/internal/configure.bzl
-@@ -327,6 +327,7 @@ def _cc_toolchain_str(
+@@ -300,6 +300,8 @@ def _cc_toolchain_str(
+         if exec_os == target_os and exec_arch == target_arch:
+             # For darwin -> darwin, we can use the macOS SDK path.
+             sysroot_path = _default_sysroot_path(rctx, exec_os)
++        elif target_os == "none":
++            sysroot_path = ""
+         else:
+             # We are trying to cross-compile without a sysroot, let's bail.
+             # TODO: Are there situations where we can continue?
+@@ -323,6 +325,7 @@ def _cc_toolchain_str(
+         "linux-aarch64": "aarch64-unknown-linux-gnu",
+         "linux-armv7": "armv7-unknown-linux-gnueabihf",
+         "linux-x86_64": "x86_64-unknown-linux-gnu",
++        "none-x86_64": "x86_64-unknown-none",
+         "wasm32": "wasm32-unknown-unknown",
          "wasm64": "wasm64-unknown-unknown",
          "wasip1-wasm32": "wasm32-wasip1",
-         "wasip1-wasm64": "wasm64-wasip1",
-+        "none-x86_64": "x86_64-unknown-none",
-     }[target_pair]
-     cxx_builtin_include_directories = [
-         toolchain_path_prefix + "include/c++/v1",

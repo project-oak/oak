@@ -34,6 +34,5 @@ def setup_llvm_toolchains():
         llvm_version = "19.1.6",
         sysroot = {
             "linux-x86_64": "@@oak_cc_toolchain_sysroot//:sysroot",
-            "none-x86_64": "/dev/null",
         },
     )
