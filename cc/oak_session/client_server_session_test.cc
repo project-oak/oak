@@ -39,6 +39,7 @@ using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Optional;
+using ::testing::Ref;
 
 constexpr absl::string_view kFakeAttesterId = "fake_attester";
 constexpr absl::string_view kFakeEvent = "fake event";
@@ -155,6 +156,43 @@ TEST(ClientServerSessionTest, UnattestedNNHandshakeSucceeds) {
   auto server_session = ServerSession::Create(TestConfigUnattestedNN());
 
   DoHandshake(**client_session, **server_session);
+}
+
+TEST(ClientServerSessionTest, UnattestedNNHandshakeProvidesSessionToken) {
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
+
+  DoHandshake(**client_session, **server_session);
+
+  absl::StatusOr<ffi::RustBytes> client_session_binding_token =
+      (*client_session)->GetSessionBindingToken("info");
+  ASSERT_THAT(client_session_binding_token, IsOk());
+
+  absl::StatusOr<ffi::RustBytes> server_session_binding_token =
+      (*server_session)->GetSessionBindingToken("info");
+  ASSERT_THAT(server_session_binding_token, IsOk());
+
+  EXPECT_THAT(*client_session_binding_token,
+              Eq(absl::string_view(*server_session_binding_token)));
+}
+
+TEST(ClientServerSessionTest,
+     UnattestedNNHandshakeProvidesDifferentSessionTokenForDifferentInfo) {
+  auto client_session = ClientSession::Create(TestConfigUnattestedNN());
+  auto server_session = ServerSession::Create(TestConfigUnattestedNN());
+
+  DoHandshake(**client_session, **server_session);
+
+  absl::StatusOr<ffi::RustBytes> client_session_binding_token =
+      (*client_session)->GetSessionBindingToken("info");
+  ASSERT_THAT(client_session_binding_token, IsOk());
+
+  absl::StatusOr<ffi::RustBytes> server_session_binding_token =
+      (*server_session)->GetSessionBindingToken("wrong info");
+  ASSERT_THAT(server_session_binding_token, IsOk());
+
+  EXPECT_THAT(*client_session_binding_token,
+              Ne(absl::string_view(*server_session_binding_token)));
 }
 
 TEST(ClientServerSessionTest, AttestedNNHandshakeSucceeds) {

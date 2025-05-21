@@ -38,6 +38,7 @@ using ::oak::ffi::bindings::free_rust_bytes_contents;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::testing::Eq;
+using ::testing::Ne;
 
 constexpr absl::string_view kClientKeyBytes =
     "clientkeybytes12clientkeybytes34";
@@ -219,6 +220,61 @@ TEST(OakSessionBindingsTest, TestNNHandshake) {
 
   DoHandshake(server_session, client_session);
 
+  free_server_session(server_session);
+  free_client_session(client_session);
+}
+
+TEST(OakSessionBindingsTest, TestNNHandshakeProvidesSessionToken) {
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
+  ASSERT_THAT(server_session_result, IsResult());
+  ServerSession* server_session = server_session_result.result;
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
+  ASSERT_THAT(client_session_result, IsResult());
+  ClientSession* client_session = client_session_result.result;
+
+  DoHandshake(server_session, client_session);
+
+  ErrorOrRustBytes client_session_binding_token =
+      client_get_session_binding_token(client_session, BytesView("info"));
+  ASSERT_THAT(client_session_binding_token, IsResult());
+  ErrorOrRustBytes server_session_binding_token =
+      server_get_session_binding_token(server_session, BytesView("info"));
+  ASSERT_THAT(server_session_binding_token, IsResult());
+  EXPECT_THAT(absl::string_view(*client_session_binding_token.result),
+              Eq(absl::string_view(*server_session_binding_token.result)));
+
+  free_rust_bytes(client_session_binding_token.result);
+  free_rust_bytes(server_session_binding_token.result);
+  free_server_session(server_session);
+  free_client_session(client_session);
+}
+
+TEST(OakSessionBindingsTest,
+     TestNNHandshakeProvidesDifferentSessionTokenForDifferentInfo) {
+  ErrorOrServerSession server_session_result =
+      new_server_session(TestConfigUnattestedNN());
+  ASSERT_THAT(server_session_result, IsResult());
+  ServerSession* server_session = server_session_result.result;
+  ErrorOrClientSession client_session_result =
+      new_client_session(TestConfigUnattestedNN());
+  ASSERT_THAT(client_session_result, IsResult());
+  ClientSession* client_session = client_session_result.result;
+
+  DoHandshake(server_session, client_session);
+
+  ErrorOrRustBytes client_session_binding_token =
+      client_get_session_binding_token(client_session, BytesView("info"));
+  ASSERT_THAT(client_session_binding_token, IsResult());
+  ErrorOrRustBytes server_session_binding_token =
+      server_get_session_binding_token(server_session, BytesView("wrong info"));
+  ASSERT_THAT(server_session_binding_token, IsResult());
+  EXPECT_THAT(absl::string_view(*client_session_binding_token.result),
+              Ne(absl::string_view(*server_session_binding_token.result)));
+
+  free_rust_bytes(client_session_binding_token.result);
+  free_rust_bytes(server_session_binding_token.result);
   free_server_session(server_session);
   free_client_session(client_session);
 }

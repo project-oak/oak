@@ -213,6 +213,30 @@ fn safe_server_write(session: &mut ServerSession, plaintext_slice: &[u8]) -> *co
     }
 }
 
+/// Calls [`ClientSession::get_session_binding_token`].
+///
+/// If non-null bytes are returned, they should be freed with free_bytes.
+/// If a non-null error is returned, it should be freed with free_error.
+///
+/// # Safety
+///
+/// * The provided [`ClientSession`] pointer should be non-null, properly
+///   aligned, and points to a valid [`ClientSession`] instance.
+#[no_mangle]
+pub unsafe extern "C" fn server_get_session_binding_token(
+    session: *mut ServerSession,
+    info: BytesView,
+) -> ErrorOrRustBytes {
+    safe_server_get_session_binding_token(&*session, info.as_slice())
+}
+
+fn safe_server_get_session_binding_token(session: &ServerSession, info: &[u8]) -> ErrorOrRustBytes {
+    match session.get_session_binding_token(info) {
+        Ok(st) => ErrorOrRustBytes::ok(st.into_boxed_slice()),
+        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+    }
+}
+
 ///  Return ownership of the [`ServerSession`] pointer to Rust, where it will be
 ///  dropped and all related memory released.
 ///

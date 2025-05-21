@@ -63,6 +63,8 @@ class ServerSession {
   // should be copied (for example, by creating a std::string from it.)
   absl::StatusOr<std::optional<ffi::RustBytes>> ReadToRustBytes();
 
+  absl::StatusOr<ffi::RustBytes> GetSessionBindingToken(absl::string_view info);
+
  private:
   explicit ServerSession(bindings::ServerSession* rust_session)
       : rust_session_(rust_session) {}

@@ -130,6 +130,24 @@ absl::StatusOr<std::optional<ffi::RustBytes>> ClientSession::ReadToRustBytes() {
   return ffi::RustBytes(result.result);
 }
 
+absl::StatusOr<ffi::RustBytes> ClientSession::GetSessionBindingToken(
+    absl::string_view info) {
+  const ffi::bindings::ErrorOrRustBytes result =
+      bindings::client_get_session_binding_token(
+          rust_session_, ffi::bindings::BytesView(info));
+  if (result.error != nullptr) {
+    return ffi::bindings::ErrorIntoStatus(result.error);
+  }
+
+  if (result.result == nullptr) {
+    return absl::InternalError(
+        "Unexpected empty hash without error. This is a library error, please "
+        "report a bug.");
+  }
+
+  return ffi::RustBytes(result.result);
+}
+
 ClientSession::~ClientSession() {
   bindings::free_client_session(rust_session_);
 }
