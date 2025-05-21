@@ -65,16 +65,29 @@ message InvalidRequestResponse {
 
 message KeySyncRequest {
   // The key should be a byte string of size 32 bytes (256 bits).
-  bytes data_encryption_key = 1;
+  bytes key_encryption_key = 1;
 
   // The ID of the user. Currently it has one to one mapping to the database.
   // That is, each id has a unique database.
-  int64 uid = 2;
+  string pm_uid = 2;
 }
 
 message KeySyncResponse {
-  bool success = 1;
-  string error_message = 2;
+  enum Status {
+    // Default status, should ideally not be sent by the server. Client can
+    // treat this as an error if received.
+    UNSPECIFIED = 0;
+    SUCCESS = 1;
+    // The key is incorrect (e.g., derived using wrong algorithm or wrong salt).
+    // The clients should derive the key again with the correct information
+    // (e.g., make sure they use the stored key derivation info from the
+    // server).
+    INVALID_KEY = 3;
+    // The pm_uid doesn't exist. The users should try to register themselves
+    // first
+    INVALID_PM_UID = 4;
+  }
+  Status status = 1;
 }
 
 message GetMemoryByIdRequest {
@@ -103,6 +116,39 @@ message SearchMemoryResponse {
   repeated SearchResult results = 1;
 }
 
+message KeyDerivationInfo {
+  bytes kek_salt = 1;     // Salt used for KEK derivation.
+  int32 kek_version = 2;  // Version of the KEK derivation method or key.
+}
+
+message BootStrapRequest {
+  string pm_uid = 1;
+  bytes key_encryption_key = 2;
+
+  KeyDerivationInfo boot_strap_info = 3;
+}
+
+message BootStrapResponse {
+  enum Status {
+    // Default status, should ideally not be sent by the server. Client can
+    // treat this as an error if received.
+    UNSPECIFIED = 0;
+
+    // Successful bootstrap! The user can skip the key sync and directly send
+    // memory related requests.
+    SUCCESS = 1;
+
+    // If the user has been registered, server will return the saved
+    // KeyDerivationInfo with this error. Clients should rederive the key with
+    // the return information.
+    USER_ALREADY_EXISTS = 3;
+  }
+  Status status = 1;
+
+  // Set when status is `USER_ALREADY_EXISTS`
+  KeyDerivationInfo key_derivation_info = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     AddMemoryRequest add_memory_request = 1;
@@ -113,6 +159,7 @@ message SealedMemoryRequest {
 
     KeySyncRequest key_sync_request = 6;
     SearchMemoryRequest search_memory_request = 7;
+    BootStrapRequest boot_strap_request = 8;
   }
 
   // Optional unique identifier for this request within the session.
@@ -130,6 +177,7 @@ message SealedMemoryResponse {
 
     KeySyncResponse key_sync_response = 6;
     SearchMemoryResponse search_memory_response = 7;
+    BootStrapResponse boot_strap_response = 8;
   }
 
   // Propagated from the request_id from the request.

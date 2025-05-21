@@ -120,6 +120,7 @@ mod ffi {
     }
 }
 
+use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
@@ -187,3 +188,7 @@ impl ffi::IcingSearchEngine {
 // Useful constants from icing
 
 pub const LIST_FILTER_QUERY_LANGUAGE_FEATURE: &str = "LIST_FILTER_QUERY_LANGUAGE";
+
+pub fn icing_search_engine_null_helper() -> UniquePtr<IcingSearchEngine> {
+    UniquePtr::null()
+}

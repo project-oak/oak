@@ -23,7 +23,8 @@ use anyhow::{bail, Context, Result};
 // Rexport the ffi functions from the bridge.
 pub use icing_ffi_bridge::*;
 use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;
-pub use icing_rust_proto::{icing::lib::*, oak::private_memory::IcingGroundTruthFiles};
+pub use icing_rust_proto::icing::lib::*;
+pub use sealed_memory_rust_proto::oak::private_memory::IcingGroundTruthFiles;
 
 use crate::property_proto::VectorProto;
 

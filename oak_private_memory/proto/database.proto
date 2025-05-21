@@ -23,8 +23,12 @@ package oak.private_memory;
 
 // A simple key value pair.
 message DataBlob {
-  int64 id = 1;
-  bytes encrypted_blob = 2;
+  string id = 1;
+  bytes blob = 2;
+}
+
+message WriteUnencryptedDataBlobRequest {
+  DataBlob data_blob = 1;
 }
 
 message WriteDataBlobRequest {
@@ -40,11 +44,24 @@ message WriteDataBlobResponse {
   OpStatus status = 1;
 }
 
+message WriteUnencryptedDataBlobResponse {
+  OpStatus status = 1;
+}
+
 message ReadDataBlobRequest {
-  int64 id = 1;
+  string id = 1;
+}
+
+message ReadUnencryptedDataBlobRequest {
+  string id = 1;
 }
 
 message ReadDataBlobResponse {
+  OpStatus status = 1;
+  DataBlob data_blob = 2;
+}
+
+message ReadUnencryptedDataBlobResponse {
   OpStatus status = 1;
   DataBlob data_blob = 2;
 }
@@ -62,6 +79,14 @@ service SealedMemoryDatabaseService {
 
   // Reads a data blob from the database.
   rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
+
+  // Writes an unencrypted data blob to the database.
+  rpc WriteUnencryptedDataBlob(WriteUnencryptedDataBlobRequest)
+      returns (WriteUnencryptedDataBlobResponse) {}
+
+  // Reads an unencrypted data blob from the database.
+  rpc ReadUnencryptedDataBlob(ReadUnencryptedDataBlobRequest)
+      returns (ReadUnencryptedDataBlobResponse) {}
 
   // Resets the database. This is mainly used for testing.
   rpc ResetDatabase(ResetDatabaseRequest) returns (ResetDatabaseResponse) {}

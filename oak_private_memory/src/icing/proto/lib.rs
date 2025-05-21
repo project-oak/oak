@@ -20,11 +20,3 @@ pub mod icing {
         tonic::include_proto!("icing.lib");
     }
 }
-
-pub mod oak {
-    // Don't lint generated code.
-    #![allow(clippy::all, clippy::pedantic, clippy::nursery)]
-    pub mod private_memory {
-        tonic::include_proto!("oak.private_memory");
-    }
-}

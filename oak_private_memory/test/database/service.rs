@@ -20,37 +20,98 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
 use sealed_memory_rust_proto::oak::private_memory::{
-    ReadDataBlobRequest, ReadDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
-    WriteDataBlobRequest, WriteDataBlobResponse,
+    DataBlob, OpStatus, ReadDataBlobRequest, ReadDataBlobResponse, ReadUnencryptedDataBlobRequest,
+    ReadUnencryptedDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
+    WriteDataBlobRequest, WriteDataBlobResponse, WriteUnencryptedDataBlobRequest,
+    WriteUnencryptedDataBlobResponse,
 };
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
 
-#[derive(Default)]
 pub struct SealedMemoryDatabaseServiceTestImpl {
-    pub database: HashMap<i64, Vec<u8>>,
+    pub database: Mutex<HashMap<String, DataBlob>>,
+    pub unencrypted_database: Mutex<HashMap<String, DataBlob>>,
+}
+
+impl Default for SealedMemoryDatabaseServiceTestImpl {
+    fn default() -> Self {
+        Self {
+            database: Mutex::new(HashMap::new()),
+            unencrypted_database: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+impl SealedMemoryDatabaseServiceTestImpl {
+    pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
+        self.database.lock().await.insert(id, blob);
+    }
+    pub async fn get_blob_inner(&self, id: &str) -> Option<DataBlob> {
+        self.database.lock().await.get(id).cloned()
+    }
 }
 
 #[tonic::async_trait]
 impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     async fn write_data_blob(
         &self,
-        _request: tonic::Request<WriteDataBlobRequest>,
+        request: tonic::Request<WriteDataBlobRequest>,
     ) -> Result<tonic::Response<WriteDataBlobResponse>, tonic::Status> {
+        let request = request.into_inner();
+        self.add_blob_inner(
+            request.data_blob.as_ref().unwrap().id.clone(),
+            request.data_blob.unwrap(),
+        )
+        .await;
         Ok(tonic::Response::new(WriteDataBlobResponse::default()))
     }
 
     async fn read_data_blob(
         &self,
-        _request: tonic::Request<ReadDataBlobRequest>,
+        request: tonic::Request<ReadDataBlobRequest>,
     ) -> Result<tonic::Response<ReadDataBlobResponse>, tonic::Status> {
-        Ok(tonic::Response::new(ReadDataBlobResponse::default()))
+        let request = request.into_inner();
+        let blob = self.get_blob_inner(&request.id).await;
+        println!("Read {:?}, blob {:?}", request, blob);
+
+        Ok(tonic::Response::new(ReadDataBlobResponse {
+            data_blob: blob,
+            status: Some(OpStatus { success: true, error_message: Default::default() }),
+        }))
+    }
+
+    async fn write_unencrypted_data_blob(
+        &self,
+        request: tonic::Request<WriteUnencryptedDataBlobRequest>,
+    ) -> Result<tonic::Response<WriteUnencryptedDataBlobResponse>, tonic::Status> {
+        let request = request.into_inner();
+        // The `encrypted_blob` field in DataBlob is used for unencrypted data here.
+        self.unencrypted_database.lock().await.insert(
+            request.data_blob.as_ref().expect("data_blob should be present").id.clone(),
+            request.data_blob.unwrap(),
+        );
+        Ok(tonic::Response::new(WriteUnencryptedDataBlobResponse::default()))
+    }
+
+    async fn read_unencrypted_data_blob(
+        &self,
+        request: tonic::Request<ReadUnencryptedDataBlobRequest>,
+    ) -> Result<tonic::Response<ReadUnencryptedDataBlobResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let blob = self.unencrypted_database.lock().await.get(&request.id).cloned();
+        // The `encrypted_blob` field in DataBlob contains the unencrypted data here.
+        Ok(tonic::Response::new(ReadUnencryptedDataBlobResponse {
+            data_blob: blob,
+            status: Some(OpStatus { success: true, error_message: Default::default() }),
+        }))
     }
 
     async fn reset_database(
         &self,
         _request: tonic::Request<ResetDatabaseRequest>,
     ) -> Result<tonic::Response<ResetDatabaseResponse>, tonic::Status> {
+        self.database.lock().await.clear();
+        self.unencrypted_database.lock().await.clear();
         Ok(tonic::Response::new(ResetDatabaseResponse::default()))
     }
 }

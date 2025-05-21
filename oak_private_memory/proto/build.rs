@@ -50,17 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.SearchMemoryResponse",
         "oak.private_memory.Embedding",
         "oak.private_memory.SearchResult",
+        "oak.private_memory.KeyDerivationInfo",
+        "oak.private_memory.BootStrapRequest",
+        "oak.private_memory.BootStrapResponse",
     ];
-
-    // `u64` fields in js are encoded as string when serializing to Json, which
-    // matches the json proto spec. To solve this, we deserialize the field as a
-    // string and then parse it as a u64. If the field is passed as a u64, we
-    // simply return the number.
-    let u64_fields = ["oak.private_memory.KeySyncRequest.uid"];
-
-    for message_type in u64_fields {
-        config.field_attribute(message_type, "#[serde(deserialize_with = \"serde_aux::field_attributes::deserialize_number_from_string\")]");
-    }
 
     let oneof_field_names = [
         "oak.private_memory.SealedMemoryResponse.response",
@@ -81,7 +74,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bytes_fields = [
         "oak.private_memory.Memory.content",
-        "oak.private_memory.KeySyncRequest.data_encryption_key",
+        "oak.private_memory.KeySyncRequest.key_encryption_key",
+        "oak.private_memory.BootStrapRequest.key_encryption_key",
+        "oak.private_memory.KeyDerivationInfo.kek_salt",
     ];
     for bytes_field in bytes_fields {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");

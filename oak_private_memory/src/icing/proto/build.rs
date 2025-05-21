@@ -23,8 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|s| s.replace("external/icing/proto", "../../../../icing/proto"))
         .collect::<Vec<_>>();
 
-    all_protos.push("../../../src/icing/proto/internal.proto".to_string());
-
     let included_protos = vec![
         std::path::PathBuf::from("../../../../icing/proto"),
         std::path::PathBuf::from("../../.."),

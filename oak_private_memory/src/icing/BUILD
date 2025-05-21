@@ -36,6 +36,7 @@ rust_library(
     srcs = ["lib.rs"],
     deps = [
         ":icing_ffi_bridge",
+        "//proto:sealed_memory_rust_proto",
         "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",

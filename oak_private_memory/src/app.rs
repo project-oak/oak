@@ -20,11 +20,12 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_request, sealed_memory_response, AddMemoryRequest, AddMemoryResponse, Embedding,
-    GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
-    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest,
-    ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse, SearchMemoryRequest,
-    SearchMemoryResponse, SearchResult,
+    boot_strap_response, key_sync_response, sealed_memory_request, sealed_memory_response,
+    AddMemoryRequest, AddMemoryResponse, BootStrapRequest, BootStrapResponse, DataBlob, Embedding,
+    EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest,
+    GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory,
+    PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest,
+    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse, SearchResult,
 };
 use tokio::{
     runtime::Handle,
@@ -36,7 +37,7 @@ use crate::{
     app_config::ApplicationConfig,
     database::{
         decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache,
-        IcingMetaDatabase, MemoryId,
+        DbMigration, IcingMetaDatabase, MemoryId,
     },
     debug,
 };
@@ -102,7 +103,7 @@ impl MemoryInterface for DatabaseWithCache {
 /// The state for each client connection.
 pub struct UserSessionContext {
     pub key: Vec<u8>,
-    pub uid: i64,
+    pub uid: String,
     pub message_type: MessageType,
 
     pub database: DatabaseWithCache,
@@ -110,7 +111,7 @@ pub struct UserSessionContext {
 }
 
 // The message format for the plaintext.
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, PartialEq)]
 pub enum MessageType {
     #[default]
     BinaryProto,
@@ -121,6 +122,7 @@ pub enum MessageType {
 pub struct SealedMemoryHandler {
     pub application_config: ApplicationConfig,
     pub session_context: Mutex<Option<UserSessionContext>>,
+    db_client_cache: Mutex<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
 }
 
 impl Drop for SealedMemoryHandler {
@@ -133,7 +135,10 @@ impl Drop for SealedMemoryHandler {
             debug!("Enter");
             // For test purpose. Will be removed soon
             if let Some(user_context) = session_context.lock().await.as_mut() {
-                let database = encrypt_database(user_context.database.meta_db(), &user_context.key);
+                let database = encrypt_database(
+                    &user_context.database.export().encrypted_info.unwrap(),
+                    &user_context.key,
+                );
                 if database.is_err() {
                     debug!("Failed to serialize database");
                     return;
@@ -143,7 +148,7 @@ impl Drop for SealedMemoryHandler {
                 debug!("Saving nonce: {}", database.nonce.len());
                 let result = user_context
                     .database_service_client
-                    .add_blob(database, Some(user_context.uid))
+                    .add_blob(database, Some(user_context.uid.clone()))
                     .await;
                 debug!("db response {:#?}", result);
             }
@@ -156,6 +161,7 @@ impl Clone for SealedMemoryHandler {
         Self {
             application_config: self.application_config.clone(),
             session_context: Default::default(),
+            db_client_cache: Default::default(),
         }
     }
 }
@@ -165,17 +171,53 @@ impl SealedMemoryHandler {
         let application_config: ApplicationConfig =
             serde_json::from_slice(application_config_bytes).expect("Invalid application config");
 
-        Self { application_config, session_context: Default::default() }
+        Self {
+            application_config,
+            session_context: Default::default(),
+            db_client_cache: Mutex::new(None),
+        }
     }
-}
 
-impl SealedMemoryHandler {
     pub async fn session_context_established(&self) -> bool {
         self.session_context().await.is_some()
     }
 
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
         self.session_context.lock().await
+    }
+
+    /// Returns a database service client.
+    ///
+    /// If a client has been established for this handler instance, a clone of
+    /// it is returned. Otherwise, a new client is established, cached for
+    /// future use by this handler instance, and then returned.
+    pub async fn get_db_client(
+        &self,
+    ) -> anyhow::Result<SealedMemoryDatabaseServiceClient<Channel>> {
+        let mut guard = self.db_client_cache.lock().await;
+        if let Some(client) = guard.as_ref() {
+            debug!("Reusing cached DB client");
+            return Ok(client.clone());
+        }
+
+        debug!("Creating new DB client");
+        let db_addr = self.application_config.database_service_host;
+        // The format "http://<host>:<port>" is expected by tonic.
+        let db_url = format!("http://{db_addr}");
+        debug!("Database service URL: {}", db_url);
+
+        let endpoint = Channel::from_shared(db_url.clone())
+            .with_context(|| format!("Failed to create endpoint from URL: {}", db_url))?;
+
+        let channel = endpoint
+            .connect()
+            .await
+            .with_context(|| format!("Failed to connect to database service at {}", db_url))?;
+
+        let new_client = SealedMemoryDatabaseServiceClient::new(channel);
+        *guard = Some(new_client.clone());
+        debug!("Successfully created and cached new DB client");
+        Ok(new_client)
     }
 
     pub async fn get_message_type(&self) -> MessageType {
@@ -205,7 +247,11 @@ impl SealedMemoryHandler {
         }
     }
 
-    pub async fn serialize_response(&self, response: &SealedMemoryResponse) -> Vec<u8> {
+    pub async fn serialize_response(
+        &self,
+        response: &SealedMemoryResponse,
+        message_type: Option<MessageType>,
+    ) -> Vec<u8> {
         if self.session_context_established().await {
             match self.get_message_type().await {
                 MessageType::BinaryProto => {
@@ -214,6 +260,11 @@ impl SealedMemoryHandler {
                 MessageType::Json => {
                     return serde_json::to_vec(response).unwrap();
                 }
+            }
+        }
+        if let Some(message_type) = message_type {
+            if message_type == MessageType::Json {
+                return serde_json::to_vec(response).unwrap();
             }
         }
         // Default to binary proto if the session is not established.
@@ -292,57 +343,132 @@ impl SealedMemoryHandler {
         }
     }
 
+    pub async fn boot_strap_handler(
+        &self,
+        request: BootStrapRequest,
+    ) -> anyhow::Result<BootStrapResponse> {
+        if request.key_encryption_key.is_empty() {
+            bail!("key_encryption_key not set in BootStrapRequest");
+        }
+        if request.pm_uid.is_empty() {
+            bail!("pm_uid not set in BootStrapRequest");
+        }
+        let boot_strap_info = request
+            .boot_strap_info
+            .context("boot_strap_info (KeyDerivationInfo) not set in BootStrapRequest")?;
+
+        let key = request.key_encryption_key;
+        let uid = request.pm_uid;
+
+        if !Self::is_valid_key(&key) {
+            bail!("Not a valid key!");
+        }
+
+        let mut db_client = self
+            .get_db_client()
+            .await
+            .context("Failed to get DB client for bootstrap operation")?;
+
+        if let Ok(data_blob) = db_client.get_unencrypted_blob(&uid).await {
+            // User already exists
+            let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)?;
+            let key_derivation_info =
+                plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
+
+            debug!("User have been registered!, {}", uid);
+            return Ok(BootStrapResponse {
+                status: boot_strap_response::Status::UserAlreadyExists.into(),
+                key_derivation_info: Some(key_derivation_info),
+            });
+        }
+
+        // User does not exist.
+        debug!("Registering new user: {}", uid);
+
+        let new_plain_text_info =
+            PlainTextUserInfo { key_derivation_info: Some(boot_strap_info.clone()) };
+        let initial_encrypted_info = EncryptedUserInfo { icing_db: None };
+
+        let encrypted_db_blob = encrypt_database(&initial_encrypted_info, &key)
+            .context("Failed to encrypt initial user info")?;
+        db_client
+            .add_blob(encrypted_db_blob, Some(uid.clone()))
+            .await
+            .context("Failed to add encrypted user info blob to DB")?;
+
+        db_client
+            .add_unencrypted_blob(
+                DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() },
+                None,
+            )
+            .await
+            .context("Failed to add unencrypted plain text user info blob to DB")?;
+
+        debug!("Successfully registered new user {}", uid);
+        Ok(BootStrapResponse {
+            status: boot_strap_response::Status::Success.into(),
+            key_derivation_info: Some(boot_strap_info),
+        })
+    }
+
     pub async fn key_sync_handler(
         &self,
         request: KeySyncRequest,
         is_json: bool,
     ) -> anyhow::Result<KeySyncResponse> {
-        const INVALID_UID: i64 = 0;
-        if request.data_encryption_key.is_empty() || request.uid == INVALID_UID {
+        if request.key_encryption_key.is_empty() || request.pm_uid.is_empty() {
             bail!("uid or key not set in request");
         }
-        let key = request.data_encryption_key;
-        let uid = request.uid;
+        let key = request.key_encryption_key;
+        let uid = request.pm_uid;
         if !Self::is_valid_key(&key) {
             bail!("Not a valid key!");
         }
 
-        let mut mutex_guard = self.session_context().await;
-        if mutex_guard.is_some() {
+        if self.session_context().await.is_some() {
             bail!("already setup the session for {uid}");
         }
 
-        let db_addr = self.application_config.database_service_host;
-        let db_url = format!("http://{db_addr}");
-        log::debug!("Database addr {}", db_url);
-        let db_channel = Channel::from_shared(db_url)
-            .context("couldn't create database channel")
-            .unwrap()
-            .connect()
-            .await
-            .context("couldn't connect via database channel")
-            .unwrap();
+        let mut db_client =
+            self.get_db_client().await.context("Failed to get DB client for key sync")?;
+        let database;
+        let key_derivation_info;
 
-        let mut db_client = SealedMemoryDatabaseServiceClient::new(db_channel);
-        debug!("Trying to get datablob");
-        let database = if let Ok(data_blob) = db_client.get_blob(&uid).await {
-            let database = decrypt_database(data_blob, &key)?;
-            debug!("Loaded database successfully!!");
-            database
+        if let Ok(data_blob) = db_client.get_unencrypted_blob(&uid).await {
+            let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)?;
+            key_derivation_info =
+                plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
         } else {
-            let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
-            IcingMetaDatabase::new(&temp_path)?
+            return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
+        }
+        if let Ok(data_blob) = db_client.get_blob(&uid).await {
+            let encrypted_info = decrypt_database(data_blob, &key)?;
+            database = if encrypted_info.icing_db.is_some() {
+                IcingMetaDatabase::import(
+                    &encrypted_info.icing_db.clone().unwrap().encode_to_vec(),
+                    None,
+                )?
+            } else {
+                let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
+                IcingMetaDatabase::new(&temp_path)?
+            };
+            debug!("Loaded database successfully!!");
+        } else {
+            debug!("no blob for {}", uid);
+            return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         };
+
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
+        let mut mutex_guard = self.session_context().await;
         *mutex_guard = Some(UserSessionContext {
             key: key.clone(),
             uid,
             message_type,
             database_service_client: db_client.clone(),
-            database: DatabaseWithCache::new(database, key, db_client),
+            database: DatabaseWithCache::new(database, key, db_client, key_derivation_info),
         });
 
-        Ok(KeySyncResponse::default())
+        Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })
     }
 
     pub async fn search_memory_handler(
@@ -420,6 +546,7 @@ impl_packing!(Request => ResetMemoryRequest);
 impl_packing!(Request => KeySyncRequest);
 impl_packing!(Request => GetMemoryByIdRequest);
 impl_packing!(Request => SearchMemoryRequest);
+impl_packing!(Request => BootStrapRequest);
 impl_packing!(Response => AddMemoryResponse);
 impl_packing!(Response => GetMemoriesResponse);
 impl_packing!(Response => ResetMemoryResponse);
@@ -427,6 +554,7 @@ impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
 impl_packing!(Response => GetMemoryByIdResponse);
 impl_packing!(Response => SearchMemoryResponse);
+impl_packing!(Response => BootStrapResponse);
 
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
@@ -436,6 +564,7 @@ impl ApplicationHandler for SealedMemoryHandler {
     /// there.
     async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         let request = self.deserialize_request(request_bytes).await;
+        let mut message_type = None;
         let response = if request.is_none() {
             InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
                 .into_response()
@@ -448,6 +577,12 @@ impl ApplicationHandler for SealedMemoryHandler {
             }
             let request = request.unwrap();
             let mut response = match request {
+                sealed_memory_request::Request::BootStrapRequest(request) => {
+                    if self.is_message_type_json(request_bytes) {
+                        message_type = Some(MessageType::Json);
+                    }
+                    self.boot_strap_handler(request).await?.into_response()
+                }
                 sealed_memory_request::Request::KeySyncRequest(request) => self
                     .key_sync_handler(request, self.is_message_type_json(request_bytes))
                     .await?
@@ -472,6 +607,6 @@ impl ApplicationHandler for SealedMemoryHandler {
             response
         };
 
-        Ok(self.serialize_response(&response).await)
+        Ok(self.serialize_response(&response, message_type).await)
     }
 }

@@ -31,10 +31,11 @@ use private_memory_server_lib::{
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    sealed_memory_response, AddMemoryRequest, AddMemoryResponse, Embedding, GetMemoriesRequest,
+    boot_strap_response, key_sync_response, sealed_memory_response, AddMemoryRequest,
+    AddMemoryResponse, BootStrapRequest, BootStrapResponse, Embedding, GetMemoriesRequest,
     GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse,
-    KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest, ResetMemoryResponse,
-    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
+    KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest,
+    ResetMemoryResponse, SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -306,14 +307,27 @@ async fn test_noise_add_get_reset_memory() {
 
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
+    let pm_uid = 234.to_string();
+    let boot_strap_request = BootStrapRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
+    let boot_strap_response: BootStrapResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
     // Key sync
     let request_id = 0xeadbeef;
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
+    let key_sync_request =
+        KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: pm_uid.clone() };
     send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
 
-    let (_key_sync_response, return_id): (KeySyncResponse, i32) =
+    let (key_sync_response, return_id): (KeySyncResponse, i32) =
         receive_plaintext_response_with_id(&mut response_stream, &mut client_session).await;
     assert_eq!(request_id, return_id);
+    assert_eq!(key_sync_response.status, key_sync_response::Status::Success as i32);
 
     let request = AddMemoryRequest {
         memory: Some(Memory {
@@ -398,8 +412,21 @@ async fn test_noise_add_get_reset_memory_as_json() {
 
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
+    let pm_uid = 234.to_string();
+    let boot_strap_request = BootStrapRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_plantext_request_as_json(&mut tx, &mut client_session, boot_strap_request);
+    let boot_strap_response: BootStrapResponse =
+        receive_plaintext_response_as_json(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+
     // Key sync
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
+    let key_sync_request =
+        KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: pm_uid.clone() };
     send_plantext_request_as_json(&mut tx, &mut client_session, key_sync_request);
 
     let _key_sync_response: KeySyncResponse =
@@ -456,8 +483,10 @@ async fn test_noise_add_get_reset_memory_as_json() {
 
 #[test]
 fn proto_serialization_test() {
-    let request = KeySyncRequest { uid: 12345678910, data_encryption_key: vec![1, 2, 3] };
-    let json_str = "{\"dataEncryptionKey\":\"AQID\",\"uid\":\"12345678910\"}";
+    let request =
+        KeySyncRequest { pm_uid: "12345678910".to_string(), key_encryption_key: vec![1, 2, 3] };
+    println!("Serailization {:?}", serde_json::to_string(&request));
+    let json_str = "{\"keyEncryptionKey\":\"AQID\",\"pmUid\":\"12345678910\"}";
     let request_from_string_num = serde_json::from_str::<KeySyncRequest>(json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
 }
@@ -495,9 +524,20 @@ async fn test_embedding_search() {
 
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
+    let pm_uid = 234.to_string();
+    let boot_strap_request = BootStrapRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
+    let boot_strap_response: BootStrapResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
     // Key sync
     let request_id = 0xeadbeef;
-    let key_sync_request = KeySyncRequest { data_encryption_key: TEST_EK.to_vec(), uid: 234 };
+    let key_sync_request = KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid };
     send_plantext_request_with_id(&mut tx, &mut client_session, key_sync_request, request_id);
 
     let (_key_sync_response, return_id): (KeySyncResponse, i32) =
@@ -562,4 +602,56 @@ async fn test_embedding_search() {
         search_memory_response.results[1].memory.as_ref().unwrap().id,
         add_memory_response1.id
     );
+}
+
+#[tokio::test]
+async fn test_boot_strap() {
+    let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
+
+    let url = format!("http://{addr}");
+
+    println!("Connecting to test server on {}", url);
+
+    let channel = Channel::from_shared(url)
+        .context("couldn't create gRPC channel")
+        .unwrap()
+        .connect()
+        .await
+        .context("couldn't connect via gRPC channel")
+        .unwrap();
+
+    let mut client = SealedMemoryServiceClient::new(channel);
+
+    let (mut tx, rx) = mpsc::channel(10);
+
+    let mut response_stream =
+        client.invoke(rx).await.expect("couldn't send stream request").into_inner();
+
+    // We don't have a noise client impl yet, so we need to manage the session
+    // manually.
+    let mut client_session = oak_session::ClientSession::create(
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+    )
+    .expect("could not create client session");
+
+    client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
+
+    let pm_uid = 234.to_string();
+    let boot_strap_request = BootStrapRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_plantext_request(&mut tx, &mut client_session, boot_strap_request.clone());
+    let boot_strap_response: BootStrapResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+
+    // Register again.
+    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
+    let boot_strap_response: BootStrapResponse =
+        receive_plaintext_response(&mut response_stream, &mut client_session).await;
+
+    assert_eq!(boot_strap_response.status, boot_strap_response::Status::UserAlreadyExists as i32);
 }

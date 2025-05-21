@@ -126,7 +126,9 @@ mod tests {
 
         let result_proto = icing_search_engine.put(&doc1);
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
-        icing_search_engine.persist_to_disk(persist_type::Code::Full.into());
+        let result_proto = icing_search_engine.persist_to_disk(persist_type::Code::Full.into());
+        let result_proto = icing::PersistToDiskResultProto::decode(result_proto.as_slice())?;
+        assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         let ground_truth_files =
             icing::IcingGroundTruthFiles::new(temp_dir.path().to_str().unwrap())?;

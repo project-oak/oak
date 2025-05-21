@@ -20,8 +20,37 @@
 syntax = "proto3";
 
 package oak.private_memory;
+import "proto/sealed_memory.proto";
+
+// Contains all the ground truths files of an icing database.
+//
+// Can be used to rebuild the original database.
+// It allows exporting an icing database as a byte array, so we can
+// store it as a blob.
+message IcingGroundTruthFiles {
+  bytes schema_pb = 1;
+  bytes overlay_schema_pb = 2;
+  bytes schema_store_header = 3;
+  bytes document_log = 4;
+}
 
 message EncryptedDataBlob {
   bytes nonce = 1;
   bytes data = 2;
+}
+
+message PlainTextUserInfo {
+  KeyDerivationInfo key_derivation_info = 1;
+}
+
+message EncryptedUserInfo {
+  IcingGroundTruthFiles icing_db = 1;
+}
+// Contain the user's key derivation info, icing db, etc.
+// This is the struct stored in spanner.
+message UserDb {
+  // The information stored encrypted at storage.
+  EncryptedUserInfo encrypted_info = 1;
+  // The information stored in plaintext at storage.
+  PlainTextUserInfo plaintext_info = 2;
 }

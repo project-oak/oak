@@ -21,7 +21,9 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, Embedding, EncryptedDataBlob, Memory, ReadDataBlobRequest, WriteDataBlobRequest,
+    DataBlob, Embedding, EncryptedDataBlob, EncryptedUserInfo, KeyDerivationInfo, Memory,
+    PlainTextUserInfo, ReadDataBlobRequest, ReadUnencryptedDataBlobRequest, UserDb,
+    WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
 };
 use tempfile::tempdir;
 use tonic::transport::Channel;
@@ -33,7 +35,7 @@ use crate::{
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
 // TODO: b/413429146 - Use a larger int.
-pub type BlobId = i64;
+pub type BlobId = String;
 
 // The unique id for a memory, responding to `struct Memory`.
 // It doesn't have a 1:1 mapping to BlobId, as a single memory
@@ -72,6 +74,17 @@ const MEMORY_ID_NAME: &str = "memoryId";
 const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 
+pub trait DbMigration {
+    type ImportFrom;
+    type ExportTo;
+
+    /// Import from `source` to `path`.
+    fn import(source: &Self::ImportFrom, path: Option<&str>) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+    fn export(&self) -> Self::ExportTo;
+}
+
 impl IcingMetaDatabase {
     /// Creates a ResultSpecProto projection to retrieve only the blob ids.
     fn create_blob_id_projection() -> icing::TypePropertyMask {
@@ -93,35 +106,6 @@ impl IcingMetaDatabase {
     }
     pub fn base_dir(&self) -> String {
         self.base_dir.clone()
-    }
-
-    /// Rebuild the icing database in `target_base_dir` given the content of the
-    /// ground truth files in `buffer`.
-    pub fn import(buffer: &[u8], target_base_dir: Option<&str>) -> anyhow::Result<Self> {
-        let base_dir_str = match target_base_dir {
-            Some(dir) => dir.to_string(),
-            _ => {
-                let temp_dir = tempdir()?;
-                temp_dir.path().to_str().unwrap().to_string()
-            }
-        };
-
-        // Decode the ground truth data
-        let ground_truth = icing::IcingGroundTruthFiles::decode(buffer)?;
-
-        // Migrate the data to the target directory (this handles cleaning the
-        // directory)
-        ground_truth.migrate(&base_dir_str)?;
-
-        // Initialize Icing Search Engine from the migrated directory
-        let options_bytes = icing::get_default_icing_options(&base_dir_str).encode_to_vec();
-        let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
-        if result_proto.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
-            bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
-        }
-
-        Ok(Self { icing_search_engine, base_dir: base_dir_str })
     }
 
     /// Create a new icing database in `base_dir`. If there is already a icing
@@ -197,7 +181,7 @@ impl IcingMetaDatabase {
             .set_schema(SCHMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
-            .add_int64_property(BLOB_ID_NAME.as_bytes(), blob_id)
+            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
             .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
             .build();
         let result = self.icing_search_engine.put(&doc);
@@ -278,18 +262,9 @@ impl IcingMetaDatabase {
             .properties
             .iter()
             .find(|prop| prop.name.as_ref() == Some(&blob_id_name))?
-            .int64_values
+            .string_values
             .first()
             .cloned()
-    }
-
-    pub fn export(&self) -> Vec<u8> {
-        self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
-        let blob = icing::IcingGroundTruthFiles::new(&self.base_dir)
-            .expect("Failed to read ground truth files from base_dir")
-            .encode_to_vec();
-        debug!("Exporting icing db, len: {}", blob.len());
-        blob
     }
 
     pub fn reset(&self) {
@@ -366,8 +341,53 @@ impl IcingMetaDatabase {
     }
 }
 
+impl DbMigration for IcingMetaDatabase {
+    type ImportFrom = Vec<u8>;
+    type ExportTo = icing::IcingGroundTruthFiles;
+    fn export(&self) -> icing::IcingGroundTruthFiles {
+        let result_proto =
+            self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
+        let result_proto =
+            icing::PersistToDiskResultProto::decode(result_proto.as_slice()).unwrap();
+        assert!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        icing::IcingGroundTruthFiles::new(&self.base_dir)
+            .expect("Failed to read ground truth files from base_dir")
+    }
+
+    /// Rebuild the icing database in `target_base_dir` given the content of the
+    /// ground truth files in `buffer`.
+    fn import(buffer: &Vec<u8>, target_base_dir: Option<&str>) -> anyhow::Result<Self> {
+        let base_dir_str = match target_base_dir {
+            Some(dir) => dir.to_string(),
+            _ => {
+                let temp_dir = tempdir()?;
+                temp_dir.path().to_str().unwrap().to_string()
+            }
+        };
+        debug!("import to {:?}", base_dir_str);
+
+        let ground_truth = icing::IcingGroundTruthFiles::decode(buffer.as_slice())?;
+
+        ground_truth.migrate(&base_dir_str)?;
+
+        let options_bytes = icing::get_default_icing_options(&base_dir_str).encode_to_vec();
+        let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
+        let result_proto = icing_search_engine.initialize();
+        if result_proto.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+            bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
+        }
+
+        Ok(Self { icing_search_engine, base_dir: base_dir_str })
+    }
+}
+
 impl Drop for IcingMetaDatabase {
     fn drop(&mut self) {
+        // The destructor of `icing_search_engine` will try to perform a
+        // `persist_to_disk`. If the directory is deleted, a few warnings and
+        // errors will be printed out. So we manually trigger its destructor
+        // first, and then delete the dir.
+        self.icing_search_engine = icing::icing_search_engine_null_helper();
         match std::fs::remove_dir_all(&self.base_dir) {
             Ok(()) => debug!("Successfully removed the icing directory."),
             Err(e) => debug!("Failed to remove the icing directory, {}", e),
@@ -407,7 +427,7 @@ impl MemoryCache {
         }
         // If not in cache, fetch from external DB
         let memory = self.fetch_decrypt_decode_memory(blob_id).await?;
-        self.content_cache.insert(*blob_id, memory.clone());
+        self.content_cache.insert(blob_id.clone(), memory.clone());
         Ok(memory)
     }
 
@@ -421,9 +441,9 @@ impl MemoryCache {
         // Check cache first
         for blob_id in blob_ids {
             if let Some(memory) = self.content_cache.get(blob_id) {
-                results.insert(*blob_id, memory.clone());
+                results.insert(blob_id.clone(), memory.clone());
             } else {
-                missing_ids.push(*blob_id);
+                missing_ids.push(blob_id.clone());
             }
         }
 
@@ -434,8 +454,8 @@ impl MemoryCache {
                 let decrypted_data =
                     decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
                 let memory: Memory = Memory::decode(&*decrypted_data)?;
-                self.content_cache.insert(*blob_id, memory.clone());
-                results.insert(*blob_id, memory);
+                self.content_cache.insert(blob_id.clone(), memory.clone());
+                results.insert(blob_id.clone(), memory);
             }
         }
 
@@ -452,15 +472,15 @@ impl MemoryCache {
     }
 
     pub async fn add_memory(&mut self, memory: Memory) -> anyhow::Result<BlobId> {
-        let blob_id: BlobId = rand::rng().random();
+        let blob_id: BlobId = rand::rng().random::<u128>().to_string();
         let (encrypted_data, nonce) = self.encode_encrypt_memory(&memory)?;
         let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
         // Store in external DB, explicitly providing the generated ID
-        self.db_client.add_blob(encrypted_blob, Some(blob_id)).await?;
+        self.db_client.add_blob(encrypted_blob, Some(blob_id.clone())).await?;
 
         // Add to local cache
-        self.content_cache.insert(blob_id, memory);
+        self.content_cache.insert(blob_id.clone(), memory);
 
         Ok(blob_id)
     }
@@ -471,7 +491,7 @@ impl MemoryCache {
 
         for memory in memories {
             let (encrypted_data, nonce) = self.encode_encrypt_memory(memory)?;
-            let blob_id: BlobId = rand::rng().random();
+            let blob_id: BlobId = rand::rng().random::<u128>().to_string();
             let encrypted_blob = EncryptedDataBlob { nonce, data: encrypted_data };
 
             blob_ids.push(blob_id);
@@ -483,7 +503,7 @@ impl MemoryCache {
 
         // Add to local cache
         for (blob_id, memory) in blob_ids.iter().zip(memories.iter()) {
-            self.content_cache.insert(*blob_id, memory.clone());
+            self.content_cache.insert(blob_id.clone(), memory.clone());
         }
 
         Ok(blob_ids)
@@ -496,24 +516,40 @@ impl MemoryCache {
 pub struct DatabaseWithCache {
     database: IcingMetaDatabase,
     pub cache: MemoryCache,
+    key_derivation_info: KeyDerivationInfo,
 }
 
 impl DatabaseWithCache {
-    pub fn new(database: IcingMetaDatabase, dek: Vec<u8>, db_client: ExternalDbClient) -> Self {
-        Self { database, cache: MemoryCache::new(db_client, dek) }
+    pub fn new(
+        database: IcingMetaDatabase,
+        dek: Vec<u8>,
+        db_client: ExternalDbClient,
+        key_derivation_info: KeyDerivationInfo,
+    ) -> Self {
+        Self { database, cache: MemoryCache::new(db_client, dek), key_derivation_info }
     }
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
         &mut self.database
     }
+
+    pub fn export(&self) -> UserDb {
+        let icing_db = self.database.export();
+        UserDb {
+            encrypted_info: Some(EncryptedUserInfo { icing_db: Some(icing_db) }),
+            plaintext_info: Some(PlainTextUserInfo {
+                key_derivation_info: Some(self.key_derivation_info.clone()),
+            }),
+        }
+    }
 }
 
 pub fn encrypt_database(
-    database: &IcingMetaDatabase,
+    database: &EncryptedUserInfo,
     key: &[u8],
 ) -> anyhow::Result<EncryptedDataBlob> {
     let nonce = generate_nonce();
-    let datablob = database.export();
+    let datablob = database.encode_to_vec();
     let data = encrypt(key, &nonce, &datablob)?;
     Ok(EncryptedDataBlob { nonce, data })
 }
@@ -521,12 +557,12 @@ pub fn encrypt_database(
 pub fn decrypt_database(
     datablob: EncryptedDataBlob,
     key: &[u8],
-) -> anyhow::Result<IcingMetaDatabase> {
+) -> anyhow::Result<EncryptedUserInfo> {
     let nonce = datablob.nonce;
     let data = datablob.data;
     let decrypted_data = decrypt(key, &nonce, &data)?;
-    let meta_db = IcingMetaDatabase::import(&decrypted_data, None)?; // Import to a temp dir by default
-    Ok(meta_db)
+    let user_db = EncryptedUserInfo::decode(decrypted_data.as_slice())?;
+    Ok(user_db)
 }
 
 // Handlers for storing raw data blobs in the external database.
@@ -544,6 +580,12 @@ pub trait DataBlobHandler {
     ) -> anyhow::Result<Vec<BlobId>>;
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob>;
     async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>>;
+    async fn add_unencrypted_blob(
+        &mut self,
+        data_blob: DataBlob,
+        id: Option<BlobId>,
+    ) -> anyhow::Result<BlobId>;
+    async fn get_unencrypted_blob(&mut self, id: &BlobId) -> anyhow::Result<DataBlob>;
 }
 
 #[async_trait]
@@ -553,8 +595,8 @@ impl DataBlobHandler for ExternalDbClient {
         data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId> {
-        let id = id.unwrap_or_else(|| rand::rng().random::<i64>());
-        let data_blob = DataBlob { id, encrypted_blob: data_blob.encode_to_vec() };
+        let id = id.unwrap_or_else(|| rand::rng().random::<u128>().to_string());
+        let data_blob = DataBlob { id: id.clone(), blob: data_blob.encode_to_vec() };
         let db_response = self
             .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
             .await
@@ -571,7 +613,7 @@ impl DataBlobHandler for ExternalDbClient {
     ) -> anyhow::Result<Vec<BlobId>> {
         let mut result = Vec::with_capacity(data_blobs.len());
         let ids: Vec<Option<BlobId>> = if let Some(ids) = ids {
-            ids.iter().map(|id| Some(*id)).collect()
+            ids.iter().map(|id| Some(id.clone())).collect()
         } else {
             vec![None; data_blobs.len()]
         };
@@ -585,14 +627,14 @@ impl DataBlobHandler for ExternalDbClient {
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob> {
         let db_response = self
-            .read_data_blob(ReadDataBlobRequest { id: *id })
+            .read_data_blob(ReadDataBlobRequest { id: id.clone() })
             .await
             .expect("Read blob fail!")
             .into_inner();
         if let Some(status) = db_response.status {
             if status.success && db_response.data_blob.is_some() {
                 let data_blob = db_response.data_blob.unwrap();
-                let data_blob = EncryptedDataBlob::decode(&*data_blob.encrypted_blob)?;
+                let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)?;
                 return Ok(data_blob);
             }
         }
@@ -604,11 +646,44 @@ impl DataBlobHandler for ExternalDbClient {
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {
             let mut client = self.clone();
-            let id = *id;
+            let id = id.clone();
             result.push(tokio::spawn(async move { client.get_blob(&id).await.unwrap() }));
         }
         let result = futures::future::join_all(result).await;
         result.into_iter().map(|x| x.map_err(anyhow::Error::msg)).collect()
+    }
+
+    async fn add_unencrypted_blob(
+        &mut self,
+        data_blob: DataBlob,
+        id: Option<BlobId>,
+    ) -> anyhow::Result<BlobId> {
+        let id = id.unwrap_or_else(|| data_blob.id.clone());
+        // Ensure the DataBlob has the correct ID if it was generated or overridden.
+        let data_blob_with_id = DataBlob { id: id.clone(), blob: data_blob.blob };
+        let db_response = self
+            .write_unencrypted_data_blob(WriteUnencryptedDataBlobRequest {
+                data_blob: Some(data_blob_with_id),
+            })
+            .await
+            .map_err(anyhow::Error::msg)?
+            .into_inner();
+        debug!("db response {:#?}", db_response);
+        Ok(id)
+    }
+
+    async fn get_unencrypted_blob(&mut self, id: &BlobId) -> anyhow::Result<DataBlob> {
+        let db_response = self
+            .read_unencrypted_data_blob(ReadUnencryptedDataBlobRequest { id: id.clone() })
+            .await
+            .map_err(anyhow::Error::msg)?
+            .into_inner();
+        if let Some(status) = db_response.status {
+            if status.success && db_response.data_blob.is_some() {
+                return Ok(db_response.data_blob.unwrap());
+            }
+        }
+        bail!("Failed to read unencrypted data blob with id: {}", id);
     }
 }
 
@@ -629,15 +704,15 @@ mod tests {
             tags: vec!["the_tag".to_string()],
             ..Default::default()
         };
-        let blob_id = 12345;
-        icing_database.add_memory(memory, blob_id)?;
+        let blob_id = 12345.to_string();
+        icing_database.add_memory(memory, blob_id.clone())?;
         let memory2 = Memory {
             id: "Thisisanid2".to_string(),
             tags: vec!["the_tag".to_string()],
             ..Default::default()
         };
-        let blob_id2 = 12346;
-        icing_database.add_memory(memory2, blob_id2)?;
+        let blob_id2 = 12346.to_string();
+        icing_database.add_memory(memory2, blob_id2.clone())?;
 
         let result = icing_database.get_memories_by_tag("the_tag".to_string()).unwrap();
         expect_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
@@ -651,13 +726,13 @@ mod tests {
         let mut icing_database = IcingMetaDatabase::new(base_dir)?;
 
         let memory_id1 = "memory_id_export_1".to_string();
-        let blob_id1 = 654321;
+        let blob_id1 = 654321.to_string();
         let memory1 = Memory {
             id: memory_id1.clone(),
             tags: vec!["export_tag".to_string()],
             ..Default::default()
         };
-        icing_database.add_memory(memory1, blob_id1)?;
+        icing_database.add_memory(memory1, blob_id1.clone())?;
 
         // Export the database
         let exported_data = icing_database.export();
@@ -670,12 +745,13 @@ mod tests {
         let import_temp_dir = tempdir().unwrap();
         let import_base_dir = import_temp_dir.path().to_str().unwrap();
         let imported_database =
-            IcingMetaDatabase::import(&exported_data, Some(import_base_dir)).unwrap();
+            IcingMetaDatabase::import(&exported_data.encode_to_vec(), Some(import_base_dir))
+                .unwrap();
 
         // Verify data exists in the imported database
         expect_that!(
             imported_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
-            eq(Some(blob_id1))
+            eq(&Some(blob_id1.clone()))
         );
         expect_that!(
             imported_database.get_memories_by_tag("export_tag".to_string()).unwrap(),
@@ -690,31 +766,31 @@ mod tests {
         let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
 
         let memory_id1 = "memory_id_1".to_string();
-        let blob_id1 = 54321;
+        let blob_id1 = 54321.to_string();
         let memory1 =
             Memory { id: memory_id1.clone(), tags: vec!["tag1".to_string()], ..Default::default() };
-        icing_database.add_memory(memory1, blob_id1)?;
+        icing_database.add_memory(memory1, blob_id1.clone())?;
 
         let memory_id2 = "memory_id_2".to_string();
-        let blob_id2 = 54322;
+        let blob_id2 = 54322.to_string();
         let memory2 =
             Memory { id: memory_id2.clone(), tags: vec!["tag2".to_string()], ..Default::default() };
-        icing_database.add_memory(memory2, blob_id2)?;
+        icing_database.add_memory(memory2, blob_id2.clone())?;
 
         // Test finding an existing blob ID
         expect_that!(
             icing_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
-            eq(Some(blob_id1))
+            eq(&Some(blob_id1))
         );
         // Test finding another existing blob ID
         expect_that!(
             icing_database.get_blob_id_by_memory_id(memory_id2).unwrap(),
-            eq(Some(blob_id2))
+            eq(&Some(blob_id2))
         );
         // Test finding a non-existent blob ID
         expect_that!(
             icing_database.get_blob_id_by_memory_id("non_existent_id".to_string()).unwrap(),
-            eq(None)
+            eq(&None)
         );
         Ok(())
     }
@@ -725,7 +801,7 @@ mod tests {
         let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
 
         let memory_id1 = "memory_embed_1".to_string();
-        let blob_id1 = 98765;
+        let blob_id1 = 98765.to_string();
         let embedding1 = Embedding {
             model_signature: "test_model".to_string(),
             values: vec![1.0, 0.0, 0.0], // Vector pointing along x-axis
@@ -736,10 +812,10 @@ mod tests {
             embeddings: vec![embedding1.clone()],
             ..Default::default()
         };
-        icing_database.add_memory(memory1, blob_id1)?;
+        icing_database.add_memory(memory1, blob_id1.clone())?;
 
         let memory_id2 = "memory_embed_2".to_string();
-        let blob_id2 = 98766;
+        let blob_id2 = 98766.to_string();
         let embedding2 = Embedding {
             model_signature: "test_model".to_string(),
             values: vec![0.0, 1.0, 0.0], // Vector pointing along y-axis
@@ -750,7 +826,7 @@ mod tests {
             embeddings: vec![embedding2.clone()],
             ..Default::default()
         };
-        icing_database.add_memory(memory2, blob_id2)?;
+        icing_database.add_memory(memory2, blob_id2.clone())?;
 
         // Query embedding close to embedding1
         let query_embedding =
