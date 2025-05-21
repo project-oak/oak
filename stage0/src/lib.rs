@@ -67,7 +67,6 @@ pub mod paging;
 mod pic;
 mod zero_page;
 
-pub use acpi::Ebda;
 pub use acpi_tables::{
     DescriptionHeader, LocalApicFlags, Madt, MultiprocessorWakeup, ProcessorLocalApic,
     ProcessorLocalX2Apic, Rsdp, Rsdt, RsdtEntryPairMut, Xsdt,

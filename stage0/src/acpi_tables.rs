@@ -59,6 +59,7 @@
 //!
 //! Collectively, these structures are referred to as "the ACPI tables".
 
+use alloc::vec::Vec;
 use core::{
     any::type_name,
     fmt::Display,
@@ -72,7 +73,7 @@ use bitflags::bitflags;
 use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-use crate::{acpi::Ebda, Platform};
+use crate::{acpi::HIGH_MEMORY_ALLOCATOR, Platform};
 
 type ResultStaticErr<T> = Result<T, &'static str>;
 
@@ -139,14 +140,6 @@ impl Rsdp {
             if checksum != 0 {
                 return Err("Invalid RSDP extended checksum");
             }
-        }
-
-        // Check the pointer addresses; if present, they should point within the EBDA.
-        if self.rsdt_address > 0 && !Ebda::instance().contains_addr(self.rsdt_address as usize) {
-            return Err("Invalid RSDT address: does not point to within EBDA");
-        }
-        if self.xsdt_address > 0 && !Ebda::instance().contains_addr(self.xsdt_address as usize) {
-            return Err("Invalid XSDT address: does not point to within EBDA");
         }
 
         Ok(())
@@ -251,10 +244,6 @@ impl DescriptionHeader {
     }
 
     fn validate(&self) -> ResultStaticErr<()> {
-        if !Ebda::instance().contains_addr_range(&self.addr_range()) {
-            return Err("ACPI table falls outside EBDA");
-        }
-
         if self.compute_checksum() != 0 {
             return Err("ACPI table checksum invalid");
         }
@@ -426,11 +415,6 @@ impl Rsdt {
             return Err("RSDT invalid: entries size not a multiple of pointer size");
         }
 
-        for &entry in self.entries_arr() {
-            if !Ebda::instance().contains_addr(entry as usize) {
-                return Err("RSDT invalid: entry points outside EBDA");
-            }
-        }
         Ok(())
     }
 }
@@ -620,11 +604,6 @@ impl Xsdt {
             return Err("XSDT invalid: entries size not a multiple of pointer size");
         }
 
-        for entry in self.entries_arr() {
-            if !Ebda::instance().contains_addr(entry.raw_val() as usize) {
-                return Err("XSDT invalid: entry points outside EBDA");
-            }
-        }
         Ok(())
     }
 }
@@ -689,15 +668,6 @@ pub struct ControllerHeader {
 
 impl ControllerHeader {
     fn validate(&self) -> ResultStaticErr<()> {
-        let structure = {
-            let base = self as *const _ as usize;
-            base..base + self.len as usize
-        };
-
-        if !Ebda::instance().contains_addr_range(&structure) {
-            return Err("ACPI interrupt data structure falls outside EBDA");
-        }
-
         Ok(())
     }
 }
@@ -946,20 +916,20 @@ impl Madt {
             old_madt_len + MultiprocessorWakeup::MULTIPROCESSOR_WAKEUP_STRUCTURE_LENGTH as usize;
 
         // New contents = old contents + MPW. Allocate new length, copy old contents.
-        let new_madt_buf: &mut [u8] = Ebda::instance().allocate(new_madt_len)?;
-        new_madt_buf[0..old_madt_len].copy_from_slice(self.as_byte_slice()?);
+        let mut new_madt_buf = Vec::with_capacity_in(new_madt_len, &HIGH_MEMORY_ALLOCATOR);
+        new_madt_buf.extend_from_slice(self.as_byte_slice()?);
         log::info!("MADT contents copied to {:?}", new_madt_buf.as_ptr_range());
 
         // Make an MPW somwhere then copy over its bytes after old MADT contents.
         let temp_mpw: MultiprocessorWakeup =
             MultiprocessorWakeup { mailbox_address: os_mailbox_address, ..Default::default() };
-        new_madt_buf[old_madt_len..new_madt_len].copy_from_slice(temp_mpw.as_bytes());
+        new_madt_buf.extend_from_slice(temp_mpw.as_bytes());
         log::info!(
             "Written Multiprocessor Wakeup Structure to: {:?}",
             new_madt_buf[old_madt_len..new_madt_len].as_ptr_range()
         );
 
-        let new_madt = Madt::from_buf_mut(new_madt_buf)
+        let new_madt = Madt::from_buf_mut(new_madt_buf.leak())
             .map_err(|_| "MADT no longer valid after adding MultiprocessorWakeup")?;
         log::info!("New MADT loaded, at {:#x}", new_madt as *const _ as usize);
         Ok(new_madt)

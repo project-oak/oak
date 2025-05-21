@@ -23,11 +23,10 @@ use alloc::{alloc::Global, boxed::Box, collections::BTreeMap, ffi::CString};
 use core::{
     alloc::{Allocator, Layout},
     borrow::{Borrow, BorrowMut},
-    cell::OnceCell,
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
-    mem::{size_of, size_of_val, zeroed, MaybeUninit},
-    ops::{Deref, DerefMut, Range},
+    mem::size_of_val,
+    ops::{Deref, DerefMut},
 };
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -43,24 +42,24 @@ use crate::{
     Madt, ZeroPage,
 };
 
-/// Root System Descriptor Pointer.
-/// Not really a pointer but a structure (see https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#root-system-description-pointer-rsdp).#
-/// It's located in the first 1KiB of the EBDA.
+// Ever so slightly smaller than 128K (0x2_0000) because the BumpAllocator also
+// needs to fit a usize in there to track how much memory has been allocated.
+type LowMemoryAllocator = crate::allocator::BumpAllocator<0x1_9000>;
+/// Allocator for low memory in the EBDA: 128K of memory (where the RSDP will be
+/// loaded).
 #[link_section = ".ebda"]
-static mut EBDA: MaybeUninit<Rsdp> = MaybeUninit::uninit();
+static LOW_MEMORY_ALLOCATOR: LowMemoryAllocator = LowMemoryAllocator::uninit();
 
 /// How much memory to reserve for ACPI tables in "high" memory.
 const HIGH_MEM_SIZE: usize = 0x10_0000;
 
-// Raw chunk of the "high" memory for ACPI tables. This should get replaced by a
-// proper allocator as part of clean-up.
-static mut HIGH_MEM: OnceCell<&'static mut [u8]> = OnceCell::new();
-
-static mut HIGH_MEM_ALLOC: OnceCell<Ebda> = OnceCell::new();
+// Not using BumpAllocator here because we don't statically know where the
+// memory backing the allocator will go.
+type HighMemoryAllocator = linked_list_allocator::LockedHeap;
+/// Allocator fir high memory (where the ACPI tables themselves will go).
+pub static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
-const RSDP_FILE_NAME_SUFFIX: &str = "acpi/rsdp";
-const ACPI_TABLES_FILE_NAME_SUFFIX: &str = "acpi/tables";
 
 const ROMFILE_LOADER_FILESZ: usize = 56;
 
@@ -94,6 +93,10 @@ trait Files {
 
     /// Access the contents of the named file, if it exists.
     fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str>;
+
+    /// Returns the first file with a name that matches the suffix, if it
+    /// exists.
+    fn find_file_suffix(&self, suffix: &CStr) -> Option<&[u8]>;
 }
 
 /// Wrapper for a file, as they may come from different zones.
@@ -111,6 +114,22 @@ enum File<'a, 'b, L: Allocator, H: Allocator> {
     /// able to get zero-length slices as the backing store for this type of
     /// file.
     Fake(core::ptr::NonNull<u8>),
+}
+
+impl<L: Allocator, H: Allocator> File<'_, '_, L, H> {
+    /// Leaks the memory owned by this file, if any.
+    fn leak(self) {
+        match self {
+            Self::Low(file) => {
+                Box::leak(file);
+            }
+            Self::High(file) => {
+                Box::leak(file);
+            }
+            #[cfg(test)]
+            Self::Fake(_) => {}
+        };
+    }
 }
 
 impl<L: Allocator, H: Allocator> Deref for File<'_, '_, L, H> {
@@ -159,6 +178,16 @@ struct MemFiles<L: Allocator + 'static, H: Allocator + 'static> {
 impl<L: Allocator + 'static, H: Allocator + 'static> MemFiles<L, H> {
     pub const fn new(low_allocator: &'static L, high_allocator: &'static H) -> Self {
         Self { low_allocator, high_allocator, files: BTreeMap::new() }
+    }
+
+    /// Leaks all the files in this storage.
+    ///
+    /// As MemFiles is just glorified bag of `Box`-es, this just calls
+    /// `Box::leak` on all of them.
+    pub fn leak(self) {
+        for file in self.files.into_values() {
+            file.leak();
+        }
     }
 
     #[cfg(test)]
@@ -248,85 +277,15 @@ impl<L: Allocator + 'static, H: Allocator + 'static> Files for MemFiles<L, H> {
         let file = self.files.get(name).ok_or("file not found")?;
         Ok(file.borrow())
     }
-}
 
-/// Implementation for `Files` that just delegates to the existing EBDA space.
-struct EbdaFiles;
-
-impl Files for EbdaFiles {
-    fn allocate(
-        &mut self,
-        name: &CStr,
-        layout: Layout,
-        _zone: Zone,
-    ) -> Result<&mut [u8], &'static str> {
-        let name = name.to_str().map_err(|_| "invalid file name")?;
-
-        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
-            // We don't really care which version we're dealing with, as long as the data
-            // structure is one of the two.
-            if layout.size() > size_of::<Rsdp>() || (layout.size() != 20 && layout.size() != 36) {
-                return Err("RSDP doesn't match expected size");
+    fn find_file_suffix(&self, suffix: &CStr) -> Option<&[u8]> {
+        for (name, contents) in self.files.iter() {
+            if !name.as_bytes().ends_with(suffix.to_bytes()) {
+                continue;
             }
-
-            // Safety: we do not have concurrent threads so accessing the static is safe.
-            let buf = unsafe { EBDA.write(zeroed()) };
-
-            // Sanity checks.
-            if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
-                log::error!("RSDP address: {:p}", buf);
-                return Err("RSDP address is not within the first 1 KiB of EBDA");
-            }
-            if (buf as *const _ as u64) % layout.align() as u64 != 0 {
-                return Err("RSDP address not aligned properly");
-            }
-            Ok(buf.as_bytes_mut())
-        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            let ebda = Ebda::instance();
-            ebda.check_alignment(layout.align() as u32)?;
-            ebda.allocate(layout.size())
-        } else {
-            Err("Unsupported file in table-loader")
+            return Some(contents.borrow());
         }
-    }
-
-    fn get_file_mut(&mut self, name: &CStr) -> Result<&mut [u8], &'static str> {
-        // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
-        // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
-
-        // Safety: we do not have concurrent threads so accessing the static is safe,
-        // and even if Allocate has not been called yet, all values are valid for an
-        // [u8].
-        let name = name.to_str().map_err(|_| "invalid file name")?;
-        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            Ok(unsafe { EBDA.assume_init_mut().as_bytes_mut() })
-        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            unsafe { HIGH_MEM.get_mut() }
-                .map(DerefMut::deref_mut)
-                .ok_or("high memory for ACPI not initialized yet")
-        } else {
-            Err("Unsupported file in table-loader")
-        }
-    }
-
-    fn get_file(&self, name: &CStr) -> Result<&[u8], &'static str> {
-        // TODO: b/380246359 - When Ebda wraps around Rsdp too, remove these
-        // direct accesses to EBDA_MEM to guarantee Ebda::len stays correct.
-
-        // Safety: we do not have concurrent threads so accessing the static is safe,
-        // and even if Allocate has not been called yet, all values are valid for an
-        // [u8].
-        let name = name.to_str().map_err(|_| "invalid file name")?;
-        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            Ok(unsafe { EBDA.assume_init_ref().as_bytes() })
-        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
-            unsafe { HIGH_MEM.get() }
-                .map(Deref::deref)
-                .ok_or("high memory for ACPI not initialized yet")
-        } else {
-            Err("Unsupported file in table-loader")
-        }
+        None
     }
 }
 
@@ -349,71 +308,6 @@ impl<P: crate::Platform> Firmware for FwCfg<P> {
 
     fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.read_file(file, buf)
-    }
-}
-
-/// A wrapper around EBDA memory with helpers to manage it.
-// TODO: b/380246359 - let Ebda wrap around both RSDP and the rest of EBDA.
-#[derive(Debug)]
-pub struct Ebda {
-    ebda_buf: &'static mut [u8],
-    /// Count of bytes actually used within ebda_buf.
-    len_bytes: usize,
-}
-
-impl Ebda {
-    pub fn instance() -> &'static mut Ebda {
-        // Safety: EBDA_INSTANCE accessed for write only from a single thread (BSP).
-        // Read-only access from APs (assembly code).
-        unsafe {
-            match HIGH_MEM_ALLOC.get_mut() {
-                Some(ebda) => ebda,
-                None => {
-                    // Safety: Either the cell is initalized or we panic.
-                    let ebda = Self {
-                        ebda_buf: HIGH_MEM
-                            .get_mut()
-                            .expect("high memory for ACPI not initialized yet"),
-
-                        len_bytes: 0,
-                    };
-                    HIGH_MEM_ALLOC.set(ebda).unwrap();
-                    HIGH_MEM_ALLOC.get_mut().unwrap()
-                }
-            }
-        }
-    }
-
-    /// Allocates byte_count of memory on the EBDA and returns a slice to it.
-    pub fn allocate(&mut self, byte_count: usize) -> Result<&mut [u8], &'static str> {
-        let dest_base_ix = self.len_bytes;
-        let dest_top_ix = dest_base_ix + byte_count;
-
-        self.len_bytes += byte_count;
-        Ok(self.ebda_buf[dest_base_ix..dest_top_ix].as_mut())
-    }
-
-    pub fn check_alignment(&self, required_alignment: u32) -> Result<(), &'static str> {
-        let start = self.ebda_buf.as_ptr_range().start as u64;
-        if start % required_alignment as u64 != 0 {
-            log::error!(
-                "ACPI tables address: {:#018x}, required alignment: {}",
-                start,
-                required_alignment
-            );
-            return Err("ACPI tables address not aligned properly");
-        }
-        Ok(())
-    }
-
-    /// Returns true if addr is within EBDA address range.
-    /// Convenience method for validations.
-    pub fn contains_addr(&self, addr: usize) -> bool {
-        self.ebda_buf.as_ptr_range().contains(&(addr as *const u8))
-    }
-
-    pub fn contains_addr_range(&self, range: &Range<usize>) -> bool {
-        self.contains_addr(range.start) && self.contains_addr(range.end)
     }
 }
 
@@ -978,12 +872,12 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
     // reserve the memory for ACPI tables
     zero_page.insert_e820_entry(BootE820Entry::new(mem_start, HIGH_MEM_SIZE, E820EntryType::ACPI));
 
-    // Safety: the pointer should only be written once, and we're single threaded,
-    // and if it is nullptr any allocations would have panicked by now.
-    // TODO: b/409562112 - This should be replaced by a proper allocator instead of
-    // juggling raw pointers.
-    unsafe { HIGH_MEM.set(core::slice::from_raw_parts_mut(mem_start as *mut u8, HIGH_MEM_SIZE)) }
-        .map_err(|_| "high memory for ACPI tables already set")
+    // Safety: the pointer is not null, we've reserved the 'static memory for
+    // ourselves.
+    unsafe {
+        HIGH_MEMORY_ALLOCATOR.lock().init(mem_start as *mut u8, HIGH_MEM_SIZE);
+    }
+    Ok(())
 }
 
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
@@ -993,6 +887,8 @@ pub fn build_acpi_tables<P: crate::Platform>(
     fwcfg: &mut FwCfg<P>,
     acpi_digest: &mut Sha256,
 ) -> Result<&'static Rsdp, &'static str> {
+    let mut files = MemFiles::new(&LOW_MEMORY_ALLOCATOR, &HIGH_MEMORY_ALLOCATOR);
+
     let file =
         fwcfg.find(TABLE_LOADER_FILE_NAME).ok_or("Could not find 'etc/table-loader' in fw_cfg")?;
 
@@ -1015,11 +911,17 @@ pub fn build_acpi_tables<P: crate::Platform>(
     };
 
     for command in commands {
-        command.invoke(&mut EbdaFiles, fwcfg, acpi_digest)?;
+        command.invoke(&mut files, fwcfg, acpi_digest)?;
     }
 
+    // Strictly speaking we should search through the low memory to find the RSDP,
+    // but for practical purposes we know that the VMs we care about end the file
+    // that contains the file with `acpi/rsdp` (the prefix may vary), so let's look
+    // up just that file.
+    let rsdp = files.find_file_suffix(c"acpi/rsdp").ok_or("RSDP file not found")?;
+
     // Safety: we ensure that the RSDP is valid before returning a reference to it.
-    let rsdp = unsafe { EBDA.assume_init_mut() };
+    let rsdp = unsafe { &mut *(rsdp.as_ptr() as *mut Rsdp) };
     rsdp.validate::<P>()?;
     log::info!("ACPI tables before finalizing:");
     debug_print_acpi_tables(rsdp)?;
@@ -1029,6 +931,9 @@ pub fn build_acpi_tables<P: crate::Platform>(
     rsdp.validate::<P>()?;
     log::info!("ACPI tables after finalizing:");
     debug_print_acpi_tables(rsdp)?;
+
+    // Ensure the tables stick around by leaking the memory holding them.
+    files.leak();
 
     Ok(rsdp)
 }
