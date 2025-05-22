@@ -22,11 +22,6 @@
 
 namespace oak::crypto {
 
-// TODO: b/414973369 - Use `TimeUtil::kTimestampMinSeconds` and
-// `TimeUtil::kTimestampMaxSeconds` once go/oak-cr/19460 is submitted.
-static constexpr int64_t kTimestampMinSeconds = -62135596800LL;
-static constexpr int64_t kTimestampMaxSeconds = 253402300799LL;
-
 class Clock {
  public:
   virtual absl::Time CurrentTime() const = 0;

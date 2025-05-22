@@ -23,20 +23,20 @@
 #include "absl/strings/str_cat.h"
 #include "absl/time/time.h"
 #include "google/protobuf/timestamp.pb.h"
+#include "google/protobuf/util/time_util.h"
 
 namespace oak::crypto {
 
 namespace {
 using google::protobuf::Timestamp;
+using google::protobuf::util::TimeUtil;
 }  // namespace
 
 absl::Time SystemClock::CurrentTime() const { return absl::Now(); }
 
 absl::StatusOr<Timestamp> ToTimestamp(absl::Time time) {
-  // TODO: b/414973369 - Use `TimeUtil::kTimestampMinSeconds` and
-  // `TimeUtil::kTimestampMaxSeconds` once go/oak-cr/19460 is submitted.
-  absl::Time kMinTime = absl::FromUnixSeconds(kTimestampMinSeconds);
-  absl::Time kMaxTime = absl::FromUnixSeconds(kTimestampMaxSeconds);
+  absl::Time kMinTime = absl::FromUnixSeconds(TimeUtil::kTimestampMinSeconds);
+  absl::Time kMaxTime = absl::FromUnixSeconds(TimeUtil::kTimestampMaxSeconds);
   if (time < kMinTime || time > kMaxTime) {
     return absl::InvalidArgumentError(absl::StrCat(
         "couldn't convert absl::Time to google::protobuf::Timestamp: ", time,

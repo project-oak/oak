@@ -20,6 +20,7 @@
 #include "absl/time/time.h"
 #include "gmock/gmock.h"
 #include "google/protobuf/timestamp.pb.h"
+#include "google/protobuf/util/time_util.h"
 #include "gtest/gtest.h"
 
 constexpr uint64_t kTestTimeSeconds = 12;
@@ -29,6 +30,7 @@ namespace oak::crypto {
 namespace {
 
 using google::protobuf::Timestamp;
+using google::protobuf::util::TimeUtil;
 
 TEST(UtilsTest, ToTimestampSucceeds) {
   absl::Time time = absl::FromUnixSeconds(kTestTimeSeconds) +
@@ -44,10 +46,10 @@ TEST(UtilsTest, ToTimestampSucceeds) {
 }
 
 TEST(UtilsTest, ToTimestampFails) {
-  // TODO: b/414973369 - Use `TimeUtil::kTimestampMinSeconds` and
-  // `TimeUtil::kTimestampMaxSeconds` once go/oak-cr/19460 is submitted.
-  absl::Time time_under_limit = absl::FromUnixSeconds(kTimestampMinSeconds - 1);
-  absl::Time time_over_limit = absl::FromUnixSeconds(kTimestampMaxSeconds + 1);
+  absl::Time time_under_limit =
+      absl::FromUnixSeconds(TimeUtil::kTimestampMinSeconds - 1);
+  absl::Time time_over_limit =
+      absl::FromUnixSeconds(TimeUtil::kTimestampMaxSeconds + 1);
 
   absl::StatusOr<Timestamp> result_under_limit = ToTimestamp(time_under_limit);
   EXPECT_FALSE(result_under_limit.ok());
