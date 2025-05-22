@@ -51,17 +51,10 @@ load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
 
-load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
+load("@oak//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
-create_oak_crate_repositories(
-    cargo_lockfile = "//:Cargo.bazel.lock",
-    lockfile = "//:cargo-bazel-lock.json",
-    no_std_cargo_lockfile = "//:Cargo_no_std.bazel.lock",
-    no_std_lockfile = "//:cargo-no-std-bazel-lock.json",
-    no_std_no_avx_cargo_lockfile = "//:Cargo_no_std_no_avx.bazel.lock",
-    no_std_no_avx_lockfile = "//:cargo-no-std-no-avx-bazel-lock.json",
-)
+create_oak_crate_repositories()
 
-load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
+load("@oak//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()

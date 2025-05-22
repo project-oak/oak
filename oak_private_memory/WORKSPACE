@@ -128,18 +128,23 @@ load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
 
-load("//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
+load("@oak//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
+load("@rules_rust//crate_universe:defs.bzl", "crate")
 
 create_oak_crate_repositories(
-    cargo_lockfile = "//:Cargo.bazel.lock",
-    lockfile = "//:cargo-bazel-lock.json",
-    no_std_cargo_lockfile = "//:Cargo_no_std.bazel.lock",
-    no_std_lockfile = "//:cargo-no-std-bazel-lock.json",
-    no_std_no_avx_cargo_lockfile = "//:Cargo_no_std_no_avx.bazel.lock",
-    no_std_no_avx_lockfile = "//:cargo-no-std-no-avx-bazel-lock.json",
+    extra_packages = {
+        "codespan-reporting": crate.spec(version = "0.12.0"),
+        "cxx": crate.spec(version = "1.0.157"),
+        "cxx-build": crate.spec(version = "1.0.157"),
+        "foldhash": crate.spec(version = "0.1.5"),
+        "proc-macro2": crate.spec(version = "1.0.95"),
+        "rand": crate.spec(version = "0.9.1"),
+        "rustversion": crate.spec(version = "1.0.20"),
+        "serde-aux": crate.spec(version = "4.6.0"),
+    },
 )
 
-load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
+load("@oak//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
 

@@ -981,9 +981,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.157"
+version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d6354e975ea4ec28033ec3a36fa9baa1a02e3eb22ad740eeb4929370d4f5ba8"
+checksum = "a71ea7f29c73f7ffa64c50b83c9fe4d3a6d4be89a86b009eb80d5a6d3429d741"
 dependencies = [
  "cc",
  "cxxbridge-cmd",
@@ -995,9 +995,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.157"
+version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b4400e26ea4b99417e4263b1ce2d8452404d750ba0809a7bd043072593d430d"
+checksum = "36a8232661d66dcf713394726157d3cfe0a89bfc85f52d6e9f9bbc2306797fe7"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1009,9 +1009,9 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-cmd"
-version = "1.0.157"
+version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31860c98f69fc14da5742c5deaf78983e846c7b27804ca8c8319e32eef421bde"
+checksum = "4f44296c8693e9ea226a48f6a122727f77aa9e9e338380cb021accaeeb7ee279"
 dependencies = [
  "clap",
  "codespan-reporting",
@@ -1022,15 +1022,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.157"
+version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0402a66013f3b8d3d9f2d7c9994656cc81e671054822b0728d7454d9231892f"
+checksum = "c42f69c181c176981ae44ba9876e2ea41ce8e574c296b38d06925ce9214fb8e4"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.157"
+version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64c0b38f32d68f3324a981645ee39b2d686af36d03c98a386df3716108c9feae"
+checksum = "8faff5d4467e0709448187df29ccbf3b0982cc426ee444a193f87b11afb565a8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1221,7 +1221,6 @@ dependencies = [
  "itertools 0.13.0",
  "jni",
  "lazy_static",
- "libloading",
  "libm",
  "linked_list_allocator",
  "lock_api",
@@ -1258,6 +1257,7 @@ dependencies = [
  "rand_core 0.6.4",
  "regex",
  "regex-lite",
+ "ring",
  "rlsf",
  "rsa",
  "rtnetlink",
@@ -1280,6 +1280,7 @@ dependencies = [
  "tar",
  "temp-env",
  "tempfile",
+ "tikv-jemallocator",
  "time",
  "tokio",
  "tokio-stream",
@@ -2337,16 +2338,6 @@ name = "libc"
 version = "0.2.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
-
-[[package]]
-name = "libloading"
-version = "0.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
-dependencies = [
- "cfg-if",
- "windows-targets 0.52.6",
-]
 
 [[package]]
 name = "libm"
@@ -3794,9 +3785,9 @@ dependencies = [
 
 [[package]]
 name = "serde-aux"
-version = "4.6.0"
+version = "4.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5290c39c5f6992b9dddbda28541d965dba46468294e6018a408fa297e6c602de"
+checksum = "207f67b28fe90fb596503a9bf0bf1ea5e831e21307658e177c5dfcdfc3ab8a0a"
 dependencies = [
  "chrono",
  "serde",
@@ -4252,6 +4243,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.100",
+]
+
+[[package]]
+name = "tikv-jemalloc-sys"
+version = "0.5.4+5.3.0-patched"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9402443cb8fd499b6f327e40565234ff34dbda27460c5b47db0db77443dd85d1"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
+name = "tikv-jemallocator"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "965fe0c26be5c56c94e38ba547249074803efd52adfb66de62107d95aab3eaca"
+dependencies = [
+ "libc",
+ "tikv-jemalloc-sys",
 ]
 
 [[package]]

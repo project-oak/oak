@@ -1,5 +1,5 @@
 {
-  "checksum": "3ad4521e88239ee6d39250cf5ec7a0807c6eddd2e99b835f8829593264d7be46",
+  "checksum": "9dfdac96e06f6d4571447e1abaa5498b905b0889323c3c7cf0dc7c658828d3e6",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1860,7 +1860,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -1976,7 +1976,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -5265,7 +5265,7 @@
               "target": "rayon"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -6960,6 +6960,10 @@
               "target": "goblin"
             },
             {
+              "id": "googletest 0.14.0",
+              "target": "googletest"
+            },
+            {
               "id": "hashbrown 0.14.3",
               "target": "hashbrown"
             },
@@ -7006,10 +7010,6 @@
             {
               "id": "lazy_static 1.4.0",
               "target": "lazy_static"
-            },
-            {
-              "id": "libloading 0.8.5",
-              "target": "libloading"
             },
             {
               "id": "libm 0.2.8",
@@ -7140,7 +7140,7 @@
               "target": "rand_core"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -7226,6 +7226,10 @@
             {
               "id": "tempfile 3.10.1",
               "target": "tempfile"
+            },
+            {
+              "id": "tikv-jemallocator 0.5.4",
+              "target": "tikv_jemallocator"
             },
             {
               "id": "time 0.3.36",
@@ -7953,7 +7957,7 @@
               "target": "log"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             }
           ],
@@ -10006,11 +10010,11 @@
               "target": "log"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
@@ -10088,6 +10092,125 @@
       "license": "MIT",
       "license_ids": [
         "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest 0.14.0": {
+      "name": "googletest",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest/0.14.0/download",
+          "sha256": "fbbb8bea2ac2741b1d5e1183896ad6a3f1e8e25e375ed5737a171e057cacd8a3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "googletest",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "num-traits 0.2.18",
+              "target": "num_traits"
+            },
+            {
+              "id": "regex 1.11.1",
+              "target": "regex"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "googletest_macro 0.14.0",
+              "target": "googletest_macro"
+            },
+            {
+              "id": "rustversion 1.0.20",
+              "target": "rustversion"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE"
+    },
+    "googletest_macro 0.14.0": {
+      "name": "googletest_macro",
+      "version": "0.14.0",
+      "package_url": "https://github.com/google/googletest-rust",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/googletest_macro/0.14.0/download",
+          "sha256": "672de67b4529abeb5c623913ca6de8a3031ab97dc105c58ab747199b084ab1bf"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "googletest_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "googletest_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.94",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.100",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.14.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
       ],
       "license_file": "LICENSE"
     },
@@ -12207,7 +12330,7 @@
               "target": "memchr"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
@@ -13317,61 +13440,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "libloading 0.8.5": {
-      "name": "libloading",
-      "version": "0.8.5",
-      "package_url": "https://github.com/nagisa/rust_libloading/",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/libloading/0.8.5/download",
-          "sha256": "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "libloading",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "libloading",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [],
-          "selects": {
-            "cfg(unix)": [
-              {
-                "id": "cfg-if 1.0.0",
-                "target": "cfg_if"
-              }
-            ],
-            "cfg(windows)": [
-              {
-                "id": "windows-targets 0.52.4",
-                "target": "windows_targets"
-              }
-            ]
-          }
-        },
-        "edition": "2015",
-        "version": "0.8.5"
-      },
-      "license": "ISC",
-      "license_ids": [
-        "ISC"
-      ],
-      "license_file": "LICENSE"
     },
     "libm 0.2.8": {
       "name": "libm",
@@ -19388,7 +19456,7 @@
               "target": "prost_types"
             },
             {
-              "id": "regex 1.10.4",
+              "id": "regex 1.11.1",
               "target": "regex"
             },
             {
@@ -20370,14 +20438,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "regex 1.10.4": {
+    "regex 1.11.1": {
       "name": "regex",
-      "version": "1.10.4",
+      "version": "1.11.1",
       "package_url": "https://github.com/rust-lang/regex",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex/1.10.4/download",
-          "sha256": "c117dbdfde9c8308975b6a18d71f3f385c89461f7b3fb054288ecf2a2058ba4c"
+          "url": "https://static.crates.io/crates/regex/1.11.1/download",
+          "sha256": "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
         }
       },
       "targets": [
@@ -20401,6 +20469,7 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "perf",
             "perf-backtrack",
             "perf-cache",
@@ -20409,7 +20478,14 @@
             "perf-literal",
             "perf-onepass",
             "std",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment"
           ],
           "selects": {}
         },
@@ -20424,18 +20500,18 @@
               "target": "memchr"
             },
             {
-              "id": "regex-automata 0.4.6",
+              "id": "regex-automata 0.4.9",
               "target": "regex_automata"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.10.4"
+        "version": "1.11.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20444,14 +20520,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "regex-automata 0.4.6": {
+    "regex-automata 0.4.9": {
       "name": "regex-automata",
-      "version": "0.4.6",
+      "version": "0.4.9",
       "package_url": "https://github.com/rust-lang/regex/tree/master/regex-automata",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex-automata/0.4.6/download",
-          "sha256": "86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
+          "url": "https://static.crates.io/crates/regex-automata/0.4.9/download",
+          "sha256": "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
         }
       },
       "targets": [
@@ -20490,7 +20566,15 @@
             "perf-literal-substring",
             "std",
             "syntax",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment",
+            "unicode-word-boundary"
           ],
           "selects": {}
         },
@@ -20505,14 +20589,14 @@
               "target": "memchr"
             },
             {
-              "id": "regex-syntax 0.8.3",
+              "id": "regex-syntax 0.8.5",
               "target": "regex_syntax"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.4.6"
+        "version": "0.4.9"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -20567,14 +20651,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "regex-syntax 0.8.3": {
+    "regex-syntax 0.8.5": {
       "name": "regex-syntax",
-      "version": "0.8.3",
+      "version": "0.8.5",
       "package_url": "https://github.com/rust-lang/regex/tree/master/regex-syntax",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/regex-syntax/0.8.3/download",
-          "sha256": "adad44e29e4c806119491a7f06f03de4d1af22c3a680dd47f1e6e179439d1f56"
+          "url": "https://static.crates.io/crates/regex-syntax/0.8.5/download",
+          "sha256": "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
         }
       },
       "targets": [
@@ -20598,13 +20682,21 @@
         ],
         "crate_features": {
           "common": [
+            "default",
             "std",
-            "unicode-bool"
+            "unicode",
+            "unicode-age",
+            "unicode-bool",
+            "unicode-case",
+            "unicode-gencat",
+            "unicode-perl",
+            "unicode-script",
+            "unicode-segment"
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.8.3"
+        "version": "0.8.5"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -21650,14 +21742,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "rustversion 1.0.14": {
+    "rustversion 1.0.20": {
       "name": "rustversion",
-      "version": "1.0.14",
+      "version": "1.0.20",
       "package_url": "https://github.com/dtolnay/rustversion",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rustversion/1.0.14/download",
-          "sha256": "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+          "url": "https://static.crates.io/crates/rustversion/1.0.20/download",
+          "sha256": "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
         }
       },
       "targets": [
@@ -21694,14 +21786,14 @@
         "deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.14"
+        "version": "1.0.20"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -23797,7 +23889,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -23865,7 +23957,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -24932,6 +25024,180 @@
         "version": "1.0.60"
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "tikv-jemalloc-sys 0.5.4+5.3.0-patched": {
+      "name": "tikv-jemalloc-sys",
+      "version": "0.5.4+5.3.0-patched",
+      "package_url": "https://github.com/tikv/jemallocator",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/tikv-jemalloc-sys/0.5.4+5.3.0-patched/download",
+          "sha256": "9402443cb8fd499b6f327e40565234ff34dbda27460c5b47db0db77443dd85d1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "tikv_jemalloc_sys",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "tikv_jemalloc_sys",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "background_threads_runtime_support"
+          ],
+          "selects": {}
+        },
+        "data": {
+          "common": [
+            "@jemalloc//:gen_dir"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.171",
+              "target": "libc"
+            },
+            {
+              "id": "tikv-jemalloc-sys 0.5.4+5.3.0-patched",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "extra_deps": {
+          "common": [
+            "@jemalloc//:jemalloc"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.4+5.3.0-patched"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data": {
+          "common": [
+            "@jemalloc//:gen_dir"
+          ],
+          "selects": {}
+        },
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "cc 1.2.18",
+              "target": "cc"
+            }
+          ],
+          "selects": {}
+        },
+        "build_script_env": {
+          "common": {
+            "JEMALLOC_OVERRIDE": "$(execpath @jemalloc//:gen_dir)/lib/libjemalloc.a"
+          },
+          "selects": {}
+        },
+        "links": "jemalloc"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "tikv-jemallocator 0.5.4": {
+      "name": "tikv-jemallocator",
+      "version": "0.5.4",
+      "package_url": "https://github.com/tikv/jemallocator",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/tikv-jemallocator/0.5.4/download",
+          "sha256": "965fe0c26be5c56c94e38ba547249074803efd52adfb66de62107d95aab3eaca"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "tikv_jemallocator",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "tikv_jemallocator",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "background_threads_runtime_support",
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.171",
+              "target": "libc"
+            },
+            {
+              "id": "tikv-jemalloc-sys 0.5.4+5.3.0-patched",
+              "target": "tikv_jemalloc_sys"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.4"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -26904,7 +27170,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -32519,7 +32785,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.14",
+              "id": "rustversion 1.0.20",
               "target": "rustversion"
             }
           ],
@@ -33347,6 +33613,7 @@
     "futures-util 0.3.31",
     "getrandom 0.2.12",
     "goblin 0.8.2",
+    "googletest 0.14.0",
     "hashbrown 0.14.3",
     "hex 0.4.3",
     "hkdf 0.12.4",
@@ -33359,7 +33626,6 @@
     "itertools 0.13.0",
     "jni 0.21.1",
     "lazy_static 1.4.0",
-    "libloading 0.8.5",
     "libm 0.2.8",
     "linked_list_allocator 0.10.5",
     "lock_api 0.4.11",
@@ -33393,7 +33659,7 @@
     "rand 0.8.5",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
-    "regex 1.10.4",
+    "regex 1.11.1",
     "regex-lite 0.1.6",
     "ring 0.17.14",
     "rlsf 0.2.1",
@@ -33416,6 +33682,7 @@
     "tar 0.4.40",
     "temp-env 0.3.6",
     "tempfile 3.10.1",
+    "tikv-jemallocator 0.5.4",
     "time 0.3.36",
     "tokio 1.37.0",
     "tokio-stream 0.1.15",

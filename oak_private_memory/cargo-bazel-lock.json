@@ -1,5 +1,5 @@
 {
-  "checksum": "597d94fb8321e14e18279802efe35a99b26a8b8034922d889437ea962cb38f8c",
+  "checksum": "91ac5e02969bcc435048fcfbb5036cc4e81b426fd7015fb0304e7a2988d03ee0",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -6058,14 +6058,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "cxx 1.0.157": {
+    "cxx 1.0.158": {
       "name": "cxx",
-      "version": "1.0.157",
+      "version": "1.0.158",
       "package_url": "https://github.com/dtolnay/cxx",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/cxx/1.0.157/download",
-          "sha256": "3d6354e975ea4ec28033ec3a36fa9baa1a02e3eb22ad740eeb4929370d4f5ba8"
+          "url": "https://static.crates.io/crates/cxx/1.0.158/download",
+          "sha256": "a71ea7f29c73f7ffa64c50b83c9fe4d3a6d4be89a86b009eb80d5a6d3429d741"
         }
       },
       "targets": [
@@ -6118,13 +6118,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "cxxbridge-macro 1.0.157",
+              "id": "cxxbridge-macro 1.0.158",
               "target": "cxxbridge_macro"
             }
           ],
           "selects": {}
         },
-        "version": "1.0.157"
+        "version": "1.0.158"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6137,14 +6137,14 @@
         "cxx_cc": "cxx_cc"
       }
     },
-    "cxx-build 1.0.157": {
+    "cxx-build 1.0.158": {
       "name": "cxx-build",
-      "version": "1.0.157",
+      "version": "1.0.158",
       "package_url": "https://github.com/dtolnay/cxx",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/cxx-build/1.0.157/download",
-          "sha256": "8b4400e26ea4b99417e4263b1ce2d8452404d750ba0809a7bd043072593d430d"
+          "url": "https://static.crates.io/crates/cxx-build/1.0.158/download",
+          "sha256": "36a8232661d66dcf713394726157d3cfe0a89bfc85f52d6e9f9bbc2306797fe7"
         }
       },
       "targets": [
@@ -6196,7 +6196,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.157"
+        "version": "1.0.158"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6205,14 +6205,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "cxxbridge-flags 1.0.157": {
+    "cxxbridge-flags 1.0.158": {
       "name": "cxxbridge-flags",
-      "version": "1.0.157",
+      "version": "1.0.158",
       "package_url": "https://github.com/dtolnay/cxx",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/cxxbridge-flags/1.0.157/download",
-          "sha256": "b0402a66013f3b8d3d9f2d7c9994656cc81e671054822b0728d7454d9231892f"
+          "url": "https://static.crates.io/crates/cxxbridge-flags/1.0.158/download",
+          "sha256": "c42f69c181c176981ae44ba9876e2ea41ce8e574c296b38d06925ce9214fb8e4"
         }
       },
       "targets": [
@@ -6241,7 +6241,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.157"
+        "version": "1.0.158"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6250,14 +6250,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "cxxbridge-macro 1.0.157": {
+    "cxxbridge-macro 1.0.158": {
       "name": "cxxbridge-macro",
-      "version": "1.0.157",
+      "version": "1.0.158",
       "package_url": "https://github.com/dtolnay/cxx",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/cxxbridge-macro/1.0.157/download",
-          "sha256": "64c0b38f32d68f3324a981645ee39b2d686af36d03c98a386df3716108c9feae"
+          "url": "https://static.crates.io/crates/cxxbridge-macro/1.0.158/download",
+          "sha256": "8faff5d4467e0709448187df29ccbf3b0982cc426ee444a193f87b11afb565a8"
         }
       },
       "targets": [
@@ -6306,7 +6306,7 @@
           ],
           "selects": {}
         },
-        "version": "1.0.157"
+        "version": "1.0.158"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -7173,11 +7173,11 @@
               "target": "curve25519_dalek"
             },
             {
-              "id": "cxx 1.0.157",
+              "id": "cxx 1.0.158",
               "target": "cxx"
             },
             {
-              "id": "cxx-build 1.0.157",
+              "id": "cxx-build 1.0.158",
               "target": "cxx_build"
             },
             {
@@ -7267,10 +7267,6 @@
             {
               "id": "lazy_static 1.5.0",
               "target": "lazy_static"
-            },
-            {
-              "id": "libloading 0.8.6",
-              "target": "libloading"
             },
             {
               "id": "libm 0.2.11",
@@ -7413,6 +7409,10 @@
               "target": "regex_lite"
             },
             {
+              "id": "ring 0.17.14",
+              "target": "ring"
+            },
+            {
               "id": "rlsf 0.2.1",
               "target": "rlsf"
             },
@@ -7433,7 +7433,7 @@
               "target": "serde"
             },
             {
-              "id": "serde-aux 4.6.0",
+              "id": "serde-aux 4.7.0",
               "target": "serde_aux"
             },
             {
@@ -7491,6 +7491,10 @@
             {
               "id": "tempfile 3.19.1",
               "target": "tempfile"
+            },
+            {
+              "id": "tikv-jemallocator 0.5.4",
+              "target": "tikv_jemallocator"
             },
             {
               "id": "time 0.3.41",
@@ -13911,61 +13915,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "libloading 0.8.6": {
-      "name": "libloading",
-      "version": "0.8.6",
-      "package_url": "https://github.com/nagisa/rust_libloading/",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/libloading/0.8.6/download",
-          "sha256": "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "libloading",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "libloading",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [],
-          "selects": {
-            "cfg(unix)": [
-              {
-                "id": "cfg-if 1.0.0",
-                "target": "cfg_if"
-              }
-            ],
-            "cfg(windows)": [
-              {
-                "id": "windows-targets 0.52.6",
-                "target": "windows_targets"
-              }
-            ]
-          }
-        },
-        "edition": "2015",
-        "version": "0.8.6"
-      },
-      "license": "ISC",
-      "license_ids": [
-        "ISC"
-      ],
-      "license_file": "LICENSE"
     },
     "libm 0.2.11": {
       "name": "libm",
@@ -23378,14 +23327,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "serde-aux 4.6.0": {
+    "serde-aux 4.7.0": {
       "name": "serde-aux",
-      "version": "4.6.0",
+      "version": "4.7.0",
       "package_url": "https://github.com/iddm/serde-aux",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/serde-aux/4.6.0/download",
-          "sha256": "5290c39c5f6992b9dddbda28541d965dba46468294e6018a408fa297e6c602de"
+          "url": "https://static.crates.io/crates/serde-aux/4.7.0/download",
+          "sha256": "207f67b28fe90fb596503a9bf0bf1ea5e831e21307658e177c5dfcdfc3ab8a0a"
         }
       },
       "targets": [
@@ -23436,7 +23385,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "4.6.0"
+        "version": "4.7.0"
       },
       "license": "MIT",
       "license_ids": [
@@ -26304,6 +26253,180 @@
         "version": "2.0.12"
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "tikv-jemalloc-sys 0.5.4+5.3.0-patched": {
+      "name": "tikv-jemalloc-sys",
+      "version": "0.5.4+5.3.0-patched",
+      "package_url": "https://github.com/tikv/jemallocator",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/tikv-jemalloc-sys/0.5.4+5.3.0-patched/download",
+          "sha256": "9402443cb8fd499b6f327e40565234ff34dbda27460c5b47db0db77443dd85d1"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "tikv_jemalloc_sys",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "tikv_jemalloc_sys",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "background_threads_runtime_support"
+          ],
+          "selects": {}
+        },
+        "data": {
+          "common": [
+            "@jemalloc//:gen_dir"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.171",
+              "target": "libc"
+            },
+            {
+              "id": "tikv-jemalloc-sys 0.5.4+5.3.0-patched",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "extra_deps": {
+          "common": [
+            "@jemalloc//:jemalloc"
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.4+5.3.0-patched"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data": {
+          "common": [
+            "@jemalloc//:gen_dir"
+          ],
+          "selects": {}
+        },
+        "data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "cc 1.2.18",
+              "target": "cc"
+            }
+          ],
+          "selects": {}
+        },
+        "build_script_env": {
+          "common": {
+            "JEMALLOC_OVERRIDE": "$(execpath @jemalloc//:gen_dir)/lib/libjemalloc.a"
+          },
+          "selects": {}
+        },
+        "links": "jemalloc"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "tikv-jemallocator 0.5.4": {
+      "name": "tikv-jemallocator",
+      "version": "0.5.4",
+      "package_url": "https://github.com/tikv/jemallocator",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/tikv-jemallocator/0.5.4/download",
+          "sha256": "965fe0c26be5c56c94e38ba547249074803efd52adfb66de62107d95aab3eaca"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "tikv_jemallocator",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "tikv_jemallocator",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "background_threads_runtime_support",
+            "default"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.171",
+              "target": "libc"
+            },
+            {
+              "id": "tikv-jemalloc-sys 0.5.4+5.3.0-patched",
+              "target": "tikv_jemalloc_sys"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.5.4"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -35287,8 +35410,8 @@
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
     "curve25519-dalek 4.1.3",
-    "cxx 1.0.157",
-    "cxx-build 1.0.157",
+    "cxx 1.0.158",
+    "cxx-build 1.0.158",
     "derive_builder 0.20.2",
     "ecdsa 0.16.9",
     "elf 0.7.4",
@@ -35311,7 +35434,6 @@
     "itertools 0.13.0",
     "jni 0.21.1",
     "lazy_static 1.5.0",
-    "libloading 0.8.6",
     "libm 0.2.11",
     "linked_list_allocator 0.10.5",
     "lock_api 0.4.12",
@@ -35348,13 +35470,14 @@
     "rand_core 0.6.4",
     "regex 1.11.1",
     "regex-lite 0.1.6",
+    "ring 0.17.14",
     "rlsf 0.2.1",
     "rsa 0.9.8",
     "rtnetlink 0.14.1",
     "rustversion 1.0.20",
     "self_cell 1.1.0",
     "serde 1.0.219",
-    "serde-aux 4.6.0",
+    "serde-aux 4.7.0",
     "serde_json 1.0.140",
     "serde_yaml 0.9.34+deprecated",
     "sha2 0.10.8",
@@ -35370,6 +35493,7 @@
     "tar 0.4.44",
     "temp-env 0.3.6",
     "tempfile 3.19.1",
+    "tikv-jemallocator 0.5.4",
     "time 0.3.41",
     "tokio 1.44.2",
     "tokio-stream 0.1.17",
