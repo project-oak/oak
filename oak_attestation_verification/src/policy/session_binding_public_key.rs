@@ -23,12 +23,15 @@ use alloc::{
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_crypto::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        session_binding_public_key_endorsement, EventAttestationResults,
-        SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement,
+use oak_proto_rust::{
+    certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
+    oak::{
+        attestation::v1::{
+            session_binding_public_key_endorsement, EventAttestationResults,
+            SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement,
+        },
+        Variant,
     },
-    Variant,
 };
 
 use crate::{policy::SESSION_BINDING_PUBLIC_KEY_ID, util::decode_event_proto};
@@ -51,19 +54,39 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
         &self,
         encoded_event: &[u8],
         encoded_endorsement: &Variant,
-        _milliseconds_since_epoch: i64,
+        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
             encoded_event,
         )?;
-        let endorsement: Option<SessionBindingPublicKeyEndorsement> =
-            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
+        let endorsement =
+            <&Variant as TryInto<Option<SessionBindingPublicKeyEndorsement>>>::try_into(
+                encoded_endorsement,
+            )
+            .map_err(anyhow::Error::msg)?
+            .context("ceftificate authority endorsment is not present")?;
 
-        match &endorsement
-            .context("endorsment for session binding public key is not present")?
-            .r#type
-        {
+        // TODO: b/417151897 - Return error if certificate is not provided, once the
+        // server starts generating certificates.
+        if let Some(certificate_authority_endorsement) = &endorsement.ca_endorsement {
+            let certificate = certificate_authority_endorsement
+                .certificate
+                .as_ref()
+                .context("certificate is not present in the CertificateAuthorityEndorsement")?;
+            self.certificate_verifier
+                .verify(
+                    &event.session_binding_public_key,
+                    &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
+                    milliseconds_since_epoch,
+                    certificate,
+                )
+                .context("couldn't verify certificate for session binding public key")?;
+        }
+
+        // TODO: b/417151897 - Remove this block once server start providing
+        // certificates.
+        match &endorsement.r#type {
             Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
                 tink_endorsement,
             )) => {
@@ -80,7 +103,7 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
                 anyhow::bail!("CertificateAuthorityEndorsment not supported")
             }
             None => anyhow::bail!("SessionBindingPublicKeyEndorsement is empty"),
-        };
+        }
 
         let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
         if !event.session_binding_public_key.is_empty() {

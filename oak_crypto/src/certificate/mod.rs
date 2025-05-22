@@ -16,3 +16,6 @@
 
 pub mod certificate_authority;
 pub mod certificate_verifier;
+#[cfg(test)]
+mod tests;
+pub mod utils;

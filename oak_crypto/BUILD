@@ -67,6 +67,8 @@ rust_library(
         "@oak_crates_index//:p256",
         "@oak_crates_index//:pkcs8",
         "@oak_crates_index//:primeorder",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand_chacha",
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:sha2",
