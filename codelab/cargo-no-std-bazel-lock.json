@@ -1,5 +1,5 @@
 {
-  "checksum": "105f414536bd63d0411011e82304ab21999d4fec093c4a847cc14867c6ff2467",
+  "checksum": "c4e59823148234666b24798335582e96a4060346761cd06cbdd4a43bf658d9b2",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -1068,6 +1068,51 @@
         },
         "edition": "2018",
         "version": "0.10.4"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "bumpalo 3.17.0": {
+      "name": "bumpalo",
+      "version": "3.17.0",
+      "package_url": "https://github.com/fitzgen/bumpalo",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bumpalo/3.17.0/download",
+          "sha256": "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bumpalo",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bumpalo",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default"
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "3.17.0"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -3033,6 +3078,10 @@
               "target": "virtio_drivers"
             },
             {
+              "id": "wasm-bindgen 0.2.100",
+              "target": "wasm_bindgen"
+            },
+            {
               "id": "wasmi 0.31.2",
               "target": "wasmi"
             },
@@ -3041,7 +3090,7 @@
               "target": "x509_cert"
             },
             {
-              "id": "x86_64 0.14.11",
+              "id": "x86_64 0.14.12",
               "target": "x86_64"
             },
             {
@@ -3797,7 +3846,10 @@
         ],
         "crate_features": {
           "common": [
-            "rdrand"
+            "js",
+            "js-sys",
+            "rdrand",
+            "wasm-bindgen"
           ],
           "selects": {}
         },
@@ -3819,6 +3871,16 @@
               {
                 "id": "libc 0.2.154",
                 "target": "libc"
+              }
+            ],
+            "wasm32-unknown-unknown": [
+              {
+                "id": "js-sys 0.3.77",
+                "target": "js_sys"
+              },
+              {
+                "id": "wasm-bindgen 0.2.100",
+                "target": "wasm_bindgen"
               }
             ]
           }
@@ -4614,6 +4676,65 @@
         ],
         "edition": "2018",
         "version": "1.0.11"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "js-sys 0.3.77": {
+      "name": "js-sys",
+      "version": "0.3.77",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen/tree/master/crates/js-sys",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/js-sys/0.3.77/download",
+          "sha256": "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "js_sys",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "js_sys",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "once_cell 1.19.0",
+              "target": "once_cell"
+            },
+            {
+              "id": "wasm-bindgen 0.2.100",
+              "target": "wasm_bindgen"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.3.77"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -8915,7 +9036,8 @@
             "parsing",
             "printing",
             "proc-macro",
-            "visit"
+            "visit",
+            "visit-mut"
           ],
           "selects": {}
         },
@@ -9657,6 +9779,367 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "wasm-bindgen 0.2.100": {
+      "name": "wasm-bindgen",
+      "version": "0.2.100",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasm-bindgen/0.2.100/download",
+          "sha256": "1edc8929d7499fc4e8f0be2262a241556cfc54a0bea223790e71446f2aab1ef5"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasm_bindgen",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasm_bindgen",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "msrv",
+            "rustversion",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "cfg-if 1.0.0",
+              "target": "cfg_if"
+            },
+            {
+              "id": "once_cell 1.19.0",
+              "target": "once_cell"
+            },
+            {
+              "id": "wasm-bindgen 0.2.100",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "rustversion 1.0.16",
+              "target": "rustversion"
+            },
+            {
+              "id": "wasm-bindgen-macro 0.2.100",
+              "target": "wasm_bindgen_macro"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.2.100"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "wasm-bindgen-backend 0.2.100": {
+      "name": "wasm-bindgen-backend",
+      "version": "0.2.100",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen/tree/master/crates/backend",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasm-bindgen-backend/0.2.100/download",
+          "sha256": "2f0a0651a5c2bc21487bde11ee802ccaf4c51935d0d3d42a6101f98161700bc6"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasm_bindgen_backend",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasm_bindgen_backend",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "bumpalo 3.17.0",
+              "target": "bumpalo"
+            },
+            {
+              "id": "log 0.4.21",
+              "target": "log"
+            },
+            {
+              "id": "proc-macro2 1.0.85",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.66",
+              "target": "syn"
+            },
+            {
+              "id": "wasm-bindgen-shared 0.2.100",
+              "target": "wasm_bindgen_shared"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.100"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "wasm-bindgen-macro 0.2.100": {
+      "name": "wasm-bindgen-macro",
+      "version": "0.2.100",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen/tree/master/crates/macro",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasm-bindgen-macro/0.2.100/download",
+          "sha256": "7fe63fc6d09ed3792bd0897b314f53de8e16568c2b3f7982f468c0bf9bd0b407"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "wasm_bindgen_macro",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasm_bindgen_macro",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "wasm-bindgen-macro-support 0.2.100",
+              "target": "wasm_bindgen_macro_support"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.100"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "wasm-bindgen-macro-support 0.2.100": {
+      "name": "wasm-bindgen-macro-support",
+      "version": "0.2.100",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen/tree/master/crates/macro-support",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasm-bindgen-macro-support/0.2.100/download",
+          "sha256": "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasm_bindgen_macro_support",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasm_bindgen_macro_support",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.85",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.36",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.66",
+              "target": "syn"
+            },
+            {
+              "id": "wasm-bindgen-backend 0.2.100",
+              "target": "wasm_bindgen_backend"
+            },
+            {
+              "id": "wasm-bindgen-shared 0.2.100",
+              "target": "wasm_bindgen_shared"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.100"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "wasm-bindgen-shared 0.2.100": {
+      "name": "wasm-bindgen-shared",
+      "version": "0.2.100",
+      "package_url": "https://github.com/rustwasm/wasm-bindgen/tree/master/crates/shared",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wasm-bindgen-shared/0.2.100/download",
+          "sha256": "1a05d73b933a847d6cccdda8f838a22ff101ad9bf93e33684f39c1f5f0eece3d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wasm_bindgen_shared",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wasm_bindgen_shared",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "unicode-ident 1.0.12",
+              "target": "unicode_ident"
+            },
+            {
+              "id": "wasm-bindgen-shared 0.2.100",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.100"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ],
+        "links": "wasm_bindgen"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "wasmi 0.31.2": {
       "name": "wasmi",
       "version": "0.31.2",
@@ -10122,14 +10605,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.14.11": {
+    "x86_64 0.14.12": {
       "name": "x86_64",
-      "version": "0.14.11",
+      "version": "0.14.12",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.14.11/download",
-          "sha256": "3b835097a84e4457323331ec5d6eb23d096066cbfb215d54096dcb4b2e85f500"
+          "url": "https://static.crates.io/crates/x86_64/0.14.12/download",
+          "sha256": "96cb6fd45bfeab6a5055c5bffdb08768bd0c069f1d946debe585bbb380a7c062"
         }
       },
       "targets": [
@@ -10189,7 +10672,7 @@
           ],
           "selects": {}
         },
-        "version": "0.14.11"
+        "version": "0.14.12"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -10541,9 +11024,10 @@
     "time 0.3.36",
     "uart_16550 0.3.1",
     "virtio-drivers 0.7.3",
+    "wasm-bindgen 0.2.100",
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
-    "x86_64 0.14.11",
+    "x86_64 0.14.12",
     "zerocopy 0.7.34",
     "zeroize 1.8.1"
   ],

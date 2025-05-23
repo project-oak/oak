@@ -406,6 +406,14 @@ bazel-clippy:
 bazel-clippy-ci:
     scripts/clippy_clean
 
+bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
+
+bazel-repin-private-memory:
+    cd oak_private_memory && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+
+bazel-repin-codelab:
+    cd codelab && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 

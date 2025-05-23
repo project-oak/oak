@@ -1,5 +1,5 @@
 {
-  "checksum": "91ac5e02969bcc435048fcfbb5036cc4e81b426fd7015fb0304e7a2988d03ee0",
+  "checksum": "b3ac907f05cee757b12ee4f1cd0494d97f697c17741f0ca2be51e499e8190323",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7573,7 +7573,7 @@
               "target": "x509_cert"
             },
             {
-              "id": "x86_64 0.14.13",
+              "id": "x86_64 0.14.12",
               "target": "x86_64"
             },
             {
@@ -34401,14 +34401,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.14.13": {
+    "x86_64 0.14.12": {
       "name": "x86_64",
-      "version": "0.14.13",
+      "version": "0.14.12",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.14.13/download",
-          "sha256": "c101112411baafbb4bf8d33e4c4a80ab5b02d74d2612331c61e8192fc9710491"
+          "url": "https://static.crates.io/crates/x86_64/0.14.12/download",
+          "sha256": "96cb6fd45bfeab6a5055c5bffdb08768bd0c069f1d946debe585bbb380a7c062"
         }
       },
       "targets": [
@@ -34468,7 +34468,7 @@
           ],
           "selects": {}
         },
-        "version": "0.14.13"
+        "version": "0.14.12"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -35513,7 +35513,7 @@
     "wasmtime 25.0.3",
     "which 5.0.0",
     "x509-cert 0.2.5",
-    "x86_64 0.14.13",
+    "x86_64 0.14.12",
     "xz2 0.1.7",
     "zerocopy 0.7.35",
     "zeroize 1.8.1"
