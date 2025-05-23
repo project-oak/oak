@@ -31,7 +31,7 @@ use oak_proto_rust::oak::{
 };
 
 use crate::{
-    compare::compare_measurement_digest, expect::acquire_stage0_expected_values,
+    compare::compare_firmware_layer_measurement_digests, expect::acquire_stage0_expected_values,
     platform::convert_amd_sev_snp_initial_measurement,
 };
 
@@ -67,7 +67,6 @@ impl Policy<[u8]> for FirmwarePolicy {
         encoded_endorsement: &Variant,
         milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults> {
-        let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
         let endorsement: Option<FirmwareEndorsement> =
             encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
 
@@ -76,19 +75,19 @@ impl Policy<[u8]> for FirmwarePolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("getting stage0 values")?;
+        .context("getting firmware layer values")?;
 
-        compare_measurement_digest(&initial_measurement, &expected_values)
-            .context("stage0 measurement values failed verification")?;
+        compare_firmware_layer_measurement_digests(firmware_measurement, &expected_values)
+            .context("couldn't verify firmware layer")?;
 
-        // Add measurement of Stage0 to the artificts list.
+        // This setup is used by CB until they implement their own firmware policy.
+        let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
         const FIRMWARE_MEASUREMENT_ARTIFACT_KEY: &str = "firmware_measurement";
         let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
         artifacts.insert(
             FIRMWARE_MEASUREMENT_ARTIFACT_KEY.to_string(),
             initial_measurement.sha2_384.to_vec(),
         );
-
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults { artifacts })
     }

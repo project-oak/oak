@@ -165,16 +165,14 @@ fn compare_root_layer_measurement_digests(
         expected_values.insecure.as_ref(),
     ) {
         (Some(Report::SevSnp(report_values)), Some(amd_sev_values), _, _) => {
-            let measurement =
-                convert_amd_sev_snp_initial_measurement(&report_values.initial_measurement);
-            compare_measurement_digest(
-                &measurement,
+            compare_firmware_layer_measurement_digests(
+                &report_values.initial_measurement,
                 amd_sev_values
                     .stage0_expected
                     .as_ref()
                     .context("no stage0 expected value provided")?,
             )
-            .context("stage0 measurement values failed verification")?;
+            .context("firmware layer verification failed")?;
             verify_amd_sev_attestation_report_values(report_values, amd_sev_values)
         }
         (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
@@ -191,6 +189,15 @@ fn compare_root_layer_measurement_digests(
             "invalid combination of root layer reference values and endorsed evidence"
         )),
     }
+}
+
+pub(crate) fn compare_firmware_layer_measurement_digests(
+    initial_measurement: &[u8],
+    expected_values: &ExpectedDigests,
+) -> anyhow::Result<()> {
+    let measurement = convert_amd_sev_snp_initial_measurement(initial_measurement);
+    compare_measurement_digest(&measurement, expected_values)
+        .context("firmware measurement values failed verification")
 }
 
 /// Verifies the measurement values of the kernel layer, which is common to both

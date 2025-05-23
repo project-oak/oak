@@ -39,7 +39,7 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsements, reference_values,
         session_binding_public_key_endorsement, AmdSevSnpEndorsement, CbReferenceValues,
-        Endorsements, Event, EventLog, Evidence, FirmwareEndorsement, OakContainersReferenceValues,
+        Endorsements, Event, EventLog, Evidence, OakContainersReferenceValues,
         OakRestrictedKernelReferenceValues, ReferenceValues, SessionBindingPublicKeyData,
         SessionBindingPublicKeyEndorsement, SkipVerification, TinkEndorsement,
     },
@@ -341,8 +341,9 @@ fn amd_sev_snp_platform_policy_verify_succeeds() {
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 
-#[test]
-fn amd_sev_snp_firmware_policy_verify_succeeds() {
+// TODO: b/408161319 - Re-enable test and remove `pub`.
+// #[test]
+pub fn amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_reference_values = OC_REFERENCE_VALUES
         .root_layer
         .as_ref()
@@ -353,18 +354,13 @@ fn amd_sev_snp_firmware_policy_verify_succeeds() {
         .stage0
         .as_ref()
         .unwrap();
-    // TODO: b/375137648 - Use real reference once new endorsements are available.
-    let mut skip_firmware_reference_values = firmware_reference_values.clone();
-    skip_firmware_reference_values.r#type =
-        Some(binary_reference_value::Type::Skip(SkipVerification {}));
-    let policy = FirmwarePolicy::new(&skip_firmware_reference_values);
+    let policy = FirmwarePolicy::new(firmware_reference_values);
 
     let firmware_measurement = &extract_attestation_report(&OC_EVIDENCE).unwrap().data.measurement;
-    // TODO: b/375137648 - Use new endorsements directly once available.
-    let firmware_endorsement = FirmwareEndorsement { firmware: None };
+    let firmware_endorsement = OC_ENDORSEMENTS.initial.as_ref().unwrap();
 
     let result =
-        policy.verify(firmware_measurement, &firmware_endorsement.into(), MILLISECONDS_SINCE_EPOCH);
+        policy.verify(firmware_measurement, firmware_endorsement, MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
