@@ -128,6 +128,10 @@ load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
 
+load("@oak//bazel/crates:patched_crates.bzl", "load_patched_crates")
+
+load_patched_crates()
+
 load("@oak//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 load("@rules_rust//crate_universe:defs.bzl", "crate")
 

@@ -50,7 +50,7 @@ def create_oak_crate_repositories(
         no_std_no_avx_lockfile = "//:cargo-no-std-no-avx-bazel-lock.json",
         extra_no_std_no_avx_annotations = {},
         extra_no_std_no_avx_packages = {}):
-    """ Creates the oak crate repositories. 
+    """ Creates the oak crate repositories.
 
     Args:
         cargo_lockfile: The cargo lock file for the primary crate index.
@@ -119,14 +119,14 @@ def create_oak_crate_repositories(
                 conditions = [Label("//:x86_64-none-setting"), Label("//:wasm32-none-setting")],
                 packages = OAK_NO_STD_CRATES.keys() + extra_no_std_packages.keys(),
                 # See comment on micro_rpc/BUILD.
-                overrides = {"prost-types": Label("//third_party/prost-types")},
+                overrides = {"prost-types": Label("@prost_types_oak_patched//:prost-types")},
             ),
             aliased_crates_repository(
                 name = "oak_no_std_no_avx_crates_index",
                 conditions = [Label("//:x86_64-none-no_avx-setting")],
                 packages = OAK_NO_STD_NO_AVX_CRATES.keys() + extra_no_std_no_avx_packages.keys(),
                 # See comment on micro_rpc/BUILD.
-                overrides = {"prost-types": Label("//third_party/prost-types")},
+                overrides = {"prost-types": Label("@prost_types_oak_patched//:prost-types")},
             ),
             aliased_crates_repository(
                 name = "oak_std_crates_index",
