@@ -15,6 +15,7 @@
 //
 
 package com.google.oak.session;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * SessionConfigBuilder wrapper.
@@ -23,6 +24,8 @@ package com.google.oak.session;
  *
  * The full API is not yet exposed, we will add additional configuration support
  * as needed.
+ *
+ * The config can only be used once, by calling [consume].
  */
 public class OakSessionConfigBuilder {
   public static void loadNativeLib() {
@@ -43,18 +46,22 @@ public class OakSessionConfigBuilder {
     NOISE_NN,
   }
 
-  private long nativePtr;
+  private AtomicLong nativePtr;
 
   public OakSessionConfigBuilder(AttestationType attestationType, HandshakeType handshakeType) {
     this(nativeCreateConfigBuilder(attestationType.ordinal(), handshakeType.ordinal()));
   }
 
   private OakSessionConfigBuilder(long nativePtr) {
-    this.nativePtr = nativePtr;
+    this.nativePtr = new AtomicLong(nativePtr);
   }
 
-  public long getNativePtr() {
-    return this.nativePtr;
+  public long consume() {
+    long result = this.nativePtr.getAndSet(0);
+    if (result == 0) {
+      throw new IllegalStateException("This config builder has already been used.");
+    }
+    return result;
   }
 
   private static native long nativeCreateConfigBuilder(int attestationType, int handshakeType);

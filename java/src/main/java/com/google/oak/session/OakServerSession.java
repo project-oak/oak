@@ -33,7 +33,7 @@ public class OakServerSession implements AutoCloseable {
   private boolean closed = false;
 
   public OakServerSession(OakSessionConfigBuilder builder) {
-    this.nativePtr = nativeCreateServerSession(builder.getNativePtr());
+    this.nativePtr = nativeCreateServerSession(builder.consume());
   }
 
   public static void loadNativeLib() {

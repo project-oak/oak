@@ -114,6 +114,16 @@ public class OakSessionTest {
   }
 
   @Test
+  public void testOakSessionConfigOnlyUsedOnce() {
+    OakSessionConfigBuilder incorrectlyUsedTwice =
+        new OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN);
+
+    OakClientSession unused = new OakClientSession(incorrectlyUsedTwice);
+    assertThrows("already been used", IllegalStateException.class,
+        () -> new OakServerSession(incorrectlyUsedTwice));
+  }
+
+  @Test
   public void testWriteUnopenedClientSessionFails() throws Exception {
     assertThrows("session is not open", OakSessionException.class,
         () -> clientSession.write(PlaintextMessage.getDefaultInstance()));
