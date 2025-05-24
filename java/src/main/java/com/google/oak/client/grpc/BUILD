@@ -48,7 +48,7 @@ kt_android_library(
         "//java/src/main/java/com/google/oak/session:exception_android",
         "//java/src/main/java/com/google/oak/session:session_config_builder_android",
         "//proto/session:session_java_proto",
-        "@com_google_protobuf//java/core",
+        "@com_google_protobuf//java/lite",
         "@io_grpc_grpc_java//stub",
         "@javax_inject_javax_inject",
     ],

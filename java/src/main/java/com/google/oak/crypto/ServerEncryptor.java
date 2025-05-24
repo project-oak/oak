@@ -43,7 +43,7 @@ public class ServerEncryptor implements AutoCloseable {
 
   private final KeyPair serverKeyPair;
 
-  // Context is initialized after receiving an initial request messagecontaining client's
+  // Context is initialized after receiving an initial request message containing client's
   // encapsulated public key.
   private Optional<RecipientContext> recipientContext;
 
@@ -73,7 +73,8 @@ public class ServerEncryptor implements AutoCloseable {
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
    * @param encryptedRequest {@code EncryptedRequest} proto message
-   * @return a response message plaintext and associated data wrapped in a {@code Result}
+   * @return a response message plaintext and associated data wrapped in a
+   *         {@code Result}
    */
   public final Result<DecryptionResult, Exception> decrypt(
       final EncryptedRequest encryptedRequest) {
@@ -83,7 +84,7 @@ public class ServerEncryptor implements AutoCloseable {
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Get recipient context.
-    if (recipientContext.isEmpty()) {
+    if (!recipientContext.isPresent()) {
       // Get serialized encapsulated public key.
       if (encryptedRequest.getSerializedEncapsulatedPublicKey().equals(ByteString.EMPTY)) {
         return Result.error(new Exception(
@@ -109,14 +110,15 @@ public class ServerEncryptor implements AutoCloseable {
    * Encrypts `plaintext` and authenticates `associatedData` using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param plaintext the input byte array to be encrypted
-   * @param associatedData the input byte array with associated data to be authenticated
+   * @param plaintext      the input byte array to be encrypted
+   * @param associatedData the input byte array with associated data to be
+   *                       authenticated
    * @return {@code EncryptedResponse} proto message wrapped in a {@code Result}
    */
   public final Result<EncryptedResponse, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Get recipient context.
-    if (recipientContext.isEmpty()) {
+    if (!recipientContext.isPresent()) {
       return Result.error(new Exception("server encryptor is not initialized"));
     }
 

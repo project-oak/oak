@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
@@ -24,6 +26,13 @@ package(
 
 kt_jvm_library(
     name = "decryption_result",
+    srcs = [
+        "DecryptionResult.kt",
+    ],
+)
+
+kt_android_library(
+    name = "decryption_result_android",
     srcs = [
         "DecryptionResult.kt",
     ],
@@ -44,15 +53,15 @@ java_library(
 )
 
 # Clients are responsible for bundling in "libhpke-jni.so".
-java_library(
+android_library(
     name = "client_encryptor_android",
     srcs = [
         "ClientEncryptor.java",
     ],
     deps = [
-        ":decryption_result",
+        ":decryption_result_android",
         "//java/src/main/java/com/google/oak/crypto/hpke:hpke_android",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/crypto:crypto_java_proto",
         "@com_google_protobuf//java/lite",
     ],
@@ -73,15 +82,15 @@ java_library(
 )
 
 # Clients are responsible for bundling in "libhpke-jni.so".
-java_library(
+android_library(
     name = "server_encryptor_android",
     srcs = [
         "ServerEncryptor.java",
     ],
     deps = [
-        ":decryption_result",
+        ":decryption_result_android",
         "//java/src/main/java/com/google/oak/crypto/hpke:hpke_android",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/crypto:crypto_java_proto",
         "@com_google_protobuf//java/lite",
     ],

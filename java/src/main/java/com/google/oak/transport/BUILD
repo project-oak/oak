@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -37,7 +38,7 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "transport_android",
     srcs = [
         "EvidenceProvider.java",
@@ -45,7 +46,7 @@ java_library(
         "Transport.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "@io_grpc_grpc_java//api",
@@ -68,14 +69,14 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "grpc_streaming_transport_android",
     srcs = [
         "GrpcStreamingTransport.java",
     ],
     deps = [
         ":transport_android",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "//proto/session:service_streaming_java_proto",
@@ -91,7 +92,7 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "api_key_interceptor_android",
     srcs = ["ApiKeyInterceptor.java"],
     deps = [

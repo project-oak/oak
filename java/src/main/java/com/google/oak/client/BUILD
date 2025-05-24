@@ -46,7 +46,7 @@ android_library(
         "//java/src/main/java/com/google/oak/crypto:client_encryptor_android",
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
         "//java/src/main/java/com/google/oak/transport:transport_android",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/attestation:verification_java_proto",
     ],
 )

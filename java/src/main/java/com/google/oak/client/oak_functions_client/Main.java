@@ -41,7 +41,7 @@ public class Main {
   public static void main(String[] args) throws Exception {
     // Create a gRPC channel.
     URL parsedUrl = new URL(args[0]);
-    ManagedChannelBuilder builder =
+    ManagedChannelBuilder<?> builder =
         ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
     builder.intercept(new ApiKeyInterceptor(EMPTY_API_KEY));
     ManagedChannel channel = builder.build();

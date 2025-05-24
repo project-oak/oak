@@ -37,7 +37,7 @@ android_library(
     name = "attestation_verifier_android",
     srcs = ["AttestationVerifier.java"],
     deps = [
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:verification_java_proto",
@@ -64,7 +64,7 @@ android_library(
     srcs = ["InsecureAttestationVerifier.java"],
     deps = [
         ":attestation_verifier_android",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:verification_java_proto",

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -38,7 +39,7 @@ java_library(
 )
 
 # Clients are responsible for bundling in "libhpke-jni.so".
-java_library(
+android_library(
     name = "hpke_android",
     srcs = [
         "Hpke.java",
@@ -47,6 +48,6 @@ java_library(
         "SenderContext.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/util:util_android",
     ],
 )
