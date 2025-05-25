@@ -28,23 +28,35 @@ docker_run_flags=(
   '--env=RUST_LOGS'
   '--env=JUST_TIMESTAMP'
   '--env=JUST_TIMESTAMP_FORMAT'
+
+  '--workdir=/workspace'
+  '--network=host'
+  '--security-opt=seccomp=unconfined'
+
+  # BIND MOUNTS - Make host directories available in container.
   "--mount=type=bind,source=$HOST_WORKSPACE_DIR,target=/workspace"
-  # Enable Docker-in-Docker by giving the container access to the host docker
-  # daemon.
-  "--volume=$XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock"
   # The container uses the host docker daemon, so docker commands running in
   # the container actually access the host filesystem. Thus mount the /tmp
   # directory as a volume in the container so that it can access the outputs of
   # docker commands that write to /tmp.
-  '--volume=/tmp:/tmp'
-  '--volume=/dev/log:/dev/log'
+  '--mount=type=bind,source=/tmp,target=/tmp'
+  '--mount=type=bind,source=/dev/log,target=/dev/log'
   # Provide readonly access to the kernel image and kernel volumes of the host
   # to enable virt-make-fs which requires access to a kernel.
-  '--volume=/boot:/boot:ro'
-  '--volume=/lib/modules:/lib/modules:ro'
-  '--workdir=/workspace'
-  '--network=host'
-  '--security-opt=seccomp=unconfined'
+  '--mount=type=bind,source=/boot,target=/boot,ro'
+  '--mount=type=bind,source=/lib/modules,target=/lib/modules,ro'
+
+  # VOLUME MOUNTS - They do not map to host directories, but are persisted by
+  # the host between runs.
+  #
+  # Note: src is just a "name" for volume mounts, not a host directory.
+  #
+  # This prevents nix from having to re-populate the cache every time you start
+  # your local docker container.
+  '--mount=type=volume,src=nix-store,target=/nix'
+  # This prevent bazel from having to re-populate the cache every time you start
+  # your local docker container.
+  '--mount=type=volume,src=bazel-cache,target=/root/.cache/bazel'
 )
 
 # If the host supports KVM, allow the docker image to use it.
