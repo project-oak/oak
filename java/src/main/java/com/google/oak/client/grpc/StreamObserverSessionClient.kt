@@ -16,6 +16,7 @@
 
 package com.google.oak.client.grpc
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue
 import com.google.oak.session.OakClientSession
 import com.google.oak.session.OakSessionConfigBuilder
 import com.google.oak.session.OakSessionException
@@ -23,6 +24,7 @@ import com.google.oak.session.v1.PlaintextMessage
 import com.google.oak.session.v1.SessionRequest
 import com.google.oak.session.v1.SessionResponse
 import com.google.protobuf.ByteString
+import io.grpc.stub.ClientCallStreamObserver
 import io.grpc.stub.StreamObserver
 import java.util.Optional
 import javax.inject.Provider
@@ -89,15 +91,33 @@ class StreamObserverSessionClient(
    *   you'll call a gRPC `asyncStub` method that implements a bi-directional streaming endpoint
    *   using the Oak Session protocol.
    */
+  @CanIgnoreReturnValue
   fun startSession(
     sessionStreamObserver: OakSessionStreamObserver,
     streamStarter: (StreamObserver<SessionResponse>) -> StreamObserver<SessionRequest>,
-  ) {
-    ServerStreamObserver.startSession(
+  ): SessionHandle {
+    return ServerStreamObserver.startSession(
       OakClientSession(sessionConfigBuilderProvider.get()),
       sessionStreamObserver,
       { streamStarter(it) },
     )
+  }
+
+  /**
+   * A handle to an active session.
+   *
+   * A session handle contains coarse-grained control to the session. For example, it can be used to
+   * connect an active session to a component with a lifecycle, which can call [cancel] to clean up
+   * an active session that's no longer needed.
+   */
+  interface SessionHandle {
+    /**
+     * Cancel the session in any state.
+     *
+     * This will cancel the underlying gRPC stream, and clean up any other resources. The session
+     * should not be used anymore after calling this.
+     */
+    fun cancel(message: String? = null, cause: Throwable? = null)
   }
 
   /**
@@ -206,13 +226,16 @@ class StreamObserverSessionClient(
         oakClientSession: OakClientSession,
         sessionStreamObserver: OakSessionStreamObserver,
         streamStarter: (StreamObserver<SessionResponse>) -> StreamObserver<SessionRequest>,
-      ) {
+      ): SessionHandle {
         val observer = ServerStreamObserver(oakClientSession, sessionStreamObserver)
         observer.toServer = streamStarter(observer)
-
         val initMessage =
           oakClientSession.outgoingMessage.assert("Client did not have initial message.")
         observer.toServer.onNext(initMessage)
+        return object : SessionHandle {
+          override fun cancel(message: String?, cause: Throwable?) =
+            (observer.toServer as ClientCallStreamObserver).cancel(message, cause)
+        }
       }
     }
   }

@@ -64,7 +64,7 @@ class StreamObserverSessionClientTest {
   @Test
   fun client_startedSession_handshakesWithServer() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
-    val fakeService = FakeServiceImpl(unattestedConfig()) { it }
+    val fakeService = FakeServiceImpl(unattestedConfigProvider()) { it }
     startServer(fakeService).use {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
@@ -76,7 +76,7 @@ class StreamObserverSessionClientTest {
   @Test
   fun client_startedSession_providesUnderlyingSession() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
-    val fakeService = FakeServiceImpl(unattestedConfig()) { it }
+    val fakeService = FakeServiceImpl(unattestedConfigProvider()) { it }
     startServer(fakeService).use {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
@@ -92,7 +92,7 @@ class StreamObserverSessionClientTest {
   fun client_startedSession_getsServerAppResponse() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
     val fakeService =
-      FakeServiceImpl(unattestedConfig()) { "PONG: ${it.toStringUtf8()}".toByteString() }
+      FakeServiceImpl(unattestedConfigProvider()) { "PONG: ${it.toStringUtf8()}".toByteString() }
     startServer(fakeService).use {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
@@ -110,7 +110,7 @@ class StreamObserverSessionClientTest {
   fun client_startedSession_getsServerMultipleAppResponses() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
     val fakeService =
-      FakeServiceImpl(unattestedConfig()) { "PONG: ${it.toStringUtf8()}".toByteString() }
+      FakeServiceImpl(unattestedConfigProvider()) { "PONG: ${it.toStringUtf8()}".toByteString() }
     startServer(fakeService).use {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
@@ -142,7 +142,7 @@ class StreamObserverSessionClientTest {
   @Test
   fun client_serverApplicationError_returnsError() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
-    val fakeService = FakeServiceImpl(unattestedConfig()) { throw RuntimeException("oops") }
+    val fakeService = FakeServiceImpl(unattestedConfigProvider()) { throw RuntimeException("oops") }
     startServer(fakeService).use {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
@@ -152,6 +152,49 @@ class StreamObserverSessionClientTest {
 
       val exception = assertFailsWith<StatusRuntimeException> { responseObserver.awaitCompleted() }
       assertEquals(exception.status.code, Status.Code.UNKNOWN)
+    }
+  }
+
+  @Test
+  fun client_cancellingUnopenSession_cancels() {
+    val client = StreamObserverSessionClient(unattestedConfigProvider())
+    val responseObserver = WaitingResponseObserver()
+    val fakeService = FakeServiceImpl(unattestedConfigProvider())
+    fakeService.stopResponding = true
+    startServer(fakeService).use {
+      val cancelHandle = client.startSession(responseObserver) { stub.startSession(it) }
+
+      val cancelCause = RuntimeException("fake cause")
+      cancelHandle.cancel("test cancel", cancelCause)
+      val exception = assertFailsWith<StatusRuntimeException> { responseObserver.awaitCompleted() }
+      assertEquals(exception.status.code, Status.Code.CANCELLED)
+      assertEquals(
+        (fakeService.error.get() as StatusRuntimeException).status.code,
+        Status.Code.CANCELLED,
+      )
+    }
+  }
+
+  @Test
+  fun client_cancellingActiveSession_cancels() {
+    val client = StreamObserverSessionClient(unattestedConfigProvider())
+    val fakeService = FakeServiceImpl(unattestedConfigProvider())
+    startServer(fakeService).use {
+      val responseObserver = WaitingResponseObserver()
+
+      val cancelHandle = client.startSession(responseObserver) { stub.startSession(it) }
+
+      val clientRequests = responseObserver.awaitOpen()
+      clientRequests.onNext("Hello World".toByteString())
+      // Still active...
+
+      cancelHandle.cancel("test cancel", null)
+      val exception = assertFailsWith<StatusRuntimeException> { responseObserver.awaitCompleted() }
+      assertEquals(exception.status.code, Status.Code.CANCELLED)
+      assertEquals(
+        (fakeService.error.get() as? StatusRuntimeException)?.status?.code,
+        Status.Code.CANCELLED,
+      )
     }
   }
 
@@ -191,14 +234,13 @@ class StreamObserverSessionClientTest {
     fun awaitCompleted(): List<ByteString> = done.getForTesting()
   }
 
-  private fun unattestedConfig() =
+  private fun unattestedConfigProvider() = Provider {
     OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN)
-
-  private fun unattestedConfigProvider() = Provider { unattestedConfig() }
+  }
 
   private fun String.toByteString() = ByteString.copyFrom(this, StandardCharsets.UTF_8)
 
-  fun startServer(serviceImpl: FakeServiceImpl): AutoCloseable =
+  fun startServer(serviceImpl: TestServiceGrpc.TestServiceImplBase): AutoCloseable =
     InProcessServerBuilder.forName(serverName)
       .executor(Executors.newSingleThreadExecutor())
       .addService(serviceImpl)
@@ -209,17 +251,26 @@ class StreamObserverSessionClientTest {
   /**
    * The fake service to use for tests. It does a handshake and responds to app messages using the
    * provided application implementation function.
+   *
+   * @param sessionConfig the server session to use (should match test client)
+   * @param application a bytes-in bytes-out application impl. Defaults to empty responses.
    */
   class FakeServiceImpl(
-    val sessionConfig: OakSessionConfigBuilder,
-    val application: (ByteString) -> ByteString,
+    val sessionConfigProvider: Provider<OakSessionConfigBuilder>,
+    val application: (ByteString) -> ByteString = { ByteString.EMPTY },
   ) : TestServiceGrpc.TestServiceImplBase() {
+    val error = CompletableFuture<Throwable>()
+    /** Set to true to fake a hanging server. */
+    var stopResponding = false
+
     override fun startSession(
       responses: StreamObserver<SessionResponse>
     ): StreamObserver<SessionRequest> {
-      val serverSession = OakServerSession(sessionConfig)
+      val serverSession = OakServerSession(sessionConfigProvider.get())
       return object : StreamObserver<SessionRequest> {
         override fun onNext(request: SessionRequest) {
+          if (stopResponding) return
+
           if (serverSession.isOpen) {
             check(serverSession.putIncomingMessage(request))
             val decrypted = checkNotNull(serverSession.read().getOrNull()).plaintext
@@ -235,6 +286,7 @@ class StreamObserverSessionClientTest {
         }
 
         override fun onError(t: Throwable) {
+          error.complete(t)
           responses.onError(t)
         }
 

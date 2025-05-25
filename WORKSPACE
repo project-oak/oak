@@ -82,6 +82,7 @@ maven_install(
     artifacts = [
         "co.nstant.in:cbor:0.9",
         "com.google.crypto.tink:tink:1.12.0",
+        "com.google.errorprone:error_prone_annotations:2.38.0",
         "com.google.flogger:flogger-system-backend:0.8",
         "com.google.flogger:google-extensions:0.8",
         "com.google.protobuf:protobuf-kotlin:3.18.0",
