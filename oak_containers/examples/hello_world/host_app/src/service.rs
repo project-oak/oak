@@ -38,6 +38,7 @@ impl HostApplicationImpl {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 enum Action {
     Receive(Option<Result<RequestWrapper, tonic::Status>>),
     Send(Option<Result<ResponseWrapper, tonic::Status>>),

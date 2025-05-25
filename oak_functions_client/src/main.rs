@@ -24,8 +24,8 @@ use oak_functions_abi::Request;
 use oak_functions_client::OakFunctionsClient;
 use regex::Regex;
 
-const TWO_MIB: usize = 2 * 1024 * 1024;
-const LARGE_MESSAGE: [u8; TWO_MIB] = [0; TWO_MIB];
+static TWO_MIB: usize = 2 * 1024 * 1024;
+static LARGE_MESSAGE: [u8; TWO_MIB] = [0; TWO_MIB];
 
 #[derive(Parser, Clone)]
 #[command(about = "Oak Functions Client")]

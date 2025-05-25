@@ -146,14 +146,14 @@ pub type DefaultStatement = Statement<DefaultPredicate>;
 
 pub fn is_firmware_type(statement: &DefaultStatement) -> bool {
     // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    return statement.predicate.usage == "firmware"
-        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE);
+    statement.predicate.usage == "firmware"
+        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
 }
 
 pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
     // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    return statement.predicate.usage == "kernel"
-        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE);
+    statement.predicate.usage == "kernel"
+        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
 }
 
 /// Verifies a signed endorsement against a reference value.
@@ -194,7 +194,7 @@ pub fn verify_endorsement(
 
     let rekor_ref_value =
         ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
-    return match rekor_ref_value.r#type.as_ref() {
+    match rekor_ref_value.r#type.as_ref() {
         Some(verifying_key_reference_value::Type::Skip(_)) => Ok(statement),
         Some(verifying_key_reference_value::Type::Verify(key_set)) => {
             let log_entry = &signed_endorsement.rekor_log_entry;
@@ -207,7 +207,7 @@ pub fn verify_endorsement(
             Ok(statement)
         }
         None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
-    };
+    }
 }
 
 /// Verifies the binary endorsement against log entry and public keys.

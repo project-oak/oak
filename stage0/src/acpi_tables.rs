@@ -445,7 +445,7 @@ pub struct XsdtEntryPtr<'a> {
     _phantom: PhantomData<&'a DescriptionHeader>,
 }
 
-impl<'a> XsdtEntryPtr<'a> {
+impl XsdtEntryPtr<'_> {
     pub fn raw_val(&self) -> u64 {
         // As per Section 5.2 in the ACPI specification 6.5,
         // Address is little endian.
@@ -458,7 +458,7 @@ impl<'a> XsdtEntryPtr<'a> {
     }
 }
 
-impl<'a> Deref for XsdtEntryPtr<'a> {
+impl Deref for XsdtEntryPtr<'_> {
     type Target = DescriptionHeader;
 
     fn deref(&self) -> &DescriptionHeader {
@@ -469,7 +469,7 @@ impl<'a> Deref for XsdtEntryPtr<'a> {
     }
 }
 
-impl<'a> DerefMut for XsdtEntryPtr<'a> {
+impl DerefMut for XsdtEntryPtr<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         let ptr = self.raw_val() as *mut DescriptionHeader;
         check_ptr_aligned(ptr);

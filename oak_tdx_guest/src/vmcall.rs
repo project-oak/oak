@@ -38,11 +38,11 @@ const RETRY: u64 = 1;
 const INVALID_OPERAND: u64 = 1 << 63;
 
 // The result from an instruction if the input GPA is already in use.
-const GPA_INUSE: u64 = 1 << 63 | 1;
+const GPA_INUSE: u64 = (1 << 63) | 1;
 
 // The result from an instruction if the input size or GPA is not properly
 // aligned.
-const ALIGN_ERROR: u64 = 1 << 63 | 1 << 1;
+const ALIGN_ERROR: u64 = (1 << 63) | (1 << 1);
 
 // GetQuote Status Code: GET_QUOTE_SUCCESS
 const GET_QUOTE_SUCCESS: u64 = 0;
@@ -58,7 +58,7 @@ const GET_QUOTE_ERROR: u64 = 1 << 63;
 
 // GetQuote Status Code: GET_QUOTE_SERVICE_UNAVAILABLE
 // Quoting service isn’t available
-const GET_QUOTE_SERVICE_UNAVAILABLE: u64 = 1 << 63 | 1;
+const GET_QUOTE_SERVICE_UNAVAILABLE: u64 = (1 << 63) | 1;
 
 /// The TDG.VP.VMCALL leaf number for TDCALL.
 const VM_CALL_LEAF: u64 = 0;

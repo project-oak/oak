@@ -22,7 +22,7 @@
           };
           rustToolchain =
             # This should be kept in sync with the value in bazel/rust/defs.bzl
-            pkgs.rust-bin.nightly."2024-09-05".default.override {
+            pkgs.rust-bin.nightly."2025-03-01".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -81,6 +81,10 @@
             };
             # Minimal shell with only the dependencies needed to run the bazel steps.
             bazelShell = with pkgs; mkShell {
+              shellHook = ''
+                # https://github.com/NixOS/nix/issues/262
+                unset TMPDIR
+              '';
               packages = [
                 autoconf
                 autogen

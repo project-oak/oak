@@ -38,7 +38,7 @@ impl<S: PageSize> oak_stage0::hal::Mmio<S> for Mmio<S> {
             if offset >= S::SIZE as usize {
                 panic!("invalid MMIO access for read: offset would read beyond memory boundary");
             }
-            ghcb.mmio_read_u32(self.mmio.base_address + offset)
+            ghcb.mmio_read_u32(self.mmio.base_address + (offset as u64))
                 .expect("couldn't read the MSR using the GHCB protocol")
         } else {
             self.mmio.read_u32(offset)
@@ -51,7 +51,7 @@ impl<S: PageSize> oak_stage0::hal::Mmio<S> for Mmio<S> {
             if offset >= S::SIZE as usize {
                 panic!("invalid MMIO access for write: offset would write beyond memory boundary");
             }
-            ghcb.mmio_write_u32(self.mmio.base_address + offset, value)
+            ghcb.mmio_write_u32(self.mmio.base_address + (offset as u64), value)
                 .expect("couldn't read the MSR using the GHCB protocol")
         } else {
             self.mmio.write_u32(offset, value)

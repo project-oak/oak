@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Random IDs for commonly used attestation types.
+// Random IDs for commonly used attestation types.
 
 /// Attestation type where the session binding key is signed by a key known to
 /// the client.

@@ -310,7 +310,7 @@ fn it_should_handle_wasm_panic() {
         server_encryption_public_key: &'a [u8],
     }
 
-    impl<'a> micro_rpc::Transport for Transport<'a> {
+    impl micro_rpc::Transport for Transport<'_> {
         fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, !> {
             log::debug!("request bytes: {:?}", request_bytes);
 

@@ -113,7 +113,7 @@ enum File<'a, 'b, L: Allocator, H: Allocator> {
     Fake(core::ptr::NonNull<u8>),
 }
 
-impl<'a, 'b, L: Allocator, H: Allocator> Deref for File<'a, 'b, L, H> {
+impl<L: Allocator, H: Allocator> Deref for File<'_, '_, L, H> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -130,7 +130,7 @@ impl<'a, 'b, L: Allocator, H: Allocator> Deref for File<'a, 'b, L, H> {
     }
 }
 
-impl<'a, 'b, L: Allocator, H: Allocator> DerefMut for File<'a, 'b, L, H> {
+impl<L: Allocator, H: Allocator> DerefMut for File<'_, '_, L, H> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Self::Low(ref mut file) => file.borrow_mut(),
@@ -970,7 +970,7 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
                     && entry.addr() < (0x4000_0000 - HIGH_MEM_SIZE)
                     && entry.size() >= HIGH_MEM_SIZE
             })
-            .last()
+            .next_back()
             .ok_or("could not find memory for ACPI tables")?;
         let mem_end = core::cmp::min(0x4000_0000, entry.addr() + entry.size());
         mem_end - HIGH_MEM_SIZE

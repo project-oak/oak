@@ -358,9 +358,7 @@ impl HumanReadableExplanation for KernelLayerData {
                 .kernel_image
                 .as_ref()
                 .context("unexpectedly unset kernel_image proto field")
-                .and_then(|digest| {
-                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-                })?;
+                .and_then(ArtifactDigestSha2_256::try_from)?;
             kernel_image_digest.provenance_link()
         };
         let initial_ramdisk_provenance_link = {
@@ -368,9 +366,7 @@ impl HumanReadableExplanation for KernelLayerData {
                 .init_ram_fs
                 .as_ref()
                 .context("unexpectedly unset init_ram_fs proto field")
-                .and_then(|digest| {
-                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-                })?;
+                .and_then(ArtifactDigestSha2_256::try_from)?;
             init_ram_fs_digest.provenance_link()
         };
         let yaml_string = {
@@ -417,14 +413,8 @@ fn provenance_explanation_for_kernel_layer_reference_values(
     {
         writeln!(output, "Accepted Kernel Image Artifacts:").map_err(anyhow::Error::msg)?;
         for digest in digests {
-            writeln!(
-                output,
-                "- {}",
-                ArtifactDigestSha2_256::try_from(digest)
-                    .map_err(anyhow::Error::from)?
-                    .provenance_link()
-            )
-            .map_err(anyhow::Error::msg)?;
+            writeln!(output, "- {}", ArtifactDigestSha2_256::try_from(digest)?.provenance_link())
+                .map_err(anyhow::Error::msg)?;
         }
     };
 
@@ -439,14 +429,8 @@ fn provenance_explanation_for_kernel_layer_reference_values(
     {
         writeln!(output, "Accepted Initial Ramdisk Artifacts:").map_err(anyhow::Error::msg)?;
         for digest in digests {
-            writeln!(
-                output,
-                "- {}",
-                ArtifactDigestSha2_256::try_from(digest)
-                    .map_err(anyhow::Error::from)?
-                    .provenance_link()
-            )
-            .map_err(anyhow::Error::msg)?;
+            writeln!(output, "- {}", ArtifactDigestSha2_256::try_from(digest)?.provenance_link())
+                .map_err(anyhow::Error::msg)?;
         }
     };
 
@@ -500,9 +484,7 @@ impl HumanReadableExplanation for SystemLayerData {
                 .system_image
                 .as_ref()
                 .context("unexpectedly unset system_image proto field")
-                .and_then(|digest| {
-                    ArtifactDigestSha2_256::try_from(digest).map_err(anyhow::Error::from)
-                })?;
+                .and_then(ArtifactDigestSha2_256::try_from)?;
             system_image_digest.provenance_link()
         };
         let yaml_string = {
@@ -544,14 +526,8 @@ fn provenance_explanation_for_system_layer_reference_values(
     {
         writeln!(output, "Accepted System Image Artifacts:").map_err(anyhow::Error::msg)?;
         for digest in digests {
-            writeln!(
-                output,
-                "- {}",
-                ArtifactDigestSha2_256::try_from(digest)
-                    .map_err(anyhow::Error::from)?
-                    .provenance_link()
-            )
-            .map_err(anyhow::Error::msg)?;
+            writeln!(output, "- {}", ArtifactDigestSha2_256::try_from(digest)?.provenance_link())
+                .map_err(anyhow::Error::msg)?;
         }
     };
 
@@ -677,14 +653,8 @@ fn provenance_explanation_for_container_layer_reference_values(
     {
         writeln!(output, "Accepted Binary Artifacts:").map_err(anyhow::Error::msg)?;
         for digest in digests {
-            writeln!(
-                output,
-                "- {}",
-                ArtifactDigestSha2_256::try_from(digest)
-                    .map_err(anyhow::Error::from)?
-                    .provenance_link()
-            )
-            .map_err(anyhow::Error::msg)?;
+            writeln!(output, "- {}", ArtifactDigestSha2_256::try_from(digest)?.provenance_link())
+                .map_err(anyhow::Error::msg)?;
         }
     };
 
@@ -699,14 +669,8 @@ fn provenance_explanation_for_container_layer_reference_values(
     {
         writeln!(output, "Accepted Configuration Artifacts:").map_err(anyhow::Error::msg)?;
         for digest in digests {
-            writeln!(
-                output,
-                "- {}",
-                ArtifactDigestSha2_256::try_from(digest)
-                    .map_err(anyhow::Error::from)?
-                    .provenance_link()
-            )
-            .map_err(anyhow::Error::msg)?;
+            writeln!(output, "- {}", ArtifactDigestSha2_256::try_from(digest)?.provenance_link())
+                .map_err(anyhow::Error::msg)?;
         }
     };
 

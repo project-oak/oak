@@ -51,7 +51,7 @@ fn get_vsock_addr(addr: tonic::transport::Uri) -> anyhow::Result<VsockAddr> {
         cid,
         authority
             .split(':')
-            .last()
+            .next_back()
             .context("failed to extract port from vsock address")?
             .parse::<u32>()
             .context("invalid vsock port")?,

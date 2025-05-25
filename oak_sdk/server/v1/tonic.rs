@@ -22,7 +22,6 @@ use crate::oak_application_context::OakApplicationContext;
 
 /// Helper for handling streaming requests presented by a tonic server
 /// implementation.
-
 pub type OakApplicationStream =
     Pin<Box<dyn Stream<Item = Result<ResponseWrapper, tonic::Status>> + Send + 'static>>;
 

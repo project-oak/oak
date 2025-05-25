@@ -77,7 +77,7 @@ fn main() {
 
     print!("{}", title("Evidence:"));
 
-    match extracted_evidence.evidence_values.clone().take() {
+    match extracted_evidence.evidence_values.clone() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
             match restricted_kernel_evidence {
                 OakRestrictedKernelData {

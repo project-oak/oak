@@ -5,7 +5,8 @@ load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
 
 # This should be kept in sync with the value in flake.nix
 # Chosen to match the current internal Rust nightly (go/current-rust-nightly)
-RUST_NIGHTLY_DATE = "2024-09-05"
+# You'll likely need to update the sha256 hashes below as well.
+RUST_NIGHTLY_DATE = "2025-03-01"
 
 RUST_NIGHTLY_VERSION = "nightly/" + RUST_NIGHTLY_DATE
 
@@ -13,20 +14,30 @@ RUST_VERSIONS = [
     RUST_NIGHTLY_VERSION,
 ]
 
-# Note: I was tempted to use the RUST_NIGHTLY_DATE symbol here, but this
-# dictionary literal gets printed out when you build, so it's easier to just
-# paste it as-is.
+# To get the latest SHA256, use the get_sha256s.sh helper script.
 RUST_SHA256S = {
-    "2024-09-05/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "cca47094fbd0b5e677adc8f68f4b7b5b74b13028d9ed05244049de3896ef4be2",
-    "2024-09-05/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "d16362b2cdcad8f90e40598bcb39c303f979cb6981ad7f334b630917ad4b2596",
-    "2024-09-05/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "bfb8064dec80ba5988620e23fbb5730753f35662a70e6d52e7c80a675ec05e3b",
-    "2024-09-05/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "cd045f86c0d4e3b3647000096d46aabcb55c408915578f593dfa65a3d8453c10",
-    "2024-09-05/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "1be4c36649cd2ec214e8c43ca63fb38d09dd2d5a76eefc8e33cee8025286a09d",
-    "2024-09-05/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "c4433dae8219c9e619adaeaa903f27c233cd1a84a75a1b7112445bbe3e12a35c",
-    "2024-09-05/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "0295fce4801daef5a569dfb38b403f5b1d185b64c0bace4c9869b9631957dcec",
+    "2025-04-03/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "adfe5bd8fb807bfd8fee2ede9d88853837ba9dcf14dd701edeb33a8c9d84a6f2",
+    "2025-04-03/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "06839db5cd1810032a3115211b558b257c75f8459645265e310f0c518c9ad2d8",
+    "2025-04-03/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "e2adf4c25541e7abf7e0c4e6586c94ac662fb9ae3e78b1f7310789bfc1cb5860",
+    "2025-04-03/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "6b3b7dc16ccb0204bcc2fc381ffe69d1eaddf326583c11d24699797ebd0778c6",
+    "2025-04-03/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "e9e98ec5cb439842c2eaa14abeaacbb22e0da169dadb18f1f6de7ffadb3b4829",
+    "2025-04-03/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "2418663236236373c3d278e6e602ef5ad3158b9cebd5c1095f7916dbd9c9b891",
+    "2025-04-03/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "f8876b429b1ad9dfd5ece1e47947b39b20a0ecc56b1c76a614c4af5797152d86",
 }
 
-STDLIBS_SHA256 = "894cfc1fb6316acef5c4095aab8713f56bd57f90db5dfb75788b8ab995f86657"
+# To get the latest SHA256, use the get_sha256s.sh helper script.
+# curl https://static.rust-lang.org/dist/$RUST_NIGHTLY_VERSION/rustc-nightly-src.tar.gz.sha256
+STDLIBS_SHA256 = ""
+
+# If updates change stdlib dependencies, you may need to update these. Hunt
+# around in your bazel cache's `$BAZEL_CACHE/external/stdlibs/vendor` path to see what's available.
+# Most likely you can just pick the latest one.
+STDLIBS_DEPS_VERSIONS = {
+    "compiler_builtins": "0.1.148",
+    "cfg-if": "1.0.0",
+    "libc": "0.2.169",
+    "rustc-demangle": "0.1.24",
+}
 
 RUST_EDITION = "2021"
 

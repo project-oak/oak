@@ -33,12 +33,9 @@
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(array_chunks)]
-#![feature(lazy_cell)]
 #![feature(naked_functions)]
 #![feature(c_size_t)]
 #![feature(never_type)]
-#![feature(offset_of_nested)]
-#![feature(asm_const)]
 
 mod acpi;
 mod args;

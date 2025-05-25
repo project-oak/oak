@@ -17,7 +17,6 @@
 
 #[allow(unused_imports)] // Macros only used in tests.
 #[macro_use]
-
 pub mod client;
 mod crypto_wrapper;
 mod error;

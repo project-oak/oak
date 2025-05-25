@@ -217,7 +217,7 @@ where
     }
 }
 
-impl<'a, T, A: Allocator> Read for Console<'a, T, A>
+impl<T, A: Allocator> Read for Console<'_, T, A>
 where
     T: VirtioTransport,
 {
@@ -232,7 +232,7 @@ where
     }
 }
 
-impl<'a, T, A: Allocator> Write for Console<'a, T, A>
+impl<T, A: Allocator> Write for Console<'_, T, A>
 where
     T: VirtioTransport,
 {

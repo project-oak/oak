@@ -520,14 +520,14 @@ pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
     let stepping = (stepping & STEPPING_MASK) as u64;
 
     let model = if family == 6 || family == 15 {
-        ((model & MODEL_MASK) as u64) << MODEL_SHIFT
+        (((model & MODEL_MASK) as u64) << MODEL_SHIFT)
             | (((model & EXTENDED_MODEL_MASK) as u64) << EXTENDED_MODEL_SHIFT)
     } else {
         ((model & MODEL_MASK) as u64) << MODEL_SHIFT
     };
 
     let family = if family > FAMILY_MAX {
-        (FAMILY_MAX as u64) << FAMILY_SHIFT
+        ((FAMILY_MAX as u64) << FAMILY_SHIFT)
             | (((family - FAMILY_MAX) as u64) << EXTENDED_FAMILY_SHIFT)
     } else {
         (family as u64) << FAMILY_SHIFT

@@ -50,8 +50,8 @@ static DESCRIPTORS: Spinlock<Descriptors> = Spinlock::new(Descriptors {
 /// Does basic initialization of the GDT for the kernel itself.
 pub fn init_gdt_early() {
     let mut descriptors = DESCRIPTORS.lock();
-    descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
-    descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
+    descriptors.kernel_cs_selector = descriptors.gdt.append(Descriptor::kernel_code_segment());
+    descriptors.kernel_ds_selector = descriptors.gdt.append(Descriptor::kernel_data_segment());
 
     // Safety: descriptors are 'static, so this is safe to load, but unfortunately
     // the fact isn't visible through the MutexGuard.
@@ -82,15 +82,15 @@ pub fn init_gdt(double_fault_stack: VirtAddr, privileged_interrupt_stack: VirtAd
     // switch to this stack.
     descriptors.tss.interrupt_stack_table[DOUBLE_FAULT_STACK_INDEX as usize] = double_fault_stack;
 
-    descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
-    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
+    descriptors.user_ds_selector = descriptors.gdt.append(Descriptor::user_data_segment());
+    descriptors.user_cs_selector = descriptors.gdt.append(Descriptor::user_code_segment());
     // Safety: we know that descriptors are 'static as they are stored in the static
     // variable, but unfortunately that fact is not visible through the
     // MutexGuard. Thus, we need to rely on `transmute()` to extend the lifetime
     // and use `load_unsafe()` to actually load the GDT.
     let tss_descriptor =
         Descriptor::tss_segment(unsafe { core::intrinsics::transmute(&descriptors.tss) });
-    descriptors.tss_selector = descriptors.gdt.add_entry(tss_descriptor);
+    descriptors.tss_selector = descriptors.gdt.append(tss_descriptor);
     unsafe {
         descriptors.gdt.load_unsafe();
         load_tss(descriptors.tss_selector);

@@ -167,7 +167,7 @@ pub struct CpuidRequest {
 impl From<CpuidRequest> for u64 {
     fn from(request: CpuidRequest) -> Self {
         let info = 0x004;
-        info | (request.leaf as u64) << 32 | (request.register as u64) << 30
+        info | ((request.leaf as u64) << 32) | ((request.register as u64) << 30)
     }
 }
 

@@ -88,7 +88,7 @@ macro_rules! builder_param {
     };
 }
 
-impl<'a> Default for StandaloneBuilder<'a> {
+impl Default for StandaloneBuilder<'_> {
     fn default() -> Self {
         Self::new()
     }

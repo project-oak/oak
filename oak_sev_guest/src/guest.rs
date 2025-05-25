@@ -341,7 +341,7 @@ impl KeyRequest {
     /// Sets bits 1 and 2 of the `key_select` field.
     pub fn set_key_select(&mut self, key_select: KeySelect) {
         self.key_select = self.key_select & !KeyRequest::KEY_SELECT_MASK
-            | (key_select as u32) << 1 & KeyRequest::KEY_SELECT_MASK;
+            | ((key_select as u32) << 1) & KeyRequest::KEY_SELECT_MASK;
     }
 }
 

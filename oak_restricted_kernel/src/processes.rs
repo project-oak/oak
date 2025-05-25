@@ -192,7 +192,7 @@ impl Process {
         // We've mapped the memory into the process page tables. Let's revert to the
         // previous page table.
         {
-            let mut mapped_prev_pt = outer_prev_page_table.inner().lock();
+            let mapped_prev_pt = outer_prev_page_table.inner().lock();
             let prev_page_table = mapped_prev_pt.level_4_table();
             let pml4_frame =
                 identify_pml4_frame(prev_page_table).context("could not get pml4 frame")?;

@@ -38,7 +38,7 @@ pub fn rdtsc() -> u64 {
         )
     }
 
-    edx << 32 | eax
+    (edx << 32) | eax
 }
 
 /// Measures the number of clock cycles between `new()` and `elapsed()`.

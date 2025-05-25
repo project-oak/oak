@@ -56,6 +56,7 @@ impl<H: Handler> OakFunctionsContainersService<H> {
         Self { instance_config, instance: OnceLock::new(), encryption_key_handle, observer }
     }
 
+    #[allow(clippy::result_large_err)]
     fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
         self.instance.get().ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
     }

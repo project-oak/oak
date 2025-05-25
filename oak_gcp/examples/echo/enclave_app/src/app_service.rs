@@ -46,6 +46,7 @@ impl EnclaveApplicationImplementation {
 }
 
 trait IntoTonicResult<T> {
+    #[allow(clippy::result_large_err)]
     fn into_tonic_result(self, context: &str) -> tonic::Result<T>;
 }
 

@@ -1,5 +1,5 @@
 {
-  "checksum": "4d3e794a7c6b896844e31edf2339556945d3920f73b3c4d43f0aa03f21abed5c",
+  "checksum": "d66b3615e29621549060b25610511a854685814f09deca2bce4ca8948dd67e27",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -3082,7 +3082,7 @@
               "target": "x509_cert"
             },
             {
-              "id": "x86_64 0.14.12",
+              "id": "x86_64 0.15.2",
               "target": "x86_64"
             },
             {
@@ -10527,14 +10527,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.14.12": {
+    "x86_64 0.15.2": {
       "name": "x86_64",
-      "version": "0.14.12",
+      "version": "0.15.2",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.14.12/download",
-          "sha256": "96cb6fd45bfeab6a5055c5bffdb08768bd0c069f1d946debe585bbb380a7c062"
+          "url": "https://static.crates.io/crates/x86_64/0.15.2/download",
+          "sha256": "0f042214de98141e9c8706e8192b73f56494087cc55ebec28ce10f26c5c364ae"
         }
       },
       "targets": [
@@ -10559,6 +10559,7 @@
         "crate_features": {
           "common": [
             "abi_x86_interrupt",
+            "asm_const",
             "const_fn",
             "default",
             "instructions",
@@ -10594,7 +10595,7 @@
           ],
           "selects": {}
         },
-        "version": "0.14.12"
+        "version": "0.15.2"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -10935,7 +10936,7 @@
     "uart_16550 0.3.1",
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
-    "x86_64 0.14.12",
+    "x86_64 0.15.2",
     "zerocopy 0.7.34",
     "zeroize 1.8.1"
   ],

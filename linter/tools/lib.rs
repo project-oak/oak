@@ -26,7 +26,12 @@ pub mod rustfmt;
 pub mod shell_check;
 pub mod source_license;
 
-use std::{fs::File, io::Read, path::Path, process::Command};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+    process::Command,
+};
 
 fn has_extension(path: &Path, extensions: &[&str]) -> bool {
     match path.extension() {
@@ -43,7 +48,7 @@ fn has_filename(path: &Path, names: &[&str]) -> bool {
 }
 
 fn contents_starts_with(path: &Path, bytes: &[u8]) -> anyhow::Result<bool> {
-    let f = File::open(path)?;
+    let f = BufReader::new(File::open(path)?);
     let start: std::io::Result<Vec<u8>> = f.bytes().take(bytes.len()).collect();
     Ok(start? == bytes)
 }

@@ -53,7 +53,7 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
         // page tables.
         mapper
             .map_to_with_table_flags(
-                Page::<S>::from_start_address(offset + i * (S::SIZE as usize)).unwrap(),
+                Page::<S>::from_start_address(offset + (i as u64) * S::SIZE).unwrap(),
                 frame,
                 flags,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,

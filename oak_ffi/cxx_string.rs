@@ -19,7 +19,7 @@ use std::os::raw::c_void;
 /// A basic wrapper around Rust or C-provided bytes of known length.
 ///
 /// This structure can be passed back and forth between Rust and C code.
-
+///
 /// A wrapper around a std::string so that it can be passed to Rust.
 ///
 /// See the corresponding C++ implementation in cc/ffi/cxx_string.h

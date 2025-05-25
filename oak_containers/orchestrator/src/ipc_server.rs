@@ -51,6 +51,7 @@ impl CryptoService {
         Self { instance_keys, group_keys }
     }
 
+    #[allow(clippy::result_large_err)]
     fn signing_key(
         &self,
         key_origin: KeyOrigin,

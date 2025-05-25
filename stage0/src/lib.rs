@@ -18,6 +18,7 @@
 #![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
+#![allow(static_mut_refs)]
 
 extern crate alloc;
 
@@ -93,8 +94,8 @@ const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 const PAGE_SIZE: usize = 4096;
 
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
-    let cs = gdt.add_entry(Descriptor::kernel_code_segment());
-    let ds = gdt.add_entry(Descriptor::kernel_data_segment());
+    let cs = gdt.append(Descriptor::kernel_code_segment());
+    let ds = gdt.append(Descriptor::kernel_data_segment());
     (cs, ds)
 }
 

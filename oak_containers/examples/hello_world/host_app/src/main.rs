@@ -29,7 +29,6 @@ pub enum ServerType {
 
 #[derive(clap::Parser, Debug)]
 #[group(skip)]
-
 pub struct Args {
     #[command(flatten)]
     pub launcher_args: oak_containers_launcher::Args,

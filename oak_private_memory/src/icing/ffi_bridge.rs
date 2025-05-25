@@ -23,18 +23,17 @@ mod ffi {
         type DocumentBuilder;
 
         fn create_document_builder() -> UniquePtr<DocumentBuilder>;
-        fn set_uri<'a>(&self, uri: &[u8]) -> &'a DocumentBuilder;
-        fn set_namespace<'a>(&self, name_space: &[u8]) -> &'a DocumentBuilder;
-        fn set_key<'a>(&self, name_space: &[u8], uri: &[u8]) -> &'a DocumentBuilder;
-        fn set_schema<'a>(&self, schema: &[u8]) -> &'a DocumentBuilder;
-        fn add_string_property<'a>(&self, name: &[u8], value: &[&[u8]]) -> &'a DocumentBuilder;
-        fn add_vector_property_impl<'a>(&self, name: &[u8], value: &[&[u8]])
-            -> &'a DocumentBuilder;
-        fn add_int64_property<'a>(&self, name: &[u8], value: i64) -> &'a DocumentBuilder;
-        fn set_creation_timestamp_ms<'a>(&self, creation_timestamp_ms: u64) -> &'a DocumentBuilder;
-        fn set_score<'a>(&self, score: i32) -> &'a DocumentBuilder;
-        fn set_ttl_ms<'a>(&self, ttl_ms: u64) -> &'a DocumentBuilder;
-        fn clear_properties<'a>(&self) -> &'a DocumentBuilder;
+        fn set_uri(&self, uri: &[u8]) -> &DocumentBuilder;
+        fn set_namespace(&self, name_space: &[u8]) -> &DocumentBuilder;
+        fn set_key(&self, name_space: &[u8], uri: &[u8]) -> &DocumentBuilder;
+        fn set_schema(&self, schema: &[u8]) -> &DocumentBuilder;
+        fn add_string_property(&self, name: &[u8], value: &[&[u8]]) -> &DocumentBuilder;
+        fn add_vector_property_impl(&self, name: &[u8], value: &[&[u8]]) -> &DocumentBuilder;
+        fn add_int64_property(&self, name: &[u8], value: i64) -> &DocumentBuilder;
+        fn set_creation_timestamp_ms(&self, creation_timestamp_ms: u64) -> &DocumentBuilder;
+        fn set_score(&self, score: i32) -> &DocumentBuilder;
+        fn set_ttl_ms(&self, ttl_ms: u64) -> &DocumentBuilder;
+        fn clear_properties(&self) -> &DocumentBuilder;
         fn build_impl(&self) -> UniquePtr<CxxVector<u8>>;
     }
 

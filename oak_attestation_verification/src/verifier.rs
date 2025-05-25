@@ -612,10 +612,10 @@ fn verify_event_log(
     let empty_endorsement = Variant::default();
     let mut padded_event_endorsements: Vec<&Variant> = event_endorsements.iter().collect();
     if event_log.encoded_events.len() > event_endorsements.len() {
-        padded_event_endorsements.extend(
-            core::iter::repeat(&empty_endorsement)
-                .take(event_log.encoded_events.len() - event_endorsements.len()),
-        );
+        padded_event_endorsements.extend(core::iter::repeat_n(
+            &empty_endorsement,
+            event_log.encoded_events.len() - event_endorsements.len(),
+        ));
     }
 
     let verification_iterator =

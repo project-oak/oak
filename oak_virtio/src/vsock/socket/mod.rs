@@ -324,7 +324,7 @@ where
     }
 }
 
-impl<'a, T, A: Allocator> Read for Socket<'a, T, A>
+impl<T, A: Allocator> Read for Socket<'_, T, A>
 where
     T: VirtioTransport,
 {
@@ -346,7 +346,7 @@ where
     }
 }
 
-impl<'a, T, A: Allocator> Write for Socket<'a, T, A>
+impl<T, A: Allocator> Write for Socket<'_, T, A>
 where
     T: VirtioTransport,
 {

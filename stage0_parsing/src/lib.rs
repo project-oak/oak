@@ -151,9 +151,9 @@ impl Stage0Info {
 
     pub fn new(bytes: Vec<u8>) -> Self {
         let size = bytes.len();
-        let start_address = FIRMWARE_TOP - size;
+        let start_address = FIRMWARE_TOP - (size as u64);
         let legacy_size = size.min(LEGACY_MAX_SIZE);
-        let legacy_start_address = LEGACY_TOP - legacy_size;
+        let legacy_start_address = LEGACY_TOP - (legacy_size as u64);
         let legacy_offset = size - legacy_size;
         Self { bytes, start_address, legacy_start_address, legacy_offset }
     }

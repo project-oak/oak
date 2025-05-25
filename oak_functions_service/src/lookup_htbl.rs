@@ -438,7 +438,7 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
         len >>= 8;
         num_bytes += 1;
     }
-    let first_byte = ((num_bytes - 1) << 6 | len) as u8;
+    let first_byte = (((num_bytes - 1) << 6) | len) as u8;
     data[index] = first_byte;
     num_bytes
 }

@@ -356,10 +356,11 @@ fn compare_text_value(actual: &str, expected: &TextExpectedValue) -> anyhow::Res
 fn verify_regex(actual: &str, regex: &str) -> anyhow::Result<()> {
     let re = Regex::new(regex)
         .map_err(|msg| anyhow::anyhow!("couldn't parse regex in the reference value: {msg}"))?;
-    Ok(anyhow::ensure!(
+    anyhow::ensure!(
         re.is_match(actual),
         format!("value doesn't match the reference value regex: {actual}")
-    ))
+    );
+    Ok(())
 }
 
 #[cfg(not(feature = "regex"))]

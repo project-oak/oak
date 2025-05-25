@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{arch::asm, ops::Deref};
+use core::{arch::naked_asm, ops::Deref};
 
 use log::error;
 use oak_sev_guest::{
@@ -36,7 +36,7 @@ static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescript
 #[naked]
 extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
     unsafe {
-        asm! {
+        naked_asm! {
             "push %rax",            // save old rax value
             "mov 16(%rsp), %rax",   // rax = rsp + 16 (address of the return RIP)
             "cmpw $0x320F, (%rax)", // is RIP pointing to 0x320F (RDMSR)?
@@ -52,7 +52,7 @@ extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFram
             "jmp {}",               // Let the Rust code take care of it. We jmp instead of call, as the
                                     // Rust function will call `iretq` instead of `ret` at the end.
             sym general_protection_fault_handler_inner,
-            options(att_syntax, noreturn)
+            options(att_syntax)
         }
     }
 }
@@ -77,7 +77,7 @@ extern "x86-interrupt" fn page_fault_handler(
 ) {
     error!("KERNEL PANIC: PAGE FAULT");
     error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
-    error!("Faulting virtual address: {:#018x}", Cr2::read());
+    error!("Faulting virtual address: {:#018x}", Cr2::read_raw());
     error!("Error code: {:?}", error_code);
     shutdown::shutdown();
 }
@@ -94,9 +94,9 @@ extern "x86-interrupt" fn double_fault_handler(
     // there's no point in logging that.
     error!("KERNEL PANIC: DOUBLE FAULT");
     error!("Instruction pointer: {:#016x}", stack_frame.deref().instruction_pointer.as_u64());
-    error!("Code segment: {:#x}", stack_frame.deref().code_segment);
+    error!("Code segment: {:#x}", stack_frame.deref().code_segment.0);
     error!("Stack pointer: {:#016x}", stack_frame.deref().stack_pointer.as_u64());
-    error!("Stack segment: {:#x}", stack_frame.deref().stack_segment);
+    error!("Stack segment: {:#x}", stack_frame.deref().stack_segment.0);
     error!("CPU flags: {:#x}", stack_frame.deref().cpu_flags);
     shutdown::shutdown();
 }

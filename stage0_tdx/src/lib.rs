@@ -16,6 +16,7 @@
 
 #![no_std]
 #![feature(allocator_api)]
+#![allow(static_mut_refs)]
 extern crate alloc;
 mod accept_memory;
 mod attestation;

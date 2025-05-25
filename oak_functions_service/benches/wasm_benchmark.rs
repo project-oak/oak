@@ -101,7 +101,7 @@ struct Transport<'a, H: Handler> {
     wasm_handler: &'a mut H,
 }
 
-impl<'a, H: Handler> micro_rpc::Transport for Transport<'a, H> {
+impl<H: Handler> micro_rpc::Transport for Transport<'_, H> {
     fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, !> {
         Ok(self.wasm_handler.handle_invoke(Request { body: request.to_vec() }).unwrap().body)
     }

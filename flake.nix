@@ -79,7 +79,7 @@
             }).androidsdk;
           rustToolchain =
             # This should be kept in sync with the value in bazel/rust/defs.bzl
-            pkgs.rust-bin.nightly."2024-09-05".default.override {
+            pkgs.rust-bin.nightly."2024-11-01".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -166,6 +166,8 @@
               shellHook = ''
                 export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
                 export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2";
+                # https://github.com/NixOS/nix/issues/262
+                unset TMPDIR
               '';
               packages = [
                 autoconf

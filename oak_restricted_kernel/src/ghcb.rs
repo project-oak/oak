@@ -168,7 +168,7 @@ fn get_identity_mapped_encrypted_page_table<'a>(
 fn get_ghcb_page() -> Page<Size2MiB> {
     // Safety: the reference to a mutable static is safe, as we only use it to
     // calculate a virtual address and don't dereference it.
-    let ghcb_pointer = unsafe { addr_of!(GHCB_WRAPPER) };
+    let ghcb_pointer = addr_of!(GHCB_WRAPPER);
     let ghcb_address = VirtAddr::from_ptr(ghcb_pointer);
     Page::<Size2MiB>::from_start_address(ghcb_address).expect("invalid start address for GHCB page")
 }

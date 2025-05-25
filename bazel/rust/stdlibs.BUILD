@@ -1,5 +1,6 @@
 # Build configuration to rebuild the rust std libraries.
 
+load("@oak//bazel/rust:defs.bzl", "STDLIBS_DEPS_VERSIONS")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -53,8 +54,8 @@ rust_library(
     name = "compiler_builtins",
     # There are multiple versions available in the nightly tarball, we choose the newest.
     srcs = glob([
-        "vendor/compiler_builtins-0.1.123/src/**/*.rs",
-        "vendor/compiler_builtins-0.1.123/libm/**/*.rs",
+        "vendor/compiler_builtins-" + STDLIBS_DEPS_VERSIONS["compiler_builtins"] + "/src/**/*.rs",
+        "vendor/compiler_builtins-" + STDLIBS_DEPS_VERSIONS["compiler_builtins"] + "/libm/**/*.rs",
     ]),
     compile_data = glob(["vendor/compiler_builtins-0.1.123/src/**/*.md"]),
     crate_features = [
@@ -110,12 +111,11 @@ rust_library(
     ],
 )
 
-
 rust_library(
     name = "cfg_if",
     # There are multiple versions available in the nightly tarball, we choose the newest.
-    srcs = glob(["vendor/cfg-if-1.0.0/src/**/*.rs"]),
-    compile_data = glob(["vendor/cfg-if-1.0.0/src/**/*.md"]),
+    srcs = glob(["vendor/cfg-if-" + STDLIBS_DEPS_VERSIONS["cfg-if"] + "/src/**/*.rs"]),
+    compile_data = glob(["vendor/cfg-if-" + STDLIBS_DEPS_VERSIONS["cfg-if"] + "/src/**/*.md"]),
     crate_features = [
         "compiler_builtins",
         "core",
@@ -165,8 +165,8 @@ rust_library(
 rust_library(
     name = "libc",
     # There are multiple versions available in the nightly tarball, we choose the newest.
-    srcs = glob(["vendor/libc-0.2.158/src/**/*.rs"]),
-    compile_data = glob(["vendor/libc-0.2.158/src/**/*.md"]),
+    srcs = glob(["vendor/libc-" + STDLIBS_DEPS_VERSIONS["libc"] + "/src/**/*.rs"]),
+    compile_data = glob(["vendor/libc-" + STDLIBS_DEPS_VERSIONS["libc"] + "/src/**/*.md"]),
     crate_features = [
         "align",
     ],

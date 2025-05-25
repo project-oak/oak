@@ -97,13 +97,13 @@ macro_rules! mutable_interrupt_handler_with_error_code {
     (unsafe fn $name:ident ( $stack_frame:ident : &mut MutableInterruptStackFrame , $error_code:ident : u64 $(,)? ) $code:block) => {
         #[naked]
         unsafe extern "sysv64" fn $name() -> ! {
-            use core::arch::asm;
+            use core::arch::naked_asm;
 
             extern "sysv64" fn inner_function($stack_frame: &mut MutableInterruptStackFrame, $error_code: u64) {
                 $code
             }
 
-            asm!(
+            naked_asm!(
                 // We don't want the error code on the stack. We want the value of RSI on the stack
                 // and the error code in RSI, as it will be the second parameter to the inner
                 // function.
@@ -187,7 +187,6 @@ macro_rules! mutable_interrupt_handler_with_error_code {
                 // from the handler.
                 "iretq",
                 INNER_ADDRESS = sym inner_function,
-                options(noreturn)
             )
         }
     };

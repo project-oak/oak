@@ -30,7 +30,7 @@ mod switch_process;
 mod tests;
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{arch::asm, ffi::c_void, mem::offset_of, ptr::addr_of_mut};
+use core::{arch::naked_asm, ffi::c_void, mem::offset_of, ptr::addr_of_mut};
 
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::{Errno, Syscall};
@@ -231,7 +231,7 @@ extern "C" fn syscall_entrypoint() {
     // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3
     // for more details.
     unsafe {
-        asm! {
+        naked_asm! {
             // Switch to kernel GS.
             "swapgs",
 
@@ -352,7 +352,6 @@ extern "C" fn syscall_entrypoint() {
             OFFSET_USER_STACK_POINTERS = const(offset_of!(GsData, user_stack_pointers)),
             OFFSET_CURRENT_PID = const(offset_of!(GsData, current_pid)),
             POINTER_SIZE_SHIFT = const(core::mem::size_of::<VirtAddr>().trailing_zeros()),
-            options(noreturn)
         }
     }
 }

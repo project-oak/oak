@@ -15,7 +15,7 @@
 //
 
 use alloc::{ffi::CString, vec::Vec};
-use core::{ffi::CStr, mem::size_of, slice};
+use core::{mem::size_of, slice};
 
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
@@ -127,10 +127,7 @@ impl ZeroPage {
             // Safety: BootE820Entry has the same structure as what qemu uses, and we're
             // limiting ourselves to up to 128 entries.
             log::debug!("Using fw_cfg to create the E820 table");
-            fw_cfg.read_file_by_name(
-                CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
-                &mut self.inner.e820_table,
-            )
+            fw_cfg.read_file_by_name(c"etc/e820", &mut self.inner.e820_table)
         });
 
         let e820_entries = match len_bytes {

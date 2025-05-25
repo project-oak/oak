@@ -16,6 +16,7 @@
 
 #![no_std]
 #![feature(allocator_api)]
+#![allow(static_mut_refs)]
 extern crate alloc;
 pub mod platform;
 pub use crate::platform::Sev;

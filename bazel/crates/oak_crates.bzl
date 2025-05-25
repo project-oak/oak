@@ -248,7 +248,7 @@ def _common_crates(std):
             features = ["pem"],
             version = "0.2.5",
         ),
-        "x86_64": crate.spec(version = "=0.14.12"),  #  0.15 does not support LowerHex formatting.
+        "x86_64": crate.spec(version = "=0.15.2"),
         "zerocopy": crate.spec(
             default_features = False,
             features = ["derive"],
