@@ -35,7 +35,12 @@ impl BytesView {
 
     /// Create a new instance wrapping the provided slice.
     pub fn new_from_slice(slice: &[u8]) -> BytesView {
-        BytesView::new(slice.as_ptr(), slice.len())
+        if slice.is_empty() {
+            // Empty slices return 0x1 for their ptr value.
+            BytesView::new(core::ptr::null(), 0)
+        } else {
+            BytesView::new(slice.as_ptr(), slice.len())
+        }
     }
 
     /// Return a `std::slice` representation of this [`BytesView`] instance.
@@ -80,7 +85,13 @@ impl RustBytes {
     /// to be freed later with a call to [`free_rust_bytes`].
     pub fn new(bytes: Box<[u8]>) -> RustBytes {
         let raw_bytes_ptr = Box::into_raw(bytes);
-        RustBytes { data: raw_bytes_ptr as *const u8, len: raw_bytes_ptr.len() }
+        if raw_bytes_ptr.is_empty() {
+            // Empty slices will return 0x01 for the pointer, so we need to make sure
+            // that C still gets a null pointer.
+            RustBytes { data: core::ptr::null(), len: 0 }
+        } else {
+            RustBytes { data: raw_bytes_ptr as *const u8, len: raw_bytes_ptr.len() }
+        }
     }
 
     /// Return a `std::slice` representation of this [`RustBytes`] instance.
@@ -89,12 +100,24 @@ impl RustBytes {
     /// # Safety
     /// The instance contains a non-null, properly aligned, valid pointer.
     pub unsafe fn as_slice(&self) -> &[u8] {
-        std::slice::from_raw_parts(self.data, self.len)
+        // Empty slices will return 0x01 for the pointer, so we need to make sure
+        // that C still gets a null pointer.
+        if self.data.is_null() {
+            &[]
+        } else {
+            std::slice::from_raw_parts(self.data, self.len)
+        }
     }
 
     /// Return a [`BytesView`] containing the Rust bytes.
     pub fn as_bytes_view(&self) -> BytesView {
-        BytesView::new(self.data, self.len)
+        if self.data.is_null() {
+            // Empty slices will return 0x01 for the pointer, so we need to make sure
+            // that C still gets a null pointer.
+            BytesView::new(std::ptr::null(), 0)
+        } else {
+            BytesView::new(self.data, self.len)
+        }
     }
 }
 
