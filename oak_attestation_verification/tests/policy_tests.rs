@@ -77,14 +77,34 @@ const CONTAINER_EVENT_INDEX: usize = 2;
 
 const TEST_SESSION_BINDING_PUBLIC_KEY: [u8; 4] = [0, 1, 2, 3];
 
-// Pretend the tests run at this time: 15 Jan 2025, 12:00 UTC.
-const MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
+// For RK testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
+const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
 
-struct TestClock;
+// For OC testdata: Pretend the tests runs on 01 June 2025, 12:00 UTC.
+const OC_MILLISECONDS_SINCE_EPOCH: i64 = 1748779200000;
 
-impl Clock for TestClock {
+// For CB testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
+const CB_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
+
+struct RkTestClock;
+struct OcTestClock;
+struct CbTestClock;
+
+impl Clock for CbTestClock {
     fn get_milliseconds_since_epoch(&self) -> i64 {
-        MILLISECONDS_SINCE_EPOCH
+        CB_MILLISECONDS_SINCE_EPOCH
+    }
+}
+
+impl Clock for OcTestClock {
+    fn get_milliseconds_since_epoch(&self) -> i64 {
+        OC_MILLISECONDS_SINCE_EPOCH
+    }
+}
+
+impl Clock for RkTestClock {
+    fn get_milliseconds_since_epoch(&self) -> i64 {
+        RK_MILLISECONDS_SINCE_EPOCH
     }
 }
 
@@ -218,7 +238,7 @@ fn cb_software_rooted_dice_verify_succeeds() {
     let evidence = load_cb_evidence_software_rooted();
     let endorsements = Endorsements::default();
 
-    let verifier = SoftwareRootedDiceAttestationVerifier::new(Arc::new(TestClock {}));
+    let verifier = SoftwareRootedDiceAttestationVerifier::new(Arc::new(CbTestClock {}));
 
     let result = verifier.verify(&evidence, &endorsements);
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -268,7 +288,7 @@ fn cb_dice_verify_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(TestClock {}),
+        Arc::new(CbTestClock {}),
     );
 
     let result = verifier.verify(&evidence, &endorsements);
@@ -305,7 +325,7 @@ fn event_log_verifier_succeeds() {
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
-    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(RkTestClock {}));
     let result = verifier.verify(&evidence, &endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -321,7 +341,7 @@ fn event_log_verifier_succeeds() {
 }
 
 #[test]
-fn amd_sev_snp_platform_policy_verify_succeeds() {
+fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
     let platform_reference_values =
         OC_REFERENCE_VALUES.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
     let policy = AmdSevSnpPolicy::new(platform_reference_values);
@@ -335,7 +355,8 @@ fn amd_sev_snp_platform_policy_verify_succeeds() {
         },
     };
 
-    let result = policy.verify(attestation_report, &endorsement.into(), MILLISECONDS_SINCE_EPOCH);
+    let result =
+        policy.verify(attestation_report, &endorsement.into(), OC_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -343,7 +364,7 @@ fn amd_sev_snp_platform_policy_verify_succeeds() {
 
 // TODO: b/408161319 - Re-enable test and remove `pub`.
 // #[test]
-pub fn amd_sev_snp_firmware_policy_verify_succeeds() {
+pub fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_reference_values = OC_REFERENCE_VALUES
         .root_layer
         .as_ref()
@@ -360,7 +381,7 @@ pub fn amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_endorsement = OC_ENDORSEMENTS.initial.as_ref().unwrap();
 
     let result =
-        policy.verify(firmware_measurement, firmware_endorsement, MILLISECONDS_SINCE_EPOCH);
+        policy.verify(firmware_measurement, firmware_endorsement, OC_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -373,7 +394,7 @@ fn oc_kernel_policy_verify_succeeds() {
     let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
     let endorsement = &OC_ENDORSEMENTS.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -386,7 +407,7 @@ fn oc_system_policy_verify_succeeds() {
     let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
     let endorsement = &OC_ENDORSEMENTS.events[SYSTEM_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -400,7 +421,7 @@ fn oc_container_policy_verify_succeeds() {
     let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
     let endorsement = &OC_ENDORSEMENTS.events[CONTAINER_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -438,7 +459,7 @@ fn oc_amd_sev_snp_verifier_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(TestClock {}),
+        Arc::new(OcTestClock {}),
     );
     let result = verifier.verify(&OC_EVIDENCE, &OC_ENDORSEMENTS);
 
@@ -453,7 +474,7 @@ fn rk_kernel_policy_verify_succeeds() {
     let event = &RK_EVIDENCE.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
     let endorsement = &RK_ENDORSEMENTS.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, RK_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -467,7 +488,7 @@ fn rk_application_policy_verify_succeeds() {
     let event = &RK_EVIDENCE.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
     let endorsement = &RK_ENDORSEMENTS.events[RK_APPLICATION_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, RK_MILLISECONDS_SINCE_EPOCH);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -501,7 +522,7 @@ fn rk_amd_sev_snp_verifier_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(TestClock {}),
+        Arc::new(RkTestClock {}),
     );
     let result = verifier.verify(&RK_EVIDENCE, &RK_ENDORSEMENTS);
 
