@@ -15,6 +15,7 @@
 //
 
 use alloc::vec::Vec;
+use core::time::Duration;
 
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
@@ -22,7 +23,10 @@ use oak_proto_rust::oak::crypto::v1::{
 use prost::Message;
 use prost_types::Timestamp;
 
-use crate::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
+use crate::{
+    certificate::{certificate_verifier::CertificateVerifier, utils::to_timestamp},
+    verifier::Verifier,
+};
 
 const TEST_PUBLIC_KEY: &[u8] = b"TEST_PUBLIC_KEY";
 const TEST_BAD_PUBLIC_KEY: &[u8] = b"TEST_BAD_PUBLIC_KEY";
@@ -30,7 +34,7 @@ const TEST_PURPOSE_ID: &[u8] = b"TEST_PURPOSE_ID";
 const TEST_BAD_PURPOSE_ID: &[u8] = b"TEST_BAD_PURPOSE_ID";
 const TEST_SIGNATURE: &[u8] = b"TEST_SIGNATURE";
 const TEST_BAD_SIGNATURE: &[u8] = b"TEST_BAD_SIGNATURE";
-const TEST_CURRENT_TIME_MILLISECONDS: i64 = 1_000_000;
+const TEST_CURRENT_TIME_MILLISECONDS: i64 = 1_234_567;
 
 #[derive(Clone, Default)]
 struct MockVerifier {
@@ -42,10 +46,6 @@ impl Verifier for MockVerifier {
         anyhow::ensure!(self.expected_signature == signature, "couldn't verify signature");
         Ok(())
     }
-}
-
-fn create_timestamp(milliseconds: i64) -> Timestamp {
-    Timestamp { seconds: milliseconds / 1000, nanos: ((milliseconds % 1000) * 1000) as i32 }
 }
 
 fn create_test_certificate(
@@ -75,8 +75,8 @@ fn test_verify_certificate_success() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
         TEST_SIGNATURE,
     );
 
@@ -97,8 +97,8 @@ fn test_verify_certificate_signature_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
         TEST_BAD_SIGNATURE,
     );
 
@@ -119,8 +119,8 @@ fn test_verify_certificate_validity_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 2),
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 2),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
         TEST_SIGNATURE,
     );
 
@@ -141,8 +141,8 @@ fn test_verify_certificate_public_key_failure() {
     let certificate = create_test_certificate(
         TEST_BAD_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
         TEST_SIGNATURE,
     );
 
@@ -163,8 +163,8 @@ fn test_verify_certificate_purpose_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_BAD_PURPOSE_ID,
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
-        create_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 1),
         TEST_SIGNATURE,
     );
 
@@ -175,6 +175,54 @@ fn test_verify_certificate_purpose_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert!(result.is_err(), "Expected verification to fail, but got success");
+}
+
+#[test]
+fn test_verify_certificate_clock_skew() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 5),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + 5),
+        TEST_SIGNATURE,
+    );
+
+    let allowed_clock_skew = Duration::from_millis(5);
+    let mut verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+    verifier.set_allowed_clock_skew(allowed_clock_skew);
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS - 7,
+        &certificate,
+    );
+    assert!(result.is_ok(), "Expected verification to succeed, but got error: {:?}", result.err());
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS + 7,
+        &certificate,
+    );
+    assert!(result.is_ok(), "Expected verification to succeed, but got error: {:?}", result.err());
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS - 11,
+        &certificate,
+    );
+    assert!(result.is_err(), "Expected verification to fail, but got success");
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS + 11,
         &certificate,
     );
     assert!(result.is_err(), "Expected verification to fail, but got success");

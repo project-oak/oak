@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use core::time::Duration;
+
 use anyhow::{anyhow, Context};
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SubjectPublicKeyInfo, Validity,
@@ -22,17 +24,38 @@ use prost::Message;
 
 use crate::{certificate::utils::to_milliseconds_since_epoch, verifier::Verifier};
 
+/// Struct that verifies the validity of the [`Certificate`] proto, which
+/// includes verifying its validity and that it contains expected fields.
+/// It relies on the [`Verifier`] to verify that [`Certificate::signature_info`]
+/// field correctly signs the [`Certificate::serialized_payload`], i.e. to
+/// verify the raw signature.
 #[derive(Clone)]
 pub struct CertificateVerifier<V: Verifier> {
     pub signature_verifier: V,
+    /// Acceptable time period that corresponds to the device clock skew. The
+    /// default value is `0`, which means that there is no clock skew.
+    allowed_clock_skew: Duration,
 }
 
 impl<V: Verifier> CertificateVerifier<V> {
+    /// Creates a new instance of [`CertificateVerifier`].
     pub fn new(signature_verifier: V) -> Self {
-        Self { signature_verifier }
+        Self { signature_verifier, allowed_clock_skew: Duration::default() }
+    }
+
+    /// Adds acceptable time period before the certificate validity starts and
+    /// after it ends in order to account for devices with skewed clocks.
+    pub fn set_allowed_clock_skew(&mut self, allowed_clock_skew: Duration) {
+        self.allowed_clock_skew = allowed_clock_skew;
     }
 }
 
+// TODO: b/407715638 - Use [`core::time`] instead of `i64` milliseconds.
+/// Verifies the validity of the [`Certificate`] proto, which includes:
+/// - Verifying its validity: check that `milliseconds_since_epoch` falls
+///   withing the period defined by [`Validity`].
+/// - Check that the payload contains expected [`subject_public_key`] and
+///   [`purpose_id`].
 impl<V: Verifier> CertificateVerifier<V> {
     pub fn verify(
         &self,
@@ -62,7 +85,7 @@ impl<V: Verifier> CertificateVerifier<V> {
             .subject_public_key_info
             .as_ref()
             .context("empty subject_public_key_info field")?;
-        Self::verify_subject_public_key_info(
+        self.verify_subject_public_key_info(
             subject_public_key,
             purpose_id,
             subject_public_key_info,
@@ -71,13 +94,14 @@ impl<V: Verifier> CertificateVerifier<V> {
 
         // Verify certificate validity.
         let validity = payload.validity.context("empty validity field")?;
-        Self::verify_validity(milliseconds_since_epoch, &validity)
+        self.verify_validity(milliseconds_since_epoch, &validity)
             .context("couldn't verify certificate validity")?;
 
         Ok(())
     }
 
     fn verify_subject_public_key_info(
+        &self,
         expected_subject_public_key: &[u8],
         expected_purpose_id: &[u8],
         subject_public_key_info: &SubjectPublicKeyInfo,
@@ -95,7 +119,20 @@ impl<V: Verifier> CertificateVerifier<V> {
         Ok(())
     }
 
-    fn verify_validity(milliseconds_since_epoch: i64, validity: &Validity) -> anyhow::Result<()> {
+    /// Verifies that the certificate is valid at
+    /// `current_time_milliseconds_since_epoch`. Verification is done by
+    /// checking that `current_time_milliseconds_since_epoch` value is
+    /// between [`Validity::not_before`] and [`Validity::not_after`]
+    /// (inclusive).
+    ///
+    /// Also, if [`::allowed_clock_skew`] is not zero, then it's subtracted from
+    /// the [`Validity::not_before`] and added to the [`Validity::not_after`]
+    /// before verification to account for devices with skewed clocks.
+    fn verify_validity(
+        &self,
+        current_time_milliseconds_since_epoch: i64,
+        validity: &Validity,
+    ) -> anyhow::Result<()> {
         let not_before_milliseconds = to_milliseconds_since_epoch(
             validity.not_before.as_ref().context("Validity.not_before field is empty")?,
         );
@@ -106,15 +143,20 @@ impl<V: Verifier> CertificateVerifier<V> {
             not_before_milliseconds < not_after_milliseconds,
             "not_before timestamp is not strictly earlier than not_after timestamp",
         );
+        let skewed_not_before_milliseconds =
+            not_before_milliseconds - (self.allowed_clock_skew.as_millis() as i64);
+        let skewed_not_after_milliseconds =
+            not_after_milliseconds + (self.allowed_clock_skew.as_millis() as i64);
 
-        // TODO: b/417198320: - Increase the validity window verification according to a
-        // time skew parameter. TODO: b/417198320: - Print timestamps as part of
-        // the error.
+        // TODO: b/414973682: - Print timestamps as part of the error.
         anyhow::ensure!(
-            milliseconds_since_epoch >= not_before_milliseconds,
+            current_time_milliseconds_since_epoch >= skewed_not_before_milliseconds,
             "certificate validity period hasn't started yet",
         );
-        anyhow::ensure!(milliseconds_since_epoch <= not_after_milliseconds, "certificate expired",);
+        anyhow::ensure!(
+            current_time_milliseconds_since_epoch <= skewed_not_after_milliseconds,
+            "certificate expired"
+        );
 
         Ok(())
     }
