@@ -101,9 +101,7 @@ impl IcingMetaDatabase {
         self.base_dir.clone()
     }
 
-    /// Create a new icing database in `base_dir`. If there is already a icing
-    /// db in `base_dir`, the old one will be deleted.
-    pub fn new(base_dir: &str) -> anyhow::Result<Self> {
+    fn create_schema() -> icing::SchemaProto {
         let schema_type_builder = icing::create_schema_type_config_builder();
         schema_type_builder
             .set_type(SCHMA_NAME.as_bytes())
@@ -148,7 +146,13 @@ impl IcingMetaDatabase {
 
         let schema_builder = icing::create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        let schema = schema_builder.build();
+        schema_builder.build()
+    }
+
+    /// Create a new icing database in `base_dir`. If there is already a icing
+    /// db in `base_dir`, the old one will be deleted.
+    pub fn new(base_dir: &str) -> anyhow::Result<Self> {
+        let schema = Self::create_schema();
 
         let options_bytes = icing::get_default_icing_options(base_dir).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
@@ -262,6 +266,8 @@ impl IcingMetaDatabase {
 
     pub fn reset(&self) {
         self.icing_search_engine.reset();
+        let schema = Self::create_schema();
+        self.icing_search_engine.set_schema(&schema);
     }
 
     /// Search based on the document embedding `doc_embedding` (the ones that
