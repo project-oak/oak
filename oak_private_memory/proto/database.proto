@@ -72,22 +72,33 @@ message ResetDatabaseResponse {
   OpStatus status = 1;
 }
 
+message WriteBlobsRequest {
+  repeated DataBlob encrypted_blobs = 1;
+  repeated DataBlob unencrypted_blobs = 2;
+}
+
+message WriteBlobsResponse {
+  OpStatus status = 1;
+}
+
 // The untrusted database service that the trusted application can connect to.
 service SealedMemoryDatabaseService {
   // Writes a data blob to the database.
   rpc WriteDataBlob(WriteDataBlobRequest) returns (WriteDataBlobResponse) {}
-
   // Reads a data blob from the database.
   rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
-
   // Writes an unencrypted data blob to the database.
   rpc WriteUnencryptedDataBlob(WriteUnencryptedDataBlobRequest)
       returns (WriteUnencryptedDataBlobResponse) {}
-
   // Reads an unencrypted data blob from the database.
   rpc ReadUnencryptedDataBlob(ReadUnencryptedDataBlobRequest)
       returns (ReadUnencryptedDataBlobResponse) {}
 
   // Resets the database. This is mainly used for testing.
   rpc ResetDatabase(ResetDatabaseRequest) returns (ResetDatabaseResponse) {}
+
+  // Writes multiple blobs (encrypted or unencrypted) to the database in a
+  // batch. Backend implementation should guarantee that either all blobs are
+  // written or none are written.
+  rpc WriteBlobs(WriteBlobsRequest) returns (WriteBlobsResponse) {}
 }

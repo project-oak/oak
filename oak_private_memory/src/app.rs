@@ -391,18 +391,15 @@ impl SealedMemoryHandler {
 
         let encrypted_db_blob = encrypt_database(&initial_encrypted_info, &key)
             .context("Failed to encrypt initial user info")?;
-        db_client
-            .add_blob(encrypted_db_blob, Some(uid.clone()))
-            .await
-            .context("Failed to add encrypted user info blob to DB")?;
 
         db_client
-            .add_unencrypted_blob(
-                DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() },
-                None,
+            .add_mixed_blobs(
+                vec![encrypted_db_blob],
+                Some(vec![uid.clone()]),
+                vec![DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() }],
             )
             .await
-            .context("Failed to add unencrypted plain text user info blob to DB")?;
+            .context("Failed to write blobs")?;
 
         debug!("Successfully registered new user {}", uid);
         Ok(BootStrapResponse {

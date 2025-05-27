@@ -21,9 +21,9 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, Embedding, EncryptedDataBlob, EncryptedUserInfo, KeyDerivationInfo, Memory,
+    DataBlob, Embedding, EncryptedDataBlob, EncryptedUserInfo, KeyDerivationInfo, Memory, OpStatus,
     PlainTextUserInfo, ReadDataBlobRequest, ReadUnencryptedDataBlobRequest, UserDb,
-    WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
+    WriteBlobsRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
 };
 use tempfile::tempdir;
 use tonic::transport::Channel;
@@ -586,6 +586,15 @@ pub trait DataBlobHandler {
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId>;
     async fn get_unencrypted_blob(&mut self, id: &BlobId) -> anyhow::Result<DataBlob>;
+
+    /// Writes a mix of encrypted and unencrypted blobs to the database in a
+    /// batch.
+    async fn add_mixed_blobs(
+        &mut self,
+        encrypted_contents: Vec<EncryptedDataBlob>,
+        encrypted_ids: Option<Vec<BlobId>>,
+        unencrypted_blobs: Vec<DataBlob>,
+    ) -> anyhow::Result<OpStatus>;
 }
 
 #[async_trait]
@@ -684,6 +693,48 @@ impl DataBlobHandler for ExternalDbClient {
             }
         }
         bail!("Failed to read unencrypted data blob with id: {}", id);
+    }
+
+    async fn add_mixed_blobs(
+        &mut self,
+        encrypted_contents: Vec<EncryptedDataBlob>,
+        encrypted_ids: Option<Vec<BlobId>>,
+        unencrypted_blobs: Vec<DataBlob>,
+    ) -> anyhow::Result<OpStatus> {
+        let pbuf_encrypted_blobs: Vec<DataBlob> = match encrypted_ids {
+            Some(ids) => {
+                ensure!(
+                    encrypted_contents.len() == ids.len(),
+                    "If encrypted_ids is provided, its length must match encrypted_contents. Got {} contents and {} IDs.",
+                    encrypted_contents.len(),
+                    ids.len()
+                );
+                ids.into_iter()
+                    .zip(encrypted_contents.into_iter())
+                    .map(|(id, content)| DataBlob { id, blob: content.encode_to_vec() })
+                    .collect()
+            }
+            None => encrypted_contents
+                .into_iter()
+                .map(|content| {
+                    let id: BlobId = rand::random::<u128>().to_string(); // Generate random ID
+                    DataBlob { id, blob: content.encode_to_vec() }
+                })
+                .collect(),
+        };
+
+        let request =
+            WriteBlobsRequest { encrypted_blobs: pbuf_encrypted_blobs, unencrypted_blobs };
+
+        let response = self
+            .write_blobs(request)
+            .await
+            .map_err(|e| anyhow::anyhow!("gRPC call to WriteBlobs failed: {:?}", e))?
+            .into_inner();
+
+        response
+            .status
+            .ok_or_else(|| anyhow::anyhow!("WriteBlobsResponse from server missing status field"))
     }
 }
 
