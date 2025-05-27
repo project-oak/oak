@@ -22,10 +22,11 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use sealed_memory_rust_proto::oak::private_memory::{
     boot_strap_response, key_sync_response, sealed_memory_request, sealed_memory_response,
     AddMemoryRequest, AddMemoryResponse, BootStrapRequest, BootStrapResponse, DataBlob, Embedding,
-    EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest,
-    GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory,
-    PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest,
-    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse, SearchResult,
+    EncryptedDataBlob, EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse,
+    GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest,
+    KeySyncResponse, Memory, PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse,
+    SealedMemoryRequest, SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
+    SearchResult, WrappedDataEncryptionKey,
 };
 use tokio::{
     runtime::Handle,
@@ -40,6 +41,7 @@ use crate::{
         DbMigration, IcingMetaDatabase, MemoryId,
     },
     debug,
+    encryption::{decrypt, encrypt, generate_nonce},
 };
 
 #[async_trait]
@@ -102,7 +104,7 @@ impl MemoryInterface for DatabaseWithCache {
 
 /// The state for each client connection.
 pub struct UserSessionContext {
-    pub key: Vec<u8>,
+    pub dek: Vec<u8>,
     pub uid: String,
     pub message_type: MessageType,
 
@@ -137,7 +139,7 @@ impl Drop for SealedMemoryHandler {
             if let Some(user_context) = session_context.lock().await.as_mut() {
                 let database = encrypt_database(
                     &user_context.database.export().encrypted_info.unwrap(),
-                    &user_context.key,
+                    &user_context.dek,
                 );
                 if database.is_err() {
                     debug!("Failed to serialize database");
@@ -385,11 +387,20 @@ impl SealedMemoryHandler {
         // User does not exist.
         debug!("Registering new user: {}", uid);
 
-        let new_plain_text_info =
-            PlainTextUserInfo { key_derivation_info: Some(boot_strap_info.clone()) };
+        // Generate a 256-bit key for the user.
+        let mut dek = [0u8; 32];
+        rand::rng().fill(&mut dek);
+        let dek: Vec<u8> = dek.into();
+        let nonce = generate_nonce();
+        let wrapped_key = EncryptedDataBlob { data: encrypt(&key, &nonce, &dek)?, nonce };
+
+        let new_plain_text_info = PlainTextUserInfo {
+            key_derivation_info: Some(boot_strap_info.clone()),
+            wrapped_dek: Some(WrappedDataEncryptionKey { wrapped_key: Some(wrapped_key) }),
+        };
         let initial_encrypted_info = EncryptedUserInfo { icing_db: None };
 
-        let encrypted_db_blob = encrypt_database(&initial_encrypted_info, &key)
+        let encrypted_db_blob = encrypt_database(&initial_encrypted_info, &dek)
             .context("Failed to encrypt initial user info")?;
 
         db_client
@@ -430,16 +441,25 @@ impl SealedMemoryHandler {
             self.get_db_client().await.context("Failed to get DB client for key sync")?;
         let database;
         let key_derivation_info;
+        let dek: Vec<u8>;
 
         if let Ok(data_blob) = db_client.get_unencrypted_blob(&uid).await {
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)?;
             key_derivation_info =
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
+            let wrapped_dek = plain_text_info
+                .wrapped_dek
+                .clone()
+                .context("Empty wrapped dek")?
+                .wrapped_key
+                .clone()
+                .context("Empty wrapped dek")?;
+            dek = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data)?;
         } else {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
         if let Ok(data_blob) = db_client.get_blob(&uid).await {
-            let encrypted_info = decrypt_database(data_blob, &key)?;
+            let encrypted_info = decrypt_database(data_blob, &dek)?;
             database = if encrypted_info.icing_db.is_some() {
                 IcingMetaDatabase::import(
                     &encrypted_info.icing_db.clone().unwrap().encode_to_vec(),
@@ -458,11 +478,11 @@ impl SealedMemoryHandler {
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
         *mutex_guard = Some(UserSessionContext {
-            key: key.clone(),
+            dek: dek.clone(),
             uid,
             message_type,
             database_service_client: db_client.clone(),
-            database: DatabaseWithCache::new(database, key, db_client, key_derivation_info),
+            database: DatabaseWithCache::new(database, dek, db_client, key_derivation_info),
         });
 
         Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })

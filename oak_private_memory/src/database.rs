@@ -539,6 +539,7 @@ impl DatabaseWithCache {
             encrypted_info: Some(EncryptedUserInfo { icing_db: Some(icing_db) }),
             plaintext_info: Some(PlainTextUserInfo {
                 key_derivation_info: Some(self.key_derivation_info.clone()),
+                wrapped_dek: None,
             }),
         }
     }

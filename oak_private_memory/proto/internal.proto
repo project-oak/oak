@@ -39,8 +39,13 @@ message EncryptedDataBlob {
   bytes data = 2;
 }
 
+message WrappedDataEncryptionKey {
+  EncryptedDataBlob wrapped_key = 1;
+}
+
 message PlainTextUserInfo {
   KeyDerivationInfo key_derivation_info = 1;
+  WrappedDataEncryptionKey wrapped_dek = 2;
 }
 
 message EncryptedUserInfo {
