@@ -362,9 +362,8 @@ fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 
-// TODO: b/408161319 - Re-enable test and remove `pub`.
-// #[test]
-pub fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
+#[test]
+fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_reference_values = OC_REFERENCE_VALUES
         .root_layer
         .as_ref()
