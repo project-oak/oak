@@ -67,18 +67,15 @@ use core::mem;
 
 use anyhow::{anyhow, Context, Error, Ok};
 use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
-use oak_proto_rust::oak::{
-    attestation::v1::AttestationResults,
-    session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-        SessionBinding, SessionRequest, SessionResponse,
-    },
+use oak_proto_rust::oak::session::v1::{
+    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
+    SessionBinding, SessionRequest, SessionResponse,
 };
 
 use crate::{
     attestation::{
         AttestationHandler, AttestationType, AttestationVerdict, ClientAttestationHandler,
-        ServerAttestationHandler,
+        ServerAttestationHandler, VerifierResult,
     },
     config::{EncryptorProvider, SessionConfig},
     handshake::{
@@ -215,7 +212,7 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
     Handshake {
         handshaker: H,
         encryptor_provider: Box<dyn EncryptorProvider>,
-        attestation_results: BTreeMap<String, AttestationResults>,
+        attestation_results: BTreeMap<String, VerifierResult>,
     },
     /// The phase where the session is established and ready for encrypted
     /// communication.
@@ -256,8 +253,8 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                     AttestationVerdict::AttestationPassed { attestation_results } => {
                         attestation_results
                     }
-                    AttestationVerdict::AttestationFailed { .. } => {
-                        return Err(anyhow!("attestation failed"));
+                    AttestationVerdict::AttestationFailed { reason, .. } => {
+                        return Err(anyhow!("attestation failed: {:?}", reason));
                     }
                 };
                 *self = Step::Handshake {
@@ -727,25 +724,30 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 /// if providers/bindings are missing.
 fn verify_session_binding(
     binding_verifier_providers: &BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
-    attestation_results: &BTreeMap<String, AttestationResults>,
+    attestation_results: &BTreeMap<String, VerifierResult>,
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
-    for (verifier_id, results) in attestation_results {
-        let binding_verifier = binding_verifier_providers
-            .get(verifier_id)
-            .ok_or(anyhow!(
+    for (verifier_id, result) in attestation_results {
+        if let VerifierResult::Success(r) = result {
+            let binding_verifier = binding_verifier_providers
+                .get(verifier_id)
+                .ok_or(anyhow!(
                 "no session binding verifier provider supplied for the verifier ID {verifier_id}"
             ))?
-            .create_session_binding_verifier(results)?;
-        binding_verifier.verify_binding(
-            handshake_hash,
-            bindings
-                .get(verifier_id)
-                .ok_or(anyhow!("handshake message doesn't have a binding for ID {}", verifier_id))?
-                .binding
-                .as_slice(),
-        )?;
+                .create_session_binding_verifier(r)?;
+            binding_verifier.verify_binding(
+                handshake_hash,
+                bindings
+                    .get(verifier_id)
+                    .ok_or(anyhow!(
+                        "handshake message doesn't have a binding for ID {}",
+                        verifier_id
+                    ))?
+                    .binding
+                    .as_slice(),
+            )?;
+        }
     }
     Ok(())
 }

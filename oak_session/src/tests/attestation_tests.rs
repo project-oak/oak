@@ -33,7 +33,7 @@ use oak_proto_rust::oak::{
 use crate::{
     attestation::{
         AttestationHandler, AttestationType, AttestationVerdict, ClientAttestationHandler,
-        DefaultAttestationAggregator, ServerAttestationHandler,
+        DefaultVerifierResultsAggregator, ServerAttestationHandler, VerifierResult,
     },
     config::AttestationHandlerConfig,
     ProtocolEngine,
@@ -148,7 +148,7 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -169,7 +169,7 @@ fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -189,7 +189,7 @@ fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -207,7 +207,7 @@ fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -233,7 +233,7 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
             create_mock_endorser(),
         )]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -270,7 +270,7 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
             create_mock_endorser(),
         )]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -305,7 +305,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -343,7 +343,7 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -384,7 +384,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -437,7 +437,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -483,7 +483,7 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
             peer_verifiers: BTreeMap::from([]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -515,7 +515,7 @@ fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
             peer_verifiers: BTreeMap::from([]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -550,7 +550,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 MATCHED_ATTESTER_ID1.to_string(),
                 create_failing_mock_verifier(),
             )]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -571,11 +571,11 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
         assert_that!(
             client_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
-                reason: "Verification failed",
-                error_messages: eq(&BTreeMap::from([(
-                    MATCHED_ATTESTER_ID1.to_string(),
-                    "Mock failure".to_string()
-                )])),
+                reason: starts_with("Verification failed"),
+                attestation_results: elements_are!((
+                    eq(MATCHED_ATTESTER_ID1),
+                    matches_pattern!(VerifierResult::Failure(anything())),
+                )),
             })),
             "Attestation type {attestation_type:?} should fail with an unmatched verifier"
         );
@@ -595,7 +595,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 MATCHED_ATTESTER_ID1.to_string(),
                 create_failing_mock_verifier(),
             )]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -616,11 +616,303 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
         assert_that!(
             server_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
-                reason: "Verification failed",
-                error_messages: eq(&BTreeMap::from([(
+                reason: starts_with("Verification failed"),
+                attestation_results: elements_are!((
+                    eq(MATCHED_ATTESTER_ID1),
+                    matches_pattern!(VerifierResult::Failure(anything())),
+                )),
+            })),
+            "Attestation type {attestation_type:?} should fail with an unmatched verifier"
+        );
+    }
+
+    Ok(())
+}
+
+#[googletest::test]
+fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
+    for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
+        let client_config = AttestationHandlerConfig {
+            attestation_type,
+            self_attesters: BTreeMap::from([]),
+            self_endorsers: BTreeMap::from([]),
+            peer_verifiers: BTreeMap::from([
+                (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+                (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+                // Failures in an unmatched verifier are irrelevant as it is never invoked
+                (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            ]),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
+        };
+
+        let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
+
+        let attest_response = AttestResponse {
+            endorsed_evidence: BTreeMap::from([
+                (
                     MATCHED_ATTESTER_ID1.to_string(),
-                    "Mock failure".to_string()
-                )])),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    MATCHED_ATTESTER_ID2.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    UNMATCHED_ATTESTER_ID.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+            ]),
+        };
+        assert_that!(
+            client_attestation_provider.put_incoming_message(attest_response),
+            ok(some(()))
+        );
+        assert_that!(
+            client_attestation_provider.take_attestation_verdict(),
+            ok(matches_pattern!(AttestationVerdict::AttestationPassed {
+                attestation_results: unordered_elements_are!(
+                    (
+                        eq(MATCHED_ATTESTER_ID1),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (
+                        eq(MATCHED_ATTESTER_ID2),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
+                    (
+                        eq(UNMATCHED_ATTESTER_ID),
+                        matches_pattern!(VerifierResult::Unverified(anything()))
+                    )
+                ),
+            })),
+            "Attestation type {attestation_type:?} should fail with an unmatched verifier"
+        );
+    }
+
+    Ok(())
+}
+
+#[googletest::test]
+fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
+    for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
+        let server_config = AttestationHandlerConfig {
+            attestation_type,
+            self_attesters: BTreeMap::from([]),
+            self_endorsers: BTreeMap::from([]),
+            peer_verifiers: BTreeMap::from([
+                (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+                (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+                // Failures in an unmatched verifier are irrelevant as it is never invoked
+                (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            ]),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
+        };
+
+        let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
+
+        let attest_request = AttestRequest {
+            endorsed_evidence: BTreeMap::from([
+                (
+                    MATCHED_ATTESTER_ID1.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    MATCHED_ATTESTER_ID2.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    UNMATCHED_ATTESTER_ID.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+            ]),
+        };
+        assert_that!(
+            server_attestation_provider.put_incoming_message(attest_request),
+            ok(some(()))
+        );
+        assert_that!(
+            server_attestation_provider.take_attestation_verdict(),
+            ok(matches_pattern!(AttestationVerdict::AttestationPassed {
+                attestation_results: unordered_elements_are!(
+                    (
+                        eq(MATCHED_ATTESTER_ID1),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (
+                        eq(MATCHED_ATTESTER_ID2),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
+                    (
+                        eq(UNMATCHED_ATTESTER_ID),
+                        matches_pattern!(VerifierResult::Unverified(anything())),
+                    )
+                ),
+            })),
+            "Attestation type {attestation_type:?} should fail with an unmatched verifier"
+        );
+    }
+
+    Ok(())
+}
+
+#[googletest::test]
+fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<()> {
+    for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
+        let client_config = AttestationHandlerConfig {
+            attestation_type,
+            self_attesters: BTreeMap::from([]),
+            self_endorsers: BTreeMap::from([]),
+            peer_verifiers: BTreeMap::from([
+                (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+                (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
+                (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            ]),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
+        };
+
+        let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
+
+        let attest_response = AttestResponse {
+            endorsed_evidence: BTreeMap::from([
+                (
+                    MATCHED_ATTESTER_ID1.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    MATCHED_ATTESTER_ID2.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    UNMATCHED_ATTESTER_ID.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+            ]),
+        };
+        assert_that!(
+            client_attestation_provider.put_incoming_message(attest_response),
+            ok(some(()))
+        );
+        assert_that!(
+            client_attestation_provider.take_attestation_verdict(),
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+                reason: starts_with("Verification failed"),
+                attestation_results: unordered_elements_are!(
+                    (
+                        eq(MATCHED_ATTESTER_ID1),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (
+                        eq(MATCHED_ATTESTER_ID2),
+                        matches_pattern!(VerifierResult::Failure(anything())),
+                    ),
+                    (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
+                    (
+                        eq(UNMATCHED_ATTESTER_ID),
+                        matches_pattern!(VerifierResult::Unverified(anything())),
+                    )
+                ),
+            })),
+            "Attestation type {attestation_type:?} should fail with an unmatched verifier"
+        );
+    }
+
+    Ok(())
+}
+
+#[googletest::test]
+fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<()> {
+    for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
+        let server_config = AttestationHandlerConfig {
+            attestation_type,
+            self_attesters: BTreeMap::from([]),
+            self_endorsers: BTreeMap::from([]),
+            peer_verifiers: BTreeMap::from([
+                (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
+                (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
+                (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            ]),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
+        };
+
+        let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
+
+        let attest_request = AttestRequest {
+            endorsed_evidence: BTreeMap::from([
+                (
+                    MATCHED_ATTESTER_ID1.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    MATCHED_ATTESTER_ID2.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+                (
+                    UNMATCHED_ATTESTER_ID.to_string(),
+                    EndorsedEvidence {
+                        evidence: Some(Evidence { ..Default::default() }),
+                        endorsements: Some(Endorsements { ..Default::default() }),
+                    },
+                ),
+            ]),
+        };
+        assert_that!(
+            server_attestation_provider.put_incoming_message(attest_request),
+            ok(some(()))
+        );
+        assert_that!(
+            server_attestation_provider.take_attestation_verdict(),
+            ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+                reason: starts_with("Verification failed"),
+                attestation_results: unordered_elements_are!(
+                    (
+                        eq(MATCHED_ATTESTER_ID1),
+                        matches_pattern!(VerifierResult::Success(anything())),
+                    ),
+                    (
+                        eq(MATCHED_ATTESTER_ID2),
+                        matches_pattern!(VerifierResult::Failure(anything())),
+                    ),
+                    (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
+                    (
+                        eq(UNMATCHED_ATTESTER_ID),
+                        matches_pattern!(VerifierResult::Unverified(anything())),
+                    )
+                ),
             })),
             "Attestation type {attestation_type:?} should fail with an unmatched verifier"
         );
@@ -640,7 +932,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
                 UNMATCHED_VERIFIER_ID.to_string(),
                 create_passing_mock_verifier(),
             )]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -675,7 +967,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
                 UNMATCHED_VERIFIER_ID.to_string(),
                 create_passing_mock_verifier(),
             )]),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -709,7 +1001,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -751,7 +1043,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -793,7 +1085,7 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
@@ -832,7 +1124,7 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
@@ -878,7 +1170,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
     let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
@@ -894,7 +1186,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let results = do_attestation_exchange(client_config, server_config)?;
@@ -927,7 +1219,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID2.to_string(),
             create_failing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
     let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
@@ -943,7 +1235,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_failing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let results = do_attestation_exchange(client_config, server_config)?;
@@ -976,7 +1268,7 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
     let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::SelfUnidirectional,
@@ -989,7 +1281,7 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
             create_mock_endorser(),
         )]),
         peer_verifiers: BTreeMap::from([]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let results = do_attestation_exchange(client_config, server_config)?;
@@ -1016,7 +1308,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
     let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
@@ -1032,7 +1324,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
             UNMATCHED_ATTESTER_ID.to_string(),
             create_passing_mock_verifier(),
         )]),
-        attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+        attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
     };
 
     let results = do_attestation_exchange(client_config, server_config)?;

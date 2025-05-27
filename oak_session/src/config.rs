@@ -47,7 +47,7 @@ use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
 use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 use crate::{
-    attestation::{AttestationAggregator, AttestationType, DefaultAttestationAggregator},
+    attestation::{AttestationType, DefaultVerifierResultsAggregator, VerifierResultsAggregator},
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
@@ -130,7 +130,7 @@ impl SessionConfigBuilder {
             self_attesters: BTreeMap::new(),
             self_endorsers: BTreeMap::new(),
             peer_verifiers: BTreeMap::new(),
-            attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
+            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
         };
 
         let handshake_handler_config = HandshakeHandlerConfig {
@@ -433,7 +433,7 @@ pub struct AttestationHandlerConfig {
     /// Logic to combine multiple attestation verification results (if the peer
     /// provides evidence from different attesters) into a single overall
     /// [`AttestationVerdict`].
-    pub attestation_aggregator: Box<dyn AttestationAggregator>,
+    pub attestation_results_aggregator: Box<dyn VerifierResultsAggregator>,
 }
 
 /// Configuration for the cryptographic handshake phase of a session.

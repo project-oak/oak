@@ -61,8 +61,9 @@
 //!     - `peer_verifiers`: A map of `AttestationVerifier`s used to verify the
 //!       peer's `EndorsedEvidence`. Each verifier is associated with an
 //!       "attestation ID" allowing multiple types of evidence to be processed.
-//!     - `attestation_aggregator`: An `AttestationAggregator` that determines
-//!       the overall outcome if multiple pieces of evidence are verified.
+//!     - `attestation_aggregator`: An `VerifierResultsAggregator` that
+//!       determines the overall outcome if multiple pieces of evidence are
+//!       verified.
 //!
 //! - **`AttestationVerdict`**: An enum (`AttestationPassed` or
 //!   `AttestationFailed`) representing the final outcome of the attestation
@@ -71,7 +72,8 @@
 //!   from successful verifications, which can be used later (e.g., for session
 //!   binding).
 //!
-//! - **`AttestationAggregator` Trait (and `DefaultAttestationAggregator`)**:
+//! - **`VerifierResultsAggregator` Trait (and
+//!   `DefaultVerifierResultsAggregator`)**:
 //!   - **Purpose**: Defines how multiple individual `AttestationResults` (from
 //!     verifying different pieces of peer evidence) are combined into a single
 //!     `AttestationVerdict`.
@@ -79,11 +81,11 @@
 //!     sources (e.g., hardware attestation, software attestation). The
 //!     aggregator decides if the overall attestation is successful based on a
 //!     defined policy.
-//!   - **`DefaultAttestationAggregator`**: Requires at least one piece of
+//!   - **`DefaultVerifierResultsAggregator`**: Requires at least one piece of
 //!     evidence to be successfully verified and all verified pieces to be
 //!     successful.
 
-use alloc::{collections::BTreeMap, string::String, sync::Arc};
+use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use anyhow::{anyhow, Context, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
@@ -105,17 +107,17 @@ use crate::{config::AttestationHandlerConfig, ProtocolEngine};
 pub enum AttestationVerdict {
     /// Indicates that the attestation process completed successfully.
     ///
-    /// Contains a map of `AttestationResults` for each attestation ID that
+    /// Contains a map of `VerifierResult`s for each attestation ID that
     /// was successfully verified. This map can be used by other parts of the
     /// session establishment process, for instance, to extract keys for session
     /// binding.
-    AttestationPassed { attestation_results: BTreeMap<String, AttestationResults> },
+    AttestationPassed { attestation_results: BTreeMap<String, VerifierResult> },
 
     /// Indicates that the attestation process failed.
     ///
     /// Provides a general `reason` for the failure and a map of
-    /// `error_messages` detailing failures for specific attestation IDs.
-    AttestationFailed { reason: String, error_messages: BTreeMap<String, String> },
+    /// `attestation_results` for specific attestation IDs for further details.
+    AttestationFailed { reason: String, attestation_results: BTreeMap<String, VerifierResult> },
 }
 
 /// Defines the configuration for the attestation flow between two parties.
@@ -137,7 +139,20 @@ pub enum AttestationType {
     Unattested,
 }
 
-/// Defines the contract for an attestation provider.
+/// Verification result for an individual verifier (per attestation type)
+#[derive(Clone, Debug, PartialEq)]
+pub enum VerifierResult {
+    // Verifier yielded a success result
+    Success(AttestationResults),
+    // Verifier returned a failure
+    Failure(AttestationResults),
+    // No evidence have been supplied for the verifier
+    Missing,
+    // The evidence has been presented but no verifier is confiugured
+    Unverified(EndorsedEvidence),
+}
+
+/// Defines the contract for an attestation handler.
 ///
 /// An `AttestationHandler` is responsible for managing the attestation process
 /// for one side of the communication (either client or server). It handles the
@@ -156,17 +171,17 @@ pub trait AttestationHandler: Send {
 /// single verdict.
 ///
 /// In scenarios where multiple attestation mechanisms are used (identified by
-/// different attestation IDs), an `AttestationAggregator` determines the
+/// different attestation IDs), an `VerifierResultsAggregator` determines the
 /// overall success or failure of the attestation phase based on the individual
 /// results.
-pub trait AttestationAggregator: Send {
+pub trait VerifierResultsAggregator: Send {
     fn aggregate_attestation_results(
         &self,
-        results: BTreeMap<String, AttestationResults>,
+        results: BTreeMap<String, VerifierResult>,
     ) -> AttestationVerdict;
 }
 
-/// A default implementation of the `AttestationAggregator` trait.
+/// A default implementation of the `VerifierResultsAggregator` trait.
 ///
 /// This aggregator requires that:
 /// 1. There is at least one attestation result provided.
@@ -175,9 +190,9 @@ pub trait AttestationAggregator: Send {
 /// It operates on the principle that only evidence matching a configured peer
 /// verifier is considered, effectively performing an inner join between
 /// expected verifiers and received evidence.
-pub struct DefaultAttestationAggregator {}
+pub struct DefaultVerifierResultsAggregator {}
 
-impl AttestationAggregator for DefaultAttestationAggregator {
+impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
     /// Aggregates results based on the default policy: at least one result, and
     /// all must be successful.
     ///
@@ -188,25 +203,35 @@ impl AttestationAggregator for DefaultAttestationAggregator {
     /// with the original results.
     fn aggregate_attestation_results(
         &self,
-        results: BTreeMap<String, AttestationResults>,
+        results: BTreeMap<String, VerifierResult>,
     ) -> AttestationVerdict {
-        if results.is_empty() {
+        let mut has_match = false;
+        let mut failures: BTreeMap<&String, &AttestationResults> = BTreeMap::new();
+        results.iter().for_each(|(id, v)| match v {
+            VerifierResult::Success(_) => has_match = true,
+            VerifierResult::Failure(attestation_results) => {
+                has_match = true;
+                failures.insert(id, attestation_results);
+            }
+            _ => {}
+        });
+        if !has_match {
             return AttestationVerdict::AttestationFailed {
                 reason: String::from("No matching attestation results"),
-                error_messages: BTreeMap::new(),
+                attestation_results: results,
             };
         }
-        let failures: BTreeMap<&String, &AttestationResults> = results
-            .iter()
-            .filter(|(_, v)| v.status == attestation_results::Status::GenericFailure as i32)
-            .collect();
         if !failures.is_empty() {
             AttestationVerdict::AttestationFailed {
-                reason: String::from("Verification failed"),
-                error_messages: failures
-                    .iter()
-                    .map(|(id, v)| ((*id).clone(), v.reason.clone()))
-                    .collect(),
+                reason: format!(
+                    "Verification failed. {}",
+                    failures
+                        .iter()
+                        .map(|(id, results)| format!("ID {}: {}", id, results.reason))
+                        .collect::<Vec<String>>()
+                        .join(";")
+                ),
+                attestation_results: results,
             }
         } else {
             AttestationVerdict::AttestationPassed { attestation_results: results }
@@ -310,7 +335,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
         }
         self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
-                Some(self.config.attestation_aggregator.aggregate_attestation_results(
+                Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
@@ -421,7 +446,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
         }
         self.attestation_result = match self.config.attestation_type {
             AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
-                Some(self.config.attestation_aggregator.aggregate_attestation_results(
+                Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
                     combine_attestation_results(
                         &self.config.peer_verifiers,
                         &incoming_message.endorsed_evidence,
@@ -453,28 +478,33 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
 fn combine_attestation_results(
     verifiers: &BTreeMap<String, Arc<dyn AttestationVerifier>>,
     attested_evidence: &BTreeMap<String, EndorsedEvidence>,
-) -> Result<BTreeMap<String, AttestationResults>, Error> {
-    let verifiable_evidence = verifiers
+) -> Result<BTreeMap<String, VerifierResult>, Error> {
+    verifiers
         .iter()
         .merge_join_by(attested_evidence.iter(), |(id1, _), (id2, _)| Ord::cmp(id1, id2))
-        .filter_map(|v| match v {
-            EitherOrBoth::Both((id, verifier), (_, e)) => Some((id, (verifier, e))),
-            _ => None,
-        });
-    let mut attestation_results = BTreeMap::new();
-    for (id, (verifier, e)) in verifiable_evidence {
-        attestation_results.insert(
-            id.clone(),
-            verifier.verify(
-                e.evidence
-                    .as_ref()
-                    .context(format!("Missing evidence in the attest response for ID {}", id))?,
-                e.endorsements.as_ref().context(format!(
-                    "Missing endorsements in the attest response for ID {}",
-                    id
-                ))?,
-            )?,
-        );
-    }
-    Ok(attestation_results)
+        .map(|v| match v {
+            EitherOrBoth::Both((id, verifier), (_, e)) => {
+                let result = verifier.verify(
+                    e.evidence.as_ref().context(format!(
+                        "Missing evidence in the attest response for ID {}",
+                        id
+                    ))?,
+                    e.endorsements.as_ref().context(format!(
+                        "Missing endorsements in the attest response for ID {}",
+                        id
+                    ))?,
+                )?;
+                Ok((
+                    id.clone(),
+                    if result.status == attestation_results::Status::Success as i32 {
+                        VerifierResult::Success(result)
+                    } else {
+                        VerifierResult::Failure(result)
+                    },
+                ))
+            }
+            EitherOrBoth::Left((id, _)) => Ok((id.clone(), VerifierResult::Missing)),
+            EitherOrBoth::Right((id, e)) => Ok((id.clone(), VerifierResult::Unverified(e.clone()))),
+        })
+        .collect::<Result<BTreeMap<String, VerifierResult>, Error>>()
 }
