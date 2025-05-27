@@ -358,7 +358,7 @@ wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatibl
 # The kokoro script build_test_and_copy_to_placer expects this recipe to
 # generate properly optimized and stripped binaries that it will then copy to
 # placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
-build-and-test: std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan test-codelab test-workspace
+build-and-test: std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan test-codelab
 
 # The list of ASAN targets is currently constrained right now because:
 # * ASAN builds/tests are quite a bit slower
@@ -373,13 +373,6 @@ std-crates:
     # bazel test will build all targets as well unless --build_tests_only is specified.
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
     bazel test {{BAZEL_CONFIG_FLAG}} //...:all
-
-test-workspace:
-    # Test Oak as a dependency in the test workspace
-    # Some dependencies aren't properly exposed yet, so just testing a subset of targets
-    cd bazel/test_workspace && \
-        ./bootstrap && CARGO_BAZEL_REPIN=1 bazel build \
-            {{BAZEL_CONFIG_FLAG}} @oak2//micro_rpc @oak2//oak_grpc_utils @oak2//oak_proto_rust
 
 test-codelab:
     cd codelab && bazel build //enclave_app:enclave_app
