@@ -486,7 +486,7 @@ fn proto_serialization_test() {
     let request =
         KeySyncRequest { pm_uid: "12345678910".to_string(), key_encryption_key: vec![1, 2, 3] };
     println!("Serailization {:?}", serde_json::to_string(&request));
-    let json_str = "{\"keyEncryptionKey\":\"AQID\",\"pmUid\":\"12345678910\"}";
+    let json_str = r#"{"keyEncryptionKey":"AQID","pmUid":"12345678910"}"#;
     let request_from_string_num = serde_json::from_str::<KeySyncRequest>(json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
 }
