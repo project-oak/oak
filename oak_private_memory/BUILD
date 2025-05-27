@@ -63,6 +63,7 @@ rust_library(
         "src/app_service.rs",
         "src/database.rs",
         "src/encryption.rs",
+        "src/external_db_client.rs",
         "src/lib.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],

@@ -18,4 +18,5 @@ pub mod app_config;
 pub mod app_service;
 pub mod database;
 pub mod encryption;
+pub mod external_db_client;
 use println as debug;
