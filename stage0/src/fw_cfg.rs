@@ -27,7 +27,7 @@ use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{allocator::Shared, hal::Port, BootAllocator};
 
@@ -91,7 +91,7 @@ enum FwCfgItems {
 
 /// an individual file entry, 64 bytes total
 #[repr(C)]
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(IntoBytes, FromBytes)]
 pub struct DirEntry {
     /// size of referenced fw_cfg item, big-endian
     size: u32,
@@ -241,14 +241,14 @@ impl<P: crate::Platform> FwCfg<P> {
     /// up to the caller to ensure that the type of `object` is a faithful
     /// representation of the contents of the file; otherwise, `object` may
     /// be left in an invalid state.
-    pub unsafe fn read_file_by_name<T: AsBytes + FromBytes>(
+    pub unsafe fn read_file_by_name<T: IntoBytes + FromBytes>(
         &mut self,
         name: &CStr,
         object: &mut T,
     ) -> Result<usize, &'static str> {
         let entry = self.find(name);
         if let Some(file) = entry {
-            self.read_file(&file, object.as_bytes_mut())
+            self.read_file(&file, object.as_mut_bytes())
         } else {
             Err("couldn't find requested file")
         }
@@ -387,8 +387,8 @@ impl<P: crate::Platform> FwCfg<P> {
         unsafe { self.selector.try_write(selector) }
     }
 
-    fn read<T: AsBytes + FromBytes>(&mut self, object: &mut T) -> Result<(), &'static str> {
-        self.read_buf(object.as_bytes_mut())
+    fn read<T: IntoBytes + FromBytes>(&mut self, object: &mut T) -> Result<(), &'static str> {
+        self.read_buf(object.as_mut_bytes())
     }
 
     fn read_buf(&mut self, buf: &mut [u8]) -> Result<(), &'static str> {

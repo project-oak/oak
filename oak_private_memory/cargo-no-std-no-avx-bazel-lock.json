@@ -1,5 +1,5 @@
 {
-  "checksum": "c199ea7d16e526507f9df8ff664988277250b29c11e07b44db60098ea477e581",
+  "checksum": "459e546a6713e72b0e2fa0942db8b51df7098a8d3434daad4c53d14b44959cce",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3090,8 +3090,9 @@
               "target": "x86_64"
             },
             {
-              "id": "zerocopy 0.7.35",
-              "target": "zerocopy"
+              "id": "zerocopy 0.8.25",
+              "target": "zerocopy",
+              "alias": "zerocopy_08"
             },
             {
               "id": "zeroize 1.8.1",
@@ -10618,62 +10619,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy 0.7.35": {
-      "name": "zerocopy",
-      "version": "0.7.35",
-      "package_url": "https://github.com/google/zerocopy",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/zerocopy/0.7.35/download",
-          "sha256": "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "zerocopy",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "zerocopy",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "derive",
-            "zerocopy-derive"
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "zerocopy-derive 0.7.35",
-              "target": "zerocopy_derive"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.7.35"
-      },
-      "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
-      "license_ids": [
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "zerocopy 0.8.25": {
       "name": "zerocopy",
       "version": "0.8.25",
@@ -10717,7 +10662,9 @@
         ],
         "crate_features": {
           "common": [
-            "simd"
+            "derive",
+            "simd",
+            "zerocopy-derive"
           ],
           "selects": {}
         },
@@ -10732,15 +10679,13 @@
         },
         "edition": "2021",
         "proc_macro_deps": {
-          "common": [],
-          "selects": {
-            "cfg(any())": [
-              {
-                "id": "zerocopy-derive 0.8.25",
-                "target": "zerocopy_derive"
-              }
-            ]
-          }
+          "common": [
+            {
+              "id": "zerocopy-derive 0.8.25",
+              "target": "zerocopy_derive"
+            }
+          ],
+          "selects": {}
         },
         "version": "0.8.25"
       },
@@ -10754,63 +10699,6 @@
         "data_glob": [
           "**"
         ]
-      },
-      "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
-      "license_ids": [
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "zerocopy-derive 0.7.35": {
-      "name": "zerocopy-derive",
-      "version": "0.7.35",
-      "package_url": "https://github.com/google/zerocopy",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/zerocopy-derive/0.7.35/download",
-          "sha256": "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
-        }
-      },
-      "targets": [
-        {
-          "ProcMacro": {
-            "crate_name": "zerocopy_derive",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "zerocopy_derive",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "proc-macro2 1.0.95",
-              "target": "proc_macro2"
-            },
-            {
-              "id": "quote 1.0.36",
-              "target": "quote"
-            },
-            {
-              "id": "syn 2.0.101",
-              "target": "syn"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.7.35"
       },
       "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
       "license_ids": [
@@ -11004,7 +10892,6 @@
     "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [],
     "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [],
     "cfg(all(target_arch = \"loongarch64\", target_os = \"linux\"))": [],
-    "cfg(any())": [],
     "cfg(any(target_arch = \"aarch64\", target_arch = \"x86_64\", target_arch = \"x86\"))": [
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
@@ -11097,7 +10984,7 @@
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
     "x86_64 0.15.2",
-    "zerocopy 0.7.35",
+    "zerocopy 0.8.25",
     "zeroize 1.8.1"
   ],
   "direct_dev_deps": [],

@@ -19,7 +19,7 @@
 //! startup.
 
 use strum::FromRepr;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::FromBytes;
 
 /// The size of the secrets page.
 pub const SECRETS_PAGE_SIZE: usize = 4096;
@@ -34,7 +34,7 @@ pub const SECRETS_PAGE_MAX_VERSION: u32 = 3;
 ///
 /// See Table 4 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 pub struct GuestReservedArea {
     /// VMPL0 Current Guest Message Sequence Number \[31:0\]
     pub vmpl0_guest_seq_low: u32,
@@ -83,7 +83,7 @@ static_assertions::assert_eq_size!(GuestReservedArea, [u8; 96]);
 ///
 /// See: Table 68 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
 #[repr(C, align(4096))]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 pub struct SecretsPage {
     /// The version of the secrets page.
     pub version: u32,

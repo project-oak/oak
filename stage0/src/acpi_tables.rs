@@ -71,7 +71,7 @@ use core::{
 
 use bitflags::bitflags;
 use x86_64::VirtAddr;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 use crate::{acpi::HIGH_MEMORY_ALLOCATOR, Platform};
 
@@ -82,7 +82,7 @@ type ResultStaticErr<T> = Result<T, &'static str>;
 /// Used to locate either the RSDT or XSDT in memory.
 ///
 /// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-#[derive(FromZeroes, FromBytes, AsBytes, Debug)]
+#[derive(FromBytes, IntoBytes, Debug, Immutable)]
 #[repr(C, packed)]
 pub struct Rsdp {
     /// Signature: "RSD PTR " (note the trailing space).
@@ -437,7 +437,7 @@ impl XsdtEntryPtr<'_> {
     }
 
     pub fn set_addr(&mut self, value: u64) {
-        value.to_le_bytes().write_to(self.addr[..].as_mut());
+        value.to_le_bytes().write_to(self.addr[..].as_mut()).unwrap();
         self.validate().expect("XsdtEntryPtr validate failed on set_addr");
     }
 }
@@ -657,7 +657,7 @@ pub struct Madt {
 /// table structure, and it will only `validate` if an instance of this type is
 /// in the expected memory region (EBDA). Not meant to be built and passed
 /// around.
-#[derive(Clone, Copy, Debug, AsBytes)]
+#[derive(Clone, Copy, Debug, IntoBytes, Immutable)]
 #[repr(C, packed)]
 pub struct ControllerHeader {
     // There's only 17 possible types, the rest of the range is reserved. We need
@@ -751,7 +751,7 @@ impl ProcessorLocalX2Apic {
 /// Multiprocessor Wakeup structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.19 of APIC Specification.
-#[derive(Debug, AsBytes)]
+#[derive(Debug, IntoBytes, Immutable)]
 #[repr(C, packed)]
 pub struct MultiprocessorWakeup {
     /// Interrupt structure common header.

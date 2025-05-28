@@ -28,7 +28,7 @@ use oak_dice::evidence::{
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD, EVENT_LOG_FD};
 use p256::ecdsa::SigningKey;
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::{FromZeros, IntoBytes};
 
 lazy_static::lazy_static! {
     pub(crate) static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
@@ -42,7 +42,7 @@ lazy_static::lazy_static! {
 
 fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData> {
     let mut result = RestrictedKernelDiceData::new_zeroed();
-    let buffer = result.as_bytes_mut();
+    let buffer = result.as_mut_bytes();
     let len = read(DICE_DATA_FD, buffer).map_err(|err| anyhow::anyhow!("read failure: {err}"))?;
     if len != buffer.len() {
         anyhow::bail!("invalid dice data size");

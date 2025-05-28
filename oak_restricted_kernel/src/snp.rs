@@ -124,7 +124,7 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
     let cpuid_slice: &[u8] =
         unsafe { from_raw_parts(cpuid_page_address.as_ptr(), Size4KiB::SIZE as usize) };
     CPUID_PAGE
-        .set(CpuidPage::read_from(cpuid_slice).expect("CPUID page byte slice was invalid"))
+        .set(CpuidPage::read_from_bytes(cpuid_slice).expect("CPUID page byte slice was invalid"))
         .expect("couldn't set CPUID page");
     CPUID_PAGE.get().unwrap().validate().expect("invalid CPUID page");
 
@@ -136,7 +136,10 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
     let secrets_slice: &[u8] =
         unsafe { from_raw_parts(secrets_page_address.as_ptr(), Size4KiB::SIZE as usize) };
     SECRETS_PAGE
-        .set(SecretsPage::read_from(secrets_slice).expect("secrets page byte slice was invalid"))
+        .set(
+            SecretsPage::read_from_bytes(secrets_slice)
+                .expect("secrets page byte slice was invalid"),
+        )
         .expect("couldn't set secrets page");
     SECRETS_PAGE.get().unwrap().validate().expect("invalid secrets page");
 }

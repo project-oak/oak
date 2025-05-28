@@ -249,10 +249,11 @@ def _common_crates(std):
             version = "0.2.5",
         ),
         "x86_64": crate.spec(version = "=0.15.2"),
-        "zerocopy": crate.spec(
+        "zerocopy_08": crate.spec(
+            package = "zerocopy",
             default_features = False,
             features = ["derive"],
-            version = "0.7.32",
+            version = "0.8.25",
         ),
         "zeroize": crate.spec(
             features = ["derive"],

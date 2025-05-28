@@ -25,13 +25,13 @@
 
 use bitflags::bitflags;
 use strum::FromRepr;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes, KnownLayout};
 
 /// A signed attestation report.
 ///
 /// See Table 22 of the specification.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct AttestationReport {
     /// The data contained in the report.
     pub data: AttestationReportData,
@@ -74,7 +74,7 @@ pub const REPORT_DATA_SIZE: usize = 64;
 ///
 /// See Table 22 of the specification.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
@@ -269,7 +269,7 @@ pub enum SigningKey {
 ///
 /// See Table 9 of the specification.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct GuestPolicy {
     /// The minimum ABI minor version required to launch the guest.
     pub abi_minor: u8,
@@ -308,7 +308,7 @@ impl GuestPolicy {
 ///
 /// See Table 3 of the specification.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP)
     /// bootloader.
@@ -346,7 +346,7 @@ bitflags! {
 ///
 /// See Table 135 of the specification.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct EcdsaSignature {
     /// The R component of this signature. The value is zero-extended and
     /// little-endian encoded.

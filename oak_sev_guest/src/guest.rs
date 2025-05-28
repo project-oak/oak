@@ -24,7 +24,7 @@ use core::mem::size_of;
 use bitflags::bitflags;
 use oak_sev_snp_attestation_report::AttestationReport;
 use strum::{EnumIter, FromRepr};
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, Immutable, IntoBytes};
 
 /// The size of a guest message, including the header and maximum payload size.
 pub const GUEST_MESSAGE_SIZE: usize = 4096;
@@ -47,7 +47,7 @@ pub const CURRENT_ATTESTATION_VERSION: u8 = 2;
 ///
 /// See section 8.26 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C, align(4096))]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes)]
 pub struct GuestMessage {
     /// The message header.
     pub header: GuestMessageHeader,
@@ -79,7 +79,7 @@ impl Default for GuestMessage {
 ///
 /// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct AuthenticatedHeader {
     /// The algorithm used to encrypt the payload.
     ///
@@ -114,7 +114,7 @@ static_assertions::assert_eq_size!(AuthenticatedHeader, [u8; 48]);
 ///
 /// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct GuestMessageHeader {
     /// The authentication tag for the payload and additional data.
     pub auth_tag: [u8; 32],
@@ -266,7 +266,7 @@ pub enum MessageType {
 ///
 /// See Table 18 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes)]
 pub struct KeyRequest {
     /// Selects which key will be used to derive the key.
     ///
@@ -361,7 +361,7 @@ impl Message for KeyRequest {
 ///
 /// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
+#[derive(Debug, FromBytes, IntoBytes)]
 pub struct KeyResponse {
     /// The status of the operation.
     ///
@@ -460,7 +460,7 @@ bitflags! {
 ///
 /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
+#[derive(Debug, IntoBytes, FromBytes)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
     pub report_data: [u8; 64],
@@ -496,7 +496,7 @@ impl Message for AttestationRequest {
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
+#[derive(Debug, FromBytes, IntoBytes)]
 pub struct AttestationResponse {
     /// The status of the operation.
     ///

@@ -323,8 +323,10 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
     match root_layer.platform() {
         TeePlatform::Unspecified => Err(anyhow::anyhow!("unspecified TEE platform")),
         TeePlatform::AmdSevSnp => {
-            let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
-                .context("invalid AMD SEV-SNP attestation report")?;
+            let report = AttestationReport::ref_from_bytes(&root_layer.remote_attestation_report)
+                .map_err(|err| {
+                anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err)
+            })?;
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             let converted_attestation_report = convert_amd_sev_snp_attestation_report(report)?;
@@ -334,8 +336,9 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
         TeePlatform::None => {
             // We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake
             // when not running in a TEE.
-            let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
-                .context("invalid fake attestation report")?;
+            let report =
+                AttestationReport::ref_from_bytes(&root_layer.remote_attestation_report)
+                    .map_err(|err| anyhow::anyhow!("invalid fake attestation report: {}", err))?;
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             let report_data = report.data.report_data.as_ref().to_vec();

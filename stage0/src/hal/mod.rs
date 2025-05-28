@@ -31,7 +31,7 @@ use x86_64::{
     },
     PhysAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{acpi_tables::Rsdp, paging::PageEncryption, zero_page::ZeroPage};
 
@@ -103,7 +103,7 @@ pub trait Platform {
     /// and measure them. This gets executed before asking the fw_cfg device
     /// for E820 table. It should populate the inner E820 table. If this
     /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
-    fn prefill_e820_table<T: AsBytes + FromBytes>(input: &mut T) -> Result<usize, &'static str>;
+    fn prefill_e820_table<T: IntoBytes + FromBytes>(input: &mut T) -> Result<usize, &'static str>;
 
     /// Platform-specific intialization.
     ///

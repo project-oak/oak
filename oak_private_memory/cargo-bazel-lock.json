@@ -1,5 +1,5 @@
 {
-  "checksum": "cc28b2e04de420d5bdd4c72f5099f3a82bacdf6ab15b13a52e62977c16efad35",
+  "checksum": "e4adb35ad0363ffcc389e07bb17bf7c4c50455fdbf69598efec35ca337fb02dc",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7581,8 +7581,9 @@
               "target": "xz2"
             },
             {
-              "id": "zerocopy 0.7.35",
-              "target": "zerocopy"
+              "id": "zerocopy 0.8.25",
+              "target": "zerocopy",
+              "alias": "zerocopy_08"
             },
             {
               "id": "zeroize 1.8.1",
@@ -19113,7 +19114,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.24",
+              "id": "zerocopy 0.8.25",
               "target": "zerocopy"
             }
           ],
@@ -34667,21 +34668,21 @@
         ],
         "crate_features": {
           "common": [
-            "derive",
-            "simd",
-            "zerocopy-derive"
+            "simd"
           ],
           "selects": {}
         },
         "edition": "2018",
         "proc_macro_deps": {
-          "common": [
-            {
-              "id": "zerocopy-derive 0.7.35",
-              "target": "zerocopy_derive"
-            }
-          ],
-          "selects": {}
+          "common": [],
+          "selects": {
+            "cfg(any())": [
+              {
+                "id": "zerocopy-derive 0.7.35",
+                "target": "zerocopy_derive"
+              }
+            ]
+          }
         },
         "version": "0.7.35"
       },
@@ -34693,14 +34694,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy 0.8.24": {
+    "zerocopy 0.8.25": {
       "name": "zerocopy",
-      "version": "0.8.24",
+      "version": "0.8.25",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy/0.8.24/download",
-          "sha256": "2586fea28e186957ef732a5f8b3be2da217d65c5969d4b1e17f973ebbe876879"
+          "url": "https://static.crates.io/crates/zerocopy/0.8.25/download",
+          "sha256": "a1702d9583232ddb9174e01bb7c15a2ab8fb1bc6f227aa1233858c351a3ba0cb"
         }
       },
       "targets": [
@@ -34736,14 +34737,16 @@
         ],
         "crate_features": {
           "common": [
-            "simd"
+            "derive",
+            "simd",
+            "zerocopy-derive"
           ],
           "selects": {}
         },
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.24",
+              "id": "zerocopy 0.8.25",
               "target": "build_script_build"
             }
           ],
@@ -34751,17 +34754,15 @@
         },
         "edition": "2021",
         "proc_macro_deps": {
-          "common": [],
-          "selects": {
-            "cfg(any())": [
-              {
-                "id": "zerocopy-derive 0.8.24",
-                "target": "zerocopy_derive"
-              }
-            ]
-          }
+          "common": [
+            {
+              "id": "zerocopy-derive 0.8.25",
+              "target": "zerocopy_derive"
+            }
+          ],
+          "selects": {}
         },
-        "version": "0.8.24"
+        "version": "0.8.25"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -34839,14 +34840,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy-derive 0.8.24": {
+    "zerocopy-derive 0.8.25": {
       "name": "zerocopy-derive",
-      "version": "0.8.24",
+      "version": "0.8.25",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.24/download",
-          "sha256": "a996a8f63c5c4448cd959ac1bab0aaa3306ccfd060472f85943ee0750f0169be"
+          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.25/download",
+          "sha256": "28a6e20d751156648aa063f3800b706ee209a32c0b4d9f24be3d980b01be55ef"
         }
       },
       "targets": [
@@ -34886,7 +34887,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.8.24"
+        "version": "0.8.25"
       },
       "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
       "license_ids": [
@@ -35516,7 +35517,7 @@
     "x509-cert 0.2.5",
     "x86_64 0.15.2",
     "xz2 0.1.7",
-    "zerocopy 0.7.35",
+    "zerocopy 0.8.25",
     "zeroize 1.8.1"
   ],
   "direct_dev_deps": [],

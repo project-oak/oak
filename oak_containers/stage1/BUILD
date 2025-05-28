@@ -44,7 +44,7 @@ rust_library(
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:x86_64",
         "@oak_crates_index//:xz2",
-        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zerocopy_08",
         "@oak_crates_index//:zeroize",
     ],
 )

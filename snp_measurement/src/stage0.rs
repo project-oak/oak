@@ -25,7 +25,7 @@ use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,
 };
-use zerocopy::AsBytes;
+use zerocopy::IntoBytes;
 
 use crate::page::PageType;
 
@@ -85,7 +85,7 @@ impl SnpRomParsing for Stage0Info {
         // reverse offset from the end of the firmware image to the start of the
         // SEV metadata section.
         let mut sev_metadata_offset: u32 = 0;
-        sev_metadata_offset.as_bytes_mut().copy_from_slice(sev_metadata_content);
+        sev_metadata_offset.as_mut_bytes().copy_from_slice(sev_metadata_content);
         let sev_metadata_offset = sev_metadata_offset as usize;
         trace!("SEV metadata offset: {}", sev_metadata_offset);
         assert!(sev_metadata_offset < self.bytes.len(), "invalid SEV metadata offset");
@@ -116,7 +116,7 @@ impl SnpRomParsing for Stage0Info {
         // bytes that represent the 32-bit unsigned little-endian encoding of
         // the reset address.
         let mut sev_es_reset_address: u32 = 0;
-        sev_es_reset_address.as_bytes_mut().copy_from_slice(sev_es_reset_block_content);
+        sev_es_reset_address.as_mut_bytes().copy_from_slice(sev_es_reset_block_content);
         sev_es_reset_address.into()
     }
 }
@@ -147,7 +147,7 @@ impl SevMetadataPageInfo {
     fn parse(bytes: &[u8]) -> Self {
         assert!(bytes.len() == SEV_METADATA_ENTRY_SIZE);
         let mut base: u32 = 0;
-        base.as_bytes_mut().copy_from_slice(&bytes[0..4]);
+        base.as_mut_bytes().copy_from_slice(&bytes[0..4]);
         let start_address = PhysAddr::new(base as u64);
         assert_eq!(
             start_address,
@@ -156,12 +156,12 @@ impl SevMetadataPageInfo {
         );
 
         let mut size: u32 = 0;
-        size.as_bytes_mut().copy_from_slice(&bytes[4..8]);
+        size.as_mut_bytes().copy_from_slice(&bytes[4..8]);
         assert_eq!((size as u64) % Size4KiB::SIZE, 0, "invalid SEV metadata entry size");
         let page_count = (size as usize) / (Size4KiB::SIZE as usize);
 
         let mut page_type: u32 = 0;
-        page_type.as_bytes_mut().copy_from_slice(&bytes[8..12]);
+        page_type.as_mut_bytes().copy_from_slice(&bytes[8..12]);
         trace!("Metadata page entry: base: {}, size: {}, page_type: {}", base, size, page_type);
         let page_type = SevMetadataPageType::from_repr(page_type)
             .expect("invalid SEV metadata page type")
@@ -230,13 +230,13 @@ impl SevMetadataHeader {
         signature[..].copy_from_slice(&bytes[..4]);
         assert_eq!(signature, SEV_SECTION_SIGNATURE, "invalid signature for SEV metadata section");
         let mut version: u32 = 0;
-        version.as_bytes_mut().copy_from_slice(&bytes[8..12]);
+        version.as_mut_bytes().copy_from_slice(&bytes[8..12]);
         assert_eq!(version, SEV_METADATA_VERSION, "invalid version for SEV metadata section");
 
         let mut length: u32 = 0;
-        length.as_bytes_mut().copy_from_slice(&bytes[4..8]);
+        length.as_mut_bytes().copy_from_slice(&bytes[4..8]);
         let mut count: u32 = 0;
-        count.as_bytes_mut().copy_from_slice(&bytes[12..16]);
+        count.as_mut_bytes().copy_from_slice(&bytes[12..16]);
         trace!("SEV metadata header: length:{}, count:{}", length, count);
         assert_eq!(
             length,

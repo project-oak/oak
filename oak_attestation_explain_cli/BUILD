@@ -33,6 +33,6 @@ rust_binary(
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:sha2",
-        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zerocopy_08",
     ],
 )

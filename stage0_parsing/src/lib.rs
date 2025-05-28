@@ -17,7 +17,7 @@ use std::{collections::HashMap, mem::size_of};
 
 use log::trace;
 use x86_64::PhysAddr;
-use zerocopy::AsBytes;
+use zerocopy::IntoBytes;
 
 /// The header of a guid table entry.
 ///
@@ -33,10 +33,10 @@ impl GuidTableEntryHeader {
         let mut guid: u128 = 0;
         let guid_end = bytes.len();
         let guid_start = guid_end - size_of::<u128>();
-        guid.as_bytes_mut().copy_from_slice(&bytes[guid_start..guid_end]);
+        guid.as_mut_bytes().copy_from_slice(&bytes[guid_start..guid_end]);
         let mut size: u16 = 0;
         let size_start = guid_start - size_of::<u16>();
-        size.as_bytes_mut().copy_from_slice(&bytes[size_start..guid_start]);
+        size.as_mut_bytes().copy_from_slice(&bytes[size_start..guid_start]);
         Self { guid, size }
     }
 }

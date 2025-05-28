@@ -23,7 +23,7 @@ use x86_64::{
     structures::paging::{page::NotGiantPageSize, PageSize, PhysFrame, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
 use crate::{
     cpuid::{CpuidInput, CpuidOutput},
@@ -127,7 +127,7 @@ const SHARED_BUFFER_SIZE: usize = 2032;
 ///
 /// See: Table 3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>
 #[repr(C, align(4096))]
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes)]
 pub struct Ghcb {
     /// Reserved. Must be 0.
     _reserved_0: [u8; 203],
@@ -235,7 +235,7 @@ impl AsRef<Ghcb> for Ghcb {
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
 /// Flags indicating which fields in a specific GHCB instance are valid.
-#[derive(Debug, Default, FromZeroes, FromBytes)]
+#[derive(Debug, Default, FromBytes)]
 #[repr(transparent)]
 pub struct ValidBitmap(u128);
 
@@ -420,7 +420,7 @@ where
             ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
             ghcb.valid_bitmap |= ValidBitmap::SW_SCRATCH;
             // Safety: the shared buffer is bigger than an u32.
-            ghcb.shared_buffer.as_bytes_mut()[0..core::mem::size_of::<u32>()]
+            ghcb.shared_buffer.as_mut_bytes()[0..core::mem::size_of::<u32>()]
                 .copy_from_slice(value.as_bytes());
         })
     }
@@ -616,8 +616,8 @@ where
         })?;
 
         let ghcb = self.ghcb.as_ref();
-        let page_state_change = PageStateChange::read_from(&ghcb.shared_buffer)
-            .ok_or("Unexpected length mismatch between PSC request and GHCB shared buffer")?;
+        let page_state_change = PageStateChange::read_from_bytes(&ghcb.shared_buffer)
+            .map_err(|_| "Unexpected length mismatch between PSC request and GHCB shared buffer")?;
         // If cur_entry did not move past end_entry, SW_EXITINFO2 will contain
         // additional information. For now, we just return a generic error.
         if page_state_change.header.cur_entry <= page_state_change.header.end_entry {
@@ -674,7 +674,7 @@ fn reset_slice(slice: &mut [u8]) {
 }
 
 #[repr(C)]
-#[derive(AsBytes, FromBytes, FromZeroes)]
+#[derive(IntoBytes, FromBytes, Immutable)]
 struct PageStateChangeHeader {
     cur_entry: u16,
     end_entry: u16,
@@ -685,7 +685,7 @@ struct PageStateChangeHeader {
 ///
 /// See section 4.1.6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 #[repr(C)]
-#[derive(AsBytes, FromBytes, FromZeroes)]
+#[derive(IntoBytes, FromBytes, Immutable)]
 struct PageStateChange {
     header: PageStateChangeHeader,
     entry: [u64; 253],

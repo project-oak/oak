@@ -1,5 +1,5 @@
 {
-  "checksum": "9aca28559fc200fa9800324b019b2e3f648e5cfbd1e2547b4e654994b532797d",
+  "checksum": "0e317e75353e168fdbc6b1b2d7326d69c6417560c39fb341b4430834284126ce",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3098,8 +3098,9 @@
               "target": "x86_64"
             },
             {
-              "id": "zerocopy 0.7.34",
-              "target": "zerocopy"
+              "id": "zerocopy 0.8.25",
+              "target": "zerocopy",
+              "alias": "zerocopy_08"
             },
             {
               "id": "zeroize 1.8.1",
@@ -10807,7 +10808,9 @@
         ],
         "crate_features": {
           "common": [
-            "simd"
+            "derive",
+            "simd",
+            "zerocopy-derive"
           ],
           "selects": {}
         },
@@ -10822,15 +10825,13 @@
         },
         "edition": "2021",
         "proc_macro_deps": {
-          "common": [],
-          "selects": {
-            "cfg(any())": [
-              {
-                "id": "zerocopy-derive 0.8.25",
-                "target": "zerocopy_derive"
-              }
-            ]
-          }
+          "common": [
+            {
+              "id": "zerocopy-derive 0.8.25",
+              "target": "zerocopy_derive"
+            }
+          ],
+          "selects": {}
         },
         "version": "0.8.25"
       },
@@ -11094,7 +11095,6 @@
     "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [],
     "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [],
     "cfg(all(target_arch = \"loongarch64\", target_os = \"linux\"))": [],
-    "cfg(any())": [],
     "cfg(any(target_arch = \"aarch64\", target_arch = \"x86_64\", target_arch = \"x86\"))": [
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
@@ -11189,7 +11189,7 @@
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
     "x86_64 0.15.2",
-    "zerocopy 0.7.34",
+    "zerocopy 0.8.25",
     "zeroize 1.8.1"
   ],
   "direct_dev_deps": [],

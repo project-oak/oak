@@ -54,7 +54,7 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "@oak_crates_index//:spinning_top",
     "@oak_crates_index//:strum",
     "@oak_crates_index//:x86_64",
-    "@oak_crates_index//:zerocopy",
+    "@oak_crates_index//:zerocopy_08",
     "@oak_crates_index//:zeroize",
 ]
 

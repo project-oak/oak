@@ -386,7 +386,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 )
             };
 
-            let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            let dice_data = oak_dice::evidence::Stage0DiceData::read_from_bytes(dice_memory_slice)
                 .expect("failed to read dice data");
 
             if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {

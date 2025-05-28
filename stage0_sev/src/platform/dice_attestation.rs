@@ -28,7 +28,7 @@ use oak_stage0::{allocator::Shared, hal::Platform};
 use oak_stage0_dice::DerivedKey;
 use spinning_top::Spinlock;
 use x86_64::{PhysAddr, VirtAddr};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{FromBytes, IntoBytes};
 use zeroize::Zeroize;
 
 use super::{GHCB_WRAPPER, SEV_SECRETS};
@@ -55,8 +55,8 @@ pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
 
 /// Sends a request to the Secure Processor using the Guest Message Protocol.
 fn send_guest_message_request<
-    Request: AsBytes + FromBytes + Message,
-    Response: AsBytes + FromBytes + Message,
+    Request: IntoBytes + FromBytes + Message,
+    Response: IntoBytes + FromBytes + Message,
 >(
     request: Request,
 ) -> Result<Response, &'static str> {

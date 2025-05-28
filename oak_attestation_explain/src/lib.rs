@@ -37,7 +37,7 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use sha2::{Digest, Sha256};
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::{FromBytes, KnownLayout};
 
 use crate::alloc::{borrow::ToOwned, string::ToString};
 
@@ -723,7 +723,7 @@ trait OakDigestDisplay {
 /// Convience struct that maintains type safety determinig the length of the
 /// underlying slice. Provides consistent methods for creating and printing the
 /// data.
-#[derive(FromBytes, FromZeroes)]
+#[derive(FromBytes, KnownLayout)]
 struct ArtifactDigestSha2_256(pub [u8; 32]);
 
 impl TryFrom<&RawDigest> for ArtifactDigestSha2_256 {
@@ -741,7 +741,8 @@ impl TryFrom<&[u8]> for ArtifactDigestSha2_256 {
     type Error = anyhow::Error;
 
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-        ArtifactDigestSha2_256::read_from(slice).context("unexpected length of measurement")
+        ArtifactDigestSha2_256::read_from_bytes(slice)
+            .map_err(|err| anyhow::anyhow!("unexpected length of measurement: {}", err))
     }
 }
 
@@ -759,7 +760,7 @@ impl OakDigestDisplay for ArtifactDigestSha2_256 {
 /// Convience struct that maintains type safety determinig the length of the
 /// underlying slice. Provides consistent methods for creating and printing the
 /// data.
-#[derive(FromZeroes, FromBytes)]
+#[derive(FromBytes, KnownLayout)]
 struct SNPInitialMemoryMeasurement([u8; 48]);
 
 impl SNPInitialMemoryMeasurement {
@@ -791,6 +792,7 @@ impl TryFrom<&[u8]> for SNPInitialMemoryMeasurement {
     type Error = anyhow::Error;
 
     fn try_from(slice: &[u8]) -> Result<Self, Self::Error> {
-        SNPInitialMemoryMeasurement::read_from(slice).context("unexpected length of measurement")
+        SNPInitialMemoryMeasurement::read_from_bytes(slice)
+            .map_err(|err| anyhow::anyhow!("unexpected length of measurement: {}", err))
     }
 }

@@ -119,8 +119,8 @@ impl Verifier for TestSignatureVerifier {
 fn extract_attestation_report(evidence: &Evidence) -> anyhow::Result<&AttestationReport> {
     let root_layer =
         &evidence.root_layer.as_ref().context("root DICE layer wasn't provided in the evidence")?;
-    AttestationReport::ref_from(&root_layer.remote_attestation_report)
-        .context("invalid AMD SEV-SNP attestation report")
+    AttestationReport::ref_from_bytes(&root_layer.remote_attestation_report)
+        .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))
 }
 
 // Loads a valid AMD SEV-SNP evidence instance for Oak Containers.

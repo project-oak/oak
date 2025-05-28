@@ -26,7 +26,7 @@ use x509_cert::{
     der::{referenced::OwnedToRef, Encode},
     Certificate,
 };
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::{FromZeros, IntoBytes};
 
 // The keys in the key-value map of X509 certificates are Object Identifiers
 // (OIDs) which have a global registry. The present OIDs are taken from

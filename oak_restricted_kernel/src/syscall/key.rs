@@ -56,7 +56,7 @@ impl FileDescriptor for DerivedKeyDescriptor {
             DerivedKeyDescriptor::Readable(_read_state) => Err(Errno::EINVAL),
             DerivedKeyDescriptor::Writeable(write_state) => {
                 let data_as_slice =
-                    <DerivedKey as zerocopy::AsBytes>::as_bytes_mut(&mut write_state.data);
+                    <DerivedKey as zerocopy::IntoBytes>::as_mut_bytes(&mut write_state.data);
 
                 if buf.len() > data_as_slice[write_state.index..].len() {
                     // the key has a known size. If the app keeps writing to
@@ -70,7 +70,8 @@ impl FileDescriptor for DerivedKeyDescriptor {
 
                 if write_state.index == data_as_slice.len() {
                     let derived_key =
-                        <DerivedKey as zerocopy::FromBytes>::read_from(data_as_slice).unwrap();
+                        <DerivedKey as zerocopy::FromBytes>::read_from_bytes(data_as_slice)
+                            .unwrap();
                     let _ = core::mem::replace(
                         self,
                         Self::Readable(DerivedKeyState { index: 0, data: derived_key }),

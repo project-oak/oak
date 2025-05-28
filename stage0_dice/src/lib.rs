@@ -41,7 +41,7 @@ use oak_proto_rust::oak::attestation::v1::{
 use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use prost::Message;
 use sha2::{Digest, Sha256};
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::{FromZeros, IntoBytes};
 
 pub type DerivedKey = [u8; 32];
 

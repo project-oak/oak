@@ -34,7 +34,7 @@ rust_binary(
         "//oak_restricted_kernel_orchestrator",
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:log",
-        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zerocopy_08",
         "@oak_crates_index//:zeroize",
     ],
 )

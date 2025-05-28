@@ -19,7 +19,7 @@ use core::{mem::size_of, slice};
 
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
     cmos::Cmos,
@@ -93,8 +93,9 @@ impl ZeroPage {
         // later anyway, so we overwrite it with zeros before measuring so
         // we can get consistent measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
         // information on the  field offsets.
-        *u32::mut_from(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") = 0;
-        *u32::mut_from(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
+        *u32::mut_from_bytes(&mut buf[0x218..0x21C]).expect("invalid slice for initrd location") =
+            0;
+        *u32::mut_from_bytes(&mut buf[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
 
         let measurement = buf.measure();
 
@@ -110,7 +111,7 @@ impl ZeroPage {
         // added to the end of the setup header and there is padding after
         // header, so the resulting data stucture should still be understood
         // correctly by the kernel.
-        let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
+        let dest = &mut self.inner.hdr.as_mut_bytes()[..src.len()];
         dest.copy_from_slice(src);
         Some(measurement)
     }

@@ -27,7 +27,7 @@ use oak_dice::evidence::Stage0DiceData;
 use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD, EVENT_LOG_FD};
 use oak_restricted_kernel_orchestrator::AttestedApp;
 use oak_restricted_kernel_sdk::channel::FileDescriptorChannel;
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::{FromZeros, IntoBytes};
 use zeroize::Zeroize;
 
 struct OrchestratorLogger {}
@@ -83,7 +83,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 
 fn read_stage0_dice_data() -> Stage0DiceData {
     let mut result = Stage0DiceData::new_zeroed();
-    let buffer = result.as_bytes_mut();
+    let buffer = result.as_mut_bytes();
     let len = syscall::read(DICE_DATA_FD, buffer).expect("failed to read dice data");
     assert!(len == buffer.len(), "invalid dice data size");
     result
@@ -114,10 +114,10 @@ fn entrypoint() {
 
     syscall::write(DERIVED_KEY_FD, attested_app.derived_key.as_bytes())
         .expect("failed to write derived key");
-    attested_app.derived_key.as_bytes_mut().zeroize();
+    attested_app.derived_key.as_mut_bytes().zeroize();
     syscall::write(DICE_DATA_FD, attested_app.dice_data.as_bytes())
         .expect("failed to write dice data");
-    attested_app.dice_data.as_bytes_mut().zeroize();
+    attested_app.dice_data.as_mut_bytes().zeroize();
     syscall::write(EVENT_LOG_FD, attested_app.get_encoded_event_log().as_slice())
         .expect("failed to write event log");
 

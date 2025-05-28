@@ -48,7 +48,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{FromBytes, IntoBytes};
 use zeroize::Zeroize;
 
 use crate::{
@@ -296,7 +296,7 @@ impl oak_stage0::Platform for Tdx {
     }
 
     #[allow(clippy::if_same_then_else)]
-    fn prefill_e820_table<T: AsBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
+    fn prefill_e820_table<T: IntoBytes + FromBytes>(dest: &mut T) -> Result<usize, &'static str> {
         serial::debug!("Prefill e820 table from TDHOB");
 
         let hit = hob::get_hit()?;
@@ -320,7 +320,7 @@ impl oak_stage0::Platform for Tdx {
 
                 // Figure out the location of the next E820 entry
                 let new_entry_ptr: *mut BootE820Entry = unsafe {
-                    dest.as_bytes_mut().as_mut_ptr().byte_add(index) as *mut BootE820Entry
+                    dest.as_mut_bytes().as_mut_ptr().byte_add(index) as *mut BootE820Entry
                 };
 
                 let entry_type = if curr_src.physical_start == hob::get_hob_start() as u64 {

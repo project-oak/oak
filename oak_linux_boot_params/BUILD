@@ -34,6 +34,6 @@ rust_library(
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:strum",
-        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zerocopy_08",
     ],
 )

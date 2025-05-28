@@ -52,9 +52,10 @@ pub fn verify_root_attestation_signature(
     match root_layer.platform() {
         TeePlatform::Unspecified => anyhow::bail!("unspecified TEE platform"),
         TeePlatform::AmdSevSnp => {
-            let attestation_report =
-                AttestationReport::ref_from(&root_layer.remote_attestation_report)
-                    .context("invalid AMD SEV-SNP attestation report")?;
+            let attestation_report = AttestationReport::ref_from_bytes(
+                &root_layer.remote_attestation_report,
+            )
+            .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
 
             // Ensure the Attestation report is properly signed by the platform and the
             // corresponding certificate is signed by AMD.

@@ -48,7 +48,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
-use zerocopy::AsBytes;
+use zerocopy::IntoBytes;
 use zeroize::Zeroize;
 
 mod acpi;
@@ -350,7 +350,7 @@ trait Measured {
     fn measure(&self) -> Measurement;
 }
 
-impl<T: zerocopy::AsBytes + ?Sized> Measured for T {
+impl<T: zerocopy::IntoBytes + zerocopy::Immutable + ?Sized> Measured for T {
     fn measure(&self) -> Measurement {
         let mut measurement = Measurement::default();
         let mut digest = Sha256::default();

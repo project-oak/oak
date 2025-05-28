@@ -31,6 +31,6 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:static_assertions",
         "@oak_crates_index//:x86_64",
-        "@oak_crates_index//:zerocopy",
+        "@oak_crates_index//:zerocopy_08",
     ],
 )

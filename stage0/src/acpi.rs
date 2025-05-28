@@ -32,7 +32,9 @@ use core::{
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
-use zerocopy::AsBytes;
+#[cfg(test)]
+use zerocopy::Immutable;
+use zerocopy::IntoBytes;
 
 use crate::{
     acpi_tables::{
@@ -363,7 +365,7 @@ static_assertions::assert_eq_size!(Allocate, Pad);
 
 impl Allocate {
     #[cfg(test)]
-    pub fn new<T: AsBytes + ?Sized>(file: &T, align: u32, zone: Zone) -> Self {
+    pub fn new<T: IntoBytes + Immutable + ?Sized>(file: &T, align: u32, zone: Zone) -> Self {
         let mut cmd =
             Self { file: [0; ROMFILE_LOADER_FILESZ], align, zone: zone as u8, _padding: [0; 60] };
         cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
@@ -431,7 +433,12 @@ static_assertions::assert_eq_size!(AddPointer, Pad);
 
 impl AddPointer {
     #[cfg(test)]
-    pub fn new<T: AsBytes + ?Sized>(dest_file: &T, src_file: &T, offset: u32, size: u8) -> Self {
+    pub fn new<T: IntoBytes + Immutable + ?Sized>(
+        dest_file: &T,
+        src_file: &T,
+        offset: u32,
+        size: u8,
+    ) -> Self {
         let mut cmd = Self {
             dest_file: [0; ROMFILE_LOADER_FILESZ],
             src_file: [0; ROMFILE_LOADER_FILESZ],
@@ -471,7 +478,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPointer {
             return Err("COMMAND_ADD_POINTER has invalid size");
         }
         let mut pointer = 0u64;
-        pointer.as_bytes_mut()[..self.size as usize].copy_from_slice(
+        pointer.as_mut_bytes()[..self.size as usize].copy_from_slice(
             &dest_file[self.offset as usize..(self.offset + self.size as u32) as usize],
         );
         pointer += src_file_ptr as u64;
@@ -521,7 +528,12 @@ static_assertions::assert_eq_size!(AddChecksum, Pad);
 
 impl AddChecksum {
     #[cfg(test)]
-    pub fn new<T: AsBytes + ?Sized>(file: &T, offset: u32, start: u32, length: u32) -> Self {
+    pub fn new<T: IntoBytes + Immutable + ?Sized>(
+        file: &T,
+        offset: u32,
+        start: u32,
+        length: u32,
+    ) -> Self {
         let mut cmd =
             Self { file: [0; ROMFILE_LOADER_FILESZ], offset, start, length, _padding: [0; 54] };
         cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
@@ -899,7 +911,7 @@ pub fn build_acpi_tables<P: crate::Platform>(
     let buf = fwcfg.read_file_vec(&file)?;
     acpi_digest.update(&buf);
 
-    // We can't use zerocopy::FromBytes/AsBytes here, as the fields of the structs
+    // We can't use zerocopy::FromBytes/IntoBytes here, as the fields of the structs
     // have padding that zerocopy doesn't support.
     // Safety: we're using `size_of` here to ensure that we don't go over the
     // boundaries of the original array.

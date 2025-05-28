@@ -100,11 +100,11 @@ impl Kernel {
             setup_data[0x211] |= 0x80;
             // Set the default command_line location.
             let default_cmd_line = 0x20000;
-            *u32::mut_from(&mut setup_data[0x228..0x22C]).expect("invalid slice for cmd_line") =
-                default_cmd_line;
+            *u32::mut_from_bytes(&mut setup_data[0x228..0x22C])
+                .expect("invalid slice for cmd_line") = default_cmd_line;
             // Set the offset to the end of the heap.
             let default_setup = 0x10000;
-            *u16::mut_from(&mut setup_data[0x224..0x226])
+            *u16::mut_from_bytes(&mut setup_data[0x224..0x226])
                 .expect("invalid slice for heap end ptr") =
                 (default_cmd_line - default_setup - 0x200) as u16;
         }
@@ -113,9 +113,10 @@ impl Kernel {
         // initial RAM disk. To have stable measurements Stage 0 will overwrite
         // these with zeros, before measuring and then overwrite these with the
         // actual values before booting the kernel.
-        *u32::mut_from(&mut setup_data[0x218..0x21C]).expect("invalid slice for initrd location") =
-            0;
-        *u32::mut_from(&mut setup_data[0x21C..0x220]).expect("invalid slice for initrd size") = 0;
+        *u32::mut_from_bytes(&mut setup_data[0x218..0x21C])
+            .expect("invalid slice for initrd location") = 0;
+        *u32::mut_from_bytes(&mut setup_data[0x21C..0x220])
+            .expect("invalid slice for initrd size") = 0;
         Self { setup_data, kernel_image }
     }
 

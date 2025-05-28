@@ -31,10 +31,10 @@ impl DiceData {
     fn as_mut_slice(&mut self) -> &mut [u8] {
         match self {
             DiceData::Layer0(stage0_dice_data) => {
-                <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data)
+                <Stage0DiceData as zerocopy::IntoBytes>::as_mut_bytes(stage0_dice_data)
             }
             DiceData::Layer1(stage1_dice_data) => {
-                <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes_mut(stage1_dice_data)
+                <RestrictedKernelDiceData as zerocopy::IntoBytes>::as_mut_bytes(stage1_dice_data)
             }
         }
     }
@@ -84,12 +84,13 @@ impl FileDescriptor for DiceDataDescriptor {
         match self {
             DiceDataDescriptor::Readable(read_state) => match &mut read_state.data {
                 DiceData::Layer0(stage0_dice_data) => {
-                    <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data).zeroize();
+                    <Stage0DiceData as zerocopy::IntoBytes>::as_mut_bytes(stage0_dice_data)
+                        .zeroize();
                     let _ = core::mem::replace(
                         self,
                         Self::Writeable(Box::new(WriteState {
                             index: 0,
-                            data: <RestrictedKernelDiceData as zerocopy::FromZeroes>::new_zeroed(),
+                            data: <RestrictedKernelDiceData as zerocopy::FromZeros>::new_zeroed(),
                         })),
                     );
                     self.write(buf)
@@ -97,7 +98,7 @@ impl FileDescriptor for DiceDataDescriptor {
                 _ => Err(Errno::EINVAL),
             },
             DiceDataDescriptor::Writeable(write_state) => {
-                let data_as_slice = <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes_mut(
+                let data_as_slice = <RestrictedKernelDiceData as zerocopy::IntoBytes>::as_mut_bytes(
                     &mut write_state.data,
                 );
 
@@ -113,8 +114,10 @@ impl FileDescriptor for DiceDataDescriptor {
 
                 if write_state.index == data_as_slice.len() {
                     let read_data =
-                        <RestrictedKernelDiceData as zerocopy::FromBytes>::read_from(data_as_slice)
-                            .unwrap();
+                        <RestrictedKernelDiceData as zerocopy::FromBytes>::read_from_bytes(
+                            data_as_slice,
+                        )
+                        .unwrap();
                     let _ = core::mem::replace(
                         self,
                         Self::Readable(Box::new(ReadState {
