@@ -32,51 +32,21 @@ presubmit: \
 presubmit-full: \
     presubmit \
     all_ensure_no_std \
-    kokoro_build_binaries_rust \
     kokoro_verify_buildconfigs \
     oak_containers_tests \
-    kokoro_oak_containers
 
 format:
     bazel build linter && bazel-bin/linter/linter --fix
 
 # -- End Developer Workflow Tools --
 
-# -- BUILD ENCLAVE APPS --
-
-build_all_enclave_apps: build_key_xor_test_app build_oak_echo_enclave_app build_oak_echo_raw_enclave_app build_oak_functions_enclave_app build_oak_orchestrator build_oak_functions_insecure_enclave_app
-
-build_key_xor_test_app: (build_enclave_app "key_xor_test_app")
-build_oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
-build_oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
-build_oak_multi_process_test: (build_enclave_app "oak_multi_process_test")
-build_oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
-build_oak_orchestrator: (build_enclave_app "oak_orchestrator")
-
-# Build a single enclave app, given its name.
-build_enclave_app name:
-    bazel build //enclave_apps/{{name}}
-    mkdir --parents artifacts/enclave_apps/
-    cp --force --preserve=timestamps \
-        bazel-bin/enclave_apps/{{name}}/{{name}} \
-        artifacts/enclave_apps/
-
-build_oak_functions_insecure_enclave_app:
-    bazel build //enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app
-    mkdir --parents artifacts/enclave_apps/
-    cp --force --preserve=timestamps \
-        bazel-bin/enclave_apps/oak_functions_enclave_app/oak_functions_insecure_enclave_app \
-        artifacts/enclave_apps/
-
-# -- END Build Enclave Apps --
-
 run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
-    artifacts/oak_functions_containers_launcher \
+    artifacts/binaries/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
-        --stage0-binary=artifacts/stage0_bin \
-        --kernel=bazel-bin/oak_containers/kernel/bzImage \
-        --initrd=artifacts/stage1.cpio \
-        --system-image=artifacts/oak_containers_system_image.tar.xz \
+        --stage0-binary=artifacts/binaries/stage0_bin \
+        --kernel=artifacts/oak_containers_kernel \
+        --initrd=artifacts/binaries/stage1.cpio \
+        --system-image=artifacts/binaries/oak_containers_system_image.tar.xz \
         --container-bundle=bazel-bin/oak_functions_containers_app/bundle.tar \
         --ramdrive-size=1000000 \
         --memory-size=2G \
@@ -86,47 +56,17 @@ run_oak_functions_containers_launcher wasm_path port lookup_data_path communicat
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
-run_oak_functions_launcher wasm_path port lookup_data_path: (restricted_kernel_bzimage_and_provenance_subjects "_virtio_console_channel")
-    artifacts/oak_functions_launcher \
-        --bios-binary=artifacts/stage0_bin \
+run_oak_functions_launcher wasm_path port lookup_data_path:
+    artifacts/binaries/oak_functions_launcher \
+        --bios-binary=artifacts/binaries/stage0_bin \
         --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
         --vmm-binary=$(which qemu-system-x86_64) \
-        --app-binary=artifacts/enclave_apps/oak_functions_enclave_app \
-        --initrd=artifacts/enclave_apps/oak_orchestrator \
+        --app-binary=artifacts/binaries/oak_functions_enclave_app \
+        --initrd=artifacts/binaries/oak_orchestrator \
         --memory-size=256M \
         --wasm={{wasm_path}} \
         --port={{port}} \
         --lookup-data={{lookup_data_path}}
-
-# Run an integration test for Oak Functions making sure all the dependencies are built.
-run_oak_functions_test: build_oak_orchestrator oak_functions_launcher build_oak_functions_enclave_app (wasm_release_crate "key_value_lookup") oak_restricted_kernel_wrapper_virtio_console_channel
-    cargo test --package=key_value_lookup test_server
-
-# Builds a variant of the restricted kernel and creates a bzImage of it.
-# Then creates provenance subjects for it.
-# kernel_suffix examples: _virtio_console_channel, _simple_io_channel
-restricted_kernel_bzimage_and_provenance_subjects kernel_suffix:
-    mkdir --parents oak_restricted_kernel_wrapper/bin
-
-    # Building in "opt" mode is required so that Rust won't try to prevent underflows.
-    # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build \
-        --compilation_mode opt --platforms=//:x86_64-unknown-none \
-        //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_bin
-
-    # Create provenance subjects for a kernel bzImage, by extracting the setup data
-    # and image to the output directory.
-    bazel build --platforms=//:x86_64-unknown-none \
-        //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper{{kernel_suffix}}_measurement
-
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}* \
-        artifacts
-
-    # Place things where they were built in the cargo world for compatiblity.
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper{{kernel_suffix}}_bin \
-        oak_restricted_kernel_wrapper/bin/wrapper_bzimage{{kernel_suffix}}
 
 # Create provenance subjects for a kernel bzImage, by extracting the setup data
 # and image to the output directory.
@@ -138,47 +78,6 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
         --kernel-setup-data-output="{{output_dir}}/{{kernel_name}}_setup_data" \
         --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
 
-oak_restricted_kernel_bin_virtio_console_channel:
-    # Building in "opt" mode is required so that Rust won't try to prevent underflows.
-    # This check must be OFF otherwise checks will be too conservative and fail at runtime.
-    bazel build \
-         --compilation_mode opt --platforms=//:x86_64-unknown-none \
-        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel
-
-oak_restricted_kernel_wrapper_virtio_console_channel:
-    just restricted_kernel_bzimage_and_provenance_subjects _virtio_console_channel
-
-oak_restricted_kernel_bin_simple_io_channel:
-    bazel build --platforms=//:x86_64-unknown-none \
-        //oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel
-
-oak_restricted_kernel_wrapper_simple_io_channel:
-    just restricted_kernel_bzimage_and_provenance_subjects _simple_io_channel
-
-oak_client_android_app:
-    bazel build \
-        //java/src/main/java/com/google/oak/client/android:client_app
-    # Copy out to a directory which does not change with bazel config and does
-    # not interfere with cargo. It should be reused for other targets as well.
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/java/src/main/java/com/google/oak/client/android/client_app.apk \
-        artifacts
-
-private_memory_presubmit:
-    cd oak_private_memory && nix develop --command just presubmit
-
-oak_private_memory:  private_memory_server private_memory_enclave_bundle
-
-private_memory_server: private_memory_presubmit
-    cp --force --preserve=timestamps --no-preserve=mode \
-        oak_private_memory/bazel-bin/private_memory_server \
-        artifacts
-
-private_memory_enclave_bundle: private_memory_presubmit
-    cp --force --preserve=timestamps --no-preserve=mode \
-        oak_private_memory/bazel-bin/bundle.tar \
-        artifacts/private_memory_enclave_bundle.tar
-
 wasm_crate name:
     cargo build --target=wasm32-unknown-unknown -p {{name}}
 
@@ -187,53 +86,23 @@ wasm_release_crate name:
 
 all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
 
-stage0_bin:
-    bazel build --platforms=//:x86_64-firmware \
-        //stage0_bin:stage0_bin
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/stage0_bin/stage0_bin \
-        artifacts/stage0_bin
+provenance-subjects: \
+    stage0_bin_subjects \
+    oak_containers_kernel_subjects
+
+stage0_bin_subjects: (copy-artifact "stage0_bin" "stage0_bin" "//:x86_64-firmware")
     mkdir -p artifacts/stage0_bin_subjects
     rm --force artifacts/stage0_bin_subjects/*
     bazel run //snp_measurement -- \
         --vcpu-count=1,2,4,8,16,32,64 \
-        --stage0-rom=$(realpath artifacts/stage0_bin) \
+        --stage0-rom=$(realpath artifacts/binaries/stage0_bin) \
         --attestation-measurements-output-dir=$(realpath artifacts/stage0_bin_subjects)
 
-stage0_bin_tdx:
-    bazel build  --platforms=//:x86_64-firmware \
-        //stage0_bin_tdx:stage0_bin_tdx
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/stage0_bin_tdx/stage0_bin_tdx \
-        artifacts/stage0_bin_tdx
-
-stage1_cpio:
-    bazel build //oak_containers/stage1_bin
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_containers/stage1_bin/stage1.cpio \
-        artifacts
-
-stage1_tdx_cpio:
-    bazel build //oak_containers/stage1_bin_tdx
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_containers/stage1_bin_tdx/stage1_tdx.cpio \
-        artifacts
-
-oak_containers_kernel:
-    bazel build //oak_containers/kernel/...
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/kernel/bzImage \
-        artifacts/oak_containers_kernel
+oak_containers_kernel_subjects: (copy-artifact "oak_containers/kernel:bzImage" "oak_containers_kernel")
     just bzimage_provenance_subjects \
         oak_containers_kernel \
-        $(realpath artifacts/oak_containers_kernel) \
+        $(realpath artifacts/binaries/oak_containers_kernel) \
         $(realpath oak_containers)/kernel/bin/subjects
-
-oak_containers_launcher:
-    bazel build //oak_containers/launcher:oak_containers_launcher
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/launcher/oak_containers_launcher \
-        $(realpath artifacts/oak_containers_launcher)
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
@@ -247,41 +116,8 @@ bazel_wasm name:
 
 # Oak Containers Hello World entry point.
 
-oak_containers_hello_world_container_bundle_tar:
-    bazel build //oak_containers/examples/hello_world/enclave_app:bundle.tar
-    # bazel-bin symlink doesn't exist outside of the docker container, this
-    # makes the file available to the kokoro script.
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/examples/hello_world/enclave_app/bundle.tar \
-        artifacts/rust_hello_world_enclave_bundle.tar
-
 cc_oak_containers_hello_world_container_bundle_tar:
     bazel build //cc/containers/hello_world_enclave_app:bundle.tar
-
-# Oak Functions Containers entry point.
-
-oak_functions_containers_app_bundle_tar:
-    bazel build oak_functions_containers_app:bundle oak_functions_containers_app:bundle_insecure
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_functions_containers_app/bundle.tar \
-        artifacts/oak_functions_containers_app_bundle.tar
-
-oak_functions_containers_launcher:
-    bazel build oak_functions_containers_launcher
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_functions_containers_launcher/oak_functions_containers_launcher \
-        artifacts/oak_functions_containers_launcher
-
-oak_functions_launcher:
-    bazel build oak_functions_launcher
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_functions_launcher/oak_functions_launcher \
-        artifacts/oak_functions_launcher
-
-all_oak_functions_containers_binaries: stage0_bin stage0_bin_tdx stage1_cpio stage1_tdx_cpio \
-    oak_containers_kernel oak_containers_system_image \
-    oak_functions_containers_app_bundle_tar oak_functions_containers_launcher \
-    oak_functions_launcher
 
 ensure_no_std package:
     RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
@@ -300,10 +136,6 @@ oak_attestation_explain_wasm:
 check-format:
     bazel build linter && bazel-bin/linter/linter --verbose
 
-kokoro_build_binaries_rust: build_all_enclave_apps oak_restricted_kernel_bin_virtio_console_channel \
-    oak_restricted_kernel_wrapper_simple_io_channel stage0_bin stage0_bin_tdx \
-    oak_client_android_app oak_private_memory
-
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
 
@@ -312,20 +144,6 @@ oak_containers_tests:
     bazel test \
         //oak_containers/... \
         //oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests
-
-kokoro_oak_containers: oak_functions_containers_app_bundle_tar oak_containers_tests \
-    stage0_bin_tdx stage1_tdx_cpio \
-    containers_placer_artifacts
-
-# This is for use with the `oak-containers-test.sh` helper script for testing on the TDX machines.
-# Ask dingelish@ or jibbl@ for more info.
-oak_containers_tdx_testing: stage0_bin_tdx stage1_tdx_cpio \
-    oak_containers_kernel \
-    oak_containers_tdx_system_image \
-    oak_functions_containers_app_bundle_tar \
-    oak_containers_nvidia_system_image \
-    oak_containers_hello_world_container_bundle_tar \
-    oak_containers_launcher containers_placer_artifacts
 
 # --- End Kokoro CI Entry Points ---
 
@@ -345,8 +163,14 @@ wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatibl
 # The kokoro script build_test_and_copy_to_placer expects this recipe to
 # generate properly optimized and stripped binaries that it will then copy to
 # placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
-build-and-test: std-crates bare-metal-crates wasm-crates kokoro_build_binaries_rust asan test-codelab
+build-and-test: \
+    std-crates \
+    bare-metal-crates \
+    wasm-crates \
+    provenance-subjects \
+    test-codelab
 
+build-and-test-and-copy: build-and-test copy-oak-artifacts private-memory-build-and-copy
 # The list of ASAN targets is currently constrained right now because:
 # * ASAN builds/tests are quite a bit slower
 # * In some build targets (cargo_build_scripts for example), LD_LIBRARY_PATH is
@@ -387,9 +211,6 @@ bazel-clippy-ci:
     scripts/clippy_clean
 
 bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
-
-bazel-repin-private-memory:
-    cd oak_private_memory && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 bazel-repin-codelab:
     cd codelab && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
@@ -470,63 +291,120 @@ run-java-functions-client addr:
 run-cc-functions-client addr request:
     bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}
 
-containers_placer_artifacts:
-    # We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
-    # TODO: b/376322165 - Remove the need for this
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
-        artifacts/oak_containers_system_image.tar.xz
+# OAK PRIVATE MEMORY
 
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
-        artifacts/oak_containers_nvidia_system_image.tar.xz
+private_memory_presubmit:
+    cd oak_private_memory && nix develop --command just presubmit
 
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/examples/hello_world/enclave_app/bundle.tar \
-        artifacts/rust_hello_world_enclave_bundle.tar
+private-memory-build-and-copy:
+    cd oak_private_memory && nix develop --command just build-and-test-and-copy
 
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_functions_containers_app/bundle.tar \
-        artifacts/oak_functions_containers_app_bundle.tar
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_functions_containers_app/bundle_insecure.tar \
-        artifacts/oak_functions_containers_app_bundle_insecure.tar
+bazel-repin-private-memory:
+    cd oak_private_memory && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
-    cp --force --preserve=timestamps bazel-bin/oak_containers/kernel/bzImage artifacts/oak_containers_kernel
-    cp --force --preserve=timestamps bazel-bin/oak_containers/agent/bin/oak_containers_agent artifacts
-    cp --force --preserve=timestamps bazel-bin/oak_containers/orchestrator_bin/bin/oak_containers_orchestrator artifacts
-    cp --force --preserve=timestamps bazel-bin/oak_containers/syslogd/oak_containers_syslogd artifacts
+# ARTIFACT COPYING
 
+clean-artifacts:
+    # Removes all ignored files from the specified path
+    git clean -X --force artifacts/**
+
+# This is the core rule for copying binaries that we want to keep available
+# through bazel configuration changes, share with CI hosts, or publish transparently.
+#
+# It ensures that the target is built; this should not add too much time, since already-built
+# targets will quickly complete the "build" command.
+copy-artifact target dest platform="":
+    bazel build {{target}} --platforms={{platform}}
+    mkdir --parents artifacts/binaries
     cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_containers/stage1_bin/stage1.cpio \
-        artifacts/stage1.cpio
+        $(bazel cquery --platforms={{platform}} {{target}} --output files) \
+        artifacts/binaries/{{dest}}
 
-    cp --force --preserve=timestamps --no-preserve=mode \
-        bazel-bin/oak_containers/stage1_bin_tdx/stage1_tdx.cpio \
-        artifacts
+# We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
+# The copy-artifact lines are sorted alphabetically, as they will appear in the result store.
+copy-oak-artifacts: \
+    (copy-artifact "enclave_apps/key_xor_test_app" "key_xor_test_app") \
+    (copy-artifact "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
+    (copy-artifact "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
+    (copy-artifact "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
+    (copy-artifact "oak_containers/kernel:bzImage" "oak_containers_kernel") \
+    (copy-artifact "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
+    (copy-artifact "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
+    (copy-artifact "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
+    (copy-artifact "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "oak_containers_stage1_tdx") \
+    (copy-artifact "oak_containers/syslogd" "oak_containers_syslogd") \
+    (copy-artifact "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
+    (copy-artifact "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
+    (copy-artifact "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app") \
+    (copy-artifact "oak_functions_containers_app/bundle.tar" "oak_functions_container") \
+    (copy-artifact "oak_functions_containers_app/bundle_insecure.tar" "oak_functions_insecure_container") \
+    (copy-artifact "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
+    (copy-artifact "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app") \
+    (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
+    (copy-artifact "stage0_bin" "stage0_bin") \
+    (copy-artifact "stage0_bin_tdx" "stage0_bin_tdx")
 
-bazel_build_copy package target:
-    bazel build "{{package}}:{{target}}"
-    cp --force --preserve=timestamps "bazel-bin/{{package}}/{{target}}" artifacts
 
-oak_containers_agent: (bazel_build_copy "oak_containers/agent" "bin/oak_containers_agent")
-oak_containers_orchestrator: (bazel_build_copy "oak_containers/orchestrator_bin" "bin/oak_containers_orchestrator")
-oak_containers_syslogd: (bazel_build_copy "oak_containers/syslogd" "oak_containers_syslogd")
+### Github Buildconfig rules
+### These correspond to the commands in `buildconfigs/*.sh`
+github-key_xor_test_app: \
+    (copy-artifact "enclave_apps/key_xor_test_app" "key_xor_test_app")
 
-oak_containers_system_image:
-    bazel build oak_containers/system_image:oak_containers_system_image
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_system_image.tar.xz \
-        artifacts
+github-oak_client_android_app: \
+    (copy-artifact "java/src/main/java/com/google/oak/client/android:client_app.apk" "client_app.apk")
 
-oak_containers_tdx_system_image:
-    bazel build oak_containers/system_image:oak_containers_tdx_system_image
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_tdx_system_image.tar.xz \
-        artifacts
+github-oak_containers_agent: \
+    (copy-artifact "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent")
 
-oak_containers_nvidia_system_image:
-    bazel build oak_containers/system_image:oak_containers_nvidia_system_image
-    cp --force --preserve=timestamps \
-        bazel-bin/oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz \
-        artifacts
+github-oak_containers_kernel: oak_containers_kernel_subjects
+
+github-oak_containers_nvidia_system_image: \
+    (copy-artifact "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image.tar.xz")
+
+github-oak_containers_orchestrator: \
+    (copy-artifact "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator")
+
+github-stage1_tdx_cpio: \
+    (copy-artifact "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "stage1_tdx.cpio")
+
+github-stage1_cpio: \
+    (copy-artifact "oak_containers/stage1_bin:stage1.cpio" "stage1.cpio")
+
+github-oak_containers_syslogd: \
+    (copy-artifact "oak_containers/syslogd" "oak_containers_syslogd")
+
+github-oak_containers_system_image: \
+    (copy-artifact "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image.tar.xz")
+
+github-oak_echo_enclave_app: \
+    (copy-artifact "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app")
+
+github-oak_echo_raw_enclave_app: \
+    (copy-artifact "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app")
+
+github-oak_functions_enclave_app: \
+    (copy-artifact "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app")
+
+github-oak_functions_insecure_enclave_app: \
+    (copy-artifact "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app")
+
+github-oak_orchestrator: \
+    (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator")
+
+github-oak_restricted_kernel_wrapper_simple_io_channel: \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "")
+
+github-private_memory_enclave_app:
+    cd oak_private_memory && just private-memory-enclave-bundle-tar
+
+github-private_memory_server:
+    cd oak_private_memory && just private-memory-server
+
+github-stage0_bin_tdx: (copy-artifact "stage0_bin_tdx" "stage0_bin_tdx")
+
+github-stage0_bin: (copy-artifact "stage0_bin" "stage0_bin") stage0_bin_subjects

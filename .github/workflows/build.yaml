@@ -32,7 +32,7 @@ jobs:
           - buildconfigs/oak_functions_enclave_app.sh
           - buildconfigs/oak_functions_insecure_enclave_app.sh
           - buildconfigs/oak_orchestrator.sh
-          - buildconfigs/oak_restricted_kernel_simple_io_init_rd_wrapper_bin.sh
+          - buildconfigs/oak_restricted_kernel_simple_io_channel.sh
           - buildconfigs/private_memory_server.sh
           - buildconfigs/stage0_bin.sh
           - buildconfigs/stage0_bin_tdx.sh

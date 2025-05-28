@@ -7,12 +7,12 @@ export PACKAGE_NAME=private_memory_enclave_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  private_memory_enclave_bundle
+  github-private_memory_enclave_app
 )
 
 export SUBJECT_PATHS=(
-  artifacts/private_memory_enclave_bundle.tar
+  artifacts/binaries/private_memory_enclave_bundle.tar
 )

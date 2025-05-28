@@ -23,7 +23,7 @@ package(
 
 # Example:
 # bazel run //snp_measurement -- \
-#  --stage0-rom=$(pwd)/artifacts/stage0_bin \
+#  --stage0-rom=$(pwd)/artifacts/binaries/stage0_bin \
 #  --vcpu-count=4
 rust_binary(
     name = "snp_measurement",

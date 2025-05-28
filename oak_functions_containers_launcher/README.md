@@ -30,13 +30,13 @@ Bring up the Oak Functions Launcher, for example to run it with the test lookup
 Wasm module:
 
 ```console
-$ artifacts/oak_functions_containers_launcher \
+$ artifacts/binaries/oak_functions_containers_launcher \
     --vmm-binary=$(which qemu-system-x86_64) \
-    --stage0-binary=artifacts/stage0_bin \
-    --kernel=artifacts/oak_containers_kernel \
-    --initrd=artifacts/stage1.cpio \
-    --system-image=artifacts/oak_containers_system_image.tar.xz \
-    --container-bundle=artifacts/oak_functions_containers_app_bundle.tar \
+    --stage0-binary=artifacts/binaries/stage0_bin \
+    --kernel=artifacts/binaries/oak_containers_kernel \
+    --initrd=artifacts/binaries/stage1.cpio \
+    --system-image=artifacts/binaries/oak_containers_system_image.tar.xz \
+    --container-bundle=artifacts/binaries/oak_functions_containers_app_bundle.tar \
     --ramdrive-size=1000000 \
     --memory-size=10G \
     --wasm=target/wasm32-unknown-unknown/release/key_value_lookup.wasm \

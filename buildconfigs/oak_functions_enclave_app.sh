@@ -7,13 +7,12 @@ export PACKAGE_NAME=oak_functions_enclave_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  build_enclave_app
-  oak_functions_enclave_app
+  github-oak_functions_enclave_app
 )
 
 export SUBJECT_PATHS=(
-  artifacts/enclave_apps/oak_functions_enclave_app
+  artifacts/binaries/oak_functions_enclave_app
 )

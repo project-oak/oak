@@ -32,7 +32,7 @@ cargo run --package=oak_restricted_kernel_launcher -- \
 --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=8G \
---bios-binary=artifacts/stage0_bin \
---initrd=artifacts/enclave_apps/oak_orchestrator \
---app-binary=artifacts/enclave_apps/oak_multi_process_test
+--bios-binary=artifacts/binaries/stage0_bin \
+--initrd=artifacts/binaries/oak_orchestrator \
+--app-binary=artifacts/binaries/oak_multi_process_test
 ```

@@ -23,7 +23,7 @@ package(
 
 # Example:
 # bazel run //tdx_measurement -- \
-#  --stage0-rom=$(pwd)/artifacts/stage0_bin_tdx
+#  --stage0-rom=$(pwd)/artifacts/binaries/stage0_bin_tdx
 rust_binary(
     name = "tdx_measurement",
     srcs = glob(["src/**"]),

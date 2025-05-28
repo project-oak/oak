@@ -7,12 +7,12 @@ export PACKAGE_NAME=oak_containers_agent
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  oak_containers_agent
+  github-oak_containers_agent
 )
 
 export SUBJECT_PATHS=(
-  artifacts/oak_containers_agent
+  artifacts/binaries/oak_containers_agent
 )

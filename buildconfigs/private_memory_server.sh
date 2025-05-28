@@ -7,12 +7,12 @@ export PACKAGE_NAME=private_memory_server
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  private_memory_server
+  github-private_memory_server
 )
 
 export SUBJECT_PATHS=(
-  artifacts/private_memory_server
+  artifacts/binaries/private_memory_server
 )

@@ -7,12 +7,12 @@ export PACKAGE_NAME=key_xor_test_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  build_key_xor_test_app
+  github-key_xor_test_app
 )
 
 export SUBJECT_PATHS=(
-  artifacts/enclave_apps/key_xor_test_app
+  artifacts/binaries/key_xor_test_app
 )

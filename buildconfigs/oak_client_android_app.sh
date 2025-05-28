@@ -7,12 +7,12 @@ export PACKAGE_NAME=oak_client_android_app
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  oak_client_android_app
+  github-oak_client_android_app
 )
 
 export SUBJECT_PATHS=(
-  artifacts/client_app.apk
+  artifacts/binaries/client_app.apk
 )

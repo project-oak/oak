@@ -7,12 +7,12 @@ export PACKAGE_NAME=oak_containers_stage1
 export BUILD_COMMAND=(
   nix
   develop
-  .#githubBuildShell
+  .#default
   --command
   just
-  stage1_cpio
+  github-stage1_cpio
 )
 
 export SUBJECT_PATHS=(
-  artifacts/stage1.cpio
+  artifacts/binaries/stage1.cpio
 )
