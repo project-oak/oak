@@ -291,14 +291,21 @@ http_archive(
     urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
 )
 
-load("//bazel/nix:kernel.bzl", "nix_kernel_repo")
+load("//bazel/nix:deps.bzl", "load_nixpkgs_repositories")
 
-# Get the nix-built Kernels into our Bazel workspace, and verify the sha256
-nix_kernel_repo(
-    name = "nix_kernels",
-    bzImage_sha256 = "9e4dd5c5cebb4be3bea8747035979ab373b92124bbb9dcdef19325cea7116717",
-    bzImage_vanilla_sha256 = "1ce6de1a2c4885dbf6d445a5bac390e285a76104d52e5356501330b409aaf141",
-)
+load_nixpkgs_repositories()
+
+load("//bazel/nix:defs.bzl", "setup_nixpkgs_dependencies")
+
+setup_nixpkgs_dependencies()
+
+load("//bazel/nix:repo.bzl", "create_nix_flake_repo")
+
+create_nix_flake_repo()
+
+load("//oak_containers/kernel:pkgs.bzl", "setup_nix_kernels")
+
+setup_nix_kernels()
 
 http_archive(
     name = "rules_rust_wasm_bindgen",

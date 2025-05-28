@@ -15,8 +15,12 @@ cd "$SCRIPTS_DIR"
 
 mkdir --parent target
 
-cp --force "$LINUX_KERNEL_SOURCE" target/linux-"$LINUX_KERNEL_VERSION".tar.xz
-cp --force "$LINUX_KERNEL_CONFIG" target/minimal.config
+LINUX_KERNEL_VERSION=$(cat ../../kernel/kernel_version.txt)
+echo "VERSION: $LINUX_KERNEL_VERSION"
+cp --force ../../kernel/configs/6.12.25/minimal.config target/minimal.config
+# It would be nice if we could find the sources that nix has already downloaded,
+# but this will do for now.
+curl "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${LINUX_KERNEL_VERSION}.tar.xz" --output target/linux-"$LINUX_KERNEL_VERSION".tar.xz
 
 function build_base {
   local tag=$1

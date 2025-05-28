@@ -1,3 +1,5 @@
+load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+
 #
 # Copyright 2024 The Project Oak Authors
 #
@@ -13,16 +15,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
+# Copy the file to a nicely named spot.
 copy_file(
     name = "kernel",
-    src = "@nix_kernels//:bzImage",
+    src = "@nix_linux_kernel//:bzImage",
     out = "bzImage",
+)
+
+genrule(
+    name = "generate_kernel_sha256",
+    srcs = ["@nix_linux_kernel//:bzImage"],
+    outs = ["bzImage.sha256"],
+    cmd = "sha256sum $(location @nix_linux_kernel//:bzImage) > $@",
+)
+
+genrule(
+    name = "generate_vanilla_kernel_sha256",
+    srcs = ["@nix_vanilla_linux_kernel//:bzImage"],
+    outs = ["vanilla_bzImage.sha256"],
+    cmd = "sha256sum $(location @nix_vanilla_linux_kernel//:bzImage) > $@",
+)
+
+write_source_files(
+    name = "regenerate_sha256",
+    files = {
+        "generated/bzImage.sha256": ":generate_kernel_sha256",
+        "generated/vanilla_bzImage.sha256": ":generate_vanilla_kernel_sha256",
+    },
 )

@@ -12,9 +12,7 @@ Oak Containers.
 # Updating the Linux Kernel Version
 
 The Linux kernel is built using Nix to help with reproducibility. The kernel
-version is specified in `flake.nix` in the root.
-
-You may need to update the symlinks if the nix store absolute path has changed.
+version is specified in kernel_version.txt in this directory.
 
 You'll also need to update the checksums, so that the checksum verification test
 continues to pass.

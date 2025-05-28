@@ -79,6 +79,10 @@
             };
             # Minimal shell with only the dependencies needed to run the bazel steps.
             bazelShell = with pkgs; mkShell {
+              shellHook = ''
+                # https://github.com/NixOS/nix/issues/262
+                unset TMPDIR
+              '';
               packages = [
                 autoconf
                 autogen

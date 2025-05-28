@@ -24,50 +24,6 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          linux_kernel_version = "6.12.25";
-          linux_kernel_src = builtins.fetchurl {
-            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${linux_kernel_version}.tar.xz";
-            sha256 = "c8af780f6f613ca24622116e4c512a764335ab66e75c6643003c16e49a8e3b90";
-          };
-          linux_kernel_config = ./oak_containers/kernel/configs/${linux_kernel_version}/minimal.config;
-          # Build the linux kernel for Oak Containers as a nix package, which simplifies
-          # reproducibility.
-          # Note that building a package via nix is not by itself a guarantee of
-          # reproducibility; see https://reproducible.nixos.org.
-          # Common kernel configuration
-          commonLinuxKernelConfig = {
-            # To allow reproducibility, the following options need to be configured:
-            # - CONFIG_MODULE_SIG is not set
-            # - CONFIG_MODULE_SIG_ALL is not set
-            # - CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
-            configfile = linux_kernel_config;
-            # And also the following build variables.
-            # See https://docs.kernel.org/kbuild/reproducible-builds.html.
-            extraMakeFlags = [
-              "KBUILD_BUILD_USER=user"
-              "KBUILD_BUILD_HOST=host"
-            ];
-            version = linux_kernel_version;
-            src = linux_kernel_src;
-            allowImportFromDerivation = true;
-          };
-          # Patched kernel
-          linux_kernel = pkgs.linuxManualConfig (commonLinuxKernelConfig // {
-            kernelPatches = [{
-              name = "virtio-dma";
-              patch = ./oak_containers/kernel/patches/virtio-dma.patch;
-            }
-            {
-              name = "tdx-skip-probe-roms";
-              patch = ./oak_containers/kernel/patches/tdx-probe-roms.patch;
-            }
-            {
-              name = "rtmr-enabling";
-              patch = ./oak_containers/kernel/patches/rtmr-enable.patch;
-            }];
-          });
-          # Vanilla kernel
-          vanilla_linux_kernel = pkgs.linuxManualConfig commonLinuxKernelConfig;
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -97,7 +53,6 @@
           src = ./.;
         in
         {
-          packages = { inherit linux_kernel; inherit vanilla_linux_kernel; };
           formatter = pkgs.nixpkgs-fmt;
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
@@ -166,6 +121,8 @@
               shellHook = ''
                 export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
                 export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2";
+
+                # Prevent issues when trying to do nix builds inside of a nix shell.
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
               '';
@@ -179,20 +136,9 @@
                 bazel-buildtools
               ];
             };
-            # Shell for building Oak Containers kernel and system image. This is not included in the
+            # Shell for building containers system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
-              # We need access to the kernel source and configuration, not just the binaries, to
-              # build the system image with nvidia drivers in it.
-              # See oak_containers/system_image/build-base.sh (and nvidia_base_image.Dockerfile) for
-              # more details.
-              shellHook = ''
-                export LINUX_KERNEL="${linux_kernel}"
-                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
-                export LINUX_KERNEL_VERSION="${linux_kernel_version}"
-                export LINUX_KERNEL_SOURCE="${linux_kernel_src}"
-                export LINUX_KERNEL_CONFIG="${linux_kernel_config}"
-              '';
               inputsFrom = [
                 base
                 bazelShell
@@ -218,34 +164,8 @@
                 umoci
               ];
             };
-            # Shell for oak_containers_kernel.
-            linuxKernelShell = with pkgs; mkShell {
-              shellHook = ''
-                export LINUX_KERNEL="${linux_kernel}"
-                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
-              '';
-              inputsFrom = [
-                rust
-                bazelShell
-              ];
-              packages = [
-                bc
-                bison
-                curl
-                elfutils
-                flex
-                libelf
-              ];
-            };
             # Shell for most CI steps (i.e. without containers support).
             ci = pkgs.mkShell {
-             shellHook = ''
-                export LINUX_KERNEL="${linux_kernel}"
-                export VANILLA_LINUX_KERNEL="${vanilla_linux_kernel}"
-                export LINUX_KERNEL_VERSION="${linux_kernel_version}"
-                export LINUX_KERNEL_SOURCE="${linux_kernel_src}"
-                export LINUX_KERNEL_CONFIG="${linux_kernel_config}"
-              '';
               inputsFrom = [
                 rust
                 bazelShell
