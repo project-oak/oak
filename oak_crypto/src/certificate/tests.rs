@@ -80,9 +80,8 @@ fn test_verify_certificate_success() {
         TEST_SIGNATURE,
     );
 
-    let verifier = CertificateVerifier {
-        signature_verifier: MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() },
-    };
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let result = verifier.verify(
         TEST_PUBLIC_KEY,
@@ -103,9 +102,8 @@ fn test_verify_certificate_signature_failure() {
         TEST_BAD_SIGNATURE,
     );
 
-    let verifier = CertificateVerifier {
-        signature_verifier: MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() },
-    };
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let result = verifier.verify(
         TEST_PUBLIC_KEY,
@@ -126,9 +124,8 @@ fn test_verify_certificate_validity_failure() {
         TEST_SIGNATURE,
     );
 
-    let verifier = CertificateVerifier {
-        signature_verifier: MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() },
-    };
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let result = verifier.verify(
         TEST_PUBLIC_KEY,
@@ -149,9 +146,8 @@ fn test_verify_certificate_public_key_failure() {
         TEST_SIGNATURE,
     );
 
-    let verifier = CertificateVerifier {
-        signature_verifier: MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() },
-    };
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let result = verifier.verify(
         TEST_PUBLIC_KEY,
@@ -172,9 +168,8 @@ fn test_verify_certificate_purpose_failure() {
         TEST_SIGNATURE,
     );
 
-    let verifier = CertificateVerifier {
-        signature_verifier: MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() },
-    };
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let result = verifier.verify(
         TEST_PUBLIC_KEY,

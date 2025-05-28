@@ -321,7 +321,7 @@ fn event_log_verifier_succeeds() {
     };
     let endorsements = Endorsements { events: vec![tink_endorsement.into()], ..Default::default() };
     let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
-        CertificateVerifier { signature_verifier: TestSignatureVerifier {} };
+        CertificateVerifier::new(TestSignatureVerifier {});
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.

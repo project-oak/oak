@@ -28,6 +28,12 @@ pub struct CertificateVerifier<V: Verifier> {
 }
 
 impl<V: Verifier> CertificateVerifier<V> {
+    pub fn new(signature_verifier: V) -> Self {
+        Self { signature_verifier }
+    }
+}
+
+impl<V: Verifier> CertificateVerifier<V> {
     pub fn verify(
         &self,
         subject_public_key: &[u8],
