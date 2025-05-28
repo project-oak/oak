@@ -8,6 +8,9 @@ bazel-*
 # Local additional settings and overrides.
 /.local.bazelrc
 
+# Copied in by Kokoro jobs
+.tmp.ci.bazelrc
+
 # We don't want to force test_workspace repinning to be part of normal workflow.
 # If you want to experiment in the test directory, run the boostrap script
 # there first.

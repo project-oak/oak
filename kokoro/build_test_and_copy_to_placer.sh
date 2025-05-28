@@ -14,6 +14,9 @@ source kokoro/helpers/copy_binaries.sh
 # shellcheck source=kokoro/helpers/common.sh
 source kokoro/helpers/common.sh
 
+configure_common_env
+configure_bazelrc
+
 ./scripts/docker_pull
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.
 ./scripts/docker_run nix develop .#default --command just build-and-test bazel-cache-test containers_placer_artifacts

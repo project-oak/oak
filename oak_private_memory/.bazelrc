@@ -44,3 +44,6 @@ build:clippy --output_groups=+clippy_checks
 build:rustfmt --aspects=@rules_rust//rust:defs.bzl%rustfmt_aspect
 build:rustfmt --output_groups=+rustfmt_checks
 build:rustfmt --@rules_rust//rust/settings:rustfmt.toml=@oak//:.rustfmt.toml
+
+import %workspace%/../.ci.bazelrc
+try-import %workspace%/../.tmp.ci.bazelrc

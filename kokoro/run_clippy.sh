@@ -12,6 +12,9 @@ cd "$(dirname "$0")/.."
 # shellcheck source=kokoro/helpers/common.sh
 source kokoro/helpers/common.sh
 
+configure_common_env
+configure_bazelrc
+
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#default --command just clippy-ci
 ./scripts/git_check_diff

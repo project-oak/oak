@@ -50,46 +50,6 @@ build:clang-tidy --output_groups=report
 # Optionally override the .clang-tidy config file target
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
 
-# CI specific config. This config should be safe to use from any presubmit and postsubmit jobs.
-
-# Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
-# and avoid attempting to parallelize steps that are actually serialized by Bazel.
-build:ci --block_for_lock=false
-# Useful to determine how long individual steps are taking in CI.
-build:ci --show_timestamps
-
-# Always use optimization.
-build:ci --compilation_mode opt
-
-# Strip debug information from linked results.
-build:ci --linkopt=-Wl,--strip-all
-
-# --show_result leads to all of the built packages being logged at the
-# end, so we can visually verify that CI tasks are building everything we want.
-build:ci --show_result=1000000
-
-# --noshow_progress and --curses=no prevent a lot of progress bar noise in the CI logs.
-build:ci --noshow_progress
-build:ci --curses=no
-
-# Inline CI failures, since log files are hard to access in this enviroment
-build:ci --verbose_failures
-
-# Always show test errors in CI
-test --test_output=errors
-# Show stdout/stderr in test output in CI
-test --test_arg=--nocapture
-
-# The unsafe-fast-presubmit config should only be used in presubmits steps that do not produce
-# binaries that need to be released or trusted (e.g. TEE applications). This is because it enables
-# using a remote cache, which in general may not be considered trustworthy.
-
-# Inherit from the ci config.
-build:unsafe-fast-presubmit --config=ci
-build:unsafe-fast-presubmit --remote_cache=https://storage.googleapis.com/oak-bazel-cache
-build:unsafe-fast-presubmit --remote_upload_local_results=true
-build:unsafe-fast-presubmit --google_default_credentials=true
-
 # Many of these flags were discovered by looking for `build:asan` examples internally.
 build:asan --strip=never
 build:asan --copt -fsanitize=address
@@ -133,3 +93,6 @@ build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-
 # build:unsafe-fast-presubmit --remote_upload_local_results=true
 # ```
 try-import ./.local.bazelrc
+
+import ./.ci.bazelrc
+try-import ./.tmp.ci.bazelrc
