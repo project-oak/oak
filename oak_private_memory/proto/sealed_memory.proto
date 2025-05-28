@@ -121,14 +121,14 @@ message KeyDerivationInfo {
   int32 kek_version = 2;  // Version of the KEK derivation method or key.
 }
 
-message BootStrapRequest {
+message UserRegistrationRequest {
   string pm_uid = 1;
   bytes key_encryption_key = 2;
 
   KeyDerivationInfo boot_strap_info = 3;
 }
 
-message BootStrapResponse {
+message UserRegistrationResponse {
   enum Status {
     // Default status, should ideally not be sent by the server. Client can
     // treat this as an error if received.
@@ -159,7 +159,7 @@ message SealedMemoryRequest {
 
     KeySyncRequest key_sync_request = 6;
     SearchMemoryRequest search_memory_request = 7;
-    BootStrapRequest boot_strap_request = 8;
+    UserRegistrationRequest user_registration_request = 8;
   }
 
   // Optional unique identifier for this request within the session.
@@ -177,7 +177,7 @@ message SealedMemoryResponse {
 
     KeySyncResponse key_sync_response = 6;
     SearchMemoryResponse search_memory_response = 7;
-    BootStrapResponse boot_strap_response = 8;
+    UserRegistrationResponse user_registration_response = 8;
   }
 
   // Propagated from the request_id from the request.

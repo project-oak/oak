@@ -20,13 +20,13 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    boot_strap_response, key_sync_response, sealed_memory_request, sealed_memory_response,
-    AddMemoryRequest, AddMemoryResponse, BootStrapRequest, BootStrapResponse, DataBlob, Embedding,
-    EncryptedDataBlob, EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse,
-    GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest,
-    KeySyncResponse, Memory, PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse,
-    SealedMemoryRequest, SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
-    SearchResult, WrappedDataEncryptionKey,
+    key_sync_response, sealed_memory_request, sealed_memory_response, user_registration_response,
+    AddMemoryRequest, AddMemoryResponse, DataBlob, Embedding, EncryptedDataBlob, EncryptedUserInfo,
+    GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
+    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, PlainTextUserInfo,
+    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
+    SearchMemoryRequest, SearchMemoryResponse, SearchResult, UserRegistrationRequest,
+    UserRegistrationResponse, WrappedDataEncryptionKey,
 };
 use tokio::{
     runtime::Handle,
@@ -347,17 +347,17 @@ impl SealedMemoryHandler {
 
     pub async fn boot_strap_handler(
         &self,
-        request: BootStrapRequest,
-    ) -> anyhow::Result<BootStrapResponse> {
+        request: UserRegistrationRequest,
+    ) -> anyhow::Result<UserRegistrationResponse> {
         if request.key_encryption_key.is_empty() {
-            bail!("key_encryption_key not set in BootStrapRequest");
+            bail!("key_encryption_key not set in UserRegistrationRequest");
         }
         if request.pm_uid.is_empty() {
-            bail!("pm_uid not set in BootStrapRequest");
+            bail!("pm_uid not set in UserRegistrationRequest");
         }
         let boot_strap_info = request
             .boot_strap_info
-            .context("boot_strap_info (KeyDerivationInfo) not set in BootStrapRequest")?;
+            .context("boot_strap_info (KeyDerivationInfo) not set in UserRegistrationRequest")?;
 
         let key = request.key_encryption_key;
         let uid = request.pm_uid;
@@ -378,8 +378,8 @@ impl SealedMemoryHandler {
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
 
             debug!("User have been registered!, {}", uid);
-            return Ok(BootStrapResponse {
-                status: boot_strap_response::Status::UserAlreadyExists.into(),
+            return Ok(UserRegistrationResponse {
+                status: user_registration_response::Status::UserAlreadyExists.into(),
                 key_derivation_info: Some(key_derivation_info),
             });
         }
@@ -413,8 +413,8 @@ impl SealedMemoryHandler {
             .context("Failed to write blobs")?;
 
         debug!("Successfully registered new user {}", uid);
-        Ok(BootStrapResponse {
-            status: boot_strap_response::Status::Success.into(),
+        Ok(UserRegistrationResponse {
+            status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
         })
     }
@@ -563,7 +563,7 @@ impl_packing!(Request => ResetMemoryRequest);
 impl_packing!(Request => KeySyncRequest);
 impl_packing!(Request => GetMemoryByIdRequest);
 impl_packing!(Request => SearchMemoryRequest);
-impl_packing!(Request => BootStrapRequest);
+impl_packing!(Request => UserRegistrationRequest);
 impl_packing!(Response => AddMemoryResponse);
 impl_packing!(Response => GetMemoriesResponse);
 impl_packing!(Response => ResetMemoryResponse);
@@ -571,7 +571,7 @@ impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
 impl_packing!(Response => GetMemoryByIdResponse);
 impl_packing!(Response => SearchMemoryResponse);
-impl_packing!(Response => BootStrapResponse);
+impl_packing!(Response => UserRegistrationResponse);
 
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
@@ -594,7 +594,7 @@ impl ApplicationHandler for SealedMemoryHandler {
             }
             let request = request.unwrap();
             let mut response = match request {
-                sealed_memory_request::Request::BootStrapRequest(request) => {
+                sealed_memory_request::Request::UserRegistrationRequest(request) => {
                     if self.is_message_type_json(request_bytes) {
                         message_type = Some(MessageType::Json);
                     }

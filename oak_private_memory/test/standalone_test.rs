@@ -31,11 +31,11 @@ use private_memory_server_lib::{
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    boot_strap_response, key_sync_response, sealed_memory_response, AddMemoryRequest,
-    AddMemoryResponse, BootStrapRequest, BootStrapResponse, Embedding, GetMemoriesRequest,
-    GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse,
-    KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory, ResetMemoryRequest,
-    ResetMemoryResponse, SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse,
+    key_sync_response, sealed_memory_response, user_registration_response, AddMemoryRequest,
+    AddMemoryResponse, Embedding, GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest,
+    GetMemoryByIdResponse, InvalidRequestResponse, KeyDerivationInfo, KeySyncRequest,
+    KeySyncResponse, Memory, ResetMemoryRequest, ResetMemoryResponse, SealedMemoryResponse,
+    SearchMemoryRequest, SearchMemoryResponse, UserRegistrationRequest, UserRegistrationResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -308,16 +308,19 @@ async fn test_noise_add_get_reset_memory() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     let pm_uid = 234.to_string();
-    let boot_strap_request = BootStrapRequest {
+    let user_registration_request = UserRegistrationRequest {
         key_encryption_key: TEST_EK.to_vec(),
         pm_uid: pm_uid.clone(),
         boot_strap_info: Some(KeyDerivationInfo::default()),
     };
-    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
-    let boot_strap_response: BootStrapResponse =
+    send_plantext_request(&mut tx, &mut client_session, user_registration_request);
+    let user_registration_response: UserRegistrationResponse =
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+    assert_eq!(
+        user_registration_response.status,
+        user_registration_response::Status::Success as i32
+    );
     // Key sync
     let request_id = 0xeadbeef;
     let key_sync_request =
@@ -413,16 +416,19 @@ async fn test_noise_add_get_reset_memory_as_json() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     let pm_uid = 234.to_string();
-    let boot_strap_request = BootStrapRequest {
+    let user_registration_request = UserRegistrationRequest {
         key_encryption_key: TEST_EK.to_vec(),
         pm_uid: pm_uid.clone(),
         boot_strap_info: Some(KeyDerivationInfo::default()),
     };
-    send_plantext_request_as_json(&mut tx, &mut client_session, boot_strap_request);
-    let boot_strap_response: BootStrapResponse =
+    send_plantext_request_as_json(&mut tx, &mut client_session, user_registration_request);
+    let user_registration_response: UserRegistrationResponse =
         receive_plaintext_response_as_json(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+    assert_eq!(
+        user_registration_response.status,
+        user_registration_response::Status::Success as i32
+    );
 
     // Key sync
     let key_sync_request =
@@ -525,16 +531,19 @@ async fn test_embedding_search() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     let pm_uid = 234.to_string();
-    let boot_strap_request = BootStrapRequest {
+    let user_registration_request = UserRegistrationRequest {
         key_encryption_key: TEST_EK.to_vec(),
         pm_uid: pm_uid.clone(),
         boot_strap_info: Some(KeyDerivationInfo::default()),
     };
-    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
-    let boot_strap_response: BootStrapResponse =
+    send_plantext_request(&mut tx, &mut client_session, user_registration_request);
+    let user_registration_response: UserRegistrationResponse =
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+    assert_eq!(
+        user_registration_response.status,
+        user_registration_response::Status::Success as i32
+    );
     // Key sync
     let request_id = 0xeadbeef;
     let key_sync_request = KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid };
@@ -637,21 +646,27 @@ async fn test_boot_strap() {
     client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
 
     let pm_uid = 234.to_string();
-    let boot_strap_request = BootStrapRequest {
+    let user_registration_request = UserRegistrationRequest {
         key_encryption_key: TEST_EK.to_vec(),
         pm_uid: pm_uid.clone(),
         boot_strap_info: Some(KeyDerivationInfo::default()),
     };
-    send_plantext_request(&mut tx, &mut client_session, boot_strap_request.clone());
-    let boot_strap_response: BootStrapResponse =
+    send_plantext_request(&mut tx, &mut client_session, user_registration_request.clone());
+    let user_registration_response: UserRegistrationResponse =
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(boot_strap_response.status, boot_strap_response::Status::Success as i32);
+    assert_eq!(
+        user_registration_response.status,
+        user_registration_response::Status::Success as i32
+    );
 
     // Register again.
-    send_plantext_request(&mut tx, &mut client_session, boot_strap_request);
-    let boot_strap_response: BootStrapResponse =
+    send_plantext_request(&mut tx, &mut client_session, user_registration_request);
+    let user_registration_response: UserRegistrationResponse =
         receive_plaintext_response(&mut response_stream, &mut client_session).await;
 
-    assert_eq!(boot_strap_response.status, boot_strap_response::Status::UserAlreadyExists as i32);
+    assert_eq!(
+        user_registration_response.status,
+        user_registration_response::Status::UserAlreadyExists as i32
+    );
 }

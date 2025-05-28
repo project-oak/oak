@@ -51,8 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.Embedding",
         "oak.private_memory.SearchResult",
         "oak.private_memory.KeyDerivationInfo",
-        "oak.private_memory.BootStrapRequest",
-        "oak.private_memory.BootStrapResponse",
+        "oak.private_memory.UserRegistrationRequest",
+        "oak.private_memory.UserRegistrationResponse",
     ];
 
     let oneof_field_names = [
@@ -75,7 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes_fields = [
         "oak.private_memory.Memory.content",
         "oak.private_memory.KeySyncRequest.key_encryption_key",
-        "oak.private_memory.BootStrapRequest.key_encryption_key",
+        "oak.private_memory.UserRegistrationRequest.key_encryption_key",
         "oak.private_memory.KeyDerivationInfo.kek_salt",
     ];
     for bytes_field in bytes_fields {
