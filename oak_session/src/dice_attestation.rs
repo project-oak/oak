@@ -25,6 +25,12 @@ use oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
 
+/// Attestation verifier verifying evidence produced by the DICE attestation.
+///
+/// DICE attestation is defined
+/// [here](https://trustedcomputinggroup.org/wp-content/uploads/DICE-Attestation-Architecture-Version-1.1-Revision-18_pub.pdf).
+/// Our approach to using DICE for the TEE attestation is described in
+/// [this talk](https://assets-global.website-files.com/63c54a346e01f30e726f97cf/660e6af00e242f9c38cac561_DICE%20Attestation%20on%20AMD%20SEV-SNP%20-%20Juliette%20Pluto%20Ivan%20Petrov.pdf)
 pub struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
     clock: Arc<dyn Clock>,

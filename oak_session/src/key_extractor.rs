@@ -27,13 +27,20 @@ use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 use p256::ecdsa::VerifyingKey;
 
+/// Trait that allows extracting a verifying key (e.g., a session binding key)
+/// from the supplied and verified evidence.
 pub trait KeyExtractor: Send + Sync {
+    /// Extracts the verifying key from the attestation results returned by
+    /// [`AttestationVerifier`]. Only results of a successful verification are
+    /// expected to contain the key.
     fn extract_verifying_key(
         &self,
         results: &AttestationResults,
     ) -> Result<Box<dyn Verifier>, Error>;
 }
 
+/// Key extractor that takes the key from the top level signing_public_key field
+/// in [`AttestationResults`]
 pub struct DefaultSigningKeyExtractor;
 
 impl KeyExtractor for DefaultSigningKeyExtractor {
@@ -54,6 +61,9 @@ impl KeyExtractor for DefaultSigningKeyExtractor {
     }
 }
 
+/// Key extractor that takes the binding key from the artifacts contained in
+/// [`AttestationResults`] using a predefined artifact ID
+/// ([`SESSION_BINDING_PUBLIC_KEY_ID`]).
 pub struct DefaultBindingKeyExtractor;
 
 impl KeyExtractor for DefaultBindingKeyExtractor {
