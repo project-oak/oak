@@ -44,16 +44,16 @@
 //!     - `Unattested`: No attestation occurs (generally for testing or
 //!       low-security scenarios).
 //!
-//! - **`AttestationProvider` Trait**: The core abstraction representing one
+//! - **`AttestationHandler` Trait**: The core abstraction representing one
 //!   party's role in the attestation process. Implementations
-//!   (`ClientAttestationProvider`, `ServerAttestationProvider`) manage the
-//!   state and logic for generating/sending their own evidence and/or
+//!   (`ClientAttestationHandler`, `ServerAttestationHandler`) manage the state
+//!   and logic for generating/sending their own evidence and/or
 //!   receiving/verifying the peer's evidence. They use the `ProtocolEngine`
 //!   trait to exchange `AttestRequest` and `AttestResponse` messages.
 //!
-//! - **`ClientAttestationProvider` / `ServerAttestationProvider`**: Concrete
+//! - **`ClientAttestationHandler` / `ServerAttestationHandler`**: Concrete
 //!   implementations for the client (initiator) and server (responder) roles.
-//!   They are initialized with an `AttestationProviderConfig` which specifies:
+//!   They are initialized with an `AttestationHandlerConfig` which specifies:
 //!     - `self_attesters`: Components that generate this party's attestation
 //!       `Evidence`.
 //!     - `self_endorsers`: Components that generate `Endorsements` for this
@@ -93,7 +93,7 @@ use oak_proto_rust::oak::{
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
-use crate::{config::AttestationProviderConfig, ProtocolEngine};
+use crate::{config::AttestationHandlerConfig, ProtocolEngine};
 
 /// Represents the outcome of the attestation process.
 ///
@@ -139,19 +139,17 @@ pub enum AttestationType {
 
 /// Defines the contract for an attestation provider.
 ///
-/// An `AttestationProvider` is responsible for managing the attestation process
+/// An `AttestationHandler` is responsible for managing the attestation process
 /// for one side of the communication (either client or server). It handles the
 /// generation or verification of attestation evidence. Implementations are
 /// expected to be stateful, progressing as messages are exchanged.
-pub trait AttestationProvider: Send {
+pub trait AttestationHandler: Send {
     /// Retrieves the final attestation verdict once the process is complete.
     ///
-    /// This method consumes the attestation result, meaning it can typically
-    /// only be called once successfully. It returns an error if the
-    /// attestation process is not yet finished or if the result has already
-    /// been taken. The lifetime of the `AttestationVerdict` is tied to this
-    /// consumption.
-    fn take_attestation_result(self) -> Result<AttestationVerdict, Error>;
+    /// This method consumes the attestation verdict, meaning it can
+    /// only be called once by design. It returns an error if the
+    /// attestation process is not yet finished.
+    fn take_attestation_verdict(self) -> Result<AttestationVerdict, Error>;
 }
 
 /// Defines the contract for aggregating multiple attestation results into a
@@ -216,7 +214,7 @@ impl AttestationAggregator for DefaultAttestationAggregator {
     }
 }
 
-/// Client-side implementation of the `AttestationProvider`.
+/// Client-side implementation of the `AttestationHandler`.
 ///
 /// This struct manages the attestation process for the client (the initiator of
 /// the session). It generates an `AttestRequest` containing its own endorsed
@@ -226,14 +224,14 @@ impl AttestationAggregator for DefaultAttestationAggregator {
 /// attestation). It utilizes the `ProtocolEngine` trait to drive the message
 /// exchange.
 #[allow(dead_code)]
-pub struct ClientAttestationProvider {
-    config: AttestationProviderConfig,
+pub struct ClientAttestationHandler {
+    config: AttestationHandlerConfig,
     attest_request: Option<AttestRequest>,
     attestation_result: Option<AttestationVerdict>,
 }
 
-impl ClientAttestationProvider {
-    /// Creates a new `ClientAttestationProvider` with the given configuration.
+impl ClientAttestationHandler {
+    /// Creates a new `ClientAttestationHandler` with the given configuration.
     ///
     /// Initializes the provider and, if applicable based on
     /// `config.attestation_type`, pre-generates the initial `AttestRequest`
@@ -243,7 +241,7 @@ impl ClientAttestationProvider {
     ///
     /// The lifetime of the attesters and endorsers in `config` must be managed
     /// by the caller; they are typically `Arc`ed to allow sharing.
-    pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
+    pub fn create(config: AttestationHandlerConfig) -> Result<Self, Error> {
         Ok(Self {
             attest_request: Some(AttestRequest {
                 endorsed_evidence: config
@@ -271,15 +269,15 @@ impl ClientAttestationProvider {
     }
 }
 
-impl AttestationProvider for ClientAttestationProvider {
+impl AttestationHandler for ClientAttestationHandler {
     /// Retrieves the attestation verdict from the client's perspective.
-    /// See `AttestationProvider::take_attestation_result` for details.
-    fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
+    /// See `AttestationHandler::take_attestation_verdict` for details.
+    fn take_attestation_verdict(mut self) -> Result<AttestationVerdict, Error> {
         self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 
-impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider {
+impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler {
     /// Gets the next outgoing `AttestRequest` message to be sent to the server.
     ///
     /// For the client, this is typically the initial `AttestRequest` containing
@@ -296,7 +294,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
     /// data. It verifies the server's evidence based on the configured
     /// `peer_verifiers` and `attestation_type`. The result of this
     /// verification is stored internally and can be retrieved via
-    /// `take_attestation_result`.
+    /// `take_attestation_verdict`.
     ///
     /// Returns `Ok(Some(()))` if the message was processed and the attestation
     /// step is now complete from the client's perspective regarding message
@@ -327,7 +325,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
     }
 }
 
-/// Server-side implementation of the `AttestationProvider`.
+/// Server-side implementation of the `AttestationHandler`.
 ///
 /// This struct manages the attestation process for the server (the responder in
 /// the session). It processes the client's `AttestRequest` to verify client
@@ -337,14 +335,14 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
 /// attestation). It utilizes the `ProtocolEngine` trait to drive the message
 /// exchange.
 #[allow(dead_code)]
-pub struct ServerAttestationProvider {
-    config: AttestationProviderConfig,
+pub struct ServerAttestationHandler {
+    config: AttestationHandlerConfig,
     attest_response: Option<AttestResponse>,
     attestation_result: Option<AttestationVerdict>,
 }
 
-impl ServerAttestationProvider {
-    /// Creates a new `ServerAttestationProvider` with the given configuration.
+impl ServerAttestationHandler {
+    /// Creates a new `ServerAttestationHandler` with the given configuration.
     ///
     /// Initializes the provider and, if applicable based on
     /// `config.attestation_type`, pre-generates the `AttestResponse`
@@ -354,7 +352,7 @@ impl ServerAttestationProvider {
     ///
     /// The lifetime of the attesters and endorsers in `config` must be managed
     /// by the caller.
-    pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
+    pub fn create(config: AttestationHandlerConfig) -> Result<Self, Error> {
         Ok(Self {
             attest_response: Some(AttestResponse {
                 endorsed_evidence: config
@@ -382,15 +380,15 @@ impl ServerAttestationProvider {
     }
 }
 
-impl AttestationProvider for ServerAttestationProvider {
+impl AttestationHandler for ServerAttestationHandler {
     /// Retrieves the attestation verdict from the server's perspective.
-    /// See `AttestationProvider::take_attestation_result` for details.
-    fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
+    /// See `AttestationHandler::take_attestation_verdict` for details.
+    fn take_attestation_verdict(mut self) -> Result<AttestationVerdict, Error> {
         self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 
-impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider {
+impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler {
     /// Gets the next outgoing `AttestResponse` message to be sent to the
     /// client.
     ///
@@ -408,7 +406,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
     /// data. It verifies the client's evidence based on the configured
     /// `peer_verifiers` and `attestation_type`. The result of this
     /// verification is stored internally and can be retrieved via
-    /// `take_attestation_result`.
+    /// `take_attestation_verdict`.
     ///
     /// Returns `Ok(Some(()))` if the message was processed. The server then
     /// typically prepares its own `AttestResponse`.

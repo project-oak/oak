@@ -22,7 +22,7 @@
 //! - **Attestation**: Specifies the type of attestation to perform (e.g.,
 //!   bidirectional, unidirectional), which attesters and endorsers to use for
 //!   self-attestation, and which verifiers to use for peer attestation.
-//!   Configuration is held in [`AttestationProviderConfig`].
+//!   Configuration is held in [`AttestationHandlerConfig`].
 //! - **Handshake**: Defines the cryptographic handshake protocol (e.g., Noise
 //!   patterns like KK, NK, NN), and any pre-shared static keys required by the
 //!   chosen protocol. Configuration is held in [`HandshakerConfig`].
@@ -64,7 +64,7 @@ use crate::{
 #[allow(dead_code)]
 pub struct SessionConfig {
     /// Configuration for the attestation phase.
-    pub attestation_provider_config: AttestationProviderConfig,
+    pub attestation_handler_config: AttestationHandlerConfig,
     /// Configuration for the cryptographic handshake phase.
     pub handshaker_config: HandshakerConfig,
     /// Configuration for creating the session encryptor.
@@ -125,7 +125,7 @@ impl SessionConfigBuilder {
     /// endorsers, or verifiers), handshake (no static keys or session binders),
     /// and encryption (using `OrderedChannelEncryptorProvider`).
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
-        let attestation_provider_config = AttestationProviderConfig {
+        let attestation_handler_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::new(),
             self_endorsers: BTreeMap::new(),
@@ -146,7 +146,7 @@ impl SessionConfigBuilder {
         let binding_verifier_providers = BTreeMap::new();
 
         let config = SessionConfig {
-            attestation_provider_config,
+            attestation_handler_config,
             handshaker_config,
             encryptor_config,
             binding_verifier_providers,
@@ -161,7 +161,7 @@ impl SessionConfigBuilder {
     ///
     /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
     pub fn add_self_attester(mut self, attester_id: String, attester: Box<dyn Attester>) -> Self {
-        self.config.attestation_provider_config.self_attesters.insert(attester_id, attester.into());
+        self.config.attestation_handler_config.self_attesters.insert(attester_id, attester.into());
         self
     }
 
@@ -172,10 +172,7 @@ impl SessionConfigBuilder {
         attester_id: String,
         attester: &Arc<dyn Attester>,
     ) -> Self {
-        self.config
-            .attestation_provider_config
-            .self_attesters
-            .insert(attester_id, attester.clone());
+        self.config.attestation_handler_config.self_attesters.insert(attester_id, attester.clone());
         self
     }
 
@@ -185,7 +182,7 @@ impl SessionConfigBuilder {
     ///
     /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
     pub fn add_self_endorser(mut self, endorser_id: String, endorser: Box<dyn Endorser>) -> Self {
-        self.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser.into());
+        self.config.attestation_handler_config.self_endorsers.insert(endorser_id, endorser.into());
         self
     }
 
@@ -196,10 +193,7 @@ impl SessionConfigBuilder {
         endorser_id: String,
         endorser: &Arc<dyn Endorser>,
     ) -> Self {
-        self.config
-            .attestation_provider_config
-            .self_endorsers
-            .insert(endorser_id, endorser.clone());
+        self.config.attestation_handler_config.self_endorsers.insert(endorser_id, endorser.clone());
         self
     }
 
@@ -219,7 +213,7 @@ impl SessionConfigBuilder {
         verifier: Box<dyn AttestationVerifier>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.into());
         self.config.binding_verifier_providers.insert(
@@ -240,7 +234,7 @@ impl SessionConfigBuilder {
         verifier: &Arc<dyn AttestationVerifier>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.clone());
         self.config.binding_verifier_providers.insert(
@@ -267,7 +261,7 @@ impl SessionConfigBuilder {
         key_extractor: Box<dyn KeyExtractor>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.into());
         self.config.binding_verifier_providers.insert(
@@ -287,7 +281,7 @@ impl SessionConfigBuilder {
         key_extractor: &Arc<dyn KeyExtractor>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.clone());
         self.config.binding_verifier_providers.insert(
@@ -312,7 +306,7 @@ impl SessionConfigBuilder {
         binding_verifier_provider: Box<dyn SessionBindingVerifierProvider>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.into());
         self.config
@@ -332,7 +326,7 @@ impl SessionConfigBuilder {
         binding_verifier_provider: &Arc<dyn SessionBindingVerifierProvider>,
     ) -> Self {
         self.config
-            .attestation_provider_config
+            .attestation_handler_config
             .peer_verifiers
             .insert(attester_id.clone(), verifier.clone());
         self.config
@@ -415,7 +409,7 @@ impl SessionConfigBuilder {
 /// Instances are typically created and populated via the
 /// [`SessionConfigBuilder`].
 #[allow(dead_code)]
-pub struct AttestationProviderConfig {
+pub struct AttestationHandlerConfig {
     /// Specifies the type of attestation to be performed (e.g., bidirectional).
     pub attestation_type: AttestationType,
     /// A map of attesters (keyed by `attester_id`) used by this party to

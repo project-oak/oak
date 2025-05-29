@@ -31,10 +31,10 @@ use oak_proto_rust::oak::{
 };
 use oak_session::{
     attestation::{
-        AttestationProvider, AttestationType, AttestationVerdict, ClientAttestationProvider,
-        DefaultAttestationAggregator, ServerAttestationProvider,
+        AttestationHandler, AttestationType, AttestationVerdict, ClientAttestationHandler,
+        DefaultAttestationAggregator, ServerAttestationHandler,
     },
-    config::AttestationProviderConfig,
+    config::AttestationHandlerConfig,
     ProtocolEngine,
 };
 
@@ -109,11 +109,11 @@ struct AttestationExchangeResults {
 }
 
 fn do_attestation_exchange(
-    client_config: AttestationProviderConfig,
-    server_config: AttestationProviderConfig,
+    client_config: AttestationHandlerConfig,
+    server_config: AttestationHandlerConfig,
 ) -> anyhow::Result<AttestationExchangeResults> {
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = client_attestation_provider
         .get_outgoing_message()
@@ -128,8 +128,8 @@ fn do_attestation_exchange(
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     Ok(AttestationExchangeResults {
-        client: client_attestation_provider.take_attestation_result(),
-        server: server_attestation_provider.take_attestation_result(),
+        client: client_attestation_provider.take_attestation_verdict(),
+        server: server_attestation_provider.take_attestation_verdict(),
     })
 }
 
@@ -142,7 +142,7 @@ const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
 
 #[googletest::test]
 fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -150,7 +150,7 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert_that!(
@@ -163,7 +163,7 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
 
 #[googletest::test]
 fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -171,7 +171,7 @@ fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     let result = client_attestation_provider
         .put_incoming_message(AttestResponse { endorsed_evidence: BTreeMap::from([]) });
@@ -183,7 +183,7 @@ fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -191,7 +191,7 @@ fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
@@ -201,7 +201,7 @@ fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Unattested,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -209,7 +209,7 @@ fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     assert_that!(
         server_attestation_provider.get_outgoing_message(),
@@ -221,7 +221,7 @@ fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::SelfUnidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -235,7 +235,7 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     assert_that!(
         client_attestation_provider.get_outgoing_message(),
@@ -258,7 +258,7 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
 
 #[googletest::test]
 fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::SelfUnidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -272,7 +272,7 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
@@ -296,7 +296,7 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
 
 #[googletest::test]
 fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -307,7 +307,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     assert_that!(
         client_attestation_provider.get_outgoing_message(),
@@ -325,7 +325,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_result(),
+        client_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -334,7 +334,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
 
 #[googletest::test]
 fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -345,7 +345,7 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest {
         endorsed_evidence: BTreeMap::from([(
@@ -369,7 +369,7 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
 
 #[googletest::test]
 fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -386,7 +386,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     assert_that!(
         client_attestation_provider.get_outgoing_message(),
@@ -413,7 +413,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     assert_that!(
-        client_attestation_provider.take_attestation_result(),
+        client_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -422,7 +422,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
 
 #[googletest::test]
 fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
@@ -439,7 +439,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest {
         endorsed_evidence: BTreeMap::from([(
@@ -467,7 +467,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
     );
 
     assert_that!(
-        server_attestation_provider.take_attestation_result(),
+        server_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -477,7 +477,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
 #[googletest::test]
 fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let client_config = AttestationProviderConfig {
+        let client_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -485,7 +485,7 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+        let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
         let attest_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
         assert_that!(
@@ -494,7 +494,7 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
         );
 
         assert_that!(
-            client_attestation_provider.take_attestation_result(),
+            client_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
@@ -509,7 +509,7 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
 #[googletest::test]
 fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let server_config = AttestationProviderConfig {
+        let server_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -517,7 +517,7 @@ fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+        let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
         let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
         assert_that!(
@@ -526,7 +526,7 @@ fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
         );
 
         assert_that!(
-            server_attestation_provider.take_attestation_result(),
+            server_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
@@ -541,7 +541,7 @@ fn server_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
 #[googletest::test]
 fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let client_config = AttestationProviderConfig {
+        let client_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -552,7 +552,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+        let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
         let attest_response = AttestResponse {
             endorsed_evidence: BTreeMap::from([(
@@ -568,7 +568,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
             ok(some(()))
         );
         assert_that!(
-            client_attestation_provider.take_attestation_result(),
+            client_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "Verification failed",
                 error_messages: eq(&BTreeMap::from([(
@@ -586,7 +586,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
 #[googletest::test]
 fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let server_config = AttestationProviderConfig {
+        let server_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -597,7 +597,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+        let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
         let attest_request = AttestRequest {
             endorsed_evidence: BTreeMap::from([(
@@ -613,7 +613,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
             ok(some(()))
         );
         assert_that!(
-            server_attestation_provider.take_attestation_result(),
+            server_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "Verification failed",
                 error_messages: eq(&BTreeMap::from([(
@@ -631,7 +631,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
 #[googletest::test]
 fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let client_config = AttestationProviderConfig {
+        let client_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -642,7 +642,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+        let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
         let attest_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
         assert_that!(
@@ -651,7 +651,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
         );
         // This failure should mention what evidence is missing instead.
         assert_that!(
-            client_attestation_provider.take_attestation_result(),
+            client_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
@@ -666,7 +666,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
 #[googletest::test]
 fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     for attestation_type in [AttestationType::PeerUnidirectional, AttestationType::Bidirectional] {
-        let server_config = AttestationProviderConfig {
+        let server_config = AttestationHandlerConfig {
             attestation_type,
             self_attesters: BTreeMap::from([]),
             self_endorsers: BTreeMap::from([]),
@@ -677,7 +677,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+        let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
         let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
         assert_that!(
@@ -686,7 +686,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
         );
         // This failure should mention what evidence is missing instead.
         assert_that!(
-            server_attestation_provider.take_attestation_result(),
+            server_attestation_provider.take_attestation_verdict(),
             ok(matches_pattern!(AttestationVerdict::AttestationFailed {
                 reason: "No matching attestation results",
                 ..
@@ -700,7 +700,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn client_additional_attestation_passes() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -711,7 +711,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     let attest_response = AttestResponse {
         endorsed_evidence: BTreeMap::from([
@@ -733,7 +733,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_result(),
+        client_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -742,7 +742,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn server_additional_attestation_passes() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -753,7 +753,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest {
         endorsed_evidence: BTreeMap::from([
@@ -775,7 +775,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
-        server_attestation_provider.take_attestation_result(),
+        server_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -784,7 +784,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn client_receives_additional_attestations() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -795,7 +795,7 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut client_attestation_provider = ClientAttestationProvider::create(client_config)?;
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
     let attest_response = AttestResponse {
         endorsed_evidence: BTreeMap::from([(
@@ -814,7 +814,7 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
     assert_that!(client_attestation_provider.put_incoming_message(ignored_response), ok(none()));
 
     assert_that!(
-        client_attestation_provider.take_attestation_result(),
+        client_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -823,7 +823,7 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn server_receives_additional_attestations() -> anyhow::Result<()> {
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -834,7 +834,7 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
 
-    let mut server_attestation_provider = ServerAttestationProvider::create(server_config)?;
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
     let attest_request = AttestRequest {
         endorsed_evidence: BTreeMap::from([(
@@ -852,7 +852,7 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
     assert_that!(server_attestation_provider.put_incoming_message(ignored_request), ok(none()));
 
     assert_that!(
-        server_attestation_provider.take_attestation_result(),
+        server_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
     );
 
@@ -863,7 +863,7 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -879,7 +879,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
         )]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
@@ -912,7 +912,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -928,7 +928,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
         )]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
@@ -961,7 +961,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
@@ -977,7 +977,7 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
         )]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::SelfUnidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
@@ -1007,7 +1007,7 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
 
 #[googletest::test]
 fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Result<()> {
-    let client_config = AttestationProviderConfig {
+    let client_config = AttestationHandlerConfig {
         attestation_type: AttestationType::PeerUnidirectional,
         self_attesters: BTreeMap::from([]),
         self_endorsers: BTreeMap::from([]),
@@ -1017,7 +1017,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
         )]),
         attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
     };
-    let server_config = AttestationProviderConfig {
+    let server_config = AttestationHandlerConfig {
         attestation_type: AttestationType::Bidirectional,
         self_attesters: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),

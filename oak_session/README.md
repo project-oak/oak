@@ -191,7 +191,7 @@ composed of one of each `Attester`, `Endorser`, `AttestationVerifier`,
 
 ### Attestation flow
 
-During the `ATTESTATION` state , the `AttestationProvider`, obtains endorsed
+During the `ATTESTATION` state , the `AttestationHandler`, obtains endorsed
 evidence by calling the `Attester`/`Endorser` implementation. Conversely, it
 invokes the `AttestationVerifier` validation logic for any received evidence.
 When multiple attestations are provided by the peer, an additional
@@ -209,10 +209,10 @@ sequenceDiagram
 
     box Client side
         participant AV as AttestationVerifier
-        participant CAP as ClientAttestationProvider
+        participant CAP as ClientAttestationHandler
     end
     box Server side
-        participant SAP as ServerAttestationProvider
+        participant SAP as ServerAttestationHandler
         participant A as Attester
         participant E as Endorser
     end
@@ -246,10 +246,10 @@ sequenceDiagram
         participant CAV as AttestationVerifier
         participant CE as Endorser
         participant CA as Attester
-        participant CAP as ClientAttestationProvider
+        participant CAP as ClientAttestationHandler
     end
     box Server side
-        participant SAP as ServerAttestationProvider
+        participant SAP as ServerAttestationHandler
         participant SA as Attester
         participant SE as Endorser
         participant SAV as AttestationVerifier
