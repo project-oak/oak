@@ -24,9 +24,10 @@ streaming sessions, and endorsement/evidence client-side caching.
 - **Noise Handshake:** We rely on the Noise protocol framework to perform the
   handshake and establish a secure communication channel between parties. A
   number of [Noise Patterns](https://noiseexplorer.com/patterns/) are supported.
-- **Attestation-to-Handshake Binding:** Each party signs the handshake
-  transcript hash with the application keyset to bind the attestation to the
-  session.
+- **Session Binding:** Each attesting party signs a session handshake token
+  derived from the handshake transcript hash with the dedicated binding keyset
+  derived from the attestation root of trust. This ensures that the attestation
+  is securely bound to the session and cannot be reused in replay attacks.
 - **Support for unreliable transport:** The implementation can be adapted to
   handle unreliable connections (e.g., UDP) by incorporating sequence numbers,
   nonce customization, and message duplication prevention mechanisms.
@@ -278,16 +279,53 @@ sequenceDiagram
     Note over CAP, SAP: Attestation result is<br/> passed to HandshakeHandler
 ```
 
+#### Exchanging attestations
+
+Oak Session allows the clients to configure multiple attesters and corresponding
+attestation verifiers to use during the [attestation step](#attestation-flow) of
+the session initialization. Each attester and the corresponding verifier are
+identified by a unique attestation type ID string and are assumed to
+produce/consume the same type of evidence.
+
+The evidence that is being exchanged by the parties is contained in the
+[EndorsedEvidence](/proto/session/messages.proto) message. It is included in
+the[AttestRequest/AttestResponse](/proto/session/session.proto) messages in a
+map keyed by the attestation type ID. The verifying party uses the attestation
+type ID to identify the evidence to be consumed by its attestation verifiers.
+Each verifier that has received matching evidence produces
+[AttestationResults](/proto/attestation/verification.proto). To reach the final
+attestation verdict individual attestation results are passed to the
+[AttestationAggregator](src/attestation.rs) component that makes the decision on
+whether the attestation step succeeded or failed and passes it with the
+accompanying metadata to the session.
+
 ### Handshake flow
 
 During the `HANDSHAKE` state, the `HandshakeHandler` initiates the Noise session
-proper. It uses the `SessionBinder` and `SessionBindingVerifier` once the
-session is established to create and verify the other end's bindings.
+proper.Once the handshake is complete each party is in possession of two shared
+symmetric keys; one can be used to encrypt the outgoing traffic, the other one
+to decrypt incoming messages.
 
-The binding of the session has been merged with the Noise handshake flow to
-avoid one extra message in the case of attested servers. In the case of attested
-clients, the client has to send one extra "follow-up message" after the
-handshake proper, with the session bindings.
+In order to bind the established secure session to the previously verified
+attestation we require each party follow up the handshake with signing a
+handshake token (a byte string derived from the handshake transcript and so
+uniquely identifying the session) with the binding keyset. The public key for
+the binding keyset must be included in the attestation evidence. The verifying
+peer configures SessionBindingVerifier at their end to extract the key and
+verify the binding signature. This confirms that the handshake was performed
+with the same entity that issued the attestation.
+
+- For the unidirectional attestation use case where only the responder needs to
+  be attested we append the signature to the last message of the handshake to
+  avoid an unnecessary round trip
+- The client sends their binding signatured in a separate follow up message
+- If multiple attesters are used, each of them must include its own separate
+  binding key in the [evidence](/proto/session/messages.proto).
+  - Session binding signatures are exchanged in
+    [HandshakeRequest/HandshakeResponse](/proto/session/session.proto) messages,
+    in a map keyed by the attestation type ID, in the
+    [HandshakeRequest](/proto/session/session.proto) for the initiator or the
+    [HandshakeResponse](/proto/session/session.proto) for the responder.
 
 The following diagram shows the handshake sequence. The client is configured in
 `PeerUnidirectional` mode, and the server is configured in `SelfUnidirectional`
@@ -385,9 +423,52 @@ encryption and decryption of application messages.
 To use this library, follow these steps:
 
 - Create a `Config` object specifying the desired features of the session
-  - Pick the attestation type (Unidirectional or Bidirectional)
-  - Add attesters and attestation verifiers
-  - Pick the desired Noise handshake pattern
+
+  - Select the attestation type, for example, SelfUnidirectional
+  - Select the desired Noise handshake pattern, for example, NoiseNN
+  - The attesting party must configure the following objects for each supported
+    attestation type:
+
+    - [`Attester`](/oak_attestation_types/src/attester.rs)
+    - [`Endorser`](/oak_attestation_types/src/endorser.rs)
+    - [`SessionBinder`](src/session_binding.rs)
+
+    ```rust
+      let config =
+          SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+              .add_self_attester(attester_id.clone(), Box::new(my_attester))
+              .add_self_endorser(attester_id.clone(), Box::new(my_endorser))
+              .add_session_binder(attester_id.clone(), Box::new(my_session_binder))
+              .build();
+    ```
+
+  - The verifying party configures the following components:
+
+    - [`AttestationVerifier`](/oak_attestation_verification_types/src/verifier.rs)
+    - [`SessionBindingVerifier`](src/session_binding.rs)
+      - [KeyExtractor](src/key_extractor) can be used instead of providing
+        SessionBindingVerifier directly. In this case it is used to extract the
+        binding key from the corresponding evidence. The key is then used to
+        construct [SignatureBindingVerifier](src/session_binding.rs) to verify
+        the binding
+      - If neither SessionBindingVerifier nor KeyExtractor is provided for a
+        given attestation verifier
+        [DefaultSigningKeyExtractor](src/key_extractor.rs) is used in its place.
+        It takes the key from the top level
+        [signing_public_key](/proto/attestation/verification.proto) field in
+        AttestationResults
+
+    ```rust
+        let client_config =
+          SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+              .add_peer_verifier_with_key_extractor(
+                  attester_id.clone(),
+                  Box::new(my_attestation_verifier),
+                  Box::new(DefaultBindingKeyExtractor {}),
+              )
+              .build();
+    ```
+
 - Use the configuration to create a `Session` object (`ClientSession` for the
   initiator of the connection, `ServerSession` for the responder)
 - Use `get_outgoing_message` and `put_incoming_message` to exchange the attested
