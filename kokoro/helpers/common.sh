@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-
-
 function configure_common_env() {
   export RUST_BACKTRACE=1
   export RUST_LOG=debug
@@ -19,23 +17,4 @@ function configure_bazelrc() {
     touch ./.tmp.ci.bazelrc
   fi
   trap "rm --force ./.tmp.ci.bazelrc" EXIT
-}
-
-function kokoro_cleanup() {
-    # Clean up bazel out directories to avoid everything being considered an action output.
-    # That is also problematic because bazel-out is an absolute symlink, and that is not allowed by
-    # RBE. See b/357487334.
-    rm --recursive --force \
-      ./bazel-bin \
-      ./bazel-out \
-      ./bazel-testlogs \
-      ./bazel-workspace \
-      ./oak_private_memory/bazel-bin \
-      ./oak_private_memory/bazel-out \
-      ./oak_private_memory/bazel-testlogs \
-      ./oak_private_memory/bazel-oak_private_memory \
-      ./codelab/bazel-out \
-      ./codelab/bazel-bin \
-      ./codelab/bazel-testlogs \
-      ./codelab/bazel-codelab
 }

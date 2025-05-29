@@ -31,5 +31,3 @@ cp --preserve=timestamps \
     "${KOKORO_ARTIFACTS_DIR}/binaries/test"
 
 copy_binaries_to_placer
-
-kokoro_cleanup

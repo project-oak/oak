@@ -17,5 +17,3 @@ configure_bazelrc
 
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#githubBuildShell --command just kokoro_verify_buildconfigs
-
-kokoro_cleanup

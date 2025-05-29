@@ -18,5 +18,3 @@ configure_bazelrc
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#ci --command just cargo-audit
 ./scripts/git_check_diff
-
-kokoro_cleanup
