@@ -14,6 +14,30 @@
 // limitations under the License.
 //
 
+//! This module defines the configuration structures and a builder pattern
+//! (`SessionConfigBuilder`) used to set up and customize `Session` instances.
+//! It centralizes all the necessary settings for the various phases of a secure
+//! session, including:
+//!
+//! - **Attestation**: Specifies the type of attestation to perform (e.g.,
+//!   bidirectional, unidirectional), which attesters and endorsers to use for
+//!   self-attestation, and which verifiers to use for peer attestation.
+//!   Configuration is held in [`AttestationProviderConfig`].
+//! - **Handshake**: Defines the cryptographic handshake protocol (e.g., Noise
+//!   patterns like KK, NK, NN), and any pre-shared static keys required by the
+//!   chosen protocol. Configuration is held in [`HandshakerConfig`].
+//! - **Encryption**: Determines how session encryptors are provided after a
+//!   successful handshake. Configuration is held in [`EncryptorConfig`].
+//! - **Session Binding**: Manages how attestation results are cryptographically
+//!   bound to the session. This includes providers for verifying session
+//!   bindings received from the peer, and binders for this party to create its
+//!   own session bindings.
+//!
+//! The [`SessionConfig`] struct is the main container for all these settings,
+//! and the [`SessionConfigBuilder`] provides a fluent API to construct it
+//! step-by-step. This approach allows for flexible and clear configuration of
+//! complex session establishment logic.
+
 use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 
 use anyhow::Error;
@@ -31,15 +55,35 @@ use crate::{
         SessionBinder, SessionBindingVerifierProvider, SignatureBindingVerifierProvider,
     },
 };
+
+/// Top-level configuration for a secure session.
+///
+/// This struct aggregates configurations for attestation, handshake,
+/// encryption, and session binding verification. Instances are typically
+/// created using the [`SessionConfigBuilder`].
 #[allow(dead_code)]
 pub struct SessionConfig {
+    /// Configuration for the attestation phase.
     pub attestation_provider_config: AttestationProviderConfig,
+    /// Configuration for the cryptographic handshake phase.
     pub handshaker_config: HandshakerConfig,
+    /// Configuration for creating the session encryptor.
     pub encryptor_config: EncryptorConfig,
+    /// A map of attestation IDs to providers that can create verifiers for
+    /// session bindings received from the peer. These are used to ensure that
+    /// the peer's attestation is bound to the current session.
     pub binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
 }
 
 impl SessionConfig {
+    /// Creates a new [`SessionConfigBuilder`] to construct a `SessionConfig`.
+    ///
+    /// # Arguments
+    ///
+    /// * `attestation_type`: Specifies the attestation flow (e.g.,
+    ///   bidirectional, unidirectional).
+    /// * `handshake_type`: Specifies the cryptographic handshake protocol to
+    ///   use.
     pub fn builder(
         attestation_type: AttestationType,
         handshake_type: HandshakeType,
@@ -48,14 +92,22 @@ impl SessionConfig {
     }
 }
 
+/// A builder for creating [`SessionConfig`] instances.
+///
+/// Provides a fluent API to configure all aspects of a secure session.
 pub struct SessionConfigBuilder {
     config: SessionConfig,
 }
 
+/// Trait for objects that can provide an [`Encryptor`] instance.
+///
+/// This allows deferring the creation of the encryptor until session keys are
+/// available after a successful handshake.
 pub trait EncryptorProvider: Send {
     fn provide_encryptor(&self, session_keys: SessionKeys) -> Result<Box<dyn Encryptor>, Error>;
 }
 
+/// An [`EncryptorProvider`] that creates [`OrderedChannelEncryptor`] instances.
 pub struct OrderedChannelEncryptorProvider;
 
 impl EncryptorProvider for OrderedChannelEncryptorProvider {
@@ -66,6 +118,12 @@ impl EncryptorProvider for OrderedChannelEncryptorProvider {
 }
 
 impl SessionConfigBuilder {
+    /// Creates a new `SessionConfigBuilder` with essential attestation and
+    /// handshake types.
+    ///
+    /// Initializes with default configurations for attestation (no attesters,
+    /// endorsers, or verifiers), handshake (no static keys or session binders),
+    /// and encryption (using `OrderedChannelEncryptorProvider`).
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_provider_config = AttestationProviderConfig {
             attestation_type,
@@ -96,17 +154,19 @@ impl SessionConfigBuilder {
         Self { config }
     }
 
-    /// Add an Attester that generates an Evidence for this TEE.
-    /// `attester_id` is passed alongside the Evidence and will be used by the
-    /// peer to pick the corresponding Verifier.
+    /// Add an Attester that generates [`Evidence`] for this party (self).
+    /// The `attester_id` is a string identifier that is sent alongside the
+    /// [`Evidence`]. The peer uses this ID to select the corresponding
+    /// [`AttestationVerifier`] for verification.
     ///
-    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
+    /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
     pub fn add_self_attester(mut self, attester_id: String, attester: Box<dyn Attester>) -> Self {
         self.config.attestation_provider_config.self_attesters.insert(attester_id, attester.into());
         self
     }
 
-    /// Add an Attester but retain ownership of the object.
+    /// Add an Attester by reference, retaining ownership of the attester
+    /// object. See [`add_self_attester`] for more details on `attester_id`.
     pub fn add_self_attester_ref(
         mut self,
         attester_id: String,
@@ -119,17 +179,18 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Endorser that generates Endorsements for this TEE.
-    /// Endorser will only endorse the Evidence generated by an Attester with
-    /// the same ID as the `endorser_id`.
+    /// Add an Endorser that generates [`Endorsements`] for this party's (self)
+    /// [`Evidence`]. The `endorser_id` must match the `attester_id` of the
+    /// [`Attester`] whose [`Evidence`] it is endorsing.
     ///
-    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
+    /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
     pub fn add_self_endorser(mut self, endorser_id: String, endorser: Box<dyn Endorser>) -> Self {
         self.config.attestation_provider_config.self_endorsers.insert(endorser_id, endorser.into());
         self
     }
 
-    /// Add an Endorser but retain ownership of the object
+    /// Add an Endorser by reference, retaining ownership of the endorser
+    /// object. See [`add_self_endorser`] for more details on `endorser_id`.
     pub fn add_self_endorser_ref(
         mut self,
         endorser_id: String,
@@ -142,12 +203,16 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier that will verify Evidence and Endorsements
-    /// from the peer's TEE. Verifier only verifies Evidence and
-    /// Endorsements with with the same ID as the `attester_id`. A default key
-    /// extractor is used to bind the received evidence to the session.
+    /// Add an [`AttestationVerifier`] to verify [`Evidence`] and
+    /// [`Endorsements`] received from the peer. The `attester_id` is used
+    /// to match this verifier with the `attester_id` accompanying the
+    /// peer's [`Evidence`]. This method uses a default [`KeyExtractor`]
+    /// ([`DefaultSigningKeyExtractor`]) to extract a key from the verified
+    /// attestation results, which is then used to create a
+    /// [`SessionBindingVerifierProvider`] for ensuring the peer's
+    /// attestation is bound to the current session.
     ///
-    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+    /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
     pub fn add_peer_verifier(
         mut self,
         attester_id: String,
@@ -166,7 +231,9 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier but retain ownership of the object.
+    /// Add an [`AttestationVerifier`] by reference, retaining ownership.
+    /// See [`add_peer_verifier`] for details on `attester_id` and default
+    /// session binding verification.
     pub fn add_peer_verifier_ref(
         mut self,
         attester_id: String,
@@ -185,14 +252,14 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier with the custom key extractor to extract the
-    /// key to bind the attestation to the session. The verifier will verify
-    /// Evidence and Endorsements from the peer's TEE, and the key extractor
-    /// will be used to extract the binding key from the evidence. Verifier only
-    /// verifies Evidence and Endorsements with with the same ID as the
-    /// `attester_id`.
+    /// Add an [`AttestationVerifier`] with a custom [`KeyExtractor`].
+    /// The `attester_id` matches the verifier to the peer's [`Evidence`].
+    /// The provided `key_extractor` is used to derive a key from the peer's
+    /// verified attestation results. This key is then used by a
+    /// [`SignatureBindingVerifierProvider`] to verify that the peer's
+    /// attestation is bound to the current session.
     ///
-    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+    /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
     pub fn add_peer_verifier_with_key_extractor(
         mut self,
         attester_id: String,
@@ -210,8 +277,9 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier with the custom key extractor but retain
-    /// ownership of the objects.
+    /// Add an [`AttestationVerifier`] and a custom [`KeyExtractor`] by
+    /// reference. Retains ownership of the provided objects. See
+    /// [`add_peer_verifier_with_key_extractor`] for more details.
     pub fn add_peer_verifier_with_key_extractor_ref(
         mut self,
         attester_id: String,
@@ -229,14 +297,14 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier with the custom binding verifier provider to
-    /// extract the key to bind the attestation to the session. The verifier
-    /// will verify Evidence and Endorsements from the peer's TEE, and the
-    /// binding verifier provider will create an object that can ensure binding
-    /// between the evidence and the session. Verifier only verifies Evidence
-    /// and Endorsements with with the same ID as the `attester_id`.
+    /// Add an [`AttestationVerifier`] with a custom
+    /// [`SessionBindingVerifierProvider`]. The `attester_id` matches the
+    /// verifier to the peer's [`Evidence`]. The `binding_verifier_provider`
+    /// is directly used to create a verifier for the peer's session
+    /// binding, offering maximum flexibility in how session binding is
+    /// verified.
     ///
-    /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
+    /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
     pub fn add_peer_verifier_with_binding_verifier_provider(
         mut self,
         attester_id: String,
@@ -253,8 +321,10 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an Attestation Verifier with the custom binding verifier provider
-    /// but retain ownership of the objects.
+    /// Add an [`AttestationVerifier`] and a custom
+    /// [`SessionBindingVerifierProvider`] by reference. Retains ownership
+    /// of the provided objects. See
+    /// [`add_peer_verifier_with_binding_verifier_provider`] for more details.
     pub fn add_peer_verifier_with_binding_verifier_provider_ref(
         mut self,
         attester_id: String,
@@ -271,6 +341,11 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Sets this party's static private key for the handshake.
+    ///
+    /// This key is used in handshake patterns that require the party to have a
+    /// pre-known static identity (e.g., Noise patterns like IK, KK).
+    /// Panics if the key has already been set.
     pub fn set_self_static_private_key(mut self, private_key: Box<dyn IdentityKeyHandle>) -> Self {
         if self.config.handshaker_config.self_static_private_key.is_none() {
             self.config.handshaker_config.self_static_private_key = Some(private_key);
@@ -280,6 +355,11 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Sets the peer's static public key for the handshake.
+    ///
+    /// This key is used in handshake patterns where the peer's static identity
+    /// is known beforehand (e.g., Noise patterns like IK, KK).
+    /// Panics if the key has already been set.
     pub fn set_peer_static_public_key(mut self, public_key: &[u8]) -> Self {
         if self.config.handshaker_config.peer_static_public_key.is_none() {
             self.config.handshaker_config.peer_static_public_key = Some(public_key.to_vec());
@@ -289,6 +369,9 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Sets a custom [`EncryptorProvider`] for creating the session encryptor.
+    ///
+    /// This allows overriding the default [`OrderedChannelEncryptorProvider`].
     pub fn set_encryption_provider(
         mut self,
         encryptor_provider: Box<dyn EncryptorProvider>,
@@ -297,6 +380,10 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Adds a [`SessionBinder`] used by this party to bind its attestation to
+    /// the current session's handshake. The `attester_id` associates this
+    /// binder with a specific attestation flow/result, ensuring that the
+    /// correct attestation context is bound.
     pub fn add_session_binder(
         mut self,
         attester_id: String,
@@ -306,6 +393,8 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Adds a [`SessionBinder`] by reference, retaining ownership.
+    /// See [`add_session_binder`] for details on `attester_id`.
     pub fn add_session_binder_ref(
         mut self,
         attester_id: String,
@@ -315,33 +404,66 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Consumes the builder and returns the configured [`SessionConfig`].
     pub fn build(self) -> SessionConfig {
         self.config
     }
 }
 
+/// Configuration for the attestation phase of a session.
+///
+/// Instances are typically created and populated via the
+/// [`SessionConfigBuilder`].
 #[allow(dead_code)]
 pub struct AttestationProviderConfig {
+    /// Specifies the type of attestation to be performed (e.g., bidirectional).
     pub attestation_type: AttestationType,
+    /// A map of attesters (keyed by `attester_id`) used by this party to
+    /// generate its own attestation [`Evidence`].
     pub self_attesters: BTreeMap<String, Arc<dyn Attester>>,
+    /// A map of endorsers (keyed by `attester_id`) used by this party to
+    /// generate [`Endorsements`] for its own [`Evidence`]. The key must match
+    /// the `attester_id` of the evidence being endorsed.
     pub self_endorsers: BTreeMap<String, Arc<dyn Endorser>>,
+    /// A map of [`AttestationVerifier`]s (keyed by `attester_id`) used to
+    /// verify [`EndorsedEvidence`] received from the peer. The key is used to
+    /// select the correct verifier based on the `attester_id` provided with the
+    /// peer's evidence.
     pub peer_verifiers: BTreeMap<String, Arc<dyn AttestationVerifier>>,
+    /// Logic to combine multiple attestation verification results (if the peer
+    /// provides evidence from different attesters) into a single overall
+    /// [`AttestationVerdict`].
     pub attestation_aggregator: Box<dyn AttestationAggregator>,
 }
 
+/// Configuration for the cryptographic handshake phase of a session.
+///
+/// Instances are typically created and populated via the
+/// [`SessionConfigBuilder`].
 #[allow(dead_code)]
 pub struct HandshakerConfig {
+    /// Specifies the cryptographic handshake protocol to use (e.g., Noise KK,
+    /// NK, NN).
     pub handshake_type: HandshakeType,
-    // Used for authentication schemes where a static public key is pre-shared with the responder.
+    /// This party's static private key. Required for certain handshake patterns
+    /// (e.g., Noise IK where this party is the initiator, or Noise KK).
     pub self_static_private_key: Option<Box<dyn IdentityKeyHandle>>,
-    // Used for authentication schemes where a responder's static public key is pre-shared with
-    // the initiator.
+    /// The peer's static public key. Required for certain handshake patterns
+    /// (e.g., Noise IK where this party is the responder, or Noise KK).
     pub peer_static_public_key: Option<Vec<u8>>,
-    // Session binders to bind the handshake hash to the previously received attestation data,
-    // keyed by the attestation type.
+    /// A map of [`SessionBinder`]s (keyed by `attester_id`) used by this party
+    /// to create cryptographic bindings. These bindings link this party's
+    /// attestation (identified by `attester_id`) to the current session's
+    /// handshake hash.
     pub session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
 }
 
+/// Configuration for creating the session encryptor.
+///
+/// Instances are typically created and populated via the
+/// [`SessionConfigBuilder`].
 pub struct EncryptorConfig {
+    /// A provider that creates an [`Encryptor`] instance once session keys are
+    /// established from the handshake.
     pub encryptor_provider: Box<dyn EncryptorProvider>,
 }

@@ -14,8 +14,74 @@
 // limitations under the License.
 //
 
-//! This module provides an implementation of the Attestation Provider, which
-//! handles remote attestation between two parties.
+//! This module provides implementations for the attestation phase of
+//! establishing a secure session. Remote attestation is the process by which
+//! two parties (e.g., a client and a server) exchange cryptographic evidence to
+//! verify each other's identity, software configuration, and execution
+//! environment. This establishes a root of trust before sensitive information
+//! is exchanged or session keys are derived.
+//!
+//! ## Overview
+//!
+//! The attestation process involves one or both parties generating "evidence"
+//! (often a quote from a secure hardware component like a TPM or SEV-SNP) and
+//! "endorsements" (certificates or other data that vouch for the evidence).
+//! This `EndorsedEvidence` is then sent to the peer, who verifies it against a
+//! set of configured policies and trusted authorities.
+//!
+//! This module provides the building blocks to manage this exchange and
+//! verification, supporting various configurations from unidirectional to
+//! bidirectional attestation.
+//!
+//! ## Key Abstractions and Their Roles
+//!
+//! - **`AttestationType`**: An enum that defines the direction and necessity of
+//!   attestation. This allows for flexibility:
+//!     - `Bidirectional`: Both parties attest and verify each other.
+//!     - `SelfUnidirectional`: Only "self" (the party configuring) attests to
+//!       the peer.
+//!     - `PeerUnidirectional`: Only the "peer" attests to "self".
+//!     - `Unattested`: No attestation occurs (generally for testing or
+//!       low-security scenarios).
+//!
+//! - **`AttestationProvider` Trait**: The core abstraction representing one
+//!   party's role in the attestation process. Implementations
+//!   (`ClientAttestationProvider`, `ServerAttestationProvider`) manage the
+//!   state and logic for generating/sending their own evidence and/or
+//!   receiving/verifying the peer's evidence. They use the `ProtocolEngine`
+//!   trait to exchange `AttestRequest` and `AttestResponse` messages.
+//!
+//! - **`ClientAttestationProvider` / `ServerAttestationProvider`**: Concrete
+//!   implementations for the client (initiator) and server (responder) roles.
+//!   They are initialized with an `AttestationProviderConfig` which specifies:
+//!     - `self_attesters`: Components that generate this party's attestation
+//!       `Evidence`.
+//!     - `self_endorsers`: Components that generate `Endorsements` for this
+//!       party's `Evidence`.
+//!     - `peer_verifiers`: A map of `AttestationVerifier`s used to verify the
+//!       peer's `EndorsedEvidence`. Each verifier is associated with an
+//!       "attestation ID" allowing multiple types of evidence to be processed.
+//!     - `attestation_aggregator`: An `AttestationAggregator` that determines
+//!       the overall outcome if multiple pieces of evidence are verified.
+//!
+//! - **`AttestationVerdict`**: An enum (`AttestationPassed` or
+//!   `AttestationFailed`) representing the final outcome of the attestation
+//!   process for a party. It's marked `#[must_use]` to ensure failures are
+//!   explicitly handled. `AttestationPassed` includes the `AttestationResults`
+//!   from successful verifications, which can be used later (e.g., for session
+//!   binding).
+//!
+//! - **`AttestationAggregator` Trait (and `DefaultAttestationAggregator`)**:
+//!   - **Purpose**: Defines how multiple individual `AttestationResults` (from
+//!     verifying different pieces of peer evidence) are combined into a single
+//!     `AttestationVerdict`.
+//!   - **Why**: In complex systems, a peer might provide evidence from multiple
+//!     sources (e.g., hardware attestation, software attestation). The
+//!     aggregator decides if the overall attestation is successful based on a
+//!     defined policy.
+//!   - **`DefaultAttestationAggregator`**: Requires at least one piece of
+//!     evidence to be successfully verified and all verified pieces to be
+//!     successful.
 
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
@@ -29,51 +95,72 @@ use oak_proto_rust::oak::{
 
 use crate::{config::AttestationProviderConfig, ProtocolEngine};
 
-/// The verdict of the attestation.
+/// Represents the outcome of the attestation process.
+///
+/// This enum is marked `#[must_use]` to ensure that the `AttestationFailed`
+/// variant is explicitly handled, preventing accidental ignoring of attestation
+/// failures.
 #[derive(Debug)]
 #[must_use = "this `AttestationVerdict` may be an `AttestationFailed` variant, which should be handled"]
 pub enum AttestationVerdict {
-    /// The attestation was successful. The `attestation_results` map contains
-    /// the attestation results for each matched attester, keyed by the
-    /// attestation ID.
+    /// Indicates that the attestation process completed successfully.
+    ///
+    /// Contains a map of `AttestationResults` for each attestation ID that
+    /// was successfully verified. This map can be used by other parts of the
+    /// session establishment process, for instance, to extract keys for session
+    /// binding.
     AttestationPassed { attestation_results: BTreeMap<String, AttestationResults> },
-    /// The attestation failed.
-    /// The `reason` field contains a general error message about the failure.
-    /// The `error_messages` map contains detailed error messages for each
-    /// matched attester that failed verification, keyed by the attestation
-    /// ID.
+
+    /// Indicates that the attestation process failed.
+    ///
+    /// Provides a general `reason` for the failure and a map of
+    /// `error_messages` detailing failures for specific attestation IDs.
     AttestationFailed { reason: String, error_messages: BTreeMap<String, String> },
 }
 
-/// Configuration of the attestation behavior that the AttestationProvider will
-/// perform between two parties: Client and Server.
+/// Defines the configuration for the attestation flow between two parties.
 ///
-/// When configuring the Client: "Self" is the Client and "Peer" is the Server.
-/// When configuring the Server: "Self" is the Server and "Peer" is the Client.
+/// The terms "Self" and "Peer" are relative to the party configuring the
+/// attestation. For a client, "Self" is the client and "Peer" is the server.
+/// For a server, "Self" is the server and "Peer" is the client.
 #[derive(Clone, Copy, Debug)]
 pub enum AttestationType {
-    /// Both parties attest each other.
+    /// Both parties perform attestation and verify each other's evidence.
     Bidirectional,
-    /// "Self" attests itself to the "Peer".
+    /// "Self" attests its identity to the "Peer". The "Peer" verifies "Self".
     SelfUnidirectional,
-    /// "Peer" attests itself to the "Self".
+    /// "Peer" attests its identity to "Self". "Self" verifies "Peer".
     PeerUnidirectional,
-    /// No attestation.
+    /// No attestation is performed by either party. This is intended for
+    /// testing and prototyping and is generally discouraged for production
+    /// environments.
     Unattested,
 }
 
-/// Provider for the particular type of the attestation.
+/// Defines the contract for an attestation provider.
+///
+/// An `AttestationProvider` is responsible for managing the attestation process
+/// for one side of the communication (either client or server). It handles the
+/// generation or verification of attestation evidence. Implementations are
+/// expected to be stateful, progressing as messages are exchanged.
 pub trait AttestationProvider: Send {
-    // Consume the attestation results when they're ready. Returns None if the
-    // attestation still is still pending the incoming peer's data. The result is
-    // taken rather than copied since the results returned might be heavy and
-    // contain cryptographic material.
+    /// Retrieves the final attestation verdict once the process is complete.
+    ///
+    /// This method consumes the attestation result, meaning it can typically
+    /// only be called once successfully. It returns an error if the
+    /// attestation process is not yet finished or if the result has already
+    /// been taken. The lifetime of the `AttestationVerdict` is tied to this
+    /// consumption.
     fn take_attestation_result(self) -> Result<AttestationVerdict, Error>;
 }
 
-/// Aggregates the attestation result from multiple verifiers. Implementations
-/// of this trait define the logic of when the overall attestation step succeeds
-/// or fails.
+/// Defines the contract for aggregating multiple attestation results into a
+/// single verdict.
+///
+/// In scenarios where multiple attestation mechanisms are used (identified by
+/// different attestation IDs), an `AttestationAggregator` determines the
+/// overall success or failure of the attestation phase based on the individual
+/// results.
 pub trait AttestationAggregator: Send {
     fn aggregate_attestation_results(
         &self,
@@ -81,18 +168,26 @@ pub trait AttestationAggregator: Send {
     ) -> AttestationVerdict;
 }
 
-/// Default implementation of the AttestationAggregator.
+/// A default implementation of the `AttestationAggregator` trait.
 ///
-/// This implementation requires the following:
-///  - At least one attestation result is present.
-///  - None of the present attestation results have a failure status.
+/// This aggregator requires that:
+/// 1. There is at least one attestation result provided.
+/// 2. All provided attestation results indicate success.
 ///
-/// Because combine_attestation_results() is implemented as the inner join of
-/// the peer verifiers and the received evidence, only the matching evidence
-/// will be used for the verification.
+/// It operates on the principle that only evidence matching a configured peer
+/// verifier is considered, effectively performing an inner join between
+/// expected verifiers and received evidence.
 pub struct DefaultAttestationAggregator {}
 
 impl AttestationAggregator for DefaultAttestationAggregator {
+    /// Aggregates results based on the default policy: at least one result, and
+    /// all must be successful.
+    ///
+    /// If `results` is empty, it returns `AttestationFailed` with a reason
+    /// indicating no matching results. If any result in the `results` map
+    /// has a `GenericFailure` status, it returns `AttestationFailed` with
+    /// details of the failures. Otherwise, it returns `AttestationPassed`
+    /// with the original results.
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, AttestationResults>,
@@ -121,8 +216,15 @@ impl AttestationAggregator for DefaultAttestationAggregator {
     }
 }
 
-/// Client-side Attestation Provider that initiates remote attestation with the
-/// server.
+/// Client-side implementation of the `AttestationProvider`.
+///
+/// This struct manages the attestation process for the client (the initiator of
+/// the session). It generates an `AttestRequest` containing its own endorsed
+/// evidence (if configured for `Bidirectional` or `SelfUnidirectional`
+/// attestation) and processes the server's `AttestResponse` to verify peer
+/// evidence (if configured for `Bidirectional` or `PeerUnidirectional`
+/// attestation). It utilizes the `ProtocolEngine` trait to drive the message
+/// exchange.
 #[allow(dead_code)]
 pub struct ClientAttestationProvider {
     config: AttestationProviderConfig,
@@ -131,6 +233,16 @@ pub struct ClientAttestationProvider {
 }
 
 impl ClientAttestationProvider {
+    /// Creates a new `ClientAttestationProvider` with the given configuration.
+    ///
+    /// Initializes the provider and, if applicable based on
+    /// `config.attestation_type`, pre-generates the initial `AttestRequest`
+    /// containing the client's own endorsed evidence. This evidence is
+    /// created by invoking the `quote` method on configured
+    /// `self_attesters` and `endorse` on `self_endorsers`.
+    ///
+    /// The lifetime of the attesters and endorsers in `config` must be managed
+    /// by the caller; they are typically `Arc`ed to allow sharing.
     pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
         Ok(Self {
             attest_request: Some(AttestRequest {
@@ -160,16 +272,36 @@ impl ClientAttestationProvider {
 }
 
 impl AttestationProvider for ClientAttestationProvider {
+    /// Retrieves the attestation verdict from the client's perspective.
+    /// See `AttestationProvider::take_attestation_result` for details.
     fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
         self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 
 impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider {
+    /// Gets the next outgoing `AttestRequest` message to be sent to the server.
+    ///
+    /// For the client, this is typically the initial `AttestRequest` containing
+    /// its own evidence (if any). This method will return
+    /// `Some(AttestRequest)` once, after which it will return `Ok(None)` as
+    /// the client sends only one attestation message.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
         Ok(self.attest_request.take())
     }
 
+    /// Processes an incoming `AttestResponse` message from the server.
+    ///
+    /// This method is called when the client receives the server's attestation
+    /// data. It verifies the server's evidence based on the configured
+    /// `peer_verifiers` and `attestation_type`. The result of this
+    /// verification is stored internally and can be retrieved via
+    /// `take_attestation_result`.
+    ///
+    /// Returns `Ok(Some(()))` if the message was processed and the attestation
+    /// step is now complete from the client's perspective regarding message
+    /// exchange. Returns `Ok(None)` if the attestation result was already
+    /// obtained, indicating no further messages are expected in this phase.
     fn put_incoming_message(
         &mut self,
         incoming_message: AttestResponse,
@@ -195,8 +327,15 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationProvider
     }
 }
 
-/// Server-side Attestation Provider that responds to the remote attestation
-/// request from the client.
+/// Server-side implementation of the `AttestationProvider`.
+///
+/// This struct manages the attestation process for the server (the responder in
+/// the session). It processes the client's `AttestRequest` to verify client
+/// evidence (if configured for `Bidirectional` or `PeerUnidirectional`
+/// attestation) and generates an `AttestResponse` containing its own endorsed
+/// evidence (if configured for `Bidirectional` or `SelfUnidirectional`
+/// attestation). It utilizes the `ProtocolEngine` trait to drive the message
+/// exchange.
 #[allow(dead_code)]
 pub struct ServerAttestationProvider {
     config: AttestationProviderConfig,
@@ -205,6 +344,16 @@ pub struct ServerAttestationProvider {
 }
 
 impl ServerAttestationProvider {
+    /// Creates a new `ServerAttestationProvider` with the given configuration.
+    ///
+    /// Initializes the provider and, if applicable based on
+    /// `config.attestation_type`, pre-generates the `AttestResponse`
+    /// containing the server's own endorsed evidence. This evidence is
+    /// created by invoking the `quote` method on configured
+    /// `self_attesters` and `endorse` on `self_endorsers`.
+    ///
+    /// The lifetime of the attesters and endorsers in `config` must be managed
+    /// by the caller.
     pub fn create(config: AttestationProviderConfig) -> Result<Self, Error> {
         Ok(Self {
             attest_response: Some(AttestResponse {
@@ -234,16 +383,36 @@ impl ServerAttestationProvider {
 }
 
 impl AttestationProvider for ServerAttestationProvider {
+    /// Retrieves the attestation verdict from the server's perspective.
+    /// See `AttestationProvider::take_attestation_result` for details.
     fn take_attestation_result(mut self) -> Result<AttestationVerdict, Error> {
         self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))
     }
 }
 
 impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider {
+    /// Gets the next outgoing `AttestResponse` message to be sent to the
+    /// client.
+    ///
+    /// For the server, this is typically the `AttestResponse` generated after
+    /// processing the client's request (or pre-generated if only
+    /// self-attesting). This method will return `Some(AttestResponse)`
+    /// once, after which it will return `Ok(None)`.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
         Ok(self.attest_response.take())
     }
 
+    /// Processes an incoming `AttestRequest` message from the client.
+    ///
+    /// This method is called when the server receives the client's attestation
+    /// data. It verifies the client's evidence based on the configured
+    /// `peer_verifiers` and `attestation_type`. The result of this
+    /// verification is stored internally and can be retrieved via
+    /// `take_attestation_result`.
+    ///
+    /// Returns `Ok(Some(()))` if the message was processed. The server then
+    /// typically prepares its own `AttestResponse`.
+    /// Returns `Ok(None)` if the attestation result was already obtained.
     fn put_incoming_message(
         &mut self,
         incoming_message: AttestRequest,
@@ -269,6 +438,20 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationProvider
     }
 }
 
+/// Combines received `attested_evidence` with configured `verifiers`.
+///
+/// This function performs a merge-join between the set of verifiers (keyed by
+/// attestation ID) and the set of received endorsed evidence (also keyed by
+/// attestation ID). For each matching pair, it invokes the `verify` method of
+/// the `AttestationVerifier`.
+///
+/// It effectively filters the `attested_evidence` to only include entries for
+/// which a corresponding verifier is configured, and then collects their
+/// verification outcomes.
+///
+/// Returns a map of `AttestationResults` keyed by attestation ID for all
+/// successfully processed (though not necessarily successfully verified)
+/// evidence.
 fn combine_attestation_results(
     verifiers: &BTreeMap<String, Arc<dyn AttestationVerifier>>,
     attested_evidence: &BTreeMap<String, EndorsedEvidence>,

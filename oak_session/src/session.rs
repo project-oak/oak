@@ -15,7 +15,46 @@
 //
 
 //! This module provides an SDK for creating secure attested sessions between
-//! two parties.
+//! two parties. It orchestrates the complex process of establishing a trusted
+//! and confidential communication channel, suitable for sensitive interactions.
+//!
+//! ## Overview
+//!
+//! The primary goal of this module is to simplify the creation of sessions that
+//! are:
+//! - **Attested**: Both parties can cryptographically verify the identity and
+//!   trustworthiness of the other, based on evidence and endorsements. This is
+//!   handled by the `AttestationProvider` implementations.
+//! - **End-to-End Encrypted**: Application messages exchanged over the session
+//!   are encrypted using the derived session keys, ensuring confidentiality and
+//!   integrity. This is the responsibility of the `Encryptor`. The keying
+//!   material is obtained from the `Handshaker` during the handshake phase,
+//!   using the Noise Protocol Framework.
+//! - **Bound**: The attestation and handshake phases are cryptographically
+//!   linked, ensuring that the attested peer is the same one participating in
+//!   the handshake. `SessionBindingToken`s allow applications to further bind
+//!   their operations to this specific secure session.
+//!
+//! ## Design Philosophy
+//!
+//! The session establishment is a multi-step process. To manage this complexity
+//! and ensure protocol correctness, the module employs a state machine pattern,
+//! represented by the `Step` enum. This design:
+//! - Enforces the correct sequence of operations (Attestation -> Handshake ->
+//!   Open).
+//! - Manages the lifecycle and ownership of state-specific components (like
+//!   `AttestationProvider`, `Handshaker`, `Encryptor`).
+//! - Facilitates clear transitions and error handling at each step.
+//!
+//! The `Session` trait provides a high-level API for applications, abstracting
+//! away the internal state transitions. The `ProtocolEngine` trait is used by
+//! the `Session` implementations to drive the underlying message exchange for
+//! each phase of the protocol. This separation of concerns makes the system
+//! modular and easier to manage.
+//!
+//! Client (`ClientSession`) and server (`ServerSession`) roles have distinct
+//! implementations, reflecting their different responsibilities in the protocol
+//! initiation and response flow.
 
 use alloc::{
     boxed::Box,
@@ -50,82 +89,163 @@ use crate::{
     ProtocolEngine,
 };
 
-/// An identifier that uniquely identifies an established session channel.
+/// A unique identifier for an established secure session channel.
+///
+/// This token is derived from the cryptographic hash of the handshake
+/// transcript and an `info` string. It can be used by applications to bind
+/// other operations or resources to this specific secure session, providing a
+/// strong link to the authenticated and encrypted channel.
 pub struct SessionBindingToken(Vec<u8>);
 
 impl SessionBindingToken {
+    /// Creates a new `SessionBindingToken`.
+    ///
+    /// `handshake_hash` is the hash of the completed Noise handshake
+    /// transcript. `info` is an optional byte string provided by the
+    /// application, allowing for context-specific tokens (e.g.,
+    /// differentiating tokens for different purposes within the same
+    /// session).
     pub fn new(handshake_hash: &[u8], info: &[u8]) -> Self {
         let hash = session_binding_token_hash(handshake_hash, info);
         Self(hash.to_vec())
     }
 
+    /// Returns a slice view of the token's bytes.
+    /// The lifetime of the slice is bound to the `SessionBindingToken`
+    /// instance.
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }
 
+    /// Clones the token and returns its bytes as a boxed slice.
+    ///
+    /// This is useful when the token needs to be stored with a `'static`
+    /// lifetime or moved elsewhere.
     pub fn into_boxed_slice(&self) -> Box<[u8]> {
         self.0.clone().into_boxed_slice()
     }
 }
 
-/// Trait that represents an end-to-end encrypted bidirectional streaming
-/// session between two peers.
+/// Trait defining the interface for an end-to-end encrypted, attested,
+/// bidirectional streaming session.
 ///
-/// If one of the methods returns an error, it means that there was a protocol
-/// error and the session needs to be restarted (because the state-machine is in
-/// an incorrect state).
+/// This is the primary API for applications using the Oak Session SDK.
+/// Implementations manage the full lifecycle of a session: attestation,
+/// cryptographic handshake, and secure data exchange.
+///
+/// If any method returns an `Error`, the session is considered compromised or
+/// in an error and a new session needs to be started (because the state-machine
+/// is in an incorrect state).
 pub trait Session: Send {
-    /// Checks whether session is ready to send and receive encrypted messages.
-    /// Session becomes ready once remote attestation and crypto handshake have
-    /// been successfully finished.
+    /// Checks if the session is open and ready for secure communication.
+    ///
+    /// A session becomes open only after both the remote attestation (if
+    /// configured) and the cryptographic handshake have completed
+    /// successfully.
     fn is_open(&self) -> bool;
 
-    /// Encrypts `plaintext` and send it to the peer.
+    /// Encrypts the given `plaintext` message and prepares it for sending to
+    /// the peer.
     ///
-    /// This function can be called multiple times in a row, which will result
-    /// in multiple outgoing protocol messages being created.
+    /// This method should only be called when `is_open()` returns true.
+    /// The encrypted message is queued internally and will be wrapped in a
+    /// `SessionRequest` (for clients) or `SessionResponse` (for servers) when
+    /// `get_outgoing_message()` is called.
+    ///
+    /// Multiple calls to `write` can queue multiple messages.
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error>;
 
     /// Reads an encrypted message from the peer and decrypt it.
     ///
+    /// This method should only be called when `is_open()` returns true.
     /// This function can be called multiple times in a row, if the peer sent
-    /// multiple protocol messages that need to be decrypted.
+    /// multiple protocol messages that need to be decrypted (previously
+    /// supplied via `put_incoming_message()`).
     ///
     /// Method returns `Result<Option<()>>` with the corresponding outcomes:
-    /// - `Ok(None)`: Nothing to read
-    /// - `Ok(Some(Vec<u8>))`: Successfully read plaintext bytes
-    /// - `Err`: Protocol error
+    /// - `Ok(Some(PlaintextMessage))`: If a message was successfully decrypted.
+    /// - `Ok(None)`: If there are no pending incoming messages to decrypt.
+    /// - `Err(Error)`: If a decryption or protocol error occurs.
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error>;
 
-    /// Returns a unique token  bound to this session.
+    /// Returns a unique `SessionBindingToken` for this session.
+    ///
+    /// This token can be used by the application to bind other data or
+    /// operations to the security properties (authentication, encryption)
+    /// of this specific session. `info_string` allows for domain separation
+    /// if multiple tokens are needed for different purposes within the same
+    /// session.
+    ///
+    /// This method can only be called successfully when `is_open()` is true.
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error>;
 }
 
-/// Represents all data that is used for a particular session protocol step and
+/// Represents the internal state machine and data for a session's progression.
+///
+/// This enum encapsulates the distinct phases of establishing a secure session:
+/// Attestation, Handshake, and Open (for active communication). It manages the
+/// ownership and transition of state-specific objects like
+/// `AttestationProvider`, `Handshaker`, and `Encryptor`. The `Invalid` state is
+/// a temporary placeholder used during non-atomic state transitions to maintain
+/// memory safety.
+///
+/// `AP` is the type of `AttestationProvider` (client or server).
+/// `H` is the type of `Handshaker` (client or server).
 /// for transition to the next one. It is parametrized by the type of
 /// attestation provider and handshaker (either the client or server version).
 enum Step<AP: AttestationProvider, H: Handshaker> {
     /// Protocol step where communicating parties exchange and verify the
     /// attested evidence. May be skipped if no attestation is required.
+    ///
+    /// Holds the `attester` for managing this phase, a `handshaker_provider`
+    /// to create the `Handshaker` for the next phase, and an
+    /// `encryptor_provider` to create the `Encryptor` once the handshake is
+    /// complete. The lifetimes of these providers are managed by the `Step`
+    /// enum.
     Attestation {
         attester: AP,
         handshaker_provider: Box<dyn HandshakerBuilder<H>>,
         encryptor_provider: Box<dyn EncryptorProvider>,
     },
     /// Protocol step for performing the Noise handshake.
+    ///
+    /// Holds the active `handshaker`, the `encryptor_provider`, and the
+    /// `attestation_results` obtained from the previous phase. These results
+    /// may be used for verifying session bindings during the handshake.
     Handshake {
         handshaker: H,
         encryptor_provider: Box<dyn EncryptorProvider>,
         attestation_results: BTreeMap<String, AttestationResults>,
     },
-    /// Session is open and allows encrypted communication.
+    /// The phase where the session is established and ready for encrypted
+    /// communication.
+    ///
+    /// Holds the `encryptor` for protecting application messages and the
+    /// `handshake_hash` from the completed handshake, used for generating
+    /// `SessionBindingToken`s. The `Encryptor`'s lifetime is tied to this
+    /// state.
     Open { encryptor: Box<dyn Encryptor>, handshake_hash: Vec<u8> },
-    /// Invalid state. The session is only temporarily put into this state if
-    /// the transition between steps cannot be performed atomically.
+    /// A temporary state indicating that the session is currently transitioning
+    /// between valid steps. Operations on a session in this state will fail.
     Invalid,
 }
 
 impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
+    /// Transitions the session to the next logical step in the protocol.
+    ///
+    /// - From `Attestation` to `Handshake`: Occurs after
+    ///   `attester.take_attestation_result()` is successful. The `Handshaker`
+    ///   is built using `handshaker_provider`.
+    /// - From `Handshake` to `Open`: Occurs after
+    ///   `handshaker.take_session_keys()` is successful. The `Encryptor` is
+    ///   built using `encryptor_provider`.
+    ///
+    /// This method manages the ownership transfer of data (like
+    /// `AttestationResults` to `Handshake` step, and `SessionKeys` to the
+    /// `Encryptor`). If a transition fails (e.g., attestation failed, or
+    /// provider fails to build), an error is returned, and the session
+    /// typically remains in `Invalid` or the previous state if the
+    /// transition was aborted early.
     fn next(&mut self) -> Result<(), Error> {
         // We can't transition between states without using this temp variable while
         // ensuring the memory safety because of the objects' lifetime.
@@ -161,6 +281,10 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
         Ok(())
     }
 
+    /// Retrieves a `SessionBindingToken` if the session is in the `Open` state.
+    ///
+    /// Delegates to `SessionBindingToken::new` using the stored
+    /// `handshake_hash`. Returns an error if the session is not yet open.
     fn get_session_binding_token(&self, info: &[u8]) -> Result<SessionBindingToken, Error> {
         match &self {
             Step::Open { handshake_hash, .. } => Ok(SessionBindingToken::new(handshake_hash, info)),
@@ -169,15 +293,37 @@ impl<AP: AttestationProvider, H: Handshaker> Step<AP, H> {
     }
 }
 
-/// Client-side secure attested session entrypoint.
+/// Client-side implementation of an end-to-end secure attested session.
+///
+/// Orchestrates the `ClientAttestationProvider` and `ClientHandshaker` through
+/// the `Step` state machine to establish a session with a server. Implements
+/// the `Session` trait for application use and `ProtocolEngine` for driving the
+/// underlying message exchange.
 pub struct ClientSession {
+    /// The current step/state of the session establishment process.
     step: Step<ClientAttestationProvider, ClientHandshaker>,
+    /// Providers for creating `SessionBindingVerifier`s, keyed by attestation
+    /// ID. Used to verify session bindings received from the server during
+    /// the handshake, linking the server's attestation to the current
+    /// session.
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
+    /// Queue for outgoing `SessionRequest` messages (typically encrypted
+    /// application data).
     outgoing_requests: VecDeque<SessionRequest>,
+    /// Queue for incoming `SessionResponse` messages that have been processed
+    /// up to the session layer but not yet decrypted and read by the
+    /// application.
     incoming_responses: VecDeque<SessionResponse>,
 }
 
 impl ClientSession {
+    /// Creates a new `ClientSession` with the given `SessionConfig`.
+    ///
+    /// Initializes the session in the `Step::Attestation` phase, creating a
+    /// `ClientAttestationProvider`. The configuration is consumed, and its
+    /// components (like providers and keys) are moved into the session's
+    /// state. The lifetimes of objects within `config` (e.g., keys in
+    /// `HandshakerConfig`) are now managed by the `ClientSession`.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
             step: Step::Attestation {
@@ -195,10 +341,12 @@ impl ClientSession {
 }
 
 impl Session for ClientSession {
+    /// Checks if the client session is open. See `Session::is_open`.
     fn is_open(&self) -> bool {
         matches!(self.step, Step::Open { .. })
     }
 
+    /// Encrypts and queues a message for the server. See `Session::write`.
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => {
@@ -215,6 +363,7 @@ impl Session for ClientSession {
         }
     }
 
+    /// Reads and decrypts a message from the server. See `Session::read`.
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => match self.incoming_responses.pop_front() {
@@ -240,12 +389,24 @@ impl Session for ClientSession {
         }
     }
 
+    /// Gets a session binding token. See `Session::get_session_binding_token`.
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
         self.step.get_session_binding_token(info_string)
     }
 }
 
 impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
+    /// Gets the next outgoing `SessionRequest` to be sent to the server.
+    ///
+    /// Depending on the current `step`:
+    /// - `Attestation`: Returns an `AttestRequest` from the
+    ///   `ClientAttestationProvider`.
+    /// - `Handshake`: Returns a `HandshakeRequest` from the `ClientHandshaker`.
+    ///   If the handshake completes as a result, transitions to `Open`.
+    /// - `Open`: Returns an `EncryptedMessage` (application data) from
+    ///   `outgoing_requests`.
+    ///
+    /// If no message is ready, returns `Ok(None)`.
     fn get_outgoing_message(&mut self) -> Result<Option<SessionRequest>, Error> {
         match &mut self.step {
             Step::Attestation { attester, .. } => {
@@ -276,6 +437,21 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
         Ok(self.outgoing_requests.pop_front())
     }
 
+    /// Processes an incoming `SessionResponse` from the server.
+    ///
+    /// Depending on the current `step` and message type:
+    /// - `Attestation` + `AttestResponse`: Passes to
+    ///   `ClientAttestationProvider`. If attestation completes, transitions to
+    ///   `Handshake`.
+    /// - `Handshake` + `HandshakeResponse`: Passes to `ClientHandshaker`.
+    ///   Verifies server's session bindings using `binding_verifier_providers`
+    ///   and `attestation_results`. If handshake completes, transitions to
+    ///   `Open`.
+    /// - `Open` + `EncryptedMessage`: Queues in `incoming_responses` for
+    ///   `read()`.
+    ///
+    /// Returns `Ok(Some(()))` if processed, `Err` on mismatch or protocol
+    /// error.
     fn put_incoming_message(
         &mut self,
         incoming_message: SessionResponse,
@@ -324,16 +500,36 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     }
 }
 
-// Server-side secure attested session entrypoint.
+/// Server-side implementation of an end-to-end secure attested session.
+///
+/// Orchestrates the `ServerAttestationProvider` and `ServerHandshaker` through
+/// the `Step` state machine to establish a session with a client. Implements
+/// the `Session` trait for application use and `ProtocolEngine` for driving the
+/// underlying message exchange.
 pub struct ServerSession {
+    /// The current step/state of the session establishment process.
     step: Step<ServerAttestationProvider, ServerHandshaker>,
+    /// Providers for creating `SessionBindingVerifier`s, keyed by attestation
+    /// ID. Used to verify session bindings received from the client during
+    /// the handshake, linking the client's attestation to the current
+    /// session.
     binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
-    // encryptor is initialized once the handshake is completed and the session becomes open
+    /// Queue for outgoing `SessionResponse` messages (typically encrypted
+    /// application data).
     outgoing_responses: VecDeque<SessionResponse>,
+    /// Queue for incoming `SessionRequest` messages that have been processed up
+    /// to the session layer but not yet decrypted and read by the
+    /// application.
     incoming_requests: VecDeque<SessionRequest>,
 }
 
 impl ServerSession {
+    /// Creates a new `ServerSession` with the given `SessionConfig`.
+    ///
+    /// Initializes the session in the `Step::Attestation` phase, creating a
+    /// `ServerAttestationProvider`. Determines if client binding is expected
+    /// based on `config.attestation_provider_config.attestation_type` for
+    /// the `ServerHandshaker`. The configuration is consumed.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         let client_binding_expected = matches!(
             config.attestation_provider_config.attestation_type,
@@ -356,10 +552,12 @@ impl ServerSession {
 }
 
 impl Session for ServerSession {
+    /// Checks if the server session is open. See `Session::is_open`.
     fn is_open(&self) -> bool {
         matches!(self.step, Step::Open { .. })
     }
 
+    /// Encrypts and queues a message for the client. See `Session::write`.
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => {
@@ -376,6 +574,7 @@ impl Session for ServerSession {
         }
     }
 
+    /// Reads and decrypts a message from the client. See `Session::read`.
     fn read(&mut self) -> Result<Option<PlaintextMessage>, Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => match self.incoming_requests.pop_front() {
@@ -401,12 +600,25 @@ impl Session for ServerSession {
         }
     }
 
+    /// Gets a session binding token. See `Session::get_session_binding_token`.
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
         self.step.get_session_binding_token(info_string)
     }
 }
 
 impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
+    /// Gets the next outgoing `SessionResponse` to be sent to the client.
+    ///
+    /// Depending on the current `step`:
+    /// - `Attestation`: Returns an `AttestResponse` from
+    ///   `ServerAttestationProvider` (after processing client's request).
+    ///   Transitions to `Handshake`.
+    /// - `Handshake`: Returns a `HandshakeResponse` from `ServerHandshaker`. If
+    ///   handshake completes, transitions to `Open`.
+    /// - `Open`: Returns an `EncryptedMessage` (application data) from
+    ///   `outgoing_responses`.
+    ///
+    /// If no message is ready, returns `Ok(None)`.
     fn get_outgoing_message(&mut self) -> Result<Option<SessionResponse>, Error> {
         match &mut self.step {
             Step::Attestation { attester, .. } => {
@@ -437,6 +649,20 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
         }
     }
 
+    /// Processes an incoming `SessionRequest` from the client.
+    ///
+    /// Depending on the current `step` and message type:
+    /// - `Attestation` + `AttestRequest`: Passes to
+    ///   `ServerAttestationProvider`.
+    /// - `Handshake` + `HandshakeRequest`: Passes to `ServerHandshaker`. If
+    ///   this is the client's binding follow-up, verifies it using
+    ///   `binding_verifier_providers` and `attestation_results`. If handshake
+    ///   completes, transitions to `Open`.
+    /// - `Open` + `EncryptedMessage`: Queues in `incoming_requests` for
+    ///   `read()`.
+    ///
+    /// Returns `Ok(Some(()))` if processed, `Err` on mismatch or protocol
+    /// error.
     fn put_incoming_message(
         &mut self,
         incoming_message: SessionRequest,
@@ -482,6 +708,22 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     }
 }
 
+/// Verifies the received session `bindings` against the provided
+/// `attestation_results`.
+///
+/// For each entry in `attestation_results` (keyed by attestation ID), this
+/// function:
+/// 1. Retrieves the corresponding `SessionBindingVerifierProvider` from
+///    `binding_verifier_providers`.
+/// 2. Creates a `SessionBindingVerifier` using the attestation result.
+/// 3. Retrieves the corresponding `SessionBinding` from the `bindings` map.
+/// 4. Calls `verify_binding` on the verifier with the `handshake_hash` and the
+///    received binding.
+///
+/// This ensures that for each attested identity (via `attestation_results`),
+/// its purported binding to the current session (via `handshake_hash`) is
+/// cryptographically valid. An error is returned if any verification fails, or
+/// if providers/bindings are missing.
 fn verify_session_binding(
     binding_verifier_providers: &BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
     attestation_results: &BTreeMap<String, AttestationResults>,
