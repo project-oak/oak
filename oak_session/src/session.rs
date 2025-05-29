@@ -28,8 +28,8 @@
 //! - **End-to-End Encrypted**: Application messages exchanged over the session
 //!   are encrypted using the derived session keys, ensuring confidentiality and
 //!   integrity. This is the responsibility of the `Encryptor`. The keying
-//!   material is obtained from the `Handshaker` during the handshake phase,
-//!   using the Noise Protocol Framework.
+//!   material is obtained from the `HandshakeHandler` during the handshake
+//!   phase, using the Noise Protocol Framework.
 //! - **Bound**: The attestation and handshake phases are cryptographically
 //!   linked, ensuring that the attested peer is the same one participating in
 //!   the handshake. `SessionBindingToken`s allow applications to further bind
@@ -43,7 +43,7 @@
 //! - Enforces the correct sequence of operations (Attestation -> Handshake ->
 //!   Open).
 //! - Manages the lifecycle and ownership of state-specific components (like
-//!   `AttestationHandler`, `Handshaker`, `Encryptor`).
+//!   `AttestationHandler`, `HandshakeHandler`, `Encryptor`).
 //! - Facilitates clear transitions and error handling at each step.
 //!
 //! The `Session` trait provides a high-level API for applications, abstracting
@@ -82,8 +82,8 @@ use crate::{
     },
     config::{EncryptorProvider, SessionConfig},
     handshake::{
-        ClientHandshaker, ClientHandshakerBuilder, Handshaker, HandshakerBuilder, ServerHandshaker,
-        ServerHandshakerBuilder,
+        ClientHandshakeHandler, ClientHandshakeHandlerBuilder, HandshakeHandler,
+        HandshakeHandlerBuilder, ServerHandshakeHandler, ServerHandshakeHandlerBuilder,
     },
     session_binding::SessionBindingVerifierProvider,
     ProtocolEngine,
@@ -185,26 +185,26 @@ pub trait Session: Send {
 /// This enum encapsulates the distinct phases of establishing a secure session:
 /// Attestation, Handshake, and Open (for active communication). It manages the
 /// ownership and transition of state-specific objects like
-/// `AttestationHandler`, `Handshaker`, and `Encryptor`. The `Invalid` state is
-/// a temporary placeholder used during non-atomic state transitions to maintain
-/// memory safety.
+/// `AttestationHandler`, `HandshakeHandler`, and `Encryptor`. The `Invalid`
+/// state is a temporary placeholder used during non-atomic state transitions to
+/// maintain memory safety.
 ///
 /// `AP` is the type of `AttestationHandler` (client or server).
-/// `H` is the type of `Handshaker` (client or server).
+/// `H` is the type of `HandshakeHandler` (client or server).
 /// for transition to the next one. It is parametrized by the type of
 /// attestation provider and handshaker (either the client or server version).
-enum Step<AP: AttestationHandler, H: Handshaker> {
+enum Step<AP: AttestationHandler, H: HandshakeHandler> {
     /// Protocol step where communicating parties exchange and verify the
     /// attested evidence. May be skipped if no attestation is required.
     ///
-    /// Holds the `attester` for managing this phase, a `handshaker_provider`
-    /// to create the `Handshaker` for the next phase, and an
-    /// `encryptor_provider` to create the `Encryptor` once the handshake is
-    /// complete. The lifetimes of these providers are managed by the `Step`
-    /// enum.
+    /// Holds the `attester` for managing this phase, a
+    /// `handshake_handler_provider` to create the `HandshakeHandler` for
+    /// the next phase, and an `encryptor_provider` to create the
+    /// `Encryptor` once the handshake is complete. The lifetimes of these
+    /// providers are managed by the `Step` enum.
     Attestation {
         attester: AP,
-        handshaker_provider: Box<dyn HandshakerBuilder<H>>,
+        handshake_handler_provider: Box<dyn HandshakeHandlerBuilder<H>>,
         encryptor_provider: Box<dyn EncryptorProvider>,
     },
     /// Protocol step for performing the Noise handshake.
@@ -230,12 +230,12 @@ enum Step<AP: AttestationHandler, H: Handshaker> {
     Invalid,
 }
 
-impl<AP: AttestationHandler, H: Handshaker> Step<AP, H> {
+impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
     /// Transitions the session to the next logical step in the protocol.
     ///
     /// - From `Attestation` to `Handshake`: Occurs after
-    ///   `attester.take_attestation_verdict()` is successful. The `Handshaker`
-    ///   is built using `handshaker_provider`.
+    ///   `attester.take_attestation_verdict()` is successful. The
+    ///   `HandshakeHandler` is built using `handshake_handler_provider`.
     /// - From `Handshake` to `Open`: Occurs after
     ///   `handshaker.take_session_keys()` is successful. The `Encryptor` is
     ///   built using `encryptor_provider`.
@@ -251,7 +251,7 @@ impl<AP: AttestationHandler, H: Handshaker> Step<AP, H> {
         // ensuring the memory safety because of the objects' lifetime.
         let old_state = mem::replace(self, Step::Invalid);
         match old_state {
-            Step::Attestation { attester, handshaker_provider, encryptor_provider } => {
+            Step::Attestation { attester, handshake_handler_provider, encryptor_provider } => {
                 let attestation_results = match attester.take_attestation_verdict()? {
                     AttestationVerdict::AttestationPassed { attestation_results } => {
                         attestation_results
@@ -262,7 +262,7 @@ impl<AP: AttestationHandler, H: Handshaker> Step<AP, H> {
                 };
                 *self = Step::Handshake {
                     encryptor_provider,
-                    handshaker: handshaker_provider.build()?,
+                    handshaker: handshake_handler_provider.build()?,
                     attestation_results,
                 };
             }
@@ -295,13 +295,13 @@ impl<AP: AttestationHandler, H: Handshaker> Step<AP, H> {
 
 /// Client-side implementation of an end-to-end secure attested session.
 ///
-/// Orchestrates the `ClientAttestationHandler` and `ClientHandshaker` through
-/// the `Step` state machine to establish a session with a server. Implements
-/// the `Session` trait for application use and `ProtocolEngine` for driving the
-/// underlying message exchange.
+/// Orchestrates the `ClientAttestationHandler` and `ClientHandshakeHandler`
+/// through the `Step` state machine to establish a session with a server.
+/// Implements the `Session` trait for application use and `ProtocolEngine` for
+/// driving the underlying message exchange.
 pub struct ClientSession {
     /// The current step/state of the session establishment process.
-    step: Step<ClientAttestationHandler, ClientHandshaker>,
+    step: Step<ClientAttestationHandler, ClientHandshakeHandler>,
     /// Providers for creating `SessionBindingVerifier`s, keyed by attestation
     /// ID. Used to verify session bindings received from the server during
     /// the handshake, linking the server's attestation to the current
@@ -323,13 +323,13 @@ impl ClientSession {
     /// `ClientAttestationHandler`. The configuration is consumed, and its
     /// components (like providers and keys) are moved into the session's
     /// state. The lifetimes of objects within `config` (e.g., keys in
-    /// `HandshakerConfig`) are now managed by the `ClientSession`.
+    /// `HandshakeHandlerConfig`) are now managed by the `ClientSession`.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         Ok(Self {
             step: Step::Attestation {
                 attester: ClientAttestationHandler::create(config.attestation_handler_config)?,
-                handshaker_provider: Box::new(ClientHandshakerBuilder {
-                    config: config.handshaker_config,
+                handshake_handler_provider: Box::new(ClientHandshakeHandlerBuilder {
+                    config: config.handshake_handler_config,
                 }),
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },
@@ -401,8 +401,9 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     /// Depending on the current `step`:
     /// - `Attestation`: Returns an `AttestRequest` from the
     ///   `ClientAttestationHandler`.
-    /// - `Handshake`: Returns a `HandshakeRequest` from the `ClientHandshaker`.
-    ///   If the handshake completes as a result, transitions to `Open`.
+    /// - `Handshake`: Returns a `HandshakeRequest` from the
+    ///   `ClientHandshakeHandler`. If the handshake completes as a result,
+    ///   transitions to `Open`.
     /// - `Open`: Returns an `EncryptedMessage` (application data) from
     ///   `outgoing_requests`.
     ///
@@ -443,7 +444,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
     /// - `Attestation` + `AttestResponse`: Passes to
     ///   `ClientAttestationHandler`. If attestation completes, transitions to
     ///   `Handshake`.
-    /// - `Handshake` + `HandshakeResponse`: Passes to `ClientHandshaker`.
+    /// - `Handshake` + `HandshakeResponse`: Passes to `ClientHandshakeHandler`.
     ///   Verifies server's session bindings using `binding_verifier_providers`
     ///   and `attestation_results`. If handshake completes, transitions to
     ///   `Open`.
@@ -502,13 +503,13 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
 
 /// Server-side implementation of an end-to-end secure attested session.
 ///
-/// Orchestrates the `ServerAttestationHandler` and `ServerHandshaker` through
-/// the `Step` state machine to establish a session with a client. Implements
-/// the `Session` trait for application use and `ProtocolEngine` for driving the
-/// underlying message exchange.
+/// Orchestrates the `ServerAttestationHandler` and `ServerHandshakeHandler`
+/// through the `Step` state machine to establish a session with a client.
+/// Implements the `Session` trait for application use and `ProtocolEngine` for
+/// driving the underlying message exchange.
 pub struct ServerSession {
     /// The current step/state of the session establishment process.
-    step: Step<ServerAttestationHandler, ServerHandshaker>,
+    step: Step<ServerAttestationHandler, ServerHandshakeHandler>,
     /// Providers for creating `SessionBindingVerifier`s, keyed by attestation
     /// ID. Used to verify session bindings received from the client during
     /// the handshake, linking the client's attestation to the current
@@ -529,7 +530,7 @@ impl ServerSession {
     /// Initializes the session in the `Step::Attestation` phase, creating a
     /// `ServerAttestationHandler`. Determines if client binding is expected
     /// based on `config.attestation_handler_config.attestation_type` for
-    /// the `ServerHandshaker`. The configuration is consumed.
+    /// the `ServerHandshakeHandler`. The configuration is consumed.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
         let client_binding_expected = matches!(
             config.attestation_handler_config.attestation_type,
@@ -538,8 +539,8 @@ impl ServerSession {
         Ok(Self {
             step: Step::Attestation {
                 attester: ServerAttestationHandler::create(config.attestation_handler_config)?,
-                handshaker_provider: Box::new(ServerHandshakerBuilder {
-                    config: config.handshaker_config,
+                handshake_handler_provider: Box::new(ServerHandshakeHandlerBuilder {
+                    config: config.handshake_handler_config,
                     client_binding_expected,
                 }),
                 encryptor_provider: config.encryptor_config.encryptor_provider,
@@ -613,8 +614,9 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     /// - `Attestation`: Returns an `AttestResponse` from
     ///   `ServerAttestationHandler` (after processing client's request).
     ///   Transitions to `Handshake`.
-    /// - `Handshake`: Returns a `HandshakeResponse` from `ServerHandshaker`. If
-    ///   handshake completes, transitions to `Open`.
+    /// - `Handshake`: Returns a `HandshakeResponse` from
+    ///   `ServerHandshakeHandler`. If handshake completes, transitions to
+    ///   `Open`.
     /// - `Open`: Returns an `EncryptedMessage` (application data) from
     ///   `outgoing_responses`.
     ///
@@ -653,8 +655,8 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
     ///
     /// Depending on the current `step` and message type:
     /// - `Attestation` + `AttestRequest`: Passes to `ServerAttestationHandler`.
-    /// - `Handshake` + `HandshakeRequest`: Passes to `ServerHandshaker`. If
-    ///   this is the client's binding follow-up, verifies it using
+    /// - `Handshake` + `HandshakeRequest`: Passes to `ServerHandshakeHandler`.
+    ///   If this is the client's binding follow-up, verifies it using
     ///   `binding_verifier_providers` and `attestation_results`. If handshake
     ///   completes, transitions to `Open`.
     /// - `Open` + `EncryptedMessage`: Queues in `incoming_requests` for

@@ -25,7 +25,7 @@
 //!   Configuration is held in [`AttestationHandlerConfig`].
 //! - **Handshake**: Defines the cryptographic handshake protocol (e.g., Noise
 //!   patterns like KK, NK, NN), and any pre-shared static keys required by the
-//!   chosen protocol. Configuration is held in [`HandshakerConfig`].
+//!   chosen protocol. Configuration is held in [`HandshakeHandlerConfig`].
 //! - **Encryption**: Determines how session encryptors are provided after a
 //!   successful handshake. Configuration is held in [`EncryptorConfig`].
 //! - **Session Binding**: Manages how attestation results are cryptographically
@@ -66,7 +66,7 @@ pub struct SessionConfig {
     /// Configuration for the attestation phase.
     pub attestation_handler_config: AttestationHandlerConfig,
     /// Configuration for the cryptographic handshake phase.
-    pub handshaker_config: HandshakerConfig,
+    pub handshake_handler_config: HandshakeHandlerConfig,
     /// Configuration for creating the session encryptor.
     pub encryptor_config: EncryptorConfig,
     /// A map of attestation IDs to providers that can create verifiers for
@@ -133,7 +133,7 @@ impl SessionConfigBuilder {
             attestation_aggregator: Box::new(DefaultAttestationAggregator {}),
         };
 
-        let handshaker_config = HandshakerConfig {
+        let handshake_handler_config = HandshakeHandlerConfig {
             handshake_type,
             self_static_private_key: None,
             peer_static_public_key: None,
@@ -147,7 +147,7 @@ impl SessionConfigBuilder {
 
         let config = SessionConfig {
             attestation_handler_config,
-            handshaker_config,
+            handshake_handler_config,
             encryptor_config,
             binding_verifier_providers,
         };
@@ -341,8 +341,8 @@ impl SessionConfigBuilder {
     /// pre-known static identity (e.g., Noise patterns like IK, KK).
     /// Panics if the key has already been set.
     pub fn set_self_static_private_key(mut self, private_key: Box<dyn IdentityKeyHandle>) -> Self {
-        if self.config.handshaker_config.self_static_private_key.is_none() {
-            self.config.handshaker_config.self_static_private_key = Some(private_key);
+        if self.config.handshake_handler_config.self_static_private_key.is_none() {
+            self.config.handshake_handler_config.self_static_private_key = Some(private_key);
         } else {
             panic!("self private key has already been set");
         }
@@ -355,8 +355,8 @@ impl SessionConfigBuilder {
     /// is known beforehand (e.g., Noise patterns like IK, KK).
     /// Panics if the key has already been set.
     pub fn set_peer_static_public_key(mut self, public_key: &[u8]) -> Self {
-        if self.config.handshaker_config.peer_static_public_key.is_none() {
-            self.config.handshaker_config.peer_static_public_key = Some(public_key.to_vec());
+        if self.config.handshake_handler_config.peer_static_public_key.is_none() {
+            self.config.handshake_handler_config.peer_static_public_key = Some(public_key.to_vec());
         } else {
             panic!("peer public key has already been set");
         }
@@ -383,7 +383,10 @@ impl SessionConfigBuilder {
         attester_id: String,
         session_binder: Box<dyn SessionBinder>,
     ) -> Self {
-        self.config.handshaker_config.session_binders.insert(attester_id, session_binder.into());
+        self.config
+            .handshake_handler_config
+            .session_binders
+            .insert(attester_id, session_binder.into());
         self
     }
 
@@ -394,7 +397,10 @@ impl SessionConfigBuilder {
         attester_id: String,
         session_binder: &Arc<dyn SessionBinder>,
     ) -> Self {
-        self.config.handshaker_config.session_binders.insert(attester_id, session_binder.clone());
+        self.config
+            .handshake_handler_config
+            .session_binders
+            .insert(attester_id, session_binder.clone());
         self
     }
 
@@ -435,7 +441,7 @@ pub struct AttestationHandlerConfig {
 /// Instances are typically created and populated via the
 /// [`SessionConfigBuilder`].
 #[allow(dead_code)]
-pub struct HandshakerConfig {
+pub struct HandshakeHandlerConfig {
     /// Specifies the cryptographic handshake protocol to use (e.g., Noise KK,
     /// NK, NN).
     pub handshake_type: HandshakeType,

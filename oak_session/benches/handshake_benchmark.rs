@@ -21,8 +21,8 @@ use alloc::{boxed::Box, collections::BTreeMap};
 use criterion::{criterion_group, criterion_main, Criterion};
 use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_session::{
-    config::HandshakerConfig,
-    handshake::{ClientHandshaker, HandshakeType, ServerHandshaker},
+    config::HandshakeHandlerConfig,
+    handshake::{ClientHandshakeHandler, HandshakeType, ServerHandshakeHandler},
     ProtocolEngine,
 };
 
@@ -30,15 +30,15 @@ fn process_kk_handshake() {
     let initiator_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_public_key = responder_identity_key.get_public_key().unwrap();
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseKK,
         self_static_private_key: Some(responder_identity_key),
         peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseKK,
             self_static_private_key: Some(initiator_identity_key),
             peer_static_public_key: Some(responder_public_key),
@@ -51,15 +51,15 @@ fn process_kk_handshake() {
 
 fn process_nk_handshake() {
     let identity_key = Box::new(IdentityKey::generate());
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: None,
         peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseNK,
             self_static_private_key: Some(identity_key),
             peer_static_public_key: None,
@@ -71,15 +71,15 @@ fn process_nk_handshake() {
 }
 
 fn process_nn_handshake() {
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseNN,
             self_static_private_key: None,
             peer_static_public_key: None,
@@ -91,8 +91,8 @@ fn process_nn_handshake() {
 }
 
 pub fn do_handshake(
-    mut client_handshaker: ClientHandshaker,
-    mut server_handshaker: ServerHandshaker,
+    mut client_handshaker: ClientHandshakeHandler,
+    mut server_handshaker: ServerHandshakeHandler,
 ) {
     let request = client_handshaker.get_outgoing_message().unwrap().unwrap();
     server_handshaker

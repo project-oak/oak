@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! This module provides implementations of the `Handshaker` trait, which
+//! This module provides implementations of the `HandshakeHandler` trait, which
 //! handles the cryptographic handshake phase of establishing a secure session.
 //! It primarily utilizes the Noise Protocol Framework to agree upon shared
 //! session keys and a verifiable handshake transcript.
@@ -50,38 +50,40 @@
 //!       binding.
 //!     - `session_bindings`: Bindings (e.g., signatures) received from the
 //!       peer, linking their attestation to this handshake.
-//! - **`Handshaker` Trait**: Defines the core interface for performing a
+//! - **`HandshakeHandler` Trait**: Defines the core interface for performing a
 //!   handshake. It includes methods for obtaining the derived `session_keys`
 //!   and `handshake_hash`, and checking if the handshake is complete. It also
 //!   leverages the `ProtocolEngine` trait for sending and receiving handshake
 //!   messages.
-//! - **`ClientHandshaker` and `ServerHandshaker`**: Concrete implementations of
-//!   the `Handshaker` trait for the client (initiator) and server (responder)
-//!   roles, respectively. They manage the state machine specific to their role
-//!   in the chosen Noise protocol.
-//! - **`HandshakerBuilder` Trait (and its implementations
-//!   `ClientHandshakerBuilder`, `ServerHandshakerBuilder`)**: These act as
-//!   factories for creating `Handshaker` instances. This pattern is used by the
-//!   main `Session` logic to construct the appropriate handshaker after the
-//!   attestation phase, passing in necessary configuration (like identity keys
-//!   and chosen `HandshakeType`).
+//! - **`ClientHandshakeHandler` and `ServerHandshakeHandler`**: Concrete
+//!   implementations of the `HandshakeHandler` trait for the client (initiator)
+//!   and server (responder) roles, respectively. They manage the state machine
+//!   specific to their role in the chosen Noise protocol.
+//! - **`HandshakeHandlerBuilder` Trait (and its implementations
+//!   `ClientHandshakeHandlerBuilder`, `ServerHandshakeHandlerBuilder`)**: These
+//!   act as factories for creating `HandshakeHandler` instances. This pattern
+//!   is used by the main `Session` logic to construct the appropriate
+//!   handshaker after the attestation phase, passing in necessary configuration
+//!   (like identity keys and chosen `HandshakeType`).
 //!
 //! ## Interaction and Flow
 //!
-//! 1. A `HandshakerBuilder` is used to create either a `ClientHandshaker` or a
-//!    `ServerHandshaker`, configured with cryptographic keys (via
-//!    `IdentityKeyHandle`), the desired `HandshakeType`, and potentially
-//!    `SessionBinder`s if the local party needs to send a session binding.
-//! 2. The `Session` logic uses the `ProtocolEngine` methods on the `Handshaker`
-//!    (`get_outgoing_message`, `put_incoming_message`) to exchange one or more
-//!    `HandshakeRequest` and `HandshakeResponse` messages with the peer.
-//! 3. Internally, the `Handshaker` uses the `oak_crypto::noise_handshake`
+//! 1. A `HandshakeHandlerBuilder` is used to create either a
+//!    `ClientHandshakeHandler` or a `ServerHandshakeHandler`, configured with
+//!    cryptographic keys (via `IdentityKeyHandle`), the desired
+//!    `HandshakeType`, and potentially `SessionBinder`s if the local party
+//!    needs to send a session binding.
+//! 2. The `Session` logic uses the `ProtocolEngine` methods on the
+//!    `HandshakeHandler` (`get_outgoing_message`, `put_incoming_message`) to
+//!    exchange one or more `HandshakeRequest` and `HandshakeResponse` messages
+//!    with the peer.
+//! 3. Internally, the `HandshakeHandler` uses the `oak_crypto::noise_handshake`
 //!    primitives to process these messages according to the selected Noise
 //!    pattern.
-//! 4. Upon successful completion, the `Handshaker` makes the `HandshakeResult`
-//!    available, allowing the `Session` to retrieve the `session_keys` for
-//!    creating an `Encryptor` and the `handshake_hash` for verifying session
-//!    bindings.
+//! 4. Upon successful completion, the `HandshakeHandler` makes the
+//!    `HandshakeResult` available, allowing the `Session` to retrieve the
+//!    `session_keys` for creating an `Encryptor` and the `handshake_hash` for
+//!    verifying session bindings.
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::convert::TryInto;
@@ -99,7 +101,7 @@ use oak_proto_rust::oak::{
     },
 };
 
-use crate::{config::HandshakerConfig, session_binding::SessionBinder, ProtocolEngine};
+use crate::{config::HandshakeHandlerConfig, session_binding::SessionBinder, ProtocolEngine};
 
 /// Specifies the type of Noise Protocol Framework handshake pattern to be used.
 ///
@@ -136,57 +138,58 @@ pub struct HandshakeResult {
     pub session_bindings: BTreeMap<String, SessionBinding>,
 }
 
-/// A trait for building a `Handshaker` instance.
+/// A trait for building a `HandshakeHandler` instance.
 ///
-/// This factory trait allows for deferred creation of a `Handshaker`,
+/// This factory trait allows for deferred creation of a `HandshakeHandler`,
 /// encapsulating the necessary configuration. This is useful in the `Session`
-/// state machine where the `Handshaker` is created after the attestation phase.
-pub trait HandshakerBuilder<T: Handshaker>: Send {
-    /// Builds and returns a `Handshaker` instance.
+/// state machine where the `HandshakeHandler` is created after the attestation
+/// phase.
+pub trait HandshakeHandlerBuilder<T: HandshakeHandler>: Send {
+    /// Builds and returns a `HandshakeHandler` instance.
     ///
-    /// The lifetime of the returned `Handshaker` is owned by the caller.
+    /// The lifetime of the returned `HandshakeHandler` is owned by the caller.
     /// Configuration data is typically moved into the builder and then into the
-    /// `Handshaker`.
+    /// `HandshakeHandler`.
     fn build(self: Box<Self>) -> Result<T, Error>;
 }
 
-/// A builder for creating `ClientHandshaker` instances.
+/// A builder for creating `ClientHandshakeHandler` instances.
 ///
-/// It holds the `HandshakerConfig` required to initialize the client-side
+/// It holds the `HandshakeHandlerConfig` required to initialize the client-side
 /// handshake.
-pub struct ClientHandshakerBuilder {
-    pub config: HandshakerConfig,
+pub struct ClientHandshakeHandlerBuilder {
+    pub config: HandshakeHandlerConfig,
 }
 
-impl HandshakerBuilder<ClientHandshaker> for ClientHandshakerBuilder {
-    /// Constructs a `ClientHandshaker` using the stored configuration.
-    fn build(self: Box<Self>) -> Result<ClientHandshaker, Error> {
-        ClientHandshaker::create(self.config)
+impl HandshakeHandlerBuilder<ClientHandshakeHandler> for ClientHandshakeHandlerBuilder {
+    /// Constructs a `ClientHandshakeHandler` using the stored configuration.
+    fn build(self: Box<Self>) -> Result<ClientHandshakeHandler, Error> {
+        ClientHandshakeHandler::create(self.config)
     }
 }
 
-/// A builder for creating `ServerHandshaker` instances.
+/// A builder for creating `ServerHandshakeHandler` instances.
 ///
-/// It holds the `HandshakerConfig` and a flag indicating whether to expect
-/// a session binding message from the client.
-pub struct ServerHandshakerBuilder {
-    pub config: HandshakerConfig,
+/// It holds the `HandshakeHandlerConfig` and a flag indicating whether to
+/// expect a session binding message from the client.
+pub struct ServerHandshakeHandlerBuilder {
+    pub config: HandshakeHandlerConfig,
     pub client_binding_expected: bool,
 }
 
-impl HandshakerBuilder<ServerHandshaker> for ServerHandshakerBuilder {
-    /// Constructs a `ServerHandshaker` using the stored configuration.
-    fn build(self: Box<Self>) -> Result<ServerHandshaker, Error> {
-        Ok(ServerHandshaker::new(self.config, self.client_binding_expected))
+impl HandshakeHandlerBuilder<ServerHandshakeHandler> for ServerHandshakeHandlerBuilder {
+    /// Constructs a `ServerHandshakeHandler` using the stored configuration.
+    fn build(self: Box<Self>) -> Result<ServerHandshakeHandler, Error> {
+        Ok(ServerHandshakeHandler::new(self.config, self.client_binding_expected))
     }
 }
 
 /// Defines the contract for a cryptographic handshaker.
 ///
-/// A `Handshaker` is responsible for executing a Noise protocol handshake to
-/// establish shared session keys and a handshake hash. Implementations are
+/// A `HandshakeHandler` is responsible for executing a Noise protocol handshake
+/// to establish shared session keys and a handshake hash. Implementations are
 /// stateful and use the `ProtocolEngine` trait to exchange handshake messages.
-pub trait Handshaker: Send {
+pub trait HandshakeHandler: Send {
     /// Retrieves the session keys derived from the completed handshake.
     ///
     /// This method consumes the session keys, meaning it can typically only be
@@ -202,7 +205,7 @@ pub trait Handshaker: Send {
     /// logging or multiple binding verifications, though typically used
     /// once by the `Session`). Returns an error if the handshake is not yet
     /// complete. The lifetime of the returned slice is tied to the
-    /// `Handshaker` instance.
+    /// `HandshakeHandler` instance.
     fn get_handshake_hash(&self) -> Result<&[u8], Error>;
 
     /// Checks if the handshake process is fully complete.
@@ -215,14 +218,14 @@ pub trait Handshaker: Send {
     fn is_handshake_complete(&self) -> bool;
 }
 
-/// Client-side implementation of the `Handshaker`.
+/// Client-side implementation of the `HandshakeHandler`.
 ///
 /// Manages the state for the client (initiator) during a Noise handshake.
 /// It constructs the initial handshake message and processes the server's
 /// response. If client attestation is involved (`session_binders` is not
 /// empty), it may also prepare a follow-up message containing the client's
 /// session binding.
-pub struct ClientHandshaker {
+pub struct ClientHandshakeHandler {
     /// The `HandshakeInitiator` is used to generate the initial handshake
     /// message and process the server's response.
     handshake_initiator: HandshakeInitiator,
@@ -238,35 +241,35 @@ pub struct ClientHandshaker {
     handshake_result: Option<HandshakeResult>,
 }
 
-impl ClientHandshaker {
-    /// Creates a new `ClientHandshaker` and prepares the initial handshake
-    /// message.
+impl ClientHandshakeHandler {
+    /// Creates a new `ClientHandshakeHandler` and prepares the initial
+    /// handshake message.
     ///
     /// Initializes the Noise protocol state based on
-    /// `handshaker_config.handshake_type` and any provided static keys. The
-    /// first message to be sent to the server is generated and stored
+    /// `handshake_handler_config.handshake_type` and any provided static keys.
+    /// The first message to be sent to the server is generated and stored
     /// internally, ready to be retrieved by `get_outgoing_message`.
     ///
-    /// The `handshaker_config` is consumed, and its owned data (like keys) is
-    /// moved into the `ClientHandshaker`.
-    pub fn create(handshaker_config: HandshakerConfig) -> anyhow::Result<Self> {
-        let handshake_type = handshaker_config.handshake_type;
-        let peer_static_public_key = handshaker_config.peer_static_public_key.clone();
+    /// The `handshake_handler_config` is consumed, and its owned data (like
+    /// keys) is moved into the `ClientHandshakeHandler`.
+    pub fn create(handshake_handler_config: HandshakeHandlerConfig) -> anyhow::Result<Self> {
+        let handshake_type = handshake_handler_config.handshake_type;
+        let peer_static_public_key = handshake_handler_config.peer_static_public_key.clone();
         let mut handshake_initiator = match handshake_type {
             HandshakeType::NoiseKN => core::unimplemented!(),
             HandshakeType::NoiseKK => HandshakeInitiator::new_kk(
                 peer_static_public_key
-                    .context("handshaker_config missing the peer public key")?
+                    .context("handshake_handler_config missing the peer public key")?
                     .as_slice()
                     .try_into()
                     .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
-                handshaker_config
+                handshake_handler_config
                     .self_static_private_key
-                    .context("handshaker_config missing the self static private key")?,
+                    .context("handshake_handler_config missing the self static private key")?,
             ),
             HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
                 peer_static_public_key
-                    .context("handshaker_config missing the peer public key")?
+                    .context("handshake_handler_config missing the peer public key")?
                     .as_slice()
                     .try_into()
                     .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
@@ -293,7 +296,7 @@ impl ClientHandshaker {
         };
         Ok(Self {
             handshake_initiator,
-            session_binders: handshaker_config.session_binders,
+            session_binders: handshake_handler_config.session_binders,
             initial_message: Some(initial_message),
             followup_message: None,
             handshake_result: None,
@@ -301,13 +304,13 @@ impl ClientHandshaker {
     }
 }
 
-impl Handshaker for ClientHandshaker {
-    /// Retrieves the session keys. See `Handshaker::take_session_keys`.
+impl HandshakeHandler for ClientHandshakeHandler {
+    /// Retrieves the session keys. See `HandshakeHandler::take_session_keys`.
     fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
         Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    /// Gets the handshake hash. See `Handshaker::get_handshake_hash`.
+    /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
     fn get_handshake_hash(&self) -> Result<&[u8], Error> {
         Ok(&self
             .handshake_result
@@ -324,9 +327,9 @@ impl Handshaker for ClientHandshaker {
     }
 }
 
-/// Implements the `ProtocolEngine` for the `ClientHandshaker`, defining how it
-/// exchanges messages with the server during the handshake.
-impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
+/// Implements the `ProtocolEngine` for the `ClientHandshakeHandler`, defining
+/// how it exchanges messages with the server during the handshake.
+impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHandler {
     /// Retrieves the next outgoing `HandshakeRequest` to be sent to the server.
     ///
     /// This method is called by the session logic to get the client's messages.
@@ -410,7 +413,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
     }
 }
 
-/// Server-side implementation of the `Handshaker`.
+/// Server-side implementation of the `HandshakeHandler`.
 ///
 /// Manages the state for the server (responder) during a Noise handshake.
 /// It processes the client's initial handshake message and generates a
@@ -419,7 +422,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshaker {
 /// expect a follow-up message from the client if `client_binding_expected` is
 /// true.
 #[allow(dead_code)]
-pub struct ServerHandshaker {
+pub struct ServerHandshakeHandler {
     handshake_type: HandshakeType,
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
     peer_public_key: Option<Vec<u8>>,
@@ -430,22 +433,25 @@ pub struct ServerHandshaker {
     handshake_result: Option<HandshakeResult>,
 }
 
-impl ServerHandshaker {
-    /// Creates a new `ServerHandshaker`.
+impl ServerHandshakeHandler {
+    /// Creates a new `ServerHandshakeHandler`.
     ///
-    /// `handshaker_config` provides the necessary cryptographic keys and
+    /// `handshake_handler_config` provides the necessary cryptographic keys and
     /// handshake type. `client_binding_expected` informs the server whether
     /// to wait for a follow-up message from the client containing the
     /// client's session binding after the main handshake response has been
     /// sent.
     ///
-    /// The `handshaker_config` is consumed.
-    pub fn new(handshaker_config: HandshakerConfig, client_binding_expected: bool) -> Self {
+    /// The `handshake_handler_config` is consumed.
+    pub fn new(
+        handshake_handler_config: HandshakeHandlerConfig,
+        client_binding_expected: bool,
+    ) -> Self {
         Self {
-            handshake_type: handshaker_config.handshake_type,
-            self_identity_key: handshaker_config.self_static_private_key,
-            peer_public_key: handshaker_config.peer_static_public_key,
-            session_binders: handshaker_config.session_binders,
+            handshake_type: handshake_handler_config.handshake_type,
+            self_identity_key: handshake_handler_config.self_static_private_key,
+            peer_public_key: handshake_handler_config.peer_static_public_key,
+            session_binders: handshake_handler_config.session_binders,
             client_binding_expected,
             noise_response: None,
             handshake_response: None,
@@ -454,13 +460,13 @@ impl ServerHandshaker {
     }
 }
 
-impl Handshaker for ServerHandshaker {
-    /// Retrieves the session keys. See `Handshaker::take_session_keys`.
+impl HandshakeHandler for ServerHandshakeHandler {
+    /// Retrieves the session keys. See `HandshakeHandler::take_session_keys`.
     fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
         Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
     }
 
-    /// Gets the handshake hash. See `Handshaker::get_handshake_hash`.
+    /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
     fn get_handshake_hash(&self) -> Result<&[u8], Error> {
         Ok(&self
             .handshake_result
@@ -476,7 +482,7 @@ impl Handshaker for ServerHandshaker {
     }
 }
 
-impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
+impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHandler {
     /// Gets the outgoing `HandshakeResponse` to be sent to the client.
     ///
     /// This message is generated after processing the client's initial
@@ -521,7 +527,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                         HandshakeType::NoiseKK => respond_kk(
                             self.self_identity_key
                                 .as_ref()
-                                .context("handshaker_config missing the self private key")?
+                                .context("handshake_handler_config missing the self private key")?
                                 .as_ref(),
                             self.peer_public_key
                                 .as_ref()
@@ -532,7 +538,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshaker {
                         HandshakeType::NoiseNK => respond_nk(
                             self.self_identity_key
                                 .as_ref()
-                                .context("handshaker_config missing the self private key")?
+                                .context("handshake_handler_config missing the self private key")?
                                 .as_ref(),
                             &noise_message.into(),
                         )

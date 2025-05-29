@@ -35,9 +35,9 @@ use rand_core::OsRng;
 use crate::{
     alloc::string::ToString,
     attestation::AttestationType,
-    config::{HandshakerConfig, SessionConfig},
+    config::{HandshakeHandlerConfig, SessionConfig},
     encryptors::{OrderedChannelEncryptor, UnorderedChannelEncryptor},
-    handshake::{ClientHandshaker, HandshakeType, Handshaker, ServerHandshaker},
+    handshake::{ClientHandshakeHandler, HandshakeHandler, HandshakeType, ServerHandshakeHandler},
     session_binding::SignatureBinderBuilder,
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
@@ -85,15 +85,15 @@ fn process_kk_handshake() {
     let initiator_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_public_key = responder_identity_key.get_public_key().unwrap();
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseKK,
         self_static_private_key: Some(responder_identity_key),
         peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseKK,
             self_static_private_key: Some(initiator_identity_key),
             peer_static_public_key: Some(responder_public_key),
@@ -107,15 +107,15 @@ fn process_kk_handshake() {
 #[test]
 fn process_nk_handshake() {
     let identity_key = Box::new(IdentityKey::generate());
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseNK,
         self_static_private_key: None,
         peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseNK,
             self_static_private_key: Some(identity_key),
             peer_static_public_key: None,
@@ -128,15 +128,15 @@ fn process_nk_handshake() {
 
 #[test]
 fn process_nn_handshake() {
-    let client_handshaker = ClientHandshaker::create(HandshakerConfig {
+    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
         handshake_type: HandshakeType::NoiseNN,
         self_static_private_key: None,
         peer_static_public_key: None,
         session_binders: BTreeMap::new(),
     })
     .unwrap();
-    let server_handshaker = ServerHandshaker::new(
-        HandshakerConfig {
+    let server_handshaker = ServerHandshakeHandler::new(
+        HandshakeHandlerConfig {
             handshake_type: HandshakeType::NoiseNN,
             self_static_private_key: None,
             peer_static_public_key: None,
@@ -147,7 +147,10 @@ fn process_nn_handshake() {
     do_handshake(client_handshaker, server_handshaker);
 }
 
-fn do_handshake(mut client_handshaker: ClientHandshaker, mut server_handshaker: ServerHandshaker) {
+fn do_handshake(
+    mut client_handshaker: ClientHandshakeHandler,
+    mut server_handshaker: ServerHandshakeHandler,
+) {
     let request = client_handshaker.get_outgoing_message().unwrap().unwrap();
     server_handshaker
         .put_incoming_message(request)

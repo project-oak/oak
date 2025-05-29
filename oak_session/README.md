@@ -229,7 +229,7 @@ sequenceDiagram
     CAP->>AV: verify(evidence, endorsements)
     AV-->>CAP: result
 
-    Note over CAP: Attestation result is<br/> passed to Handshaker
+    Note over CAP: Attestation result is<br/> passed to HandshakeHandler
 ```
 
 The following diagram contains the flow for bidirectional attestation flow. In
@@ -275,12 +275,12 @@ sequenceDiagram
     CAP->>CAV: verify(server_evidence, server_endorsements)
     CAV-->>CAP: result
 
-    Note over CAP, SAP: Attestation result is<br/> passed to Handshaker
+    Note over CAP, SAP: Attestation result is<br/> passed to HandshakeHandler
 ```
 
 ### Handshake flow
 
-During the `HANDSHAKE` state, the `Handshaker` initiates the Noise session
+During the `HANDSHAKE` state, the `HandshakeHandler` initiates the Noise session
 proper. It uses the `SessionBinder` and `SessionBindingVerifier` once the
 session is established to create and verify the other end's bindings.
 
@@ -300,10 +300,10 @@ sequenceDiagram
     box Client side
         participant CSV as SessionBindingVerifier
         participant CN as Noise Protocol
-        participant CH as ClientHandshaker
+        participant CH as ClientHandshakeHandler
     end
     box Server side
-        participant SH as ServerHandshaker
+        participant SH as ServerHandshakeHandler
         participant SN as Noise Protocol
         participant SSB as SessionBinder
     end
@@ -339,10 +339,10 @@ sequenceDiagram
         participant CSV as SessionBindingVerifier
         participant CSB as SessionBinder
         participant CN as Noise Protocol
-        participant CH as ClientHandshaker
+        participant CH as ClientHandshakeHandler
     end
     box Server side
-        participant SH as ServerHandshaker
+        participant SH as ServerHandshakeHandler
         participant SN as Noise Protocol
         participant SSB as SessionBinder
         participant SSV as SessionBindingVerifier
@@ -377,8 +377,8 @@ sequenceDiagram
 ### Encryption flow
 
 Finally, once the session is in `OPEN` state, the `Encryptor` consumes the
-session key obtained by the `Handshaker`. This object handles the encryption and
-decryption of application messages.
+session key obtained by the `HandshakeHandler`. This object handles the
+encryption and decryption of application messages.
 
 ## Getting Started
 
