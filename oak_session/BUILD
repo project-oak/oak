@@ -23,7 +23,7 @@ package(
 
 rust_library(
     name = "oak_session",
-    srcs = glob(["src/*.rs"]),
+    srcs = glob(["src/**/*.rs"]),
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
@@ -49,34 +49,5 @@ rust_test(
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:mockall",
         "@oak_crates_index//:rand_core",
-    ],
-)
-
-rust_test(
-    name = "attestation_tests",
-    srcs = ["tests/attestation.rs"],
-    deps = [
-        ":oak_session",
-        "//oak_attestation_types",
-        "//oak_attestation_verification_types",
-        "//oak_proto_rust",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:googletest",
-        "@oak_crates_index//:mockall",
-    ],
-)
-
-rust_test(
-    name = "session_tests",
-    srcs = ["tests/session_tests.rs"],
-    deps = [
-        ":oak_session",
-        "//oak_attestation_types",
-        "//oak_attestation_verification_types",
-        "//oak_crypto",
-        "//oak_proto_rust",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:googletest",
-        "@oak_crates_index//:mockall",
     ],
 )

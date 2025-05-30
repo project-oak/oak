@@ -29,7 +29,8 @@ use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
-use oak_session::{
+
+use crate::{
     attestation::{
         AttestationHandler, AttestationType, AttestationVerdict, ClientAttestationHandler,
         DefaultAttestationAggregator, ServerAttestationHandler,

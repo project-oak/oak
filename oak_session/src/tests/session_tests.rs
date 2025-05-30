@@ -14,11 +14,16 @@
 
 extern crate alloc;
 
+use std::{boxed::Box, string::ToString, vec::Vec};
+
 use googletest::prelude::*;
 use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
-use oak_crypto::verifier::Verifier;
+use oak_crypto::{
+    identity_key::{IdentityKey, IdentityKeyHandle},
+    verifier::Verifier,
+};
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{
@@ -26,7 +31,8 @@ use oak_proto_rust::oak::{
         SessionResponse,
     },
 };
-use oak_session::{
+
+use crate::{
     attestation::AttestationType,
     config::SessionConfig,
     handshake::HandshakeType,
@@ -183,6 +189,50 @@ fn pairwise_nn_unattested_succeeds() -> anyhow::Result<()> {
     do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
 
     invoke_hello_world(&mut client_session, &mut server_session);
+
+    Ok(())
+}
+
+#[googletest::test]
+fn pairwise_nk_unattested_succeeds() -> anyhow::Result<()> {
+    let identity_key = Box::new(IdentityKey::generate());
+    let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_peer_static_public_key(identity_key.get_public_key().unwrap().as_slice())
+        .build();
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_static_private_key(identity_key)
+        .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
+
+    invoke_hello_world(&mut client_session, &mut server_session);
+
+    Ok(())
+}
+
+#[should_panic]
+#[googletest::test]
+fn pairwise_nk_unattested_mismatched_keys_fails() -> anyhow::Result<()> {
+    let identity_key = Box::new(IdentityKey::generate());
+    let wrong_identity_key = Box::new(IdentityKey::generate());
+    let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_peer_static_public_key(identity_key.get_public_key().unwrap().as_slice())
+        .build();
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_static_private_key(wrong_identity_key)
+        .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
 
     Ok(())
 }
@@ -430,6 +480,23 @@ fn pairwise_nn_peer_self_succeeds_custom_session_binding_verifier() -> anyhow::R
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
+    Ok(())
+}
+
+#[googletest::test]
+fn test_session_sendable() -> anyhow::Result<()> {
+    fn foo<T: Send>(_: T) {}
+
+    fn test(s: ServerSession) {
+        foo(s)
+    }
+
+    let identity_key = Box::new(IdentityKey::generate());
+    let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
+        .set_self_static_private_key(identity_key)
+        .build();
+    let server_session = ServerSession::create(server_config).unwrap();
+    test(server_session);
     Ok(())
 }
 
