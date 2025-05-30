@@ -2,6 +2,9 @@
 # This crate defines some common useful types that other Rust FFI implementations can use.
 # The corresponding Rust types are in oak_ffi
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],

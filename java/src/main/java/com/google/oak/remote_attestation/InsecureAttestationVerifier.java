@@ -53,8 +53,7 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
   @Override
   public final Result<AttestationResults, Exception> verify(
       final Instant now, final Evidence evidence, final Endorsements endorsements) {
-    return Result.success(
-        AttestationResults.newBuilder()
+    return Result.success(AttestationResults.newBuilder()
             .setStatus(AttestationResults.Status.STATUS_SUCCESS)
             .setEncryptionPublicKey(com.google.protobuf.ByteString.copyFrom(extractPublicKey(
                 evidence.getApplicationKeys().getEncryptionPublicKeyCertificate().toByteArray())))

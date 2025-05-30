@@ -15,6 +15,8 @@
 #
 """Rules related to android targets."""
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 def oak_android_jni_library(**kwargs):
     """A trivial macro to create targets destined for internal android use.
 
@@ -23,4 +25,4 @@ def oak_android_jni_library(**kwargs):
     Its current purpose is to serve as an indication that we'd like to transform
     this rules into a specific Android JNI rule in the import environment.
     """
-    native.cc_binary(**kwargs)
+    cc_binary(**kwargs)

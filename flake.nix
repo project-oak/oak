@@ -91,13 +91,6 @@
                 wasm-pack
               ];
             };
-            # For some reason node does not know how to find the prettier plugin, so we need to
-            # manually specify its fully qualified path.
-            prettier = with pkgs; writeShellScriptBin "prettier" ''
-              ${nodePackages.prettier}/bin/prettier \
-              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/index.js" \
-              "$@"
-            '';
             # Minimal shell with only the dependencies needed to run the format and check-format
             # steps.
             lint = with pkgs; mkShell {
@@ -105,15 +98,14 @@
                 bazel-buildtools
                 cargo-deadlinks
                 clang-tools
+                go-toml
                 hadolint
                 ktfmt
                 ktlint
                 nixpkgs-fmt
+                nodePackages.prettier
                 nodePackages.markdownlint-cli
                 shellcheck
-              ];
-              buildInputs = [
-                prettier
               ];
             };
             # Minimal shell with only the dependencies needed to run the bazel steps.

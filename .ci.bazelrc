@@ -1,8 +1,5 @@
 # CI specific config. This config should be safe to use from any presubmit and postsubmit jobs.
 
-# Fail immediately if the Bazel server lock cannot be acquired so that we can notice this in CI
-# and avoid attempting to parallelize steps that are actually serialized by Bazel.
-build:ci --block_for_lock=false
 # Useful to determine how long individual steps are taking in CI.
 build:ci --show_timestamps
 

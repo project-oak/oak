@@ -21,6 +21,7 @@ load(
     "find_cpp_toolchain",
     "use_cpp_toolchain",
 )
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 
 # Bazel rule for collecting the object files that a target depends on.
 # Modified from https://github.com/bazelbuild/bazel/issues/1920

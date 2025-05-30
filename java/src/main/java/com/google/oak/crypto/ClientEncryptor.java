@@ -86,8 +86,7 @@ public class ClientEncryptor implements AutoCloseable {
         nonce -> senderContext.seal(nonce, plaintext, associatedData).map(ciphertext -> {
           // Create request message.
           EncryptedRequest.Builder encryptedRequestBuilder =
-              EncryptedRequest.newBuilder().setEncryptedMessage(
-                  AeadEncryptedMessage.newBuilder()
+              EncryptedRequest.newBuilder().setEncryptedMessage(AeadEncryptedMessage.newBuilder()
                       .setNonce(ByteString.copyFrom(nonce))
                       .setCiphertext(ByteString.copyFrom(ciphertext))
                       .setAssociatedData(ByteString.copyFrom(associatedData))

@@ -65,17 +65,17 @@ public class OakClient<T extends Transport> implements AutoCloseable {
         .mapError(Exception::new)
         .andThen(endorsedEvidence
             -> verifier
-                   .verify(clock.instant(), endorsedEvidence.getEvidence(),
-                       endorsedEvidence.getEndorsements())
-                   .andThen(b -> {
-                     if (b.getStatus() == AttestationResults.Status.STATUS_SUCCESS) {
-                       return Result.success(
-                           new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray()));
-                     } else {
-                       return Result.error(new IllegalStateException(
-                           "Couldn't verify attestation results: " + b.getReason()));
-                     }
-                   }));
+                .verify(clock.instant(), endorsedEvidence.getEvidence(),
+                    endorsedEvidence.getEndorsements())
+                .andThen(b -> {
+                  if (b.getStatus() == AttestationResults.Status.STATUS_SUCCESS) {
+                    return Result.success(
+                        new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray()));
+                  } else {
+                    return Result.error(new IllegalStateException(
+                        "Couldn't verify attestation results: " + b.getReason()));
+                  }
+                }));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {
@@ -95,11 +95,11 @@ public class OakClient<T extends Transport> implements AutoCloseable {
         .andThen(encryptor
             // Encrypt request.
             -> encryptor
-                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                   // Send request.
-                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                   // Decrypt response.
-                   .andThen(encryptor::decrypt))
+                .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                // Send request.
+                .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                // Decrypt response.
+                .andThen(encryptor::decrypt))
         .map(d -> d.plaintext);
   }
 

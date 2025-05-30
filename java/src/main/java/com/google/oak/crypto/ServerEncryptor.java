@@ -125,16 +125,15 @@ public class ServerEncryptor implements AutoCloseable {
     // Encrypt response.
     return Hpke.generateRandomNonce().andThen(nonce
         -> recipientContext.get()
-               .seal(nonce, plaintext, associatedData)
-               // Create response message.
-               .map(ciphertext
-                   -> EncryptedResponse.newBuilder()
-                          .setEncryptedMessage(
-                              AeadEncryptedMessage.newBuilder()
-                                  .setNonce(ByteString.copyFrom(nonce))
-                                  .setCiphertext(ByteString.copyFrom(ciphertext))
-                                  .setAssociatedData(ByteString.copyFrom(associatedData))
-                                  .build())
-                          .build()));
+            .seal(nonce, plaintext, associatedData)
+            // Create response message.
+            .map(ciphertext
+                -> EncryptedResponse.newBuilder()
+                    .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
+                            .setNonce(ByteString.copyFrom(nonce))
+                            .setCiphertext(ByteString.copyFrom(ciphertext))
+                            .setAssociatedData(ByteString.copyFrom(associatedData))
+                            .build())
+                    .build()));
   }
 }

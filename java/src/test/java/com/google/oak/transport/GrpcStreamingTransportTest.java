@@ -118,10 +118,10 @@ public class GrpcStreamingTransportTest {
     // Create a server, add service, start, and register for automatic graceful
     // shutdown.
     grpcCleanup.register(InProcessServerBuilder.forName(serverName)
-                             .directExecutor()
-                             .addService(serviceImpl)
-                             .build()
-                             .start());
+            .directExecutor()
+            .addService(serviceImpl)
+            .build()
+            .start());
 
     // Create a client channel and register for automatic graceful shutdown.
     ManagedChannel channel =

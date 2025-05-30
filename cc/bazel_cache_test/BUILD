@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     licenses = ["notice"],
 )
