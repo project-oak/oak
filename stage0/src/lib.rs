@@ -163,6 +163,9 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let kernel = unsafe { kernel::Kernel::try_load_kernel_image(&mut fwcfg) }.unwrap();
     let kernel_sha2_256_digest = kernel.measure();
 
+    // Set up the allocator for ACPI-related memory in the EBDA region.
+    acpi::setup_low_allocator(&mut zero_page).unwrap();
+
     // Grab 1 MB of memory for ACPI-related things, as not everything will fit into
     // the EBDA. We want this space to be 1M in size, and to be as close to the 1GiB
     // boundary as possible.

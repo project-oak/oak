@@ -25,7 +25,7 @@ use core::{
     borrow::{Borrow, BorrowMut},
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
-    mem::size_of_val,
+    mem::{size_of_val, MaybeUninit},
     ops::{Deref, DerefMut},
 };
 
@@ -44,13 +44,14 @@ use crate::{
     Madt, ZeroPage,
 };
 
-// Ever so slightly smaller than 128K (0x2_0000) because the BumpAllocator also
-// needs to fit a usize in there to track how much memory has been allocated.
-type LowMemoryAllocator = crate::allocator::BumpAllocator<0x1_9000>;
+type LowMemoryAllocator = linked_list_allocator::LockedHeap;
 /// Allocator for low memory in the EBDA: 128K of memory (where the RSDP will be
 /// loaded).
+static LOW_MEMORY_ALLOCATOR: LowMemoryAllocator = LowMemoryAllocator::empty();
+
+/// EDBA is 128 KiB (0x2_0000).
 #[link_section = ".ebda"]
-static LOW_MEMORY_ALLOCATOR: LowMemoryAllocator = LowMemoryAllocator::uninit();
+static mut EBDA: [MaybeUninit<u8>; 0x2_0000] = [MaybeUninit::uninit(); 0x2_0000];
 
 /// How much memory to reserve for ACPI tables in "high" memory.
 const HIGH_MEM_SIZE: usize = 0x10_0000;
@@ -58,7 +59,7 @@ const HIGH_MEM_SIZE: usize = 0x10_0000;
 // Not using BumpAllocator here because we don't statically know where the
 // memory backing the allocator will go.
 type HighMemoryAllocator = linked_list_allocator::LockedHeap;
-/// Allocator fir high memory (where the ACPI tables themselves will go).
+/// Allocator for high memory (where the ACPI tables themselves will go).
 pub static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
@@ -860,6 +861,20 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
         };
         command.invoke(files, fwcfg, acpi_digest)
     }
+}
+
+pub fn setup_low_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str> {
+    // Safety: Access is safe since we don't support threads, so there is no
+    // concurrent access.
+    let edba_slice = unsafe { EBDA.as_mut_slice() };
+    // Reserve the memory for ACPI tables.
+    zero_page.insert_e820_entry(BootE820Entry::new(
+        edba_slice.as_ptr() as usize,
+        edba_slice.len(),
+        E820EntryType::ACPI,
+    ));
+    LOW_MEMORY_ALLOCATOR.lock().init_from_slice(edba_slice);
+    Ok(())
 }
 
 pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str> {
