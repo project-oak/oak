@@ -39,7 +39,7 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:spinning_top",
         "@oak_crates_index//:x86_64",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
         "@oak_crates_index//:zeroize",
     ],
 )
@@ -62,7 +62,7 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:spinning_top",
         "@oak_crates_index//:x86_64",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
         "@oak_crates_index//:zeroize",
     ],
 )

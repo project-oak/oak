@@ -55,7 +55,7 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
     ],
 )
 
@@ -116,7 +116,7 @@ rust_test_suite(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
     ],
 )
 
@@ -149,7 +149,7 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
     ],
 )
 
@@ -215,7 +215,7 @@ rust_test_suite(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
     ],
 )
 

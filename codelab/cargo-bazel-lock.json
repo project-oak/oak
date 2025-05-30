@@ -1,5 +1,5 @@
 {
-  "checksum": "5d6335c01082f55cb77bd811e08d5b02d87947fcae39c48aa31a73dfd4279a82",
+  "checksum": "76a934b55130cfd1f2c0d615837695452fae3ff9da61309aebe6e9d90594a7cf",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -7317,8 +7317,7 @@
             },
             {
               "id": "zerocopy 0.8.25",
-              "target": "zerocopy",
-              "alias": "zerocopy_08"
+              "target": "zerocopy"
             },
             {
               "id": "zeroize 1.7.0",

@@ -59,6 +59,6 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:strum",
-        "@oak_crates_index//:zerocopy_08",
+        "@oak_crates_index//:zerocopy",
     ],
 )
