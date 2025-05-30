@@ -145,4 +145,25 @@ impl WasmClientSession {
             })
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
+
+    /// Derives the key-exchange key (KEK) from the user secret.
+    ///
+    /// The `user_secret` is an arbitrary byte array, and the `kek_version` is
+    /// the version of the KEK. The `salt` is a 16-byte array.
+    ///
+    /// The function returns a 256-bit key, or an error if the input is
+    /// invalid.
+    #[wasm_bindgen]
+    pub fn derive_kek(
+        user_secret: &[u8],
+        kek_version: i32,
+        salt: &[u8],
+    ) -> Result<Vec<u8>, JsValue> {
+        Ok(user_info_derive::derive_kek(user_secret, kek_version, salt))
+    }
+
+    #[wasm_bindgen]
+    pub fn derive_pm_uid(user_secret: &[u8]) -> Result<Vec<u8>, JsValue> {
+        Ok(user_info_derive::derive_pm_uid(user_secret))
+    }
 }

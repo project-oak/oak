@@ -1,5 +1,5 @@
 {
-  "checksum": "27d227fe0916b6659525b8eb05b0cd8e178a1da17be304b85246850876626f0f",
+  "checksum": "e5a77a279dfc6dbf6f5553e2ce74a2a1d5f64028898a9e75d1650c93f9320da5",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2960,6 +2960,10 @@
             {
               "id": "hkdf 0.12.4",
               "target": "hkdf"
+            },
+            {
+              "id": "hmac 0.12.1",
+              "target": "hmac"
             },
             {
               "id": "hpke 0.11.0",
@@ -10951,6 +10955,7 @@
     "hashbrown 0.14.5",
     "hex 0.4.3",
     "hkdf 0.12.4",
+    "hmac 0.12.1",
     "hpke 0.11.0",
     "itertools 0.13.0",
     "lazy_static 1.5.0",

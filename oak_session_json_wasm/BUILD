@@ -14,24 +14,48 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_shared_library", "rust_test")
 load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 package(
     licenses = ["notice"],
 )
 
+rust_library(
+    name = "user_info_derive",
+    srcs = ["user_info_derive.rs"],
+    deps = [
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:hmac",
+        "@oak_crates_index//:sha2",
+    ],
+)
+
+rust_test(
+    name = "user_info_derive_test",
+    crate = ":user_info_derive",
+    deps = [
+        "@oak_crates_index//:hex",
+    ],
+)
+
 rust_shared_library(
     name = "oak_session_json_lib",
-    srcs = ["lib.rs"],
+    srcs = [
+        "lib.rs",
+    ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     target_compatible_with = ["//:wasm32-none-setting"],
     deps = [
+        ":user_info_derive",
         "@oak//oak_proto_rust",
         "@oak//oak_session",
+        "@oak_crates_index//:hkdf",
+        "@oak_crates_index//:hmac",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:wasm-bindgen",
     ],
 )

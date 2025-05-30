@@ -1212,6 +1212,7 @@ dependencies = [
  "hashbrown 0.14.5",
  "hex",
  "hkdf",
+ "hmac",
  "hpke",
  "http 0.2.12",
  "http-body-util",

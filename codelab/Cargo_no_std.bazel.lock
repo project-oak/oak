@@ -483,6 +483,7 @@ dependencies = [
  "hashbrown",
  "hex",
  "hkdf",
+ "hmac",
  "hpke",
  "itertools",
  "lazy_static",

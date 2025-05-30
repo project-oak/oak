@@ -115,6 +115,10 @@ def _common_crates(std):
             default_features = False,
             version = "0.12.4",
         ),
+        "hmac": crate.spec(
+            default_features = False,
+            version = "0.12.1",
+        ),
         "hpke": crate.spec(
             default_features = False,
             features = [
