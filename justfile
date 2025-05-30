@@ -341,7 +341,7 @@ copy-oak-artifacts: \
     (copy-artifact "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
     (copy-artifact "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app") \
     (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
     (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
     (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
     (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
@@ -396,7 +396,7 @@ github-oak_orchestrator: \
     (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator")
 
 github-oak_restricted_kernel_wrapper_simple_io_channel: \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "") \
+    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
     (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "")
 
 github-private_memory_enclave_app:
