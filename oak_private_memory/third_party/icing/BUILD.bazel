@@ -26,38 +26,14 @@ proto_library(
 )
 
 filegroup(
-   name = "icing_proto_srcs",
-   srcs = glob(["proto/**/*.proto"]),
+    name = "icing_proto_srcs",
+    srcs = glob(["proto/**/*.proto"]),
 )
 
 cc_proto_library(
     name = "icing_cc_proto",
     visibility = ["//visibility:public"],
     deps = [":icing_proto"],
-)
-
-# Using example from https://github.com/hlopko/bazel-jni-example/blob/main/tools/jni/BUILD
-genrule(
-    name = "copy_link_jni_md_header",
-    srcs = ["@bazel_tools//tools/jdk:jni_md_header-linux"],
-    outs = ["jni_md.h"],
-    cmd = "cp -f $< $@",
-)
-
-genrule(
-    name = "copy_link_jni_header",
-    srcs = ["@bazel_tools//tools/jdk:jni_header"],
-    outs = ["jni.h"],
-    cmd = "cp -f $< $@",
-)
-
-cc_library(
-    name = "copy_jni_hdr_lib",
-    hdrs = [
-        ":copy_link_jni_header",
-        ":copy_link_jni_md_header",
-    ],
-    includes = ["."],
 )
 
 cc_library(
@@ -101,8 +77,8 @@ cc_library(
         ".",  # For includes relative to the library's root (like CMAKE_CURRENT_SOURCE_DIR)
     ],
     deps = [
-        ":copy_jni_hdr_lib",
         ":icing_cc_proto",
+        "@bazel_tools//tools/jdk:jni",
         "@icu//:common",
     ],
 )
