@@ -26,14 +26,11 @@ presubmit: \
     build-and-test \
     clippy-ci \
     cargo-audit \
-    cargo-udeps \
     private_memory_presubmit
 
 presubmit-full: \
     presubmit \
-    all_ensure_no_std \
-    kokoro_verify_buildconfigs \
-    oak_containers_tests \
+    kokoro_verify_buildconfigs
 
 format:
     bazel build linter && bazel-bin/linter/linter --fix
@@ -78,14 +75,6 @@ bzimage_provenance_subjects kernel_name bzimage_path output_dir:
         --kernel-setup-data-output="{{output_dir}}/{{kernel_name}}_setup_data" \
         --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
 
-wasm_crate name:
-    cargo build --target=wasm32-unknown-unknown -p {{name}}
-
-wasm_release_crate name:
-    cargo build --target=wasm32-unknown-unknown --release -p {{name}}
-
-all_wasm_test_crates: (wasm_release_crate "echo") (wasm_release_crate "key_value_lookup") (wasm_release_crate "invalid_module") (wasm_release_crate "oak_functions_test_module") (wasm_release_crate "oak_functions_sdk_abi_test_get_storage_item") (wasm_release_crate "oak_functions_sdk_abi_test_invoke_testing")
-
 provenance-subjects: \
     stage0_bin_subjects \
     oak_containers_kernel_subjects
@@ -110,20 +99,6 @@ profile_wasm:
     cargo bench --package=oak_functions_service --bench=wasm_benchmark --features=wasmtime flamegraph -- --profile-time=5
     google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
 
-bazel_wasm name:
-    bazel build {{name}} --platforms=":wasm32-unknown-unknown"
-
-
-# Oak Containers Hello World entry point.
-
-cc_oak_containers_hello_world_container_bundle_tar:
-    bazel build //cc/containers/hello_world_enclave_app:bundle.tar
-
-ensure_no_std package:
-    RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
-
-all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_verification") (ensure_no_std "oak_restricted_kernel_sdk")
-
 oak_attestation_explain_wasm:
     env --chdir=oak_attestation_explain_wasm \
     wasm-pack build \
@@ -138,12 +113,6 @@ check-format:
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
-
-# Builds and tests all Oak Container binaries.
-oak_containers_tests:
-    bazel test \
-        //oak_containers/... \
-        //oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests
 
 # --- End Kokoro CI Entry Points ---
 
@@ -247,20 +216,6 @@ cargo-audit:
         cargo-audit audit -f $lockfile
     done
 
-cargo-deny:
-    #!/bin/sh
-    for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
-    do
-        env --chdir=$(dirname "$workspace") cargo deny check
-    done
-
-cargo-udeps:
-    #!/bin/sh
-    for workspace in $({{CARGO_WORKSPACE_LIST_CMD}})
-    do
-        env --chdir=$(dirname "$workspace") cargo udeps --all-targets --backend=depinfo --workspace
-    done
-
 git-check-diff:
     ./scripts/git_check_diff
 
@@ -284,12 +239,6 @@ bazel-cache-test:
 
 build-clients:
     bazel build //java/src/main/java/com/google/oak/client/oak_functions_client //cc/client:cli
-
-run-java-functions-client addr:
-    bazel-out/k8-fastbuild/bin/java/src/main/java/com/google/oak/client/oak_functions_client/oak_functions_client {{addr}}
-
-run-cc-functions-client addr request:
-    bazel-out/k8-fastbuild/bin/cc/client/cli {{addr}} {{request}}
 
 # OAK PRIVATE MEMORY
 
