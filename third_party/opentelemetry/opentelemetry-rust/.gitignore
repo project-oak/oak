@@ -1,8 +1,0 @@
-/.vscode/
-/target/
-*/target/
-**/*.rs.bk
-Cargo.lock
-/.idea/
-
-.cosine
