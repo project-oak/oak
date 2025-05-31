@@ -63,21 +63,21 @@ class ClientSession;
 // An opaque Rust Attestor
 // Pointers to this incomplete type are used to reference
 // the corresponding Rust struct in the function calls.
-class FfiAttester {
+struct FfiAttester {
   void* attester;
 };
 
 // An opaque Rust Endorser
 // Pointers to this incomplete type are used to reference
 // the corresponding Rust struct in the function calls.
-class FfiEndorser {
+struct FfiEndorser {
   void* endorser;
 };
 
 // An opaque Rust Attestation Verifier
 // Pointers to this incomplete type are used to reference
 // the corresponding Rust struct in the function calls.
-class FfiAttestationVerifier {
+struct FfiAttestationVerifier {
   void* verifier;
 };
 
