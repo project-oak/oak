@@ -28,6 +28,7 @@ rust_library(
     data = [
         "//oak_containers/stage1_bin",
         "//oak_containers/system_image:oak_containers_system_image",
+        "//oak_functions_launcher",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
     ],

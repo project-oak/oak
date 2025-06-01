@@ -146,17 +146,6 @@ impl Future for Term {
     }
 }
 
-pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
-    let uri = format!("http://localhost:{port}/");
-
-    // Create client
-    let mut client = OakFunctionsClient::new(&uri, &InsecureAttestationVerifier {})
-        .await
-        .expect("couldn't create client");
-
-    client.invoke(request_body).await.expect("error response")
-}
-
 // Assert that string value of the body of the given response matches the
 // expected string.
 pub fn assert_response_body(response: Response, expected: &str) {

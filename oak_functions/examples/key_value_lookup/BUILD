@@ -34,7 +34,6 @@ rust_test(
     crate_features = ["bazel"],
     data = [
         ":key_value_lookup",
-        "//oak_functions_launcher",
     ],
     deps = [
         "//micro_rpc",

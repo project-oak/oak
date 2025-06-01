@@ -22,7 +22,6 @@ extern crate test;
 use std::time::Duration;
 
 use maplit::hashmap;
-use oak_functions_test_utils::make_request;
 use test::Bencher;
 
 #[tokio::test]
@@ -50,23 +49,23 @@ async fn test_server() {
         lookup_data_file.path().to_str().unwrap(),
     );
 
-    // Wait for the server to start up.
-    // TODO(#4677): Reduce the wait time.
-    std::thread::sleep(Duration::from_secs(30));
+    let mut client =
+        oak_functions_test_utils::create_client(server_port, std::time::Duration::from_secs(30))
+            .await;
 
     {
         // Lookup match.
-        let response = make_request(server_port, b"key_1").await;
+        let response = client.invoke(b"key_1").await.unwrap();
         assert_eq!(b"value_1", &response.as_ref());
     }
     {
         // Lookup fail.
-        let response = make_request(server_port, b"key_42").await;
+        let response = client.invoke(b"key_42").await.unwrap();
         assert_eq!(Vec::<u8>::new(), response);
     }
     {
         // Lookup match but empty value.
-        let response = make_request(server_port, b"empty").await;
+        let response = client.invoke(b"empty").await.unwrap();
         assert_eq!(Vec::<u8>::new(), response);
     }
 }
@@ -100,7 +99,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     let mut client = runtime.block_on(oak_functions_test_utils::create_client(
         server_port,
-        std::time::Duration::from_secs(120),
+        std::time::Duration::from_secs(30),
     ));
 
     let summary = bencher.bench(|bencher| {
