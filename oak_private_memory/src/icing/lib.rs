@@ -148,9 +148,9 @@ pub fn get_default_scoring_spec() -> ScoringSpecProto {
     }
 }
 
-pub fn create_vector_proto(model_signature: &str, values: &[f32]) -> VectorProto {
+pub fn create_vector_proto(identifier: &str, values: &[f32]) -> VectorProto {
     VectorProto {
-        model_signature: Some(model_signature.to_string()),
+        model_signature: Some(identifier.to_string()),
         values: values.to_vec(), // Convert the slice to a Vec<f32>
     }
 }

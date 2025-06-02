@@ -24,8 +24,8 @@ use sealed_memory_rust_proto::oak::private_memory::{
     AddMemoryRequest, AddMemoryResponse, DataBlob, Embedding, EncryptedDataBlob, EncryptedUserInfo,
     GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
     InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, PlainTextUserInfo,
-    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
-    SearchMemoryRequest, SearchMemoryResponse, SearchResult, UserRegistrationRequest,
+    ResetMemoryRequest, ResetMemoryResponse, ScoreRange, SealedMemoryRequest, SealedMemoryResponse,
+    SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserRegistrationRequest,
     UserRegistrationResponse, WrappedDataEncryptionKey,
 };
 use tokio::{
@@ -50,7 +50,12 @@ trait MemoryInterface {
     async fn get_memories_by_tag(&mut self, tag: String) -> Vec<Memory>;
     async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory>;
     async fn reset_memory(&mut self) -> bool;
-    async fn search_memory(&mut self, query: &[Embedding], limit: u32) -> Vec<SearchResult>;
+    async fn search_memory(
+        &mut self,
+        query: &[Embedding],
+        limit: u32,
+        score_range: Option<ScoreRange>,
+    ) -> Vec<SearchMemoryResultItem>;
 }
 
 #[async_trait]
@@ -91,13 +96,19 @@ impl MemoryInterface for DatabaseWithCache {
         true
     }
 
-    async fn search_memory(&mut self, query: &[Embedding], limit: u32) -> Vec<SearchResult> {
-        let (blob_ids, scores) = self.meta_db().embedding_search(query, limit).unwrap();
+    async fn search_memory(
+        &mut self,
+        query: &[Embedding],
+        limit: u32,
+        score_range: Option<ScoreRange>,
+    ) -> Vec<SearchMemoryResultItem> {
+        let (blob_ids, scores) =
+            self.meta_db().embedding_search(query, limit, score_range).unwrap();
         let memories = self.cache.get_memories_by_blob_ids(&blob_ids).await.unwrap();
         memories
             .into_iter()
             .zip(scores.into_iter())
-            .map(|(memory, score)| SearchResult { memory: Some(memory), score })
+            .map(|(memory, _score)| SearchMemoryResultItem { memory: Some(memory) })
             .collect()
     }
 }
@@ -495,11 +506,25 @@ impl SealedMemoryHandler {
         let mut mutex_guard = self.session_context().await;
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
+            let search_query_container =
+                request.query.context("SearchMemoryRequest must contain a 'query' field")?;
+
+            let embedding_query_details = match search_query_container.clause {
+                Some(
+                    sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                        eq,
+                    ),
+                ) => eq,
+                None => bail!("SearchMemoryQuery must contain a 'clause'"),
+            };
+
+            let search_embeddings = &embedding_query_details.embedding;
+            let score_range = embedding_query_details.score_range;
+
             let database = &mut context.database;
-            let embedding = request.embedding_query;
-            const MAX_RESULTS: u32 = 1000;
-            let limit = if request.limit == 0 { MAX_RESULTS } else { request.limit };
-            let results = database.search_memory(&embedding, limit).await;
+            const MAX_RESULTS: u32 = 100;
+            let limit = MAX_RESULTS;
+            let results = database.search_memory(search_embeddings, limit, score_range).await;
             Ok(SearchMemoryResponse { results })
         } else {
             bail!("You need to call key sync first")

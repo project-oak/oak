@@ -20,7 +20,7 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::oak::private_memory::{
     Embedding, EncryptedDataBlob, EncryptedUserInfo, KeyDerivationInfo, Memory, PlainTextUserInfo,
-    UserDb,
+    ScoreRange, UserDb,
 };
 use tempfile::tempdir;
 
@@ -171,7 +171,7 @@ impl IcingMetaDatabase {
         let embeddings: Vec<_> = memory
             .embeddings
             .iter()
-            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
+            .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
             .collect();
         let doc = icing::create_document_builder()
             .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
@@ -288,6 +288,7 @@ impl IcingMetaDatabase {
         &self,
         embedding: &[Embedding],
         limit: u32,
+        score_op: Option<ScoreRange>,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>)> {
         let mut scoring_spec = icing::get_default_scoring_spec();
         scoring_spec.rank_by = Some(
@@ -299,6 +300,16 @@ impl IcingMetaDatabase {
             "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
         scoring_spec.advanced_scoring_expression = Some(SUM_ALL_MATCHING_EMBEDDING.to_string());
 
+        // Search the first embedding property, specified by `EMBEDDING_NAME`.
+        // Since we have only one embedding property, this is the one to go.
+        let query_string = if let Some(score_op) = score_op {
+            let score_min = score_op.min;
+            let score_max = score_op.max;
+            format!("semanticSearch(getEmbeddingParameter(0), {score_min}, {score_max})")
+        } else {
+            "semanticSearch(getEmbeddingParameter(0))".to_string()
+        };
+
         let search_spec = icing::SearchSpecProto {
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             embedding_query_metric_type: Some(
@@ -307,12 +318,10 @@ impl IcingMetaDatabase {
 
             embedding_query_vectors: embedding
                 .iter()
-                .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
+                .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
                 .collect(),
 
-            // Search the first embedding property, specified by `EMBEDDING_NAME`.
-            // Since we have only one embedding property, this is the one to go.
-            query: Some("semanticSearch(getEmbeddingParameter(0))".to_string()),
+            query: Some(query_string),
             enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
         };
@@ -681,7 +690,7 @@ mod tests {
         let memory_id1 = "memory_embed_1".to_string();
         let blob_id1 = 98765.to_string();
         let embedding1 = Embedding {
-            model_signature: "test_model".to_string(),
+            identifier: "test_model".to_string(),
             values: vec![1.0, 0.0, 0.0], // Vector pointing along x-axis
         };
         let memory1 = Memory {
@@ -695,7 +704,7 @@ mod tests {
         let memory_id2 = "memory_embed_2".to_string();
         let blob_id2 = 98766.to_string();
         let embedding2 = Embedding {
-            model_signature: "test_model".to_string(),
+            identifier: "test_model".to_string(),
             values: vec![0.0, 1.0, 0.0], // Vector pointing along y-axis
         };
         let memory2 = Memory {
@@ -708,8 +717,9 @@ mod tests {
 
         // Query embedding close to embedding1
         let query_embedding =
-            Embedding { model_signature: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] };
-        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding.clone()], 2)?;
+            Embedding { identifier: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] };
+        let (blob_ids, scores) =
+            icing_database.embedding_search(&[query_embedding.clone()], 2, None)?;
 
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
         expect_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
@@ -717,7 +727,7 @@ mod tests {
         expect_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
         // Make sure the limit works
-        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding], 1)?;
+        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding], 1, None)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
         expect_that!(blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient

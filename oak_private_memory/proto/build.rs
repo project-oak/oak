@@ -49,15 +49,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.SearchMemoryRequest",
         "oak.private_memory.SearchMemoryResponse",
         "oak.private_memory.Embedding",
-        "oak.private_memory.SearchResult",
         "oak.private_memory.KeyDerivationInfo",
         "oak.private_memory.UserRegistrationRequest",
         "oak.private_memory.UserRegistrationResponse",
+        "oak.private_memory.SearchMemoryResultItem",
+        "oak.private_memory.SearchMemoryQuery",
+        "oak.private_memory.MemoryContent",
+        "oak.private_memory.MemoryValue",
+        "oak.private_memory.EmbeddingQuery",
+        "oak.private_memory.ScoreRange",
     ];
 
     let oneof_field_names = [
         "oak.private_memory.SealedMemoryResponse.response",
         "oak.private_memory.SealedMemoryRequest.request",
+        "oak.private_memory.SearchMemoryQuery.clause",
+        "oak.private_memory.MemoryValue.value",
     ];
     for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
         config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");
@@ -73,7 +80,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let bytes_fields = [
-        "oak.private_memory.Memory.content",
         "oak.private_memory.KeySyncRequest.key_encryption_key",
         "oak.private_memory.UserRegistrationRequest.key_encryption_key",
         "oak.private_memory.KeyDerivationInfo.kek_salt",

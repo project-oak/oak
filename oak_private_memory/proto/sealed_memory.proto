@@ -24,15 +24,31 @@ package oak.private_memory;
 import "proto/session/session.proto";
 
 message Embedding {
-  string model_signature = 1;
+  // Identifier for the model that generated this embedding.
+  // During searching, only the embeddings with the same identifier will
+  // be used to caculate scores.
+  string identifier = 1;
+  // The actual embedding values.
   repeated float values = 2;
+}
+
+message MemoryValue {
+  oneof value {
+    bytes bytes_val = 1;
+    int64 int64_val = 2;
+  }
+}
+
+message MemoryContent {
+  map<string, MemoryValue> contents = 1;
 }
 
 message Memory {
   string id = 1;
-  bytes content = 2;
+  reserved 2;
   repeated string tags = 3;
   repeated Embedding embeddings = 4;
+  MemoryContent content = 5;
 }
 
 message AddMemoryRequest {
@@ -101,19 +117,53 @@ message GetMemoryByIdResponse {
   Memory memory = 2;
 }
 
-message SearchMemoryRequest {
-  // If set, the server will return at most `limit` memories.
-  uint32 limit = 1;
-  repeated Embedding embedding_query = 2;
+// Metric type for comparing embeddings.
+enum EmbeddingQueryMetricType {
+  DOT_PRODUCT = 0;
+  // COSINE, EUCLIDEAN, etc
 }
 
-message SearchResult {
+message ScoreRange {
+  float min = 1;
+  float max = 2;
+}
+
+// Defines the query for an embedding search.
+message EmbeddingQuery {
+  EmbeddingQueryMetricType metric_type = 1;
+  repeated Embedding embedding = 2;
+
+  // If score_range is set, only the embeddings with scores in the
+  // range will be returned.
+  // For example, if the search embedding is [1,1,1], and we have two documents:
+  // Document 1:
+  //   embedding: [{"model1": [1, 0, 1]}, {"model1": [1, 1, 1]}]
+  // Document 2:
+  //   embedding: [{"model1": [1, 0, 0]}, {"model1": [0, 1, 1]}]
+  // If the score_range is [2.5, 4.0] and the aggregate type is SUM with
+  // DOT_PRODUCT metric, then the second document will be filtered out because
+  // none of the embeddings has the score in the range. The first document will
+  // be returned, because its second embedding has the score of 3.0 in the range
+  // [2.5, 4.0]. And its first embedding is filtered out.
+  ScoreRange score_range = 3;
+}
+
+message SearchMemoryQuery {
+  oneof clause {
+    EmbeddingQuery embedding_query = 1;
+  }
+}
+
+message SearchMemoryRequest {
+  SearchMemoryQuery query = 1;
+}
+
+message SearchMemoryResultItem {
   Memory memory = 1;
-  float score = 2;
 }
 
 message SearchMemoryResponse {
-  repeated SearchResult results = 1;
+  repeated SearchMemoryResultItem results = 1;
 }
 
 message KeyDerivationInfo {
