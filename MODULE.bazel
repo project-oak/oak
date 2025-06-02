@@ -4,6 +4,8 @@
 #
 # For more details, please check https://github.com/bazelbuild/bazel/issues/18958
 ###############################################################################
+module(name = "oak")
+
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 

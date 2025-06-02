@@ -888,7 +888,7 @@
     "@@rules_android~//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
       "general": {
         "bzlTransitiveDigest": "NAy+0M15JNVEBb8Tny6t7j3lKqTnsAMjoBB6LJ+C370=",
-        "usagesDigest": "jETJ575d8hCEZoQtJDbtN/NHVuwclIv9nFQJBnlENWg=",
+        "usagesDigest": "K+W0Lrm6oeh7zSxlvcimXYizLOspFLI82bdgCO6rnHs=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
