@@ -109,7 +109,7 @@ oak_attestation_explain_wasm:
 # --- KOKORO CI Entry Points ---
 
 check-format:
-    bazel build linter && bazel-bin/linter/linter --verbose
+    bazel build linter && bazel-bin/linter/linter
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh

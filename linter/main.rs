@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::time::Instant;
+use std::{io::Write, time::Instant};
 
 use clap::Parser;
 use colored::*;
@@ -104,9 +104,8 @@ impl LinterContext {
         };
         let title = format!("{} {}", verb, LT::NAME.bright_white());
 
-        let padding_size = (80 - title.len()) / 2;
-        let padding = (0..padding_size).map(|_| "*").collect::<String>();
-        println!("\n\n\n{} {} {}\n", padding, title, padding);
+        print!("======>{title}... ");
+        let _ = std::io::stdout().flush();
     }
 
     fn lint<LT: linter::LinterTool>(&self, tool: LT) -> ResultCounts {
@@ -132,19 +131,20 @@ impl LinterContext {
                     }
                 }
                 Ok(linter::Outcome::Failure(message)) => {
-                    println!("{}\n{message}", outcome.filename.red());
                     error_messages.push(format!("{}: {}", outcome.filename, message));
                 }
             };
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);
-        println!(
-            "=======> {} processed {} files in {:?}",
-            LT::NAME.bright_white(),
-            processed,
-            elapsed
-        );
+        let error_count = error_messages.len();
+        let summary = if error_count > 0 {
+            let issue_word = if error_count == 1 { "issue" } else { "issues" };
+            format!("{error_count} {issue_word} found").red()
+        } else {
+            "no issues found".to_string().truecolor(0, 200, 0)
+        };
+        println!("{summary}. processed {} files in {:?}", processed, elapsed);
         ResultCounts { processed, error_messages }
     }
 }
