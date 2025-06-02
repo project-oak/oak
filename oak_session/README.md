@@ -5,7 +5,7 @@
 
 <!-- Oak Logo End -->
 
-# Encrypted Session SDK
+# Oak Encrypted Session SDK
 
 This library provides an implementation of Oak end-to-end encrypted attested
 session between the communicating parties, e.g., between Oak enclaves and user
