@@ -18,8 +18,10 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "google/protobuf/timestamp.proto";
 import "proto/digest.proto";
 import "proto/attestation/tcb_version.proto";
+import "proto/session/messages.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -291,3 +293,16 @@ message CbData {
 
 // Oak Standalone currently skips all attestation
 message OakStandaloneData {}
+
+message CollectedAttestation {
+  message RequestMetadata {
+    // URI from which the attestation was obtained.
+    string uri = 1;
+    google.protobuf.Timestamp request_time = 2;
+  }
+  RequestMetadata request_metadata = 1;
+
+  // Maps unique IDs of attestation providers to the corresponding evidence.
+  // This matches the corresponding map in Oak Session.
+  map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 2;
+}

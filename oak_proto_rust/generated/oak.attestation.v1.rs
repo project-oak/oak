@@ -1500,6 +1500,31 @@ pub struct CbData {
 pub struct OakStandaloneData {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct CollectedAttestation {
+    #[prost(message, optional, tag = "1")]
+    pub request_metadata: ::core::option::Option<collected_attestation::RequestMetadata>,
+    /// Maps unique IDs of attestation providers to the corresponding evidence.
+    /// This matches the corresponding map in Oak Session.
+    #[prost(btree_map = "string, message", tag = "2")]
+    pub endorsed_evidence: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        super::super::session::v1::EndorsedEvidence,
+    >,
+}
+/// Nested message and enum types in `CollectedAttestation`.
+pub mod collected_attestation {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost_derive::Message)]
+    pub struct RequestMetadata {
+        /// URI from which the attestation was obtained.
+        #[prost(string, tag = "1")]
+        pub uri: ::prost::alloc::string::String,
+        #[prost(message, optional, tag = "2")]
+        pub request_time: ::core::option::Option<::prost_types::Timestamp>,
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct VerificationSkipped {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost_derive::Message)]

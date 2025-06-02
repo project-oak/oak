@@ -144,6 +144,8 @@ proto_library(
     deps = [
         ":tcb_version_proto",
         "//proto:digest_proto",
+        "//proto/session:messages_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
 )
 
