@@ -81,7 +81,7 @@ sequenceDiagram
     activate CT
     CT--)ST: open channel (e.g. GRPC BiDi stream)
 
-    Note over CS,SS: ATTEST
+    Note over CS,SS: ATTESTATION
     CT->>+CS: get_outgoing_message
     CS-->>-CT: message
     CT--)ST: send(message)
