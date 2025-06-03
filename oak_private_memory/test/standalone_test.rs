@@ -35,8 +35,8 @@ use sealed_memory_rust_proto::oak::private_memory::{
     user_registration_response, AddMemoryRequest, AddMemoryResponse, Embedding, EmbeddingQuery,
     GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
     InvalidRequestResponse, KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory,
-    MemoryContent, MemoryValue, ResetMemoryRequest, ResetMemoryResponse, ScoreRange,
-    SealedMemoryResponse, SearchMemoryQuery, SearchMemoryRequest, SearchMemoryResponse,
+    MemoryContent, MemoryField, MemoryValue, ResetMemoryRequest, ResetMemoryResponse, ResultMask,
+    ScoreRange, SealedMemoryResponse, SearchMemoryQuery, SearchMemoryRequest, SearchMemoryResponse,
     UserRegistrationRequest, UserRegistrationResponse,
 };
 use tokio::net::TcpListener;
@@ -402,7 +402,8 @@ async fn execute_embedding_search_logic(
     let search_query = SearchMemoryQuery {
         clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
     };
-    let search_request = SearchMemoryRequest { query: Some(search_query), page_size: 10 };
+    let search_request =
+        SearchMemoryRequest { query: Some(search_query), page_size: 10, ..Default::default() };
     send_request_generic(tx, client_session, search_request, None, mode).await;
     let (search_memory_response, _): (SearchMemoryResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -431,7 +432,8 @@ async fn execute_embedding_search_logic(
     let search_query = SearchMemoryQuery {
         clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
     };
-    let search_request = SearchMemoryRequest { query: Some(search_query), page_size: 10 };
+    let search_request =
+        SearchMemoryRequest { query: Some(search_query), page_size: 10, ..Default::default() };
     send_request_generic(tx, client_session, search_request, None, mode).await;
     let (search_memory_response, _): (SearchMemoryResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -441,6 +443,206 @@ async fn execute_embedding_search_logic(
         search_memory_response.results[0].memory.as_ref().unwrap().id,
         add_memory_response2.id
     );
+}
+
+async fn execute_result_masking_logic(
+    tx: &mut mpsc::Sender<SessionRequest>,
+    client_session: &mut oak_session::ClientSession,
+    response_stream: &mut tonic::Streaming<SessionResponse>,
+    mode: TestMode,
+) {
+    let pm_uid = format!(
+        "test_result_masking_{:?}_{}",
+        mode,
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    );
+
+    // User Registration
+    let user_registration_request = UserRegistrationRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_request_generic(tx, client_session, user_registration_request, None, mode).await;
+    let (user_reg_response, _): (UserRegistrationResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(user_reg_response.status, user_registration_response::Status::Success as i32);
+
+    // Key Sync
+    let key_sync_request_data =
+        KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: pm_uid.clone() };
+    send_request_generic(tx, client_session, key_sync_request_data, None, mode).await;
+    let (key_sync_response, _): (KeySyncResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(key_sync_response.status, key_sync_response::Status::Success as i32);
+
+    // Add a comprehensive memory item
+    let original_memory_id = "mask_test_mem_item_id_1".to_string();
+    let original_tags = vec!["tagMaskTestA".to_string(), "tagMaskTestB".to_string()];
+    let original_embedding =
+        Embedding { identifier: "mask_test_model".to_string(), values: vec![0.5, 0.5] };
+    let original_embeddings = vec![original_embedding.clone()];
+
+    let mut original_contents_map = std::collections::HashMap::new();
+    original_contents_map.insert(
+        "content_key_str".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::BytesVal("value_string_data".as_bytes().to_vec())),
+        },
+    );
+    original_contents_map.insert(
+        "content_key_int".to_string(),
+        MemoryValue { value: Some(memory_value::Value::Int64Val(98765)) },
+    );
+    let original_memory_content = MemoryContent { contents: original_contents_map.clone() };
+
+    let add_memory_request_data = AddMemoryRequest {
+        memory: Some(Memory {
+            id: original_memory_id.clone(),
+            tags: original_tags.clone(),
+            embeddings: original_embeddings.clone(),
+            content: Some(original_memory_content.clone()),
+        }),
+    };
+    send_request_generic(tx, client_session, add_memory_request_data, None, mode).await;
+    let (add_memory_response, _): (AddMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(add_memory_response.id, original_memory_id);
+
+    // Search query that will find the item
+    let search_embedding_for_query = Embedding {
+        identifier: "mask_test_model".to_string(), // Match identifier
+        values: vec![0.5, 0.5],
+    };
+    let embedding_query_for_search = EmbeddingQuery {
+        embedding: vec![search_embedding_for_query.clone()],
+        ..Default::default()
+    };
+    let search_query_clause = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(
+            embedding_query_for_search.clone(),
+        )),
+    };
+
+    // Test Case 1: No ResultMask (result_mask field is None)
+    println!("Test Case 1: No ResultMask (all fields expected)");
+    let search_request_no_mask = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: None,
+    };
+    send_request_generic(tx, client_session, search_request_no_mask, None, mode).await;
+    let (response_no_mask, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_no_mask.results.len(), 1);
+    let mem_no_mask = response_no_mask.results[0].memory.as_ref().unwrap();
+    assert_eq!(mem_no_mask.id, original_memory_id);
+    assert_eq!(mem_no_mask.tags, original_tags);
+    assert_eq!(mem_no_mask.embeddings, original_embeddings);
+    assert_eq!(mem_no_mask.content.as_ref().unwrap().contents, original_contents_map);
+
+    // Test Case 2: Empty include_fields (no top-level fields expected)
+    println!("Test Case 2: Empty include_fields");
+    let search_request_empty_fields = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: Some(ResultMask { include_fields: vec![], include_content_fields: vec![] }),
+    };
+    send_request_generic(tx, client_session, search_request_empty_fields, None, mode).await;
+    let (response_empty_fields, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_empty_fields.results.len(), 1);
+    let mem_empty_fields = response_empty_fields.results[0].memory.as_ref().unwrap();
+    assert!(mem_empty_fields.id.is_empty(), "ID should be empty");
+    assert!(mem_empty_fields.tags.is_empty(), "Tags should be empty");
+    assert!(mem_empty_fields.embeddings.is_empty(), "Embeddings should be empty");
+    assert!(mem_empty_fields.content.is_none(), "Content should be None");
+
+    // Test Case 3: Specific top-level fields (ID and TAGS)
+    println!("Test Case 3: Specific top-level fields (ID and TAGS)");
+    let search_request_id_tags = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
+            include_content_fields: vec![],
+        }),
+    };
+    send_request_generic(tx, client_session, search_request_id_tags, None, mode).await;
+    let (response_id_tags, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_id_tags.results.len(), 1);
+    let mem_id_tags = response_id_tags.results[0].memory.as_ref().unwrap();
+    assert_eq!(mem_id_tags.id, original_memory_id);
+    assert_eq!(mem_id_tags.tags, original_tags);
+    assert!(mem_id_tags.embeddings.is_empty());
+    assert!(mem_id_tags.content.is_none());
+
+    // Test Case 4: CONTENT included, specific content_fields ("content_key_str")
+    println!("Test Case 4: CONTENT with specific content_fields");
+    let search_request_content_specific = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Content as i32],
+            include_content_fields: vec!["content_key_str".to_string()],
+        }),
+    };
+    send_request_generic(tx, client_session, search_request_content_specific, None, mode).await;
+    let (response_content_specific, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_content_specific.results.len(), 1);
+    let mem_cs = response_content_specific.results[0].memory.as_ref().unwrap();
+    assert!(mem_cs.id.is_empty());
+    assert!(mem_cs.tags.is_empty());
+    assert!(mem_cs.embeddings.is_empty());
+    assert!(mem_cs.content.is_some());
+    let specific_contents = &mem_cs.content.as_ref().unwrap().contents;
+    assert_eq!(specific_contents.len(), 1);
+    assert!(specific_contents.contains_key("content_key_str"));
+    assert_eq!(specific_contents["content_key_str"], original_contents_map["content_key_str"]);
+
+    // Test Case 5: CONTENT included, empty content_fields (all content sub-fields
+    // expected)
+    println!("Test Case 5: CONTENT with empty content_fields");
+    let search_request_content_all_sub = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Content as i32],
+            include_content_fields: vec![],
+        }),
+    };
+    send_request_generic(tx, client_session, search_request_content_all_sub, None, mode).await;
+    let (response_content_all_sub, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_content_all_sub.results.len(), 1);
+    let mem_cas = response_content_all_sub.results[0].memory.as_ref().unwrap();
+    assert!(mem_cas.id.is_empty());
+    assert!(mem_cas.tags.is_empty());
+    assert!(mem_cas.embeddings.is_empty());
+    assert!(mem_cas.content.is_some());
+    assert_eq!(mem_cas.content.as_ref().unwrap().contents, original_contents_map);
+
+    // Test Case 6: CONTENT *not* included, but content_fields specified
+    println!("Test Case 6: ID included, content_fields specified (CONTENT not in include_fields)");
+    let search_request_id_stray_content = SearchMemoryRequest {
+        query: Some(search_query_clause.clone()),
+        page_size: 1,
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Id as i32],
+            include_content_fields: vec!["content_key_str".to_string()], // Should be ignored
+        }),
+    };
+    send_request_generic(tx, client_session, search_request_id_stray_content, None, mode).await;
+    let (response_id_stray, _): (SearchMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(response_id_stray.results.len(), 1);
+    let mem_is = response_id_stray.results[0].memory.as_ref().unwrap();
+    assert_eq!(mem_is.id, original_memory_id);
+    assert!(mem_is.tags.is_empty());
+    assert!(mem_is.embeddings.is_empty());
+    assert!(mem_is.content.is_none());
 }
 
 async fn execute_boot_strap_logic(
@@ -579,6 +781,28 @@ async fn test_embedding_search_all_modes() {
         client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
 
         execute_embedding_search_logic(&mut tx, &mut client_session, &mut response_stream, mode)
+            .await;
+    }
+}
+
+#[tokio::test]
+async fn test_result_masking_all_modes() {
+    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let url = format!("http://{addr}");
+
+    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
+        println!("Testing Result Masking in {:?} mode", mode);
+        let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (mut tx, rx) = mpsc::channel(10);
+        let mut response_stream = client.invoke(rx).await.unwrap().into_inner();
+        let mut client_session = oak_session::ClientSession::create(
+            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+        )
+        .unwrap();
+        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+
+        execute_result_masking_logic(&mut tx, &mut client_session, &mut response_stream, mode)
             .await;
     }
 }

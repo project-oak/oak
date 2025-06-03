@@ -58,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.MemoryValue",
         "oak.private_memory.EmbeddingQuery",
         "oak.private_memory.ScoreRange",
+        "oak.private_memory.ResultMask",
     ];
 
     let oneof_field_names = [

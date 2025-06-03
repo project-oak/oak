@@ -23,10 +23,10 @@ use sealed_memory_rust_proto::oak::private_memory::{
     key_sync_response, sealed_memory_request, sealed_memory_response, user_registration_response,
     AddMemoryRequest, AddMemoryResponse, DataBlob, EncryptedDataBlob, EncryptedUserInfo,
     GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
-    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, PlainTextUserInfo,
-    ResetMemoryRequest, ResetMemoryResponse, SealedMemoryRequest, SealedMemoryResponse,
-    SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserRegistrationRequest,
-    UserRegistrationResponse, WrappedDataEncryptionKey,
+    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, MemoryField,
+    PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse, ResultMask, SealedMemoryRequest,
+    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem,
+    UserRegistrationRequest, UserRegistrationResponse, WrappedDataEncryptionKey,
 };
 use tokio::{
     runtime::Handle,
@@ -54,6 +54,29 @@ trait MemoryInterface {
         &mut self,
         request: SearchMemoryRequest,
     ) -> anyhow::Result<Vec<SearchMemoryResultItem>>;
+}
+
+// Helper function to apply the result mask to a single Memory object.
+fn apply_mask_to_memory(memory: &mut Memory, mask: &ResultMask) {
+    // include_fields is not empty, so it acts as an "only include these" list.
+    if !mask.include_fields.contains(&(MemoryField::Id as i32)) {
+        memory.id.clear();
+    }
+    if !mask.include_fields.contains(&(MemoryField::Tags as i32)) {
+        memory.tags.clear();
+    }
+    if !mask.include_fields.contains(&(MemoryField::Embeddings as i32)) {
+        memory.embeddings.clear();
+    }
+
+    if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
+        memory.content = None;
+    } else if !mask.include_content_fields.is_empty() {
+        if let Some(content_struct) = memory.content.as_mut() {
+            // Filter the 'contents' map based on 'include_content_fields'.
+            content_struct.contents.retain(|key, _| mask.include_content_fields.contains(key));
+        }
+    }
 }
 
 #[async_trait]
@@ -99,7 +122,14 @@ impl MemoryInterface for DatabaseWithCache {
         request: SearchMemoryRequest,
     ) -> anyhow::Result<Vec<SearchMemoryResultItem>> {
         let (blob_ids, scores) = self.meta_db().embedding_search(&request)?;
-        let memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+
+        if let Some(result_mask) = request.result_mask {
+            for memory_item in memories.iter_mut() {
+                apply_mask_to_memory(memory_item, &result_mask);
+            }
+        }
+
         Ok(memories
             .into_iter()
             .zip(scores.into_iter())

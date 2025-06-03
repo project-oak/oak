@@ -735,6 +735,7 @@ mod tests {
                     },
                 )),
             }),
+            ..Default::default()
         };
         // Query embedding close to embedding1
         let (blob_ids, scores) = icing_database.embedding_search(&request)?;

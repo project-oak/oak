@@ -154,11 +154,31 @@ message SearchMemoryQuery {
   }
 }
 
+enum MemoryField {
+  UNKNOWN = 0;     // Default value, should not be used.
+  ID = 1;          // The 'id' field of the Memory message.
+  TAGS = 2;        // The 'tags' field.
+  EMBEDDINGS = 3;  // The 'embeddings' field.
+  CONTENT = 4;     // The 'content' field .
+}
+
+// Defines which parts of the Memory object to return.
+// If `include_*` is provided, only the content defined in it will be returned.
+// `CONTENT` should be provided if `include_content_fields` is not empty.
+message ResultMask {
+  repeated string include_content_fields = 1;
+  repeated MemoryField include_fields = 2;
+}
+
 message SearchMemoryRequest {
   SearchMemoryQuery query = 1;
   // Pagination: Maximum number of results to return per page, or max results to
   // return total for single page of query.
   int32 page_size = 2;
+  reserved 3;  // reserved 3 for page_token.
+  // Specifies which fields of the matching Memory objects to return or not to
+  // return.
+  ResultMask result_mask = 4;
 }
 
 message SearchMemoryResultItem {
