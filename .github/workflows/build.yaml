@@ -46,15 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      # Needed for GCS upload.
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
 
-      # Needed for GCS upload.
-      - name: Setup Google Cloud
-        uses: google-github-actions/setup-gcloud@v2
 
       - name: Mount main branch
         uses: actions/checkout@v4
