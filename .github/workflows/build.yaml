@@ -113,12 +113,12 @@ jobs:
           set -o nounset
           set -o pipefail
           source ${{ matrix.buildconfig }}
-          export CI_JOB_TYPE=CONTINUOUS
-          export RUST_BACKTRACE=1
-          export RUST_LOG=debug
-          export XDG_RUNTIME_DIR=/var/run
-          export JUST_TIMESTAMP=true
-          export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
+
+          KOKORO_ROOT_JOB_TYPE=CONTINUOUS_INTEGRATION
+          source kokoro/helpers/common.sh
+          configure_common_env
+          configure_bazelrc
+
           scripts/docker_pull
           scripts/docker_run "${BUILD_COMMAND[@]}"
 
@@ -126,6 +126,10 @@ jobs:
         run: |
           echo "${{ steps.parse.outputs.subject-paths }}"
           ls -la ${{ steps.parse.outputs.subject-paths }}
+          for output in ${{ steps.parse.outputs.subject-paths }}
+          do
+            sha256sum "$output"
+          done
 
       - name: Attest
         id: attest
