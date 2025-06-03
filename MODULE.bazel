@@ -32,7 +32,7 @@ bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_cryp
 
 # https://github.com/bazel-contrib/rules_python
 bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
 
 # Need ignore_root_user_error to run in docker container in CI
 python.toolchain(is_default = True, python_version = "3.11", ignore_root_user_error = True)
