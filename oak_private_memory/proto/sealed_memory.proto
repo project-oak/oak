@@ -156,6 +156,9 @@ message SearchMemoryQuery {
 
 message SearchMemoryRequest {
   SearchMemoryQuery query = 1;
+  // Pagination: Maximum number of results to return per page, or max results to
+  // return total for single page of query.
+  int32 page_size = 2;
 }
 
 message SearchMemoryResultItem {

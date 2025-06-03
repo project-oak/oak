@@ -402,7 +402,7 @@ async fn execute_embedding_search_logic(
     let search_query = SearchMemoryQuery {
         clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
     };
-    let search_request = SearchMemoryRequest { query: Some(search_query) };
+    let search_request = SearchMemoryRequest { query: Some(search_query), page_size: 10 };
     send_request_generic(tx, client_session, search_request, None, mode).await;
     let (search_memory_response, _): (SearchMemoryResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -431,7 +431,7 @@ async fn execute_embedding_search_logic(
     let search_query = SearchMemoryQuery {
         clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
     };
-    let search_request = SearchMemoryRequest { query: Some(search_query) };
+    let search_request = SearchMemoryRequest { query: Some(search_query), page_size: 10 };
     send_request_generic(tx, client_session, search_request, None, mode).await;
     let (search_memory_response, _): (SearchMemoryResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;

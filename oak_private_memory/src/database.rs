@@ -335,12 +335,11 @@ impl IcingMetaDatabase {
             enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
         };
-        const LIMIT: u32 = 10;
+        const LIMIT: i32 = 10;
+        let limit = if request.page_size > 0 { request.page_size } else { LIMIT };
 
-        let mut result_spec = icing::ResultSpecProto {
-            num_per_page: Some(LIMIT.try_into().unwrap()),
-            ..Default::default()
-        };
+        let mut result_spec =
+            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
 
         // We only need the `BlobId`.
         result_spec.type_property_masks.push(Self::create_blob_id_projection());
@@ -726,7 +725,8 @@ mod tests {
         };
         icing_database.add_memory(memory2, blob_id2.clone())?;
 
-        let request = SearchMemoryRequest {
+        let mut request = SearchMemoryRequest {
+            page_size: 10,
             query: Some(sealed_memory_rust_proto::oak::private_memory::SearchMemoryQuery {
                 clause: Some(sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
                     sealed_memory_rust_proto::oak::private_memory::EmbeddingQuery {
@@ -742,6 +742,13 @@ mod tests {
         expect_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         expect_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
+
+        request.page_size = 1;
+        let (blob_ids, scores) = icing_database.embedding_search(&request)?;
+        // Expect memory1 (blob_id1) to be the top result due to higher dot product
+        expect_that!(blob_ids, elements_are![eq(&blob_id1)]);
+        // We could also assert on the score if needed, but ordering is often sufficient
+        expect_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
     }
 }
