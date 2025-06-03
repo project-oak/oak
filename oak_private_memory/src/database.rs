@@ -14,13 +14,13 @@
 // limitations under the License.
 use std::collections::HashMap;
 
-use anyhow::{bail, ensure};
+use anyhow::{bail, ensure, Context};
 use icing::IcingGroundTruthFilesHelper;
 use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::oak::private_memory::{
     Embedding, EncryptedDataBlob, EncryptedUserInfo, KeyDerivationInfo, Memory, PlainTextUserInfo,
-    ScoreRange, UserDb,
+    ScoreRange, SearchMemoryRequest, UserDb,
 };
 use tempfile::tempdir;
 
@@ -270,9 +270,7 @@ impl IcingMetaDatabase {
         self.icing_search_engine.set_schema(&schema);
     }
 
-    /// Search based on the document embedding `doc_embedding` (the ones that
-    /// users set when adding the memory) and search embedding
-    /// `search_embedding` (the one that set at search memory request).
+    /// Search based on the document embedding.
     /// The process is as follow:
     /// 1. For each memory, we find all the document embeddings that matches the
     ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
@@ -286,10 +284,22 @@ impl IcingMetaDatabase {
     ///    return the first `limit` ones with highest scores.
     pub fn embedding_search(
         &self,
-        embedding: &[Embedding],
-        limit: u32,
-        score_op: Option<ScoreRange>,
+        request: &SearchMemoryRequest,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>)> {
+        let search_query_container =
+            request.query.as_ref().context("SearchMemoryRequest must contain a 'query' field")?;
+
+        let embedding_query_details = match search_query_container.clause.as_ref() {
+            Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                    eq,
+                ),
+            ) => eq,
+            _ => bail!("SearchMemoryQuery must contain an 'EmbeddingQuery' clause"),
+        };
+
+        let query_embeddings: &[Embedding] = &embedding_query_details.embedding;
+        let score_op: Option<ScoreRange> = embedding_query_details.score_range.clone();
         let mut scoring_spec = icing::get_default_scoring_spec();
         scoring_spec.rank_by = Some(
             icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
@@ -316,7 +326,7 @@ impl IcingMetaDatabase {
                 icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
             ),
 
-            embedding_query_vectors: embedding
+            embedding_query_vectors: query_embeddings
                 .iter()
                 .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
                 .collect(),
@@ -325,9 +335,10 @@ impl IcingMetaDatabase {
             enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
         };
+        const LIMIT: u32 = 10;
 
         let mut result_spec = icing::ResultSpecProto {
-            num_per_page: Some(limit.try_into().unwrap()),
+            num_per_page: Some(LIMIT.try_into().unwrap()),
             ..Default::default()
         };
 
@@ -715,23 +726,22 @@ mod tests {
         };
         icing_database.add_memory(memory2, blob_id2.clone())?;
 
+        let request = SearchMemoryRequest {
+            query: Some(sealed_memory_rust_proto::oak::private_memory::SearchMemoryQuery {
+                clause: Some(sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                    sealed_memory_rust_proto::oak::private_memory::EmbeddingQuery {
+                        embedding: vec![Embedding { identifier: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] }],
+                        ..Default::default()
+                    },
+                )),
+            }),
+        };
         // Query embedding close to embedding1
-        let query_embedding =
-            Embedding { identifier: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] };
-        let (blob_ids, scores) =
-            icing_database.embedding_search(&[query_embedding.clone()], 2, None)?;
-
+        let (blob_ids, scores) = icing_database.embedding_search(&request)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
         expect_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         expect_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
-
-        // Make sure the limit works
-        let (blob_ids, scores) = icing_database.embedding_search(&[query_embedding], 1, None)?;
-        // Expect memory1 (blob_id1) to be the top result due to higher dot product
-        expect_that!(blob_ids, elements_are![eq(&blob_id1)]);
-        // We could also assert on the score if needed, but ordering is often sufficient
-        expect_that!(scores.len(), eq(1));
         Ok(())
     }
 }
