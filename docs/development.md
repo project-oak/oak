@@ -3,7 +3,7 @@
 Development of Oak is mainly supported within a [Nix](https://nixos.org/)
 environment on Linux, which guarantees that all the developers are using the
 same exact version of all the compilers and build tools, and that this is also
-in sync with what is used by the Continous Integration (CI) system.
+in sync with what is used by the Continuous Integration (CI) system.
 
 This is also necessary (though not by itself sufficient) to enable building Oak
 binaries in a detereministic and reproducible way, which in turn allows Oak to
