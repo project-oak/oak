@@ -82,6 +82,8 @@ pub fn to_attestation_results(
 
 // Attestation verifier that only verifies the EventLog, i.e. it doesn't verify
 // the root attestation and doesn't check the DICE certificate chain.
+// NB: this verifier returns attestation failures as Rust errors instead of the
+// AttestationResults.
 pub struct EventLogVerifier {
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
@@ -94,6 +96,9 @@ impl EventLogVerifier {
 }
 
 impl AttestationVerifier for EventLogVerifier {
+    // Verifies the EventLog in the evidence and returns AttestationResults with the
+    // Success status if verification is successful. Verification fails if one of
+    // the event verifiers fails. In this case Result::Err is returned.
     fn verify(
         &self,
         evidence: &Evidence,
@@ -122,7 +127,7 @@ impl AttestationVerifier for EventLogVerifier {
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
         Ok(AttestationResults {
-            status: Status::Unspecified.into(),
+            status: Status::Success.into(),
             reason: "".to_string(),
             encryption_public_key: vec![],
             signing_public_key: vec![],
