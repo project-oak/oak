@@ -33,20 +33,31 @@ use oak_attestation_verification_types::{
     util::Clock,
     verifier::AttestationVerifier,
 };
-use oak_crypto::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
+use oak_crypto::{
+    certificate::{certificate_verifier::CertificateVerifier, utils::to_timestamp},
+    verifier::Verifier,
+};
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, endorsements, reference_values,
-        session_binding_public_key_endorsement, AmdSevSnpEndorsement, CbReferenceValues,
-        Endorsements, Event, EventLog, Evidence, OakContainersReferenceValues,
-        OakRestrictedKernelReferenceValues, ReferenceValues, SessionBindingPublicKeyData,
-        SessionBindingPublicKeyEndorsement, SkipVerification, TinkEndorsement,
+use oak_proto_rust::{
+    certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
+    oak::{
+        attestation::v1::{
+            binary_reference_value, endorsements, reference_values,
+            session_binding_public_key_endorsement, AmdSevSnpEndorsement, CbReferenceValues,
+            CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
+            OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+            SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement, SkipVerification,
+            TinkEndorsement,
+        },
+        crypto::v1::{
+            Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
+        },
+        Variant,
     },
-    Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
+use prost_types::Timestamp;
 use zerocopy::FromBytes;
 
 const OC_EVIDENCE_PATH: &str =
@@ -70,14 +81,18 @@ const CB_ENDORSEMENTS_PATH: &str = "oak_attestation_verification/testdata/cb_end
 const CB_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/cb_reference_values.binarypb";
 
+const CERTIFICATE_EVENT_INDEX: usize = 0;
 const KERNEL_EVENT_INDEX: usize = 0;
 const RK_APPLICATION_EVENT_INDEX: usize = 1;
 const SYSTEM_EVENT_INDEX: usize = 1;
 const CONTAINER_EVENT_INDEX: usize = 2;
 
-const TEST_SESSION_BINDING_PUBLIC_KEY: [u8; 4] = [0, 1, 2, 3];
-const TEST_SIGNATURE: [u8; 4] = [4, 5, 6, 7];
-const TEST_WRONG_SIGNATURE: [u8; 4] = [8, 9, 10, 11];
+const TEST_PUBLIC_KEY: [u8; 4] = [0, 1, 2, 3];
+const TEST_WRONG_PUBLIC_KEY: [u8; 4] = [4, 5, 6, 7];
+const TEST_SIGNATURE: [u8; 4] = [8, 9, 10, 11];
+const TEST_WRONG_SIGNATURE: [u8; 4] = [12, 13, 14, 15];
+
+const TEST_MILLISECONDS_SINCE_EPOCH: i64 = 1_000_000;
 
 // For RK testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
 const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
@@ -88,9 +103,16 @@ const OC_MILLISECONDS_SINCE_EPOCH: i64 = 1748779200000;
 // For CB testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
 const CB_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
 
+struct TestClock;
 struct RkTestClock;
 struct OcTestClock;
 struct CbTestClock;
+
+impl Clock for TestClock {
+    fn get_milliseconds_since_epoch(&self) -> i64 {
+        TEST_MILLISECONDS_SINCE_EPOCH
+    }
+}
 
 impl Clock for CbTestClock {
     fn get_milliseconds_since_epoch(&self) -> i64 {
@@ -224,6 +246,66 @@ fn load_cb_reference_values() -> CbReferenceValues {
     cb_reference_values
 }
 
+fn create_public_key_event(session_binding_public_key: &[u8]) -> Event {
+    Event {
+        tag: "session_binding_key".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
+                .to_string(),
+            value: SessionBindingPublicKeyData {
+                session_binding_public_key: session_binding_public_key.to_vec(),
+            }
+            .encode_to_vec(),
+        }),
+    }
+}
+
+fn create_public_key_evidence(session_binding_public_key: &[u8]) -> Evidence {
+    let event = create_public_key_event(session_binding_public_key);
+    Evidence {
+        event_log: Some(EventLog { encoded_events: vec![event.encode_to_vec()] }),
+        ..Default::default()
+    }
+}
+
+fn create_test_certificate(signature: &[u8]) -> Certificate {
+    let not_before: Timestamp = to_timestamp(TEST_MILLISECONDS_SINCE_EPOCH - 100);
+    let not_after: Timestamp = to_timestamp(TEST_MILLISECONDS_SINCE_EPOCH + 100);
+
+    let validity = Validity { not_before: Some(not_before), not_after: Some(not_after) };
+    let subject_public_key_info = SubjectPublicKeyInfo {
+        public_key: TEST_PUBLIC_KEY.to_vec(),
+        purpose_id: SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID.to_vec(),
+    };
+    let payload = CertificatePayload {
+        validity: Some(validity),
+        subject_public_key_info: Some(subject_public_key_info),
+    };
+    let serialized_payload = payload.encode_to_vec();
+
+    Certificate {
+        serialized_payload,
+        signature_info: Some(SignatureInfo { signature: signature.to_vec() }),
+    }
+}
+
+fn create_public_key_endorsement(signature: &[u8]) -> SessionBindingPublicKeyEndorsement {
+    SessionBindingPublicKeyEndorsement {
+        // TODO: b/417151897 - Remove once clients stop using raw signatures.
+        r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
+            TinkEndorsement { signature: signature.to_vec() },
+        )),
+        ca_endorsement: Some(CertificateAuthorityEndorsement {
+            certificate: Some(create_test_certificate(signature)),
+        }),
+    }
+}
+
+fn create_public_key_endorsements(signature: &[u8]) -> Endorsements {
+    let tink_endorsement = create_public_key_endorsement(signature);
+    Endorsements { events: vec![tink_endorsement.into()], ..Default::default() }
+}
+
 lazy_static::lazy_static! {
     static ref OC_EVIDENCE: Evidence = load_oc_evidence();
     static ref OC_ENDORSEMENTS: Endorsements = load_oc_endorsements();
@@ -301,30 +383,117 @@ fn cb_dice_verify_succeeds() {
 }
 
 #[test]
-fn event_log_verifier_succeeds() {
-    let event = Event {
+fn session_binding_key_policy_succeeds() {
+    let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
+    let endorsements = create_public_key_endorsements(&TEST_SIGNATURE);
+
+    let event = &evidence.event_log.as_ref().unwrap().encoded_events[CERTIFICATE_EVENT_INDEX];
+    let endorsement = &endorsements.events[CERTIFICATE_EVENT_INDEX];
+
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    let result = policy.verify(event, endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_fails_with_incorrect_event_id() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect event ID.
+    let event_wrong_id = Event {
         tag: "session_binding_key".to_string(),
         event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
-                .to_string(),
+            type_url: "wrong ID".to_string(),
             value: SessionBindingPublicKeyData {
-                session_binding_public_key: TEST_SESSION_BINDING_PUBLIC_KEY.to_vec(),
+                session_binding_public_key: TEST_PUBLIC_KEY.to_vec(),
             }
             .encode_to_vec(),
         }),
-    };
-    let evidence = Evidence {
-        event_log: Some(EventLog { encoded_events: vec![event.encode_to_vec()] }),
-        ..Default::default()
-    };
+    }
+    .encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.verify(&event_wrong_id, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
 
-    let tink_endorsement = SessionBindingPublicKeyEndorsement {
-        r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
-            TinkEndorsement { signature: TEST_SIGNATURE.to_vec() },
-        )),
-        ..Default::default()
+#[test]
+fn session_binding_key_policy_fails_with_incorrect_endorsement_id() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect endorsement ID.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let endorsement_wrong_id = Variant {
+        id: b"Wrong ID".to_vec(),
+        value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
     };
-    let endorsements = Endorsements { events: vec![tink_endorsement.into()], ..Default::default() };
+    let result = policy.verify(&event, &endorsement_wrong_id, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_fails_with_incorrect_public_key() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect public key.
+    let event_wrong_key = create_public_key_event(&TEST_WRONG_PUBLIC_KEY).encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.verify(&event_wrong_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_fails_with_empty_public_key() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Empty public key.
+    let event_empty_key = create_public_key_event(&[]).encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.verify(&event_empty_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_fails_with_invalid_signature() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Invalid signature.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let endorsement_wrong_signature: Variant =
+        create_public_key_endorsement(&TEST_WRONG_SIGNATURE).into();
+    let result = policy.verify(&event, &endorsement_wrong_signature, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn event_log_verifier_succeeds() {
+    let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
+    let endorsements = create_public_key_endorsements(&TEST_SIGNATURE);
+
     let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
         CertificateVerifier::new(TestSignatureVerifier {
             expected_signature: TEST_SIGNATURE.to_vec(),
@@ -332,7 +501,7 @@ fn event_log_verifier_succeeds() {
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
-    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(RkTestClock {}));
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
     let result = verifier.verify(&evidence, &endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -344,34 +513,14 @@ fn event_log_verifier_succeeds() {
     let extracted_public_key =
         event_attestation_results[0].artifacts.get(SESSION_BINDING_PUBLIC_KEY_ID);
     assert!(extracted_public_key.is_some());
-    assert!(*extracted_public_key.unwrap() == TEST_SESSION_BINDING_PUBLIC_KEY);
+    assert!(*extracted_public_key.unwrap() == TEST_PUBLIC_KEY);
 }
 
 #[test]
 fn event_log_verifier_fails() {
-    let event = Event {
-        tag: "session_binding_key".to_string(),
-        event: Some(prost_types::Any {
-            type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
-                .to_string(),
-            value: SessionBindingPublicKeyData {
-                session_binding_public_key: TEST_SESSION_BINDING_PUBLIC_KEY.to_vec(),
-            }
-            .encode_to_vec(),
-        }),
-    };
-    let evidence = Evidence {
-        event_log: Some(EventLog { encoded_events: vec![event.encode_to_vec()] }),
-        ..Default::default()
-    };
+    let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
+    let endorsements = create_public_key_endorsements(&TEST_WRONG_SIGNATURE);
 
-    let tink_endorsement = SessionBindingPublicKeyEndorsement {
-        r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
-            TinkEndorsement { signature: TEST_WRONG_SIGNATURE.to_vec() },
-        )),
-        ..Default::default()
-    };
-    let endorsements = Endorsements { events: vec![tink_endorsement.into()], ..Default::default() };
     let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
         CertificateVerifier::new(TestSignatureVerifier {
             expected_signature: TEST_SIGNATURE.to_vec(),
@@ -379,7 +528,7 @@ fn event_log_verifier_fails() {
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
-    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(RkTestClock {}));
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
     let result = verifier.verify(&evidence, &endorsements);
 
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
