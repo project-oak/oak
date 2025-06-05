@@ -627,15 +627,11 @@ fn verify_event_log(
 
     let verification_iterator =
         izip!(policies.iter(), event_log.encoded_events.iter(), padded_event_endorsements.iter());
-    let event_attestation_results = verification_iterator
+    verification_iterator
         .map(|(event_policy, event, event_endorsement)| {
-            event_policy.verify(event, event_endorsement, milliseconds_since_epoch).unwrap_or(
-                // TODO: b/366186091 - Use Rust error types for failed attestation.
-                EventAttestationResults { ..Default::default() },
-            )
+            event_policy.verify(event, event_endorsement, milliseconds_since_epoch)
         })
-        .collect::<Vec<EventAttestationResults>>();
-    Ok(event_attestation_results)
+        .collect::<Result<Vec<EventAttestationResults>, anyhow::Error>>()
 }
 
 /// Verifies that artifacts in all events have unique IDs.
