@@ -115,6 +115,50 @@ fn test_verify_certificate_signature_failure() {
 }
 
 #[test]
+fn test_verify_certificate_zero_validity_failure() {
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        // `not_after` is equal to `not_before`.
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS),
+        TEST_SIGNATURE,
+    );
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert!(result.is_err(), "Expected verification to fail, but got success");
+}
+
+#[test]
+fn test_verify_certificate_negative_validity_failure() {
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        // `not_after` is smaller than `not_before`.
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS),
+        to_timestamp(TEST_CURRENT_TIME_MILLISECONDS - 1),
+        TEST_SIGNATURE,
+    );
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert!(result.is_err(), "Expected verification to fail, but got success");
+}
+
+#[test]
 fn test_verify_certificate_validity_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
@@ -224,6 +268,48 @@ fn test_verify_certificate_clock_skew() {
         TEST_PURPOSE_ID,
         TEST_CURRENT_TIME_MILLISECONDS + 11,
         &certificate,
+    );
+    assert!(result.is_err(), "Expected verification to fail, but got success");
+}
+
+#[test]
+fn test_verify_certificate_validity_limit() {
+    fn certificate_from_validity(validity: i64) -> Certificate {
+        create_test_certificate(
+            TEST_PUBLIC_KEY,
+            TEST_PURPOSE_ID,
+            to_timestamp(TEST_CURRENT_TIME_MILLISECONDS),
+            to_timestamp(TEST_CURRENT_TIME_MILLISECONDS + validity),
+            TEST_SIGNATURE,
+        )
+    }
+
+    let validity_limit = Duration::from_millis(10);
+    let mut verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+    verifier.set_validity_limit(validity_limit);
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(9),
+    );
+    assert!(result.is_ok(), "Expected verification to succeed, but got error: {:?}", result.err());
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(10),
+    );
+    assert!(result.is_ok(), "Expected verification to succeed, but got error: {:?}", result.err());
+
+    let result = verifier.verify(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(11),
     );
     assert!(result.is_err(), "Expected verification to fail, but got success");
 }

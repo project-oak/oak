@@ -35,18 +35,30 @@ pub struct CertificateVerifier<V: Verifier> {
     /// Acceptable time period that corresponds to the device clock skew. The
     /// default value is `0`, which means that there is no clock skew.
     allowed_clock_skew: Duration,
+    /// Maximum accepted certificate validity duration.
+    /// The default `None` value means that any certificate validity is
+    /// accepted. If set, then the certificate verifier will only accept
+    /// certificates with the validity duration less or equal than
+    /// `validity_limit`. This only checks the validity provided by the
+    /// certificate itself, i.e. doesn't consider the `allowed_clock_skew`.
+    validity_limit: Option<Duration>,
 }
 
 impl<V: Verifier> CertificateVerifier<V> {
     /// Creates a new instance of [`CertificateVerifier`].
     pub fn new(signature_verifier: V) -> Self {
-        Self { signature_verifier, allowed_clock_skew: Duration::default() }
+        Self { signature_verifier, allowed_clock_skew: Duration::default(), validity_limit: None }
     }
 
-    /// Adds acceptable time period before the certificate validity starts and
+    /// Sets acceptable time period before the certificate validity starts and
     /// after it ends in order to account for devices with skewed clocks.
     pub fn set_allowed_clock_skew(&mut self, allowed_clock_skew: Duration) {
         self.allowed_clock_skew = allowed_clock_skew;
+    }
+
+    /// Sets maximum accepted certificate validity duration.
+    pub fn set_validity_limit(&mut self, validity_limit: Duration) {
+        self.validity_limit = Some(validity_limit);
     }
 }
 
@@ -143,6 +155,20 @@ impl<V: Verifier> CertificateVerifier<V> {
             not_before_milliseconds < not_after_milliseconds,
             "not_before timestamp is not strictly earlier than not_after timestamp",
         );
+
+        // TODO: b/414973682: - Print timestamps as part of the error.
+        // Discard certificates with validity duration longer than
+        // [`CertificateVerifier::validity_limit`], if this value is not `None`.
+        if let Some(validity_limit) = self.validity_limit {
+            let validity_duration = not_after_milliseconds - not_before_milliseconds;
+            anyhow::ensure!(
+                validity_duration <= (validity_limit.as_millis() as i64),
+                "certificate validity duration exceeds the maximum allowed validity duration",
+            )
+        }
+
+        // Account for skewed clock if [`CertificateVerifier::allowed_clock_skew`] is
+        // non-zero.
         let skewed_not_before_milliseconds =
             not_before_milliseconds - (self.allowed_clock_skew.as_millis() as i64);
         let skewed_not_after_milliseconds =
