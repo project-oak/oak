@@ -14,4 +14,11 @@
 // limitations under the License.
 //
 
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
+
 pub mod instant;
+
+pub use instant::{Instant, UNIX_EPOCH};

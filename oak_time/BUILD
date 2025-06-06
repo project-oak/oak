@@ -24,6 +24,9 @@ package(
 rust_library(
     name = "oak_time",
     srcs = glob(["src/**/*.rs"]),
+    crate_features = [
+        "prost",
+    ],
     deps = [
         "@oak_crates_index//:prost-types",
     ],

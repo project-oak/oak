@@ -33,10 +33,7 @@ use oak_attestation_verification_types::{
     util::Clock,
     verifier::AttestationVerifier,
 };
-use oak_crypto::{
-    certificate::{certificate_verifier::CertificateVerifier, utils::to_timestamp},
-    verifier::Verifier,
-};
+use oak_crypto::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
 use oak_file_utils::data_path;
 use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
@@ -56,6 +53,7 @@ use oak_proto_rust::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_time::Instant;
 use prost::Message;
 use prost_types::Timestamp;
 use zerocopy::FromBytes;
@@ -93,6 +91,8 @@ const TEST_SIGNATURE: [u8; 4] = [8, 9, 10, 11];
 const TEST_WRONG_SIGNATURE: [u8; 4] = [12, 13, 14, 15];
 
 const TEST_MILLISECONDS_SINCE_EPOCH: i64 = 1_000_000;
+const TEST_NOT_BEFORE_MILLISECONDS_SINCE_EPOCH: u64 = 999_900;
+const TEST_NOT_AFTER_MILLISECONDS_SINCE_EPOCH: u64 = 1_000_100;
 
 // For RK testdata: Pretend the tests runs on 01 July 2025, 12:00 UTC.
 const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1751371200000;
@@ -269,8 +269,10 @@ fn create_public_key_evidence(session_binding_public_key: &[u8]) -> Evidence {
 }
 
 fn create_test_certificate(signature: &[u8]) -> Certificate {
-    let not_before: Timestamp = to_timestamp(TEST_MILLISECONDS_SINCE_EPOCH - 100);
-    let not_after: Timestamp = to_timestamp(TEST_MILLISECONDS_SINCE_EPOCH + 100);
+    let not_before: Timestamp =
+        Instant::from_unix_millis(TEST_NOT_BEFORE_MILLISECONDS_SINCE_EPOCH).into_timestamp();
+    let not_after: Timestamp =
+        Instant::from_unix_millis(TEST_NOT_AFTER_MILLISECONDS_SINCE_EPOCH).into_timestamp();
 
     let validity = Validity { not_before: Some(not_before), not_after: Some(not_after) };
     let subject_public_key_info = SubjectPublicKeyInfo {

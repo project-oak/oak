@@ -31,6 +31,7 @@ hpke = { version = "*", default-features = false, features = [
   "x25519",
 ] }
 oak_proto_rust = { workspace = true }
+oak_time = { workspace = true }
 p256 = { version = "*", default-features = false, features = [
   "alloc",
   "ecdsa",
