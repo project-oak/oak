@@ -18,7 +18,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -43,6 +43,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "messages_java_proto",
+    deps = [":messages_proto"],
+)
+
+java_lite_proto_library(
+    name = "messages_java_proto_lite",
     deps = [":messages_proto"],
 )
 
@@ -88,6 +93,11 @@ java_proto_library(
     deps = [":service_streaming_proto"],
 )
 
+java_lite_proto_library(
+    name = "service_streaming_java_proto_lite",
+    deps = [":service_streaming_proto"],
+)
+
 java_grpc_library(
     name = "service_streaming_java_grpc",
     srcs = [":service_streaming_proto"],
@@ -121,15 +131,28 @@ java_proto_library(
     deps = [":session_proto"],
 )
 
+java_lite_proto_library(
+    name = "session_java_proto_lite",
+    deps = [":session_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
         ":messages_proto",
+        ":messages_cc_proto",
+        ":messages_java_proto",
+        ":messages_java_proto_lite",
+        "service_streaming_cc_proto",
+        "service_streaming_java_proto",
+        "service_streaming_java_proto_lite",
         ":service_streaming_cc_grpc",
         ":service_streaming_java_grpc",
         ":service_unary_cc_grpc",
         ":service_unary_java_grpc",
         ":session_proto",
         ":session_cc_proto",
+        ":session_java_proto",
+        ":session_java_proto_lite",
     ],
 )

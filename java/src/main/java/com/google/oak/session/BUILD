@@ -59,7 +59,7 @@ android_library(
         ":exception_android",
         ":session_config_builder_android",
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_jni",
-        "//proto/session:session_java_proto",
+        "//proto/session:session_java_proto_lite",
         "@com_google_protobuf//:protobuf_javalite",
     ],
 )
@@ -87,7 +87,7 @@ android_library(
         ":exception_android",
         ":session_config_builder_android",
         "//java/src/main/java/com/google/oak/session/jni:oak_server_session_jni",
-        "//proto/session:session_java_proto",
+        "//proto/session:session_java_proto_lite",
         "@com_google_protobuf//:protobuf_javalite",
     ],
 )

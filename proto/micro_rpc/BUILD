@@ -16,7 +16,7 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -45,11 +45,17 @@ java_proto_library(
     deps = [":messages_proto"],
 )
 
+java_lite_proto_library(
+    name = "messages_java_proto_lite",
+    deps = [":messages_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
         ":messages_proto",
         ":messages_cc_proto",
         ":messages_java_proto",
+        ":messages_java_proto_lite",
     ],
 )
