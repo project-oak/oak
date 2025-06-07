@@ -14,6 +14,9 @@ export JUST_TIMESTAMP=true
 export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
 
 echo "build --config=ci" >> ./.tmp.ci.bazelrc
+trap 'rm ./.tmp.ci.bazelrc' EXIT
+
+failures=()
 
 check_buildconfig () {
   buildconfig="$1"
@@ -27,12 +30,23 @@ check_buildconfig () {
   for f in "${SUBJECT_PATHS[@]}"; do
     if [ ! -f "${f}" ]; then
       >&2 echo "ERROR: Missing ${f} in ${buildconfig}"
-      exit 1 # Test failed
+      failures+=("${buildconfig}: ${f}")
     fi
   done
 }
 
 for b in "$@"; do
   >&2 echo "Checking ${b}"
+  set +o errexit
   check_buildconfig "${b}"
+  set -o errexit
 done
+
+failure_count="${#failures[@]}"
+echo ""
+echo ""
+for f in "${failures[@]}"
+do
+  echo "******Missing Output - $f"
+done
+exit "$failure_count"

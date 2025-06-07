@@ -19,6 +19,6 @@ export BUILD_COMMAND=(
 # The first element must be the Transparent Release binary (the main binary).
 export SUBJECT_PATHS=(
   artifacts/binaries/oak_restricted_kernel_simple_io_init_rd_wrapper_bin
-  artifacts/binaries/oak_restricted_kernel_wrapper_simple_io_channel_measurement_image
-  artifacts/binaries/oak_restricted_kernel_wrapper_simple_io_channel_measurement_setup_data
+  artifacts/subjects/oak_restricted_kernel_wrapper_simple_io_channel_measurement_image
+  artifacts/subjects/oak_restricted_kernel_wrapper_simple_io_channel_measurement_setup_data
 )

@@ -14,6 +14,7 @@ source kokoro/helpers/common.sh
 
 configure_common_env
 configure_bazelrc
+trap copy_artifacts_to_placer EXIT
 
 ./scripts/docker_pull
 ./scripts/docker_run nix develop .#default --command just clippy-ci

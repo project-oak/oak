@@ -79,19 +79,20 @@ provenance-subjects: \
     stage0_bin_subjects \
     oak_containers_kernel_subjects
 
-stage0_bin_subjects: (copy-artifact "stage0_bin" "stage0_bin" "//:x86_64-firmware")
-    mkdir -p artifacts/stage0_bin_subjects
+stage0_bin_subjects: (copy-binary "stage0_bin" "stage0_bin" "//:x86_64-firmware")
+    mkdir -p artifacts/subjects/stage0_bin
     rm --force artifacts/stage0_bin_subjects/*
     bazel run //snp_measurement -- \
         --vcpu-count=1,2,4,8,16,32,64 \
         --stage0-rom=$(realpath artifacts/binaries/stage0_bin) \
-        --attestation-measurements-output-dir=$(realpath artifacts/stage0_bin_subjects)
+        --attestation-measurements-output-dir=$(realpath artifacts/subjects/stage0_bin)
 
-oak_containers_kernel_subjects: (copy-artifact "oak_containers/kernel:bzImage" "oak_containers_kernel")
+oak_containers_kernel_subjects: (copy-binary "oak_containers/kernel:bzImage" "oak_containers_kernel")
+    mkdir -p artifacts/subjects/oak_containers_kernel
     just bzimage_provenance_subjects \
         oak_containers_kernel \
         $(realpath artifacts/binaries/oak_containers_kernel) \
-        $(realpath oak_containers)/kernel/bin/subjects
+        $(realpath artifacts/subjects/oak_containers_kernel)
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
@@ -251,102 +252,114 @@ private-memory-build-and-copy:
 bazel-repin-private-memory:
     cd oak_private_memory && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
-# ARTIFACT COPYING
 
+####################
+# ARTIFACT COPYING #
+####################
 clean-artifacts:
     # Removes all ignored files from the specified path
     git clean -X --force artifacts/**
 
-# This is the core rule for copying binaries that we want to keep available
-# through bazel configuration changes, share with CI hosts, or publish transparently.
+# These are the core rules for copying the supported artifact types into the output directory.
+# We use these to keep track of outputs that we want to track through bazel
+# configuration changes, share with CI hosts, or publish transparently.
 #
-# It ensures that the target is built; this should not add too much time, since already-built
+# They ensure that the target is built; this should not add too much time, since already-built
 # targets will quickly complete the "build" command.
-copy-artifact target dest platform="":
+
+# This target expects a rule that outputs one binary, and copies it to artifacts/binaries with the given name.
+copy-binary target dest platform="":
     bazel build {{target}} --platforms={{platform}}
     mkdir --parents artifacts/binaries
     cp --force --preserve=timestamps --no-preserve=mode \
         $(bazel cquery --platforms={{platform}} {{target}} --output files) \
         artifacts/binaries/{{dest}}
 
-# We need to copy things out of bazel-bin so that the remaining actions in the kokoro_build_containers script can find them
-# The copy-artifact lines are sorted alphabetically, as they will appear in the result store.
+# This file copies all outputs of the given target to the artifacts/subjects subdirectory.
+copy-subjects target dest platform="":
+    mkdir --parents artifacts/subjects/{{dest}}
+    bazel build {{target}} --platforms={{platform}}
+    cp --force --preserve=timestamps --no-preserve=mode \
+        $(bazel cquery --platforms={{platform}} {{target}} --output files) \
+        artifacts/subjects/{{dest}}
+
+# These are all oak artifacts that Kokoro build-and-copy expects.
 copy-oak-artifacts: \
-    (copy-artifact "enclave_apps/key_xor_test_app" "key_xor_test_app") \
-    (copy-artifact "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
-    (copy-artifact "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
-    (copy-artifact "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
-    (copy-artifact "oak_containers/kernel:bzImage" "oak_containers_kernel") \
-    (copy-artifact "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
-    (copy-artifact "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
-    (copy-artifact "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
-    (copy-artifact "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "oak_containers_stage1_tdx") \
-    (copy-artifact "oak_containers/syslogd" "oak_containers_syslogd") \
-    (copy-artifact "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
-    (copy-artifact "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
-    (copy-artifact "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app") \
-    (copy-artifact "oak_functions_containers_app/bundle.tar" "oak_functions_container") \
-    (copy-artifact "oak_functions_containers_app/bundle_insecure.tar" "oak_functions_insecure_container") \
-    (copy-artifact "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
-    (copy-artifact "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app") \
-    (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
-    (copy-artifact "stage0_bin" "stage0_bin") \
-    (copy-artifact "stage0_bin_tdx" "stage0_bin_tdx")
+    (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app") \
+    (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
+    (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
+    (copy-binary "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
+    (copy-binary "oak_containers/kernel:bzImage" "oak_containers_kernel") \
+    (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
+    (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
+    (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
+    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "oak_containers_stage1_tdx") \
+    (copy-binary "oak_containers/syslogd" "oak_containers_syslogd") \
+    (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
+    (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
+    (copy-binary "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app") \
+    (copy-binary "oak_functions_containers_app/bundle.tar" "oak_functions_container") \
+    (copy-binary "oak_functions_containers_app/bundle_insecure.tar" "oak_functions_insecure_container") \
+    (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
+    (copy-binary "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app") \
+    (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
+    (copy-binary "stage0_bin" "stage0_bin") \
+    (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
 
 ### Github Buildconfig rules
 ### These correspond to the commands in `buildconfigs/*.sh`
 github-key_xor_test_app: \
-    (copy-artifact "enclave_apps/key_xor_test_app" "key_xor_test_app")
+    (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app")
 
 github-oak_client_android_app: \
-    (copy-artifact "java/src/main/java/com/google/oak/client/android:client_app.apk" "client_app.apk")
+    (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "client_app.apk")
 
 github-oak_containers_agent: \
-    (copy-artifact "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent")
+    (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent")
 
 github-oak_containers_kernel: oak_containers_kernel_subjects
 
 github-oak_containers_nvidia_system_image: \
-    (copy-artifact "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image.tar.xz")
+    (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image.tar.xz")
 
 github-oak_containers_orchestrator: \
-    (copy-artifact "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator")
+    (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator")
 
 github-stage1_tdx_cpio: \
-    (copy-artifact "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "stage1_tdx.cpio")
+    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "stage1_tdx.cpio")
 
 github-stage1_cpio: \
-    (copy-artifact "oak_containers/stage1_bin:stage1.cpio" "stage1.cpio")
+    (copy-binary "oak_containers/stage1_bin:stage1.cpio" "stage1.cpio")
 
 github-oak_containers_syslogd: \
-    (copy-artifact "oak_containers/syslogd" "oak_containers_syslogd")
+    (copy-binary "oak_containers/syslogd" "oak_containers_syslogd")
 
 github-oak_containers_system_image: \
-    (copy-artifact "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image.tar.xz")
+    (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image.tar.xz")
 
 github-oak_echo_enclave_app: \
-    (copy-artifact "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app")
+    (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app")
 
 github-oak_echo_raw_enclave_app: \
-    (copy-artifact "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app")
+    (copy-binary "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app")
 
 github-oak_functions_enclave_app: \
-    (copy-artifact "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app")
+    (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app")
 
 github-oak_functions_insecure_enclave_app: \
-    (copy-artifact "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app")
+    (copy-binary "enclave_apps/oak_functions_enclave_app:oak_functions_insecure_enclave_app" "oak_functions_insecure_enclave_app")
 
 github-oak_orchestrator: \
-    (copy-artifact "enclave_apps/oak_orchestrator" "oak_orchestrator")
+    (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator")
 
 github-oak_restricted_kernel_wrapper_simple_io_channel: \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
-    (copy-artifact "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "")
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "")
 
 github-private_memory_enclave_app:
     cd oak_private_memory && just private-memory-enclave-bundle-tar
@@ -354,6 +367,6 @@ github-private_memory_enclave_app:
 github-private_memory_server:
     cd oak_private_memory && just private-memory-server
 
-github-stage0_bin_tdx: (copy-artifact "stage0_bin_tdx" "stage0_bin_tdx")
+github-stage0_bin_tdx: (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
-github-stage0_bin: (copy-artifact "stage0_bin" "stage0_bin") stage0_bin_subjects
+github-stage0_bin: (copy-binary "stage0_bin" "stage0_bin") stage0_bin_subjects
