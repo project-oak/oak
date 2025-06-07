@@ -55,3 +55,24 @@ objcopy(
     name = "stage0_bin",
     src = ":stage0_bin_elf",
 )
+
+genrule(
+    name = "subjects",
+    srcs = [
+        ":stage0_bin",
+        "//snp_measurement",
+    ],
+    outs = [
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_01_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_02_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_04_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_08_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_16_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_32_vcpu",
+        "sha2_384_measurement_of_initial_memory_with_stage0_and_64_vcpu",
+    ],
+    cmd = "$(location //snp_measurement) \
+            --vcpu-count=1,2,4,8,16,32,64 \
+            --stage0-rom=$(location :stage0_bin) \
+            --attestation-measurements-output-dir=$(@D)",
+)

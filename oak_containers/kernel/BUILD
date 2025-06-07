@@ -50,3 +50,19 @@ write_source_files(
         "generated/vanilla_bzImage.sha256": ":generate_vanilla_kernel_sha256",
     },
 )
+
+genrule(
+    name = "subjects",
+    srcs = [
+        "kernel",
+        "//oak_kernel_measurement",
+    ],
+    outs = [
+        "oak_containers_kernel_image",
+        "oak_containers_kernel_setup_data",
+    ],
+    cmd = "$(location //oak_kernel_measurement) \
+        --kernel=$(location :kernel) \
+        --kernel-setup-data-output=$(@D)/oak_containers_kernel_setup_data \
+        --kernel-image-output=$(@D)/oak_containers_kernel_image",
+)

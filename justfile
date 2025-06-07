@@ -65,35 +65,6 @@ run_oak_functions_launcher wasm_path port lookup_data_path:
         --port={{port}} \
         --lookup-data={{lookup_data_path}}
 
-# Create provenance subjects for a kernel bzImage, by extracting the setup data
-# and image to the output directory.
-bzimage_provenance_subjects kernel_name bzimage_path output_dir:
-    rm --recursive --force {{output_dir}}
-    mkdir --parents {{output_dir}}
-    bazel run //oak_kernel_measurement -- \
-        --kernel={{bzimage_path}} \
-        --kernel-setup-data-output="{{output_dir}}/{{kernel_name}}_setup_data" \
-        --kernel-image-output="{{output_dir}}/{{kernel_name}}_image"
-
-provenance-subjects: \
-    stage0_bin_subjects \
-    oak_containers_kernel_subjects
-
-stage0_bin_subjects: (copy-binary "stage0_bin" "stage0_bin" "//:x86_64-firmware")
-    mkdir -p artifacts/subjects/stage0_bin
-    rm --force artifacts/stage0_bin_subjects/*
-    bazel run //snp_measurement -- \
-        --vcpu-count=1,2,4,8,16,32,64 \
-        --stage0-rom=$(realpath artifacts/binaries/stage0_bin) \
-        --attestation-measurements-output-dir=$(realpath artifacts/subjects/stage0_bin)
-
-oak_containers_kernel_subjects: (copy-binary "oak_containers/kernel:bzImage" "oak_containers_kernel")
-    mkdir -p artifacts/subjects/oak_containers_kernel
-    just bzimage_provenance_subjects \
-        oak_containers_kernel \
-        $(realpath artifacts/binaries/oak_containers_kernel) \
-        $(realpath artifacts/subjects/oak_containers_kernel)
-
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
     # If it fails with SIGSEGV, try running again.
@@ -137,7 +108,6 @@ build-and-test: \
     std-crates \
     bare-metal-crates \
     wasm-crates \
-    provenance-subjects \
     test-codelab
 
 build-and-test-and-copy: build-and-test copy-oak-artifacts private-memory-build-and-copy
@@ -318,6 +288,7 @@ copy-oak-artifacts: \
     (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
     (copy-binary "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
     (copy-binary "oak_containers/kernel:bzImage" "oak_containers_kernel") \
+    (copy-subjects "oak_containers/kernel:subjects" "oak_containers_kernel") \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
@@ -350,7 +321,9 @@ github-oak_client_android_app: \
 github-oak_containers_agent: \
     (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent")
 
-github-oak_containers_kernel: oak_containers_kernel_subjects
+github-oak_containers_kernel: \
+    (copy-binary "oak_containers/kernel" "oak_containers_kernel") \
+    (copy-subjects "oak_containers/kernel:subjects" "oak_containers_kernel") \
 
 github-oak_containers_nvidia_system_image: \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image.tar.xz")
@@ -397,4 +370,6 @@ github-private_memory_server:
 
 github-stage0_bin_tdx: (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
-github-stage0_bin: (copy-binary "stage0_bin" "stage0_bin") stage0_bin_subjects
+github-stage0_bin: \
+    (copy-binary "stage0_bin" "stage0_bin") \
+    (copy-subjects "stage0_bin:subjects" "stage0_bin")
