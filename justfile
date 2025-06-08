@@ -153,8 +153,9 @@ std-crates:
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
     bazel test --keep_going //...:all
 
+[working-directory: 'codelab']
 test-codelab:
-    cd codelab && bazel build //enclave_app:enclave_app
+    bazel build //enclave_app:enclave_app
 
 
 bare-metal-crates:
@@ -180,8 +181,9 @@ bazel-clippy-ci:
 
 bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
 
+[working-directory: 'codelab']
 bazel-repin-codelab:
-    cd codelab && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+    env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 bazel-repin:
     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
@@ -241,14 +243,17 @@ build-clients:
 
 # OAK PRIVATE MEMORY
 
+[working-directory: 'oak_private_memory']
 private_memory_presubmit:
-    cd oak_private_memory && nix develop --command just presubmit
+    nix develop --command just presubmit
 
+[working-directory: 'oak_private_memory']
 private-memory-build-and-copy:
-    cd oak_private_memory && nix develop --command just build-and-test-and-copy
+    nix develop --command just build-and-test-and-copy
 
+[working-directory: 'oak_private_memory']
 bazel-repin-private-memory:
-    cd oak_private_memory && env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 
 ####################
@@ -362,11 +367,13 @@ github-oak_restricted_kernel_wrapper_simple_io_channel: \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_bin" "oak_restricted_kernel_simple_io_init_rd_wrapper_bin") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "")
 
+[working-directory: 'oak_private_memory']
 github-private_memory_enclave_app:
-    cd oak_private_memory && just private-memory-enclave-bundle-tar
+    just private-memory-enclave-bundle-tar
 
+[working-directory: 'oak_private_memory']
 github-private_memory_server:
-    cd oak_private_memory && just private-memory-server
+    just private-memory-server
 
 github-stage0_bin_tdx: (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
