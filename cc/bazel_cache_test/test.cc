@@ -15,5 +15,18 @@
  */
 
 // A simple no-op test to check whether Bazel remote cache works properly.
-// TODO: b/337266665 - Remove bazel-cache-test logic.
+// If you suspect that the Bazel remote cache isn't working as expected, this
+// test can help.
+//
+// Change the number returned below to something unique, to make sure there are
+// no pre existing cached entries. For example:
+//
+// int main() { return #389473984793; }
+//
+// Compile locally bazel clean confirm cache hit
+//
+// Change a Kokoro script comand to run `just bazel-cache-test` in Docker
+// Push your change.
+// Wait until CI runs
+// Confirm cache hit there too
 int main() { return 0; }

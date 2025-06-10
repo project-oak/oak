@@ -148,12 +148,40 @@ build-and-test-and-copy: build-and-test copy-oak-artifacts private-memory-build-
 asan:
     bazel build --config=asan //cc/oak_session/...
 
+kokoro-build_test_and_copy_to_placer: \
+    sample-just-log \
+    (trap-logs "std-crates") \
+    (trap-logs "bare-metal-crates") \
+    (trap-logs "wasm-crates") \
+    (trap-logs "provenance-subjects") \
+    (trap-logs "test-codelab") \
+    copy-oak-artifacts \
+    private-memory-build-and-copy
+
+sample-just-log:
+    mkdir -p artifacts/bazel-testlogs/testing1/
+    echo "Can I create a new log artifact?" >> artifacts/bazel-testlogs/testing1/sponge_log.log
+
+copy-logs:
+    # Only one thread for cp or you may get race conditions when trying to create.
+    fd "test.(log|xml)" -L bazel-testlogs/** --threads=1 --exec cp --force --parents --update {} artifacts
+    fd "^test.log" artifacts/bazel-testlogs/** --exec mv "{}" "{//}/sponge_log.log"
+    fd "^test.xml" artifacts/bazel-testlogs/** --exec mv "{}" "{//}/sponge_log.xml"
+
+# This can be used by calling scripts to ex
+trap-logs recipe:
+    #!/bin/bash
+    function copy_logs() {
+      just copy-logs
+    }
+    trap copy_logs EXIT
+    just {{recipe}}
 
 std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     # bazel test will build all targets as well unless --build_tests_only is specified.
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
-    bazel test //...:all
+    bazel test --keep_going //...:all
 
 test-codelab:
     cd codelab && bazel build //enclave_app:enclave_app
