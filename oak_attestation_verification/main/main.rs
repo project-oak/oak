@@ -22,18 +22,21 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use clap::Parser;
 use oak_attestation_verification::{convert_pem_to_raw, verify_endorsement};
 use oak_proto_rust::oak::attestation::v1::{
-    endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
-    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
-    VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    verifying_key_reference_value, ClaimReferenceValue, EndorsementReferenceValue, KeyType,
+    SkipVerification, VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
 };
+
+use crate::loader::EndorsementLoader;
+
+mod loader;
 
 // The key ID for the endorser key is meaningless in this setting, just make
 // sure we use the same number in signed endorsement and reference values.
-const KEY_ID: u32 = 1;
+pub const KEY_ID: u32 = 1;
 
 #[derive(Parser, Debug)]
 pub struct Params {
@@ -68,45 +71,35 @@ fn path_exists(param: &str) -> Result<PathBuf, String> {
 fn main() {
     let p = Params::parse();
 
-    let now_utc_millis: i64 = match p.now_utc_millis {
-        None => SystemTime::now()
+    let endorsement_loader = loader::FileEndorsementLoaderBuilder::default()
+        .endorsement_path(p.endorsement)
+        .signature_path(p.signature)
+        .log_entry_path(p.log_entry)
+        .subject_path(p.subject)
+        .build()
+        .expect("Failed to build endorsement loader");
+
+    let signed_endorsement =
+        endorsement_loader.load_endorsement().expect("Failed to load endorsement");
+
+    let now_utc_millis: i64 = p.now_utc_millis.unwrap_or_else(|| {
+        SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("could not get current time")
-            .as_millis(),
-        Some(millis) => millis.try_into().unwrap(),
-    }
-    .try_into()
-    .unwrap();
-    let endorsement = fs::read(p.endorsement).expect("couldn't read endorsement");
-    let signature = fs::read(p.signature).expect("couldn't read signature");
-    let log_entry = match p.log_entry {
-        None => Vec::new(),
-        Some(path_buf) => fs::read(path_buf).expect("couldn't read log entry"),
-    };
-    let subject = match p.subject {
-        None => Vec::new(),
-        Some(path_buf) => fs::read(path_buf).expect("couldn't read subject"),
-    };
+            .with_context(|| "Failed to get UNIX_EPOCH from SystemTime::now()")
+            .and_then(|d| {
+                d.as_millis().try_into().with_context(|| "Failed to downcast duration to i64")
+            })
+            .expect("failed to convert time to milliseconds")
+    });
 
-    let endorser_public_key_pem =
-        fs::read_to_string(p.endorser_public_key).expect("couldn't read endorser public key");
-    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
-        .expect("failed to convert endorser key");
+    let endorser_key = fs::read_to_string(&p.endorser_public_key)
+        .with_context(|| {
+            format!("Failed to read endorser public key from {}", p.endorser_public_key.display())
+        })
+        .and_then(|pem| convert_pem_to_raw(pem.as_str()))
+        .map(|raw| VerifyingKey { r#type: KeyType::EcdsaP256Sha256.into(), key_id: KEY_ID, raw })
+        .expect("Could not create endorser key");
 
-    let signed_endorsement = SignedEndorsement {
-        endorsement: Some(Endorsement {
-            format: Format::EndorsementFormatJsonIntoto.into(),
-            serialized: endorsement.to_vec(),
-            subject: subject.clone(),
-        }),
-        signature: Some(Signature { key_id: KEY_ID, raw: signature.to_vec() }),
-        rekor_log_entry: log_entry.clone(),
-    };
-    let endorser_key = VerifyingKey {
-        r#type: KeyType::EcdsaP256Sha256.into(),
-        key_id: KEY_ID,
-        raw: endorser_public_key.clone(),
-    };
     let ref_values = EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
         required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),

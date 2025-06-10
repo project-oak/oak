@@ -228,5 +228,6 @@ rust_binary(
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:derive_builder",
     ],
 )
