@@ -84,6 +84,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.KeySyncRequest.key_encryption_key",
         "oak.private_memory.UserRegistrationRequest.key_encryption_key",
         "oak.private_memory.KeyDerivationInfo.kek_salt",
+        "oak.private_memory.MemoryValue.value.bytes_val",
     ];
     for bytes_field in bytes_fields {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
