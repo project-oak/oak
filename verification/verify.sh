@@ -23,7 +23,6 @@
 # Requires: curl, sha256sum
 set -e
 set -o pipefail
-
 # shellcheck source=verification/common.sh
 source "$(dirname "$0")/common.sh"
 
@@ -84,7 +83,7 @@ verify() {
     )
   fi
 
-  bazel run //oak_attestation_verification:verify_endorsement -- "${opts[@]}"
+  bazel run //oak_attestation_verification:verify_endorsement -- verify file "${opts[@]}"
 
   # Consume transparency claims.
   if grep -q "${PUBLISHED_CLAIM_TYPE}" "${dir}/endorsement.json"; then

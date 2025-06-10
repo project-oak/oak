@@ -546,6 +546,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "tracing": crate.spec(version = "0.1.40"),
     "ubyte": crate.spec(version = "0.10.4"),
+    "ureq": crate.spec(version = "2.12.1"),
     "walkdir": crate.spec(version = "2.5.0"),
     "wasmtime": crate.spec(
         default_features = False,
