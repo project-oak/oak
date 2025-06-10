@@ -19,7 +19,6 @@ fi
 docker_run_flags=(
   '--rm'
   '--env=CI'
-  '--env=KOKORO_ARTIFACTS_DIR'
   '--env=OAK_KVM_TESTS'
   '--env=RUST_BACKTRACE'
   '--env=RUST_LOGS'
