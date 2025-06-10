@@ -836,4 +836,43 @@ fn proto_serialization_test() {
     let json_str = r#"{"keyEncryptionKey":"AQID","pmUid":"12345678910"}"#;
     let request_from_string_num = serde_json::from_str::<KeySyncRequest>(json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
+
+    let key_sync_response = KeySyncResponse { status: key_sync_response::Status::Success as i32 };
+    let json_str2 = r#"{"status":"SUCCESS"}"#;
+    let key_sync_response_from_string_num =
+        serde_json::from_str::<KeySyncResponse>(json_str2).unwrap();
+    assert_eq!(
+        key_sync_response.encode_to_vec(),
+        key_sync_response_from_string_num.encode_to_vec()
+    );
+    let json_str3 = r#"{"status": 1}"#;
+    let key_sync_response_from_string_num =
+        serde_json::from_str::<KeySyncResponse>(json_str3).unwrap();
+    assert_eq!(
+        key_sync_response.encode_to_vec(),
+        key_sync_response_from_string_num.encode_to_vec()
+    );
+
+    // Test user registration response
+    let user_registration_response = UserRegistrationResponse {
+        status: user_registration_response::Status::UserAlreadyExists as i32,
+        ..Default::default()
+    };
+    let json_str4 = r#"{"status":"USER_ALREADY_EXISTS"}"#;
+    let user_registration_response_from_string_num =
+        serde_json::from_str::<UserRegistrationResponse>(json_str4).unwrap();
+    assert_eq!(
+        user_registration_response.encode_to_vec(),
+        user_registration_response_from_string_num.encode_to_vec()
+    );
+
+    // Test ResultMask
+    let result_mask = ResultMask {
+        include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
+        include_content_fields: vec!["content_key_str".to_string()],
+    };
+    let json_str5 =
+        r#"{"includeFields":["ID", "TAGS"],"includeContentFields":["content_key_str"]}"#;
+    let result_mask_from_string_num = serde_json::from_str::<ResultMask>(json_str5).unwrap();
+    assert_eq!(result_mask.encode_to_vec(), result_mask_from_string_num.encode_to_vec());
 }

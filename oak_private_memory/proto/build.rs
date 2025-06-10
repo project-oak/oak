@@ -89,6 +89,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
     }
 
+    // Enum converters
+    config.field_attribute(
+        "oak.private_memory.KeySyncResponse.status",
+        "#[serde(with=\"crate::key_sync_response_status_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.UserRegistrationResponse.status",
+        "#[serde(with=\"crate::user_registration_response_status_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.ResultMask.include_fields",
+        "#[serde(with=\"crate::memory_field_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.EmbeddingQuery.metric_type",
+        "#[serde(with=\"crate::embedding_query_metric_type_converter\")]",
+    );
+
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
     #[cfg(feature = "bazel")]
