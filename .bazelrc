@@ -1,6 +1,6 @@
 # Bazel defaults.
 
-# Build C++ targets using C++17.
+# Build C++ targets using C++20.
 # <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>
 common --cxxopt=-std=c++20
 
