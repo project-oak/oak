@@ -184,6 +184,7 @@ pub(crate) struct ContentAddressableEndorsementLoader {
 const SIGNATURE_LINK: &str = "14";
 const REKOR_LOG_ENTRY_LINK: &str = "15";
 const PUBLIC_KEY_LINK: &str = "16";
+const ENDORSEMENT_LIST_LINK: &str = "21";
 
 impl ContentAddressableEndorsementLoader {
     // Creates a new remote endorsement loader.
@@ -192,6 +193,19 @@ impl ContentAddressableEndorsementLoader {
     // - storage: the content addressable storage layer to load from.
     pub(crate) fn new_with_storage(storage: Arc<dyn ContentAddressableStorage>) -> Self {
         ContentAddressableEndorsementLoader { storage }
+    }
+
+    // Lists all endorsement hashes for the given endorser key hash.
+    //
+    // Returns:
+    // - The list of endorsement hashes.
+    pub(crate) fn list_endorsements(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
+        let endorsements =
+            self.storage.get_link(endorser_key_hash, ENDORSEMENT_LIST_LINK).with_context(|| {
+                format!("reading endorsement list for endorser {}", endorser_key_hash)
+            })?;
+
+        Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
     }
 
     // Loads endorsement and reference values from a remote content addressable

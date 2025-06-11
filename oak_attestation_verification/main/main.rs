@@ -22,6 +22,7 @@ use anyhow::Context;
 use clap::{Parser, Subcommand};
 
 mod endorsement_loader;
+mod list;
 mod verify;
 
 #[derive(Parser)]
@@ -40,6 +41,9 @@ enum Commands {
         #[command(subcommand)]
         command: verify::VerifyCommands,
     },
+
+    #[command(subcommand = "list", about = "List endorsements.")]
+    List(list::ListArgs),
 }
 
 fn main() {
@@ -58,5 +62,6 @@ fn main() {
             verify::VerifyCommands::File(args) => verify::verify_file(args, now_utc_millis),
             verify::VerifyCommands::Remote(args) => verify::verify_remote(args, now_utc_millis),
         },
+        Commands::List(args) => list::list(args, now_utc_millis),
     }
 }

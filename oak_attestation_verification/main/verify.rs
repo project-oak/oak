@@ -133,7 +133,7 @@ pub(crate) fn verify_remote(p: VerifyRemoteArgs, now_utc_millis: i64) {
 }
 
 // Verifies an endorsement from a given endorsement loader.
-fn verify(
+pub(crate) fn verify(
     signed_endorsement: SignedEndorsement,
     ref_values: EndorsementReferenceValue,
     now_utc_millis: i64,
