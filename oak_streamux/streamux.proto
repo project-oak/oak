@@ -1,0 +1,168 @@
+// Copyright 2025 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.streamux.v1;
+
+option java_multiple_files = true;
+option java_package = "com.streamux.v1";
+
+import "google/protobuf/any.proto";
+import "proto/variant.proto";
+
+// Streamux - A specification for handling concurrent streams on top of an
+// existing reliable, ordered message channel.
+//
+// A "stream" in this context is a series of messages flowing in either
+// direction on the channel that form a logical grouping, with a well-defined
+// start and end.
+//
+// This proto also serves as the specification for the Streamux protocol. One of
+// the goals is that it's easy to create a new implementation of the protocol
+// that's compatible with any of the existing implementations.
+//
+// Heavily inspired by YAMUX spec.
+// https://github.com/hashicorp/yamux/blob/master/spec.md
+//
+// We are't just using YAMUX directly for the following reasons:
+// * It's a "lower-level" specification, using raw binary framing. Since our
+//   solution is intended for use wih RPC-like structures, we want to use a
+//   proto to encode the frame information.
+// * The YAMUX frame metadata contains a lot of invalid/meaningless combinations
+//   (for example, sending SYN+ACK at the same time). We've tried to create a
+//   proto that minimizes the ability to send a frame that contains incternally
+//   inconsistent fields.
+//
+// This is originally designed for use with `oak_session` implementation, which
+// itself is based on top of a single estbaslihed gRPC bidirectional stream.
+//
+// However, this layer is usable on top of any channel with similar properties.
+// Notably:
+//
+// * Reliable   - if you send a message, it's guaranteed to be delivered if the
+//                channel is still open.
+// * Ordered    - messages will arrive at the receiver in the same order they
+//                were sent by the sender. The channel itself never re-orders a
+//                message.
+// * Error      - If the channel encounters an underlying error, the error is
+//   Detecting    propagated upwards.
+//
+// You could use this approach directly on top of a TCP stream, for example.
+//
+// # Functionality
+//
+// Streamux provides these features on top of the generic underlying stream:
+// * Stream Framing    - a way to indicate that a logical stream is starting or
+//                       stopping.
+// * Message Coherence - a way to indicate that a group of  messages are related
+//                       to each other, and should be treated as one logical
+//                       sub-stream.
+// * Error reporting   - a way to indicate an error in a substream without
+//                       having to terminate the underlying channel.
+//
+
+// # Directionality
+//
+// Message sequence numbers are a tuple(id, Direction). The `Direction` field
+// indicates which direction the message is flowing, and is used to namespace
+// the sequence numbers so that the two sides do not need to coordinate their ID
+// generation.
+//
+// # Sequence Numbers
+//
+// Each stream message must contain a sequence number.
+// While sequence numbers are not integral to the proper functioning of the
+// protocol, they are included to help detect potential implementation errors
+// and unexpected ordering/reliability with the underlying channel, and they are
+// also the mechanism by which we indicate a new stream.
+//
+// A sequence number is a tuple of an integere and an `Direction` value. Once a
+// stream is established, each side must use incrementing sequence numbers,
+// starting with 1 (not 0: we'd like to it explicit that the sender intends for
+// this to be the first message, to avoid the possiblity that the field was
+// simply not set.), and the appropriate `Direction` value.
+message Streamux {
+  // The logical stream_id that this message belongs to.
+  //
+  // Since even unary requests can be represented as streams, we choose this
+  // name to identify the core abstraction.
+  //
+  // To start a new stream, the client must send `Data` message with:
+  //   stream_id = StreamId(n)
+  //   content = Data(seq=SequenceNumber(1, CLIENT_TO_SERVER))
+  //
+  // If a server receives a message indicating the start of a `StreamId(n)`,
+  // but it has previously received a start for that stream_id, and it hasn't
+  // terminated, it must send `Reset` for the stream id, and cancel any current
+  // handling of that stream.
+  StreamId stream_id = 1;
+
+  oneof content {
+    Data data = 5;
+    Error error = 6;
+    Reset reset = 7;
+  }
+}
+
+// The direction that the message is flowing.
+enum Direction {
+  UNSPECIFIED = 0;
+  CLIENT_TO_SERVER = 1;
+  SERVER_TO_CLIENT = 2;
+}
+
+// An identifier for a single stream.
+message StreamId {
+  int32 id = 1;
+}
+
+// A sequence number attached to a data message.
+// A `Data` message containing the sequence number (1, CLIENT_TO_SERVER)
+// indicates the start of a new stream.
+message SequenceNumber {
+  int32 seq = 1;
+  Direction direction = 2;
+}
+
+// A normal streaming data packet in either direction.
+// It may also serve as a streaming ack.
+message Data {
+  SequenceNumber sequence = 1;
+  bytes payload = 2;
+  // If this is set, this will be the final message from this side.
+  bool half_close = 3;
+}
+
+// This can be used by the server to indicate an error condition.
+// Sending an error message from client to server is not valid, and the server
+// should send a `Reset` if it receives this message.
+message Error {
+  Status status = 1;
+}
+
+// Reset messages are sent by either the receiver or the server whenever a
+// message is received that isn't consistent. These are typically used for
+// protocol-level errors.
+message Reset {
+  Status status = 1;
+}
+
+// This is just grpc Status, but without requiring any specific semantics.
+message Status {
+  int32 code = 1;
+  string message = 2;
+  repeated oak.Variant details = 3;
+}
