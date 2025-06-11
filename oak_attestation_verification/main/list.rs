@@ -36,7 +36,13 @@ use crate::endorsement_loader;
 #[derive(Args)]
 pub(crate) struct ListArgs {
     #[arg(long, help = "Content addressable hash of the endorser key used to sign endorsements.")]
-    endorser_key_hash: String,
+    endorser_key_hash: Option<String>,
+
+    #[arg(
+        long,
+        help = "Content addressable hash of the rotating endorser keyset used to sign endorsements."
+    )]
+    endorser_keyset_hash: Option<String>,
 
     #[arg(
         long,
@@ -65,7 +71,46 @@ pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
         Arc::new(storage),
     );
 
-    let endorsement_hashes = loader.list_endorsements(p.endorser_key_hash.as_str());
+    let endorser_key_hashes;
+    if p.endorser_key_hash.is_some() {
+        endorser_key_hashes = vec![p.endorser_key_hash.unwrap()];
+    } else if p.endorser_keyset_hash.is_some() {
+        endorser_key_hashes = list_endorser_keys(&loader, p.endorser_keyset_hash.unwrap().as_str());
+    } else {
+        panic!("Either --endorser_key_hash or --endorser_keyset_hash must be specified.");
+    }
+
+    for endorser_key_hash in endorser_key_hashes {
+        list_endorsements(&loader, endorser_key_hash.as_str(), now_utc_millis);
+    }
+}
+
+fn list_endorser_keys(
+    loader: &endorsement_loader::ContentAddressableEndorsementLoader,
+    endorser_keyset_hash: &str,
+) -> Vec<String> {
+    let endorser_keys = loader.list_endorser_keys(endorser_keyset_hash);
+    if endorser_keys.is_err() {
+        panic!("❌  Failed to list endorser keys: {:?}", endorser_keys.err().unwrap());
+    }
+    let endorser_keys = endorser_keys.unwrap();
+    println!(
+        "🧲  Found {} endorser keys for endorser keyset {}",
+        endorser_keys.len(),
+        endorser_keyset_hash
+    );
+    for endorser_key in &endorser_keys {
+        println!("✅  {}", endorser_key);
+    }
+    endorser_keys
+}
+
+fn list_endorsements(
+    loader: &endorsement_loader::ContentAddressableEndorsementLoader,
+    endorser_key_hash: &str,
+    now_utc_millis: i64,
+) {
+    let endorsement_hashes = loader.list_endorsements(endorser_key_hash);
     if endorsement_hashes.is_err() {
         println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
         return;
@@ -75,7 +120,7 @@ pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
     println!(
         "🧲  Found {} endorsements for endorser key {}",
         endorsement_hashes.len(),
-        p.endorser_key_hash
+        endorser_key_hash
     );
 
     for endorsement_hash in endorsement_hashes {

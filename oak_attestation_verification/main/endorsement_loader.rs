@@ -185,6 +185,7 @@ const SIGNATURE_LINK: &str = "14";
 const REKOR_LOG_ENTRY_LINK: &str = "15";
 const PUBLIC_KEY_LINK: &str = "16";
 const ENDORSEMENT_LIST_LINK: &str = "21";
+const ENDORSER_KEYS_LIST_LINK: &str = "22";
 
 impl ContentAddressableEndorsementLoader {
     // Creates a new remote endorsement loader.
@@ -195,14 +196,40 @@ impl ContentAddressableEndorsementLoader {
         ContentAddressableEndorsementLoader { storage }
     }
 
+    // Lists all endorser keys for the given endorser keyset hash.
+    //
+    // Returns:
+    // - The list of endorser keys.
+    pub(crate) fn list_endorser_keys(&self, endorser_keyset_hash: &str) -> Result<Vec<String>> {
+        let endorser_keys = self
+            .storage
+            .get_link(endorser_keyset_hash, ENDORSER_KEYS_LIST_LINK)
+            .with_context(|| {
+                format!("reading endorser keys list for endorser keyset {}", endorser_keyset_hash)
+            })
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the endorser keyset is not found in the index, we treat it
+                // as if the endorser keyset is empty. So we return an empty list.
+                Some(ureq::Error::Status(404, _)) => Ok(String::new()),
+                _ => Err(err),
+            })?;
+        Ok(endorser_keys.split_terminator("\n").map(|s| s.to_string()).collect())
+    }
+
     // Lists all endorsement hashes for the given endorser key hash.
     //
     // Returns:
     // - The list of endorsement hashes.
     pub(crate) fn list_endorsements(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
-        let endorsements =
-            self.storage.get_link(endorser_key_hash, ENDORSEMENT_LIST_LINK).with_context(|| {
-                format!("reading endorsement list for endorser {}", endorser_key_hash)
+        let endorsements = self
+            .storage
+            .get_link(endorser_key_hash, ENDORSEMENT_LIST_LINK)
+            .with_context(|| format!("reading endorsement list for endorser {}", endorser_key_hash))
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the endorsement list is not found in the index, we assume
+                // the endorser has not signed any endorsements. So we return an empty list.
+                Some(ureq::Error::Status(404, _)) => Ok(String::new()),
+                _ => Err(err),
             })?;
 
         Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
@@ -240,6 +267,9 @@ impl ContentAddressableEndorsementLoader {
                 format!("reading rekor log entry for endorsement {}", endorsement_hash)
             })
             .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the rekor log entry is not found in the
+                // index, we assume the endorsement is not committed to a
+                // transparency log.
                 Some(ureq::Error::Status(404, _)) => Ok(vec![]),
                 _ => Err(err),
             })?;
