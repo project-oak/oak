@@ -9,9 +9,17 @@ function configure_common_env() {
 }
 
 function configure_bazelrc() {
-  if [ "$KOKORO_ROOT_JOB_TYPE" == "PRESUBMIT_GERRIT_ON_BORG" ]; then
+  JOB_TYPE=${KOKORO_JOB_TYPE:-local}
+  if [ "$JOB_TYPE" == "SUB_JOB" ]
+  then
+    JOB_TYPE=${KOKORO_ROOT_JOB_TYPE:-local}
+  fi
+
+  echo "Using JOB_TYPE: ${JOB_TYPE}"
+
+  if [ "$JOB_TYPE" == "PRESUBMIT_GERRIT_ON_BORG" ]; then
     echo "build --config=unsafe-fast-presubmit" >> ./.tmp.ci.bazelrc
-  elif [ "$KOKORO_ROOT_JOB_TYPE" == "CONTINUOUS_INTEGRATION" ]; then
+  elif [ "$JOB_TYPE" == "CONTINUOUS_INTEGRATION" ]; then
     echo "build --config=ci" >> ./.tmp.ci.bazelrc
   else
     touch ./.tmp.ci.bazelrc
