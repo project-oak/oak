@@ -151,7 +151,7 @@ std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     # bazel test will build all targets as well unless --build_tests_only is specified.
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
-    bazel test --keep_going //...:all
+    bazel test --config=debug --keep_going //...:all
 
 [working-directory: 'codelab']
 test-codelab:
@@ -272,18 +272,18 @@ clean-artifacts:
 
 # This target expects a rule that outputs one binary, and copies it to artifacts/binaries with the given name.
 copy-binary target dest platform="":
-    bazel build {{target}} --platforms={{platform}}
+    bazel build {{target}} --config=release --platforms={{platform}}
     mkdir --parents artifacts/binaries
     cp --force --preserve=timestamps --no-preserve=mode \
-        $(bazel cquery --platforms={{platform}} {{target}} --output files) \
+        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
         artifacts/binaries/{{dest}}
 
 # This file copies all outputs of the given target to the artifacts/subjects subdirectory.
 copy-subjects target dest platform="":
     mkdir --parents artifacts/subjects/{{dest}}
-    bazel build {{target}} --platforms={{platform}}
+    bazel build {{target}} --config=release --platforms={{platform}}
     cp --force --preserve=timestamps --no-preserve=mode \
-        $(bazel cquery --platforms={{platform}} {{target}} --output files) \
+        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
         artifacts/subjects/{{dest}}
 
 # This rule copies all file outputs of the given target to the artifacts/binaries.

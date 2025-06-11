@@ -3,12 +3,6 @@
 # Useful to determine how long individual steps are taking in CI.
 build:ci --show_timestamps
 
-# Always use optimization.
-build:ci --compilation_mode opt
-
-# Strip debug information from linked results.
-build:ci --linkopt=-Wl,--strip-all
-
 # --show_result leads to all of the built packages being logged at the
 # end, so we can visually verify that CI tasks are building everything we want.
 build:ci --show_result=1000000

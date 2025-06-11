@@ -50,6 +50,15 @@ build:clang-tidy --output_groups=report
 # Optionally override the .clang-tidy config file target
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
 
+# Always use optimization.
+build:release --compilation_mode opt
+
+# Strip debug information from linked results.
+build:release --linkopt=-Wl,--strip-all
+
+build:debug --compilation_mode dbg
+build:debug --strip never
+
 # Many of these flags were discovered by looking for `build:asan` examples internally.
 build:asan --strip=never
 build:asan --copt -fsanitize=address
