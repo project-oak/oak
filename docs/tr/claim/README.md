@@ -47,6 +47,8 @@
   [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
 - `19224`
   [OCI container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md)
+- `39284`
+  [Private AI Compute](https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md)
 - `52637`
   [Published binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md)
 - `75606`
