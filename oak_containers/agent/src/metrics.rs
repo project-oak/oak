@@ -66,7 +66,7 @@ pub struct OakObserver {
 }
 
 impl OakObserver {
-    fn create(
+    pub fn create(
         launcher_addr: String,
         scope: String,
         excluded_metrics: Vec<String>,

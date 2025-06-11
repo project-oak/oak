@@ -65,7 +65,7 @@ async fn start_server() -> Result<(
         .application_config(application_config_vec.clone())
         .build()
         .expect("failed to create Oak standalone elements");
-
+    let (_observer, metrics) = private_memory_server_lib::metrics::create_metrics();
     Ok((
         addr,
         db_addr,
@@ -77,11 +77,17 @@ async fn start_server() -> Result<(
                 Box::new(
                     private_memory_server_lib::app::SealedMemoryHandler::new(
                         &application_config_vec,
+                        metrics.clone(),
                     )
                     .await,
                 ),
             ),
-            private_memory_server_lib::app::SealedMemoryHandler::new(&application_config_vec).await,
+            private_memory_server_lib::app::SealedMemoryHandler::new(
+                &application_config_vec,
+                metrics.clone(),
+            )
+            .await,
+            metrics,
         )),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
     ))

@@ -66,6 +66,7 @@ rust_library(
         "src/encryption.rs",
         "src/external_db_client.rs",
         "src/lib.rs",
+        "src/metrics.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
@@ -73,6 +74,7 @@ rust_library(
         "//proto/grpc:sealed_memory_grpc_proto",
         "//src/icing",
         "@cxx.rs//:cxx",
+        "@oak//oak_containers/agent:oak_containers_agent",
         "@oak//oak_crypto",
         "@oak//oak_proto_rust",
         "@oak//oak_sdk/server/v1:oak_sdk_server_v1",
@@ -82,6 +84,7 @@ rust_library(
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand",

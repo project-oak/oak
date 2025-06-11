@@ -13,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
 use anyhow::{bail, Context};
 use async_trait::async_trait;
 use oak_sdk_server_v1::ApplicationHandler;
-use prost::Message;
+use opentelemetry::KeyValue;
+use prost::{Message, Name};
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -42,6 +45,7 @@ use crate::{
     },
     debug,
     encryption::{decrypt, encrypt, generate_nonce},
+    metrics,
 };
 
 #[async_trait]
@@ -161,6 +165,7 @@ pub struct SealedMemoryHandler {
     pub application_config: ApplicationConfig,
     pub session_context: Mutex<Option<UserSessionContext>>,
     db_client_cache: Mutex<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
+    pub metrics: Arc<metrics::Metrics>,
 }
 
 impl Drop for SealedMemoryHandler {
@@ -200,12 +205,13 @@ impl Clone for SealedMemoryHandler {
             application_config: self.application_config.clone(),
             session_context: Default::default(),
             db_client_cache: Default::default(),
+            metrics: self.metrics.clone(),
         }
     }
 }
 
 impl SealedMemoryHandler {
-    pub async fn new(application_config_bytes: &[u8]) -> Self {
+    pub async fn new(application_config_bytes: &[u8], metrics: Arc<metrics::Metrics>) -> Self {
         let application_config: ApplicationConfig =
             serde_json::from_slice(application_config_bytes).expect("Invalid application config");
 
@@ -213,6 +219,7 @@ impl SealedMemoryHandler {
             application_config,
             session_context: Default::default(),
             db_client_cache: Mutex::new(None),
+            metrics,
         }
     }
 
@@ -608,6 +615,10 @@ impl_packing!(Response => GetMemoryByIdResponse);
 impl_packing!(Response => SearchMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
 
+fn get_name<T: Name>(_x: &T) -> String {
+    T::NAME.to_string()
+}
+
 #[async_trait::async_trait]
 impl ApplicationHandler for SealedMemoryHandler {
     /// This implementation is quite simple, since there's just a single request
@@ -630,28 +641,50 @@ impl ApplicationHandler for SealedMemoryHandler {
             let request = request.unwrap();
             let mut response = match request {
                 sealed_memory_request::Request::UserRegistrationRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     if self.is_message_type_json(request_bytes) {
                         message_type = Some(MessageType::Json);
                     }
                     self.boot_strap_handler(request).await?.into_response()
                 }
-                sealed_memory_request::Request::KeySyncRequest(request) => self
-                    .key_sync_handler(request, self.is_message_type_json(request_bytes))
-                    .await?
-                    .into_response(),
+                sealed_memory_request::Request::KeySyncRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
+                    self.key_sync_handler(request, self.is_message_type_json(request_bytes))
+                        .await?
+                        .into_response()
+                }
                 sealed_memory_request::Request::AddMemoryRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.add_memory_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::GetMemoriesRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.get_memories_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::ResetMemoryRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.reset_memory_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.get_memory_by_id_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::SearchMemoryRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.search_memory_handler(request).await?.into_response()
                 }
             };

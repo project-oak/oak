@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.EmbeddingQuery.metric_type",
         "#[serde(with=\"crate::embedding_query_metric_type_converter\")]",
     );
-
+    config.enable_type_names();
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
     #[cfg(feature = "bazel")]

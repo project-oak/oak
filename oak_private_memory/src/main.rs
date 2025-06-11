@@ -49,16 +49,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
+    let (_observer, metrics) = private_memory_server_lib::metrics::create_metrics();
+
     let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
         listener,
         OakApplicationContext::new(
             Box::new(encryption_key_handle),
             endorsed_evidence,
             Box::new(
-                private_memory_server_lib::app::SealedMemoryHandler::new(&application_config).await,
+                private_memory_server_lib::app::SealedMemoryHandler::new(
+                    &application_config,
+                    metrics.clone(),
+                )
+                .await,
             ),
         ),
-        private_memory_server_lib::app::SealedMemoryHandler::new(&application_config).await,
+        private_memory_server_lib::app::SealedMemoryHandler::new(
+            &application_config,
+            metrics.clone(),
+        )
+        .await,
+        metrics,
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");

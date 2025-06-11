@@ -22,13 +22,14 @@ use oak_session::{
     attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
     ServerSession, Session,
 };
+use opentelemetry::KeyValue;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
-use crate::{app::SealedMemoryHandler, debug};
+use crate::{app::SealedMemoryHandler, debug, metrics};
 
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct SealedMemoryServiceImplementation {
@@ -36,14 +37,21 @@ struct SealedMemoryServiceImplementation {
     oak_application_context: Arc<OakApplicationContext>,
     // Needed while we implement noise inline.
     application_handler: crate::app::SealedMemoryHandler,
+    #[allow(dead_code)]
+    metrics: Arc<metrics::Metrics>,
 }
 
 impl SealedMemoryServiceImplementation {
     pub fn new(
         oak_application_context: OakApplicationContext,
         application_handler: SealedMemoryHandler,
+        metrics: Arc<metrics::Metrics>,
     ) -> Self {
-        Self { oak_application_context: Arc::new(oak_application_context), application_handler }
+        Self {
+            oak_application_context: Arc::new(oak_application_context),
+            application_handler,
+            metrics,
+        }
     }
 }
 
@@ -112,13 +120,17 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
+                application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
                 debug!("Receive request!!");
                 let session_request = request?;
                 if server_session.is_open() {
                     let decrypted_request = server_session.decrypt_request(session_request)
                         .into_tonic_result("failed to decrypt request")?;
-                    let plaintext_response = application_handler.handle(&decrypted_request).await
-                        .into_tonic_result("application failed")?;
+                    let plaintext_response = application_handler.handle(&decrypted_request).await;
+                    if plaintext_response.is_err() {
+                        application_handler.metrics.rpc_failure_count.add(1, &[KeyValue::new("request_type", "total")]);
+                    }
+                    let plaintext_response = plaintext_response.into_tonic_result("application failed")?;
                     yield server_session.encrypt_response(&plaintext_response)
                         .into_tonic_result("failed to encrypt response")?;
 
@@ -137,12 +149,14 @@ pub async fn create(
     listener: TcpListener,
     oak_session_context: OakApplicationContext,
     application_handler: SealedMemoryHandler,
+    metrics: Arc<metrics::Metrics>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(
             SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
                 oak_session_context,
                 application_handler,
+                metrics,
             ))
             .max_decoding_message_size(20 * 1024 * 1024), /* 20MB */
         )
