@@ -709,8 +709,8 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
 /// Verifies the received session `bindings` against the provided
 /// `attestation_results`.
 ///
-/// For each entry in `attestation_results` (keyed by attestation ID), this
-/// function:
+/// For each successful verification in `attestation_results` (keyed by
+/// attestation ID), this function:
 /// 1. Retrieves the corresponding `SessionBindingVerifierProvider` from
 ///    `binding_verifier_providers`.
 /// 2. Creates a `SessionBindingVerifier` using the attestation result.
@@ -741,8 +741,7 @@ fn verify_session_binding(
                 bindings
                     .get(verifier_id)
                     .ok_or(anyhow!(
-                        "handshake message doesn't have a binding for ID {}",
-                        verifier_id
+                        "handshake message doesn't have a binding for ID {verifier_id}"
                     ))?
                     .binding
                     .as_slice(),

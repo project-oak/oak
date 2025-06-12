@@ -85,9 +85,14 @@
 //!     evidence to be successfully verified and all verified pieces to be
 //!     successful.
 
-use alloc::{collections::BTreeMap, string::String, sync::Arc, vec::Vec};
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    sync::Arc,
+    vec::Vec,
+};
 
-use anyhow::{anyhow, Context, Error, Ok};
+use anyhow::{anyhow, Error, Ok};
 use itertools::{EitherOrBoth, Itertools};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
@@ -107,7 +112,7 @@ use crate::{config::AttestationHandlerConfig, ProtocolEngine};
 pub enum AttestationVerdict {
     /// Indicates that the attestation process completed successfully.
     ///
-    /// Contains a map of `VerifierResult`s for each attestation ID that
+    /// Contains a map of VerifierResult instances for each attestation ID that
     /// was successfully verified. This map can be used by other parts of the
     /// session establishment process, for instance, to extract keys for session
     /// binding.
@@ -484,24 +489,29 @@ fn combine_attestation_results(
         .merge_join_by(attested_evidence.iter(), |(id1, _), (id2, _)| Ord::cmp(id1, id2))
         .map(|v| match v {
             EitherOrBoth::Both((id, verifier), (_, e)) => {
-                let result = verifier.verify(
-                    e.evidence.as_ref().context(format!(
-                        "Missing evidence in the attest response for ID {}",
-                        id
-                    ))?,
-                    e.endorsements.as_ref().context(format!(
-                        "Missing endorsements in the attest response for ID {}",
-                        id
-                    ))?,
-                )?;
-                Ok((
-                    id.clone(),
-                    if result.status == attestation_results::Status::Success as i32 {
-                        VerifierResult::Success(result)
-                    } else {
-                        VerifierResult::Failure(result)
-                    },
-                ))
+                match (e.evidence.as_ref(), e.endorsements.as_ref()) {
+                    (Some(evidence), Some(endorsements)) => {
+                        let result = verifier.verify(evidence, endorsements)?;
+                        Ok((
+                            id.clone(),
+                            match result.status() {
+                                attestation_results::Status::Success => {
+                                    VerifierResult::Success(result)
+                                }
+                                _ => VerifierResult::Failure(result),
+                            },
+                        ))
+                    }
+                    _ => Ok((
+                        id.clone(),
+                        VerifierResult::Failure(AttestationResults {
+                            status: attestation_results::Status::GenericFailure.into(),
+                            reason: "Both evidence and endorsements need to be provided"
+                                .to_string(),
+                            ..Default::default()
+                        }),
+                    )),
+                }
             }
             EitherOrBoth::Left((id, _)) => Ok((id.clone(), VerifierResult::Missing)),
             EitherOrBoth::Right((id, e)) => Ok((id.clone(), VerifierResult::Unverified(e.clone()))),
