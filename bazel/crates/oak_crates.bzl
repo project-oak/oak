@@ -370,6 +370,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "command-group": crate.spec(version = "5.0.1"),
     "criterion": crate.spec(version = "0.5.1"),
     "criterion-macro": crate.spec(version = "0.4.0"),
+    "crossbeam-channel": crate.spec(version = "0.5.15"),
     "env_logger": crate.spec(version = "0.11.2"),
     "futures": crate.spec(version = "0.3.31"),
     "futures-util": crate.spec(version = "0.3.31"),

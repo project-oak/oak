@@ -1202,6 +1202,7 @@ dependencies = [
  "coset",
  "criterion",
  "criterion-macro",
+ "crossbeam-channel",
  "curve25519-dalek",
  "cxx",
  "cxx-build",

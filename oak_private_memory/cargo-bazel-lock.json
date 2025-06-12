@@ -1,5 +1,5 @@
 {
-  "checksum": "8ca700945308c23209f37571d316e157199c1dc735e628c47518acf9d73d2369",
+  "checksum": "569b04239c0d79fab87246b5cb7548b5395572bf03983bed399c431caff04daa",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7214,6 +7214,10 @@
             {
               "id": "criterion 0.5.1",
               "target": "criterion"
+            },
+            {
+              "id": "crossbeam-channel 0.5.15",
+              "target": "crossbeam_channel"
             },
             {
               "id": "curve25519-dalek 4.1.3",
@@ -37296,6 +37300,7 @@
     "coset 0.3.8",
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
+    "crossbeam-channel 0.5.15",
     "curve25519-dalek 4.1.3",
     "cxx 1.0.158",
     "cxx-build 1.0.158",
