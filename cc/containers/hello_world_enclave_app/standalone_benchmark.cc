@@ -19,16 +19,14 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status_matchers.h"
+#include "absl/strings/substitute.h"
 #include "benchmark/benchmark.h"
 #include "cc/attestation/verification/insecure_attestation_verifier.h"
 #include "cc/client/client.h"
-#include "cc/client/session_client.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/standalone/oak_standalone.h"
-#include "cc/oak_session/channel/oak_session_channel.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/transport/grpc_streaming_transport.h"
-#include "cc/transport/grpc_sync_session_client_transport.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
@@ -123,22 +121,49 @@ BENCHMARK_DEFINE_F(HelloWorldStandaloneBench, HPKEInvocation)
 BENCHMARK_DEFINE_F(HelloWorldStandaloneBench, NoiseInvocation)
 (benchmark::State& state) {
   std::string test_message = TestMessage(state.range(0));
-  client::OakSessionClient session_client;
+
+  absl::StatusOr<std::unique_ptr<session::ClientSession>> session =
+      session::ClientSession::Create(
+          session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                        session::HandshakeType::kNoiseNN)
+              .Build());
+
   grpc::ClientContext context;
-  auto channel = session_client.NewChannel(
-      std::make_unique<transport::GrpcSyncSessionClientTransport>(
-          stub_->OakSession(&context)));
-  QCHECK_OK(channel);
+  std::unique_ptr<grpc::ClientReaderWriterInterface<
+      session::v1::SessionRequest, session::v1::SessionResponse>>
+      stream = stub_->OakSession(&context);
+
+  // Handshake
+  while (!(*session)->IsOpen()) {
+    absl::StatusOr<std::optional<session::v1::SessionRequest>>
+        outgoing_message = (*session)->GetOutgoingMessage();
+    QCHECK_OK(outgoing_message);
+    QCHECK(stream->Write(**outgoing_message));
+
+    session::v1::SessionResponse response;
+    QCHECK(stream->Read(&response));
+    QCHECK_OK((*session)->PutIncomingMessage(response));
+  }
 
   for (auto i : state) {
-    auto result = (*channel)->Send(test_message);
-    QCHECK_OK(result);
-    auto response = (*channel)->Receive();
-    QCHECK_OK(response);
-    QCHECK(*response ==
-           absl::Substitute("Hello from the enclave, $1! Btw, the app has a "
-                            "config with a length of $0 bytes.",
-                            kApplicationConfig.size(), test_message));
+    QCHECK_OK((*session)->Write("Standalone Test"));
+    absl::StatusOr<std::optional<session::v1::SessionRequest>>
+        outgoing_message = (*session)->GetOutgoingMessage();
+    QCHECK_OK(outgoing_message);
+    QCHECK(stream->Write(**outgoing_message));
+
+    session::v1::SessionResponse response;
+    QCHECK(stream->Read(&response));
+    QCHECK_OK((*session)->PutIncomingMessage(response));
+    absl::StatusOr<std::optional<ffi::RustBytes>> unencrypted_response =
+        (*session)->ReadToRustBytes();
+    QCHECK_OK(unencrypted_response);
+
+    QCHECK(*unencrypted_response ==
+           std::optional(absl::Substitute(
+               "Hello from the enclave, Standalone Test! Btw, the "
+               "app has a config with a length of $0 bytes.",
+               kApplicationConfig.size())));
   }
   state.SetBytesProcessed(int64_t(state.iterations()) *
                           int64_t(state.range(0)));

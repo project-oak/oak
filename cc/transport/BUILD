@@ -113,37 +113,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-cc_library(
-    name = "grpc_sync_session_server_transport",
-    srcs = ["grpc_sync_session_server_transport.cc"],
-    hdrs = ["grpc_sync_session_server_transport.h"],
-    deps = [
-        "//cc/oak_session:server_session",
-        "//cc/oak_session/channel",
-        "//cc/server:session_server",
-        "//proto/session:session_cc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/synchronization",
-    ],
-)
-
-cc_library(
-    name = "grpc_sync_session_client_transport",
-    srcs = ["grpc_sync_session_client_transport.cc"],
-    hdrs = ["grpc_sync_session_client_transport.h"],
-    deps = [
-        "//cc/client:session_client",
-        "//cc/oak_session:client_session",
-        "//cc/oak_session/channel",
-        "//proto/session:session_cc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/synchronization",
-    ],
-)

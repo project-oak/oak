@@ -23,7 +23,7 @@
 #include "cc/containers/sdk/oak_session.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/server_encryptor.h"
-#include "cc/transport/grpc_sync_session_server_transport.h"
+#include "cc/utils/status/status.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
@@ -33,11 +33,13 @@
 
 namespace oak::containers::hello_world_enclave_app {
 
+using ::oak::session::ServerSession;
 using ::oak::session::v1::PlaintextMessage;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
+using ::oak::util::status::Annotate;
 
 grpc::Status FromAbsl(const absl::Status& status) {
   return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
@@ -64,25 +66,85 @@ grpc::Status EnclaveApplicationImpl::LegacySession(
 grpc::Status EnclaveApplicationImpl::OakSession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<SessionResponse, SessionRequest>* stream) {
-  // Set up channel and do handshake.
-  auto channel = session_server_.NewChannel(
-      std::make_unique<transport::GrpcSyncSessionServerTransport>(stream));
-  if (!channel.ok()) {
-    return FromAbsl(channel.status());
+  absl::StatusOr<std::unique_ptr<ServerSession>> session =
+      ServerSession::Create(
+          session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                        session::HandshakeType::kNoiseNN)
+              .Build());
+  if (!session.ok()) {
+    return FromAbsl(
+        Annotate(session.status(), "Failed to create server session"));
+  }
+
+  // Handshake
+  SessionRequest request;
+  while (!(*session)->IsOpen()) {
+    if (!stream->Read(&request)) {
+      // Client half-close.
+      return FromAbsl(absl::OkStatus());
+    }
+
+    absl::Status put_status = (*session)->PutIncomingMessage(request);
+    if (!put_status.ok()) {
+      return FromAbsl(Annotate(put_status, "Failed to put init message."));
+    }
+
+    absl::StatusOr<std::optional<session::v1::SessionResponse>>
+        outgoing_message = (*session)->GetOutgoingMessage();
+    if (!outgoing_message.ok()) {
+      return FromAbsl(Annotate(outgoing_message.status(),
+                               "Failed to get next init response."));
+    }
+
+    if (*outgoing_message) {
+      stream->Write(**outgoing_message);
+    }
   }
 
   // Handshake done, process requests until closed.
   while (true) {
-    absl::StatusOr<std::string> request = (*channel)->Receive();
-    if (!request.ok()) {
-      return FromAbsl(request.status());
+    if (!stream->Read(&request)) {
+      // Client half-close.
+      grpc::Status();
     }
-    std::string response = HandleRequest(*request);
-    absl::Status send_result = (*channel)->Send(response);
-    if (!send_result.ok()) {
-      return FromAbsl(send_result);
+
+    absl::Status put_status = (*session)->PutIncomingMessage(request);
+    if (!put_status.ok()) {
+      return FromAbsl(Annotate(put_status, "Failed to put encrypted message."));
+    }
+
+    absl::StatusOr<std::optional<ffi::RustBytes>> request_bytes =
+        (*session)->ReadToRustBytes();
+    if (!request_bytes.ok()) {
+      return FromAbsl(
+          Annotate(put_status, "Failed to read next encrypted request."));
+    }
+    if (!*request_bytes) {
+      return FromAbsl(absl::InternalError(
+          "Wrote an encrypted message but no data out(library error)"));
+    }
+    std::string unencrypted_response = HandleRequest(**request_bytes);
+
+    absl::Status write_result = (*session)->Write(unencrypted_response);
+    if (!write_result.ok()) {
+      return FromAbsl(
+          Annotate(write_result, "Failed to read next encrypted request."));
+    }
+
+    absl::StatusOr<std::optional<session::v1::SessionResponse>>
+        outgoing_response = (*session)->GetOutgoingMessage();
+    if (!outgoing_response.ok()) {
+      return FromAbsl(
+          Annotate(outgoing_response.status(),
+                   "Wrote message to encrypt but got no outgoing message "
+                   "(library error)."));
+    }
+
+    if (!stream->Write(**outgoing_response)) {
+      return FromAbsl(absl::InternalError("Failed to write"));
     }
   }
+
   return grpc::Status();
 }
 

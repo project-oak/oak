@@ -18,15 +18,14 @@
 
 #include "absl/log/log.h"
 #include "absl/status/status_matchers.h"
+#include "absl/strings/substitute.h"
 #include "cc/attestation/verification/insecure_attestation_verifier.h"
 #include "cc/client/client.h"
-#include "cc/client/session_client.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/standalone/oak_standalone.h"
-#include "cc/oak_session/channel/oak_session_channel.h"
+#include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
 #include "cc/transport/grpc_streaming_transport.h"
-#include "cc/transport/grpc_sync_session_client_transport.h"
 #include "gmock/gmock.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
@@ -107,18 +106,46 @@ TEST_F(HelloWorldStandaloneTest, LegacySessionReturnsResponse) {
 }
 
 TEST_F(HelloWorldStandaloneTest, OakSessionReturnsResponse) {
-  client::OakSessionClient session_client;
-  grpc::ClientContext context;
-  auto channel = session_client.NewChannel(
-      std::make_unique<transport::GrpcSyncSessionClientTransport>(
-          stub_->OakSession(&context)));
+  absl::StatusOr<std::unique_ptr<session::ClientSession>> session =
+      session::ClientSession::Create(
+          session::SessionConfigBuilder(session::AttestationType::kUnattested,
+                                        session::HandshakeType::kNoiseNN)
+              .Build());
 
-  ASSERT_THAT((*channel)->Send("Standalone Test"), IsOk());
-  ASSERT_THAT((*channel)->Receive(),
-              IsOkAndHolds(absl::Substitute(
+  grpc::ClientContext context;
+  std::unique_ptr<grpc::ClientReaderWriterInterface<
+      session::v1::SessionRequest, session::v1::SessionResponse>>
+      stream = stub_->OakSession(&context);
+
+  // Handshake
+  while (!(*session)->IsOpen()) {
+    absl::StatusOr<std::optional<session::v1::SessionRequest>>
+        outgoing_message = (*session)->GetOutgoingMessage();
+    ASSERT_THAT(outgoing_message, IsOk());
+    ASSERT_TRUE(stream->Write(**outgoing_message));
+
+    session::v1::SessionResponse response;
+    ASSERT_TRUE(stream->Read(&response));
+    ASSERT_THAT((*session)->PutIncomingMessage(response), IsOk());
+  }
+
+  ASSERT_THAT((*session)->Write("Standalone Test"), IsOk());
+  absl::StatusOr<std::optional<session::v1::SessionRequest>> outgoing_message =
+      (*session)->GetOutgoingMessage();
+  ASSERT_THAT(outgoing_message, IsOk());
+  ASSERT_TRUE(stream->Write(**outgoing_message));
+
+  session::v1::SessionResponse response;
+  ASSERT_TRUE(stream->Read(&response));
+  ASSERT_THAT((*session)->PutIncomingMessage(response), IsOk());
+  absl::StatusOr<std::optional<ffi::RustBytes>> unencrypted_response =
+      (*session)->ReadToRustBytes();
+
+  ASSERT_THAT(unencrypted_response,
+              IsOkAndHolds(std::optional(absl::Substitute(
                   "Hello from the enclave, Standalone Test! Btw, the "
                   "app has a config with a length of $0 bytes.",
-                  kApplicationConfig.size())));
+                  kApplicationConfig.size()))));
 }
 
 }  // namespace
