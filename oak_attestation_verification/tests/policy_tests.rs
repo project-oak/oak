@@ -280,6 +280,7 @@ fn create_test_certificate(signature: &[u8]) -> Certificate {
     let payload = CertificatePayload {
         validity: Some(validity),
         subject_public_key_info: Some(subject_public_key_info),
+        ..Default::default()
     };
     let serialized_payload = payload.encode_to_vec();
 

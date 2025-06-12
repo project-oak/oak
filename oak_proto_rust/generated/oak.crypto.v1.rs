@@ -32,6 +32,32 @@ pub struct SubjectPublicKeyInfo {
     #[prost(bytes = "vec", tag = "2")]
     pub purpose_id: ::prost::alloc::vec::Vec<u8>,
 }
+/// Structure that contains proof (or evidence) that the certificate has been
+/// created and signed over recently (for some definition of recent).
+/// NIST pulses are used as proof of freshness. Pulses are issued every minute
+/// and contain random, unpredictable values. Values and their timestamps
+/// can be verified to be authentically from the NIST beacon. Having knowledge of
+/// such value (or something derived from it) proves that the message was
+/// generated after the pulse. See documentation for NIST fields here:
+/// <https://csrc.nist.gov/projects/interoperable-randomness-beacons/beacon-20>
+/// <https://csrc.nist.gov/csrc/media/Projects/interoperable-randomness-beacons/documents/certificate/beacon-2.0.xsd>
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost_derive::Message)]
+pub struct ProofOfFreshness {
+    /// NIST pulse index (starting with one) of the chain that a pulse is contained
+    /// in.
+    #[prost(int64, tag = "1")]
+    pub nist_chain_index: i64,
+    /// NIST pulse index: a positive integer starting at 1 which identifies the
+    /// pulse in the chain.
+    #[prost(int64, tag = "2")]
+    pub nist_pulse_index: i64,
+    /// A 64 byte string with a hash derived from all other values in the pulse.
+    /// Crucially, it's impossible to predict the value of this field
+    /// in future pulses.
+    #[prost(bytes = "vec", tag = "3")]
+    pub nist_pulse_output_value: ::prost::alloc::vec::Vec<u8>,
+}
 /// Payload that is signed by the certificate.
 /// All fields of this message must be set. Otherwise the certificate is
 /// considered invalid.
@@ -44,6 +70,8 @@ pub struct CertificatePayload {
     /// Public key that this certificate is issued for.
     #[prost(message, optional, tag = "2")]
     pub subject_public_key_info: ::core::option::Option<SubjectPublicKeyInfo>,
+    #[prost(message, optional, tag = "3")]
+    pub proof_of_freshness: ::core::option::Option<ProofOfFreshness>,
 }
 /// Information about the signature that signs the certificate.
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -73,7 +101,7 @@ pub struct Certificate {
     /// Serialized \[`CertificatePayload`\] proto.
     #[prost(bytes = "vec", tag = "1")]
     pub serialized_payload: ::prost::alloc::vec::Vec<u8>,
-    /// Signature that signs the certificate.
+    /// Signature over serialized_payload.
     #[prost(message, optional, tag = "2")]
     pub signature_info: ::core::option::Option<SignatureInfo>,
 }
