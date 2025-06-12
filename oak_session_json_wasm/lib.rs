@@ -163,7 +163,7 @@ impl WasmClientSession {
     }
 
     #[wasm_bindgen]
-    pub fn derive_pm_uid(user_secret: &[u8]) -> Result<Vec<u8>, JsValue> {
+    pub fn derive_pm_uid(user_secret: &[u8]) -> Result<String, JsValue> {
         Ok(user_info_derive::derive_pm_uid(user_secret))
     }
 }

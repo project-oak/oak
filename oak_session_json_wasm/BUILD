@@ -25,6 +25,7 @@ rust_library(
     name = "user_info_derive",
     srcs = ["user_info_derive.rs"],
     deps = [
+        "@oak_crates_index//:hex",
         "@oak_crates_index//:hkdf",
         "@oak_crates_index//:hmac",
         "@oak_crates_index//:sha2",

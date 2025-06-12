@@ -30,15 +30,14 @@ const KEK_LENGTH: usize = 32;
 /// * `salt` - A salt value for HKDF.
 ///
 /// # Returns
-/// A `Vec<u8>` containing the derived KEK.
+/// A byte array representing the derived KEK.
 pub fn derive_kek(user_secret: &[u8], kek_version: i32, salt: &[u8]) -> Vec<u8> {
-    let hk = Hkdf::<Sha256>::new(Some(salt), user_secret);
+    let info_bytes = kek_version.to_be_bytes();
+    let hk = Hkdf::<Sha256>::new(Some(&info_bytes), user_secret);
 
     let mut okm = vec![0u8; KEK_LENGTH];
 
-    let info_bytes = kek_version.to_be_bytes();
-
-    hk.expand(&info_bytes, &mut okm).expect("Failed to expand HKDF; OKM length should be valid.");
+    hk.expand(salt, &mut okm).expect("Failed to expand HKDF; OKM length should be valid.");
 
     okm
 }
@@ -49,14 +48,14 @@ pub fn derive_kek(user_secret: &[u8], kek_version: i32, salt: &[u8]) -> Vec<u8> 
 /// * `user_secret` - The master secret for the user.
 ///
 /// # Returns
-/// A `Vec<u8>` containing the derived pm_uid.
-pub fn derive_pm_uid(user_secret: &[u8]) -> Vec<u8> {
+/// The string representation of the derived pm_uid.
+pub fn derive_pm_uid(user_secret: &[u8]) -> String {
     let mut mac = Hmac::<Sha256>::new_from_slice(user_secret)
         .expect("Failed to create HMAC instance; user_secret should be a valid key.");
 
     mac.update(b"sealed_memory");
-
-    mac.finalize().into_bytes().to_vec()
+    // Encode to hex.
+    hex::encode(mac.finalize().into_bytes())
 }
 
 #[cfg(test)]
@@ -67,10 +66,8 @@ mod tests {
     fn test_derive_pm_uid() {
         let user_secret = b"this_is_a_test_secret_for_pm_uid";
         let pm_uid = derive_pm_uid(user_secret);
-        let expected_pm_uid = b"04f91762ea6f39f8c05eafc6e010bc53bd3fbbe5a3ad3c195b6f6c2a7567d409";
-        println!("Derived PM UID (hex): {}", hex::encode(&pm_uid));
-        assert_eq!(pm_uid.len(), 32);
-        let expected_pm_uid = hex::decode(expected_pm_uid).unwrap();
+        let expected_pm_uid = "04f91762ea6f39f8c05eafc6e010bc53bd3fbbe5a3ad3c195b6f6c2a7567d409";
+        assert_eq!(pm_uid.len(), 64);
         assert_eq!(pm_uid, expected_pm_uid);
     }
 
@@ -80,9 +77,11 @@ mod tests {
         let kek_version = 0;
         let salt = b"this_is_a_random_salt_value"; // In practice, this should be random
 
+        // Ground truth for the expected KEK.
         let kek = derive_kek(user_secret, kek_version, salt);
-        println!("Derived KEK (hex): {}", hex::encode(&kek));
+        let expected_kek = b"07e74310625314a3c780305ddc89907091abcec1bf2a537117017a2b8cd43fab";
         assert_eq!(kek.len(), KEK_LENGTH);
+        assert_eq!(kek, hex::decode(expected_kek).unwrap());
 
         // Deriving with a different version should produce a different key
         let kek_v1 = derive_kek(user_secret, 1, salt);
