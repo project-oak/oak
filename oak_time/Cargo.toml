@@ -1,0 +1,17 @@
+[package]
+name = "oak_time"
+version = "0.1.0"
+authors = ["Alberto Gonzalez <albgonz@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+prost-types = { version = "*", default-features = false }
+
+[dev-dependencies]
+googletest = { version = "*", default-features = false }
+
+[features]
+default = []
+std = []
+prost = []
