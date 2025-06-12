@@ -286,6 +286,19 @@ copy-subjects target dest platform="":
         $(bazel cquery --platforms={{platform}} {{target}} --output files) \
         artifacts/subjects/{{dest}}
 
+# This rule copies all file outputs of the given target to the artifacts/binaries.
+copy-binaries target dest platform="":
+    #!/bin/sh
+    bazel build {{target}} --platforms={{platform}}
+    mkdir --parents artifacts/binaries/{{dest}}
+    for output in $(bazel cquery --platforms={{platform}} {{target}} --output files)
+    do
+        if [ -f "$output" ]
+        then
+            cp --force --preserve=timestamps --no-preserve=mode "$output" artifacts/binaries/{{dest}}
+        fi
+    done
+
 # These are all oak artifacts that Kokoro build-and-copy expects.
 copy-oak-artifacts: \
     (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app") \
@@ -311,6 +324,7 @@ copy-oak-artifacts: \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
+    (copy-binaries "oak_session_json_wasm:oak_session_json_wasm" "oak_session_json_wasm") \
     (copy-binary "stage0_bin" "stage0_bin") \
     (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
