@@ -26,6 +26,9 @@ use opentelemetry::KeyValue;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
+use sealed_memory_rust_proto::oak::private_memory::{
+    SealedMemorySessionRequest, SealedMemorySessionResponse,
+};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
@@ -51,6 +54,35 @@ impl SealedMemoryServiceImplementation {
             oak_application_context: Arc::new(oak_application_context),
             application_handler,
             metrics,
+        }
+    }
+
+    async fn handle_session_request(
+        application_handler: &SealedMemoryHandler,
+        server_session: &mut ServerSession,
+        session_request: SessionRequest,
+    ) -> Result<Option<SessionResponse>, tonic::Status> {
+        if server_session.is_open() {
+            let decrypted_request = server_session
+                .decrypt_request(session_request)
+                .into_tonic_result("failed to decrypt request")?;
+            let plaintext_response = application_handler.handle(&decrypted_request).await;
+            if plaintext_response.is_err() {
+                application_handler
+                    .metrics
+                    .rpc_failure_count
+                    .add(1, &[KeyValue::new("request_type", "total")]);
+            }
+            let plaintext_response = plaintext_response.into_tonic_result("application failed")?;
+            Ok(Some(
+                server_session
+                    .encrypt_response(&plaintext_response)
+                    .into_tonic_result("failed to encrypt response")?,
+            ))
+        } else {
+            server_session
+                .init_session(session_request)
+                .into_tonic_result("failed process handshake")
         }
     }
 }
@@ -105,6 +137,9 @@ impl ServerSessionHelpers for ServerSession {
 impl SealedMemoryService for SealedMemoryServiceImplementation {
     type InvokeStream =
         Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
+    type StartSessionStream = Pin<
+        Box<dyn Stream<Item = Result<SealedMemorySessionResponse, tonic::Status>> + Send + 'static>,
+    >;
 
     async fn invoke(
         &self,
@@ -123,25 +158,47 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
                 debug!("Receive request!!");
                 let session_request = request?;
-                if server_session.is_open() {
-                    let decrypted_request = server_session.decrypt_request(session_request)
-                        .into_tonic_result("failed to decrypt request")?;
-                    let plaintext_response = application_handler.handle(&decrypted_request).await;
-                    if plaintext_response.is_err() {
-                        application_handler.metrics.rpc_failure_count.add(1, &[KeyValue::new("request_type", "total")]);
-                    }
-                    let plaintext_response = plaintext_response.into_tonic_result("application failed")?;
-                    yield server_session.encrypt_response(&plaintext_response)
-                        .into_tonic_result("failed to encrypt response")?;
 
-                } else if let Some(response) = server_session.init_session(session_request)
-                        .into_tonic_result("failed process handshake")? {
-                            yield response;
+                if let Some(response) = Self::handle_session_request(&application_handler,
+                    &mut server_session,
+                    session_request,
+                ).await? {
+                    yield response;
                 }
             }
             debug!("Enclave Stream finished");
         };
         Ok(tonic::Response::new(Box::pin(response_stream) as Self::InvokeStream))
+    }
+
+    async fn start_session(
+        &self,
+        request: tonic::Request<tonic::Streaming<SealedMemorySessionRequest>>,
+    ) -> Result<tonic::Response<Self::StartSessionStream>, tonic::Status> {
+        let mut server_session = ServerSession::create(
+            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+        )
+        .map_err(|e| tonic::Status::internal(format!("could not create server session: {e:?}")))?;
+
+        let application_handler = self.application_handler.clone();
+
+        let mut request_stream = request.into_inner();
+        let response_stream = async_stream::try_stream! {
+            while let Some(request) = request_stream.next().await {
+                let session_request = request?.session_request.ok_or_else(|| tonic::Status::internal("failed to get session request"))?;
+
+                if let Some(response) = Self::handle_session_request(&application_handler,
+                    &mut server_session,
+                    session_request,
+                ).await? {
+                    yield SealedMemorySessionResponse {
+                        session_response: Some(response),
+                    };
+                }
+            }
+            debug!("Enclave Stream finished");
+        };
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::StartSessionStream))
     }
 }
 

@@ -17,6 +17,8 @@ pub mod oak {
     pub mod private_memory {
         tonic::include_proto!("oak.private_memory");
     }
+
+    use oak_proto_rust::oak::session;
 }
 
 pub mod base64data {

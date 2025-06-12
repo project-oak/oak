@@ -257,8 +257,18 @@ message SealedMemoryResponse {
   int32 request_id = 50;
 }
 
+message SealedMemorySessionRequest {
+  .oak.session.v1.SessionRequest session_request = 1;
+}
+
+message SealedMemorySessionResponse {
+  .oak.session.v1.SessionResponse session_response = 1;
+}
+
 service SealedMemoryService {
-  // Unary method for encrypted communication between the client and the TEE.
   rpc Invoke(stream oak.session.v1.SessionRequest)
       returns (stream oak.session.v1.SessionResponse) {}
+
+  rpc StartSession(stream SealedMemorySessionRequest)
+      returns (stream SealedMemorySessionResponse) {}
 }

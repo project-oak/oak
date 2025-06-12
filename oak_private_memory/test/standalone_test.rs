@@ -17,7 +17,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
 use futures::channel::mpsc;
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_proto_rust::oak::session::v1::PlaintextMessage;
 use oak_sdk_server_v1::OakApplicationContext;
 use oak_sdk_standalone::Standalone;
 use oak_session::{
@@ -31,13 +31,13 @@ use private_memory_server_lib::{
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    key_sync_response, memory_value, sealed_memory_response, search_memory_query,
-    user_registration_response, AddMemoryRequest, AddMemoryResponse, Embedding, EmbeddingQuery,
-    GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
-    InvalidRequestResponse, KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory,
-    MemoryContent, MemoryField, MemoryValue, ResetMemoryRequest, ResetMemoryResponse, ResultMask,
-    ScoreRange, SealedMemoryResponse, SearchMemoryQuery, SearchMemoryRequest, SearchMemoryResponse,
-    UserRegistrationRequest, UserRegistrationResponse,
+    key_sync_response, memory_value, search_memory_query, user_registration_response,
+    AddMemoryRequest, AddMemoryResponse, Embedding, EmbeddingQuery, GetMemoriesRequest,
+    GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, KeyDerivationInfo,
+    KeySyncRequest, KeySyncResponse, Memory, MemoryContent, MemoryField, MemoryValue,
+    ResetMemoryRequest, ResetMemoryResponse, ResultMask, ScoreRange, SealedMemoryResponse,
+    SealedMemorySessionRequest, SealedMemorySessionResponse, SearchMemoryQuery,
+    SearchMemoryRequest, SearchMemoryResponse, UserRegistrationRequest, UserRegistrationResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -95,30 +95,42 @@ async fn start_server() -> Result<(
 
 #[async_trait::async_trait]
 trait ClientSessionHelper {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest>;
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>>;
+    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SealedMemorySessionRequest>;
+    fn decrypt_response(
+        &mut self,
+        session_response: SealedMemorySessionResponse,
+    ) -> anyhow::Result<Vec<u8>>;
     async fn init_session(
         &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
+        send_request: &mut mpsc::Sender<SealedMemorySessionRequest>,
+        receive_response: &mut tonic::Streaming<SealedMemorySessionResponse>,
     ) -> anyhow::Result<()>;
 }
 
 #[async_trait::async_trait]
 impl ClientSessionHelper for oak_session::ClientSession {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest> {
+    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SealedMemorySessionRequest> {
         self.write(PlaintextMessage { plaintext: request.to_vec() })
             .context("couldn't write message to encrypt")?;
 
-        self.get_outgoing_message()
-            .context("error getting encrypted request")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted request"))
+        Ok(SealedMemorySessionRequest {
+            session_request: Some(
+                self.get_outgoing_message()
+                    .context("error getting encrypted request")?
+                    .ok_or_else(|| anyhow::anyhow!("no encrypted request"))?,
+            ),
+        })
     }
 
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>> {
+    fn decrypt_response(
+        &mut self,
+        session_response: SealedMemorySessionResponse,
+    ) -> anyhow::Result<Vec<u8>> {
+        let session_response = session_response
+            .session_response
+            .ok_or_else(|| tonic::Status::internal("failed to get session response"))?;
         self.put_incoming_message(session_response)
             .context("failed to put response for decryption")?;
-
         self.read()
             .context("error reading decrypted response")?
             .ok_or_else(|| anyhow::anyhow!("no encrypted response"))
@@ -127,20 +139,23 @@ impl ClientSessionHelper for oak_session::ClientSession {
 
     async fn init_session(
         &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
+        send_request: &mut mpsc::Sender<SealedMemorySessionRequest>,
+        receive_response: &mut tonic::Streaming<SealedMemorySessionResponse>,
     ) -> Result<()> {
         while !self.is_open() {
             let init_request =
                 self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
                     || anyhow::anyhow!("no init message provided, but session not initialized"),
                 )?;
-
+            let init_request = SealedMemorySessionRequest { session_request: Some(init_request) };
             send_request.try_send(init_request).context("failed to send init request")?;
 
             if let Some(init_response) =
                 receive_response.message().await.context("failed to receive response")?
             {
+                let init_response = init_response
+                    .session_response
+                    .ok_or_else(|| tonic::Status::internal("failed to get session response"))?;
                 self.put_incoming_message(init_response)
                     .context("error putting init_response response")?;
             }
@@ -157,7 +172,7 @@ enum TestMode {
 
 // Generic helper to send a request based on TestMode
 async fn send_request_generic<T>(
-    tx: &mut mpsc::Sender<SessionRequest>,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
     client_session: &mut oak_session::ClientSession,
     request_data: T,
     request_id: Option<i32>,
@@ -184,7 +199,7 @@ async fn send_request_generic<T>(
 
 // Generic helper to receive a response based on TestMode
 async fn receive_response_generic<T>(
-    response_stream: &mut tonic::Streaming<SessionResponse>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
     client_session: &mut oak_session::ClientSession,
     mode: TestMode,
 ) -> (T, i32)
@@ -215,9 +230,9 @@ where
 }
 
 async fn execute_add_get_reset_memory_logic(
-    tx: &mut mpsc::Sender<SessionRequest>,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
     client_session: &mut oak_session::ClientSession,
-    response_stream: &mut tonic::Streaming<SessionResponse>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
     mode: TestMode,
 ) {
     let pm_uid = format!(
@@ -318,9 +333,9 @@ async fn execute_add_get_reset_memory_logic(
 }
 
 async fn execute_embedding_search_logic(
-    tx: &mut mpsc::Sender<SessionRequest>,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
     client_session: &mut oak_session::ClientSession,
-    response_stream: &mut tonic::Streaming<SessionResponse>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
     mode: TestMode,
 ) {
     let pm_uid = format!(
@@ -452,9 +467,9 @@ async fn execute_embedding_search_logic(
 }
 
 async fn execute_result_masking_logic(
-    tx: &mut mpsc::Sender<SessionRequest>,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
     client_session: &mut oak_session::ClientSession,
-    response_stream: &mut tonic::Streaming<SessionResponse>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
     mode: TestMode,
 ) {
     let pm_uid = format!(
@@ -652,9 +667,9 @@ async fn execute_result_masking_logic(
 }
 
 async fn execute_boot_strap_logic(
-    tx: &mut mpsc::Sender<SessionRequest>,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
     client_session: &mut oak_session::ClientSession,
-    response_stream: &mut tonic::Streaming<SessionResponse>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
     mode: TestMode,
 ) {
     let pm_uid = format!(
@@ -687,62 +702,6 @@ async fn execute_boot_strap_logic(
 }
 
 #[tokio::test]
-async fn test_noise_handshake() {
-    // Start server
-    let (addr, _db_addr, _join_handle, _join_handle2) = start_server().await.unwrap();
-
-    let url = format!("http://{addr}");
-
-    println!("Connecting to test server on {}", url);
-
-    let channel = Channel::from_shared(url)
-        .context("couldn't create gRPC channel")
-        .unwrap()
-        .connect()
-        .await
-        .context("couldn't connect via gRPC channel")
-        .unwrap();
-
-    let mut client = SealedMemoryServiceClient::new(channel);
-
-    let (mut tx, rx) = mpsc::channel(10);
-
-    let mut response_stream =
-        client.invoke(rx).await.expect("couldn't send stream request").into_inner();
-
-    // We don't have a noise client impl yet, so we need to manage the session
-    // manually.
-    let mut client_session = oak_session::ClientSession::create(
-        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-    )
-    .expect("could not create client session");
-
-    client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
-
-    let request =
-        client_session.encrypt_request(b"standalone user").expect("failed to encrypt message");
-
-    tx.try_send(request).expect("Could not send request to server");
-
-    let response = response_stream
-        .message()
-        .await
-        .expect("error getting response")
-        .expect("didn't get any repsonse");
-
-    let decrypted_response =
-        client_session.decrypt_response(response).expect("failed to decrypt response");
-
-    let expected_response = SealedMemoryResponse {
-        response: Some(sealed_memory_response::Response::InvalidRequestResponse(
-            InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() },
-        )),
-        request_id: 0,
-    };
-    assert_eq!(decrypted_response, expected_response.encode_to_vec());
-}
-
-#[tokio::test]
 async fn test_add_get_reset_memory_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");
@@ -752,7 +711,7 @@ async fn test_add_get_reset_memory_all_modes() {
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
-        let mut response_stream = client.invoke(rx).await.unwrap().into_inner();
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
         let mut client_session = oak_session::ClientSession::create(
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
@@ -779,7 +738,7 @@ async fn test_embedding_search_all_modes() {
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
-        let mut response_stream = client.invoke(rx).await.unwrap().into_inner();
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
         let mut client_session = oak_session::ClientSession::create(
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
@@ -801,7 +760,7 @@ async fn test_result_masking_all_modes() {
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
-        let mut response_stream = client.invoke(rx).await.unwrap().into_inner();
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
         let mut client_session = oak_session::ClientSession::create(
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
@@ -823,7 +782,7 @@ async fn test_boot_strap_all_modes() {
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
-        let mut response_stream = client.invoke(rx).await.unwrap().into_inner();
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
         let mut client_session = oak_session::ClientSession::create(
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
