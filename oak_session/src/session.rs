@@ -74,8 +74,8 @@ use oak_proto_rust::oak::session::v1::{
 
 use crate::{
     attestation::{
-        AttestationHandler, AttestationType, AttestationVerdict, ClientAttestationHandler,
-        ServerAttestationHandler, VerifierResult,
+        AttestationHandler, AttestationVerdict, ClientAttestationHandler, ServerAttestationHandler,
+        VerifierResult,
     },
     config::{EncryptorProvider, SessionConfig},
     handshake::{
@@ -257,9 +257,19 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                         return Err(anyhow!("attestation failed: {:?}", reason));
                     }
                 };
+                // The peer bindings are expected whenever the peer provides evidence that can
+                // be bound to the session. Even if the evidence hasn't been verified the peer
+                // is expected (and required) to send the bindings for the evidence that it
+                // supplies.
+                let expect_peer_bindings = attestation_results.iter().any(|(_, v)| match v {
+                    VerifierResult::Success(_)
+                    | VerifierResult::Failure(_)
+                    | VerifierResult::Unverified(_) => true,
+                    VerifierResult::Missing => false,
+                });
                 *self = Step::Handshake {
                     encryptor_provider,
-                    handshaker: handshake_handler_provider.build()?,
+                    handshaker: handshake_handler_provider.build(expect_peer_bindings)?,
                     attestation_results,
                 };
             }
@@ -529,16 +539,11 @@ impl ServerSession {
     /// based on `config.attestation_handler_config.attestation_type` for
     /// the `ServerHandshakeHandler`. The configuration is consumed.
     pub fn create(config: SessionConfig) -> Result<Self, Error> {
-        let client_binding_expected = matches!(
-            config.attestation_handler_config.attestation_type,
-            AttestationType::Bidirectional | AttestationType::PeerUnidirectional
-        );
         Ok(Self {
             step: Step::Attestation {
                 attester: ServerAttestationHandler::create(config.attestation_handler_config)?,
                 handshake_handler_provider: Box::new(ServerHandshakeHandlerBuilder {
                     config: config.handshake_handler_config,
-                    client_binding_expected,
                 }),
                 encryptor_provider: config.encryptor_config.encryptor_provider,
             },

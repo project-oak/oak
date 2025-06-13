@@ -147,10 +147,16 @@ pub struct HandshakeResult {
 pub trait HandshakeHandlerBuilder<T: HandshakeHandler>: Send {
     /// Builds and returns a `HandshakeHandler` instance.
     ///
+    /// Arguments:
+    ///
+    /// * `expect_peer_bindings`: Specifies if the peer is expected to send
+    ///   session bindings at the end of the handshake (true if the peer is
+    ///   attested)
+    ///
     /// The lifetime of the returned `HandshakeHandler` is owned by the caller.
     /// Configuration data is typically moved into the builder and then into the
     /// `HandshakeHandler`.
-    fn build(self: Box<Self>) -> Result<T, Error>;
+    fn build(self: Box<Self>, expect_peer_bindings: bool) -> Result<T, Error>;
 }
 
 /// A builder for creating `ClientHandshakeHandler` instances.
@@ -163,7 +169,10 @@ pub struct ClientHandshakeHandlerBuilder {
 
 impl HandshakeHandlerBuilder<ClientHandshakeHandler> for ClientHandshakeHandlerBuilder {
     /// Constructs a `ClientHandshakeHandler` using the stored configuration.
-    fn build(self: Box<Self>) -> Result<ClientHandshakeHandler, Error> {
+    fn build(
+        self: Box<Self>,
+        _expect_peer_bindings: bool,
+    ) -> Result<ClientHandshakeHandler, Error> {
         ClientHandshakeHandler::create(self.config)
     }
 }
@@ -174,13 +183,12 @@ impl HandshakeHandlerBuilder<ClientHandshakeHandler> for ClientHandshakeHandlerB
 /// expect a session binding message from the client.
 pub struct ServerHandshakeHandlerBuilder {
     pub config: HandshakeHandlerConfig,
-    pub client_binding_expected: bool,
 }
 
 impl HandshakeHandlerBuilder<ServerHandshakeHandler> for ServerHandshakeHandlerBuilder {
     /// Constructs a `ServerHandshakeHandler` using the stored configuration.
-    fn build(self: Box<Self>) -> Result<ServerHandshakeHandler, Error> {
-        Ok(ServerHandshakeHandler::new(self.config, self.client_binding_expected))
+    fn build(self: Box<Self>, expect_peer_bindings: bool) -> Result<ServerHandshakeHandler, Error> {
+        Ok(ServerHandshakeHandler::new(self.config, expect_peer_bindings))
     }
 }
 
