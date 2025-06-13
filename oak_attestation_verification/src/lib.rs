@@ -63,5 +63,6 @@ pub fn verify_endorsement(
             not_before: validity.not_before.unix_timestamp_millis(),
             not_after: validity.not_after.unix_timestamp_millis(),
         }),
+        claim_types: s.predicate.claims.into_iter().map(|x| x.r#type).collect(),
     })
 }

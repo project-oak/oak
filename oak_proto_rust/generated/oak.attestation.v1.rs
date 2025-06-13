@@ -1246,6 +1246,9 @@ pub struct EndorsementDetails {
     /// Validity of the verified endorsement.
     #[prost(message, optional, tag = "2")]
     pub validity: ::core::option::Option<Validity>,
+    /// All claims contained in the verified endorsement.
+    #[prost(string, repeated, tag = "3")]
+    pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Evidence values extracted from attestation evidence during verification.
 #[allow(clippy::derive_partial_eq_without_eq)]

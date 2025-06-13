@@ -94,6 +94,9 @@ message EndorsementDetails {
 
   // Validity of the verified endorsement.
   Validity validity = 2;
+
+  // All claims contained in the verified endorsement.
+  repeated string claim_types = 3;
 }
 
 // Evidence values extracted from attestation evidence during verification.

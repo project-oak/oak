@@ -118,6 +118,17 @@ fn test_verify_endorsement_success() {
     );
     assert!(details.validity.as_ref().unwrap().not_before == 1709113632000, "{:?}", details);
     assert!(details.validity.as_ref().unwrap().not_after == 1740649632000, "{:?}", details);
+    assert!(details.claim_types.len() == 2, "{:?}", details);
+    assert!(
+        details.claim_types[0] == "https://project-oak.github.io/oak/test_claim_1",
+        "{:?}",
+        details
+    );
+    assert!(
+        details.claim_types[1] == "https://project-oak.github.io/oak/test_claim_2",
+        "{:?}",
+        details
+    );
 }
 
 #[test]
