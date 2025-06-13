@@ -51,7 +51,7 @@ use crate::{
 #[async_trait]
 trait MemoryInterface {
     async fn add_memory(&mut self, memory: Memory) -> Option<MemoryId>;
-    async fn get_memories_by_tag(&mut self, tag: String) -> Vec<Memory>;
+    async fn get_memories_by_tag(&mut self, tag: String, page_size: u32) -> Vec<Memory>;
     async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory>;
     async fn reset_memory(&mut self) -> bool;
     async fn search_memory(
@@ -98,8 +98,8 @@ impl MemoryInterface for DatabaseWithCache {
         Some(memory_id)
     }
 
-    async fn get_memories_by_tag(&mut self, tag: String) -> Vec<Memory> {
-        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag).unwrap();
+    async fn get_memories_by_tag(&mut self, tag: String, page_size: u32) -> Vec<Memory> {
+        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag, page_size).unwrap();
 
         if all_blob_ids.is_empty() {
             return Vec::new();
@@ -350,7 +350,7 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let memories = database.get_memories_by_tag(request.tag).await;
+            let memories = database.get_memories_by_tag(request.tag, request.page_size).await;
             Ok(GetMemoriesResponse { memories })
         } else {
             bail!("You need to call key sync first")

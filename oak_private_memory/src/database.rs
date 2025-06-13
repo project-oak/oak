@@ -189,7 +189,7 @@ impl IcingMetaDatabase {
         Ok(())
     }
 
-    pub fn get_memories_by_tag(&self, tag: String) -> anyhow::Result<Vec<BlobId>> {
+    pub fn get_memories_by_tag(&self, tag: String, page_size: u32) -> anyhow::Result<Vec<BlobId>> {
         let search_spec = icing::SearchSpecProto {
             query: Some(tag),
             // Match exactly as defined in the schema for tags.
@@ -201,7 +201,7 @@ impl IcingMetaDatabase {
         let result_spec = icing::ResultSpecProto {
             // Request a large number to get all results in one go for simplicity.
             // Consider pagination for very large datasets.
-            num_per_page: Some(1000),
+            num_per_page: Some(page_size.try_into()?),
             type_property_masks: vec![Self::create_blob_id_projection()],
             ..Default::default()
         };
@@ -611,7 +611,7 @@ mod tests {
         let blob_id2 = 12346.to_string();
         icing_database.add_memory(memory2, blob_id2.clone())?;
 
-        let result = icing_database.get_memories_by_tag("the_tag".to_string()).unwrap();
+        let result = icing_database.get_memories_by_tag("the_tag".to_string(), 10).unwrap();
         expect_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
         Ok(())
     }
@@ -651,7 +651,7 @@ mod tests {
             eq(&Some(blob_id1.clone()))
         );
         expect_that!(
-            imported_database.get_memories_by_tag("export_tag".to_string()).unwrap(),
+            imported_database.get_memories_by_tag("export_tag".to_string(), 10).unwrap(),
             unordered_elements_are![eq(&blob_id1)]
         );
         Ok(())

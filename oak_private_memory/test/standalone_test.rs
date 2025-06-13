@@ -295,13 +295,16 @@ async fn execute_add_get_reset_memory_logic(
             ..Default::default()
         }),
     };
-    send_request_generic(tx, client_session, add_memory_request_data, None, mode).await;
+    send_request_generic(tx, client_session, add_memory_request_data.clone(), None, mode).await;
     let (add_memory_response, _): (AddMemoryResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
     let memory_id_from_add = add_memory_response.id;
+    send_request_generic(tx, client_session, add_memory_request_data, None, mode).await;
+    let _: (AddMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
 
     // GetMemoriesRequest
-    let get_memories_request_data = GetMemoriesRequest { tag: "tag".to_string() };
+    let get_memories_request_data = GetMemoriesRequest { tag: "tag".to_string(), page_size: 1 };
     send_request_generic(tx, client_session, get_memories_request_data, None, mode).await;
     let (get_memories_response_1, _): (GetMemoriesResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -334,10 +337,7 @@ async fn execute_add_get_reset_memory_logic(
     let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
     assert!(get_memory_by_id_response.memory.is_some());
-    assert_eq!(
-        get_memories_response_1.memories[0].id,
-        get_memory_by_id_response.memory.unwrap().id
-    );
+    assert_eq!(memory_id_from_add, get_memory_by_id_response.memory.unwrap().id);
 
     // ResetMemoryRequest
     let reset_memory_request_data = ResetMemoryRequest::default();
@@ -347,7 +347,7 @@ async fn execute_add_get_reset_memory_logic(
     assert!(reset_memory_response.success);
 
     // GetMemoriesRequest again
-    let get_memories_request_data_2 = GetMemoriesRequest { tag: "tag".to_string() };
+    let get_memories_request_data_2 = GetMemoriesRequest { tag: "tag".to_string(), page_size: 10 };
     send_request_generic(tx, client_session, get_memories_request_data_2, None, mode).await;
     let (get_memories_response_2, _): (GetMemoriesResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
