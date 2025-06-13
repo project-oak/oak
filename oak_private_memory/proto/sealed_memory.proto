@@ -26,7 +26,7 @@ import "proto/session/session.proto";
 message Embedding {
   // Identifier for the model that generated this embedding.
   // During searching, only the embeddings with the same identifier will
-  // be used to caculate scores.
+  // be used to calculate scores.
   string identifier = 1;
   // The actual embedding values.
   repeated float values = 2;
@@ -36,6 +36,7 @@ message MemoryValue {
   oneof value {
     bytes bytes_val = 1;
     int64 int64_val = 2;
+    string string_val = 3;
   }
 }
 
@@ -192,6 +193,11 @@ message SearchMemoryResponse {
 message KeyDerivationInfo {
   bytes kek_salt = 1;     // Salt used for KEK derivation.
   int32 kek_version = 2;  // Version of the KEK derivation method or key.
+}
+
+message SealedMemoryCredentials {
+  string pm_uid = 1;
+  bytes key_encryption_key = 2;
 }
 
 message UserRegistrationRequest {

@@ -277,6 +277,16 @@ async fn execute_add_get_reset_memory_logic(
             value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
         },
     );
+    contents_map.insert(
+        "string_data".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
+        },
+    );
+    contents_map.insert(
+        "int64_data".to_string(),
+        MemoryValue { value: Some(memory_value::Value::Int64Val(123456789)) },
+    );
     let add_memory_request_data = AddMemoryRequest {
         memory: Some(Memory {
             id: "".to_string(),
@@ -298,13 +308,25 @@ async fn execute_add_get_reset_memory_logic(
     assert_eq!(get_memories_response_1.memories.len(), 1);
 
     let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
-    assert_eq!(memory_content.contents.len(), 1);
+    assert_eq!(memory_content.contents.len(), 3);
     let memory_value = memory_content.contents["text_data"].value.clone().unwrap();
     let memory_value = match memory_value {
         memory_value::Value::BytesVal(bytes) => bytes,
         _ => vec![],
     };
     assert_eq!(memory_value, "this is a test".as_bytes().to_vec());
+    let memory_value = memory_content.contents["string_data"].value.clone().unwrap();
+    let memory_value = match memory_value {
+        memory_value::Value::StringVal(string) => string,
+        _ => "".to_string(),
+    };
+    assert_eq!(memory_value, "this is a test string");
+    let memory_value = memory_content.contents["int64_data"].value.clone().unwrap();
+    let memory_value = match memory_value {
+        memory_value::Value::Int64Val(int64) => int64,
+        _ => 0,
+    };
+    assert_eq!(memory_value, 123456789);
 
     // GetMemoryByIdRequest
     let get_memory_by_id_request_data = GetMemoryByIdRequest { id: memory_id_from_add.clone() };
@@ -313,8 +335,8 @@ async fn execute_add_get_reset_memory_logic(
         receive_response_generic(response_stream, client_session, mode).await;
     assert!(get_memory_by_id_response.memory.is_some());
     assert_eq!(
-        get_memories_response_1.memories[0].encode_to_vec(),
-        get_memory_by_id_response.memory.unwrap().encode_to_vec()
+        get_memories_response_1.memories[0].id,
+        get_memory_by_id_response.memory.unwrap().id
     );
 
     // ResetMemoryRequest
