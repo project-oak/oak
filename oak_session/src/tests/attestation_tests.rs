@@ -574,7 +574,10 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 reason: starts_with("Verification failed"),
                 attestation_results: elements_are!((
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(VerifierResult::Failure(anything())),
+                    matches_pattern!(VerifierResult::Failure {
+                        evidence: anything(),
+                        result: anything()
+                    }),
                 )),
             })),
             "Attestation type {attestation_type:?} should fail with an unmatched verifier"
@@ -619,7 +622,10 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 reason: starts_with("Verification failed"),
                 attestation_results: elements_are!((
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(VerifierResult::Failure(anything())),
+                    matches_pattern!(VerifierResult::Failure {
+                        evidence: anything(),
+                        result: anything()
+                    }),
                 )),
             })),
             "Attestation type {attestation_type:?} should fail with an unmatched verifier"
@@ -682,16 +688,22 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                 attestation_results: unordered_elements_are!(
                     (
                         eq(MATCHED_ATTESTER_ID1),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (
                         eq(MATCHED_ATTESTER_ID2),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
                     (
                         eq(UNMATCHED_ATTESTER_ID),
-                        matches_pattern!(VerifierResult::Unverified(anything()))
+                        matches_pattern!(VerifierResult::Unverified { evidence: anything() })
                     )
                 ),
             })),
@@ -755,16 +767,22 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                 attestation_results: unordered_elements_are!(
                     (
                         eq(MATCHED_ATTESTER_ID1),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (
                         eq(MATCHED_ATTESTER_ID2),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
                     (
                         eq(UNMATCHED_ATTESTER_ID),
-                        matches_pattern!(VerifierResult::Unverified(anything())),
+                        matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                     )
                 ),
             })),
@@ -828,16 +846,22 @@ fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                 attestation_results: unordered_elements_are!(
                     (
                         eq(MATCHED_ATTESTER_ID1),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (
                         eq(MATCHED_ATTESTER_ID2),
-                        matches_pattern!(VerifierResult::Failure(anything())),
+                        matches_pattern!(VerifierResult::Failure {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
                     (
                         eq(UNMATCHED_ATTESTER_ID),
-                        matches_pattern!(VerifierResult::Unverified(anything())),
+                        matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                     )
                 ),
             })),
@@ -901,16 +925,22 @@ fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                 attestation_results: unordered_elements_are!(
                     (
                         eq(MATCHED_ATTESTER_ID1),
-                        matches_pattern!(VerifierResult::Success(anything())),
+                        matches_pattern!(VerifierResult::Success {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (
                         eq(MATCHED_ATTESTER_ID2),
-                        matches_pattern!(VerifierResult::Failure(anything())),
+                        matches_pattern!(VerifierResult::Failure {
+                            evidence: anything(),
+                            result: anything()
+                        }),
                     ),
                     (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
                     (
                         eq(UNMATCHED_ATTESTER_ID),
-                        matches_pattern!(VerifierResult::Unverified(anything())),
+                        matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                     )
                 ),
             })),

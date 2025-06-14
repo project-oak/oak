@@ -148,13 +148,13 @@ pub enum AttestationType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum VerifierResult {
     // Verifier yielded a success result
-    Success(AttestationResults),
+    Success { evidence: EndorsedEvidence, result: AttestationResults },
     // Verifier returned a failure
-    Failure(AttestationResults),
+    Failure { evidence: EndorsedEvidence, result: AttestationResults },
     // No evidence have been supplied for the verifier
     Missing,
     // The evidence has been presented but no verifier is confiugured
-    Unverified(EndorsedEvidence),
+    Unverified { evidence: EndorsedEvidence },
 }
 
 /// Defines the contract for an attestation handler.
@@ -213,10 +213,10 @@ impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
         let mut has_match = false;
         let mut failures: BTreeMap<&String, &AttestationResults> = BTreeMap::new();
         results.iter().for_each(|(id, v)| match v {
-            VerifierResult::Success(_) => has_match = true,
-            VerifierResult::Failure(attestation_results) => {
+            VerifierResult::Success { .. } => has_match = true,
+            VerifierResult::Failure { result, .. } => {
                 has_match = true;
-                failures.insert(id, attestation_results);
+                failures.insert(id, result);
             }
             _ => {}
         });
@@ -343,7 +343,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
                 Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
                     combine_attestation_results(
                         &self.config.peer_verifiers,
-                        &incoming_message.endorsed_evidence,
+                        incoming_message.endorsed_evidence,
                     )?,
                 ))
             }
@@ -454,7 +454,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
                 Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
                     combine_attestation_results(
                         &self.config.peer_verifiers,
-                        &incoming_message.endorsed_evidence,
+                        incoming_message.endorsed_evidence,
                     )?,
                 ))
             }
@@ -482,39 +482,44 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
 /// evidence.
 fn combine_attestation_results(
     verifiers: &BTreeMap<String, Arc<dyn AttestationVerifier>>,
-    attested_evidence: &BTreeMap<String, EndorsedEvidence>,
+    attested_evidence: BTreeMap<String, EndorsedEvidence>,
 ) -> Result<BTreeMap<String, VerifierResult>, Error> {
     verifiers
         .iter()
-        .merge_join_by(attested_evidence.iter(), |(id1, _), (id2, _)| Ord::cmp(id1, id2))
+        .merge_join_by(attested_evidence, |(id1, _), (id2, _)| Ord::cmp(id1, &id2))
         .map(|v| match v {
-            EitherOrBoth::Both((id, verifier), (_, e)) => {
-                match (e.evidence.as_ref(), e.endorsements.as_ref()) {
+            EitherOrBoth::Both((_, verifier), (id, ee)) => {
+                match (ee.evidence.as_ref(), ee.endorsements.as_ref()) {
                     (Some(evidence), Some(endorsements)) => {
                         let result = verifier.verify(evidence, endorsements)?;
                         Ok((
-                            id.clone(),
+                            id,
                             match result.status() {
                                 attestation_results::Status::Success => {
-                                    VerifierResult::Success(result)
+                                    VerifierResult::Success { evidence: ee, result }
                                 }
-                                _ => VerifierResult::Failure(result),
+                                _ => VerifierResult::Failure { evidence: ee, result },
                             },
                         ))
                     }
                     _ => Ok((
-                        id.clone(),
-                        VerifierResult::Failure(AttestationResults {
-                            status: attestation_results::Status::GenericFailure.into(),
-                            reason: "Both evidence and endorsements need to be provided"
-                                .to_string(),
-                            ..Default::default()
-                        }),
+                        id,
+                        VerifierResult::Failure {
+                            evidence: ee,
+                            result: AttestationResults {
+                                status: attestation_results::Status::GenericFailure.into(),
+                                reason: "Both evidence and endorsements need to be provided"
+                                    .to_string(),
+                                ..Default::default()
+                            },
+                        },
                     )),
                 }
             }
             EitherOrBoth::Left((id, _)) => Ok((id.clone(), VerifierResult::Missing)),
-            EitherOrBoth::Right((id, e)) => Ok((id.clone(), VerifierResult::Unverified(e.clone()))),
+            EitherOrBoth::Right((id, evidence)) => {
+                Ok((id, VerifierResult::Unverified { evidence }))
+            }
         })
         .collect::<Result<BTreeMap<String, VerifierResult>, Error>>()
 }

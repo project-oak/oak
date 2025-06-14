@@ -27,8 +27,8 @@ use oak_crypto::{
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, PlaintextMessage, SessionRequest,
-        SessionResponse,
+        session_request::Request, session_response::Response, EndorsedEvidence, PlaintextMessage,
+        SessionRequest, SessionResponse,
     },
 };
 
@@ -37,6 +37,7 @@ use crate::{
     config::SessionConfig,
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
+    session::AttestationEvidence,
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
@@ -484,6 +485,51 @@ fn pairwise_nn_peer_self_succeeds_custom_session_binding_verifier() -> anyhow::R
 }
 
 #[googletest::test]
+fn get_peer_attestation_evidence() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_session_binding_verifier_provider(),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
+
+    assert_that!(
+        client_session.get_peer_attestation_evidence(),
+        ok(matches_pattern!(AttestationEvidence {
+            evidence: elements_are![(
+                &MATCHED_ATTESTER_ID1.to_string(),
+                &EndorsedEvidence {
+                    evidence: Some(Evidence { ..Default::default() }),
+                    endorsements: Some(Endorsements { ..Default::default() })
+                }
+            )]
+        }))
+    );
+    // The client does not send any attestation evidence to the server.
+    assert_that!(
+        server_session.get_peer_attestation_evidence(),
+        ok(matches_pattern!(AttestationEvidence { evidence: empty() }))
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
 fn test_session_sendable() -> anyhow::Result<()> {
     fn foo<T: Send>(_: T) {}
 
@@ -587,6 +633,10 @@ fn do_handshake(
     assert_that!(
         server_session.get_session_binding_token(b"info").unwrap().as_slice(),
         not(eq(client_session.get_session_binding_token(b"wrong info").unwrap().as_slice()))
+    );
+    assert_that!(
+        client_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence { evidence: anything() })
     );
     Ok(())
 }

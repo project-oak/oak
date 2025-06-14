@@ -68,8 +68,8 @@ use core::mem;
 use anyhow::{anyhow, Context, Error, Ok};
 use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
 use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, PlaintextMessage,
-    SessionBinding, SessionRequest, SessionResponse,
+    session_request::Request, session_response::Response, EncryptedMessage, EndorsedEvidence,
+    PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
 };
 
 use crate::{
@@ -121,6 +121,17 @@ impl SessionBindingToken {
     pub fn into_boxed_slice(&self) -> Box<[u8]> {
         self.0.clone().into_boxed_slice()
     }
+}
+
+/// Represents the evidence supplied by the peer during the attestation phase.
+///
+/// This evidence is used to verify the peer's identity and trustworthiness.
+#[derive(Debug, Default, PartialEq)]
+pub struct AttestationEvidence {
+    /// The evidence supplied by the peer.
+    ///
+    /// The key is the ID of the evidence, and the value is the evidence itself.
+    pub evidence: BTreeMap<String, EndorsedEvidence>,
 }
 
 /// Trait defining the interface for an end-to-end encrypted, attested,
@@ -175,6 +186,12 @@ pub trait Session: Send {
     ///
     /// This method can only be called successfully when `is_open()` is true.
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error>;
+
+    /// Returns the attestation evidence for this session, as supplied by the
+    /// peer.
+    ///
+    /// This method can only be called successfully when `is_open()` is true.
+    fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error>;
 }
 
 /// Represents the internal state machine and data for a session's progression.
@@ -217,11 +234,17 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
     /// The phase where the session is established and ready for encrypted
     /// communication.
     ///
-    /// Holds the `encryptor` for protecting application messages and the
-    /// `handshake_hash` from the completed handshake, used for generating
-    /// `SessionBindingToken`s. The `Encryptor`'s lifetime is tied to this
-    /// state.
-    Open { encryptor: Box<dyn Encryptor>, handshake_hash: Vec<u8> },
+    /// Holds the internal state of an open session:
+    /// - `encryptor` for protecting application messages
+    /// - `attestation_results` from the previous phase, used for verifying
+    ///   session bindings during the handshake.
+    /// - `handshake_hash` from the completed handshake, used for generating
+    ///   `SessionBindingToken`s.
+    Open {
+        encryptor: Box<dyn Encryptor>,
+        attestation_results: BTreeMap<String, VerifierResult>,
+        handshake_hash: Vec<u8>,
+    },
     /// A temporary state indicating that the session is currently transitioning
     /// between valid steps. Operations on a session in this state will fail.
     Invalid,
@@ -262,9 +285,9 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 // is expected (and required) to send the bindings for the evidence that it
                 // supplies.
                 let expect_peer_bindings = attestation_results.iter().any(|(_, v)| match v {
-                    VerifierResult::Success(_)
-                    | VerifierResult::Failure(_)
-                    | VerifierResult::Unverified(_) => true,
+                    VerifierResult::Success { .. }
+                    | VerifierResult::Failure { .. }
+                    | VerifierResult::Unverified { .. } => true,
                     VerifierResult::Missing => false,
                 });
                 *self = Step::Handshake {
@@ -273,11 +296,12 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                     attestation_results,
                 };
             }
-            Step::Handshake { handshaker, encryptor_provider, .. } => {
+            Step::Handshake { handshaker, encryptor_provider, attestation_results } => {
                 *self = Step::Open {
                     handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
                     encryptor: encryptor_provider
                         .provide_encryptor(handshaker.take_session_keys()?)?,
+                    attestation_results,
                 };
             }
             Step::Open { .. } => {
@@ -295,6 +319,33 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
     fn get_session_binding_token(&self, info: &[u8]) -> Result<SessionBindingToken, Error> {
         match &self {
             Step::Open { handshake_hash, .. } => Ok(SessionBindingToken::new(handshake_hash, info)),
+            _ => Err(anyhow!("the session is not open")),
+        }
+    }
+
+    /// Returns the attestation results for this session.
+    ///
+    /// This method can only be called successfully when `is_open()` is true.
+    fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error> {
+        match &self {
+            Step::Open { attestation_results, .. } => {
+                let evidence = attestation_results
+                    .iter()
+                    .filter_map(|(id, verifier_result)| match verifier_result {
+                        VerifierResult::Success { evidence, .. } => {
+                            Some((id.clone(), evidence.clone()))
+                        }
+                        VerifierResult::Failure { evidence, .. } => {
+                            Some((id.clone(), evidence.clone()))
+                        }
+                        VerifierResult::Unverified { evidence } => {
+                            Some((id.clone(), evidence.clone()))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                Ok(AttestationEvidence { evidence })
+            }
             _ => Err(anyhow!("the session is not open")),
         }
     }
@@ -399,6 +450,12 @@ impl Session for ClientSession {
     /// Gets a session binding token. See `Session::get_session_binding_token`.
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
         self.step.get_session_binding_token(info_string)
+    }
+
+    /// Gets the peer attestation evidence. See
+    /// `Session::get_peer_attestation_evidence`.
+    fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error> {
+        self.step.get_peer_attestation_evidence()
     }
 }
 
@@ -607,6 +664,12 @@ impl Session for ServerSession {
     fn get_session_binding_token(&self, info_string: &[u8]) -> Result<SessionBindingToken, Error> {
         self.step.get_session_binding_token(info_string)
     }
+
+    /// Gets the peer attestation evidence. See
+    /// `Session::get_peer_attestation_evidence`.
+    fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error> {
+        self.step.get_peer_attestation_evidence()
+    }
 }
 
 impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
@@ -734,7 +797,7 @@ fn verify_session_binding(
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
     for (verifier_id, result) in attestation_results {
-        if let VerifierResult::Success(r) = result {
+        if let VerifierResult::Success { result: r, .. } = result {
             let binding_verifier = binding_verifier_providers
                 .get(verifier_id)
                 .ok_or(anyhow!(
