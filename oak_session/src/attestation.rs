@@ -210,29 +210,23 @@ impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
         &self,
         results: BTreeMap<String, VerifierResult>,
     ) -> AttestationVerdict {
-        let mut has_match = false;
-        let mut failures: BTreeMap<&String, &AttestationResults> = BTreeMap::new();
-        results.iter().for_each(|(id, v)| match v {
-            VerifierResult::Success { .. } => has_match = true,
-            VerifierResult::Failure { result, .. } => {
-                has_match = true;
-                failures.insert(id, result);
-            }
-            _ => {}
-        });
-        if !has_match {
-            return AttestationVerdict::AttestationFailed {
-                reason: String::from("No matching attestation results"),
-                attestation_results: results,
-            };
-        }
+        let failures: BTreeMap<&str, &str> = results
+            .iter()
+            .filter_map(|(id, v)| match v {
+                VerifierResult::Failure { result, .. } => {
+                    Some((id.as_str(), result.reason.as_str()))
+                }
+                VerifierResult::Missing => Some((id.as_str(), "Evidence not provided")),
+                _ => None,
+            })
+            .collect();
         if !failures.is_empty() {
             AttestationVerdict::AttestationFailed {
                 reason: format!(
                     "Verification failed. {}",
                     failures
                         .iter()
-                        .map(|(id, results)| format!("ID {}: {}", id, results.reason))
+                        .map(|(id, reason)| format!("ID {}: {}", id, reason))
                         .collect::<Vec<String>>()
                         .join(";")
                 ),
@@ -338,19 +332,13 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
         }
-        self.attestation_result = match self.config.attestation_type {
-            AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
-                Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
-                    combine_attestation_results(
-                        &self.config.peer_verifiers,
-                        incoming_message.endorsed_evidence,
-                    )?,
-                ))
-            }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => {
-                Some(AttestationVerdict::AttestationPassed { attestation_results: BTreeMap::new() })
-            }
-        };
+        self.attestation_result =
+            Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
+                combine_attestation_results(
+                    &self.config.peer_verifiers,
+                    incoming_message.endorsed_evidence,
+                )?,
+            ));
         Ok(Some(()))
     }
 }
@@ -449,19 +437,13 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
         }
-        self.attestation_result = match self.config.attestation_type {
-            AttestationType::Bidirectional | AttestationType::PeerUnidirectional => {
-                Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
-                    combine_attestation_results(
-                        &self.config.peer_verifiers,
-                        incoming_message.endorsed_evidence,
-                    )?,
-                ))
-            }
-            AttestationType::SelfUnidirectional | AttestationType::Unattested => {
-                Some(AttestationVerdict::AttestationPassed { attestation_results: BTreeMap::new() })
-            }
-        };
+        self.attestation_result =
+            Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
+                combine_attestation_results(
+                    &self.config.peer_verifiers,
+                    incoming_message.endorsed_evidence,
+                )?,
+            ));
         Ok(Some(()))
     }
 }

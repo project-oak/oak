@@ -65,6 +65,8 @@ use crate::{
 #[allow(dead_code)]
 pub struct SessionConfig {
     /// Configuration for the attestation phase.
+    pub attestation_type: AttestationType,
+    /// Configuration for the attestation phase.
     pub attestation_handler_config: AttestationHandlerConfig,
     /// Configuration for the cryptographic handshake phase.
     pub handshake_handler_config: HandshakeHandlerConfig,
@@ -127,7 +129,6 @@ impl SessionConfigBuilder {
     /// and encryption (using `OrderedChannelEncryptorProvider`).
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
         let attestation_handler_config = AttestationHandlerConfig {
-            attestation_type,
             self_attesters: BTreeMap::new(),
             self_endorsers: BTreeMap::new(),
             peer_verifiers: BTreeMap::new(),
@@ -147,6 +148,7 @@ impl SessionConfigBuilder {
         let binding_verifier_providers = BTreeMap::new();
 
         let config = SessionConfig {
+            attestation_type,
             attestation_handler_config,
             handshake_handler_config,
             encryptor_config,
@@ -162,6 +164,14 @@ impl SessionConfigBuilder {
     ///
     /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-attester>
     pub fn add_self_attester(mut self, attester_id: String, attester: Box<dyn Attester>) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-attestation is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config.attestation_handler_config.self_attesters.insert(attester_id, attester.into());
         self
     }
@@ -173,6 +183,14 @@ impl SessionConfigBuilder {
         attester_id: String,
         attester: &Arc<dyn Attester>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-attestation is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config.attestation_handler_config.self_attesters.insert(attester_id, attester.clone());
         self
     }
@@ -183,6 +201,14 @@ impl SessionConfigBuilder {
     ///
     /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
     pub fn add_self_endorser(mut self, endorser_id: String, endorser: Box<dyn Endorser>) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-endorsement is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config.attestation_handler_config.self_endorsers.insert(endorser_id, endorser.into());
         self
     }
@@ -194,6 +220,14 @@ impl SessionConfigBuilder {
         endorser_id: String,
         endorser: &Arc<dyn Endorser>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-endorsement is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config.attestation_handler_config.self_endorsers.insert(endorser_id, endorser.clone());
         self
     }
@@ -213,6 +247,14 @@ impl SessionConfigBuilder {
         attester_id: String,
         verifier: Box<dyn AttestationVerifier>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -234,6 +276,14 @@ impl SessionConfigBuilder {
         attester_id: String,
         verifier: &Arc<dyn AttestationVerifier>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -261,6 +311,14 @@ impl SessionConfigBuilder {
         verifier: Box<dyn AttestationVerifier>,
         key_extractor: Box<dyn KeyExtractor>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -281,6 +339,14 @@ impl SessionConfigBuilder {
         verifier: &Arc<dyn AttestationVerifier>,
         key_extractor: &Arc<dyn KeyExtractor>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -306,6 +372,14 @@ impl SessionConfigBuilder {
         verifier: Box<dyn AttestationVerifier>,
         binding_verifier_provider: Box<dyn SessionBindingVerifierProvider>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -326,6 +400,14 @@ impl SessionConfigBuilder {
         verifier: &Arc<dyn AttestationVerifier>,
         binding_verifier_provider: &Arc<dyn SessionBindingVerifierProvider>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .attestation_handler_config
             .peer_verifiers
@@ -384,6 +466,14 @@ impl SessionConfigBuilder {
         attester_id: String,
         session_binder: Box<dyn SessionBinder>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Session binding is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .handshake_handler_config
             .session_binders
@@ -398,6 +488,14 @@ impl SessionConfigBuilder {
         attester_id: String,
         session_binder: &Arc<dyn SessionBinder>,
     ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Session binding is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
         self.config
             .handshake_handler_config
             .session_binders
@@ -417,8 +515,6 @@ impl SessionConfigBuilder {
 /// [`SessionConfigBuilder`].
 #[allow(dead_code)]
 pub struct AttestationHandlerConfig {
-    /// Specifies the type of attestation to be performed (e.g., bidirectional).
-    pub attestation_type: AttestationType,
     /// A map of attesters (keyed by `attester_id`) used by this party to
     /// generate its own attestation [`Evidence`].
     pub self_attesters: BTreeMap<String, Arc<dyn Attester>>,

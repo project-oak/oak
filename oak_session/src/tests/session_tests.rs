@@ -262,7 +262,7 @@ fn pairwise_nn_unattested_self_succeeds() -> anyhow::Result<()> {
 }
 
 #[googletest::test]
-fn pairwise_nn_self_unattested_incompatible() -> anyhow::Result<()> {
+fn pairwise_nn_self_unattested_compatible() -> anyhow::Result<()> {
     let server_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
     let client_config =
@@ -276,50 +276,9 @@ fn pairwise_nn_self_unattested_incompatible() -> anyhow::Result<()> {
     let mut server_session = ServerSession::create(server_config)?;
 
     do_attest(&mut client_session, &mut server_session)?;
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::Expected)?;
 
-    let handshake_request = client_session
-        .get_outgoing_message()
-        .expect("An error occurred while getting the client outgoing message")
-        .expect("No client outgoing message was produced");
-    assert_that!(
-        handshake_request,
-        matches_pattern!(SessionRequest {
-            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
-        }),
-        "The message sent by the client is a handshake request"
-    );
-    assert_that!(server_session.put_incoming_message(handshake_request), ok(some(())));
-    let handshake_response = server_session
-        .get_outgoing_message()
-        .expect("An error occurred while getting the server outgoing message")
-        .expect("No server outgoing message was produced");
-    assert_that!(
-        handshake_response,
-        matches_pattern!(SessionResponse {
-            response: some(matches_pattern!(Response::HandshakeResponse(anything())))
-        }),
-        "The message sent by the server is a handshake response"
-    );
-    assert_that!(client_session.put_incoming_message(handshake_response), ok(some(())));
-
-    let handshake_followup = client_session
-        .get_outgoing_message()
-        .expect("An error occurred while getting the client followup message")
-        .expect("No client followup message was produced");
-    assert_that!(
-        client_session.is_open(),
-        eq(true),
-        "Getting the client followup message should make the session open"
-    );
-
-    assert_that!(
-        handshake_followup,
-        matches_pattern!(SessionRequest {
-            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
-        }),
-        "The message sent by the client is a handshake request"
-    );
-    assert_that!(server_session.put_incoming_message(handshake_followup), err(anything()));
+    invoke_hello_world(&mut client_session, &mut server_session);
 
     Ok(())
 }
