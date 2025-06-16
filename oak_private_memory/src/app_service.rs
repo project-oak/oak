@@ -26,9 +26,7 @@ use opentelemetry::KeyValue;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
-use sealed_memory_rust_proto::oak::private_memory::{
-    SealedMemorySessionRequest, SealedMemorySessionResponse,
-};
+use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 

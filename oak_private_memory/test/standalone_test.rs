@@ -30,16 +30,7 @@ use private_memory_server_lib::{
 };
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
-use sealed_memory_rust_proto::oak::private_memory::{
-    key_sync_response, memory_value, search_memory_query, user_registration_response,
-    AddMemoryRequest, AddMemoryResponse, DeleteMemoryRequest, DeleteMemoryResponse, Embedding,
-    EmbeddingQuery, GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest,
-    GetMemoryByIdResponse, KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory,
-    MemoryContent, MemoryField, MemoryValue, ResetMemoryRequest, ResetMemoryResponse, ResultMask,
-    ScoreRange, SealedMemoryResponse, SealedMemorySessionRequest, SealedMemorySessionResponse,
-    SearchMemoryQuery, SearchMemoryRequest, SearchMemoryResponse, UserRegistrationRequest,
-    UserRegistrationResponse,
-};
+use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 

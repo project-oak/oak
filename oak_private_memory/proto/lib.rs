@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod prelude;
+
 pub mod oak {
     pub mod private_memory {
         tonic::include_proto!("oak.private_memory");

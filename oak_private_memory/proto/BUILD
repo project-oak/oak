@@ -75,7 +75,10 @@ cargo_build_script(
 
 rust_library(
     name = "sealed_memory_rust_proto",
-    srcs = ["lib.rs"],
+    srcs = [
+        "lib.rs",
+        "prelude.rs",
+    ],
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],

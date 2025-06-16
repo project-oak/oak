@@ -22,16 +22,7 @@ use opentelemetry::KeyValue;
 use prost::{Message, Name};
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
-use sealed_memory_rust_proto::oak::private_memory::{
-    key_sync_response, sealed_memory_request, sealed_memory_response, user_registration_response,
-    AddMemoryRequest, AddMemoryResponse, DataBlob, DeleteMemoryRequest, DeleteMemoryResponse,
-    EncryptedDataBlob, EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse,
-    GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest,
-    KeySyncResponse, Memory, MemoryField, PlainTextUserInfo, ResetMemoryRequest,
-    ResetMemoryResponse, ResultMask, SealedMemoryRequest, SealedMemoryResponse,
-    SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserRegistrationRequest,
-    UserRegistrationResponse, WrappedDataEncryptionKey,
-};
+use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
     runtime::Handle,
     sync::{Mutex, MutexGuard},
