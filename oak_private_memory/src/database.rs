@@ -357,6 +357,17 @@ impl IcingMetaDatabase {
         ensure!(blob_ids.len() == scores.len());
         Ok((blob_ids, scores))
     }
+
+    pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
+        for memory_id in memory_ids {
+            let result =
+                self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
+            if result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+                bail!("Failed to delete memory with id {}: {:?}", memory_id, result.status);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl DbMigration for IcingMetaDatabase {
@@ -525,6 +536,16 @@ impl MemoryCache {
         }
 
         Ok(blob_ids)
+    }
+
+    pub async fn delete_memories(&mut self, blob_ids: &[BlobId]) -> anyhow::Result<()> {
+        // Remove from local cache
+        for blob_id in blob_ids {
+            self.content_cache.remove(blob_id);
+        }
+        // Todo: Delete from external DB
+
+        Ok(())
     }
 }
 

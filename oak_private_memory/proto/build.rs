@@ -58,6 +58,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.ResultMask",
         "oak.private_memory.SealedMemoryWrapperRequest",
         "oak.private_memory.SealedMemoryWrapperResponse",
+        "oak.private_memory.DeleteMemoryRequest",
+        "oak.private_memory.DeleteMemoryResponse",
     ];
 
     let oneof_field_names = [

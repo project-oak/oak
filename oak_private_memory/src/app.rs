@@ -24,12 +24,13 @@ use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     key_sync_response, sealed_memory_request, sealed_memory_response, user_registration_response,
-    AddMemoryRequest, AddMemoryResponse, DataBlob, EncryptedDataBlob, EncryptedUserInfo,
-    GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse,
-    InvalidRequestResponse, KeySyncRequest, KeySyncResponse, Memory, MemoryField,
-    PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse, ResultMask, SealedMemoryRequest,
-    SealedMemoryResponse, SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem,
-    UserRegistrationRequest, UserRegistrationResponse, WrappedDataEncryptionKey,
+    AddMemoryRequest, AddMemoryResponse, DataBlob, DeleteMemoryRequest, DeleteMemoryResponse,
+    EncryptedDataBlob, EncryptedUserInfo, GetMemoriesRequest, GetMemoriesResponse,
+    GetMemoryByIdRequest, GetMemoryByIdResponse, InvalidRequestResponse, KeySyncRequest,
+    KeySyncResponse, Memory, MemoryField, PlainTextUserInfo, ResetMemoryRequest,
+    ResetMemoryResponse, ResultMask, SealedMemoryRequest, SealedMemoryResponse,
+    SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserRegistrationRequest,
+    UserRegistrationResponse, WrappedDataEncryptionKey,
 };
 use tokio::{
     runtime::Handle,
@@ -58,6 +59,7 @@ trait MemoryInterface {
         &mut self,
         request: SearchMemoryRequest,
     ) -> anyhow::Result<Vec<SearchMemoryResultItem>>;
+    async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()>;
 }
 
 // Helper function to apply the result mask to a single Memory object.
@@ -139,6 +141,12 @@ impl MemoryInterface for DatabaseWithCache {
             .zip(scores.into_iter())
             .map(|(memory, _score)| SearchMemoryResultItem { memory: Some(memory) })
             .collect())
+    }
+
+    async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
+        self.meta_db().delete_memories(&ids)?;
+        self.cache.delete_memories(&ids).await?;
+        Ok(())
     }
 }
 
@@ -547,6 +555,24 @@ impl SealedMemoryHandler {
             bail!("You need to call key sync first")
         }
     }
+
+    pub async fn delete_memory_handler(
+        &self,
+        request: DeleteMemoryRequest,
+    ) -> anyhow::Result<DeleteMemoryResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
+        if let Some(context) = context {
+            let database = &mut context.database;
+            let memory_ids: Vec<MemoryId> = request.ids.into_iter().collect();
+            Ok(DeleteMemoryResponse {
+                success: database.delete_memories(memory_ids).await.is_ok(),
+                ..Default::default()
+            })
+        } else {
+            bail!("You need to call key sync first")
+        }
+    }
 }
 
 pub trait RequestUnpacking {
@@ -598,6 +624,45 @@ macro_rules! impl_packing {
             }
         }
     };
+    (Request => DeleteMemoryRequest) => {
+        impl RequestUnpacking for DeleteMemoryRequest {
+            fn from_request(x: SealedMemoryRequest) -> Option<Self> {
+                match x.request {
+                    Some(sealed_memory_request::Request::DeleteMemoryRequest(request)) => {
+                        Some(request)
+                    }
+                    _ => None,
+                }
+            }
+
+            fn into_request(self) -> SealedMemoryRequest {
+                SealedMemoryRequest {
+                    request: Some(sealed_memory_request::Request::DeleteMemoryRequest(self)),
+                    request_id: 0,
+                }
+            }
+        }
+    };
+
+    (Response => DeleteMemoryResponse) => {
+        impl ResponsePacking for DeleteMemoryResponse {
+            fn from_response(x: SealedMemoryResponse) -> Option<Self> {
+                match x.response {
+                    Some(sealed_memory_response::Response::DeleteMemoryResponse(response)) => {
+                        Some(response)
+                    }
+                    _ => None,
+                }
+            }
+
+            fn into_response(self) -> SealedMemoryResponse {
+                SealedMemoryResponse {
+                    response: Some(sealed_memory_response::Response::DeleteMemoryResponse(self)),
+                    request_id: 0,
+                }
+            }
+        }
+    };
 }
 impl_packing!(Request => AddMemoryRequest);
 impl_packing!(Request => GetMemoriesRequest);
@@ -606,6 +671,8 @@ impl_packing!(Request => KeySyncRequest);
 impl_packing!(Request => GetMemoryByIdRequest);
 impl_packing!(Request => SearchMemoryRequest);
 impl_packing!(Request => UserRegistrationRequest);
+impl_packing!(Request => DeleteMemoryRequest);
+
 impl_packing!(Response => AddMemoryResponse);
 impl_packing!(Response => GetMemoriesResponse);
 impl_packing!(Response => ResetMemoryResponse);
@@ -613,6 +680,7 @@ impl_packing!(Response => InvalidRequestResponse);
 impl_packing!(Response => KeySyncResponse);
 impl_packing!(Response => GetMemoryByIdResponse);
 impl_packing!(Response => SearchMemoryResponse);
+impl_packing!(Response => DeleteMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
 
 fn get_name<T: Name>(_x: &T) -> String {
@@ -686,6 +754,12 @@ impl ApplicationHandler for SealedMemoryHandler {
                         .rpc_count
                         .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.search_memory_handler(request).await?.into_response()
+                }
+                sealed_memory_request::Request::DeleteMemoryRequest(request) => {
+                    self.metrics
+                        .rpc_count
+                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
+                    self.delete_memory_handler(request).await?.into_response()
                 }
             };
             response.request_id = request_id;

@@ -229,6 +229,15 @@ message UserRegistrationResponse {
   KeyDerivationInfo key_derivation_info = 2;
 }
 
+message DeleteMemoryRequest {
+  repeated string ids = 1;
+}
+
+message DeleteMemoryResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
 message SealedMemoryRequest {
   oneof request {
     AddMemoryRequest add_memory_request = 1;
@@ -240,6 +249,7 @@ message SealedMemoryRequest {
     KeySyncRequest key_sync_request = 6;
     SearchMemoryRequest search_memory_request = 7;
     UserRegistrationRequest user_registration_request = 8;
+    DeleteMemoryRequest delete_memory_request = 9;
   }
 
   // Optional unique identifier for this request within the session.
@@ -258,6 +268,7 @@ message SealedMemoryResponse {
     KeySyncResponse key_sync_response = 6;
     SearchMemoryResponse search_memory_response = 7;
     UserRegistrationResponse user_registration_response = 8;
+    DeleteMemoryResponse delete_memory_response = 9;
   }
 
   // Propagated from the request_id from the request.

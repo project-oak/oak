@@ -44,6 +44,7 @@ mod ffi {
         fn initialize_impl(&self) -> UniquePtr<CxxVector<u8>>;
         fn set_schema_impl(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
+        fn delete_impl(&self, ns: &[u8], uri: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn reset(&self) -> UniquePtr<CxxVector<u8>>;
         fn search_impl(
             &self,
@@ -124,9 +125,9 @@ use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    property_proto::VectorProto, DocumentProto, InitializeResultProto, PutResultProto,
-    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
-    SetSchemaResultProto,
+    property_proto::VectorProto, DeleteResultProto, DocumentProto, InitializeResultProto,
+    PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto,
+    SearchSpecProto, SetSchemaResultProto,
 };
 use prost::Message;
 
@@ -182,6 +183,11 @@ impl ffi::IcingSearchEngine {
         let document_bytes = document.encode_to_vec();
         let result = self.put_impl(&document_bytes);
         PutResultProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn delete(&self, namespace: &[u8], uri: &[u8]) -> DeleteResultProto {
+        let result = self.delete_impl(namespace, uri);
+        DeleteResultProto::decode(result.as_slice()).unwrap()
     }
 }
 

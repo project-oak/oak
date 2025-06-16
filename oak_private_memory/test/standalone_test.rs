@@ -32,12 +32,13 @@ use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     key_sync_response, memory_value, search_memory_query, user_registration_response,
-    AddMemoryRequest, AddMemoryResponse, Embedding, EmbeddingQuery, GetMemoriesRequest,
-    GetMemoriesResponse, GetMemoryByIdRequest, GetMemoryByIdResponse, KeyDerivationInfo,
-    KeySyncRequest, KeySyncResponse, Memory, MemoryContent, MemoryField, MemoryValue,
-    ResetMemoryRequest, ResetMemoryResponse, ResultMask, ScoreRange, SealedMemoryResponse,
-    SealedMemorySessionRequest, SealedMemorySessionResponse, SearchMemoryQuery,
-    SearchMemoryRequest, SearchMemoryResponse, UserRegistrationRequest, UserRegistrationResponse,
+    AddMemoryRequest, AddMemoryResponse, DeleteMemoryRequest, DeleteMemoryResponse, Embedding,
+    EmbeddingQuery, GetMemoriesRequest, GetMemoriesResponse, GetMemoryByIdRequest,
+    GetMemoryByIdResponse, KeyDerivationInfo, KeySyncRequest, KeySyncResponse, Memory,
+    MemoryContent, MemoryField, MemoryValue, ResetMemoryRequest, ResetMemoryResponse, ResultMask,
+    ScoreRange, SealedMemoryResponse, SealedMemorySessionRequest, SealedMemorySessionResponse,
+    SearchMemoryQuery, SearchMemoryRequest, SearchMemoryResponse, UserRegistrationRequest,
+    UserRegistrationResponse,
 };
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
@@ -352,6 +353,104 @@ async fn execute_add_get_reset_memory_logic(
     let (get_memories_response_2, _): (GetMemoriesResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
     assert_eq!(get_memories_response_2.memories.len(), 0);
+}
+
+async fn execute_delete_memory_logic(
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
+    client_session: &mut oak_session::ClientSession,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
+    mode: TestMode,
+) {
+    let pm_uid = format!(
+        "test_delete_{:?}_{}",
+        mode,
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    );
+
+    // User Registration
+    let user_registration_request = UserRegistrationRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_request_generic(tx, client_session, user_registration_request, None, mode).await;
+    let (user_reg_response, _): (UserRegistrationResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(user_reg_response.status, user_registration_response::Status::Success as i32);
+
+    // Key Sync
+    let key_sync_request_data =
+        KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: pm_uid.clone() };
+    send_request_generic(tx, client_session, key_sync_request_data, None, mode).await;
+    let (key_sync_response, _): (KeySyncResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(key_sync_response.status, key_sync_response::Status::Success as i32);
+
+    // Add a few memory items
+    let mut added_memory_ids = Vec::new();
+    for i in 0..3 {
+        let add_memory_request_data = AddMemoryRequest {
+            memory: Some(Memory {
+                id: "".to_string(), // Let server generate ID
+                content: None,
+                tags: vec![format!("delete_tag_{}", i)],
+                ..Default::default()
+            }),
+        };
+        send_request_generic(tx, client_session, add_memory_request_data, None, mode).await;
+        let (add_memory_response, _): (AddMemoryResponse, i32) =
+            receive_response_generic(response_stream, client_session, mode).await;
+        added_memory_ids.push(add_memory_response.id);
+    }
+
+    // Verify items were added
+    for id in &added_memory_ids {
+        let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id.clone() };
+        send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
+        let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
+            receive_response_generic(response_stream, client_session, mode).await;
+        assert!(get_memory_by_id_response.success);
+        assert!(get_memory_by_id_response.memory.is_some());
+        assert_eq!(get_memory_by_id_response.memory.unwrap().id, *id);
+    }
+
+    // Delete some of the memory items
+    let ids_to_delete = vec![added_memory_ids[0].clone(), added_memory_ids[2].clone()];
+    let delete_memory_request_data = DeleteMemoryRequest { ids: ids_to_delete.clone() };
+    send_request_generic(tx, client_session, delete_memory_request_data, None, mode).await;
+    let (delete_memory_response, _): (DeleteMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert!(delete_memory_response.success);
+
+    // Verify deleted items are gone
+    for id in &ids_to_delete {
+        let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id.clone() };
+        send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
+        let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
+            receive_response_generic(response_stream, client_session, mode).await;
+        assert!(!get_memory_by_id_response.success);
+        assert!(get_memory_by_id_response.memory.is_none());
+    }
+
+    // Verify the item that was NOT deleted still exists
+    let id_not_deleted = added_memory_ids[1].clone();
+    let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id_not_deleted.clone() };
+    send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
+    let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert!(get_memory_by_id_response.success);
+    assert!(get_memory_by_id_response.memory.is_some());
+    assert_eq!(get_memory_by_id_response.memory.unwrap().id, id_not_deleted);
+
+    // Attempt to delete a non-existent ID
+    let non_existent_id = "non_existent_memory_id".to_string();
+    let delete_memory_request_data_non_existent =
+        DeleteMemoryRequest { ids: vec![non_existent_id.clone()] };
+    send_request_generic(tx, client_session, delete_memory_request_data_non_existent, None, mode)
+        .await;
+    let (delete_memory_response_non_existent, _): (DeleteMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert!(!delete_memory_response_non_existent.success);
 }
 
 async fn execute_embedding_search_logic(
@@ -862,4 +961,25 @@ fn proto_serialization_test() {
         r#"{"includeFields":["ID", "TAGS"],"includeContentFields":["content_key_str"]}"#;
     let result_mask_from_string_num = serde_json::from_str::<ResultMask>(json_str5).unwrap();
     assert_eq!(result_mask.encode_to_vec(), result_mask_from_string_num.encode_to_vec());
+}
+
+#[tokio::test]
+async fn test_delete_memory_all_modes() {
+    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let url = format!("http://{addr}");
+
+    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
+        println!("Testing Delete Memory in {:?} mode", mode);
+        let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (mut tx, rx) = mpsc::channel(10);
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
+        let mut client_session = oak_session::ClientSession::create(
+            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+        )
+        .unwrap();
+        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+
+        execute_delete_memory_logic(&mut tx, &mut client_session, &mut response_stream, mode).await;
+    }
 }

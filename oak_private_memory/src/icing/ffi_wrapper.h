@@ -199,6 +199,13 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Put(proto));
   }
 
+  std::unique_ptr<std::vector<uint8_t>> delete_impl(
+      rust::Slice<const uint8_t> ns, rust::Slice<const uint8_t> uri) const {
+    std::string namespace_str = RustSliceToString(ns);
+    std::string uri_str = RustSliceToString(uri);
+    return ProtoToVec(inner_->Delete(namespace_str, uri_str));
+  }
+
   std::unique_ptr<std::vector<uint8_t>> search_impl(
       rust::Slice<const uint8_t> search_spec,
       rust::Slice<const uint8_t> scoring_spec,
