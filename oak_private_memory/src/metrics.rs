@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use oak_containers_agent::metrics::OakObserver;
-use opentelemetry::metrics::Counter;
+use opentelemetry::{metrics::Counter, KeyValue};
 
 pub struct Metrics {
     // Total number of RPCs received by the private memory server.
@@ -38,6 +38,10 @@ impl Metrics {
             .u64_counter("rpc_failure_count")
             .with_description("Number of RPCs that failed.")
             .init();
+        // Initialize the total count to 0 to trigger the metric registration.
+        // Otherwise, the metric will only show up once it has been incremented.
+        rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
+        rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         Self { rpc_count, rpc_failure_count }

@@ -80,9 +80,20 @@ impl SealedMemoryServiceImplementation {
                     .into_tonic_result("failed to encrypt response")?,
             ))
         } else {
-            server_session
+            application_handler
+                .metrics
+                .rpc_count
+                .add(1, &[KeyValue::new("request_type", "Handshake")]);
+            let response = server_session
                 .init_session(session_request)
-                .into_tonic_result("failed process handshake")
+                .into_tonic_result("failed process handshake");
+            if response.is_err() {
+                application_handler
+                    .metrics
+                    .rpc_failure_count
+                    .add(1, &[KeyValue::new("request_type", "Handshake")]);
+            }
+            response
         }
     }
 }
@@ -185,6 +196,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
+                application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
                 let session_request = request?.session_request.ok_or_else(|| tonic::Status::internal("failed to get session request"))?;
 
                 if let Some(response) = Self::handle_session_request(&application_handler,
