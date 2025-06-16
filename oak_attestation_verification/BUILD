@@ -220,7 +220,7 @@ rust_test_suite(
 )
 
 rust_binary(
-    name = "verify_endorsement",
+    name = "endorscope",
     srcs = glob(["main/**"]),
     data = ["//oak_attestation_verification/testdata:endorsement"],
     deps = [

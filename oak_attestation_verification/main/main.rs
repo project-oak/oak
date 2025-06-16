@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-// Thin wrapper around oak_attestation_verification::verify_endorsement().
+// Endorscope tool: lists and verifies endorsements on static storage.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
