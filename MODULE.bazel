@@ -18,6 +18,9 @@ bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf"
 # https://github.com/google/googletest
 bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
 
+# https://github.com/google/re2
+bazel_dep(name = "re2", version = "2024-07-02", repo_name = "com_google_re2")
+
 # https://github.com/abseil/abseil-cpp
 bazel_dep(name = "abseil-cpp", version = "20250127.1", repo_name = "com_google_absl")
 

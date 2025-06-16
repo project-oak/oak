@@ -170,6 +170,8 @@ extern ffi::bindings::Error* client_write(ClientSession*,
                                           ffi::bindings::BytesView);
 extern ffi::bindings::ErrorOrRustBytes client_get_session_binding_token(
     ClientSession*, ffi::bindings::BytesView);
+extern ffi::bindings::ErrorOrRustBytes client_get_peer_attestation_evidence(
+    ClientSession*);
 extern void free_client_session(ClientSession*);
 
 // Corresponds to functions in oak_session/ffi/server_session.rs
@@ -184,6 +186,8 @@ extern ffi::bindings::Error* server_write(ServerSession*,
                                           ffi::bindings::BytesView);
 extern ffi::bindings::ErrorOrRustBytes server_get_session_binding_token(
     ServerSession*, ffi::bindings::BytesView);
+extern ffi::bindings::ErrorOrRustBytes server_get_peer_attestation_evidence(
+    ServerSession*);
 extern void free_server_session(ServerSession*);
 }
 

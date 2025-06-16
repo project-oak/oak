@@ -16,7 +16,10 @@
 
 use oak_ffi_bytes::BytesView;
 use oak_ffi_error::{Error, ErrorOrRustBytes};
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionResponse};
+use oak_proto_rust::oak::{
+    attestation::v1::CollectedAttestation,
+    session::v1::{PlaintextMessage, SessionResponse},
+};
 use oak_session::{
     config::SessionConfig,
     session::{ClientSession, Session},
@@ -228,6 +231,38 @@ pub unsafe extern "C" fn client_get_session_binding_token(
 fn safe_client_get_session_binding_token(session: &ClientSession, info: &[u8]) -> ErrorOrRustBytes {
     match session.get_session_binding_token(info) {
         Ok(st) => ErrorOrRustBytes::ok(st.into_boxed_slice()),
+        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+    }
+}
+
+/// Calls [`ClientSession::get_peer_attestation_evidence`].
+///
+/// If the call results in an error, the `error` field of the result will be
+/// populated with a string description of the Rust error.
+///
+/// The returned [`RustBytes`] will be the serialized `CollectedAttestation`
+/// proto.
+///
+/// # Safety
+///
+/// The provided [`ClientSession`] pointer should be non-null, properly aligned,
+/// and points to a valid [`ClientSession`] instance.
+#[no_mangle]
+pub unsafe extern "C" fn client_get_peer_attestation_evidence(
+    session: *const ClientSession,
+) -> ErrorOrRustBytes {
+    safe_client_get_peer_attestation_evidence(&*session)
+}
+
+fn safe_client_get_peer_attestation_evidence(session: &ClientSession) -> ErrorOrRustBytes {
+    match session.get_peer_attestation_evidence() {
+        Ok(session_evidence) => {
+            let proto_evidence = CollectedAttestation {
+                endorsed_evidence: session_evidence.evidence,
+                ..Default::default()
+            };
+            ErrorOrRustBytes::ok(Message::encode_to_vec(&proto_evidence).into_boxed_slice())
+        }
         Err(e) => ErrorOrRustBytes::err(e.to_string()),
     }
 }

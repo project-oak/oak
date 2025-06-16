@@ -148,6 +148,25 @@ absl::StatusOr<ffi::RustBytes> ClientSession::GetSessionBindingToken(
   return ffi::RustBytes(result.result);
 }
 
+absl::StatusOr<oak::attestation::v1::CollectedAttestation>
+ClientSession::GetPeerAttestationEvidence() {
+  const ffi::bindings::ErrorOrRustBytes result =
+      bindings::client_get_peer_attestation_evidence(rust_session_);
+  if (result.error != nullptr) {
+    return ffi::bindings::ErrorIntoStatus(result.error);
+  }
+
+  oak::attestation::v1::CollectedAttestation attestation;
+  if (!attestation.ParseFromArray(result.result->data, result.result->len)) {
+    ffi::bindings::free_rust_bytes(result.result);
+    return absl::InternalError(
+        "Failed to parse GetPeerAttestationEvidence result bytes as "
+        "CollectedAttestation");
+  }
+  ffi::bindings::free_rust_bytes(result.result);
+  return attestation;
+}
+
 ClientSession::~ClientSession() {
   bindings::free_client_session(rust_session_);
 }

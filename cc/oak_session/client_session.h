@@ -24,6 +24,7 @@
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/config.h"
 #include "cc/oak_session/oak_session_bindings.h"
+#include "proto/attestation/verification.pb.h"
 #include "proto/session/session.pb.h"
 
 #ifndef CC_OAK_SESSION_CLIENT_SESSION_H_
@@ -66,7 +67,24 @@ class ClientSession {
   // should be copied (for example, by creating a std::string from it.)
   absl::StatusOr<std::optional<ffi::RustBytes>> ReadToRustBytes();
 
+  // Returns a unique `SessionBindingToken` for this session.
+  //
+  // This token can be used by the application to bind other data or
+  // operations to the security properties (authentication, encryption)
+  // of this specific session. `info_string` allows for domain separation
+  // if multiple tokens are needed for different purposes within the same
+  // session.
+  //
+  // This method can only be called successfully when `IsOpen()` is true.
   absl::StatusOr<ffi::RustBytes> GetSessionBindingToken(absl::string_view info);
+
+  // Retrieves the peer's attestation evidence.
+  //
+  // Returns a `oak::attestation::v1::CollectedAttestation` proto containing
+  // the evidence, or an error status if the operation fails (e.g., session
+  // not open, FFI error, or deserialization failure).
+  absl::StatusOr<oak::attestation::v1::CollectedAttestation>
+  GetPeerAttestationEvidence();
 
  private:
   explicit ClientSession(bindings::ClientSession* rust_session)

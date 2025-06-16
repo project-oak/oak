@@ -24,6 +24,7 @@
 #include "cc/oak_session/client_session.h"
 #include "cc/oak_session/server_session.h"
 #include "cc/oak_session/testing/matchers.h"
+#include "cc/testing/protocol-buffer-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "proto/session/session.pb.h"
@@ -36,6 +37,8 @@ using ::absl_testing::IsOkAndHolds;
 using ::oak::ffi::RustBytes;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
+using ::oak::testing::proto_matchers::EqualsProto;
+using ::oak::testing::proto_matchers::proto::Partially;
 using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Optional;
@@ -98,7 +101,7 @@ SessionConfig* TestConfigAttestedNNClient() {
       ffi::bindings::BytesView(kFakeEvent),
       ffi::bindings::BytesView(kFakePlatform));
 
-  return SessionConfigBuilder(AttestationType::kSelfUnidirectional,
+  return SessionConfigBuilder(AttestationType::kPeerUnidirectional,
                               HandshakeType::kNoiseNN)
       .AddPeerVerifier(kFakeAttesterId, verifier)
       .Build();
@@ -174,6 +177,11 @@ TEST(ClientServerSessionTest, UnattestedNNHandshakeProvidesSessionToken) {
 
   EXPECT_THAT(*client_session_binding_token,
               Eq(absl::string_view(*server_session_binding_token)));
+
+  EXPECT_THAT((*server_session)->GetPeerAttestationEvidence(),
+              IsOkAndHolds(EqualsProto(R"pb()pb")));
+  EXPECT_THAT((*client_session)->GetPeerAttestationEvidence(),
+              IsOkAndHolds(EqualsProto(R"pb()pb")));
 }
 
 TEST(ClientServerSessionTest,
@@ -200,6 +208,23 @@ TEST(ClientServerSessionTest, AttestedNNHandshakeSucceeds) {
   auto server_session = ServerSession::Create(TestConfigAttestedNNServer());
 
   DoHandshake(**client_session, **server_session);
+
+  EXPECT_THAT((*server_session)->GetPeerAttestationEvidence(),
+              IsOkAndHolds(EqualsProto(R"pb()pb")));
+  EXPECT_THAT(
+      (*client_session)->GetPeerAttestationEvidence(),
+      IsOkAndHolds(Partially(EqualsProto(R"pb(
+        endorsed_evidence {
+          key: "fake_attester"
+          value {
+            evidence {
+              application_keys {}
+              event_log { encoded_events: "fake event" }
+            }
+            endorsements { platform { id: "fake" value: "fake platform" } }
+          }
+        }
+      )pb"))));
 }
 
 TEST(ClientServerSessionTest, UnattestedNKHandshakeSucceeds) {
