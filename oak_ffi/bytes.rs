@@ -149,5 +149,31 @@ pub unsafe extern "C" fn free_rust_bytes(bytes: *const RustBytes) {
 ///    function.
 #[no_mangle]
 pub unsafe extern "C" fn free_rust_bytes_contents(bytes: RustBytes) {
+    if bytes.data.is_null() {
+        return;
+    }
     drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn empty_rust_bytes() {
+        unsafe {
+            let data = Box::new([]);
+            let bytes: *const RustBytes = Box::into_raw(Box::new(RustBytes::new(data)));
+            free_rust_bytes(bytes);
+        }
+    }
+
+    #[test]
+    fn rust_bytes() {
+        unsafe {
+            let data = Box::new([1, 2, 3]);
+            let bytes: *const RustBytes = Box::into_raw(Box::new(RustBytes::new(data)));
+            free_rust_bytes(bytes);
+        }
+    }
 }

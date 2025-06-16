@@ -39,6 +39,11 @@ rust_library(
     srcs = ["bytes.rs"],
 )
 
+rust_test(
+    name = "oak_ffi_bytes_test",
+    crate = ":oak_ffi_bytes",
+)
+
 rust_library(
     name = "oak_ffi_error",
     srcs = ["error.rs"],
