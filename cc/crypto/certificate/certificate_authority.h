@@ -37,9 +37,17 @@ class CertificateAuthority {
                                 std::unique_ptr<Clock> clock)
       : signer_(std::move(signer)), clock_(std::move(clock)) {}
 
-  absl::StatusOr<::oak::crypto::v1::Certificate> GenerateCertificate(
+  absl::StatusOr<oak::crypto::v1::Certificate> GenerateCertificate(
       absl::string_view subject_public_key, absl::string_view purpose_id,
-      absl::Duration validity_duration);
+      absl::Duration validity_duration) {
+    return GenerateCertificate(subject_public_key, purpose_id,
+                               validity_duration, nullptr);
+  }
+
+  absl::StatusOr<oak::crypto::v1::Certificate> GenerateCertificate(
+      absl::string_view subject_public_key, absl::string_view purpose_id,
+      absl::Duration validity_duration,
+      oak::crypto::v1::ProofOfFreshness* proof_of_freshness_nullable);
 
  private:
   std::unique_ptr<SigningKeyHandle> signer_;

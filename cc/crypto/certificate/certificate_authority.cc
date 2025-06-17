@@ -35,6 +35,7 @@ namespace {
 using google::protobuf::Timestamp;
 using ::oak::crypto::v1::Certificate;
 using ::oak::crypto::v1::CertificatePayload;
+using ::oak::crypto::v1::ProofOfFreshness;
 using ::oak::crypto::v1::Signature;
 using ::oak::crypto::v1::SignatureInfo;
 using ::oak::crypto::v1::SubjectPublicKeyInfo;
@@ -43,7 +44,8 @@ using ::oak::crypto::v1::Validity;
 
 absl::StatusOr<Certificate> CertificateAuthority::GenerateCertificate(
     absl::string_view subject_public_key, absl::string_view purpose_id,
-    absl::Duration validity_duration) {
+    absl::Duration validity_duration,
+    ProofOfFreshness* proof_of_freshness_nullable) {
   // Set certificate validity.
   const absl::Time not_before = clock_->CurrentTime();
   const absl::Time not_after = not_before + validity_duration;
@@ -70,6 +72,11 @@ absl::StatusOr<Certificate> CertificateAuthority::GenerateCertificate(
   *certificate_payload.mutable_validity() = validity;
   *certificate_payload.mutable_subject_public_key_info() =
       subject_public_key_info;
+
+  if (proof_of_freshness_nullable != nullptr) {
+    *certificate_payload.mutable_proof_of_freshness() =
+        *proof_of_freshness_nullable;
+  }
 
   std::string serialized_certificate_payload =
       certificate_payload.SerializeAsString();
