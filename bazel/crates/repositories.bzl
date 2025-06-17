@@ -79,6 +79,7 @@ def create_oak_crate_repositories(
         supported_platform_triples = [
             "x86_64-unknown-linux-gnu",
             "x86_64-unknown-none",
+            "aarch64-apple-darwin",
         ],
     )
 

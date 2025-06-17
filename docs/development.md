@@ -216,3 +216,33 @@ Each test:
 
 We aspire for a transparent process for building and releasing Oak binaries. See
 the [build and release documentation](release.md) for more information.
+
+## Mac OS
+
+Support for Mac OS is very limited at the moment.
+
+The recommended way of installing Nix is via the
+[determinate installer](https://docs.determinate.systems/).
+
+Once that is installed, the instructions above should mostly work. Note that
+several dependencies are excluded from tne nix shell for Mac OS, therefore not
+everything will actually build. The linux-only dependencies are behind an
+optional in the `flake.nix` file:
+
+```nix
+              ...
+              # Linux-specific dependencies.
+              lib.optionals stdenv.isLinux [
+                systemd
+              ];
+              ...
+```
+
+To test whether things work end-to-end, you can try running the following
+command:
+
+```console
+bazel run linter:linter
+```
+
+which should work natively.

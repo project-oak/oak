@@ -50,6 +50,7 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     target_compatible_with = any_platform([
+        "//:aarch64-apple-setting",
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",

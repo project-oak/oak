@@ -29,6 +29,7 @@ rust_library(
         "no_std",
     ],
     target_compatible_with = any_platform([
+        "//:aarch64-apple-setting",
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",

@@ -1,7 +1,7 @@
 {
   description = "oak";
   inputs = {
-    systems.url = "github:nix-systems/x86_64-linux";
+    systems.url = "github:nix-systems/default";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     flake-utils.inputs.systems.follows = "systems";
@@ -24,6 +24,7 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
+          inherit (pkgs) lib stdenv;
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -87,10 +88,14 @@
                 cargo-vet
                 protobuf
                 buf # utility to convert binary protobuf to json; for breaking change detection.
-                systemd
                 qemu_kvm
                 python312
                 wasm-pack
+              ]
+              ++
+              # Linux-specific dependencies.
+              lib.optionals stdenv.isLinux [
+                systemd
               ];
             };
             # Minimal shell with only the dependencies needed to run the format and check-format
@@ -144,18 +149,22 @@
                 cpio
                 curl
                 docker
-                elfutils
                 fakeroot
                 flex
                 jq
                 libelf
                 perl
                 strip-nondeterminism
-                glibc
-                glibc.static
                 ncurses
                 netcat
                 umoci
+              ] 
+              ++ 
+              # Linux-specific dependencies.
+              lib.optionals stdenv.isLinux [
+                elfutils
+                glibc
+                glibc.static
               ];
             };
             # Shell for most CI steps (i.e. without containers support).

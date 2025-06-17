@@ -27,6 +27,7 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
     target_compatible_with = any_platform([
+        "//:aarch64-apple-setting",
         "//:x86_64-linux-setting",
         "//:x86_64-none-no_avx-setting",
         "//:x86_64-none-setting",

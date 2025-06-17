@@ -161,6 +161,14 @@ selects.config_setting_group(
     ],
 )
 
+selects.config_setting_group(
+    name = "aarch64-apple-setting",
+    match_all = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:osx",
+    ],
+)
+
 filegroup(
     name = "clang_tidy_config",
     srcs = [".clang-tidy"],

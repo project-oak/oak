@@ -21,6 +21,7 @@ package(
     licenses = ["notice"],
 )
 
+# TODO: b/427550226 - Make this work on Mac OS.
 rust_binary(
     name = "endorscope",
     srcs = glob(["src/**"]),
