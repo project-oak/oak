@@ -105,6 +105,25 @@ fn list_endorser_keys(
     endorser_keys
 }
 
+const PUBLISHED_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
+const RUNNABLE_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md";
+const OPEN_SOURCE_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
+
+const EXPECTED_CLAIMS: &[&str] =
+    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE];
+
+fn prettify_claim(claim: &str) -> String {
+    match claim {
+        OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
+        RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
+        PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
+        _ => claim.to_string(),
+    }
+}
+
 fn list_endorsements(
     loader: &endorsement_loader::ContentAddressableEndorsementLoader,
     endorser_key_hash: &str,
@@ -123,7 +142,9 @@ fn list_endorsements(
         endorser_key_hash
     );
 
-    for endorsement_hash in endorsement_hashes {
+    // The index is append-only so we iterate backwards to show the most recent
+    // endorsements first.
+    for endorsement_hash in endorsement_hashes.iter().rev() {
         let result = loader
             .load_endorsement(endorsement_hash.as_str())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
@@ -139,9 +160,39 @@ fn list_endorsements(
             let result = verify_endorsement(now_utc_millis, &endorsement, &reference_values)
                 .context("verifying endorsement");
             if result.is_err() {
-                println!("❌  {endorsement_hash}: {:?}", result.err().unwrap());
+                println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
             } else {
-                println!("✅  {endorsement_hash}");
+                println!("    ✅  {endorsement_hash}");
+                let statement = result.unwrap();
+                match &statement.validity {
+                    Some(v) => {
+                        println!("        Validity:  {} - {}", v.not_before, v.not_after);
+                    }
+                    None => {
+                        println!("        Validity:  missing");
+                    }
+                }
+                match &statement.subject_digest {
+                    Some(digest) => {
+                        println!("        Subject:   sha2-256:{}", hex::encode(&digest.sha2_256));
+                    }
+                    None => {
+                        println!("        Subject:   missing");
+                    }
+                }
+                for e in EXPECTED_CLAIMS {
+                    let claim = statement.claim_types.iter().find(|c| c.as_str() == *e);
+                    if claim.is_none() {
+                        println!("        ❌  {}", prettify_claim(e));
+                    } else {
+                        println!("        🛄  {}", prettify_claim(e));
+                    }
+                }
+                for c in statement.claim_types {
+                    if !EXPECTED_CLAIMS.contains(&c.as_str()) {
+                        println!("        🛄  {}", prettify_claim(&c));
+                    }
+                }
             }
         }
     }
