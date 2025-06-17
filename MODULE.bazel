@@ -6,6 +6,21 @@
 ###############################################################################
 module(name = "oak")
 
+# https://github.com/bazel-contrib/bazel-lib
+bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
+
+# https://github.com/bazelbuild/bazel-skylib
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+
+# https://github.com/grpc/grpc-java
+bazel_dep(name = "grpc-java", version="1.71.0", repo_name = "io_grpc_grpc_java")
+
+# https://github.com/bazelbuild/platforms
+bazel_dep(name = "platforms", version = "0.0.11")
+
+# https://github.com/bazelbuild/rules_cc
+bazel_dep(name = "rules_cc", version="0.1.1")
+
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 
@@ -54,3 +69,12 @@ use_repo(android_sdk_repository_extension, "androidsdk")
 register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
 
 bazel_dep(name = "rules_kotlin", version = "2.1.4")
+
+umoci_toolchain_repo = use_repo_rule("//bazel/tools/umoci:umoci_toolchain.bzl", "_umoci_toolchain_repo")
+
+umoci_toolchain_repo(
+    name = "umoci",
+)
+
+register_toolchains("@umoci//:umoci_toolchain")
+
