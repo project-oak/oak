@@ -39,12 +39,11 @@ use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
     oak::{
         attestation::v1::{
-            binary_reference_value, endorsements, reference_values,
-            session_binding_public_key_endorsement, AmdSevSnpEndorsement, CbReferenceValues,
-            CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
-            OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
-            SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement, SkipVerification,
-            TinkEndorsement,
+            binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement,
+            CbReferenceValues, CertificateAuthorityEndorsement, Endorsements, Event, EventLog,
+            Evidence, OakContainersReferenceValues, OakRestrictedKernelReferenceValues,
+            ReferenceValues, SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement,
+            SkipVerification,
         },
         crypto::v1::{
             Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
@@ -294,19 +293,16 @@ fn create_test_certificate(signature: &[u8]) -> Certificate {
 
 fn create_public_key_endorsement(signature: &[u8]) -> SessionBindingPublicKeyEndorsement {
     SessionBindingPublicKeyEndorsement {
-        // TODO: b/417151897 - Remove once clients stop using raw signatures.
-        r#type: Some(session_binding_public_key_endorsement::Type::TinkEndorsement(
-            TinkEndorsement { signature: signature.to_vec() },
-        )),
         ca_endorsement: Some(CertificateAuthorityEndorsement {
             certificate: Some(create_test_certificate(signature)),
         }),
+        ..Default::default()
     }
 }
 
 fn create_public_key_endorsements(signature: &[u8]) -> Endorsements {
-    let tink_endorsement = create_public_key_endorsement(signature);
-    Endorsements { events: vec![tink_endorsement.into()], ..Default::default() }
+    let ca_endorsement = create_public_key_endorsement(signature);
+    Endorsements { events: vec![ca_endorsement.into()], ..Default::default() }
 }
 
 lazy_static::lazy_static! {
@@ -443,6 +439,22 @@ fn session_binding_key_policy_fails_with_incorrect_endorsement_id() {
         value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
     };
     let result = policy.verify(&event, &endorsement_wrong_id, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_fails_with_empty_ca_endorsement() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Empty CA endorsement.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let empty_ca_endorsement: Variant =
+        SessionBindingPublicKeyEndorsement { ca_endorsement: None, ..Default::default() }.into();
+    let result = policy.verify(&event, &empty_ca_endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
