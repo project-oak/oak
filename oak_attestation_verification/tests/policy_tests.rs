@@ -94,8 +94,8 @@ const TEST_WRONG_SIGNATURE: [u8; 4] = [12, 13, 14, 15];
 
 const TEST_MILLISECONDS_SINCE_EPOCH: i64 = 1_000_000;
 
-// For RK testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
-const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
+// For RK testdata: Pretend the tests runs on 01 July 2025, 12:00 UTC.
+const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1751371200000;
 
 // For OC testdata: Pretend the tests runs on 01 June 2025, 12:00 UTC.
 const OC_MILLISECONDS_SINCE_EPOCH: i64 = 1748779200000;

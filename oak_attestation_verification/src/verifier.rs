@@ -139,7 +139,7 @@ impl AttestationVerifier for EventLogVerifier {
 
 pub struct AmdSevSnpDiceAttestationVerifier {
     platform_policy: AmdSevSnpPolicy,
-    _firmware_policy: Box<dyn EventPolicy>,
+    firmware_policy: Box<dyn EventPolicy>,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
 }
@@ -151,7 +151,7 @@ impl AmdSevSnpDiceAttestationVerifier {
         event_policies: Vec<Box<dyn EventPolicy>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        Self { platform_policy, _firmware_policy: firmware_policy, event_policies, clock }
+        Self { platform_policy, firmware_policy, event_policies, clock }
     }
 }
 
@@ -175,7 +175,6 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             &root_layer.remote_attestation_report,
         )
         .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
-        let _firmware_measurement = &attestation_report.data.measurement;
 
         // Verify AMD SEV-SNP platform authenticity and configuration.
         let platform_endorsement = endorsements
@@ -196,38 +195,39 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         let _ = verify_dice_chain(evidence).context("couldn't verify DICE chain")?;
 
         // Verify firmware measurement.
-        let _firmware_endorsement = &endorsements
+        let firmware_endorsement = &endorsements
             .initial
             .as_ref()
             .context("firmware endorsement wasn't provided in endorsements")?;
-        // TODO: b/408161319 - Fix firmware verification policy.
-        // let firmwate_attestation_result = self.firmware_policy
-        //     .verify(firmware_measurement, firmware_endorsement,
-        // milliseconds_since_epoch)     .context("couldn't verify firmware")?;
+        let firmware_attestation_result = self
+            .firmware_policy
+            .verify(
+                &attestation_report.data.measurement,
+                firmware_endorsement,
+                milliseconds_since_epoch,
+            )
+            .context("couldn't verify firmware")?;
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence
             .event_log
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
-        let event_attestation_results = if !endorsements.events.is_empty() {
-            let event_endorsements = &endorsements.events;
+        let mut event_attestation_results = Vec::new();
+        event_attestation_results.push(firmware_attestation_result);
+        if !endorsements.events.is_empty() {
             let results = verify_event_log(
                 event_log,
-                event_endorsements,
+                &endorsements.events,
                 self.event_policies.as_slice(),
                 milliseconds_since_epoch,
             )
             .context("couldn't verify event log")?;
 
             verify_event_artifacts_uniqueness(&results)
-                .context("couldn't verify event artifacts ID uniqueness")?;
-            results
-        } else {
-            Vec::new()
-        };
-        // TODO: b/408161319 - Fix firmware verification policy.
-        // event_attestation_results.push(firmwate_attestation_result);
+                .context("couldn't verify event artifacts uniqueness")?;
+            event_attestation_results.extend(results);
+        }
 
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
