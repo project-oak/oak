@@ -19,15 +19,15 @@ load("//bazel/private:oci_runtime_bundle.bzl", _oci_runtime_bundle = "oci_runtim
 
 oci_runtime_bundle = _oci_runtime_bundle
 
-def either_platform(platform_list):
-    """Helper to mark either platform from platform_list as compatible.
+def any_platform(platform_list):
+    """Helper to mark any platform from platform_list as compatible.
 
     Generates a `select` expression to use with `target_compatible_with`
     meaning that any of the platforms given is compatible.
 
     Example:
     ```
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting"
     ]),

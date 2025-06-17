@@ -16,7 +16,7 @@
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -29,7 +29,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
     ]),

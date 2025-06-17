@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -33,7 +33,7 @@ rust_library(
     proc_macro_deps = [
         "//oak_restricted_kernel_sdk_proc_macro",
     ],
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
     ]),

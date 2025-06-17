@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -26,7 +26,7 @@ rust_library(
     name = "stage0_dice",
     srcs = glob(["src/**"]),
     crate_name = "oak_stage0_dice",
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing of stage0.

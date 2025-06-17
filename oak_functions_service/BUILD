@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -47,7 +47,7 @@ rust_library(
     # will not have sensitive logging enabled.
     crate_features = ["deny_sensitive_logging"],
     crate_name = "oak_functions_service",
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
     ]),
@@ -59,7 +59,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     crate_features = ["allow_sensitive_logging"],
     crate_name = "oak_functions_service",
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
     ]),

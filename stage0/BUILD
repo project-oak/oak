@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -28,7 +28,7 @@ rust_library(
     crate_features = [
         "sev",
     ],
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
@@ -73,7 +73,7 @@ rust_library(
         "sev",
         "stage0_test",
     ],
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.

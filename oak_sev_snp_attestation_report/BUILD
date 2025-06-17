@@ -15,7 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "either_platform")
+load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -25,7 +25,7 @@ package(
 rust_library(
     name = "oak_sev_snp_attestation_report",
     srcs = glob(["src/**"]),
-    target_compatible_with = either_platform([
+    target_compatible_with = any_platform([
         "//:x86_64-linux-setting",
         "//:x86_64-none-setting",
         "//:x86_64-none-no_avx-setting",
