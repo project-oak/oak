@@ -62,23 +62,17 @@ absl::Status ServerSession::PutIncomingMessage(
 
 absl::StatusOr<std::optional<v1::SessionResponse>>
 ServerSession::GetOutgoingMessage() {
-  const ffi::bindings::ErrorOrRustBytes result =
-      bindings::server_get_outgoing_message(rust_session_);
-  if (result.error != nullptr) {
-    return ffi::bindings::ErrorIntoStatus(result.error);
-  }
+  auto result = ffi::ErrorIntoRustBytes(
+      bindings::server_get_outgoing_message(rust_session_));
+  if (!result.ok()) return result.status();
 
-  if (result.result == nullptr) {
-    return std::nullopt;
-  }
+  if (!result->has_value()) return std::nullopt;
 
   v1::SessionResponse response;
-  if (!response.ParseFromArray(result.result->data, result.result->len)) {
+  if (!response.ParseFromString(**result)) {
     return absl::InternalError(
         "Failed to parse GetOutoingMessage result bytes as SessionResponse");
   }
-
-  ffi::bindings::free_rust_bytes(result.result);
   return response;
 }
 
@@ -95,72 +89,53 @@ absl::Status ServerSession::Write(absl::string_view unencrypted_request) {
 }
 
 absl::StatusOr<std::optional<v1::PlaintextMessage>> ServerSession::Read() {
-  const ffi::bindings::ErrorOrRustBytes result =
-      bindings::server_read(rust_session_);
-  if (result.error != nullptr) {
-    return ffi::bindings::ErrorIntoStatus(result.error);
-  }
+  auto result = ffi::ErrorIntoRustBytes(bindings::server_read(rust_session_));
+  if (!result.ok()) return result.status();
 
-  if (result.result == nullptr) {
-    return std::nullopt;
-  }
+  if (!result->has_value()) return std::nullopt;
 
   v1::PlaintextMessage plaintext_message_result;
-  plaintext_message_result.set_plaintext(result.result->data,
-                                         result.result->len);
-
-  ffi::bindings::free_rust_bytes(result.result);
+  plaintext_message_result.set_plaintext(**result);
   return plaintext_message_result;
 }
 
 absl::StatusOr<std::optional<ffi::RustBytes>> ServerSession::ReadToRustBytes() {
-  const ffi::bindings::ErrorOrRustBytes result =
-      bindings::server_read(rust_session_);
-  if (result.error != nullptr) {
-    return ffi::bindings::ErrorIntoStatus(result.error);
-  }
+  auto result = ffi::ErrorIntoRustBytes(bindings::server_read(rust_session_));
+  if (!result.ok()) return result.status();
 
-  if (result.result == nullptr) {
-    return std::nullopt;
-  }
+  if (!result->has_value()) return std::nullopt;
 
-  return ffi::RustBytes(result.result);
+  return *std::move(*result);
 }
 
 absl::StatusOr<ffi::RustBytes> ServerSession::GetSessionBindingToken(
     absl::string_view info) {
-  const ffi::bindings::ErrorOrRustBytes result =
-      bindings::server_get_session_binding_token(
-          rust_session_, ffi::bindings::BytesView(info));
-  if (result.error != nullptr) {
-    return ffi::bindings::ErrorIntoStatus(result.error);
-  }
+  auto result =
+      ffi::ErrorIntoRustBytes(bindings::server_get_session_binding_token(
+          rust_session_, ffi::bindings::BytesView(info)));
+  if (!result.ok()) return result.status();
 
-  if (result.result == nullptr) {
+  if (!result->has_value()) {
     return absl::InternalError(
         "Unexpected empty hash without error. This is a library error, please "
         "report a bug.");
   }
 
-  return ffi::RustBytes(result.result);
+  return *std::move(*result);
 }
 
 absl::StatusOr<oak::attestation::v1::CollectedAttestation>
 ServerSession::GetPeerAttestationEvidence() {
-  const ffi::bindings::ErrorOrRustBytes result =
-      bindings::server_get_peer_attestation_evidence(rust_session_);
-  if (result.error != nullptr) {
-    return ffi::bindings::ErrorIntoStatus(result.error);
-  }
+  auto result = ffi::ErrorIntoRustBytes(
+      bindings::server_get_peer_attestation_evidence(rust_session_));
+  if (!result.ok()) return result.status();
 
   oak::attestation::v1::CollectedAttestation attestation;
-  if (!attestation.ParseFromArray(result.result->data, result.result->len)) {
-    ffi::bindings::free_rust_bytes(result.result);
+  if (result->has_value() && !attestation.ParseFromString(**result)) {
     return absl::InternalError(
         "Failed to parse GetPeerAttestationEvidence result bytes as "
         "CollectedAttestation");
   }
-  ffi::bindings::free_rust_bytes(result.result);
   return attestation;
 }
 

@@ -45,6 +45,8 @@ cc_library(
     hdrs = ["rust_bytes.h"],
     deps = [
         ":bytes_bindings",
+        ":error_bindings",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:string_view",
     ],
 )

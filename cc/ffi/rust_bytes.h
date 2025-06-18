@@ -17,8 +17,10 @@
 #include <string>
 #include <utility>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/ffi/bytes_bindings.h"
+#include "cc/ffi/error_bindings.h"
 
 #ifndef CC_OAK_SESSION_RUST_BYTES_H_
 #define CC_OAK_SESSION_RUST_BYTES_H_
@@ -97,6 +99,20 @@ class RustBytes {
 
 inline bool operator==(const RustBytes& lhs, absl::string_view rhs) {
   return static_cast<absl::string_view>(lhs) == rhs;
+}
+
+// A convenience function to create a new absl::StatusOr<RustBytes> instance
+// containing a message populated from the provided error, taking ownership
+// of all related pointers.
+inline absl::StatusOr<std::optional<RustBytes>> ErrorIntoRustBytes(
+    ffi::bindings::ErrorOrRustBytes&& error_or_rust_bytes) {
+  if (error_or_rust_bytes.error != nullptr) {
+    return ffi::bindings::ErrorIntoStatus(error_or_rust_bytes.error);
+  }
+
+  if (error_or_rust_bytes.result == nullptr) return std::nullopt;
+
+  return RustBytes(error_or_rust_bytes.result);
 }
 
 }  // namespace oak::ffi
