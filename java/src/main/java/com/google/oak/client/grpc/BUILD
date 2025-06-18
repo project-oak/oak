@@ -38,6 +38,22 @@ kt_jvm_library(
     ],
 )
 
+kt_jvm_library(
+    name = "stream_observer_session_client_no_jni",
+    srcs = [
+        "StreamObserverSessionClient.kt",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/session:client_session_no_jni",
+        "//java/src/main/java/com/google/oak/session:exception",
+        "//java/src/main/java/com/google/oak/session:session_config_builder_no_jni",
+        "//proto/session:session_java_proto",
+        "@com_google_protobuf//java/core",
+        "@io_grpc_grpc_java//stub",
+        "@javax_inject_javax_inject",
+    ],
+)
+
 kt_android_library(
     name = "stream_observer_session_client_android",
     srcs = [
@@ -47,6 +63,23 @@ kt_android_library(
         "//java/src/main/java/com/google/oak/session:client_session_android",
         "//java/src/main/java/com/google/oak/session:exception_android",
         "//java/src/main/java/com/google/oak/session:session_config_builder_android",
+        "//proto/session:session_java_proto",
+        "@com_google_protobuf//java/lite",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//stub",
+        "@javax_inject_javax_inject",
+    ],
+)
+
+kt_android_library(
+    name = "stream_observer_session_client_no_jni_android",
+    srcs = [
+        "StreamObserverSessionClient.kt",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/session:client_session_no_jni_android",
+        "//java/src/main/java/com/google/oak/session:exception_android",
+        "//java/src/main/java/com/google/oak/session:session_config_builder_no_jni_android",
         "//proto/session:session_java_proto",
         "@com_google_protobuf//java/lite",
         "@io_grpc_grpc_java//api",
