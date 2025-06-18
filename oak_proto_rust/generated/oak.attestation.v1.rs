@@ -110,6 +110,7 @@ pub struct EventLog {
     /// form is used instead of `repeated Event events` as proto serialization is
     /// non-deterministic and attestation evidence contains signatures over the
     /// digest of serialized events.
+    /// TODO: b/389059744 - Use a repeated Variant field instead.
     #[prost(bytes = "vec", repeated, tag = "2")]
     pub encoded_events: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
