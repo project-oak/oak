@@ -8,21 +8,36 @@ function configure_common_env() {
   export JUST_TIMESTAMP_FORMAT='JUST:%H:%M:%S%.3f'
 }
 
+function _install_tmp_bazelrc() {
+  readonly B=./.tmp.ci.bazelrc
+  local contents="$1"
+  if [[ -f ${B} ]]; then
+    local actual=$(cat "${B}")
+    if [[ "${actual}" != "${contents}" ]]; then
+      >&2 echo "Failed precondition: Read ${actual}, expected ${contents}"
+      exit 1
+    fi
+  else
+    echo "${contents}" > "${B}"
+    >&2 echo "Installed ${B} with \"${contents}\""
+    # shellcheck disable=SC2064
+    trap "rm --force ${B}" EXIT
+  fi
+}
+
 function configure_bazelrc() {
   JOB_TYPE=${KOKORO_JOB_TYPE:-local}
-  if [ "$JOB_TYPE" == "SUB_JOB" ]
-  then
+  if [ "$JOB_TYPE" == "SUB_JOB" ]; then
     JOB_TYPE=${KOKORO_ROOT_JOB_TYPE:-local}
   fi
 
   echo "Using JOB_TYPE: ${JOB_TYPE}"
 
   if [ "$JOB_TYPE" == "PRESUBMIT_GERRIT_ON_BORG" ]; then
-    echo "build --config=unsafe-fast-presubmit" >> ./.tmp.ci.bazelrc
+    _install_tmp_bazelrc "build --config=unsafe-fast-presubmit"
   elif [ "$JOB_TYPE" == "CONTINUOUS_INTEGRATION" ]; then
-    echo "build --config=ci" >> ./.tmp.ci.bazelrc
+    _install_tmp_bazelrc "build --config=ci"
   else
-    touch ./.tmp.ci.bazelrc
+    _install_tmp_bazelrc ""
   fi
-  trap "rm --force ./.tmp.ci.bazelrc" EXIT
 }

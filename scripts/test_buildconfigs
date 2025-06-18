@@ -13,9 +13,6 @@ export XDG_RUNTIME_DIR=/var/run
 export JUST_TIMESTAMP=true
 export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
 
-echo "build --config=ci" >> ./.tmp.ci.bazelrc
-trap 'rm ./.tmp.ci.bazelrc' EXIT
-
 failures=()
 
 check_buildconfig () {
