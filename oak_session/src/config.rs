@@ -43,8 +43,9 @@ use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::V
 use anyhow::Error;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
-use oak_crypto::{encryptor::Encryptor, identity_key::IdentityKeyHandle};
-use oak_proto_rust::oak::crypto::v1::SessionKeys;
+use oak_crypto::{
+    encryptor::Encryptor, identity_key::IdentityKeyHandle, noise_handshake::OrderedCrypter,
+};
 
 use crate::{
     attestation::{AttestationType, DefaultVerifierResultsAggregator, VerifierResultsAggregator},
@@ -104,15 +105,15 @@ pub struct SessionConfigBuilder {
 /// This allows deferring the creation of the encryptor until session keys are
 /// available after a successful handshake.
 pub trait EncryptorProvider: Send {
-    fn provide_encryptor(&self, session_keys: SessionKeys) -> Result<Box<dyn Encryptor>, Error>;
+    fn provide_encryptor(&self, crypter: OrderedCrypter) -> Result<Box<dyn Encryptor>, Error>;
 }
 
 /// An [`EncryptorProvider`] that creates [`OrderedChannelEncryptor`] instances.
 pub struct OrderedChannelEncryptorProvider;
 
 impl EncryptorProvider for OrderedChannelEncryptorProvider {
-    fn provide_encryptor(&self, session_keys: SessionKeys) -> Result<Box<dyn Encryptor>, Error> {
-        TryInto::<OrderedChannelEncryptor>::try_into(session_keys)
+    fn provide_encryptor(&self, crypter: OrderedCrypter) -> Result<Box<dyn Encryptor>, Error> {
+        TryInto::<OrderedChannelEncryptor>::try_into(crypter)
             .map(|v| Box::new(v) as Box<dyn Encryptor>)
     }
 }

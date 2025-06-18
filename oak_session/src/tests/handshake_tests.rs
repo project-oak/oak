@@ -112,13 +112,11 @@ fn do_handshake(
             .put_incoming_message(followup)
             .expect("Failed to process the follow up from the client");
     }
-    let session_keys_client = client_handshaker.take_session_keys().unwrap();
-    let session_keys_server = server_handshaker.take_session_keys().unwrap();
-    assert_that!(session_keys_client.request_key, eq(&session_keys_server.response_key));
-    assert_that!(session_keys_server.request_key, eq(&session_keys_client.response_key));
+    let crypter_client = client_handshaker.take_crypter().unwrap();
+    let crypter_server = server_handshaker.take_crypter().unwrap();
 
-    let mut encryptor_client: OrderedChannelEncryptor = session_keys_client.try_into().unwrap();
-    let mut encryptor_server: OrderedChannelEncryptor = session_keys_server.try_into().unwrap();
+    let mut encryptor_client: OrderedChannelEncryptor = crypter_client.try_into().unwrap();
+    let mut encryptor_server: OrderedChannelEncryptor = crypter_server.try_into().unwrap();
 
     for message in test_messages() {
         let ciphertext = encryptor_client.encrypt(message.clone().into()).unwrap();

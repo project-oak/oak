@@ -22,7 +22,6 @@ use oak_crypto::{
     encryptor::{Encryptor, Payload},
     noise_handshake::{OrderedCrypter, UnorderedCrypter, NONCE_LEN},
 };
-use oak_proto_rust::oak::crypto::v1::SessionKeys;
 
 // This is the default implementation of the encryptor to use for the Noise
 // protocol (consecutive nonces, no packet drop or reordering allowed)
@@ -46,15 +45,11 @@ impl Encryptor for OrderedChannelEncryptor {
     }
 }
 
-impl TryFrom<SessionKeys> for OrderedChannelEncryptor {
+impl TryFrom<OrderedCrypter> for OrderedChannelEncryptor {
     type Error = anyhow::Error;
 
-    fn try_from(sk: SessionKeys) -> Result<Self, Error> {
-        Ok(Self {
-            crypter: sk
-                .try_into()
-                .context("error creating Noise crypter from the provided session keys")?,
-        })
+    fn try_from(crypter: OrderedCrypter) -> Result<Self, Self::Error> {
+        Ok(Self { crypter })
     }
 }
 
@@ -92,10 +87,10 @@ impl Encryptor for UnorderedChannelEncryptor {
     }
 }
 
-impl TryFrom<(SessionKeys, u32)> for UnorderedChannelEncryptor {
+impl TryFrom<(OrderedCrypter, u32)> for UnorderedChannelEncryptor {
     type Error = anyhow::Error;
 
-    fn try_from(sk_and_window_size: (SessionKeys, u32)) -> Result<Self, Error> {
+    fn try_from(sk_and_window_size: (OrderedCrypter, u32)) -> Result<Self, Error> {
         Ok(Self {
             crypter: sk_and_window_size.try_into().context(
                 "error creating Noise crypter from the provided session keys and window size",

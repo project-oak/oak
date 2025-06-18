@@ -27,7 +27,7 @@ use alloc::vec::Vec;
 
 use anyhow::anyhow;
 use hashbrown::HashSet;
-use oak_proto_rust::oak::{crypto::v1::SessionKeys, session::v1::NoiseHandshakeMessage};
+use oak_proto_rust::oak::session::v1::NoiseHandshakeMessage;
 
 use crate::noise_handshake::{
     error::Error,
@@ -188,29 +188,6 @@ impl OrderedCrypter {
     }
 }
 
-impl From<OrderedCrypter> for SessionKeys {
-    fn from(value: OrderedCrypter) -> Self {
-        SessionKeys { request_key: value.write_key.to_vec(), response_key: value.read_key.to_vec() }
-    }
-}
-
-impl TryFrom<SessionKeys> for OrderedCrypter {
-    type Error = anyhow::Error;
-
-    fn try_from(sk: SessionKeys) -> Result<Self, Self::Error> {
-        Ok(OrderedCrypter::new(
-            sk.response_key
-                .as_slice()
-                .try_into()
-                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
-            sk.request_key
-                .as_slice()
-                .try_into()
-                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
-        ))
-    }
-}
-
 /// Modified impl of `OrderedCrypter` that explicitly ignores ordering.
 ///
 /// It explicitly ignores message ordering but protects against replayed
@@ -295,24 +272,24 @@ impl UnorderedCrypter {
     }
 }
 
-impl TryFrom<(SessionKeys, u32)> for UnorderedCrypter {
+impl TryFrom<(OrderedCrypter, u32)> for UnorderedCrypter {
     type Error = anyhow::Error;
 
-    fn try_from(sk_and_window_size: (SessionKeys, u32)) -> Result<Self, Self::Error> {
+    fn try_from(crypter_and_window_size: (OrderedCrypter, u32)) -> Result<Self, Self::Error> {
         Ok(UnorderedCrypter::new(
-            sk_and_window_size
+            &crypter_and_window_size
                 .0
-                .response_key
+                .read_key
                 .as_slice()
                 .try_into()
                 .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
-            sk_and_window_size
+            crypter_and_window_size
                 .0
-                .request_key
+                .read_key
                 .as_slice()
                 .try_into()
                 .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
-            sk_and_window_size.1,
+            crypter_and_window_size.1,
         ))
     }
 }

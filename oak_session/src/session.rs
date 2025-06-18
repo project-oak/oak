@@ -256,12 +256,11 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
     /// - From `Attestation` to `Handshake`: Occurs after
     ///   `attester.take_attestation_verdict()` is successful. The
     ///   `HandshakeHandler` is built using `handshake_handler_provider`.
-    /// - From `Handshake` to `Open`: Occurs after
-    ///   `handshaker.take_session_keys()` is successful. The `Encryptor` is
-    ///   built using `encryptor_provider`.
+    /// - From `Handshake` to `Open`: Occurs after `handshaker.take_crypter()`
+    ///   is successful. The `Encryptor` is built using `encryptor_provider`.
     ///
     /// This method manages the ownership transfer of data (like
-    /// `AttestationResults` to `Handshake` step, and `SessionKeys` to the
+    /// `AttestationResults` to `Handshake` step, and `OrderedCrypter` to the
     /// `Encryptor`). If a transition fails (e.g., attestation failed, or
     /// provider fails to build), an error is returned, and the session
     /// typically remains in `Invalid` or the previous state if the
@@ -299,8 +298,7 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
             Step::Handshake { handshaker, encryptor_provider, attestation_results } => {
                 *self = Step::Open {
                     handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
-                    encryptor: encryptor_provider
-                        .provide_encryptor(handshaker.take_session_keys()?)?,
+                    encryptor: encryptor_provider.provide_encryptor(handshaker.take_crypter()?)?,
                     attestation_results,
                 };
             }

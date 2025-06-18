@@ -24,9 +24,9 @@
 //! The handshake is a critical step in the overall session establishment
 //! process, occurring after initial attestation (if any) and before secure
 //! application data exchange. Its main responsibilities are:
-//! - **Key Agreement**: Securely derive shared symmetric keys (`SessionKeys`)
-//!   that will be used to encrypt and decrypt messages exchanged during the
-//!   session.
+//! - **Key Agreement**: Securely derive shared symmetric keys (returned as
+//!   `OrderedCrypter`) that will be used to encrypt and decrypt messages
+//!   exchanged during the session.
 //! - **Transcript Hashing**: Produce a cryptographic hash (`handshake_hash`) of
 //!   all messages exchanged during the handshake. This hash serves as a unique
 //!   identifier for the handshake and is crucial for cryptographically binding
@@ -91,14 +91,13 @@ use core::convert::TryInto;
 use anyhow::{anyhow, Context, Error};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
-    noise_handshake::{client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, Response},
-};
-use oak_proto_rust::oak::{
-    crypto::v1::SessionKeys,
-    session::v1::{
-        handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
-        NoiseHandshakeMessage, SessionBinding,
+    noise_handshake::{
+        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, OrderedCrypter, Response,
     },
+};
+use oak_proto_rust::oak::session::v1::{
+    handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
+    NoiseHandshakeMessage, SessionBinding,
 };
 
 use crate::{config::HandshakeHandlerConfig, session_binding::SessionBinder, ProtocolEngine};
@@ -121,10 +120,10 @@ pub enum HandshakeType {
 /// from the handshake, which is then used to secure the communication channel
 /// and potentially bind the session to the attestation phase.
 pub struct HandshakeResult {
-    /// The symmetric keys (e.g., encryption/decryption keys) established during
-    /// the handshake. These keys are used by an `Encryptor` to protect
-    /// application messages.
-    pub session_keys: SessionKeys,
+    /// Crypter using the symmetric keys (e.g., encryption/decryption keys)
+    /// established during the handshake. The crypter id used by an
+    /// `Encryptor` to protect application messages.
+    pub crypter: OrderedCrypter,
     /// A cryptographic hash of the entire transcript of messages exchanged
     /// during the handshake. This hash is crucial for binding the
     /// attestation results to the handshake, ensuring that the attested
@@ -198,12 +197,12 @@ impl HandshakeHandlerBuilder<ServerHandshakeHandler> for ServerHandshakeHandlerB
 /// to establish shared session keys and a handshake hash. Implementations are
 /// stateful and use the `ProtocolEngine` trait to exchange handshake messages.
 pub trait HandshakeHandler: Send {
-    /// Retrieves the session keys derived from the completed handshake.
+    /// Retrieves the crypter derived from the completed handshake.
     ///
-    /// This method consumes the session keys, meaning it can typically only be
+    /// This method consumes the crypter, meaning it can typically only be
     /// called once successfully. It returns an error if the handshake is
     /// not yet complete keys are not ready. Can only be called once.
-    fn take_session_keys(self) -> Result<SessionKeys, Error>;
+    fn take_crypter(self) -> Result<OrderedCrypter, Error>;
 
     /// Gets the hash of the completed handshake without consuming the stored
     /// handshake results.
@@ -313,9 +312,9 @@ impl ClientHandshakeHandler {
 }
 
 impl HandshakeHandler for ClientHandshakeHandler {
-    /// Retrieves the session keys. See `HandshakeHandler::take_session_keys`.
-    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
-        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
+    /// Retrieves the session keys. See `HandshakeHandler::take_crypter`.
+    fn take_crypter(mut self) -> Result<OrderedCrypter, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.crypter)
     }
 
     /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
@@ -364,7 +363,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
     /// server is received.
     /// - It uses the `HandshakeInitiator` to process the server's Noise
     ///   protocol message.
-    /// - On successful processing, it extracts the `SessionKeys`,
+    /// - On successful processing, it extracts the `OrderedCrypter`,
     ///   `handshake_hash`, and any `session_bindings` sent by the server,
     ///   storing them in `handshake_result`.
     /// - If client `session_binders` are configured, this method prepares the
@@ -390,7 +389,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
                     .process_response(&noise_message.into())
                     .map_err(|e| anyhow!("Error processing response: {e:?}"))
                     .map(|(handshake_hash, crypter)| HandshakeResult {
-                        session_keys: crypter.into(),
+                        crypter,
                         handshake_hash: handshake_hash.to_vec(),
                         session_bindings: incoming_message.attestation_bindings,
                     })?;
@@ -469,9 +468,9 @@ impl ServerHandshakeHandler {
 }
 
 impl HandshakeHandler for ServerHandshakeHandler {
-    /// Retrieves the session keys. See `HandshakeHandler::take_session_keys`.
-    fn take_session_keys(mut self) -> Result<SessionKeys, Error> {
-        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.session_keys)
+    /// Retrieves the session keys. See `HandshakeHandler::take_crypter`.
+    fn take_crypter(mut self) -> Result<OrderedCrypter, Error> {
+        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.crypter)
     }
 
     /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
@@ -523,7 +522,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
         }
         if let Some(noise_response) = self.noise_response.take() {
             self.handshake_result = Some(HandshakeResult {
-                session_keys: noise_response.crypter.into(),
+                crypter: noise_response.crypter,
                 handshake_hash: noise_response.handshake_hash.to_vec(),
                 session_bindings: incoming_message.attestation_bindings,
             });
@@ -587,7 +586,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                 self.noise_response = Some(noise_response);
             } else {
                 self.handshake_result = Some(HandshakeResult {
-                    session_keys: noise_response.crypter.into(),
+                    crypter: noise_response.crypter,
                     handshake_hash: noise_response.handshake_hash.to_vec(),
                     session_bindings: BTreeMap::new(),
                 })
