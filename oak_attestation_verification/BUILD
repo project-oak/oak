@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
 load("//bazel:defs.bzl", "any_platform")
 
 package(
@@ -214,20 +214,5 @@ rust_test_suite(
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
-    ],
-)
-
-rust_binary(
-    name = "endorscope",
-    srcs = glob(["main/**"]),
-    data = ["//oak_attestation_verification/testdata:endorsement"],
-    deps = [
-        ":oak_attestation_verification",
-        "//oak_proto_rust",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:derive_builder",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:ureq",
     ],
 )
