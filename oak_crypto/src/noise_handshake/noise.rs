@@ -15,6 +15,7 @@
 use alloc::vec::Vec;
 
 use crypto_wrapper::{NONCE_LEN, SYMMETRIC_KEY_LEN};
+use zeroize::Zeroizing;
 
 use crate::noise_handshake::{crypto_wrapper, error::Error};
 
@@ -39,11 +40,10 @@ fn hkdf2(
     (key1, key2)
 }
 
-#[derive(PartialEq)]
 pub struct Noise {
-    chaining_key: [u8; SYMMETRIC_KEY_LEN],
+    chaining_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
     h: [u8; SYMMETRIC_KEY_LEN],
-    symmetric_key: [u8; SYMMETRIC_KEY_LEN],
+    symmetric_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
     symmetric_nonce: u32,
 }
 
@@ -57,9 +57,9 @@ impl Noise {
         };
         chaining_key_in[..protocol_name.len()].copy_from_slice(protocol_name);
         Noise {
-            chaining_key: chaining_key_in,
+            chaining_key: chaining_key_in.into(),
             h: chaining_key_in,
-            symmetric_key: [0; SYMMETRIC_KEY_LEN],
+            symmetric_key: [0; SYMMETRIC_KEY_LEN].into(),
             symmetric_nonce: 0,
         }
     }
@@ -82,7 +82,7 @@ impl Noise {
         let mut output = [0; SYMMETRIC_KEY_LEN * 3];
         // unwrap: only fails if the output size is too large, but the output
         // size is small and fixed here.
-        crypto_wrapper::hkdf_sha256(ikm, &self.chaining_key, &[], &mut output).unwrap();
+        crypto_wrapper::hkdf_sha256(ikm, self.chaining_key.as_ref(), &[], &mut output).unwrap();
         self.chaining_key.copy_from_slice(&output[..SYMMETRIC_KEY_LEN]);
         self.mix_hash(&output[SYMMETRIC_KEY_LEN..SYMMETRIC_KEY_LEN * 2]);
         self.initialize_key(&output[SYMMETRIC_KEY_LEN * 2..].try_into().unwrap());

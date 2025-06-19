@@ -28,6 +28,7 @@ use alloc::vec::Vec;
 use anyhow::anyhow;
 use hashbrown::HashSet;
 use oak_proto_rust::oak::session::v1::NoiseHandshakeMessage;
+use zeroize::Zeroizing;
 
 use crate::noise_handshake::{
     error::Error,
@@ -158,8 +159,8 @@ fn aes_gcm_256_decrypt(
 }
 
 pub struct OrderedCrypter {
-    read_key: [u8; SYMMETRIC_KEY_LEN],
-    write_key: [u8; SYMMETRIC_KEY_LEN],
+    read_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
+    write_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
     read_nonce: Nonce,
     write_nonce: Nonce,
 }
@@ -172,8 +173,8 @@ pub struct OrderedCrypter {
 impl OrderedCrypter {
     fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
         Self {
-            read_key: *read_key,
-            write_key: *write_key,
+            read_key: (*read_key).into(),
+            write_key: (*write_key).into(),
             read_nonce: Nonce { nonce: 0 },
             write_nonce: Nonce { nonce: 0 },
         }
@@ -198,8 +199,8 @@ impl OrderedCrypter {
 /// re-ordered and dropped messages. This implementation is primarily meant for
 /// unreliable transport protocols such as UDP.
 pub struct UnorderedCrypter {
-    read_key: [u8; SYMMETRIC_KEY_LEN],
-    write_key: [u8; SYMMETRIC_KEY_LEN],
+    read_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
+    write_key: Zeroizing<[u8; SYMMETRIC_KEY_LEN]>,
     write_nonce: Nonce,
     // The current furthest read nonce seen so far.
     furthest_read_nonce: u32,
@@ -218,8 +219,8 @@ impl UnorderedCrypter {
         window_size: u32,
     ) -> Self {
         Self {
-            read_key: *read_key,
-            write_key: *write_key,
+            read_key: (*read_key).into(),
+            write_key: (*write_key).into(),
             write_nonce: Nonce { nonce: 1 },
             furthest_read_nonce: 0,
             window_size,
