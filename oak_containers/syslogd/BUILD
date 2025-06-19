@@ -24,7 +24,6 @@ package(
 rust_binary(
     name = "oak_containers_syslogd",
     srcs = glob(["src/**"]),
-    crate_features = ["bazel"],
     deps = [
         "//oak_containers/orchestrator",
         "@oak_crates_index//:anyhow",

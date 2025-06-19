@@ -15,9 +15,6 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[cfg(not(feature = "bazel"))]
-    let included_protos = vec![std::path::PathBuf::from("..")];
-    #[cfg(feature = "bazel")]
     let included_protos = oak_proto_build_utils::get_common_proto_path("..");
 
     let proto_paths = [
@@ -53,8 +50,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = prost_build::Config::new();
 
     config.btree_map(["."]);
-
-    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_JSON");
 
     config.bytes(vec![
         ".oak.containers.GetImageResponse".to_string(),
@@ -148,13 +143,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    for proto_path in proto_paths.iter() {
-        println!("cargo:rerun-if-changed={}", proto_path);
-    }
-
-    #[cfg(feature = "bazel")]
     oak_proto_build_utils::fix_prost_derives()?;
 
     Ok(())

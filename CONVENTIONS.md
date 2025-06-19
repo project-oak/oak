@@ -38,18 +38,15 @@ value, and should be avoided.
 
 ## Rust
 
-Oak's primary build system for all languages is Bazel. There are a few targets
-that are still built with Cargo, but they are the exception, and will soon be
-converted to Bazel as well.
-
-Whenever possible, create new Rust crates using only Bazel BUILD files.
+Oak's primary build system for all languages is Bazel. Cargo is available for
+experimental/side projects, but keep in mind that Oak libraries can no longer be
+built with Cargo.
 
 ### Directories
 
 Conventionally, cargo-based projects use a `src` directory under a crate where
-all of the Rust source files lived. This is not strictly needed. For the time
-being, it's acceptable to use a `src` directory or not. In the future, we may
-decide to prefer one or the other.
+all of the Rust source files lived. This is not strictly needed. Bazel-style
+projects should prefer to avoid using a src directory.
 
 #### Testing
 

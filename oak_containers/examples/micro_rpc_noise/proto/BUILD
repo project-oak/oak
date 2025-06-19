@@ -41,7 +41,6 @@ cargo_build_script(
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
         "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
-    crate_features = ["bazel"],
     data = [
         "//oak_containers/examples/micro_rpc_noise/proto:micro_rpc_noise.proto",
         "//proto:digest.proto",

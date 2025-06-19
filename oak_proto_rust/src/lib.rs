@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This module provides a uniform way to import crypto protos regardless of
-// building with cargo or bazel.
-
 // Prost generated code cannot build on its own: it needs to be
 // included into a manually crafted module structure. With crypto_rust_prost,
 // this is not needed.

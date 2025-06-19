@@ -59,16 +59,6 @@ pub fn generate_grpc_code(
         .build_client(options.build_client)
         .build_server(options.build_server);
 
-    // Do not use the default logic for re-running the build script, as it covers
-    // the entire include directory, which also includes all the Rust code, so
-    // everything is always rebuilt every time. Instead, we specify the list of
-    // files to watch explicitly, even though that may not have 100% recall,
-    // since some of the transitive includes may be missed.
-    config = config.emit_rerun_if_changed(false);
-    protos.iter().for_each(|filename| {
-        println!("cargo:rerun-if-changed={}", filename.as_ref().as_os_str().to_string_lossy())
-    });
-
     for extern_path in options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }

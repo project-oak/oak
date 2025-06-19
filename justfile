@@ -13,11 +13,6 @@ import? "justfile.local"
 # Same, but for a user-wide local Oak justfile (works with Git worktrees).
 import? "~/.oak_justfile.local"
 
-# Quick-and-dirty Cargo.toml workspace finder for cargo commands.
-# We plan to remove Cargo.toml files soon, and then this can go as well.
-export CARGO_WORKSPACE_LIST_CMD := 'grep -l "\[workspace" **/Cargo.toml --exclude="third_party/*"'
-export CARGO_LOCKFILES_LIST_CMD := 'find . -name "Cargo*.lock"'
-
 # -- DEVELOPER WORKFLOW TOOLS --
 
 # Convenience bundle of tests and checks prior to sending a change for review.
@@ -37,38 +32,62 @@ format:
 
 # -- End Developer Workflow Tools --
 
-run_oak_functions_containers_launcher wasm_path port lookup_data_path communication_channel virtio_guest_cid:
+oak-functions-containers-launcher-artifacts: \
+    (copy-binary "stage0_bin" "stage0_bin") \
+    (copy-binary "oak_containers/kernel" "oak_containers_kernel") \
+    (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
+    (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
+    (copy-binary "oak_functions_containers_app/bundle.tar" "oak_functions_containers_bundle") \
+    (copy-binary "oak_functions_containers_launcher" "oak_functions_containers_launcher") \
+
+run-oak-functions-containers-launcher wasm_target port lookup_data_path communication_channel virtio_guest_cid:
+    # Note: for speed, most dependencies are not automatically rebuilt."
+    # If you change framework code, run"
+    # just oak-functions-containers-launcher-artifacts"
+    # To enable logging, prefix your command with RUST_LOG=debug
+    bazel build -c opt {{wasm_target}}
     artifacts/binaries/oak_functions_containers_launcher \
         --vmm-binary=$(which qemu-system-x86_64) \
         --stage0-binary=artifacts/binaries/stage0_bin \
-        --kernel=artifacts/oak_containers_kernel \
-        --initrd=artifacts/binaries/stage1.cpio \
-        --system-image=artifacts/binaries/oak_containers_system_image.tar.xz \
-        --container-bundle=bazel-bin/oak_functions_containers_app/bundle.tar \
+        --kernel=artifacts/binaries/oak_containers_kernel \
+        --initrd=artifacts/binaries/oak_containers_stage1 \
+        --system-image=artifacts/binaries/oak_containers_system_image \
+        --container-bundle=artifacts/binaries/oak_functions_containers_bundle \
         --ramdrive-size=1000000 \
         --memory-size=2G \
-        --wasm={{wasm_path}} \
+        --wasm=$(bazel cquery -c opt {{wasm_target}} --output files) \
         --port={{port}} \
         --lookup-data={{lookup_data_path}} \
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
-run_oak_functions_launcher wasm_path port lookup_data_path:
+oak-functions-launcher-artifacts: \
+    (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
+    (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
+    (copy-binary "oak_functions_launcher" "oak_functions_launcher") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "")
+
+run-oak-functions-launcher wasm_target port lookup_data_path:
+    # Note: for speed, most dependencies are not automatically rebuilt."
+    # If you change framework code, run"
+    # just oak-functions-launcher-artifacts"
+    # To enable logging, prefix your command with RUST_LOG=debug
+    bazel build -c opt {{wasm_target}}
     artifacts/binaries/oak_functions_launcher \
         --bios-binary=artifacts/binaries/stage0_bin \
-        --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
+        --kernel=artifacts/binaries/oak_restricted_kernel_wrapper_virtio_console_channel_bin \
         --vmm-binary=$(which qemu-system-x86_64) \
         --app-binary=artifacts/binaries/oak_functions_enclave_app \
         --initrd=artifacts/binaries/oak_orchestrator \
         --memory-size=256M \
-        --wasm={{wasm_path}} \
+        --wasm=$(bazel cquery -c opt {{wasm_target}} --output files) \
         --port={{port}} \
         --lookup-data={{lookup_data_path}}
 
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
     # If it fails with SIGSEGV, try running again.
-    cargo bench --package=oak_functions_service --bench=wasm_benchmark --features=wasmtime flamegraph -- --profile-time=5
+    bazel run oak_functions_service:benches -- --bench --profile-time=5
     google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
 
 oak_attestation_explain_wasm:
@@ -201,17 +220,9 @@ clippy: bazel-clippy
 
 clippy-ci: bazel-clippy-ci
 
-cargo-lockfiles:
-    #!/bin/sh
-    echo $CARGO_LOCKFILES_LIST_CMD
-    for lockfile in $({{CARGO_LOCKFILES_LIST_CMD}})
-    do
-        echo Lockfile: $lockfile
-    done
-
 cargo-audit:
     #!/bin/sh
-    for lockfile in $({{CARGO_LOCKFILES_LIST_CMD}})
+    for lockfile in Cargo*.lock
     do
         echo Cargo auditing: $lockfile
         cargo-audit audit -f $lockfile

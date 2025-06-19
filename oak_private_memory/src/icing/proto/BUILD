@@ -31,7 +31,6 @@ cargo_build_script(
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
         "OAK_PROTO_PATH": "$(locations @icing//:icing_proto_srcs)",
     },
-    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",

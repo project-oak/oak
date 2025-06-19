@@ -140,10 +140,7 @@ rust_test(
         "//oak_containers/orchestrator/testdata:oci_spec_target.json",
     ],
     crate = ":oak_containers_orchestrator",
-    crate_features = [
-        "bazel",
-        "application_keys",
-    ],
+    crate_features = ["application_keys"],
     data = [
         "//oak_containers/orchestrator/testdata:test_dice",
     ],

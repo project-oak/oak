@@ -45,9 +45,6 @@ pub fn compile(
     includes: &[impl AsRef<Path>],
     options: crate::CompileOptions,
 ) {
-    protos.iter().for_each(|filename| {
-        println!("cargo:rerun-if-changed={}", filename.as_ref().as_os_str().to_string_lossy())
-    });
     let mut config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator { options: options.clone() }));
     for extern_path in options.extern_paths {

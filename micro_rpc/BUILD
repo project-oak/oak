@@ -50,7 +50,6 @@ cargo_build_script(
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
     },
-    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         "//proto/micro_rpc:messages.proto",
     ],

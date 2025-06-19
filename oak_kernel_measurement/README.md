@@ -10,14 +10,13 @@ Stage 0 measures these split, modified components rather than the original
 bzImage kernel. This tool can be used to predict the Stage 0 measurements of
 these components from a bzImage kernel.
 
-The tool can be run using:
+The tool can be run on the command line, for example:
 
 ```bash
-cargo run --package=oak_kernel_measurement -- \
-    --kernel="bazel-bin/oak_containers/kernel/bzImage
-just oak_restricted_kernel_wrapper_simple_io_channel
-cargo run --package=oak_kernel_measurement -- \
-    --kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_simple_io_channel
+just oak_containers_kernel_subjects
 ```
 
-You may need to prepend "$(pwd)" to paths.
+See the justfile for details on the command structure.
+
+The tool can also be run using a bazel rule. See
+[oak_restricted_kernel_wrapper/rules.bzl] for an example.

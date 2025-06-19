@@ -31,7 +31,6 @@ rust_shared_library(
 rust_test(
     name = "test",
     srcs = ["module/src/tests.rs"],
-    crate_features = ["bazel"],
     data = [
         ":key_value_lookup",
     ],

@@ -24,8 +24,9 @@ package(
 rust_library(
     name = "oak_functions_test_utils",
     srcs = glob(["src/*.rs"]),
-    crate_features = ["bazel"],
     data = [
+        "//enclave_apps/oak_functions_enclave_app",
+        "//enclave_apps/oak_orchestrator",
         "//oak_containers/stage1_bin",
         "//oak_containers/system_image:oak_containers_system_image",
         "//oak_functions_launcher",

@@ -93,7 +93,6 @@ rust_library(
 rust_test(
     name = "lib_test",
     crate = ":lib",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [
         "//oak_functions_test_utils",
@@ -105,7 +104,6 @@ rust_test(
 rust_test(
     name = "lib_unrestricted_test",
     crate = ":lib_unrestricted",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [
         "//oak_functions_test_utils",
@@ -117,7 +115,6 @@ rust_test(
 rust_test(
     name = "lib_insecure_test",
     crate = ":lib_insecure",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [
         "//oak_functions_test_utils",
@@ -129,7 +126,6 @@ rust_test(
 rust_test(
     name = "lib_insecure_unrestricted_test",
     crate = ":lib_insecure_unrestricted",
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = ["//oak_functions/examples/echo"],
     deps = [
         "//oak_functions_test_utils",

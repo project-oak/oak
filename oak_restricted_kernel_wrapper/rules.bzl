@@ -38,7 +38,6 @@ def kernel_bzimage_and_measurements(name, payload, visibility = None):
             "src/asm/boot.s",
             payload,
         ],
-        crate_features = ["bazel"],  # TODO: b/333064338 remove.
         linker_script = ":layout.ld",
         platform = "//:x86_64-unknown-none-noavx",
         rustc_env = {

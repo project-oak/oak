@@ -66,7 +66,6 @@ rust_library(
 rust_test_suite(
     name = "integration_tests",
     srcs = glob(["tests/**"]),
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
         "//oak_functions/examples/echo",
         "//oak_functions/examples/invalid_module",

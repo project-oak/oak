@@ -39,7 +39,6 @@ rust_library(
 rust_test_suite(
     name = "integration_tests",
     srcs = glob(["tests/**"]),
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
         "//oak_functions_sdk/tests/lookup_module",
         "//oak_functions_sdk/tests/testing_module",

@@ -45,7 +45,6 @@ cargo_build_script(
         "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
         "OAK_PROTO_PATH": "$(location @oak//proto/session:session.proto)",
     },
-    crate_features = ["bazel"],  # See b/340185847 and fix_prost_derives function doc.
     data = [
         ":database.proto",
         ":internal.proto",

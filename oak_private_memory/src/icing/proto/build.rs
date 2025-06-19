@@ -34,7 +34,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
-    #[cfg(feature = "bazel")]
     oak_proto_build_utils::fix_prost_derives()?;
 
     Ok(())

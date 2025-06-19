@@ -89,7 +89,6 @@ rust_test_suite(
         "tests/policy_tests.rs",
         "tests/verifier_tests.rs",
     ],
-    crate_features = ["bazel"],  # TODO: b/333064338 remove.
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
@@ -186,10 +185,7 @@ rust_test_suite(
         "tests/verifier_tests.rs",
     ],
     aliases = {":oak_attestation_verification_with_regex": "oak_attestation_verification"},
-    crate_features = [
-        "regex",
-        "bazel",
-    ],  # TODO: b/333064338 remove bazel feature.
+    crate_features = ["regex"],
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",

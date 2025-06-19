@@ -9,13 +9,13 @@ payload to standard output.
 To compile:
 
 ```sh
-cargo build --package=oak_functions_client
+bazel build oak_functions_client
 ```
 
 Example invocation:
 
 ```sh
-./target/debug/oak_functions_client \
+bazel run oak_functions_client -- \
   --uri=http://localhost:8080 \
   --request=request_body
 ```

@@ -8,8 +8,6 @@ Kernel in the same way as a compressed 64-bit Linux kernel.
 The wrapper is responsible for parsing the payload (the Oak Restricted Kernel)
 as an ELF file, laying it out in memory and doing any required relocations.
 
-NOTE: This wrapper is not intended to be built using `cargo build` directly.
-
 To build it, run the following in the workspace root:
 
 ```bash

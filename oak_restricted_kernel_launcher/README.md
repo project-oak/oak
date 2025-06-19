@@ -5,7 +5,7 @@ Simple launcher used to launch an instance of the restricted kernel in a VM.
 Documentation is available via:
 
 ```shell
-cargo run --package=oak_restricted_kernel_launcher -- --help
+bazel run oak_restricted_kernel_launcher -- --help
 ```
 
 The instructions below for building the required dependencies and running an app
@@ -16,23 +16,16 @@ must be built.
 
 (instructions gained from inspecting xtask, may change in the future)
 
+The easiest way to run the launcher is to use the included just command, which will use the default support dependencies, so you only need to provide the target of an enclave app to run.
+
 ```shell
-# Stage0, the restricted kernel, and an enclave app may be built like so:
-just \
-  stage0_bin \
-  oak_restricted_kernel_wrapper_virtio_console_channel \
-  build_oak_orchestrator build_oak_multi_process_test && \
 
-# Build an enclave app like so:
-just build_enclave_app build_oak_multi_process_test && \
+# These aren't built automatically every time, to make iterating faster.
+just oak-rk-launcher-artifacts
 
-# After building dependencies, an enclave app may be run like so:
-RUST_LOG=DEBUG \
-cargo run --package=oak_restricted_kernel_launcher -- \
---kernel=oak_restricted_kernel_wrapper/bin/wrapper_bzimage_virtio_console_channel \
---vmm-binary=$(which qemu-system-x86_64) \
---memory-size=8G \
---bios-binary=artifacts/binaries/stage0_bin \
---initrd=artifacts/binaries/oak_orchestrator \
---app-binary=artifacts/binaries/oak_multi_process_test
+just run-oak-functions-launcher \
+    oak_functions_launcher/key_value_lookup \
+    oak_functions_launcher/mock_lookup_data
 ```
+
+(See the just command for details)

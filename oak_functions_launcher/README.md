@@ -16,26 +16,28 @@ Then, run the following from within the
 To launch integration tests of the Oak Functions Launcher:
 
 ```shell
-cargo test --package=oak_functions_launcher
+bazel test oak_functions_launcher/...
 ```
 
 Additional documentation is available via:
 
 ```shell
-cargo run --package=oak_functions_launcher -- --help
+bazel run oak_functions_launcher -- --help
 ```
 
-To launch the Oak Functions binary directly as a child process:
+To launch the Oak Functions binary with the default support binaries, use the
+`just` command, providing a wasm target to run and a lookup data file.
 
 ```shell
-cargo build --package=oak_functions_linux_fd_bin \
-    && RUST_LOG=debug cargo run \
-    --package=oak_functions_launcher -- \
-    --wasm=oak_functions_launcher/key_value_lookup.wasm \
-    --lookup-data=oak_functions_launcher/mock_lookup_data \
-    native \
-    --enclave-binary=target/debug/oak_functions_linux_fd_bin
+# These aren't built automatically every time, to make iterating faster.
+just oak-functions-launcher-artifacts
+
+just run-oak-functions-launcher \
+    oak_functions_launcher/key_value_lookup \
+    oak_functions_launcher/mock_lookup_data
 ```
+
+(See the just command for details)
 
 Output:
 

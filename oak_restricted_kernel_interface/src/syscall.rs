@@ -153,7 +153,7 @@ pub fn unstable_switch_proccess(pid: usize) -> Result<usize, Errno> {
 }
 
 // Note that these tests are not being executed against Restricted Kernel, but
-// rather the Linux kernel of the machine cargo is running on!
+// rather the Linux kernel of the machine bazel is running on!
 #[cfg(test)]
 mod tests {
     extern crate std;

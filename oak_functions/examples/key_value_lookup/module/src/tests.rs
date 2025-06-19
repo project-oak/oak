@@ -13,9 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This is only needed in bazel because it considers the `tests.rs` file as a
-// separate crate.
-#![cfg_attr(feature = "bazel", feature(test))]
+#![feature(test)]
 
 extern crate test;
 
@@ -26,8 +24,7 @@ use test::Bencher;
 
 #[tokio::test]
 async fn test_server() {
-    // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
-    if oak_functions_test_utils::skip_test() || cfg!(feature = "bazel") {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -43,7 +40,6 @@ async fn test_server() {
         }),
     );
 
-    // TODO: b/349587445 - Use bazel variant once dependencies are bazelified.
     let (_child, server_port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         lookup_data_file.path().to_str().unwrap(),
@@ -72,8 +68,7 @@ async fn test_server() {
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    // TODO: b/349587445 - Remove bazel exclusion once dependencies are bazelified.
-    if oak_functions_test_utils::skip_test() || cfg!(feature = "bazel") {
+    if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
     }
@@ -110,7 +105,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         Ok(())
     });
 
-    // When running `cargo test` this benchmark test gets executed too, but
+    // When running `bazel test` this benchmark test gets executed too, but
     // `summary` will be `None` in that case. So, here we first check that
     // `summary` is not empty.
     if let Ok(Some(summary)) = summary {

@@ -23,9 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = Path::new(&val);
     let path_str = path.parent().unwrap().parent().unwrap().parent().unwrap();
 
-    #[cfg(not(feature = "bazel"))]
-    let mut included_protos = vec![std::path::PathBuf::from("../..")];
-    #[cfg(feature = "bazel")]
     let mut included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
     included_protos.push(path_str.to_path_buf());

@@ -16,18 +16,6 @@
 
 use std::path::{Path, PathBuf};
 
-/// Support for bazel/blaze style file naming in Cargo tests.
-/// Cargo tests run relative to the current directory, so
-/// we reset to the workspace root.
-#[cfg(not(feature = "bazel"))]
-pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
-    let mut buf = PathBuf::from(env!("WORKSPACE_ROOT"));
-    buf.push(path.as_ref());
-    println!("CARGO PATH: {buf:?}");
-    buf
-}
-
-#[cfg(feature = "bazel")]
 pub fn data_path(path: impl AsRef<Path>) -> PathBuf {
     const DATA_PATH_PREFIX: &str = "oak";
     let mut pb: PathBuf = DATA_PATH_PREFIX.into();

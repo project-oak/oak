@@ -74,12 +74,8 @@ pub fn create_test_lookup_data(
 }
 
 pub fn write_to_temp_file(content: &[u8]) -> tempfile::NamedTempFile {
-    let mut file = if cfg!(feature = "bazel") {
-        tempfile::NamedTempFile::new_in(env::var("TEST_TMPDIR").unwrap())
-    } else {
-        tempfile::NamedTempFile::new()
-    }
-    .expect("couldn't create temp file");
+    let mut file = tempfile::NamedTempFile::new_in(env::var("TEST_TMPDIR").unwrap())
+        .expect("couldn't create temp file");
     file.write_all(content).expect("couldn't write content to temp file");
     file
 }
@@ -239,7 +235,7 @@ pub fn run_oak_functions_example_in_background(
         "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
     );
 
-    let child = if cfg!(feature = "bazel") {
+    let child =
         std::process::Command::new(data_path("oak_functions_launcher/oak_functions_launcher"))
             .args(vec![
                 arg!("--bios-binary=", stage0_bin),
@@ -260,22 +256,11 @@ pub fn run_oak_functions_example_in_background(
             ])
             .stdout(Stdio::piped())
             .group_spawn()
-    } else {
-        std::process::Command::new("just")
-            .args(vec![
-                "run_oak_functions_launcher",
-                wasm_path,
-                &format!("{}", port),
-                lookup_data_path,
-            ])
-            .group_spawn()
-    }
-    .expect("didn't start oak functions launcher");
+            .expect("didn't start oak functions launcher");
 
     (BackgroundHandle(child), port)
 }
 
-#[cfg(feature = "bazel")]
 pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
     std::process::Command::new(
         PathBuf::from("java/src/main/java/com/google/oak/client/oak_functions_client")
@@ -285,7 +270,6 @@ pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
     .output()
 }
 
-#[cfg(feature = "bazel")]
 pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process::Output> {
     std::process::Command::new(PathBuf::from("cc/client").join("cli"))
         .arg(addr)

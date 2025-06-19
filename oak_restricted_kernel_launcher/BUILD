@@ -47,7 +47,6 @@ rust_library(
 rust_test(
     name = "tests",
     srcs = ["src/tests.rs"],
-    crate_features = ["bazel"],
     data = [
         "//enclave_apps/oak_echo_enclave_app",
         "//enclave_apps/oak_orchestrator",

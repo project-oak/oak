@@ -27,7 +27,6 @@ rust_library(
     srcs = [
         "lib.rs",
     ],
-    crate_features = ["bazel"],
     crate_name = "oak_micro_rpc",
     deps = [
         ":build",
@@ -47,7 +46,6 @@ cargo_build_script(
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
         "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
     },
-    crate_features = ["bazel"],
     data = [
         "//proto:digest.proto",
         "//proto/attestation:eventlog.proto",

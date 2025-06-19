@@ -24,7 +24,6 @@ package(
 rust_library(
     name = "oak_file_utils",
     srcs = ["src/lib.rs"],
-    crate_features = ["bazel"],
     deps = [
         "@rules_rust//tools/runfiles",
     ],

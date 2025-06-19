@@ -133,7 +133,6 @@ rust_test(
     name = "oak_functions_containers_app_integration_test",
     size = "large",
     srcs = ["tests/integration_test.rs"],
-    crate_features = ["bazel"],
     data = [
         "//oak_functions/examples/key_value_lookup",
     ],
