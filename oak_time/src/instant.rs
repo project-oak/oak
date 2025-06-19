@@ -352,6 +352,6 @@ mod tests {
         let instant = Instant::from_unix_millis(12345);
         let timestamp = instant.into_timestamp();
         let expected_timestamp = prost_types::Timestamp { seconds: 12, nanos: 345_000_000 };
-        assert_that!(timestamp, eq(&expected_timestamp));
+        assert_that!(&timestamp, eq(&expected_timestamp));
     }
 }
