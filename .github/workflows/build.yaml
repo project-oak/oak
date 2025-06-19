@@ -114,7 +114,7 @@ jobs:
           set -o pipefail
           source ${{ matrix.buildconfig }}
 
-          KOKORO_ROOT_JOB_TYPE=CONTINUOUS_INTEGRATION
+          KOKORO_JOB_TYPE=CONTINUOUS_INTEGRATION
           source kokoro/helpers/common.sh
           configure_common_env
           configure_bazelrc
