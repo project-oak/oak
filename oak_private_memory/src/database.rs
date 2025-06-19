@@ -189,7 +189,11 @@ impl IcingMetaDatabase {
         Ok(())
     }
 
-    pub fn get_memories_by_tag(&self, tag: String, page_size: u32) -> anyhow::Result<Vec<BlobId>> {
+    pub fn get_memories_by_tag(
+        &self,
+        tag: String,
+        mut page_size: i32,
+    ) -> anyhow::Result<Vec<BlobId>> {
         let search_spec = icing::SearchSpecProto {
             query: Some(tag),
             // Match exactly as defined in the schema for tags.
@@ -198,10 +202,15 @@ impl IcingMetaDatabase {
             ..Default::default()
         };
 
+        // Default to 10 if page size is 0.
+        if page_size <= 0 {
+            page_size = 10;
+        }
+
         let result_spec = icing::ResultSpecProto {
             // Request a large number to get all results in one go for simplicity.
             // Consider pagination for very large datasets.
-            num_per_page: Some(page_size.try_into()?),
+            num_per_page: Some(page_size),
             type_property_masks: vec![Self::create_blob_id_projection()],
             ..Default::default()
         };
