@@ -28,20 +28,20 @@ use oak_proto_rust::oak::{
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
 use time::macros::datetime;
 
-use crate::endorsement::{self, Claim, DefaultPredicate, DefaultStatement, Statement, Subject};
+use crate::statement::{self, Claim, DefaultPredicate, DefaultStatement, Statement, Subject};
 
 /// A simple fake endorsement for basic generic testing purposes.
 pub fn fake_endorsement(digest: &RawDigest, claim_types: Vec<&str>) -> DefaultStatement {
     let map_digest = raw_digest_to_map(digest);
 
     DefaultStatement {
-        _type: endorsement::STATEMENT_TYPE.to_owned(),
-        predicate_type: endorsement::PREDICATE_TYPE_V3.to_owned(),
+        _type: statement::STATEMENT_TYPE.to_owned(),
+        predicate_type: statement::PREDICATE_TYPE_V3.to_owned(),
         subject: vec![Subject { name: "fake_subject_name".to_string(), digest: map_digest }],
         predicate: DefaultPredicate {
             usage: "".to_owned(), // Ignored with predicate V3, do not use.
             issued_on: datetime!(2024-10-01 12:08 UTC),
-            validity: Some(endorsement::Validity {
+            validity: Some(statement::Validity {
                 not_before: datetime!(2024-09-01 12:00 UTC),
                 not_after: datetime!(2024-12-01 12:00 UTC),
             }),
@@ -139,11 +139,11 @@ fn raw_digest_to_map(h: &RawDigest) -> BTreeMap<String, String> {
 }
 
 pub trait GetValidity {
-    fn validity(&self) -> &endorsement::Validity;
+    fn validity(&self) -> &statement::Validity;
 }
 
 impl GetValidity for Statement<DefaultPredicate> {
-    fn validity(&self) -> &endorsement::Validity {
+    fn validity(&self) -> &statement::Validity {
         self.predicate.validity.as_ref().expect("missing validity")
     }
 }

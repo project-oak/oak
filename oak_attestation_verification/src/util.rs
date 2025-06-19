@@ -39,7 +39,7 @@ use prost_types::Any;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use time::{Duration, OffsetDateTime};
 
-use crate::endorsement;
+use crate::statement;
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
@@ -505,8 +505,8 @@ impl UnixTimestampMillis for OffsetDateTime {
     }
 }
 
-impl From<&endorsement::Validity> for Validity {
-    fn from(value: &endorsement::Validity) -> Validity {
+impl From<&statement::Validity> for Validity {
+    fn from(value: &statement::Validity) -> Validity {
         Validity {
             not_before: value.not_before.unix_timestamp_millis(),
             not_after: value.not_after.unix_timestamp_millis(),

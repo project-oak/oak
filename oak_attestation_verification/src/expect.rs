@@ -48,9 +48,9 @@ use prost::Message;
 
 use crate::{
     endorsement::{
-        self, get_digest, is_firmware_type, is_kernel_type, parse_statement,
-        verify_binary_endorsement, verify_endorsement, DefaultStatement,
+        is_firmware_type, is_kernel_type, verify_binary_endorsement, verify_endorsement,
     },
+    statement::{get_digest, parse_statement, DefaultStatement, Validity},
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
 
@@ -971,10 +971,7 @@ pub(crate) fn acquire_text_expected_values(
     }
 }
 
-fn to_expected_digests(
-    source: &[RawDigest],
-    claim_validity: Option<&endorsement::Validity>,
-) -> ExpectedDigests {
+fn to_expected_digests(source: &[RawDigest], claim_validity: Option<&Validity>) -> ExpectedDigests {
     ExpectedDigests {
         r#type: Some(expected_digests::Type::Digests(RawDigests {
             digests: source.to_vec(),

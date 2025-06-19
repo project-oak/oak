@@ -27,6 +27,7 @@ pub mod extract;
 pub(crate) mod platform;
 pub mod policy;
 pub(crate) mod rekor;
+pub mod statement;
 pub(crate) mod util;
 pub mod verifier;
 
@@ -55,7 +56,7 @@ pub fn verify_endorsement(
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<EndorsementDetails> {
     let s = endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
-    let digest = hex_to_raw_digest(&endorsement::get_digest(&s)?)?;
+    let digest = hex_to_raw_digest(&statement::get_digest(&s)?)?;
     let validity = s.predicate.validity.context("missing validity in statement")?;
     Ok(EndorsementDetails {
         subject_digest: Some(digest),

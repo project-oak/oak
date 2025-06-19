@@ -14,54 +14,28 @@
 // limitations under the License.
 //
 
-//! Verifies endorsements as coming from Transparent Release.
-//! Contains support for generating and parsing in-toto statements.
+//! Contains endorsement verification. All public calls must happen through
+//! verify_endorsement() in lib.rs.
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::vec::Vec;
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
-        VerifyingKeySet,
-    },
-    HexDigest,
+use oak_proto_rust::oak::attestation::v1::{
+    verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
+    VerifyingKeySet,
 };
-use serde::Deserialize;
-#[cfg(feature = "std")]
-use serde::Serialize;
-use time::OffsetDateTime;
 
 use crate::{
     rekor::{
         parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry,
         verify_rekor_log_entry_ecdsa,
     },
-    util::{
-        convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa,
-        UnixTimestampMillis,
-    },
+    statement::{parse_statement, validate_statement, DefaultStatement},
+    util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
 };
-
-/// URI representing in-toto statements. We only use V1, earlier and later
-/// versions will be rejected.
-pub(crate) const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
-
-/// Oldest predicate type for in-toto endorsement statements. References still
-/// exist, but fully removing it will be easy.
-#[deprecated = "Use PREDICATE_TYPE_V3"]
-const PREDICATE_TYPE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
-
-/// Previous predicate type of in-toto endorsement statements. In operation.
-#[deprecated = "Use PREDICATE_TYPE_V3"]
-const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
-
-/// Current predicate type of in-toto endorsement statements, which loses
-/// the `usage` field and adds claim types.
-pub(crate) const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
@@ -72,89 +46,6 @@ pub(crate) const FIRMWARE_CLAIM_TYPE: &str =
 /// binary unless this claim is present in the endorsement.
 pub(crate) const KERNEL_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
-
-// A map from algorithm name to lowercase hex-encoded value.
-type DigestSet = BTreeMap<String, String>;
-
-/// An artifact identified by its name and digest.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
-pub struct Subject {
-    pub name: String,
-    pub digest: DigestSet,
-}
-
-/// Validity time range of an endorsement statement.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
-pub struct Validity {
-    /// The timestamp (encoded as an Epoch time) from which the claim is
-    /// effective.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "notBefore")]
-    pub not_before: OffsetDateTime,
-
-    /// The timestamp (encoded as an Epoch time) from which the claim no longer
-    /// applies to the artifact.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "notAfter")]
-    pub not_after: OffsetDateTime,
-}
-
-// A single claim about the endorsement subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
-pub struct Claim {
-    pub r#type: String,
-}
-
-/// The predicate part of an endorsement subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
-pub struct DefaultPredicate {
-    // Specifies how to interpret the endorsement subject.
-    // The `default` option is needed to support predicate V2.
-    #[serde(default, rename = "usage")]
-    pub usage: String,
-
-    /// The timestamp (encoded as an Epoch time) when the statement was created.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "issuedOn")]
-    pub issued_on: OffsetDateTime,
-
-    /// Validity duration of this statement.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "validity")]
-    pub validity: Option<Validity>,
-
-    #[serde(default)]
-    pub claims: Vec<Claim>,
-}
-
-/// Represents a generic statement that binds a predicate to a subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
-pub struct Statement<P> {
-    pub _type: String,
-    #[serde(rename = "predicateType")]
-    pub predicate_type: String,
-    pub subject: Vec<Subject>,
-    pub predicate: P,
-}
-
-pub type DefaultStatement = Statement<DefaultPredicate>;
-
-pub fn is_firmware_type(statement: &DefaultStatement) -> bool {
-    // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    statement.predicate.usage == "firmware"
-        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
-}
-
-pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
-    // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    statement.predicate.usage == "kernel"
-        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
-}
 
 /// Verifies a signed endorsement against a reference value.
 ///
@@ -167,7 +58,7 @@ pub fn is_kernel_type(statement: &DefaultStatement) -> bool {
 /// `ref_value`: A reference value containing e.g. the public keys needed
 ///     for the verification. The deprecated fields `endorser_public_key` and
 ///     `rekor_public_key` will be ignored.
-pub fn verify_endorsement(
+pub(crate) fn verify_endorsement(
     now_utc_millis: i64,
     signed_endorsement: &SignedEndorsement,
     ref_value: &EndorsementReferenceValue,
@@ -218,7 +109,7 @@ pub fn verify_endorsement(
 /// required and the log entry will be verified. If `rekor_public_key`
 /// is empty (not set), then verification is skipped no matter if the log
 /// entry is present or not.
-pub fn verify_binary_endorsement(
+pub(crate) fn verify_binary_endorsement(
     now_utc_millis: i64,
     endorsement: &[u8],
     signature: &[u8],
@@ -256,7 +147,7 @@ pub fn verify_binary_endorsement(
     Ok(())
 }
 
-pub fn verify_endorser_public_key(
+fn verify_endorser_public_key(
     log_entry: &[u8],
     signature_key_id: u32,
     endorser_key_set: &VerifyingKeySet,
@@ -274,7 +165,7 @@ pub fn verify_endorser_public_key(
 
 /// Verifies that the endorser public key coincides with the one contained in
 /// the attestation.
-pub fn verify_endorser_public_key_ecdsa(
+fn verify_endorser_public_key_ecdsa(
     serialized_log_entry: &[u8],
     endorser_public_key: &[u8],
 ) -> anyhow::Result<()> {
@@ -304,132 +195,16 @@ pub fn verify_endorser_public_key_ecdsa(
     Ok(())
 }
 
-/// Converts the given byte array into an endorsement statement.
-pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {
-    serde_json::from_slice(bytes).map_err(|error| anyhow::anyhow!("failed to parse: {}", error))
+pub(crate) fn is_firmware_type(statement: &DefaultStatement) -> bool {
+    // TODO: b/369602264 - remove usage field in struct, remove checking it.
+    statement.predicate.usage == "firmware"
+        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
 }
 
-/// Checks that the given endorsement statement is valid, based on timestamp
-/// and required claims.
-pub fn validate_statement(
-    now_utc_millis: i64,
-    required_claims: &[&str],
-    statement: &DefaultStatement,
-) -> anyhow::Result<()> {
-    if statement._type != STATEMENT_TYPE {
-        anyhow::bail!("unsupported statement type");
-    }
-    #[allow(deprecated)] // We still need to validate the older types.
-    if statement.predicate_type != PREDICATE_TYPE_V1
-        && statement.predicate_type != PREDICATE_TYPE_V2
-        && statement.predicate_type != PREDICATE_TYPE_V3
-    {
-        anyhow::bail!("unsupported predicate type");
-    }
-
-    match &statement.predicate.validity {
-        Some(validity) => {
-            if validity.not_before.unix_timestamp_millis() > now_utc_millis {
-                anyhow::bail!("the claim is not yet applicable")
-            }
-            if validity.not_after.unix_timestamp_millis() < now_utc_millis {
-                anyhow::bail!("the claim is no longer applicable")
-            }
-        }
-        None => anyhow::bail!("the validity field is not set"),
-    }
-
-    for claim_type in required_claims {
-        statement
-            .predicate
-            .claims
-            .iter()
-            .find(|k| &k.r#type == claim_type)
-            .context("required claim type not found")?;
-    }
-
-    Ok(())
-}
-
-fn set_digest_field_from_map_entry(
-    digest: &mut HexDigest,
-    key: &str,
-    value: &str,
-) -> anyhow::Result<()> {
-    match key {
-        "psha2" => {
-            if !digest.psha2.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.psha2.push_str(value);
-        }
-        "sha1" => {
-            if !digest.sha1.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha1.push_str(value);
-        }
-        "sha256" | "sha2_256" => {
-            if !digest.sha2_256.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_256.push_str(value);
-        }
-        "sha512" | "sha2_512" => {
-            if !digest.sha2_512.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_512.push_str(value);
-        }
-        "sha3_512" => {
-            if !digest.sha3_512.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_512.push_str(value);
-        }
-        "sha3_384" => {
-            if !digest.sha3_384.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_384.push_str(value);
-        }
-        "sha3_256" => {
-            if !digest.sha3_256.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_256.push_str(value);
-        }
-        "sha3_224" => {
-            if !digest.sha3_224.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_224.push_str(value);
-        }
-        "sha384" | "sha2_384" => {
-            if !digest.sha2_384.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_384.push_str(value);
-        }
-        _ => anyhow::bail!("unknown digest key {key}"),
-    }
-
-    Ok(())
-}
-
-/// Returns the digest of the statement's subject.
-pub fn get_digest<T>(statement: &Statement<T>) -> anyhow::Result<HexDigest> {
-    if statement.subject.len() != 1 {
-        anyhow::bail!("expected a single subject, found {}", statement.subject.len());
-    }
-
-    let mut digest = HexDigest::default();
-    statement.subject[0].digest.iter().try_fold(&mut digest, |acc, (key, value)| {
-        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
-        Ok::<&mut HexDigest, anyhow::Error>(acc)
-    })?;
-
-    Ok(digest)
+pub(crate) fn is_kernel_type(statement: &DefaultStatement) -> bool {
+    // TODO: b/369602264 - remove usage field in struct, remove checking it.
+    statement.predicate.usage == "kernel"
+        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
 }
 
 #[cfg(test)]

@@ -22,10 +22,8 @@ use std::fs;
 use oak_file_utils::data_path;
 
 use crate::{
-    endorsement::{
-        get_digest, parse_statement, validate_statement, verify_binary_endorsement,
-        verify_endorser_public_key_ecdsa,
-    },
+    endorsement::{verify_binary_endorsement, verify_endorser_public_key_ecdsa},
+    statement::{parse_statement, validate_statement},
     util::convert_pem_to_raw,
 };
 
@@ -271,14 +269,4 @@ fn test_verify_binary_endorsement_succeeds_with_no_rekor_key() {
         &Vec::new(),
     );
     assert!(result.is_ok(), "{:?}", result);
-}
-
-#[test]
-fn test_get_digest() {
-    let testdata = load_testdata();
-
-    let statement = parse_statement(&testdata.endorsement).expect("couldn't parse statement");
-    let digest = get_digest(&statement).expect("failed to get digest from claim");
-
-    assert_eq!(digest.sha2_256, "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc");
 }
