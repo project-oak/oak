@@ -170,7 +170,7 @@ std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     # bazel test will build all targets as well unless --build_tests_only is specified.
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
-    bazel test --config=debug --keep_going //...:all
+    bazel test --keep_going //...:all
 
 [working-directory: 'codelab']
 test-codelab:
