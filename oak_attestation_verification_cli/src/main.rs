@@ -16,31 +16,27 @@
 
 use std::{
     fs,
-    sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::Result;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use clap::Parser;
-use oak_attestation_verification::{
-    policy::session_binding_public_key::SessionBindingPublicKeyPolicy, verifier::EventLogVerifier,
+use oak_attestation_verification::policy::session_binding_public_key::{
+    EndorsementReport, EventDeserializationReport, SessionBindingPublicKeyPolicy,
 };
-use oak_attestation_verification_types::{util::Clock, verifier::AttestationVerifier};
-use oak_crypto::certificate::certificate_verifier::CertificateVerifier;
+use oak_crypto::certificate::certificate_verifier::{
+    CertificateVerifier, PayloadDeserializationReport, SignatureReport, SubjectPublicKeyReport,
+    ValidityPeriodReport,
+};
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::{
     attestation::SIGNATURE_BASED_ATTESTATION_ID,
-    oak::{
-        attestation::v1::{
-            collected_attestation::RequestMetadata, AttestationResults, CollectedAttestation,
-        },
-        session::v1::EndorsedEvidence,
-    },
+    oak::{attestation::v1::CollectedAttestation, session::v1::EndorsedEvidence},
 };
 use prost::Message;
 
-static GOOGLE_IDENTITY_PUBLIC_KEY: &[u8; 459] =
+static GOOGLE_IDENTITY_PUBLIC_KEYSET: &[u8; 459] =
     include_bytes!("../data/google_identity_public_key.pb");
 
 #[derive(Parser, Debug)]
@@ -55,67 +51,285 @@ fn collected_attestation_parser(s: &str) -> Result<CollectedAttestation> {
     Ok(CollectedAttestation::decode(BASE64_STANDARD.decode(fs::read(s)?)?.as_slice())?)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-struct FrozenClock {
-    timestamp: SystemTime,
+// Prints a format string with the given arguments, with the provided indent
+// prefix. Defined as a macro to enable accepting a variable number of arguments
+// to the format string.
+macro_rules! print_indented {
+    ($indent:expr, $fmt:expr $(, $args:expr)*) => {
+        {
+            let formatted_text = format!($fmt $(, $args)*);
+            println!("{}{}", "\t".repeat($indent), formatted_text);
+        }
+    };
 }
 
-impl Clock for FrozenClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        let time_since_epoch = self
-            .timestamp
-            .duration_since(UNIX_EPOCH)
-            .expect("unable to calculate duration since epoch");
-        time_since_epoch
-            .as_millis()
-            .try_into()
-            .expect("unable to convert u128 millis since epoch to i64")
-    }
+// Prints one of two format string options (dependent on the condition), with
+// the provided indent prefix. Defined as a macro to enable accepting a variable
+// number of arguments to the format strings.
+macro_rules! print_indented_conditional {
+    ($indent:expr, $condition:expr, ($($true_args:tt)+), ($($false_args:tt)+)) => {
+        if $condition {
+            print_indented!($indent, $($true_args)+);
+        } else {
+            print_indented!($indent, $($false_args)+);
+        }
+    };
 }
 
 fn main() {
     let Flags { attestation } = Flags::parse();
+
+    let attestation_timestamp_millis = print_timestamp_report(&attestation);
 
     // TODO: b/419209669 - push this loop (removing print statements) down into some
     // new attestation verification library function (with tests!); make it return
     // some combined result.
     for (attestation_type_id, endorsed_evidence) in attestation.endorsed_evidence.iter() {
         match attestation_type_id.as_str() {
-            SIGNATURE_BASED_ATTESTATION_ID => {
-                println!("Signature-based attestation:");
-                match verify_signature_based_attestation(
-                    &attestation.request_metadata.clone().unwrap_or_default(),
-                    endorsed_evidence,
-                ) {
-                    Ok(_) => println!("Attestation verified successfully."),
-                    Err(_) => println!("Attestation failed to verify"),
-                }
-            }
-            &_ => println!("Unrecognized attestation type ID: {}", attestation_type_id),
+            SIGNATURE_BASED_ATTESTATION_ID => print_signature_based_attestation_report(
+                attestation_timestamp_millis,
+                endorsed_evidence,
+            ),
+            _ => println!("❓ Unrecognized attestation type ID: {}", attestation_type_id),
         }
     }
 }
 
-fn verify_signature_based_attestation(
-    request_metadata: &RequestMetadata,
+// Returns the timestamp (in millis since epoch) at which the provided
+// attestation was recorded. Prints out a report of any success/error states.
+fn print_timestamp_report(attestation: &CollectedAttestation) -> i64 {
+    let request_time =
+        attestation.request_metadata.clone().unwrap_or_default().request_time.unwrap_or_default();
+    match SystemTime::try_from(request_time) {
+        Err(err) => {
+            println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
+            0
+        }
+        Ok(system_time) => match system_time.duration_since(UNIX_EPOCH) {
+            Err(err) => {
+                println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
+                0
+            }
+            Ok(duration_since_epoch) => match duration_since_epoch.as_millis().try_into() {
+                Err(err) => {
+                    println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
+                    0
+                }
+                Ok(millis) => {
+                    print_indented_conditional!(
+                        0,
+                        millis != 0,
+                        ("✅ 🕠 Attestation timestamp, in millis since epoch: {}", millis),
+                        ("❌ 🕠 Attestation timestamp appears to be unset")
+                    );
+                    millis
+                }
+            },
+        },
+    }
+}
+
+fn print_signature_based_attestation_report(
+    attestation_timestamp_millis: i64,
     endorsed_evidence: &EndorsedEvidence,
-) -> Result<AttestationResults> {
-    let attestation_verifier = {
-        // TODO: b/419209669 - update this to choose keys based on meaningful URI
-        // values, once they are defined.
-        let tink_public_keyset = GOOGLE_IDENTITY_PUBLIC_KEY;
-        let signature_verifier = SignatureVerifier::new(tink_public_keyset);
-        let certificate_verifier = CertificateVerifier::new(signature_verifier);
-        let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
-        EventLogVerifier::new(
-            vec![Box::new(policy)],
-            Arc::new(FrozenClock {
-                timestamp: SystemTime::try_from(request_metadata.request_time.unwrap_or_default())?,
-            }),
-        )
+) {
+    let indent = 0;
+    let event = match &endorsed_evidence.evidence {
+        None => {
+            print_indented!(indent, "❌ 🧾 Attestation is missing evidence");
+            Option::None
+        }
+        Some(evidence) => {
+            print_indented!(indent, "✅ 🧾 Attestation includes evidence");
+            let indent = indent + 1;
+            match &evidence.event_log {
+                None => {
+                    print_indented!(indent, "❌ 🧾 Attestation evidence is missing event log");
+                    Option::None
+                }
+                Some(event_log) => {
+                    print_indented!(indent, "✅ 🧾 Attestation evidence includes event log");
+                    let encoded_events = &event_log.encoded_events;
+                    if encoded_events.len() != 1 {
+                        print_indented!(indent, "❌ 🧾 Attestation evidence event log must contain a single event, but contains {} event(s)", encoded_events.len());
+                        Option::None
+                    } else {
+                        print_indented!(
+                            indent,
+                            "✅ Attestation evidence event log has single event"
+                        );
+                        encoded_events.iter().next()
+                    }
+                }
+            }
+        }
     };
-    attestation_verifier.verify(
-        &endorsed_evidence.evidence.clone().unwrap_or_default(),
-        &endorsed_evidence.endorsements.clone().unwrap_or_default(),
-    )
+
+    let endorsement = match &endorsed_evidence.endorsements {
+        None => {
+            print_indented!(indent, "❌ Attestation is missing endorsements");
+            Option::None
+        }
+        Some(endorsements) => {
+            print_indented!(indent, "✅ Attestation includes endorsements");
+            let indent = indent + 1;
+            let events = &endorsements.events;
+            if events.len() != 1 {
+                print_indented!(indent, "❌ Attestation must contain a single endorsement, but contains {} endorsement(s)", events.len());
+                Option::None
+            } else {
+                print_indented!(indent, "✅ Attestation includes a single endorsement");
+                events.iter().next()
+            }
+        }
+    };
+
+    if let (Some(event), Some(endorsement)) = (event, endorsement) {
+        let report = {
+            // TODO: b/419209669 - update this to choose keys based on meaningful URI
+            // values, once they are defined.
+            let tink_public_keyset = GOOGLE_IDENTITY_PUBLIC_KEYSET;
+            let signature_verifier = SignatureVerifier::new(tink_public_keyset);
+            let certificate_verifier = CertificateVerifier::new(signature_verifier);
+            let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+            policy.report(event, endorsement, attestation_timestamp_millis)
+        };
+
+        match report.event {
+            EventDeserializationReport::Failed(err) => {
+                print_indented!(indent, "❌ Attestation event deserialization failed: {}", err)
+            }
+            EventDeserializationReport::Succeeded { has_session_binding_public_key } => {
+                print_indented!(indent, "✅ Attestation event deserialized successfully");
+                let indent = indent + 1;
+                print_indented_conditional!(
+                    indent,
+                    has_session_binding_public_key,
+                    ("✅ 🔑 Attestation event has a session binding public key"),
+                    ("❌ 🔑 Attestation event is missing a session binding public key")
+                );
+            }
+        }
+
+        match report.endorsement {
+            EndorsementReport::DeserializationFailed(err) => {
+                print_indented!(indent, "❌ Endorsement deserialization failed: {}", err)
+            }
+            EndorsementReport::MissingCertificateAuthorityEndorsement => {
+                print_indented!(
+                    indent,
+                    "❌ 📜 Endorsement is missing certificate authority endorsement"
+                )
+            }
+            EndorsementReport::MissingCertificate => print_indented!(
+                indent,
+                "❌ 📜 Certificate authority endorsement is missing certificate"
+            ),
+            EndorsementReport::InvalidEvent => {
+                print_indented!(indent, "❌ Event is invalid")
+            }
+            EndorsementReport::Checked(certificate_verification_report) => {
+                print_indented!(
+                    indent,
+                    "✅ 📜 Certificate authority endorsement deserialized successfully"
+                );
+                let indent = indent + 1;
+                print_indented!(
+                    indent,
+                    "✅ 📜 Certificate authority endorsement includes certificate"
+                );
+                match certificate_verification_report.signature {
+                    SignatureReport::Missing => {
+                        print_indented!(indent, "❌ 📜 Certificate is missing signature info")
+                    }
+                    SignatureReport::VerificationFailed(err) => {
+                        print_indented!(
+                            indent,
+                            "❌ 📜 Certificate signature verification failed: {}",
+                            err
+                        )
+                    }
+                    SignatureReport::VerificationSucceeded => {
+                        print_indented!(
+                            indent,
+                            "✅ 📜 Certificate signature verification succeeded"
+                        )
+                    }
+                }
+                match certificate_verification_report.serialized_payload {
+                    PayloadDeserializationReport::Failed(err) => print_indented!(
+                        indent,
+                        "❌ 📜 Certificate payload deserialization failed: {}",
+                        err
+                    ),
+                    PayloadDeserializationReport::Succeeded { subject_public_key, validity } => {
+                        print_indented!(
+                            indent,
+                            "✅ 📜 Certificate payload deserialization succeeded"
+                        );
+                        let indent = indent + 1;
+                        match subject_public_key {
+                            SubjectPublicKeyReport::Missing => print_indented!(
+                                indent,
+                                "❌ 📜 🔑 Certificate payload is missing subject public key info"
+                            ),
+                            SubjectPublicKeyReport::Present {
+                                public_key_match,
+                                purpose_id_match,
+                            } => {
+                                print_indented!(
+                                    indent,
+                                    "✅ 📜 🔑 Certificate payload includes subject public key info"
+                                );
+                                print_indented_conditional!(indent,
+                                                public_key_match,
+                                                ("✅ 📜 🔑 Certificate payload subject public key matches expected subject public key"),
+                                                ("❌ 📜 🔑 Certificate payload subject public key does not match expected subject public key")
+                                            );
+                                print_indented_conditional!(indent,
+                                                purpose_id_match,
+                                                ("✅ 📜 🔑 Certificate payload subject public key purpose matches expected subject public key purpose"),
+                                                ("❌ 📜 🔑 Certificate payload subject public key purpose does not match expected subject public key purpose")
+                                            );
+                            }
+                        }
+                        match validity {
+                            ValidityPeriodReport::Missing => {
+                                print_indented!(indent, "❌ Certificate is missing validity period")
+                            }
+                            ValidityPeriodReport::Present {
+                                validity_period_is_positive,
+                                validity_period_within_limit,
+                                validity_period_started_on_or_before_timestamp,
+                                validity_period_ended_at_or_after_timestamp,
+                            } => {
+                                print_indented_conditional!(
+                                    indent,
+                                    validity_period_is_positive,
+                                    ("✅ 📜 Certificate validity period is valid"),
+                                    ("❌ 📜 Certificate validity period is invalid")
+                                );
+                                print_indented_conditional!(
+                                    indent,
+                                    validity_period_within_limit,
+                                    ("✅ 📜 Certificate validity period is within limits"),
+                                    ("❌ 📜 Certificate validity period exceeds limits")
+                                );
+                                print_indented_conditional!(indent,
+                                                validity_period_started_on_or_before_timestamp,
+                                                ("✅ 📜 Certificate validity period begun at or before attestation timestamp"),
+                                                ("❌ 📜 Certificate validity period begun after attestation timestamp")
+                                            );
+                                print_indented_conditional!(indent,
+                                                validity_period_ended_at_or_after_timestamp,
+                                                ("✅ 📜 Certificate validity period ended at or after attestation timestamp"),
+                                                ("❌ 📜 Certificate validity period ended before attestation timestamp")
+                                            );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

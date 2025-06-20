@@ -21,9 +21,45 @@ use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SubjectPublicKeyInfo, Validity,
 };
 use oak_time::Instant;
-use prost::Message;
+use prost::{DecodeError, Message};
 
 use crate::verifier::Verifier;
+
+#[derive(Debug)]
+pub struct CertificateVerificationReport {
+    pub signature: SignatureReport,
+    pub serialized_payload: PayloadDeserializationReport,
+}
+
+#[derive(Debug)]
+pub enum SignatureReport {
+    Missing,
+    VerificationFailed(anyhow::Error),
+    VerificationSucceeded,
+}
+
+#[derive(Debug)]
+pub enum PayloadDeserializationReport {
+    Failed(DecodeError),
+    Succeeded { subject_public_key: SubjectPublicKeyReport, validity: ValidityPeriodReport },
+}
+
+#[derive(Debug)]
+pub enum SubjectPublicKeyReport {
+    Missing,
+    Present { public_key_match: bool, purpose_id_match: bool },
+}
+
+#[derive(Debug)]
+pub enum ValidityPeriodReport {
+    Missing,
+    Present {
+        validity_period_is_positive: bool,
+        validity_period_within_limit: bool,
+        validity_period_started_on_or_before_timestamp: bool,
+        validity_period_ended_at_or_after_timestamp: bool,
+    },
+}
 
 /// Struct that verifies the validity of the [`Certificate`] proto, which
 /// includes verifying its validity and that it contains expected fields.
@@ -114,6 +150,60 @@ impl<V: Verifier> CertificateVerifier<V> {
         Ok(())
     }
 
+    pub fn report(
+        &self,
+        subject_public_key: &[u8],
+        purpose_id: &[u8],
+        milliseconds_since_epoch: i64,
+        certificate: &Certificate,
+    ) -> CertificateVerificationReport {
+        // Verify that certificate payload is signed correctly.
+        let signature_report = match certificate.signature_info.as_ref() {
+            None => SignatureReport::Missing,
+            Some(signature_info) => match self
+                .signature_verifier
+                .verify(&certificate.serialized_payload, signature_info.signature.as_ref())
+            {
+                Ok(_) => SignatureReport::VerificationSucceeded,
+                Err(err) => SignatureReport::VerificationFailed(err),
+            },
+        };
+
+        // Deserialize certificate payload.
+        let payload_deserialization_report =
+            match CertificatePayload::decode(certificate.serialized_payload.as_ref()) {
+                Err(err) => PayloadDeserializationReport::Failed(err),
+                Ok(payload) => PayloadDeserializationReport::Succeeded {
+                    subject_public_key: match payload.subject_public_key_info.as_ref() {
+                        None => SubjectPublicKeyReport::Missing,
+                        Some(subject_public_key_info) => {
+                            let certificate_payload_subject_public_key =
+                                &subject_public_key_info.public_key;
+                            let certificate_payload_purpose_id =
+                                &subject_public_key_info.purpose_id;
+                            SubjectPublicKeyReport::Present {
+                                public_key_match: certificate_payload_subject_public_key
+                                    == subject_public_key,
+                                purpose_id_match: certificate_payload_purpose_id == purpose_id,
+                            }
+                        }
+                    },
+                    validity: match payload.validity {
+                        None => ValidityPeriodReport::Missing,
+                        Some(validity) => self.report_validity(
+                            Instant::from_unix_millis(milliseconds_since_epoch),
+                            &validity,
+                        ),
+                    },
+                },
+            };
+
+        CertificateVerificationReport {
+            signature: signature_report,
+            serialized_payload: payload_deserialization_report,
+        }
+    }
+
     fn verify_subject_public_key_info(
         &self,
         expected_subject_public_key: &[u8],
@@ -142,6 +232,7 @@ impl<V: Verifier> CertificateVerifier<V> {
     /// Also, if [`::allowed_clock_skew`] is not zero, then it's subtracted from
     /// the [`Validity::not_before`] and added to the [`Validity::not_after`]
     /// before verification to account for devices with skewed clocks.
+    // TODO: b/429956843 - consolidate Validity verification.
     fn verify_validity(&self, current_time: Instant, validity: &Validity) -> anyhow::Result<()> {
         let not_before: Instant =
             validity.not_before.as_ref().context("Validity.not_before field is empty")?.into();
@@ -185,5 +276,30 @@ impl<V: Verifier> CertificateVerifier<V> {
         );
 
         Ok(())
+    }
+
+    // TODO: b/429956843 - consolidate Validity verification.
+    fn report_validity(&self, current_time: Instant, validity: &Validity) -> ValidityPeriodReport {
+        let not_before: Instant = match validity.not_before.as_ref() {
+            None => return ValidityPeriodReport::Missing,
+            Some(not_before) => not_before.into(),
+        };
+        let not_after: Instant = match validity.not_after.as_ref() {
+            None => return ValidityPeriodReport::Missing,
+            Some(not_after) => not_after.into(),
+        };
+        let skewed_not_before = not_before - self.allowed_clock_skew;
+        let skewed_not_after = not_after + self.allowed_clock_skew;
+        ValidityPeriodReport::Present {
+            validity_period_is_positive: not_before < not_after,
+            validity_period_within_limit: if let Some(validity_limit) = self.validity_limit {
+                let validity_duration = not_after - not_before;
+                validity_duration <= validity_limit
+            } else {
+                true
+            },
+            validity_period_started_on_or_before_timestamp: current_time >= skewed_not_before,
+            validity_period_ended_at_or_after_timestamp: current_time <= skewed_not_after,
+        }
     }
 }
