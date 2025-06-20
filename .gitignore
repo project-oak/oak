@@ -34,6 +34,10 @@ cargo-timing*.html
 # Bazel cache.
 /.cache/
 
+# Python compiled files
+**/__pycache__/
+**/*.pyc
+
 # Node modules.
 **/node_modules/
 
