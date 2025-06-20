@@ -26,6 +26,7 @@ use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
     runtime::Handle,
     sync::{Mutex, MutexGuard},
+    time::Instant,
 };
 use tonic::transport::Channel;
 
@@ -693,66 +694,60 @@ impl ApplicationHandler for SealedMemoryHandler {
         } else {
             let request = request.unwrap();
             let request_id = request.request_id;
-            let request = request.request;
-            if request.is_none() {
-                bail!("The request is empty. The json format might be incorrect: the data type should strictly match.");
-            }
-            let request = request.unwrap();
-            let mut response = match request {
+            let request_variant = request.request.context("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
+
+            let metric_request_type_name = match &request_variant {
+                sealed_memory_request::Request::UserRegistrationRequest(r) => get_name(r),
+                sealed_memory_request::Request::KeySyncRequest(r) => get_name(r),
+                sealed_memory_request::Request::AddMemoryRequest(r) => get_name(r),
+                sealed_memory_request::Request::GetMemoriesRequest(r) => get_name(r),
+                sealed_memory_request::Request::ResetMemoryRequest(r) => get_name(r),
+                sealed_memory_request::Request::GetMemoryByIdRequest(r) => get_name(r),
+                sealed_memory_request::Request::SearchMemoryRequest(r) => get_name(r),
+                sealed_memory_request::Request::DeleteMemoryRequest(r) => get_name(r),
+            };
+            self.metrics
+                .rpc_count
+                .add(1, &[KeyValue::new("request_type", metric_request_type_name.clone())]);
+
+            let start_time = Instant::now();
+            let mut response = match request_variant {
                 sealed_memory_request::Request::UserRegistrationRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     if self.is_message_type_json(request_bytes) {
                         message_type = Some(MessageType::Json);
-                    }
+                    };
                     self.boot_strap_handler(request).await?.into_response()
                 }
-                sealed_memory_request::Request::KeySyncRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
-                    self.key_sync_handler(request, self.is_message_type_json(request_bytes))
-                        .await?
-                        .into_response()
-                }
+                sealed_memory_request::Request::KeySyncRequest(request) => self
+                    .key_sync_handler(request, self.is_message_type_json(request_bytes))
+                    .await?
+                    .into_response(),
                 sealed_memory_request::Request::AddMemoryRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.add_memory_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::GetMemoriesRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.get_memories_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::ResetMemoryRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.reset_memory_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.get_memory_by_id_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::SearchMemoryRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.search_memory_handler(request).await?.into_response()
                 }
                 sealed_memory_request::Request::DeleteMemoryRequest(request) => {
-                    self.metrics
-                        .rpc_count
-                        .add(1, &[KeyValue::new("request_type", get_name(&request))]);
                     self.delete_memory_handler(request).await?.into_response()
                 }
             };
+            let elapsed_time = start_time.elapsed().as_millis() as u64;
+            self.metrics
+                .rpc_latency
+                .record(elapsed_time, &[KeyValue::new("request_type", metric_request_type_name)]);
+            self.metrics
+                .rpc_latency
+                .record(elapsed_time, &[KeyValue::new("request_type", "total")]);
             response.request_id = request_id;
             response
         };

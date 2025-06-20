@@ -17,13 +17,18 @@
 use std::sync::Arc;
 
 use oak_containers_agent::metrics::OakObserver;
-use opentelemetry::{metrics::Counter, KeyValue};
+use opentelemetry::{
+    metrics::{Counter, Histogram, Unit},
+    KeyValue,
+};
 
 pub struct Metrics {
     // Total number of RPCs received by the private memory server.
     pub rpc_count: Counter<u64>,
     // Number of RPCs that failed.
     pub rpc_failure_count: Counter<u64>,
+    // Latency of each RPC.
+    pub rpc_latency: Histogram<u64>,
 }
 
 impl Metrics {
@@ -38,13 +43,23 @@ impl Metrics {
             .u64_counter("rpc_failure_count")
             .with_description("Number of RPCs that failed.")
             .init();
+        let rpc_latency = observer
+            .meter
+            .u64_histogram("rpc_latency")
+            .with_description("Latency in ms of each RPC.")
+            .with_unit(Unit::new("ms"))
+            // Update the version of opentelemetry to support custom buckets.
+            //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
+            .init();
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
+        rpc_latency.record(0, &[KeyValue::new("request_type", "test")]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
-        Self { rpc_count, rpc_failure_count }
+        observer.register_metric(rpc_latency.clone());
+        Self { rpc_count, rpc_failure_count, rpc_latency }
     }
 }
 
