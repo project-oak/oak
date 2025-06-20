@@ -156,45 +156,6 @@ git_repository(
     remote = "https://github.com/erenon/bazel_clang_tidy.git",
 )
 
-# Bazel rules for building OCI images and runtime bundles.
-http_archive(
-    name = "rules_oci",
-    sha256 = "56d5499025d67a6b86b2e6ebae5232c72104ae682b5a21287770bd3bf0661abf",
-    strip_prefix = "rules_oci-1.7.5",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.5/rules_oci-v1.7.5.tar.gz",
-)
-
-load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
-
-rules_oci_dependencies()
-
-load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "LATEST_ZOT_VERSION", "oci_register_toolchains")
-
-oci_register_toolchains(
-    name = "oci",
-    crane_version = LATEST_CRANE_VERSION,
-    zot_version = LATEST_ZOT_VERSION,
-)
-
-load("@rules_oci//oci:pull.bzl", "oci_pull")
-
-# This is the base docker image we use to bundle example apps like hello world
-# enclave apps. We don't build these, we pull them from the existing repo.
-#
-# E.g.: //oak_containers/examples/hello_world/enclave_app:bundle . You can find
-# these images at: gcr.io/distroless/cc-debian12 . We do not need root access
-# so you can search with ":nonroot" (gcr.io/distroless/cc-debian12:nonroot) or
-# "latest" (gcr.io/distroless/cc-debian12:latest). Note files tagged as ".sig"
-# or ".att" do not contain images. You can find a given digest (like the one
-# below) at http://gcr.io/distroless/cc-debian12@{digest} where {digest}
-# includes the "sha256:" bit.
-oci_pull(
-    name = "distroless_cc_debian12",
-    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
-    image = "gcr.io/distroless/cc-debian12",
-    platforms = ["linux/amd64"],
-)
-
 load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
 
 register_expand_template_toolchains()

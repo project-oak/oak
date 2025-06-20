@@ -13,13 +13,13 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 
 # https://github.com/grpc/grpc-java
-bazel_dep(name = "grpc-java", version="1.71.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
 
 # https://github.com/bazelbuild/platforms
 bazel_dep(name = "platforms", version = "0.0.11")
 
 # https://github.com/bazelbuild/rules_cc
-bazel_dep(name = "rules_cc", version="0.1.1")
+bazel_dep(name = "rules_cc", version = "0.1.1")
 
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
@@ -50,10 +50,15 @@ bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_cryp
 
 # https://github.com/bazel-contrib/rules_python
 bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+
 python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
 
 # Need ignore_root_user_error to run in docker container in CI
-python.toolchain(is_default = True, python_version = "3.11", ignore_root_user_error = True)
+python.toolchain(
+    ignore_root_user_error = True,
+    is_default = True,
+    python_version = "3.11",
+)
 
 bazel_dep(name = "rules_android", version = "0.6.1")
 
@@ -70,6 +75,20 @@ register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
 
 bazel_dep(name = "rules_kotlin", version = "2.1.4")
 
+bazel_dep(name = "rules_oci", version = "2.2.6")
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+
+# This is the base docker image we use to bundle example apps like hello world
+# enclave apps. We don't build these, we pull them from the existing repo.
+oci.pull(
+    name = "distroless_cc_debian12",
+    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
+    image = "gcr.io/distroless/cc-debian12",
+    platforms = ["linux/amd64"],
+)
+use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
+
 umoci_toolchain_repo = use_repo_rule("//bazel/tools/umoci:umoci_toolchain.bzl", "_umoci_toolchain_repo")
 
 umoci_toolchain_repo(
@@ -77,4 +96,3 @@ umoci_toolchain_repo(
 )
 
 register_toolchains("@umoci//:umoci_toolchain")
-
