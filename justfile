@@ -120,51 +120,17 @@ bare_metal_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_com
 wasm_crates_query := "kind(\"rust_.*\", //...) intersect attr(\"target_compatible_with\", \"wasm32-none-setting\", //...)"
 
 # Build and test all targets.
-# The kokoro script build_test_and_copy_to_placer expects this recipe to
-# generate properly optimized and stripped binaries that it will then copy to
-# placer. See kokoro/helpers/copy_binaries.sh for the expected outputs.
 build-and-test: \
     std-crates \
     bare-metal-crates \
     wasm-crates \
     test-codelab
-
-build-and-test-and-copy: build-and-test copy-oak-artifacts private-memory-build-and-copy
 # The list of ASAN targets is currently constrained right now because:
 # * ASAN builds/tests are quite a bit slower
 # * In some build targets (cargo_build_scripts for example), LD_LIBRARY_PATH is
 #   not correct, and libasan can not be found.
 asan:
     bazel build --config=asan //cc/oak_session/...
-
-kokoro-build_test_and_copy_to_placer: \
-    sample-just-log \
-    (trap-logs "std-crates") \
-    (trap-logs "bare-metal-crates") \
-    (trap-logs "wasm-crates") \
-    (trap-logs "provenance-subjects") \
-    (trap-logs "test-codelab") \
-    copy-oak-artifacts \
-    private-memory-build-and-copy
-
-sample-just-log:
-    mkdir -p artifacts/bazel-testlogs/testing1/
-    echo "Can I create a new log artifact?" >> artifacts/bazel-testlogs/testing1/sponge_log.log
-
-copy-logs:
-    # Only one thread for cp or you may get race conditions when trying to create.
-    fd "test.(log|xml)" -L bazel-testlogs/** --threads=1 --exec cp --force --parents --update {} artifacts
-    fd "^test.log" artifacts/bazel-testlogs/** --exec mv "{}" "{//}/sponge_log.log"
-    fd "^test.xml" artifacts/bazel-testlogs/** --exec mv "{}" "{//}/sponge_log.xml"
-
-# This can be used by calling scripts to ex
-trap-logs recipe:
-    #!/bin/bash
-    function copy_logs() {
-      just copy-logs
-    }
-    trap copy_logs EXIT
-    just {{recipe}}
 
 std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
@@ -181,13 +147,13 @@ bare-metal-crates:
     #!/bin/bash
     set -o pipefail
     echo "Building bare metal crates": $(bazel query "{{bare_metal_crates_query}}")
-    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --platforms=//:x86_64-unknown-none
+    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --keep_going --platforms=//:x86_64-unknown-none
 
 wasm-crates:
     #!/bin/bash
     set -o pipefail
     echo "Building wasm crates": $(bazel query "{{wasm_crates_query}}")
-    bazel query "{{wasm_crates_query}}" | xargs bazel build --platforms=//:wasm32-unknown-unknown
+    bazel query "{{wasm_crates_query}}" | xargs bazel build --keep_going --platforms=//:wasm32-unknown-unknown --
 
 list-bare-metal-crates:
     bazel query "{{bare_metal_crates_query}}"
@@ -316,7 +282,7 @@ copy-oak-artifacts: \
     (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
     (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
     (copy-binary "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
-    (copy-binary "oak_containers/kernel:bzImage" "oak_containers_kernel") \
+    (copy-binary "oak_containers/kernel" "oak_containers_kernel") \
     (copy-subjects "oak_containers/kernel:subjects" "oak_containers_kernel") \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \

@@ -17,7 +17,7 @@ configure_bazelrc
 
 ./scripts/docker_pull
 # TODO: b/337266665 - Remove bazel-cache-test logic once we are satisfied with remote cache hits.
-./scripts/docker_run nix develop .#default --command just build-and-test-and-copy
+./scripts/docker_run nix develop .#default --command ./kokoro/runners/build_test_and_copy.sh
 ./scripts/git_check_diff
 
 # System image deps (oak_containers_orchestrator, oak_containers_syslogd,

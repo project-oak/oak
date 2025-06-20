@@ -61,14 +61,7 @@ rust-project.json
 /downloads/
 
 # Artifact holding location for CI / Provenance tasks.
-# This are typically things built inside the docker container that we want to
-# expose to the CI host for upload, provenance generation, etc.
-# These correspond to some internal definitions, so please take care
-# if trying to add new ones.
-/artifacts/bazel-testlogs
-/artifacts/binaries
-/artifacts/misc
-/artifacts/subjects
+/artifacts
 
 # Ignore generated binary files.
 **/bin/

@@ -64,6 +64,8 @@
             base = with pkgs; mkShell {
               packages = [
                 cachix
+                envsubst
+                fd
                 just
                 ps
                 which
