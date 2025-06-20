@@ -27,7 +27,7 @@ kt_jvm_test(
     test_class = "com.google.oak.verification.LogEntryVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
-        "@maven//:junit_junit",
+        "@junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )
@@ -39,7 +39,7 @@ kt_jvm_test(
     test_class = "com.google.oak.verification.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
-        "@maven//:junit_junit",
+        "@junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )
@@ -51,7 +51,7 @@ kt_jvm_test(
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
-        "@maven//:junit_junit",
+        "@junit_junit",
         "@rules_kotlin//kotlin/compiler:kotlin-test",
     ],
 )

@@ -31,6 +31,6 @@ java_test(
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//proto/crypto:crypto_java_proto",
-        "@maven//:junit_junit",
+        "@junit_junit",
     ],
 )

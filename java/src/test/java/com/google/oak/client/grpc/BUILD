@@ -59,7 +59,7 @@ kt_jvm_library(
         "@io_grpc_grpc_java//inprocess",
         "@io_grpc_grpc_java//stub",
         "@javax_inject_javax_inject",
-        "@maven//:junit_junit",
+        "@junit_junit",
         "@org_jetbrains_kotlin_kotlin_test",
         "@org_mockito_kotlin_mockito_kotlin",
     ],

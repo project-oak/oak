@@ -21,6 +21,9 @@ bazel_dep(name = "platforms", version = "0.0.11")
 # https://github.com/bazelbuild/rules_cc
 bazel_dep(name = "rules_cc", version = "0.1.1")
 
+# https://github.com/bazelbuild/rules_proto
+bazel_dep(name = "rules_proto", version = "7.1.0")
+
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 
@@ -96,3 +99,53 @@ umoci_toolchain_repo(
 )
 
 register_toolchains("@umoci//:umoci_toolchain")
+
+# grpc-kotlin doesn't support bzlmod yet,
+# so we have to do this ourslves to get the
+# import in the WORKSAPCE to build.
+# This just covers artifacts not already
+# pulled in by our main artifacts.
+IO_GRPC_GRPC_KOTLIN_ARTIFACTS = [
+    "com.squareup:kotlinpoet:1.14.2",
+]
+
+bazel_dep(name = "rules_jvm_external", version = "6.7")
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.artifact(group = "org.jetbrains.kotlinx", artifact = "kotlinx-coroutines-test", version = "1.10.2", testonly = True)
+maven.artifact(group = "org.jetbrains.kotlin", artifact = "kotlin-test", version = "2.1.20", testonly = True)
+maven.artifact(group = "org.mockito", artifact = "mockito-core", version = "5.4.0", testonly = True)
+maven.artifact(group = "org.mockito.kotlin", artifact = "mockito-kotlin", version = "5.1.0", testonly = True)
+maven.artifact(group = "org.assertj", artifact = "assertj-core", version = "3.27.3", testonly = True)
+maven.install(
+    artifacts = [
+        "co.nstant.in:cbor:0.9",
+        "com.google.crypto.tink:tink:1.17.0",
+        "com.google.errorprone:error_prone_annotations:2.38.0",
+        "com.google.flogger:flogger-system-backend:0.9",
+        "com.google.flogger:google-extensions:0.9",
+        "com.google.protobuf:protobuf-kotlin:4.26.0",
+        "javax.inject:javax.inject:1",
+        "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
+    ] + IO_GRPC_GRPC_KOTLIN_ARTIFACTS,
+    generate_compat_repositories = True,
+    repositories = [
+        "https://maven.google.com",
+        "https://repo1.maven.org/maven2",
+    ],
+)
+use_repo(
+    maven,
+    "maven",
+    # Unfortunately, we need to list each compat respository name that we want as well.
+    "co_nstant_in_cbor",
+    "com_google_code_gson_gson",
+    "com_google_guava_guava",
+    "javax_inject_javax_inject",
+    "junit_junit",
+    "com_google_crypto_tink_tink",
+    "org_bouncycastle_bcprov_jdk18on",
+    "org_jetbrains_kotlin_kotlin_test",
+    "org_mockito_kotlin_mockito_kotlin",
+    "org_mockito_mockito_core",
+)

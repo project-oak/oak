@@ -19,24 +19,6 @@ workspace(name = "oak")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-# The `name` argument in all `http_archive` rules should be equal to the
-# WORKSPACE name of the corresponding library.
-
-# Java gRPC support.
-# https://github.com/grpc/grpc-java
-http_archive(
-    name = "io_grpc_grpc_java",
-    sha256 = "524a3d687f06ffd1c6ab66dbbb5de5b9f6adaa662570aa56e553d86c2065eb31",
-    strip_prefix = "grpc-java-1.72.0",
-    urls = [
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.72.0.tar.gz",
-    ],
-)
-
-load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
-
-grpc_java_repositories()
-
 # Kotlin gRPC
 http_archive(
     name = "com_github_grpc_grpc_kotlin",
@@ -46,70 +28,8 @@ http_archive(
     url = "https://github.com/grpc/grpc-kotlin/archive/refs/tags/v1.4.2.tar.gz",
 )
 
-load(
-    "@com_github_grpc_grpc_kotlin//:repositories.bzl",
-    "IO_GRPC_GRPC_KOTLIN_ARTIFACTS",
-    "IO_GRPC_GRPC_KOTLIN_OVERRIDE_TARGETS",
-    "grpc_kt_repositories",
-)
-
-grpc_kt_repositories()
-
-# External Java rules.
-# https://github.com/bazelbuild/rules_jvm_external
-http_archive(
-    name = "rules_jvm_external",
-    sha256 = "a1e351607f04fed296ba33c4977d3fe2a615ed50df7896676b67aac993c53c18",
-    strip_prefix = "rules_jvm_external-6.7",
-    urls = [
-        # Rules Java v5.2 (2023-04-13).
-        "https://github.com/bazelbuild/rules_jvm_external/releases/download/6.7/rules_jvm_external-6.7.tar.gz",
-    ],
-)
-
-load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
-
-rules_jvm_external_deps()
-
-load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
-
-rules_jvm_external_setup()
-
-# Maven rules.
-load("@rules_jvm_external//:defs.bzl", "maven_install")
-
-maven_install(
-    artifacts = [
-        "co.nstant.in:cbor:0.9",
-        "com.google.crypto.tink:tink:1.12.0",
-        "com.google.errorprone:error_prone_annotations:2.38.0",
-        "com.google.flogger:flogger-system-backend:0.8",
-        "com.google.flogger:google-extensions:0.8",
-        "com.google.protobuf:protobuf-kotlin:3.18.0",
-        "javax.inject:javax.inject:1",
-        "org.assertj:assertj-core:3.12.1",
-        "org.bouncycastle:bcpkix-jdk18on:1.77",
-        "org.bouncycastle:bcprov-jdk18on:1.77",
-        "org.jetbrains.kotlin:kotlin-test:2.0.0",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3",
-        "org.mockito:mockito-core:3.3.3",
-        "org.mockito.kotlin:mockito-kotlin:4.1.0",
-    ] + IO_GRPC_GRPC_JAVA_ARTIFACTS + IO_GRPC_GRPC_KOTLIN_ARTIFACTS,
-    generate_compat_repositories = True,
-    override_targets = dict(
-        IO_GRPC_GRPC_KOTLIN_OVERRIDE_TARGETS.items() +
-        IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS.items(),
-    ),
-    repositories = [
-        "https://maven.google.com",
-        "https://repo1.maven.org/maven2",
-    ],
-)
-
-load("@maven//:compat.bzl", "compat_repositories")
-
-compat_repositories()
+# The `name` argument in all `http_archive` rules should be equal to the
+# WORKSPACE name of the corresponding library.
 
 http_archive(
     name = "rules_foreign_cc",

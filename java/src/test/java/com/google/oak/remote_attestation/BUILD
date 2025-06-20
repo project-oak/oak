@@ -27,8 +27,8 @@ kt_jvm_library(
     srcs = ["AttestationVerificationClockTest.kt"],
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verification_clock",
-        "@maven//:junit_junit",
-        "@maven//:org_jetbrains_kotlin_kotlin_test",
+        "@junit_junit",
+        "@org_jetbrains_kotlin_kotlin_test",
     ],
 )
 

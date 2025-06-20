@@ -26,6 +26,6 @@ java_test(
     test_class = "com.google.oak.util.ResultTest",
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "@maven//:junit_junit",
+        "@junit_junit",
     ],
 )
