@@ -360,7 +360,7 @@ struct Allocate {
     file: RomfileName,
     align: u32,
     zone: u8,
-    _padding: [u8; 60],
+    _padding: [u8; 63],
 }
 static_assertions::assert_eq_size!(Allocate, Pad);
 
@@ -368,7 +368,7 @@ impl Allocate {
     #[cfg(test)]
     pub fn new<T: IntoBytes + Immutable + ?Sized>(file: &T, align: u32, zone: Zone) -> Self {
         let mut cmd =
-            Self { file: [0; ROMFILE_LOADER_FILESZ], align, zone: zone as u8, _padding: [0; 60] };
+            Self { file: [0; ROMFILE_LOADER_FILESZ], align, zone: zone as u8, _padding: [0; 63] };
         cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
 
         cmd
@@ -428,7 +428,7 @@ struct AddPointer {
     src_file: RomfileName,
     offset: u32,
     size: u8,
-    _padding: [u8; 6],
+    _padding: [u8; 7],
 }
 static_assertions::assert_eq_size!(AddPointer, Pad);
 
@@ -445,7 +445,7 @@ impl AddPointer {
             src_file: [0; ROMFILE_LOADER_FILESZ],
             offset,
             size,
-            _padding: [0; 6],
+            _padding: [0; 7],
         };
         cmd.dest_file[..dest_file.as_bytes().len()].copy_from_slice(dest_file.as_bytes());
         cmd.src_file[..src_file.as_bytes().len()].copy_from_slice(src_file.as_bytes());
@@ -523,7 +523,7 @@ struct AddChecksum {
 
     /// Size of the data in the file to checksum, offset from `start`
     length: u32,
-    _padding: [u8; 54],
+    _padding: [u8; 56],
 }
 static_assertions::assert_eq_size!(AddChecksum, Pad);
 
@@ -536,7 +536,7 @@ impl AddChecksum {
         length: u32,
     ) -> Self {
         let mut cmd =
-            Self { file: [0; ROMFILE_LOADER_FILESZ], offset, start, length, _padding: [0; 54] };
+            Self { file: [0; ROMFILE_LOADER_FILESZ], offset, start, length, _padding: [0; 56] };
         cmd.file[..file.as_bytes().len()].copy_from_slice(file.as_bytes());
 
         cmd
@@ -598,6 +598,7 @@ struct WritePointer {
     dst_offset: u32,
     src_offset: u32,
     size: u8,
+    _padding: [u8; 3],
 }
 static_assertions::assert_eq_size!(WritePointer, Pad);
 
@@ -645,7 +646,7 @@ struct AddPciHoles {
     pci_start_offset_64: u32,
     pci_end_offset_64: u32,
     pci_length_offset_64: u32,
-    _padding: [u8; 42],
+    _padding: [u8; 44],
 }
 static_assertions::assert_eq_size!(AddPciHoles, Pad);
 
