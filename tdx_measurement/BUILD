@@ -46,6 +46,6 @@ rust_binary(
 rust_test(
     name = "tdx_measurement_test",
     crate = ":tdx_measurement",
-    data = ["@stage0_tdx_bin_for_test//file:stage0_tdx_bin_for_test"],
+    data = ["@stage0_tdx_bin_for_test//file"],
     deps = ["//oak_file_utils"],
 )

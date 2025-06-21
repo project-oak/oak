@@ -47,7 +47,7 @@ configure_make(
     targets = ["all-static"],
     # There is no `make install` equivalent that installs (or strips) the static
     # binaries, so we do it by hand.
-    postfix_script = "cp $BUILD_TMPDIR/misc/mke2fs.static $INSTALLDIR/sbin/mke2fs && strip $INSTALLDIR/sbin/mke2fs",
+    postfix_script = "cp $$BUILD_TMPDIR/misc/mke2fs.static $$INSTALLDIR/sbin/mke2fs && strip $$INSTALLDIR/sbin/mke2fs",
     # Skip building e2scrub altogether, as that insists on touching /etc.
     args = ["E2SCRUB_DIR=\"\"", "-j$(nproc)"],
 )

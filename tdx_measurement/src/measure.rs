@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_mr_td_is_measured_correctly() {
         const STAGE0_BIN_PATH: &str =
-            "external/stage0_tdx_bin_for_test/file/stage0_tdx_bin_for_test";
+            "external/_main~_repo_rules~stage0_tdx_bin_for_test/file/stage0_tdx_bin_for_test";
         let stage0_bin = std::fs::read(data_path(STAGE0_BIN_PATH)).unwrap();
         let mr_td = mr_td_measurement(&stage0_bin);
         assert_eq!(mr_td.len(), 48);
