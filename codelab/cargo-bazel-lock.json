@@ -1,5 +1,5 @@
 {
-  "checksum": "0b6eac4a0f97bccc1764a09ec2821782de18f35569cf53eacf56c6014231df82",
+  "checksum": "acb6799d8c573a08fa3a5a2b7ea1e49d67daf1207fd0ab39457f338b36535363",
   "crates": {
     "acpi 5.0.0": {
       "name": "acpi",
@@ -7281,6 +7281,10 @@
             {
               "id": "tempfile 3.10.1",
               "target": "tempfile"
+            },
+            {
+              "id": "thiserror 2.0.12",
+              "target": "thiserror"
             },
             {
               "id": "tikv-jemallocator 0.5.4",
@@ -26079,6 +26083,93 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "thiserror 2.0.12": {
+      "name": "thiserror",
+      "version": "2.0.12",
+      "package_url": "https://github.com/dtolnay/thiserror",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/thiserror/2.0.12/download",
+          "sha256": "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "thiserror",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "thiserror",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "thiserror 2.0.12",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "thiserror-impl 2.0.12",
+              "target": "thiserror_impl"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "2.0.12"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "thiserror-impl 1.0.60": {
       "name": "thiserror-impl",
       "version": "1.0.60",
@@ -26127,6 +26218,62 @@
         },
         "edition": "2021",
         "version": "1.0.60"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "thiserror-impl 2.0.12": {
+      "name": "thiserror-impl",
+      "version": "2.0.12",
+      "package_url": "https://github.com/dtolnay/thiserror",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/thiserror-impl/2.0.12/download",
+          "sha256": "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "thiserror_impl",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "thiserror_impl",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.94",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.100",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "2.0.12"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -35653,6 +35800,7 @@
     "tar 0.4.40",
     "temp-env 0.3.6",
     "tempfile 3.10.1",
+    "thiserror 2.0.12",
     "tikv-jemallocator 0.5.4",
     "time 0.3.36",
     "tokio 1.37.0",

@@ -487,6 +487,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "tar": crate.spec(version = "0.4.40"),
     "temp-env": crate.spec(version = "0.3.6"),
     "tempfile": crate.spec(version = "3.10.1"),
+    "thiserror": crate.spec(version = "2.0.12"),
     "tikv-jemallocator": crate.spec(version = "0.5.4"),
     "tokio": crate.spec(
         features = [

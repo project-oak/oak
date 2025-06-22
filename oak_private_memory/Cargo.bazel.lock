@@ -1288,6 +1288,7 @@ dependencies = [
  "tar",
  "temp-env",
  "tempfile",
+ "thiserror 2.0.12",
  "tikv-jemallocator",
  "time",
  "tokio",

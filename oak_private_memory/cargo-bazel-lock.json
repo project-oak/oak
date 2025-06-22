@@ -1,5 +1,5 @@
 {
-  "checksum": "569b04239c0d79fab87246b5cb7548b5395572bf03983bed399c431caff04daa",
+  "checksum": "31232a31032a38329a651131c23ba47b67896bc095a1027d7ee44e5fa3e6bee2",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7546,6 +7546,10 @@
             {
               "id": "tempfile 3.19.1",
               "target": "tempfile"
+            },
+            {
+              "id": "thiserror 2.0.12",
+              "target": "thiserror"
             },
             {
               "id": "tikv-jemallocator 0.5.4",
@@ -37386,6 +37390,7 @@
     "tar 0.4.44",
     "temp-env 0.3.6",
     "tempfile 3.19.1",
+    "thiserror 2.0.12",
     "tikv-jemallocator 0.5.4",
     "time 0.3.41",
     "tokio 1.44.2",
