@@ -44,6 +44,7 @@ Running agent weather_agent, type exit to exit.
 
 MCP Server is implemented using Rust MCP SDK: https://github.com/modelcontextprotocol/rust-sdk
 
+The agent already automatically starts the server, but you can also run it manually for inspecting.
 To build the server run:
 
 ```bash

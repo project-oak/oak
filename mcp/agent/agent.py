@@ -15,7 +15,12 @@
 #
 
 from google.adk.agents import Agent
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 import math
+import os
+
+
+TARGET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../server/Cargo.toml")
 
 
 def get_user_location() -> dict:
@@ -32,29 +37,6 @@ def get_user_location() -> dict:
         },
     }
 
-def get_weather(latitude: float, longitude: float) -> dict:
-    """Retrieves current weather for specified coordinates.
-
-    Args:
-        latitude (float): Latitude.
-        longitude (float): Longitude.
-
-    Returns:
-        dict: status and weather or error msg.
-    """
-    if math.isclose(latitude, 0, rel_tol=1e-5) and math.isclose(longitude, 0, rel_tol=1e-5):
-        return {
-            "status": "success",
-            "weather": (
-                "The weather is sunny with a temperature of 30 degrees Celsius."
-            ),
-        }
-    else:
-        return {
-            "status": "error",
-            "error_message": f"Weather information for ('{latitude}','{longitude}') is not available.",
-        }
-
 
 root_agent = Agent(
     name="weather_agent",
@@ -65,5 +47,16 @@ root_agent = Agent(
     instruction=(
         "You are a helpful agent who can provide current user's location and also tell weather at this location."
     ),
-    tools=[get_user_location, get_weather],
+    tools=[
+        get_user_location,
+        MCPToolset(
+            connection_params=StdioServerParameters(
+                command='cargo',
+                args=[
+                    "run",
+                    "--manifest-path",
+                    os.path.abspath(TARGET_PATH),
+                ],
+            ),
+        )],
 )

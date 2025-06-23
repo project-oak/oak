@@ -15,6 +15,7 @@
 //
 
 use anyhow::Result;
+use log::{error, info, warn};
 use rmcp::{
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
@@ -43,17 +44,23 @@ impl WeatherService {
         #[schemars(description = "Longitude")]
         longitude: f32,
     ) -> Result<CallToolResult, McpError> {
+        info!("Requested weather for ({}, {})", latitude, longitude);
+
         const EPSILON: f32 = 1e-5;
         let result = if (latitude.abs() < EPSILON) && (longitude.abs() < EPSILON) {
-            json!({
+            let result = json!({
                 "status": "success",
                 "weather": "The weather is sunny with a temperature of 30 degrees Celsius.",
-            })
+            });
+            info!("Success: {:?}", result);
+            result
         } else {
-            json!({
+            let result = json!({
                 "status": "error",
                 "error_message": format!("Weather information for ('{}','{}') is not available.", latitude, longitude),
-            })
+            });
+            warn!("Error: {:?}", result);
+            result
         };
         let result = Content::json(result).expect("couldn't serialize JSON resuls");
         Ok(CallToolResult::success(vec![result]))
@@ -84,9 +91,17 @@ impl ServerHandler for WeatherService {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", "info")
+    }
+    env_logger::init();
+
+    info!("Starting weather service");
     let service = WeatherService::default().serve(stdio()).await.inspect_err(|e| {
-        println!("serving error: {:?}", e);
+        error!("serving error: {:?}", e);
     })?;
+    info!("Initialized weather service");
     service.waiting().await?;
+    info!("Stopping weather service");
     Ok(())
 }
