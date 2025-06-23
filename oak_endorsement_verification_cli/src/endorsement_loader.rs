@@ -31,6 +31,7 @@ use std::{fs, path::PathBuf, sync::Arc};
 use anyhow::{Context, Result};
 use derive_builder::Builder;
 use oak_attestation_verification::convert_pem_to_raw;
+use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
     EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
@@ -42,6 +43,8 @@ use oak_proto_rust::oak::attestation::v1::{
 // fetching a single set of reference values. We just make sure we use the same
 // number in signed endorsement and reference values.
 const KEY_ID: u32 = 1;
+
+const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
 
 // FileEndorsement is a struct that contains the paths to the files needed to
 // load and verify an endorsement.
@@ -125,13 +128,20 @@ impl FileEndorsementLoader {
                 raw,
             })?;
 
+        let rekor_key = VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            key_id: KEY_ID,
+            raw: get_rekor_public_key_raw(),
+        };
+
         let ref_value = EndorsementReferenceValue {
             endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
             required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
             rekor: Some(VerifyingKeyReferenceValue {
-                // The transparency log will not be verified.
-                // TODO: b/423523426 - Add support for verifying the transparency log entry.
-                r#type: Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
+                r#type: Some(verifying_key_reference_value::Type::Verify(VerifyingKeySet {
+                    keys: [rekor_key].to_vec(),
+                    ..Default::default()
+                })),
             }),
             ..Default::default()
         };
@@ -364,4 +374,10 @@ fn fetch(url: &str) -> Result<Vec<u8>> {
         .read_to_end(&mut buffer)
         .with_context(|| format!("reading response bytes from URL {url}"))?;
     Ok(buffer)
+}
+
+fn get_rekor_public_key_raw() -> Vec<u8> {
+    let pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
+        .expect("couldn't read Rekor public key");
+    convert_pem_to_raw(&pem).expect("failed to convert Rekor key")
 }

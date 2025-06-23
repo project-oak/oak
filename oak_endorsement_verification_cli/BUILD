@@ -24,8 +24,10 @@ package(
 rust_binary(
     name = "endorscope",
     srcs = glob(["src/**"]),
+    data = ["//oak_attestation_verification/testdata:endorsement"],
     deps = [
         "//oak_attestation_verification",
+        "//oak_file_utils",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
