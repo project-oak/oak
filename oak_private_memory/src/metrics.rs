@@ -55,7 +55,7 @@ impl Metrics {
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
-        rpc_latency.record(0, &[KeyValue::new("request_type", "test")]);
+        rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());

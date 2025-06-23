@@ -741,7 +741,11 @@ impl ApplicationHandler for SealedMemoryHandler {
                     self.delete_memory_handler(request).await?.into_response()
                 }
             };
-            let elapsed_time = start_time.elapsed().as_millis() as u64;
+            let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+            // Round up as 1ms.
+            if elapsed_time == 0 {
+                elapsed_time = 1;
+            }
             self.metrics
                 .rpc_latency
                 .record(elapsed_time, &[KeyValue::new("request_type", metric_request_type_name)]);
