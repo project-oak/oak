@@ -68,16 +68,6 @@ load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
 
 rules_java_dependencies()
 
-http_archive(
-    name = "com_google_protobuf",
-    strip_prefix = "protobuf-30.2",
-    url = "https://github.com/protocolbuffers/protobuf/releases/download/v30.2/protobuf-30.2.tar.gz",
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
 local_repository(
     name = "oak",
     path = "..",

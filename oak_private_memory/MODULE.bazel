@@ -19,3 +19,11 @@ oci.pull(
     platforms = ["linux/amd64"],
 )
 use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
+# Matches the version of protobuf used by Oak.
+bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
+# https://github.com/bazel-contrib/rules_python
+bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+python = use_extension("@rules_python//python/extensions:python.bzl", "python", dev_dependency = True)
+
+# Need ignore_root_user_error to run in docker container in CI
+python.toolchain(is_default = True, python_version = "3.11", ignore_root_user_error = True)

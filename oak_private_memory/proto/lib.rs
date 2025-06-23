@@ -61,7 +61,7 @@ pub mod key_sync_response_status_converter {
 
         struct StatusVisitor;
 
-        impl<'de> Visitor<'de> for StatusVisitor {
+        impl Visitor<'_> for StatusVisitor {
             type Value = i32;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -154,7 +154,7 @@ pub mod user_registration_response_status_converter {
 
         struct StatusVisitor;
 
-        impl<'de> Visitor<'de> for StatusVisitor {
+        impl Visitor<'_> for StatusVisitor {
             type Value = i32;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -283,7 +283,7 @@ pub mod memory_field_converter {
         {
             struct ElementVisitor;
 
-            impl<'de> Visitor<'de> for ElementVisitor {
+            impl Visitor<'_> for ElementVisitor {
                 type Value = i32;
 
                 fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -375,7 +375,7 @@ pub mod embedding_query_metric_type_converter {
 
         struct MetricTypeVisitor;
 
-        impl<'de> Visitor<'de> for MetricTypeVisitor {
+        impl Visitor<'_> for MetricTypeVisitor {
             type Value = i32;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
