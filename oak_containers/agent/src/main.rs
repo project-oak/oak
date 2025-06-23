@@ -18,11 +18,7 @@
 
 use clap::Parser;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
-use opentelemetry::{
-    global::set_error_handler,
-    metrics::{AsyncInstrument, Unit},
-    KeyValue,
-};
+use opentelemetry::{global::set_error_handler, metrics::AsyncInstrument, KeyValue};
 use procfs::{Current, CurrentSI};
 use tokio::time::{self, Duration};
 
@@ -37,7 +33,7 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
         oak_observer
             .meter
             .u64_observable_counter("cpu_seconds_total")
-            .with_unit(Unit::new("seconds"))
+            .with_unit("seconds")
             .with_callback(cpu_seconds_total)
             .try_init()?,
     );
@@ -73,7 +69,7 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
         oak_observer
             .meter
             .u64_observable_counter("network_receive_bytes")
-            .with_unit(Unit::new("bytes"))
+            .with_unit("bytes")
             .with_callback(net_recv_bytes)
             .try_init()?,
     );
@@ -95,7 +91,7 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
         oak_observer
             .meter
             .u64_observable_counter("network_transmit_bytes")
-            .with_unit(Unit::new("bytes"))
+            .with_unit("bytes")
             .with_callback(net_sent_bytes)
             .try_init()?,
     );
@@ -283,7 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr,
-        scope: String::from("oak_agent"),
+        scope: "oak_agent",
         excluded_metrics: None,
     };
 

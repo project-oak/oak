@@ -1,5 +1,5 @@
 {
-  "checksum": "a4027d25771b424e091fddaace76833bb5b7ac964d0c9467b13aa048be6937d4",
+  "checksum": "7e1f8ea81ecc7e2e5bdb6717fdd2a55e51733c3226eda65f63354c6be6de8a8b",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2986,7 +2986,7 @@
               "target": "linked_list_allocator"
             },
             {
-              "id": "lock_api 0.4.12",
+              "id": "lock_api 0.4.13",
               "target": "lock_api"
             },
             {
@@ -3018,7 +3018,7 @@
               "target": "primeorder"
             },
             {
-              "id": "prost 0.12.6",
+              "id": "prost 0.13.5",
               "target": "prost"
             },
             {
@@ -3058,7 +3058,7 @@
               "target": "sha2"
             },
             {
-              "id": "snafu 0.8.5",
+              "id": "snafu 0.8.6",
               "target": "snafu"
             },
             {
@@ -5081,14 +5081,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "lock_api 0.4.12": {
+    "lock_api 0.4.13": {
       "name": "lock_api",
-      "version": "0.4.12",
+      "version": "0.4.13",
       "package_url": "https://github.com/Amanieu/parking_lot",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/lock_api/0.4.12/download",
-          "sha256": "07af8b9cdd281b7915f413fa73f29ebd5d55d0d3f0155584dade1ff18cea1b17"
+          "url": "https://static.crates.io/crates/lock_api/0.4.13/download",
+          "sha256": "96936507f153605bddfcda068dd804796c84324ed2510809e5b2a624c81da765"
         }
       },
       "targets": [
@@ -5132,7 +5132,7 @@
         "deps": {
           "common": [
             {
-              "id": "lock_api 0.4.12",
+              "id": "lock_api 0.4.13",
               "target": "build_script_build"
             },
             {
@@ -5143,7 +5143,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.4.12"
+        "version": "0.4.13"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -6810,14 +6810,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "prost 0.12.6": {
+    "prost 0.13.5": {
       "name": "prost",
-      "version": "0.12.6",
+      "version": "0.13.5",
       "package_url": "https://github.com/tokio-rs/prost",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/prost/0.12.6/download",
-          "sha256": "deb1435c188b76130da55f17a466d252ff7b1418b2ad3e037d127b94e3411f29"
+          "url": "https://static.crates.io/crates/prost/0.13.5/download",
+          "sha256": "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
         }
       },
       "targets": [
@@ -6849,13 +6849,13 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.12.6"
+        "version": "0.13.5"
       },
       "license": "Apache-2.0",
       "license_ids": [
         "Apache-2.0"
       ],
-      "license_file": null
+      "license_file": "LICENSE"
     },
     "quote 1.0.40": {
       "name": "quote",
@@ -7495,14 +7495,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "rustversion 1.0.20": {
+    "rustversion 1.0.21": {
       "name": "rustversion",
-      "version": "1.0.20",
+      "version": "1.0.21",
       "package_url": "https://github.com/dtolnay/rustversion",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rustversion/1.0.20/download",
-          "sha256": "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
+          "url": "https://static.crates.io/crates/rustversion/1.0.21/download",
+          "sha256": "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
         }
       },
       "targets": [
@@ -7539,14 +7539,14 @@
         "deps": {
           "common": [
             {
-              "id": "rustversion 1.0.20",
+              "id": "rustversion 1.0.21",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2018",
-        "version": "1.0.20"
+        "version": "1.0.21"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -8356,14 +8356,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "snafu 0.8.5": {
+    "snafu 0.8.6": {
       "name": "snafu",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "package_url": "https://github.com/shepmaster/snafu",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/snafu/0.8.5/download",
-          "sha256": "223891c85e2a29c3fe8fb900c1fae5e69c2e42415e3177752e8718475efa5019"
+          "url": "https://static.crates.io/crates/snafu/0.8.6/download",
+          "sha256": "320b01e011bf8d5d7a4a4a4be966d9160968935849c83b918827f6a435e7f627"
         }
       },
       "targets": [
@@ -8389,13 +8389,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "snafu-derive 0.8.5",
+              "id": "snafu-derive 0.8.6",
               "target": "snafu_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.8.5"
+        "version": "0.8.6"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -8404,14 +8404,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "snafu-derive 0.8.5": {
+    "snafu-derive 0.8.6": {
       "name": "snafu-derive",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "package_url": "https://github.com/shepmaster/snafu",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/snafu-derive/0.8.5/download",
-          "sha256": "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
+          "url": "https://static.crates.io/crates/snafu-derive/0.8.6/download",
+          "sha256": "1961e2ef424c1424204d3a5d6975f934f56b6d50ff5732382d84ebf460e147f7"
         }
       },
       "targets": [
@@ -8455,7 +8455,7 @@
           "selects": {}
         },
         "edition": "2018",
-        "version": "0.8.5"
+        "version": "0.8.6"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -8543,7 +8543,7 @@
         "deps": {
           "common": [
             {
-              "id": "lock_api 0.4.12",
+              "id": "lock_api 0.4.13",
               "target": "lock_api"
             }
           ],
@@ -8591,7 +8591,7 @@
         "deps": {
           "common": [
             {
-              "id": "lock_api 0.4.12",
+              "id": "lock_api 0.4.13",
               "target": "lock_api"
             }
           ],
@@ -8847,7 +8847,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.20",
+              "id": "rustversion 1.0.21",
               "target": "rustversion"
             }
           ],
@@ -9522,7 +9522,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.20",
+              "id": "rustversion 1.0.21",
               "target": "rustversion"
             }
           ],
@@ -9933,7 +9933,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.20",
+              "id": "rustversion 1.0.21",
               "target": "rustversion"
             },
             {
@@ -10750,7 +10750,7 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "rustversion 1.0.20",
+              "id": "rustversion 1.0.21",
               "target": "rustversion"
             }
           ],
@@ -11229,7 +11229,7 @@
     "lazy_static 1.5.0",
     "libm 0.2.15",
     "linked_list_allocator 0.10.5",
-    "lock_api 0.4.12",
+    "lock_api 0.4.13",
     "log 0.4.27",
     "maplit 1.0.2",
     "mockall 0.13.1",
@@ -11237,7 +11237,7 @@
     "p384 0.13.1",
     "pkcs8 0.10.2",
     "primeorder 0.13.6",
-    "prost 0.12.6",
+    "prost 0.13.5",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex-lite 0.1.6",
@@ -11247,7 +11247,7 @@
     "serde 1.0.219",
     "serde_json 1.0.140",
     "sha2 0.10.9",
-    "snafu 0.8.5",
+    "snafu 0.8.6",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",
     "strum 0.26.3",

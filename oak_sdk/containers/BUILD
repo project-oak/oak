@@ -38,6 +38,7 @@ rust_library(
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:hyper-util",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",

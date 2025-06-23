@@ -1100,6 +1100,9 @@ mod tests {
             RomfileCommand::default(),
         ];
 
+        println!(" COMMAND 0: {:?}", commands[0]);
+        println!("ECOMMAND 0: {:?}", &expected_commands[0]);
+        assert_that!(&commands[0], eq(&expected_commands[0]));
         assert_that!(commands, container_eq(expected_commands));
     }
 

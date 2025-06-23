@@ -32,7 +32,7 @@ use oak_proto_rust::oak::functions::{
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
     ReserveResponse,
 };
-use opentelemetry::metrics::{Histogram, Meter, Unit};
+use opentelemetry::metrics::{Histogram, Meter};
 use prost::Message;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::StreamExt;
@@ -241,12 +241,12 @@ impl OtelObserver {
         Self {
             wasm_initialization: meter
                 .u64_histogram("wasm_initialization")
-                .with_unit(Unit::new("microseconds"))
+                .with_unit("microseconds")
                 .with_description("Time spent setting up wasm sandbox for invocation")
                 .init(),
             wasm_invocation: meter
                 .u64_histogram("wasm_invocation")
-                .with_unit(Unit::new("microseconds"))
+                .with_unit("microseconds")
                 .with_description("Time spent on calling `main` in wasm sandbox")
                 .init(),
         }

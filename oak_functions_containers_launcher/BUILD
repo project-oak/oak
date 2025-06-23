@@ -41,6 +41,7 @@ rust_library(
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:hyper-util",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",

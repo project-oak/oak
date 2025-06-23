@@ -21,10 +21,10 @@ use oak_proto_rust::{
     oak::debug::{CpuProfileRequest, CpuProfileResponse},
     perftools::profiles::Profile,
 };
-use pprof::protos::Message as _;
-
 // Interrupt frequency, in Hz.
 const SAMPLE_FREQUENCY: i32 = 100;
+
+use pprof::protos::Message as _;
 
 pub struct Service {}
 
@@ -65,14 +65,15 @@ impl DebugService for Service {
             })?
         };
 
-        // This is silly, but becauce of differing versions of Prost we have to
-        // serialize and deserialize the profile protobuf, although they are
-        // quite literally the same protobuf under the hood.
+        // This seems silly, but:
+        // * pprof crate uses its own version of the Profile proto
+        // * We can't extern-depend on the pprof version because then we would
+        // need to include pprof in oak_proto_rust, but it's not std-compatible.
+        // * So we compile our own version of the profile proto.
         let encoded = profile.encode_to_vec();
         let profile = Profile::decode(&encoded[..]).map_err(|err| {
             tonic::Status::internal(format!("failed to deserialize profile proto: {}", err))
         })?;
-
         Ok(tonic::Response::new(CpuProfileResponse { profile: Some(profile) }))
     }
 }

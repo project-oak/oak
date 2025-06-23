@@ -110,9 +110,7 @@ fn verify_signature_based_attestation(
         EventLogVerifier::new(
             vec![Box::new(policy)],
             Arc::new(FrozenClock {
-                timestamp: SystemTime::try_from(
-                    request_metadata.request_time.clone().unwrap_or_default(),
-                )?,
+                timestamp: SystemTime::try_from(request_metadata.request_time.unwrap_or_default())?,
             }),
         )
     };

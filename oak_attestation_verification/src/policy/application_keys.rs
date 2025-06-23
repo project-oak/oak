@@ -41,7 +41,7 @@ pub struct ApplicationKeysPolicy {
 
 impl ApplicationKeysPolicy {
     pub fn new(reference_values: &ApplicationKeysReferenceValues) -> Self {
-        Self { _reference_values: reference_values.clone() }
+        Self { _reference_values: *reference_values }
     }
 }
 

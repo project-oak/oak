@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
-    metrics::{Counter, Histogram, Unit},
+    metrics::{Counter, Histogram},
     KeyValue,
 };
 
@@ -47,7 +47,7 @@ impl Metrics {
             .meter
             .u64_histogram("rpc_latency")
             .with_description("Latency in ms of each RPC.")
-            .with_unit(Unit::new("ms"))
+            .with_unit("ms")
             // Update the version of opentelemetry to support custom buckets.
             //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
             .init();
@@ -64,12 +64,9 @@ impl Metrics {
 }
 
 pub fn create_metrics() -> (OakObserver, Arc<Metrics>) {
-    let mut observer = OakObserver::create(
-        "http://10.0.2.100:8080".to_string(),
-        "sealed_memory_service".to_string(),
-        vec![],
-    )
-    .unwrap();
+    let mut observer =
+        OakObserver::create("http://10.0.2.100:8080".to_string(), "sealed_memory_service", vec![])
+            .unwrap();
     let metrics = Arc::new(Metrics::new(&mut observer));
     (observer, metrics)
 }

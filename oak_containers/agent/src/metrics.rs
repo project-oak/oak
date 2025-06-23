@@ -23,15 +23,15 @@ use opentelemetry::{
     global,
     metrics::{
         Counter, Histogram, Meter, MeterProvider, MetricsError, ObservableCounter, ObservableGauge,
-        ObservableUpDownCounter, Unit, UpDownCounter,
+        ObservableUpDownCounter, UpDownCounter,
     },
     KeyValue,
 };
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
 use opentelemetry_sdk::{
     metrics::{
-        reader::{DefaultAggregationSelector, DefaultTemporalitySelector},
-        Aggregation, Instrument, PeriodicReader, SdkMeterProvider, Stream,
+        reader::DefaultTemporalitySelector, Aggregation, Instrument, PeriodicReader,
+        SdkMeterProvider, Stream,
     },
     runtime,
 };
@@ -68,7 +68,7 @@ pub struct OakObserver {
 impl OakObserver {
     pub fn create(
         launcher_addr: String,
-        scope: String,
+        scope: &'static str,
         excluded_metrics: Vec<String>,
     ) -> Result<Self, MetricsError> {
         let export_config = ExportConfig { endpoint: launcher_addr, ..ExportConfig::default() };
@@ -76,10 +76,7 @@ impl OakObserver {
         let exporter = opentelemetry_otlp::new_exporter()
             .tonic()
             .with_export_config(export_config)
-            .build_metrics_exporter(
-                Box::new(DefaultAggregationSelector::new()),
-                Box::new(DefaultTemporalitySelector::new()),
-            )?;
+            .build_metrics_exporter(Box::new(DefaultTemporalitySelector::new()))?;
 
         let reader = PeriodicReader::builder(exporter, runtime::Tokio)
             .with_interval(Duration::from_secs(EXPORT_PERIOD))
@@ -115,7 +112,7 @@ impl OakObserver {
 
 pub struct MetricsConfig {
     pub launcher_addr: String,
-    pub scope: String,
+    pub scope: &'static str,
     pub excluded_metrics: Option<Vec<String>>,
 }
 
@@ -167,7 +164,7 @@ fn add_base_metrics(observer: &mut OakObserver) -> Result<(), MetricsError> {
             .with_description("Number of active tasks in the runtime")
             .with_callback(|counter| {
                 if let Ok(active_tasks_count) =
-                    Handle::current().metrics().active_tasks_count().try_into()
+                    Handle::current().metrics().num_alive_tasks().try_into()
                 {
                     counter.observe(active_tasks_count, &[]);
                 }
@@ -181,7 +178,7 @@ fn add_base_metrics(observer: &mut OakObserver) -> Result<(), MetricsError> {
             .with_description("Number of tasks currently in the runtime's injection queue")
             .with_callback(|counter| {
                 if let Ok(injection_queue_depth) =
-                    Handle::current().metrics().injection_queue_depth().try_into()
+                    Handle::current().metrics().global_queue_depth().try_into()
                 {
                     counter.observe(injection_queue_depth, &[]);
                 }
@@ -306,7 +303,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
             latencies: self
                 .meter
                 .u64_histogram("rpc_server_latency")
-                .with_unit(Unit::new("milliseconds"))
+                .with_unit("milliseconds")
                 .with_description("Distribution of server-side RPC latency")
                 .init(),
             rpc_count: self.meter.u64_counter("rpc_count").init(),

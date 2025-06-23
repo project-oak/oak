@@ -189,7 +189,7 @@ def _common_crates(std):
             # No derive feature - it requires std and will make other crates
             # in this index, like bytes, require std.
             features = ["prost-derive"] if std else [],
-            version = "0.12.4",
+            version = "0.13.5",
         ),
         "rand_chacha": crate.spec(
             default_features = std,
@@ -305,6 +305,11 @@ OAK_STD_ANNOTATIONS = {
     # See: https://github.com/bazelbuild/rules_rust/issues/1670
     # The example there didn't work exactly as written in this context, but I was able
     # to modify it to get it working.
+    "pprof": [crate.annotation(
+        patches = [
+            "@//third_party/pprof:pprof-prost13.patch",
+        ],
+    )],
     "tikv-jemalloc-sys": [crate.annotation(
         build_script_data = [
             "@jemalloc//:gen_dir",
@@ -376,7 +381,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "futures-util": crate.spec(version = "0.3.31"),
     "googletest": crate.spec(version = "0.14.0"),
     # Use same version as cargo, newer versions has compatibility issues.
-    "http": crate.spec(version = "0.2.11"),
+    "http": crate.spec(version = "1.3"),
     "http-body-util": crate.spec(version = "0.1.2"),
     "hyper": crate.spec(
         features = [
@@ -409,7 +414,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         features = [
             "trace",
         ],
-        version = "0.22.0",
+        version = "0.26.0",
     ),
     "opentelemetry-proto": crate.spec(
         features = [
@@ -417,7 +422,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "logs",
             "metrics",
         ],
-        version = "0.5.0",
+        version = "0.26.0",
     ),
     "opentelemetry-otlp": crate.spec(
         features = [
@@ -426,7 +431,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "metrics",
             "trace",
         ],
-        version = "0.15.0",
+        version = "0.26.0",
     ),
     "opentelemetry_sdk": crate.spec(
         features = [
@@ -435,7 +440,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "rt-tokio",
             "trace",
         ],
-        version = "0.22.1",
+        version = "0.26.0",
     ),
     "os_pipe": crate.spec(version = "1.1.5"),
     "ouroboros": crate.spec(version = "0.18.4"),
@@ -449,13 +454,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "prost-codec",
             "criterion",
         ],
-        version = "0.14.0",
+        version = "0.15.0",
     ),
     "pretty_assertions": crate.spec(version = "1.4.0"),
     "procfs": crate.spec(version = "0.16.0"),
-    "prost-build": crate.spec(version = "0.12.3"),
-    "prost-derive": crate.spec(version = "0.12.4"),
-    "prost-types": crate.spec(version = "0.12.3"),
+    "prost-build": crate.spec(version = "0.13.5"),
+    "prost-derive": crate.spec(version = "0.13.5"),
+    "prost-types": crate.spec(version = "0.13.5"),
     "quote": crate.spec(version = "1.0.35"),
     "rand": crate.spec(version = "0.8.5"),
     "regex": crate.spec(
@@ -511,40 +516,26 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "tokio-util": crate.spec(version = "0.7.10"),
     "tokio-vsock": crate.spec(
-        # Pull the crate from github as the latest version
-        # in the repository depends on tonic 10.0.2 that causes
-        # compilation errors as the compiler thinks that `Connected`
-        # is not implemented for `VsockStream`.
-        # Other options is to patch the generated bazel file in the
-        # create annotation or to write bazel for the local repository
-        # in the third-party folder. Writing patches is fragile as
-        # the generated build file might differ for repositories that
-        # depends on Oak. In fact, the patched version in the
-        # third-party folder changes the version of tonic to 11.0.0 in
-        # the dependencies.
-        git = "https://github.com/rust-vsock/tokio-vsock",
-        rev = "2a52faeb4ede7d9712adbc096e547ab7ea766f4b",
-        features = ["tonic-conn"],
+        version = "*",
+        features = ["tonic012"],
     ),
     "toml": crate.spec(version = "0.5.11"),
     "tonic": crate.spec(
         features = [
             "gzip",
-            "tls",
-            "tls-roots-common",
             "tls-webpki-roots",
         ],
-        version = "0.11.0",
+        version = "0.12.0",
     ),
-    "tonic-build": crate.spec(version = "0.11.0"),
-    "tonic-web": crate.spec(version = "0.11.0"),
+    "tonic-build": crate.spec(version = "0.12.0"),
+    "tonic-web": crate.spec(version = "0.12.0"),
     "tower": crate.spec(
         features = ["load-shed"],
-        version = "0.4.13",
+        version = "0.4",
     ),
     "tower-http": crate.spec(
         features = ["trace"],
-        version = "0.4.4",
+        version = "0.6",
     ),
     "tracing": crate.spec(version = "0.1.40"),
     "ubyte": crate.spec(version = "0.10.4"),

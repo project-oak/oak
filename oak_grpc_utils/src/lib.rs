@@ -62,7 +62,7 @@ pub fn generate_grpc_code(
     for extern_path in options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(protos, include)
+    config.compile_protos(protos, include)
 }
 
 fn set_protoc_env_if_unset() {

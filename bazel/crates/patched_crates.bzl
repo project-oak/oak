@@ -48,6 +48,9 @@ def _load_patched_prost_types():
     rather than the prost-provided version, which become std-tainted.
     """
 
+    # This must match the version the crates repository uses.
+    PROST_VERSION = "0.13.5"
+
     http_archive(
         name = "prost_types_oak_patched",
         build_file_content = """
@@ -57,9 +60,10 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+
 rust_library(
     name = "prost-types",
-    srcs = glob(["prost-0.12.6/prost-types/src/*"]),
+    srcs = glob(["prost-{}/prost-types/src/*"]),
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
@@ -67,13 +71,13 @@ rust_library(
         "@oak_crates_index//:prost",
     ],
 )
-        """,
+        """.format(PROST_VERSION),
         patch_cmds = [
-            "sed -i 's/::prost::Message/::prost_derive::Message/g' prost-0.12.6/prost-types/src/*.rs",
-            "sed -i 's/::prost::Oneof/::prost_derive::Oneof/g' prost-0.12.6/prost-types/src/*.rs",
-            "sed -i 's/::prost::Enumeration/::prost_derive::Enumeration/g' prost-0.12.6/prost-types/src/*.rs",
+            "sed -i 's/::prost::Message/::prost_derive::Message/g' prost-{}/prost-types/src/*.rs".format(PROST_VERSION),
+            "sed -i 's/::prost::Oneof/::prost_derive::Oneof/g' prost-{}/prost-types/src/*.rs".format(PROST_VERSION),
+            "sed -i 's/::prost::Enumeration/::prost_derive::Enumeration/g' prost-{}/prost-types/src/*.rs".format(PROST_VERSION),
         ],
         urls = [
-            "https://github.com/tokio-rs/prost/archive/refs/tags/v0.12.6.tar.gz",
+            "https://github.com/tokio-rs/prost/archive/refs/tags/v{}.tar.gz".format(PROST_VERSION),
         ],
     )

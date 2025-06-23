@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use anyhow::{Context, Result};
+use hyper_util::rt::TokioIo;
 use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
@@ -32,7 +33,9 @@ const IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 pub async fn default_orchestrator_channel() -> Result<Channel> {
     Endpoint::try_from(IGNORED_ENDPOINT_URI)
         .context("couldn't form endpoint")?
-        .connect_with_connector(service_fn(move |_: Uri| UnixStream::connect(IPC_SOCKET)))
+        .connect_with_connector(service_fn(move |_: Uri| async {
+            Ok::<_, std::io::Error>(TokioIo::new(UnixStream::connect(IPC_SOCKET).await?))
+        }))
         .await
         .context("couldn't connect to UDS socket")
 }

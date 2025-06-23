@@ -70,7 +70,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr,
-        scope: String::from("orchestrator"),
+        scope: "orchestrator",
         excluded_metrics: None,
     };
 

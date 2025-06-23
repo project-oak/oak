@@ -308,7 +308,7 @@ impl IcingMetaDatabase {
         };
 
         let query_embeddings: &[Embedding] = &embedding_query_details.embedding;
-        let score_op: Option<ScoreRange> = embedding_query_details.score_range.clone();
+        let score_op: Option<ScoreRange> = embedding_query_details.score_range;
         let mut scoring_spec = icing::get_default_scoring_spec();
         scoring_spec.rank_by = Some(
             icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),

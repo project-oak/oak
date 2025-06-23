@@ -14,6 +14,7 @@ rust_library(
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bytes",
+        "@oak_crates_index//:hyper-util",
         "@oak_crates_index//:tokio-vsock",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",

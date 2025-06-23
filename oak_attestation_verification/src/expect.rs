@@ -217,7 +217,7 @@ pub(crate) fn get_root_layer_expected_values(
         .context("getting stage0 values")?;
         Some(AmdSevExpectedValues {
             stage0_expected: Some(stage0_expected),
-            min_tcb_version: amd_sev_values.min_tcb_version.clone(),
+            min_tcb_version: amd_sev_values.min_tcb_version,
             allow_debug: amd_sev_values.allow_debug,
         })
     } else {
@@ -237,7 +237,7 @@ pub(crate) fn get_amd_sev_snp_expected_values(
         // TODO: b/376513946 - Remove Stage0 from AMD SEV-SNP expected values
         // since it will be verified by the firmware policy.
         stage0_expected: None,
-        min_tcb_version: reference_values.min_tcb_version.clone(),
+        min_tcb_version: reference_values.min_tcb_version,
         allow_debug: reference_values.allow_debug,
     })
 }

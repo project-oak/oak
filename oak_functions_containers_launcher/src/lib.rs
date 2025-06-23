@@ -17,6 +17,7 @@ mod lookup;
 pub mod server;
 
 use anyhow::Context;
+use hyper_util::rt::TokioIo;
 use oak_containers_launcher::{Launcher, TrustedApplicationAddress};
 use oak_functions_launcher::LookupDataConfig;
 use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient;
@@ -57,8 +58,10 @@ impl UntrustedApp {
                     ))
                     .context("couldn't form channel")?
                     .connect_timeout(Duration::from_secs(120))
-                    .connect_with_connector(service_fn(move |_| {
-                        VsockStream::connect(trusted_app_address)
+                    .connect_with_connector(service_fn(move |_| async move {
+                        Ok::<_, std::io::Error>(TokioIo::new(
+                            VsockStream::connect(trusted_app_address).await?,
+                        ))
                     }))
                     .await
                     .context("couldn't connect to trusted app")?

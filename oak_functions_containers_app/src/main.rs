@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr,
-        scope: String::from("oak_functions_containers_app"),
+        scope: "oak_functions_containers_app",
         excluded_metrics: None,
     };
 

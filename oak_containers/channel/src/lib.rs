@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use anyhow::Context;
+use hyper_util::rt::TokioIo;
 use tokio_vsock::{VsockAddr, VsockStream, VMADDR_CID_HOST};
 use tonic::transport::Channel;
 use tower::service_fn;
@@ -27,8 +28,11 @@ pub async fn create_channel(addr: tonic::transport::Uri) -> anyhow::Result<Chann
         // particular, they may get confused by the "vsock" scheme. Therfore, create a
         // fake URI with the "http" scheme to placate the libraries; the actual
         // connection is made in `connect_with_connector` and that uses the correct URI.
+        let connector = service_fn(move |_| async move {
+            Ok::<_, std::io::Error>(TokioIo::new(VsockStream::connect(vsock_addr).await?))
+        });
         Ok(Channel::builder(tonic::transport::Uri::from_static("http://0:0"))
-            .connect_with_connector(service_fn(move |_| VsockStream::connect(vsock_addr)))
+            .connect_with_connector(connector)
             .await?)
     } else {
         Ok(Channel::builder(addr.clone()).connect().await?)

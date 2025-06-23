@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../../proto/session/service_streaming.proto",
             "../../proto/oak_debug/service/oak_debug.proto",
             "../../proto/oak_functions/service/oak_functions.proto",
+            "../../third_party/google/profile.proto",
         ],
         &included_protos,
         CodegenOptions {

@@ -21,7 +21,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry::logs::{AnyValue, LogRecord, Logger, Severity};
+use opentelemetry::logs::{AnyValue, LogRecord, Logger, LoggerProvider, Severity};
 use tokio::sync::{mpsc, OnceCell};
 
 use crate::systemd_journal::{Journal, JournalOpenFlags};
@@ -60,13 +60,14 @@ pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) 
         .logging()
         .with_exporter(launcher_client.openmetrics_builder())
         .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .context("could not create OTLP logger")?;
+        .context("could not create OTLP logger")?
+        .logger("TEE Log");
     let sender = async {
         while let Some(mut msg) = recv.recv().await {
-            let mut builder = LogRecord::builder();
+            let mut record = logger.create_log_record();
             // PRIORITY
             if let Some(val) = msg.remove("PRIORITY") {
-                builder = builder.with_severity_number(match val.parse()? {
+                record.set_severity_number(match val.parse()? {
                     // EMERGENCY
                     0 => Severity::Error4,
                     // ALERT
@@ -88,16 +89,15 @@ pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) 
                 });
             }
             if let Some(val) = msg.remove("_SOURCE_REALTIME_TIMESTAMP") {
-                builder = builder
-                    .with_timestamp(SystemTime::UNIX_EPOCH + Duration::from_secs(val.parse()?));
+                record.set_timestamp(SystemTime::UNIX_EPOCH + Duration::from_secs(val.parse()?));
             }
             if let Some(val) = msg.remove("MESSAGE") {
-                builder = builder.with_body(AnyValue::String(val.into()));
+                record.set_body(AnyValue::String(val.into()));
             }
-            builder = builder.with_attributes(
-                msg.into_iter().map(|(k, v)| (k.into(), AnyValue::String(v.into()))).collect(),
+            record.add_attributes(
+                msg.into_iter().map(|(k, v)| (k.to_string(), AnyValue::String(v.into()))),
             );
-            logger.emit(builder.build());
+            logger.emit(record);
         }
         Ok(())
     };
