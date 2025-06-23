@@ -952,6 +952,12 @@ fn proto_serialization_test() {
         r#"{"includeFields":["ID", "TAGS"],"includeContentFields":["content_key_str"]}"#;
     let result_mask_from_string_num = serde_json::from_str::<ResultMask>(json_str5).unwrap();
     assert_eq!(result_mask.encode_to_vec(), result_mask_from_string_num.encode_to_vec());
+
+    // Test MemoryValue with int64_val
+    let memory_value = MemoryValue { value: Some(memory_value::Value::Int64Val(12345)) };
+    let json_str6 = r#"{"int64Val":"12345"}"#;
+    let memory_value_from_string_num = serde_json::from_str::<MemoryValue>(json_str6).unwrap();
+    assert_eq!(memory_value.encode_to_vec(), memory_value_from_string_num.encode_to_vec());
 }
 
 #[tokio::test]

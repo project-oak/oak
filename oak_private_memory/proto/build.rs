@@ -91,6 +91,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
     }
 
+    // 64 bit integer fields in js are encoded as string when serializing to Json,
+    // which matches the json proto spec. To solve this, we deserialize the
+    // field as a string and then parse it as a int. If the field is passed as a
+    // int, we simply return the number.
+    let int64_fields = ["oak.private_memory.MemoryValue.value.int64_val"];
+
+    for message_type in int64_fields {
+        config.field_attribute(message_type, "#[serde(deserialize_with = \"serde_aux::field_attributes::deserialize_number_from_string\")]");
+    }
+
     // Enum converters
     config.field_attribute(
         "oak.private_memory.KeySyncResponse.status",
