@@ -24,7 +24,6 @@ extern crate std;
 
 pub mod attestation;
 pub mod config;
-pub mod dice_attestation;
 pub mod encryptors;
 pub mod handshake;
 pub mod key_extractor;

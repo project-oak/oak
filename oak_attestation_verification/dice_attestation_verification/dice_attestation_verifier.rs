@@ -17,6 +17,8 @@
 //! This module provides an implementation of the Attestation Verifier bases on
 //! verifying the DICE chain.
 
+extern crate alloc;
+
 use alloc::{string::ToString, sync::Arc};
 
 use oak_attestation_verification::verifier::verify;
