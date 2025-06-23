@@ -813,7 +813,7 @@ async fn execute_boot_strap_logic(
     assert!(user_reg_response2.key_derivation_info.is_some());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_add_get_reset_memory_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");
@@ -840,7 +840,7 @@ async fn test_add_get_reset_memory_all_modes() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_embedding_search_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");
@@ -862,7 +862,7 @@ async fn test_embedding_search_all_modes() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_result_masking_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");
@@ -884,7 +884,7 @@ async fn test_result_masking_all_modes() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_boot_strap_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");
@@ -960,7 +960,7 @@ fn proto_serialization_test() {
     assert_eq!(memory_value.encode_to_vec(), memory_value_from_string_num.encode_to_vec());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_delete_memory_all_modes() {
     let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
     let url = format!("http://{addr}");

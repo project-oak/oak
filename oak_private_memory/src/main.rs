@@ -26,7 +26,7 @@ use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     debug!("Logging!");
     let orchestrator_channel =
