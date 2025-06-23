@@ -33,6 +33,7 @@ rust_binary(
         "@oak_crates_index//:clap",
         "@oak_crates_index//:derive_builder",
         "@oak_crates_index//:hex",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",
     ],
 )

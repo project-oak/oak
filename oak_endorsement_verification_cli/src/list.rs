@@ -22,6 +22,8 @@ use std::sync::Arc;
 use anyhow::Context;
 use clap::Args;
 use oak_attestation_verification::verify_endorsement;
+use oak_proto_rust::oak::attestation::v1::MpmAttachment;
+use prost::Message;
 
 use crate::endorsement_loader;
 
@@ -105,6 +107,8 @@ fn list_endorser_keys(
     endorser_keys
 }
 
+pub(crate) const MPM_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
 const PUBLISHED_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
 const RUNNABLE_CLAIM_TYPE: &str =
@@ -117,6 +121,7 @@ const EXPECTED_CLAIMS: &[&str] =
 
 fn prettify_claim(claim: &str) -> String {
     match claim {
+        MPM_CLAIM_TYPE => format!("{claim} (Distributed as MPM)"),
         OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
         RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
         PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
@@ -156,8 +161,8 @@ fn list_endorsements(
                 result.err().unwrap()
             );
         } else {
-            let (endorsement, reference_values) = result.unwrap();
-            let result = verify_endorsement(now_utc_millis, &endorsement, &reference_values)
+            let (signed_endorsement, reference_values) = result.unwrap();
+            let result = verify_endorsement(now_utc_millis, &signed_endorsement, &reference_values)
                 .context("verifying endorsement");
             if result.is_err() {
                 println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
@@ -179,6 +184,11 @@ fn list_endorsements(
                     None => {
                         println!("        Subject:   missing");
                     }
+                }
+                if statement.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
+                    let subject = &signed_endorsement.endorsement.as_ref().unwrap().subject;
+                    let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
+                    println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
                 }
                 for e in EXPECTED_CLAIMS {
                     let claim = statement.claim_types.iter().find(|c| c.as_str() == *e);

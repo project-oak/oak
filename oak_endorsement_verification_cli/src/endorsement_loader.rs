@@ -30,13 +30,18 @@ use std::{fs, path::PathBuf, sync::Arc};
 
 use anyhow::{Context, Result};
 use derive_builder::Builder;
-use oak_attestation_verification::convert_pem_to_raw;
+use oak_attestation_verification::{
+    convert_pem_to_raw,
+    statement::{get_digest, parse_statement},
+};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
     EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
     VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
 };
+
+use crate::list::MPM_CLAIM_TYPE;
 
 // The key ID for the endorser key is used because the reference values could
 // contain multiple keys. However, is meaningless in this setting, as we are
@@ -270,6 +275,16 @@ impl ContentAddressableEndorsementLoader {
                 format!("reading signature file for endorsement {}", endorsement_hash)
             })?;
 
+        let statement = parse_statement(&endorsement).context("parsing endorsement statement")?;
+        let contains_mpm_claim =
+            statement.predicate.claims.iter().any(|c| c.r#type == MPM_CLAIM_TYPE);
+        let subject = if contains_mpm_claim {
+            let hex_digest = get_digest(&statement)?;
+            self.storage.get_file(&format!("sha2-256:{}", &hex_digest.sha2_256))?
+        } else {
+            vec![]
+        };
+
         let rekor_log_entry = self
             .storage
             .get_linked_file(endorsement_hash, REKOR_LOG_ENTRY_LINK)
@@ -288,7 +303,7 @@ impl ContentAddressableEndorsementLoader {
             endorsement: Some(Endorsement {
                 format: Format::EndorsementFormatJsonIntoto.into(),
                 serialized: endorsement,
-                subject: vec![],
+                subject,
             }),
             signature: Some(Signature { key_id: KEY_ID, raw: signature }),
             rekor_log_entry,
