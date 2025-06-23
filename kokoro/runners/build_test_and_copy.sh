@@ -9,9 +9,6 @@ cd "$(dirname "$0")/../.."
 source ./kokoro/runners/helpers.sh
 
 failures=()
-
-# Don't exit on failures, we're counting them all and reporting to total.
-set +o errexit
 run_as_test_case "build-and-test-linux-targets" "just std-crates"
 collect_test_logs
 run_as_test_case "build-bare-metal-crates" "just bare-metal-crates"

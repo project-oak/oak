@@ -5,6 +5,7 @@ function run_command_with_logfiles() {
     local -r stderr_log="${1}"
     local -r combined_log="${2}"
     local -r command="${3}"
+
     # What is this doing?
     # &> (Redirect stdout + stderr)
     # >(tee f) To a tee process writing to f
@@ -20,26 +21,36 @@ function run_as_test_case() {
 
     local -r logdir="artifacts/subtask-logs/$name"
     mkdir --parents "${logdir}"
-    local -r stdout_log="${logdir}/stdout.log"
     local -r stderr_log="${logdir}/stderr.log"
     local -r combined_log="${logdir}/sponge_log.log"
 
+    # Don't exit on failures, we're counting them all and reporting to total.
+    set +o errexit
+    # Reset the special bash SECONDS variable so we can time the command.
+    SECONDS=0
     if ! run_command_with_logfiles "${stderr_log}" "${combined_log}" "${command}"
     then
+        # Seconds will have counted the number of seconds since it was reset.
+        local -r time=$SECONDS
+        set -o errexit
         echo "${name} FAILED"
-        emit_test_fail "${name}" "${stderr_log}"
+        emit_test_fail "${name}" "${stderr_log}" "${time}"
         failures+=("${name}")
     else
+        # Seconds will have counted the number of seconds since it was reset.
+        local -r time=$SECONDS
+        set -o errexit
         echo "${name} PASSED"
-        emit_test_pass "${name}" "${stdout_log}"
+        emit_test_pass "${name}" "${combined_log}" "${time}"
     fi
 }
 
 function emit_test_pass() {
-    local -r xmlfile ="artifacts/subtask-logs/${1}/sponge_log.xml"
+    local -r xmlfile="artifacts/subtask-logs/${1}/sponge_log.xml"
 
     export NAME="${1}"
-    export LOG=$(cat "${2}")
+    export LOG=$(tail -c 100000 "${2}")
+    export TIME="${3}"
     envsubst < kokoro/helpers/test_pass.xml.tpl > "${xmlfile}"
 }
 
@@ -47,16 +58,22 @@ function emit_test_fail() {
     local -r xmlfile="artifacts/subtask-logs/${1}/sponge_log.xml"
 
     export NAME="${1}"
-    export FAILURE=$(cat "${2}")
-    envsubst < kokoro/helpers/test_failure.xml.tpl > "$xmlfile"
+    # Try to find only relevant lines to show in the main failure log.
+    export FAILURE=$(grep -C 100 "\(fail\|error\)" "${2}" | tail -c 100000)
+    export TIME="${3}"
+    envsubst < kokoro/helpers/test_failure.xml.tpl > "${xmlfile}"
 }
 
 function collect_test_logs {
     mkdir --parents artifacts/bazel-testlogs
 
     # Copy all test.log and test.xml for the most recent bazel test run into our artifacts directory.
-    fd "^test.log$" "bazel-testlogs" --exec cp --parents --force --preserve=timestamps {} artifacts
-    fd "^test.xml$" "bazel-testlogs" --exec cp --parents --force --preserve=timestamps {} artifacts
+    fd "^test.log$" "bazel-testlogs" \
+        --threads=1 --exec cp --parents --force --preserve=timestamps \
+        {} artifacts
+    fd "^test.xml$" "bazel-testlogs" \
+        --threads=1 --exec cp --parents --force --preserve=timestamps \
+        {} artifacts
 
     # Rename the files to the name that will let them be parsed as sponge logs.
     fd "^test.log" artifacts/bazel-testlogs --exec mv {} "{//}/sponge_log.log"
