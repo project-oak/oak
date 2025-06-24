@@ -27,6 +27,7 @@ use page::PageInfo;
 use x86_64::structures::paging::{PageSize, Size4KiB};
 
 use crate::{
+    page::PageType,
     stage0::{load_stage0, SnpRomParsing},
     vmsa::{get_ap_vmsa, get_boot_vmsa, VMSA_ADDRESS},
 };
@@ -45,6 +46,26 @@ struct Cli {
         help = "The dir to output the predicted attestation measurements as binary files to"
     )]
     attestation_measurements_output_dir: Option<PathBuf>,
+    #[arg(long, help = "Whether QEMU will be used as a VMM")]
+    qemu: bool,
+    #[arg(
+        long,
+        help = "The value for the CPU family to use when calculating the VMSA page",
+        default_value_t = 6
+    )]
+    cpu_family: u8,
+    #[arg(
+        long,
+        help = "The value for the CPU model to use when calculating the VMSA page",
+        default_value_t = 0
+    )]
+    cpu_model: u8,
+    #[arg(
+        long,
+        help = "The value for the CPU stepping to use when calculating the VMSA page",
+        default_value_t = 0
+    )]
+    cpu_stepping: u8,
 }
 
 impl Cli {
@@ -69,21 +90,31 @@ fn main() -> anyhow::Result<()> {
     }
 
     for snp_page in stage0.get_snp_pages() {
+        let page_type = if cli.qemu && snp_page.page_type == PageType::Unmeasured {
+            // QEMU uses page type Zero for unmeasured pages as well.
+            PageType::Zero
+        } else {
+            snp_page.page_type
+        };
         for page_number in 0..snp_page.page_count {
             base_page_info.update_from_snp_page(
-                snp_page.page_type.clone(),
+                page_type,
                 snp_page.start_address + (page_number as u64) * Size4KiB::SIZE,
             );
         }
     }
 
     // The boot vCPU has the default VMSA configured.
-    base_page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
+    base_page_info.update_from_vmsa(
+        &get_boot_vmsa(cli.cpu_family, cli.cpu_model, cli.cpu_stepping, cli.qemu),
+        VMSA_ADDRESS,
+    );
 
     // Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset
     // block table in the firmware.
     let sev_es_reset_block = stage0.get_sev_es_reset_block();
-    let ap_vmsa = get_ap_vmsa(&sev_es_reset_block);
+    let ap_vmsa =
+        get_ap_vmsa(&sev_es_reset_block, cli.cpu_family, cli.cpu_model, cli.cpu_stepping, cli.qemu);
     // Derive measurements for each vCPU counts specified.
     for vcpu_count in cli.vcpu_count {
         let mut page_info = base_page_info.clone();

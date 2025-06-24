@@ -519,7 +519,7 @@ pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
 
     let stepping = (stepping & STEPPING_MASK) as u64;
 
-    let model = if family == 6 || family == 15 {
+    let model = if family == 6 || family == 15 || family == 25 {
         (((model & MODEL_MASK) as u64) << MODEL_SHIFT)
             | (((model & EXTENDED_MODEL_MASK) as u64) << EXTENDED_MODEL_SHIFT)
     } else {

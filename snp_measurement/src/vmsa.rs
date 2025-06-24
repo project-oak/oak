@@ -23,15 +23,6 @@ use x86_64::{
 
 use crate::stage0::SevEsResetBlock;
 
-/// The CPU family of the vCPU we expect to be running on.
-const CPU_FAMILY: u8 = 6;
-
-/// The CPU model of the vCPU we expect to be running on.
-const CPU_MODEL: u8 = 0;
-
-/// The stepping of the vCPU we expect to be running on.
-const CPU_STEPPING: u8 = 0;
-
 /// The guest-physical address of the VMSA page.
 ///
 /// The current implementation uses the same fixed address for all VMSA pages.
@@ -44,14 +35,20 @@ const CPU_STEPPING: u8 = 0;
 pub const VMSA_ADDRESS: PhysAddr = PhysAddr::new((1 << 48) - Size4KiB::SIZE);
 
 /// Gets the initial VMSA for the vCPU that is used to boot the VM.
-pub fn get_boot_vmsa() -> VmsaPage {
+pub fn get_boot_vmsa(cpu_family: u8, cpu_model: u8, cpu_stepping: u8, qemu: bool) -> VmsaPage {
     let mut result = VmsaPage::new(Vmsa::new_vcpu_boot(calculate_rdx_from_fms(
-        CPU_FAMILY,
-        CPU_MODEL,
-        CPU_STEPPING,
+        cpu_family,
+        cpu_model,
+        cpu_stepping,
     )));
-    // We expect a slightly different initial state to use for the measurement.
-    result.vmsa.g_pat = 0x00070106;
+    if qemu {
+        // QEMU uses default different values for mxcsr and x87_fcw.
+        result.vmsa.mxcsr = 0x1f80;
+        result.vmsa.x87_fcw = 0x37f;
+    } else {
+        // We expect a slightly different initial state for g_pat when not using QEMU.
+        result.vmsa.g_pat = 0x00070106;
+    }
     result.vmsa.sev_features = 0x00000001;
 
     trace!("Boot VMSA: {:?}", result);
@@ -59,8 +56,14 @@ pub fn get_boot_vmsa() -> VmsaPage {
 }
 
 /// Gets the initial VMSA for additional vCPUs that are not the boot vCPU.
-pub fn get_ap_vmsa(reset_block: &SevEsResetBlock) -> VmsaPage {
-    let mut result = get_boot_vmsa();
+pub fn get_ap_vmsa(
+    reset_block: &SevEsResetBlock,
+    cpu_family: u8,
+    cpu_model: u8,
+    cpu_stepping: u8,
+    qemu: bool,
+) -> VmsaPage {
+    let mut result = get_boot_vmsa(cpu_family, cpu_model, cpu_stepping, qemu);
     result.vmsa.rip = reset_block.rip;
     result.vmsa.cs.base = reset_block.segment_base;
     trace!("AP VMSA: {:?}", result);
