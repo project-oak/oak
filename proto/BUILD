@@ -40,6 +40,25 @@ java_proto_library(
 )
 
 proto_library(
+    name = "validity_proto",
+    srcs = ["validity.proto"],
+    deps = [
+        "@com_google_protobuf//:duration_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "validity_cc_proto",
+    deps = [":validity_proto"],
+)
+
+java_proto_library(
+    name = "validity_java_proto",
+    deps = [":validity_proto"],
+)
+
+proto_library(
     name = "variant_proto",
     srcs = ["variant.proto"],
 )
@@ -60,6 +79,9 @@ build_test(
         ":digest_proto",
         ":digest_cc_proto",
         ":digest_java_proto",
+        ":validity_proto",
+        ":validity_cc_proto",
+        ":validity_java_proto",
         ":variant_proto",
         ":variant_cc_proto",
         ":variant_java_proto",
