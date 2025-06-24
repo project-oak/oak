@@ -20,6 +20,7 @@ package oak.attestation.v1;
 
 import "google/protobuf/timestamp.proto";
 import "proto/digest.proto";
+import "proto/validity.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/session/messages.proto";
 
@@ -76,7 +77,10 @@ message EventAttestationResults {
 }
 
 // Specifies a temporal range of validity for an endorsement.
+// Deprecated: Use oak.Validity instead.
 message Validity {
+  option deprecated = true;
+
   // The time the endorsement first became valid. In milliseconds UTC since
   // Unix Epoch.
   int64 not_before = 1;
@@ -92,8 +96,11 @@ message EndorsementDetails {
   // Digest of the first subject in the endorsement.
   RawDigest subject_digest = 1;
 
+  // Deprecated - use field `valid` instead.
+  Validity validity = 2 [deprecated = true];
+
   // Validity of the verified endorsement.
-  Validity validity = 2;
+  oak.Validity valid = 4;
 
   // All claims contained in the verified endorsement.
   repeated string claim_types = 3;

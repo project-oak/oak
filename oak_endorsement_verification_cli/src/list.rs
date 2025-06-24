@@ -177,6 +177,7 @@ fn list_endorsements(
                         println!("        Subject:     missing");
                     }
                 }
+                #[allow(deprecated)]
                 match &statement.validity {
                     Some(v) => {
                         let vstruct = Validity::from(v);

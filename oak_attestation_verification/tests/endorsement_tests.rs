@@ -23,6 +23,7 @@ use oak_proto_rust::oak::attestation::v1::{
     EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
     VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
 };
+use oak_time::Instant;
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
@@ -99,6 +100,7 @@ fn load_testdata() -> TestData {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_verify_endorsement_success() {
     let testdata = load_testdata();
 
@@ -118,6 +120,24 @@ fn test_verify_endorsement_success() {
     );
     assert!(details.validity.as_ref().unwrap().not_before == 1709113632000, "{:?}", details);
     assert!(details.validity.as_ref().unwrap().not_after == 1740649632000, "{:?}", details);
+    assert!(
+        details.valid.as_ref().unwrap().not_before.unwrap()
+            == Instant::from_unix_millis(
+                details.validity.as_ref().unwrap().not_before.try_into().unwrap()
+            )
+            .into_timestamp(),
+        "{:?}",
+        details
+    );
+    assert!(
+        details.valid.as_ref().unwrap().not_after.unwrap()
+            == Instant::from_unix_millis(
+                details.validity.as_ref().unwrap().not_after.try_into().unwrap()
+            )
+            .into_timestamp(),
+        "{:?}",
+        details
+    );
     assert!(details.claim_types.len() == 2, "{:?}", details);
     assert!(
         details.claim_types[0] == "https://project-oak.github.io/oak/test_claim_1",

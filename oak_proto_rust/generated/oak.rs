@@ -69,3 +69,26 @@ pub struct Variant {
     #[serde(with = "crate::base64data")]
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
+/// Defines a period of validity between two timestamps.
+#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+pub struct Validity {
+    /// Time when the valid period begins. The timestamp itself is included in
+    /// the valid period.
+    #[prost(message, optional, tag = "1")]
+    pub not_before: ::core::option::Option<::prost_types::Timestamp>,
+    /// Time when the valid period ends. The timestamp itself is included in
+    /// the valid period.
+    #[prost(message, optional, tag = "2")]
+    pub not_after: ::core::option::Option<::prost_types::Timestamp>,
+}
+/// Offsets which produce a new `Validity` instance from either a single
+/// timestamp or an existing `Validity` instance.
+#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+pub struct ValidityOffset {
+    /// Offset that produces `not_before`, perhaps negative.
+    #[prost(message, optional, tag = "1")]
+    pub not_before_offset: ::core::option::Option<::prost_types::Duration>,
+    /// Offset that produces `not_after`, perhaps negative.
+    #[prost(message, optional, tag = "2")]
+    pub not_after_offset: ::core::option::Option<::prost_types::Duration>,
+}
