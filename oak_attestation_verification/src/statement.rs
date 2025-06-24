@@ -75,6 +75,16 @@ pub struct Validity {
     pub not_after: OffsetDateTime,
 }
 
+impl From<&oak_proto_rust::oak::attestation::v1::Validity> for Validity {
+    fn from(value: &oak_proto_rust::oak::attestation::v1::Validity) -> Validity {
+        Validity {
+            // Conversion is from milliseconds to seconds.
+            not_before: OffsetDateTime::from_unix_timestamp(value.not_before / 1000).unwrap(),
+            not_after: OffsetDateTime::from_unix_timestamp(value.not_after / 1000).unwrap(),
+        }
+    }
+}
+
 // A single claim about the endorsement subject.
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]

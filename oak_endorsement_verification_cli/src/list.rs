@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
-use oak_attestation_verification::verify_endorsement;
+use oak_attestation_verification::{statement::Validity, verify_endorsement};
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use prost::Message;
 
@@ -169,20 +169,22 @@ fn list_endorsements(
             } else {
                 println!("    ✅  {endorsement_hash}");
                 let statement = result.unwrap();
-                match &statement.validity {
-                    Some(v) => {
-                        println!("        Validity:  {} - {}", v.not_before, v.not_after);
-                    }
-                    None => {
-                        println!("        Validity:  missing");
-                    }
-                }
                 match &statement.subject_digest {
                     Some(digest) => {
-                        println!("        Subject:   sha2-256:{}", hex::encode(&digest.sha2_256));
+                        println!("        Subject:     sha2-256:{}", hex::encode(&digest.sha2_256));
                     }
                     None => {
-                        println!("        Subject:   missing");
+                        println!("        Subject:     missing");
+                    }
+                }
+                match &statement.validity {
+                    Some(v) => {
+                        let vstruct = Validity::from(v);
+                        println!("        Not before:  {}", vstruct.not_before);
+                        println!("        Not after:   {}", vstruct.not_after);
+                    }
+                    None => {
+                        println!("        Validity:    missing");
                     }
                 }
                 if statement.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
