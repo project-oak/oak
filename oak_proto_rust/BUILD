@@ -90,6 +90,7 @@ cargo_build_script(
         "//proto/oak_functions:testing.proto",
         "//proto/oak_functions/sdk:oak_functions_wasm.proto",
         "//proto/oak_functions/service:oak_functions.proto",
+        "//proto/oak_functions/standalone:oak_functions_session.proto",
         "//proto/packages:packages.proto",
         "//proto/restricted_kernel:initial_data.proto",
         "//proto/session:messages.proto",

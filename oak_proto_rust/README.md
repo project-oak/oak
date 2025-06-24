@@ -3,7 +3,7 @@
 This is a transitional library that's serving as the single dependency to add
 when you need to depend on any Oak protos from a Bazel build.
 
-If the proto you need isn't yet build by this library, you can add it to the
+If the proto you need isn't yet built by this library, you can add it to the
 build.rs file (and update the dependencies for the build script target as
 needed.)
 

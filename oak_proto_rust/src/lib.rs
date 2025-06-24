@@ -101,6 +101,9 @@ pub mod oak {
         pub mod lookup_data {
             include_proto!("oak.functions.lookup_data");
         }
+        pub mod standalone {
+            include_proto!("oak.functions.standalone");
+        }
         pub mod testing {
             include_proto!("oak.functions.testing");
         }

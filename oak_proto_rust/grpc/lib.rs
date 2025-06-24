@@ -25,6 +25,10 @@ pub mod oak {
     pub mod functions {
         #![allow(clippy::return_self_not_must_use)]
         tonic::include_proto!("oak.functions");
+        pub mod standalone {
+            #![allow(clippy::return_self_not_must_use)]
+            tonic::include_proto!("oak.functions.standalone");
+        }
     }
 
     pub mod key_provisioning {
