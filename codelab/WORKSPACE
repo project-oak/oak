@@ -47,10 +47,6 @@ load("@oak//bazel/crates:patched_crates.bzl", "load_patched_crates")
 
 load_patched_crates()
 
-load("@oak//bazel/rust:deps.bzl", "load_rust_repositories")
-
-load_rust_repositories()
-
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()

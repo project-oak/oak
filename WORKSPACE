@@ -144,10 +144,6 @@ load("//bazel/llvm:reg.bzl", "register_llvm_toolchains")
 
 register_llvm_toolchains()
 
-load("//bazel/rust:deps.bzl", "load_rust_repositories")
-
-load_rust_repositories()
-
 load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()

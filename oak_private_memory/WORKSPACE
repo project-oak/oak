@@ -81,10 +81,6 @@ load("@oak//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()
 
-load("@oak//bazel/rust:deps.bzl", "load_rust_repositories")
-
-load_rust_repositories()
-
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()

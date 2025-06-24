@@ -149,3 +149,8 @@ use_repo(
     "org_mockito_kotlin_mockito_kotlin",
     "org_mockito_mockito_core",
 )
+
+##### Rust Toolchain Setup #####
+
+bazel_dep(name = "rules_shell", version = "0.5.0")
+bazel_dep(name = "rules_rust", version = "0.61.0")
