@@ -12,12 +12,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#![feature(negative_impls)]
-pub mod app;
-pub mod app_config;
-pub mod app_service;
-pub mod database;
-pub mod encryption;
-pub mod external_db_client;
-pub mod log;
-pub mod metrics;
+
+use env_logger::Env;
+pub use log::{debug, error, info};
+
+pub fn init_logging(enable_logging: bool) {
+    if enable_logging {
+        env_logger::init();
+    } else {
+        disable_icing_logging();
+        let env = Env::default().filter_or("RUST_LOG", "off");
+        env_logger::init_from_env(env);
+    }
+}
+
+pub fn disable_icing_logging() {
+    icing::set_logging(false);
+}

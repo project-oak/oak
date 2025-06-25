@@ -24,7 +24,7 @@ use sealed_memory_rust_proto::oak::private_memory::{
 };
 use tonic::transport::Channel;
 
-use crate::debug;
+use crate::log::debug;
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.

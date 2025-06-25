@@ -17,6 +17,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
 use futures::channel::mpsc;
+use log::info;
 use oak_proto_rust::oak::session::v1::PlaintextMessage;
 use oak_sdk_server_v1::OakApplicationContext;
 use oak_sdk_standalone::Standalone;
@@ -33,6 +34,9 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client:
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
+fn init_logging() {
+    let _ = env_logger::builder().is_test(true).try_init();
+}
 
 static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
 async fn start_server() -> Result<(
@@ -41,6 +45,7 @@ async fn start_server() -> Result<(
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<Result<()>>,
 )> {
+    init_logging();
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
@@ -658,7 +663,7 @@ async fn execute_result_masking_logic(
     };
 
     // Test Case 1: No ResultMask (result_mask field is None)
-    println!("Test Case 1: No ResultMask (all fields expected)");
+    info!("Test Case 1: No ResultMask (all fields expected)");
     let search_request_no_mask = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -675,7 +680,7 @@ async fn execute_result_masking_logic(
     assert_eq!(mem_no_mask.content.as_ref().unwrap().contents, original_contents_map);
 
     // Test Case 2: Empty include_fields (no top-level fields expected)
-    println!("Test Case 2: Empty include_fields");
+    info!("Test Case 2: Empty include_fields");
     let search_request_empty_fields = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -692,7 +697,7 @@ async fn execute_result_masking_logic(
     assert!(mem_empty_fields.content.is_none(), "Content should be None");
 
     // Test Case 3: Specific top-level fields (ID and TAGS)
-    println!("Test Case 3: Specific top-level fields (ID and TAGS)");
+    info!("Test Case 3: Specific top-level fields (ID and TAGS)");
     let search_request_id_tags = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -712,7 +717,7 @@ async fn execute_result_masking_logic(
     assert!(mem_id_tags.content.is_none());
 
     // Test Case 4: CONTENT included, specific content_fields ("content_key_str")
-    println!("Test Case 4: CONTENT with specific content_fields");
+    info!("Test Case 4: CONTENT with specific content_fields");
     let search_request_content_specific = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -737,7 +742,7 @@ async fn execute_result_masking_logic(
 
     // Test Case 5: CONTENT included, empty content_fields (all content sub-fields
     // expected)
-    println!("Test Case 5: CONTENT with empty content_fields");
+    info!("Test Case 5: CONTENT with empty content_fields");
     let search_request_content_all_sub = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -758,7 +763,7 @@ async fn execute_result_masking_logic(
     assert_eq!(mem_cas.content.as_ref().unwrap().contents, original_contents_map);
 
     // Test Case 6: CONTENT *not* included, but content_fields specified
-    println!("Test Case 6: ID included, content_fields specified (CONTENT not in include_fields)");
+    info!("Test Case 6: ID included, content_fields specified (CONTENT not in include_fields)");
     let search_request_id_stray_content = SearchMemoryRequest {
         query: Some(search_query_clause.clone()),
         page_size: 1,
@@ -819,7 +824,7 @@ async fn test_add_get_reset_memory_all_modes() {
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        println!("Testing Add/Get/Reset in {:?} mode", mode);
+        info!("Testing Add/Get/Reset in {:?} mode", mode);
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
@@ -846,7 +851,7 @@ async fn test_embedding_search_all_modes() {
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        println!("Testing Embedding Search in {:?} mode", mode);
+        info!("Testing Embedding Search in {:?} mode", mode);
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
@@ -868,7 +873,7 @@ async fn test_result_masking_all_modes() {
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        println!("Testing Result Masking in {:?} mode", mode);
+        info!("Testing Result Masking in {:?} mode", mode);
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
@@ -890,7 +895,7 @@ async fn test_boot_strap_all_modes() {
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        println!("Testing Bootstrap in {:?} mode", mode);
+        info!("Testing Bootstrap in {:?} mode", mode);
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);
@@ -907,9 +912,10 @@ async fn test_boot_strap_all_modes() {
 
 #[test]
 fn proto_serialization_test() {
+    init_logging();
     let request =
         KeySyncRequest { pm_uid: "12345678910".to_string(), key_encryption_key: vec![1, 2, 3] };
-    println!("Serailization {:?}", serde_json::to_string(&request));
+    info!("Serailization {:?}", serde_json::to_string(&request));
     let json_str = r#"{"keyEncryptionKey":"AQID","pmUid":"12345678910"}"#;
     let request_from_string_num = serde_json::from_str::<KeySyncRequest>(json_str).unwrap();
     assert_eq!(request.encode_to_vec(), request_from_string_num.encode_to_vec());
@@ -966,7 +972,7 @@ async fn test_delete_memory_all_modes() {
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        println!("Testing Delete Memory in {:?} mode", mode);
+        info!("Testing Delete Memory in {:?} mode", mode);
         let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
         let mut client = SealedMemoryServiceClient::new(channel);
         let (mut tx, rx) = mpsc::channel(10);

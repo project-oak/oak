@@ -30,7 +30,7 @@ use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
-use crate::{app::SealedMemoryHandler, debug, metrics};
+use crate::{app::SealedMemoryHandler, log::debug, metrics};
 
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct SealedMemoryServiceImplementation {

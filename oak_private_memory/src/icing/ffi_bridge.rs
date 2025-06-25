@@ -119,6 +119,11 @@ mod ffi {
 
         fn build(&self) -> UniquePtr<CxxVector<u8>>;
     }
+
+    unsafe extern "C++" {
+        include!("src/icing/ffi_wrapper.h");
+        fn set_logging(enabled: bool) -> bool;
+    }
 }
 
 use cxx::UniquePtr;

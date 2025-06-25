@@ -36,8 +36,8 @@ use crate::{
         decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache,
         DbMigration, IcingMetaDatabase, MemoryId,
     },
-    debug,
     encryption::{decrypt, encrypt, generate_nonce},
+    log::debug,
     metrics,
 };
 

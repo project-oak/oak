@@ -376,6 +376,12 @@ class SchemaBuilder {
 
 std::unique_ptr<SchemaBuilder> create_schema_builder();
 
+// Logging related functions
+
+// If `enabled` is true, logging will be enabled at INFO level. Otherwise,
+// logging will be enabled at FATAL level.
+bool set_logging(bool enabled);
+
 }  // namespace ffi
 }  // namespace private_memory
 

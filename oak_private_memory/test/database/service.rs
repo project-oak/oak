@@ -16,6 +16,7 @@
 use std::collections::HashMap;
 
 use anyhow::anyhow;
+use log::debug;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_server::{
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
@@ -72,7 +73,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<ReadDataBlobResponse>, tonic::Status> {
         let request = request.into_inner();
         let blob = self.get_blob_inner(&request.id).await;
-        println!("Read {:?}, blob {:?}", request, blob);
+        debug!("Read {:?}, blob {:?}", request, blob);
 
         Ok(tonic::Response::new(ReadDataBlobResponse {
             data_blob: blob,

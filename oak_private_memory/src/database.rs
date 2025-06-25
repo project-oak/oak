@@ -26,8 +26,8 @@ use tempfile::tempdir;
 
 pub use crate::external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use crate::{
-    debug,
     encryption::{decrypt, encrypt, generate_nonce},
+    log::debug,
 };
 
 // The unique id for a memory, responding to `struct Memory`.

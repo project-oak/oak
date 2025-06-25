@@ -21,13 +21,14 @@ use oak_sdk_containers::{
     default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
 };
 use oak_sdk_server_v1::OakApplicationContext;
-use println as debug;
+use private_memory_server_lib::log::debug;
 use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    private_memory_server_lib::log::init_logging(true);
     debug!("Logging!");
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create orchestrator channel")?;

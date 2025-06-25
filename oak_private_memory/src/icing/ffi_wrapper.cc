@@ -61,6 +61,14 @@ std::unique_ptr<PropertyConfigBuilder> create_property_config_builder() {
   return std::make_unique<PropertyConfigBuilder>();
 }
 
+bool set_logging(bool enabled) {
+  if (enabled) {
+    return icing::lib::SetLoggingLevel(icing::lib::LogSeverity::INFO);
+  } else {
+    return icing::lib::SetLoggingLevel(icing::lib::LogSeverity::FATAL);
+  }
+}
+
 }  // namespace ffi
 
 }  // namespace private_memory
