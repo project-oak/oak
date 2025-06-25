@@ -38,7 +38,6 @@ fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
     let measured_content = b"Just some abitrary content";
@@ -77,16 +76,14 @@ fn test_get_expected_measurement_digest_validity() {
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                validity: Some(statement_validity.into()),
-                valid: Some(statement_validity.into()),
                 digests: vec![content_digests],
+                valid: Some(statement_validity.into()),
             })),
         }
     );
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_get_stage0_expected_values_validity() {
     // Create the firmware attachement. This is what contains the *actual* digests
     // to verify.
@@ -132,7 +129,6 @@ fn test_get_stage0_expected_values_validity() {
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 digests: vec![measured_digest],
-                validity: Some(statement_validity.into()),
                 valid: Some(statement_validity.into()),
             })),
         }
@@ -140,7 +136,6 @@ fn test_get_stage0_expected_values_validity() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn test_get_kernel_expected_values_validity() {
     // Create the kernel attachement. This is what contains the *actual* digests
     // to verify.
@@ -189,7 +184,6 @@ fn test_get_kernel_expected_values_validity() {
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 digests: vec![image_digest],
-                validity: Some(statement_validity.into()),
                 valid: Some(statement_validity.into()),
             })),
         })
@@ -199,7 +193,6 @@ fn test_get_kernel_expected_values_validity() {
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
                 digests: vec![setup_digest],
-                validity: Some(statement_validity.into()),
                 valid: Some(statement_validity.into()),
             })),
         })

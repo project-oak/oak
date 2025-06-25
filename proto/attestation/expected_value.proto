@@ -22,7 +22,6 @@ package oak.attestation.v1;
 import "proto/digest.proto";
 import "proto/validity.proto";
 import "proto/attestation/tcb_version.proto";
-import "proto/attestation/verification.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -31,10 +30,9 @@ option java_package = "com.google.oak.attestation.v1";
 message VerificationSkipped {}
 
 message RawDigests {
-  repeated RawDigest digests = 1;
+  reserved 2;
 
-  // Deprecated - use field `valid` instead.
-  Validity validity = 2 [deprecated = true];
+  repeated RawDigest digests = 1;
 
   // This field is optional, and only used for some optional
   // optimizations like client-side caching of verified expected values.

@@ -976,7 +976,6 @@ fn to_expected_digests(source: &[RawDigest], claim_validity: Option<&Validity>) 
     ExpectedDigests {
         r#type: Some(expected_digests::Type::Digests(RawDigests {
             digests: source.to_vec(),
-            validity: claim_validity.map(|cv| cv.into()),
             valid: claim_validity.map(|cv| cv.into()),
         })),
     }
