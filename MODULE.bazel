@@ -150,6 +150,9 @@ use_repo(
     "org_mockito_mockito_core",
 )
 
+# https://github.com/bazelbuild/rules_java
+bazel_dep(name = "rules_java", version = "8.9.0")
+
 ##### Rust Toolchain Setup #####
 
 bazel_dep(name = "rules_shell", version = "0.5.0")
