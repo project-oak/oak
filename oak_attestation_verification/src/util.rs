@@ -28,11 +28,11 @@ use oak_proto_rust::oak::{
         KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
         OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
-        SystemLayerReferenceValues, TextReferenceValue, TimestampReferenceValue, Validity,
-        VerifyingKeySet,
+        SystemLayerReferenceValues, TextReferenceValue, TimestampReferenceValue, VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
+use oak_time::Instant;
 use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
 use prost_types::Any;
@@ -505,11 +505,44 @@ impl UnixTimestampMillis for OffsetDateTime {
     }
 }
 
-impl From<&statement::Validity> for Validity {
-    fn from(value: &statement::Validity) -> Validity {
-        Validity {
+impl From<&statement::Validity> for oak_proto_rust::oak::attestation::v1::Validity {
+    fn from(value: &statement::Validity) -> oak_proto_rust::oak::attestation::v1::Validity {
+        oak_proto_rust::oak::attestation::v1::Validity {
             not_before: value.not_before.unix_timestamp_millis(),
             not_after: value.not_after.unix_timestamp_millis(),
+        }
+    }
+}
+
+// From Rust struct to protocol buffer.
+impl From<&statement::Validity> for oak_proto_rust::oak::Validity {
+    fn from(value: &statement::Validity) -> oak_proto_rust::oak::Validity {
+        let not_before =
+            Instant::from_unix_millis(value.not_before.unix_timestamp_millis().try_into().unwrap())
+                .into_timestamp();
+        let not_after =
+            Instant::from_unix_millis(value.not_after.unix_timestamp_millis().try_into().unwrap())
+                .into_timestamp();
+        oak_proto_rust::oak::Validity { not_before: Some(not_before), not_after: Some(not_after) }
+    }
+}
+
+// From protocol buffer to Rust struct.
+impl From<&oak_proto_rust::oak::Validity> for statement::Validity {
+    fn from(value: &oak_proto_rust::oak::Validity) -> statement::Validity {
+        let not_before_nanos =
+            1000 * 1000 * Instant::from(value.not_before.unwrap()).into_unix_millis();
+        let not_after_nanos =
+            1000 * 1000 * Instant::from(value.not_after.unwrap()).into_unix_millis();
+        statement::Validity {
+            not_before: OffsetDateTime::from_unix_timestamp_nanos(
+                not_before_nanos.try_into().unwrap(),
+            )
+            .expect("failed to convert instant"),
+            not_after: OffsetDateTime::from_unix_timestamp_nanos(
+                not_after_nanos.try_into().unwrap(),
+            )
+            .expect("failed to convert instant"),
         }
     }
 }

@@ -38,12 +38,13 @@ fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
     let measured_content = b"Just some abitrary content";
     let content_digests = util::raw_digest_from_contents(measured_content);
     let endorsement = test_util::fake_endorsement(&content_digests, vec![]);
-    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
+    let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
 
     // Now create the TR endorsement.
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
@@ -76,7 +77,8 @@ fn test_get_expected_measurement_digest_validity() {
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                validity: Some(endorsement_validity.into()),
+                validity: Some(statement_validity.into()),
+                valid: Some(statement_validity.into()),
                 digests: vec![content_digests],
             })),
         }
@@ -84,6 +86,7 @@ fn test_get_expected_measurement_digest_validity() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_get_stage0_expected_values_validity() {
     // Create the firmware attachement. This is what contains the *actual* digests
     // to verify.
@@ -102,7 +105,7 @@ fn test_get_stage0_expected_values_validity() {
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, vec![FIRMWARE_CLAIM_TYPE]);
-    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
+    let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
     let tr_endorsement = TransparentReleaseEndorsement {
@@ -128,14 +131,16 @@ fn test_get_stage0_expected_values_validity() {
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                validity: Some(endorsement_validity.into()),
                 digests: vec![measured_digest],
+                validity: Some(statement_validity.into()),
+                valid: Some(statement_validity.into()),
             })),
         }
     );
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_get_kernel_expected_values_validity() {
     // Create the kernel attachement. This is what contains the *actual* digests
     // to verify.
@@ -157,7 +162,7 @@ fn test_get_kernel_expected_values_validity() {
     let subject_digests = util::raw_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, vec![KERNEL_CLAIM_TYPE]);
-    let endorsement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
+    let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
     let (serialized_endorsement, endorsement_signature) =
         test_util::serialize_and_sign_endorsement(&endorsement, signing_key);
     let tr_endorsement = TransparentReleaseEndorsement {
@@ -183,8 +188,9 @@ fn test_get_kernel_expected_values_validity() {
         expected_digests.image,
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                validity: Some(endorsement_validity.into()),
                 digests: vec![image_digest],
+                validity: Some(statement_validity.into()),
+                valid: Some(statement_validity.into()),
             })),
         })
     );
@@ -192,8 +198,9 @@ fn test_get_kernel_expected_values_validity() {
         expected_digests.setup_data,
         Some(ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                validity: Some(endorsement_validity.into()),
                 digests: vec![setup_digest],
+                validity: Some(statement_validity.into()),
+                valid: Some(statement_validity.into()),
             })),
         })
     );

@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/digest.proto";
+import "proto/validity.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/attestation/verification.proto";
 
@@ -32,9 +33,12 @@ message VerificationSkipped {}
 message RawDigests {
   repeated RawDigest digests = 1;
 
+  // Deprecated - use field `valid` instead.
+  Validity validity = 2 [deprecated = true];
+
   // This field is optional, and only used for some optional
   // optimizations like client-side caching of verified expected values.
-  Validity validity = 2;
+  oak.Validity valid = 3;
 }
 
 message ExpectedDigests {

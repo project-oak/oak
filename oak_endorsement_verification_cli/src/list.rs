@@ -168,8 +168,8 @@ fn list_endorsements(
                 println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
             } else {
                 println!("    ✅  {endorsement_hash}");
-                let statement = result.unwrap();
-                match &statement.subject_digest {
+                let details = result.unwrap();
+                match &details.subject_digest {
                     Some(digest) => {
                         println!("        Subject:     sha2-256:{}", hex::encode(&digest.sha2_256));
                     }
@@ -177,8 +177,7 @@ fn list_endorsements(
                         println!("        Subject:     missing");
                     }
                 }
-                #[allow(deprecated)]
-                match &statement.validity {
+                match &details.valid {
                     Some(v) => {
                         let vstruct = Validity::from(v);
                         println!("        Not before:  {}", vstruct.not_before);
@@ -188,20 +187,20 @@ fn list_endorsements(
                         println!("        Validity:    missing");
                     }
                 }
-                if statement.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
+                if details.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
                     let subject = &signed_endorsement.endorsement.as_ref().unwrap().subject;
                     let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
                     println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
                 }
                 for e in EXPECTED_CLAIMS {
-                    let claim = statement.claim_types.iter().find(|c| c.as_str() == *e);
+                    let claim = details.claim_types.iter().find(|c| c.as_str() == *e);
                     if claim.is_none() {
                         println!("        ❌  {}", prettify_claim(e));
                     } else {
                         println!("        🛄  {}", prettify_claim(e));
                     }
                 }
-                for c in statement.claim_types {
+                for c in details.claim_types {
                     if !EXPECTED_CLAIMS.contains(&c.as_str()) {
                         println!("        🛄  {}", prettify_claim(&c));
                     }

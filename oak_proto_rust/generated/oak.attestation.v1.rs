@@ -1449,10 +1449,14 @@ pub struct VerificationSkipped {}
 pub struct RawDigests {
     #[prost(message, repeated, tag = "1")]
     pub digests: ::prost::alloc::vec::Vec<super::super::RawDigest>,
-    /// This field is optional, and only used for some optional
-    /// optimizations like client-side caching of verified expected values.
+    /// Deprecated - use field `valid` instead.
+    #[deprecated]
     #[prost(message, optional, tag = "2")]
     pub validity: ::core::option::Option<Validity>,
+    /// This field is optional, and only used for some optional
+    /// optimizations like client-side caching of verified expected values.
+    #[prost(message, optional, tag = "3")]
+    pub valid: ::core::option::Option<super::super::Validity>,
 }
 #[derive(Clone, PartialEq, ::prost_derive::Message)]
 pub struct ExpectedDigests {

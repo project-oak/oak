@@ -99,6 +99,7 @@ proto_library(
         ":tcb_version_proto",
         ":verification_proto",
         "//proto:digest_proto",
+        "//proto:validity_proto",
     ],
 )
 
