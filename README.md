@@ -4,8 +4,6 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/oak-logo/svgs/oak-logo-negative.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="docs/oak-logo/svgs/oak-logo.svg?sanitize=true"><img alt="Project Oak Logo" src="docs/oak-logo/svgs/oak-logo.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-[![Docs](https://img.shields.io/badge/docs-rust-brightgreen?style=for-the-badge)](https://project-oak.github.io/oak/rustdoc)
-
 Oak is a software platform for building distributed systems providing externally
 verifiable (or falsifiable) claims about system behaviors in a transparent way.
 
