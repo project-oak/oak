@@ -155,7 +155,7 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert_that!(
         attest_request,
-        ok(some(matches_pattern!(AttestRequest { endorsed_evidence: empty() })))
+        ok(some(matches_pattern!(AttestRequest { endorsed_evidence: is_empty() })))
     );
 
     Ok(())
@@ -210,7 +210,7 @@ fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
 
     assert_that!(
         server_attestation_provider.get_outgoing_message(),
-        ok(some(matches_pattern!(AttestResponse { endorsed_evidence: empty() })))
+        ok(some(matches_pattern!(AttestResponse { endorsed_evidence: is_empty() })))
     );
 
     Ok(())

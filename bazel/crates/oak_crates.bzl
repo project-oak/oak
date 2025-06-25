@@ -379,7 +379,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "env_logger": crate.spec(version = "0.11.2"),
     "futures": crate.spec(version = "0.3.31"),
     "futures-util": crate.spec(version = "0.3.31"),
-    "googletest": crate.spec(version = "0.14.0"),
+    "googletest": crate.spec(version = "0.14.2"),
     # Use same version as cargo, newer versions has compatibility issues.
     "http": crate.spec(version = "1.3"),
     "http-body-util": crate.spec(version = "0.1.2"),

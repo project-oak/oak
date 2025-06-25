@@ -482,7 +482,7 @@ fn get_peer_attestation_evidence() -> anyhow::Result<()> {
     // The client does not send any attestation evidence to the server.
     assert_that!(
         server_session.get_peer_attestation_evidence(),
-        ok(matches_pattern!(AttestationEvidence { evidence: empty() }))
+        ok(matches_pattern!(AttestationEvidence { evidence: is_empty() }))
     );
 
     Ok(())
