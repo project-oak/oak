@@ -1,125 +1,69 @@
+<!-- Oak Logo Start -->
+<!-- An HTML element is intentionally used since GitHub recommends this approach to handle different images in dark/light modes. Ref: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
+<!-- markdownlint-disable-next-line MD033 -->
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="oak-logo/svgs/oak-logo-negative.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="oak-logo/svgs/oak-logo.svg?sanitize=true"><img alt="Project Oak Logo" src="oak-logo/svgs/oak-logo.svg?sanitize=true"></picture></h1>
+<!-- Oak Logo End -->
+
 # Remote Attestation
 
-**Remote Attestation** allows a client to remotely verify the TEE hardware
-authenticity and the identity of the code running inside the TEE.
+**Remote Attestation** is a process that enables clients to gain trust in the server workload by
+verifying that _"the intended software is running on the intended hardware"_, i.e. it allows clients
+to remotely verify the authenticity and integrity of the Trusted Execution Environment (TEE) and the
+workload running inside a TEE before any sensitive data is exchaged.
 
-If the code of the application is **reproducibly buildable**, the client can
-also check that the TEE is running the application that is expected to run. See
-also
+## Core Concepts
+
+Remote Attestation is done by requesting the following artifacts from the server and verifying them
+on the client-side:
+
+1) [`Evidence`](../proto/attestation/evidence.proto): Message that contains a cryptographic proof of
+the hardware and software identity. This includes quotes from the hardware root of trust (such as
+quotes from [AMD SEV-SNP](https://www.amd.com/en/developer/sev.html) or
+[Intel TDX](https://www.intel.com/content/www/us/en/developer/tools/trust-domain-extensions/overview.html))
+and measurements of the Trusted Computing Base (TCB), which is the collection of firmware and
+software.
+Evidence also binds this identity to cryptographic keys that are used to establish an end-to-end
+encrypted channel between the client and the TEE.
+For more information about Oak end-to-end encryption see
+[Oak Encrypted Session SDK](../oak_session/README.md).
+
+2) [`Endorsements`](../proto/attestation/endorsement.proto): Message that contains statements from
+trusted parties that vouch for the authenticity and integrity of the hardware and software.
+This includes certificates from the hardware manufacturer that endorse the TEE platform and
+certificates that correspond to the Binary Transparency.
+For more information about how Oak provides Binary Transparency see
 [Transparent Release](https://github.com/project-oak/oak/tree/main/docs/tr/README.md).
 
-The Remote Attestation process is based on an **Attestation Report**, a data
-structure signed by the TEE platform and containing information identifying the
-code that is running inside the TEE. This report can be verified to confirm that
-it is signed by the **TEE Provider** (e.g. AMD or Intel), which results in
-evidence that the code is running on a genuine TEE platform.
+These messages are often combined into an [`EndorsedEvidence`](../proto/session/messages.proto)
+message that is being sent to the client.
+To verify the `EndorsedEvidence` client relies on a set of
+[`ReferenceValues`](../proto/attestation/reference_value.proto), which are expectations about
+various properties of the workload, i.e. binary measurements, versions, configuration parameters and
+etc.
 
-## Workflow Diagram
+It's also important to note that Remote Attestation doesn't necessarily have to be "Server to
+Client", it can be done in any direction, even with both client and server providing attestation
+evidence to each other (i.e. _Bidirectional Attestation_).
 
-```mermaid
-sequenceDiagram
+Remote attestation process involves 3 main entities:
 
-autonumber
+- **Attester**: Entity internal to the TEE that generates the `Evidence` message.
+- **Endorser**: Entity that generates the `Endorsements` message (can either be inside or outside
+the TEE).
+- **Verifier**: Entity that provides remote attestation verification.
 
-participant C as Client
-participant U as Untrusted Launcher
-participant T as Trusted Enclave Instance
-participant P as TEE Platform
+More information about the Remote Attestation process can be found in the
+[RFC9334](https://datatracker.ietf.org/doc/html/rfc9334).
+And for more information about how Remote Attestation is linked to Binary Transparency see our
+[Confidential Computing Transparency](https://arxiv.org/abs/2409.03720) paper.
 
-Note over U,P: Boot Trusted Enclave
+## Implementation
 
-U->>P: Trusted Enclave Binary + firmware
-P->>T: Boot Trusted Enclave
+Oak provides the following SDKs that are needed for Remote Attestation:
 
-Note over U,P: Initialize
-
-U->>T: Configuration<br>C
-activate T
-T-->>T: Init logic
-T-->>T: Generate Enclave Key Pair for Encryption<br>EPK, ESK
-T->>P: AttestationReportRequest<br>Bound to H(H(C)||H(EPK))
-P-->>P: Generate AttestationReport<br>AR
-P->>T: AttestationReport (signed by TEE platform)<br>AR
-T->>U: enclave Public Key + AttestationReport<br>EPK,AR
-deactivate T
-
-Note over C,P: Fetch Enclave Public Key
-
-C->>U: GetPublicKeyRequest
-activate U
-U->>C: GetPublicKeyResponse<br>With Additional Evidence<br>EPK,AR,Ev
-deactivate U
-C-->>C: Verify AttestationReport and Enclave Public Key<br>With Additional Evidence
-
-Note over C,P: Exchange Encrypted Data
-
-loop for each invocation
-   C-->>C: Generate symmetric Response Key<br>RK
-   C-->>C: Encrypt Response Key and request body with Enclave Public Key<br>Authenticate additional data (plaintext)
-   C->>U: InvokeRequest
-   activate U
-   U->>T: InvokeRequest
-   activate T
-   T-->>T: Decrypt Response Key and request body with Enclave Secret Key
-   T-->>T: Process request
-   T-->>T: Encrypt response with Response Key
-   T->>U: InvokeResponse
-   deactivate T
-   U->>C: InvokeResponse
-   deactivate U
-   C-->>C: Decrypt response with Response Key
-end
-```
-
-### Fetch Enclave Public Key
-
-Initially, the client connects to the untrusted launcher and requests the
-attested enclave public key.
-
-The enclave generated the key after its initialization, and it will never change
-for the enclave lifetime, so the corresponding untrusted launcher can keep the
-enclave public key in memory to serve it to the client directly without having
-to interact with the enclave every time.
-
-The untrusted launcher also stores additional evidence to help clients verify
-the authenticity of the enclave and its attestation report, e.g. intermediate
-certificates, signatures and transparency log inclusion proofs.
-
-The client then checks:
-
-- that the attestation report is signed by the TEE manufacturer (e.g. AMD,
-  Intel)
-- that the attestation report is bound to the enclave public key, to confirm
-  that the key pair was in fact generated from inside the enclave
-- that the attestation report is bound to the expected configuration of the
-  enclave
-- that the attestation report measurement corresponds to a trusted version of
-  the enclave binary (e.g. via
-  [Transparent Release](https://github.com/project-oak/oak/tree/main/docs/tr/README.md))
-
-If any of these checks fails, the client refuses to go ahead.
-
-### Exchange Encrypted Data
-
-The client also generates an encryption key pair ahead of time (it may be reused
-across invocations, or it may be generated for each invocation).
-
-For each invocation (consisting of a request followed by a response) the client
-generates a fresh symmetric key for the response, then it concatenates this key
-with the request body, and encrypts the resulting blob with the enclave public
-key using [Hybrid Encryption](https://www.rfc-editor.org/rfc/rfc9180.html). The
-client may also authenticate additional data, which is not encrypted, but is
-bound to the ciphertext.
-
-It then sends the encrypted message to the server, which forwards it to the
-appropriate trusted enclave which generated the enclave public key. Only this
-enclave has the corresponding secret key, which it uses to decrypt the client
-request and verify the integrity of the additional data, if present.
-
-The trusted enclave then processes the client request according to the
-application-specific logic, and once that is done, it encrypts the response with
-the client response key via using symmetric encryption.
-
-The client receives the encrypted response, and decrypts it with the response
-key. The response key is then discarded and **not** reused for subsequent
-invocations.
+- [Oak Attestation SDK](../oak_attestation/README.md): which is used to generate remote attestation
+artifacts in the TEE.
+- [Oak Attestation Verification SDK](../oak_attestation_verification/README.md): which is used to
+define remote attestation verification logic.
+- [Oak Encrypted Session SDK](../oak_session/README.md): which is used to establish an end-to-end
+encrypted channel after a successful attestation.
