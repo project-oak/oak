@@ -517,8 +517,13 @@ impl MemoryCache {
         // Store in external DB, explicitly providing the generated ID
         self.db_client.add_blob(encrypted_blob, Some(blob_id.clone())).await?;
 
-        // Add to local cache
-        self.content_cache.insert(blob_id.clone(), memory);
+        if self.content_cache.len() > 100 {
+            // Avoid OOM.
+            self.content_cache.clear();
+        } else {
+            // Add to local cache
+            self.content_cache.insert(blob_id.clone(), memory);
+        }
 
         Ok(blob_id)
     }
