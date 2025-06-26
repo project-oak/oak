@@ -155,7 +155,10 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
     let attest_request = client_attestation_provider.get_outgoing_message();
     assert_that!(
         attest_request,
-        ok(some(matches_pattern!(AttestRequest { endorsed_evidence: is_empty() })))
+        ok(some(matches_pattern!(AttestRequest {
+            endorsed_evidence: is_empty(),
+            assertions: is_empty(),
+        })))
     );
 
     Ok(())
@@ -172,8 +175,10 @@ fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
-    let result = client_attestation_provider
-        .put_incoming_message(AttestResponse { endorsed_evidence: BTreeMap::from([]) });
+    let result = client_attestation_provider.put_incoming_message(AttestResponse {
+        endorsed_evidence: BTreeMap::from([]),
+        ..Default::default()
+    });
 
     assert_that!(result, ok(some(())));
 
@@ -191,7 +196,8 @@ fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
-    let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
+    let attest_request =
+        AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     Ok(())
@@ -210,7 +216,10 @@ fn unattested_server_attestation_provides_response() -> anyhow::Result<()> {
 
     assert_that!(
         server_attestation_provider.get_outgoing_message(),
-        ok(some(matches_pattern!(AttestResponse { endorsed_evidence: is_empty() })))
+        ok(some(matches_pattern!(AttestResponse {
+            endorsed_evidence: is_empty(),
+            assertions: is_empty(),
+        })))
     );
 
     Ok(())
@@ -242,11 +251,13 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
                     evidence: Some(Evidence { ..Default::default() }),
                     endorsements: Some(Endorsements { ..Default::default() })
                 }
-            )])
+            )]),
+            ..Default::default()
         })))
     );
 
-    let attest_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
+    let attest_response =
+        AttestResponse { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     Ok(())
@@ -269,7 +280,8 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
-    let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
+    let attest_request =
+        AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     let attest_response = server_attestation_provider.get_outgoing_message();
@@ -282,7 +294,8 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
                     evidence: Some(Evidence { ..Default::default() }),
                     endorsements: Some(Endorsements { ..Default::default() })
                 }
-            )])
+            )]),
+            ..Default::default()
         })))
     );
 
@@ -305,7 +318,10 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
 
     assert_that!(
         client_attestation_provider.get_outgoing_message(),
-        ok(some(eq(&AttestRequest { endorsed_evidence: BTreeMap::from([]) })))
+        ok(some(eq(&AttestRequest {
+            endorsed_evidence: BTreeMap::from([]),
+            ..Default::default()
+        })))
     );
 
     let attest_response = AttestResponse {
@@ -316,6 +332,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -348,13 +365,17 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     let attest_response = server_attestation_provider.get_outgoing_message();
     assert_that!(
         attest_response,
-        ok(some(eq(&AttestResponse { endorsed_evidence: BTreeMap::from([]) })))
+        ok(some(eq(&AttestResponse {
+            endorsed_evidence: BTreeMap::from([]),
+            ..Default::default()
+        })))
     );
 
     Ok(())
@@ -389,7 +410,8 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
                     evidence: Some(Evidence { ..Default::default() }),
                     endorsements: Some(Endorsements { ..Default::default() }),
                 },
-            )])
+            )]),
+            ..Default::default()
         })))
     );
 
@@ -401,6 +423,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
@@ -440,6 +463,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
@@ -453,7 +477,8 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
                     evidence: Some(Evidence { ..Default::default() }),
                     endorsements: Some(Endorsements { ..Default::default() }),
                 },
-            )])
+            )]),
+            ..Default::default()
         })))
     );
 
@@ -476,7 +501,8 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
-    let attest_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
+    let attest_response =
+        AttestResponse { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     assert_that!(
@@ -499,7 +525,8 @@ fn server_with_empty_peer_verifiers_succeeds() -> anyhow::Result<()> {
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
-    let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
+    let attest_request =
+        AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     assert_that!(
@@ -533,6 +560,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -575,6 +603,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -633,6 +662,7 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -703,6 +733,7 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -774,6 +805,7 @@ fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -847,6 +879,7 @@ fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -895,7 +928,8 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
-    let attest_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
+    let attest_response =
+        AttestResponse { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     // This failure should mention what evidence is missing instead.
     assert_that!(
@@ -924,7 +958,8 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
-    let attest_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
+    let attest_request =
+        AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     // This failure should mention what evidence is missing instead.
     assert_that!(
@@ -970,6 +1005,7 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -1011,6 +1047,7 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
                 },
             ),
         ]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -1043,12 +1080,14 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     // A second response should be ignored if the previous result has not been
     // taken.
-    let ignored_response = AttestResponse { endorsed_evidence: BTreeMap::from([]) };
+    let ignored_response =
+        AttestResponse { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(client_attestation_provider.put_incoming_message(ignored_response), ok(none()));
 
     assert_that!(
@@ -1081,11 +1120,13 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
+        ..Default::default()
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     // A second request should be ignored if the previous result has not been taken.
-    let ignored_request = AttestRequest { endorsed_evidence: BTreeMap::from([]) };
+    let ignored_request =
+        AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(ignored_request), ok(none()));
 
     assert_that!(

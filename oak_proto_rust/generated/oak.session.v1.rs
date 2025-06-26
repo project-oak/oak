@@ -38,17 +38,41 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
+/// Assertion that an attesting party is making to the verifying peer. Contains
+/// all evidence needed to verify the assertion.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Assertion {
+    /// Bytes of the assertion. We make no assumption about the format used: it can
+    /// be a serialized proto, JWT or any other data that the peer can use to make
+    /// the pass/fail decision about the assertion.
+    #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
+    pub content: ::prost::alloc::vec::Vec<u8>,
+}
 /// Request message for the remote attestation.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestRequest {
-    /// Maps unique IDs of attestation providers to the corresponding evidence.
+    /// Maps unique IDs of attestation type to the corresponding evidence,
+    /// where the evidence is presented as the EndorsedEvidence proto. To be
+    /// deprecated and replaced with assertions
     #[prost(btree_map = "string, message", tag = "1")]
     pub endorsed_evidence: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         EndorsedEvidence,
+    >,
+    /// Maps unique IDs of attestation type to the assertions. Until
+    /// endorsed_evidence is deprecated both endorsed_evidence and assertions can
+    /// be provided, it is up to the peer to disambiguate between the two.
+    #[prost(btree_map = "string, message", tag = "2")]
+    pub assertions: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        Assertion,
     >,
 }
 /// Response message for the remote attestation.
@@ -57,11 +81,21 @@ pub struct AttestRequest {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestResponse {
-    /// Maps unique IDs of attestation providers to the corresponding evidence.
+    /// Maps unique IDs of attestation type to the corresponding evidence,
+    /// where the evidence is presented as the EndorsedEvidence proto. To be
+    /// deprecated and replaced with assertions
     #[prost(btree_map = "string, message", tag = "1")]
     pub endorsed_evidence: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         EndorsedEvidence,
+    >,
+    /// Maps unique IDs of attestation type to the assertions. Until
+    /// endorsed_evidence is deprecated both endorsed_evidence and assertions can
+    /// be provided, it is up to the peer to disambiguate between the two.
+    #[prost(btree_map = "string, message", tag = "2")]
+    pub assertions: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        Assertion,
     >,
 }
 /// Noise handshake message containing fields for all handshake patterns.
@@ -110,9 +144,15 @@ pub struct SessionBinding {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandshakeRequest {
-    /// Bindings to the attestation evidence, per binding type.
+    /// Bindings to the attestation evidence, per attestation type.
     #[prost(btree_map = "string, message", tag = "3")]
     pub attestation_bindings: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        SessionBinding,
+    >,
+    /// Bindings to the provided assertions, per attestation type.
+    #[prost(btree_map = "string, message", tag = "4")]
+    pub assertion_bindings: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         SessionBinding,
     >,
@@ -137,9 +177,15 @@ pub mod handshake_request {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandshakeResponse {
-    /// Bindings to the attestation evidence, per binding type.
+    /// Bindings to the attestation evidence, per attestation type.
     #[prost(btree_map = "string, message", tag = "3")]
     pub attestation_bindings: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        SessionBinding,
+    >,
+    /// Bindings to the provided assertions, per attestation type.
+    #[prost(btree_map = "string, message", tag = "4")]
+    pub assertion_bindings: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         SessionBinding,
     >,

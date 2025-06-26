@@ -300,6 +300,7 @@ impl ClientHandshakeHandler {
                 },
             )),
             attestation_bindings: BTreeMap::new(),
+            ..Default::default()
         };
         Ok(Self {
             handshake_initiator,
@@ -409,6 +410,7 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
                                 ))
                             })
                             .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
+                        ..Default::default()
                     });
                 }
 
@@ -581,6 +583,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                         ))
                     })
                     .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
+                ..Default::default()
             });
             if self.client_binding_expected {
                 self.noise_response = Some(noise_response);

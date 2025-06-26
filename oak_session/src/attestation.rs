@@ -286,6 +286,7 @@ impl ClientAttestationHandler {
                         Ok((id.clone(), endorsed_evidence))
                     })
                     .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+                ..Default::default()
             }),
             config,
             attestation_result: None,
@@ -391,6 +392,7 @@ impl ServerAttestationHandler {
                         Ok((id.clone(), endorsed_evidence))
                     })
                     .collect::<Result<BTreeMap<String, EndorsedEvidence>, Error>>()?,
+                ..Default::default()
             }),
             config,
             attestation_result: None,

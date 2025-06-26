@@ -23,16 +23,37 @@ import "proto/session/messages.proto";
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
+// Assertion that an attesting party is making to the verifying peer. Contains
+// all evidence needed to verify the assertion.
+message Assertion {
+  // Bytes of the assertion. We make no assumption about the format used: it can
+  // be a serialized proto, JWT or any other data that the peer can use to make
+  // the pass/fail decision about the assertion.
+  bytes content = 1;
+}
+
 // Request message for the remote attestation.
 message AttestRequest {
-  // Maps unique IDs of attestation providers to the corresponding evidence.
+  // Maps unique IDs of attestation type to the corresponding evidence,
+  // where the evidence is presented as the EndorsedEvidence proto. To be
+  // deprecated and replaced with assertions
   map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 1;
+  // Maps unique IDs of attestation type to the assertions. Until
+  // endorsed_evidence is deprecated both endorsed_evidence and assertions can
+  // be provided, it is up to the peer to disambiguate between the two.
+  map<string, Assertion> assertions = 2;
 }
 
 // Response message for the remote attestation.
 message AttestResponse {
-  // Maps unique IDs of attestation providers to the corresponding evidence.
+  // Maps unique IDs of attestation type to the corresponding evidence,
+  // where the evidence is presented as the EndorsedEvidence proto. To be
+  // deprecated and replaced with assertions
   map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 1;
+  // Maps unique IDs of attestation type to the assertions. Until
+  // endorsed_evidence is deprecated both endorsed_evidence and assertions can
+  // be provided, it is up to the peer to disambiguate between the two.
+  map<string, Assertion> assertions = 2;
 }
 
 // Noise handshake message containing fields for all handshake patterns.
@@ -67,8 +88,10 @@ message HandshakeRequest {
     NoiseHandshakeMessage noise_handshake_message = 1;
   }
   reserved 2;
-  // Bindings to the attestation evidence, per binding type.
+  // Bindings to the attestation evidence, per attestation type.
   map<string, SessionBinding> attestation_bindings = 3;
+  // Bindings to the provided assertions, per attestation type.
+  map<string, SessionBinding> assertion_bindings = 4;
 }
 
 // Response message for the crypto handshake request needed to establish a set
@@ -78,8 +101,10 @@ message HandshakeResponse {
     NoiseHandshakeMessage noise_handshake_message = 1;
   }
   reserved 2;
-  // Bindings to the attestation evidence, per binding type.
+  // Bindings to the attestation evidence, per attestation type.
   map<string, SessionBinding> attestation_bindings = 3;
+  // Bindings to the provided assertions, per attestation type.
+  map<string, SessionBinding> assertion_bindings = 4;
 }
 
 // Message for encrypted data exchange after a secure session is established.

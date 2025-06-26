@@ -59,6 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ]);
 
     let annotate_types = [
+        "oak.session.v1.Assertion",
         "oak.session.v1.AttestRequest",
         "oak.session.v1.AttestResponse",
         "oak.session.v1.NoiseHandshakeMessage",
@@ -113,6 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let bytes_fields = [
+        "oak.session.v1.Assertion.content",
         "oak.session.v1.EncryptedMessage.ciphertext",
         "oak.session.v1.NoiseHandshakeMessage.ephemeral_public_key",
         "oak.session.v1.NoiseHandshakeMessage.static_public_key",
