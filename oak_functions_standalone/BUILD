@@ -81,8 +81,6 @@ rust_library(
 
 APP_DEPS = [
     "//oak_containers/agent",
-    "//oak_containers/orchestrator",
-    "//oak_sdk/containers:oak_sdk_containers",
     "//oak_crypto",
     "//oak_proto_rust",
     "@oak_crates_index//:anyhow",
@@ -97,7 +95,6 @@ APP_DEPS = [
     "@oak_crates_index//:tonic",
     "@oak_crates_index//:tokio",
     "@oak_crates_index//:tokio-stream",
-    "@oak_crates_index//:tokio-vsock",
 ]
 
 rust_binary(
@@ -134,7 +131,7 @@ rust_test(
     size = "large",
     srcs = ["tests/integration_test.rs"],
     data = [
-        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions/examples/echo",
     ],
     deps = [
         ":lib",

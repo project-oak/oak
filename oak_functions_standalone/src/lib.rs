@@ -18,42 +18,97 @@
 
 use std::{
     error::Error,
+    pin::Pin,
     sync::{Arc, OnceLock},
 };
 
 use anyhow::Context;
 use oak_containers_agent::metrics::OakObserver;
-use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, encryptor::ServerEncryptor};
 use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
-use oak_grpc::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
+use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
+    OakFunctionsSession, OakFunctionsSessionServer,
+};
 use oak_proto_rust::oak::functions::{
-    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
-    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
-    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, ReserveRequest,
+    standalone::{OakSessionRequest, OakSessionResponse},
+    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+    FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, ReserveRequest,
     ReserveResponse,
 };
 use opentelemetry::metrics::{Histogram, Meter};
-use prost::Message;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_stream::StreamExt;
+use tokio_stream::Stream;
 use tonic::{codec::CompressionEncoding, transport::server::Connected};
 use tracing::Span;
 
+// Arguements to start up the Oak Functions Session Service.
+// While currently there is only one argument, in the future lookup data
+// arguments will be added.
+pub struct OakFunctionsSessionArgs {
+    pub wasm_initialization: InitializeRequest,
+}
+
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService<H: Handler> {
+pub struct OakFunctionsSessionService<H: Handler> {
     instance_config: H::HandlerConfig,
     instance: OnceLock<OakFunctionsInstance<H>>,
-    encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<H: Handler> OakFunctionsContainersService<H> {
-    pub fn new(
+impl<H: Handler> OakFunctionsSessionService<H> {
+    pub fn startup(
         instance_config: H::HandlerConfig,
-        encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
+        oak_functions_session_args: OakFunctionsSessionArgs,
     ) -> Self {
-        Self { instance_config, instance: OnceLock::new(), encryption_key_handle, observer }
+        let oak_functions_session_service =
+            OakFunctionsSessionService { instance_config, instance: OnceLock::new(), observer };
+        // Initialize the OakFuncitonsInstance.
+        if let Err(e) =
+            oak_functions_session_service.initialize(oak_functions_session_args.wasm_initialization)
+        {
+            eprintln!("Error initializing OakFunctionsSessionService: {:?}", e);
+            panic!("Initialization failed!"); // Or propagate the error
+        }
+
+        // TODO: b/424407998 - Load lookup data via calls to `reserve`,
+        // `finish_next_lookup_data`, and `extend_next_lookup_data`.
+        oak_functions_session_service
+    }
+
+    fn initialize(&self, request: InitializeRequest) -> tonic::Result<InitializeResponse> {
+        match self.instance.get() {
+            Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
+            None => {
+                let instance = OakFunctionsInstance::new(
+                    &request,
+                    self.observer.clone(),
+                    self.instance_config.clone(),
+                )
+                .map_err(map_status)?;
+                if self.instance.set(instance).is_err() {
+                    return Err(tonic::Status::failed_precondition("already initialized"));
+                }
+                Ok(InitializeResponse::default())
+            }
+        }
+    }
+
+    pub fn extend_next_lookup_data(
+        &self,
+        request: ExtendNextLookupDataRequest,
+    ) -> tonic::Result<ExtendNextLookupDataResponse> {
+        self.get_instance()?.extend_next_lookup_data(request).map_err(map_status)
+    }
+
+    pub fn finish_next_lookup_data(
+        &self,
+        request: FinishNextLookupDataRequest,
+    ) -> tonic::Result<FinishNextLookupDataResponse> {
+        self.get_instance()?.finish_next_lookup_data(request).map_err(map_status)
+    }
+
+    pub fn reserve(&self, request: ReserveRequest) -> tonic::Result<ReserveResponse> {
+        self.get_instance()?.reserve(request).map_err(map_status)
     }
 
     #[allow(clippy::result_large_err)]
@@ -85,121 +140,22 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
     tonic::Status::new(code, status.message)
 }
 
+type ServerStreaming =
+    Pin<Box<dyn Stream<Item = Result<OakSessionResponse, tonic::Status>> + Send>>;
+
 #[tonic::async_trait]
-impl<H> OakFunctions for OakFunctionsContainersService<H>
+impl<H> OakFunctionsSession for OakFunctionsSessionService<H>
 where
     H: Handler + 'static,
     H::HandlerType: Send + Sync,
 {
-    async fn initialize(
+    type OakSessionStream = ServerStreaming;
+
+    async fn oak_session(
         &self,
-        request: tonic::Request<InitializeRequest>,
-    ) -> tonic::Result<tonic::Response<InitializeResponse>> {
-        let request = request.into_inner();
-        match self.instance.get() {
-            Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
-            None => {
-                let instance = OakFunctionsInstance::new(
-                    &request,
-                    self.observer.clone(),
-                    self.instance_config.clone(),
-                )
-                .map_err(map_status)?;
-                if self.instance.set(instance).is_err() {
-                    return Err(tonic::Status::failed_precondition("already initialized"));
-                }
-                Ok(tonic::Response::new(InitializeResponse::default()))
-            }
-        }
-    }
-
-    async fn handle_user_request(
-        &self,
-        request: tonic::Request<InvokeRequest>,
-    ) -> tonic::Result<tonic::Response<InvokeResponse>> {
-        let instance = self.get_instance()?;
-
-        let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
-            tonic::Status::invalid_argument(
-                "InvokeRequest doesn't contain an encrypted request".to_string(),
-            )
-        })?;
-
-        let (server_encryptor, request, _associated_data) =
-            ServerEncryptor::decrypt_async(&encrypted_request, self.encryption_key_handle.as_ref())
-                .await
-                .map_err(|err| {
-                    tonic::Status::internal(format!("couldn't decrypt request: {err:?}"))
-                })?;
-
-        let response_result: Result<Vec<u8>, micro_rpc::Status> =
-            instance.handle_user_request(request);
-        let response: micro_rpc::ResponseWrapper = response_result.into();
-        let response_vec = response.encode_to_vec();
-
-        // Encrypt and serialize response.
-        // The resulting decryptor for consequent requests is discarded because we don't
-        // expect another message from the stream.
-        let encrypted_response =
-            server_encryptor.encrypt(&response_vec, oak_crypto::EMPTY_ASSOCIATED_DATA).map_err(
-                |err| tonic::Status::internal(format!("couldn't encrypt resposne: {err:?}")),
-            )?;
-
-        Ok(tonic::Response::new(InvokeResponse { encrypted_response: Some(encrypted_response) }))
-    }
-
-    async fn extend_next_lookup_data(
-        &self,
-        request: tonic::Request<ExtendNextLookupDataRequest>,
-    ) -> tonic::Result<tonic::Response<ExtendNextLookupDataResponse>> {
-        self.get_instance()?
-            .extend_next_lookup_data(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
-    }
-
-    async fn finish_next_lookup_data(
-        &self,
-        request: tonic::Request<FinishNextLookupDataRequest>,
-    ) -> tonic::Result<tonic::Response<FinishNextLookupDataResponse>> {
-        self.get_instance()?
-            .finish_next_lookup_data(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
-    }
-
-    async fn abort_next_lookup_data(
-        &self,
-        request: tonic::Request<Empty>,
-    ) -> tonic::Result<tonic::Response<AbortNextLookupDataResponse>> {
-        self.get_instance()?
-            .abort_next_lookup_data(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
-    }
-
-    async fn stream_lookup_data(
-        &self,
-        request: tonic::Request<tonic::Streaming<LookupDataChunk>>,
-    ) -> tonic::Result<tonic::Response<FinishNextLookupDataResponse>> {
-        let mut request = request.into_inner();
-
-        let instance = self.get_instance()?;
-        while let Some(chunk) = request.next().await {
-            instance.extend_lookup_data_chunk(chunk?).map_err(map_status)?;
-        }
-        instance
-            .finish_next_lookup_data(FinishNextLookupDataRequest {})
-            .map(tonic::Response::new)
-            .map_err(map_status)
-    }
-
-    async fn reserve(
-        &self,
-        request: tonic::Request<ReserveRequest>,
-    ) -> tonic::Result<tonic::Response<ReserveResponse>> {
-        let request = request.into_inner();
-        self.get_instance()?.reserve(request).map(tonic::Response::new).map_err(map_status)
+        _request: tonic::Request<tonic::Streaming<OakSessionRequest>>,
+    ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
+        Err(tonic::Status::unimplemented("OakSession is not implemented"))
     }
 }
 
@@ -272,7 +228,7 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 // We're not sending traffic over a "real" network anyway, after all.
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
-/// Starts up and serves an OakFunctionsContainersService instance from the
+/// Starts up and serves an OakFunctionsStandaloneService instance from the
 /// provided stream of connections.
 // The type of the stream is pretty horrible; we can define a slightly cleaner
 // type aliases for it when `type_alias_impl_trait` has been stabilized; see https://github.com/rust-lang/rust/issues/63063.
@@ -286,9 +242,9 @@ pub async fn serve<H>(
             > + Send
             + Unpin,
     >,
-    encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     observer: OakObserver,
     handler_config: H::HandlerConfig,
+    oak_functions_session_args: OakFunctionsSessionArgs,
 ) -> anyhow::Result<()>
 where
     H: Handler + 'static,
@@ -313,10 +269,10 @@ where
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(observer.create_monitoring_layer())
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::<H>::new(
+            OakFunctionsSessionServer::new(OakFunctionsSessionService::<H>::startup(
                 handler_config,
-                Arc::from(encryption_key_handle),
                 Some(Arc::new(OtelObserver::new(observer.meter))),
+                oak_functions_session_args,
             ))
             .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
             .accept_compressed(CompressionEncoding::Gzip),

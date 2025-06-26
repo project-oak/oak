@@ -14,36 +14,17 @@
 // limitations under the License.
 
 use std::{
-    error::Error,
-    fmt::Display,
+    fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    num::{NonZeroU16, NonZeroU32},
 };
 
-use anyhow::Context;
 use clap::Parser;
-use oak_containers_agent::{
-    metrics::{MetricsConfig, OakObserver},
-    set_error_handler,
-};
-use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
+use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_functions_standalone::serve as app_serve;
-use oak_proto_rust::oak::functions::config::{
-    application_config::CommunicationChannel, ApplicationConfig, TcpCommunicationChannel,
-    WasmtimeConfig,
-};
-use oak_sdk_containers::{
-    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
-};
-use prost::Message;
-use tokio::{
-    io::{AsyncRead, AsyncWrite},
-    net::TcpListener,
-};
+use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
+use oak_proto_rust::oak::functions::{config::ApplicationConfig, InitializeRequest};
+use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
-use tokio_vsock::{VsockAddr, VsockListener};
-use tonic::transport::server::Connected;
 
 const OAK_FUNCTIONS_STANDALONE_PORT: u16 = 8080;
 
@@ -54,40 +35,17 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
-}
-
-async fn serve<S>(
-    addr: S,
-    handler_config: Option<WasmtimeConfig>,
-    stream: Box<
-        dyn tokio_stream::Stream<
-                Item = Result<
-                    impl Connected + AsyncRead + AsyncWrite + Send + Unpin + 'static,
-                    impl Error + Send + Sync + 'static,
-                >,
-            > + Send
-            + Unpin,
-    >,
-    encryption_key_handle: Box<dyn AsyncEncryptionKeyHandle + Send + Sync>,
-    observer: OakObserver,
-) -> anyhow::Result<()>
-where
-    S: Display,
-{
-    eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
-
-    app_serve::<WasmtimeHandler>(
-        stream,
-        encryption_key_handle,
-        observer,
-        handler_config.unwrap_or_default(),
-    )
-    .await
+    #[arg(default_value = "")]
+    wasm_path: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    if args.wasm_path.is_empty() {
+        panic!("--wasm_path must be specified")
+    }
 
     // Use eprintln here, as normal logging would go through the OTLP connection,
     // which may no longer be valid.
@@ -105,6 +63,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .filter_module("oak_functions_service", log::LevelFilter::Debug)
         .try_init()?;
 
+    let application_config = ApplicationConfig::default();
+    let wasmtime_config = application_config.wasmtime_config.unwrap_or_default();
+
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr,
         scope: "oak_functions_standalone",
@@ -113,62 +74,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
 
-    let orchestrator_channel =
-        default_orchestrator_channel().await.context("failed to create channel to orchestrator")?;
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), OAK_FUNCTIONS_STANDALONE_PORT);
 
-    let mut client = OrchestratorClient::create(&orchestrator_channel);
-    let encryption_key_handle =
-        Box::new(InstanceEncryptionKeyHandle::create(&orchestrator_channel));
-
-    // To be used when connecting trusted app to orchestrator.
-    let application_config = {
-        let bytes =
-            client.get_application_config().await.context("failed to get application config")?;
-
-        // If we don't get a config at all, treat it as if it had defaults. Otherwise,
-        // try parsing the message and fail if it doesn't make sense.
-        if bytes.is_empty() {
-            ApplicationConfig::default()
-        } else {
-            ApplicationConfig::decode(&bytes[..])?
-        }
+    let oak_functions_session_args = OakFunctionsSessionArgs {
+        wasm_initialization: InitializeRequest {
+            constant_response_size: 100, // This value is ultimately ignored.
+            wasm_module: fs::read(args.wasm_path).expect("failed to read wasm module"),
+        },
     };
 
-    let wasmtime_config = application_config.wasmtime_config;
-    let communication_channel = application_config
-        .communication_channel
-        .unwrap_or_else(|| CommunicationChannel::TcpChannel(TcpCommunicationChannel::default()));
-
-    let server_handle = match communication_channel {
-        CommunicationChannel::TcpChannel(config) => {
-            let port = NonZeroU16::new(config.port.try_into()?)
-                .map_or(OAK_FUNCTIONS_STANDALONE_PORT, Into::into);
-            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
-            let listener = TcpListener::bind(addr).await?;
-            tokio::spawn(serve(
-                addr,
-                wasmtime_config,
-                Box::new(TcpListenerStream::new(listener)),
-                encryption_key_handle,
-                oak_observer,
-            ))
-        }
-        CommunicationChannel::VsockChannel(config) => {
-            let port = NonZeroU32::new(config.port)
-                .map_or(OAK_FUNCTIONS_STANDALONE_PORT.into(), Into::into);
-            let addr = VsockAddr::new(tokio_vsock::VMADDR_CID_ANY, port);
-            let listener = VsockListener::bind(addr)?;
-            tokio::spawn(serve(
-                addr,
-                wasmtime_config,
-                Box::new(listener.incoming()),
-                encryption_key_handle,
-                oak_observer,
-            ))
-        }
+    let server_handle = {
+        let listener = TcpListener::bind(addr).await?;
+        serve::<WasmtimeHandler>(
+            Box::new(TcpListenerStream::new(listener)),
+            oak_observer,
+            wasmtime_config,
+            oak_functions_session_args,
+        )
     };
 
-    client.notify_app_ready().await.context("failed to notify that app is ready")?;
+    println!("Listening on Address: {}", addr);
 
-    Ok(server_handle.await??)
+    Ok(server_handle.await?)
 }

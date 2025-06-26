@@ -21,19 +21,19 @@ use std::{
 };
 
 use oak_containers_agent::metrics::OakObserver;
-use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_functions_standalone::serve;
-use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient;
-use oak_proto_rust::oak::functions::InitializeRequest;
+use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
+use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
+use oak_proto_rust::oak::functions::{standalone::OakSessionRequest, InitializeRequest};
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 #[tokio::test]
-async fn test_lookup() {
-    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
+async fn test_echo() {
+    // To be used to load the WASM module.
+    let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
     let (addr, stream) = {
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
@@ -42,32 +42,38 @@ async fn test_lookup() {
         (addr, Box::new(TcpListenerStream::new(listener)))
     };
 
-    let (encryption_key, _) = generate_encryption_key_pair();
+    let oak_functions_session_args = OakFunctionsSessionArgs {
+        wasm_initialization: InitializeRequest {
+            constant_response_size: 100, // This value is ultimately ignored.
+            wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
+        },
+    };
 
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
-        Box::new(encryption_key),
         OakObserver { meter: NoopMeterProvider::new().meter(""), metric_registry: Vec::new() },
         Default::default(),
+        oak_functions_session_args,
     ));
 
-    let mut oak_functions_client: OakFunctionsClient<tonic::transport::channel::Channel> = {
+    let mut oak_functions_session_client: OakFunctionsSessionClient<
+        tonic::transport::channel::Channel,
+    > = {
         let channel = Endpoint::from_shared(format!("http://{addr}"))
             .expect("couldn't form channel")
             .connect_timeout(Duration::from_secs(120))
             .connect()
             .await
             .expect("couldn't connect to trusted app");
-        OakFunctionsClient::new(channel).send_compressed(CompressionEncoding::Gzip)
+        OakFunctionsSessionClient::new(channel).send_compressed(CompressionEncoding::Gzip)
     };
 
-    let _ = oak_functions_client
-        .initialize(InitializeRequest {
-            constant_response_size: 1000,
-            wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
-        })
+    let iterator = tokio_stream::iter(vec![OakSessionRequest::default()]);
+
+    let _ = oak_functions_session_client
+        .oak_session(iterator)
         .await
-        .expect("failed to initialize Oak Functions");
+        .expect_err("OakSession is not implemented");
 
     server_handle.abort();
     let _ = server_handle.await;
