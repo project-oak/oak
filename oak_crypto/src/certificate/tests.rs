@@ -17,8 +17,10 @@
 use alloc::{vec, vec::Vec};
 use core::assert_matches::assert_matches;
 
-use oak_proto_rust::oak::crypto::v1::{
-    Certificate, CertificatePayload, ProofOfFreshness, SignatureInfo, SubjectPublicKeyInfo,
+use oak_proto_rust::oak::{
+    crypto::v1::{
+        Certificate, CertificatePayload, ProofOfFreshness, SignatureInfo, SubjectPublicKeyInfo,
+    },
     Validity,
 };
 use oak_time::{Duration, Instant};

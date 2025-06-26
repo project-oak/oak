@@ -54,21 +54,6 @@ pub struct HexDigest {
     #[prost(string, tag = "32")]
     pub sha2_384: ::prost::alloc::string::String,
 }
-/// Container that can contain any serialized data and a corresponding ID.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Variant {
-    /// Unique payload identifier that also defines how to deserialize the `value`.
-    #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
-    pub id: ::prost::alloc::vec::Vec<u8>,
-    /// Serialized data.
-    #[prost(bytes = "vec", tag = "2")]
-    #[serde(with = "crate::base64data")]
-    pub value: ::prost::alloc::vec::Vec<u8>,
-}
 /// Defines a period of validity between two timestamps.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Validity {
@@ -91,4 +76,19 @@ pub struct ValidityOffset {
     /// Offset that produces `not_after`, perhaps negative.
     #[prost(message, optional, tag = "2")]
     pub not_after_offset: ::core::option::Option<::prost_types::Duration>,
+}
+/// Container that can contain any serialized data and a corresponding ID.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Variant {
+    /// Unique payload identifier that also defines how to deserialize the `value`.
+    #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
+    pub id: ::prost::alloc::vec::Vec<u8>,
+    /// Serialized data.
+    #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
+    pub value: ::prost::alloc::vec::Vec<u8>,
 }

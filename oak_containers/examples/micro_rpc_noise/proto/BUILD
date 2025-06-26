@@ -44,6 +44,7 @@ cargo_build_script(
     data = [
         "//oak_containers/examples/micro_rpc_noise/proto:micro_rpc_noise.proto",
         "//proto:digest.proto",
+        "//proto:validity.proto",
         "//proto:variant.proto",
         "//proto/attestation:endorsement.proto",
         "//proto/attestation:eventlog.proto",

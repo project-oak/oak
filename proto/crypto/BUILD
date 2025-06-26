@@ -29,6 +29,7 @@ proto_library(
     name = "certificate_proto",
     srcs = ["certificate.proto"],
     deps = [
+        "//proto:validity_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
 )

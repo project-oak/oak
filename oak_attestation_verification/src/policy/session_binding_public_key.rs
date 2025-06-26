@@ -155,9 +155,8 @@ mod tests {
         attestation::v1::{
             CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
         },
-        crypto::v1::{
-            Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
-        },
+        crypto::v1::{Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo},
+        Validity,
     };
     use oak_time::clock::FixedClock;
     use prost::Message;

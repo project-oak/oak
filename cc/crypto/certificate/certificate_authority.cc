@@ -28,18 +28,19 @@
 #include "google/protobuf/timestamp.pb.h"
 #include "proto/crypto/certificate.pb.h"
 #include "proto/crypto/crypto.pb.h"
+#include "proto/validity.pb.h"
 
 namespace oak::crypto {
 
 namespace {
 using google::protobuf::Timestamp;
+using ::oak::Validity;
 using ::oak::crypto::v1::Certificate;
 using ::oak::crypto::v1::CertificatePayload;
 using ::oak::crypto::v1::ProofOfFreshness;
 using ::oak::crypto::v1::Signature;
 using ::oak::crypto::v1::SignatureInfo;
 using ::oak::crypto::v1::SubjectPublicKeyInfo;
-using ::oak::crypto::v1::Validity;
 }  // namespace
 
 absl::StatusOr<Certificate> CertificateAuthority::GenerateCertificate(

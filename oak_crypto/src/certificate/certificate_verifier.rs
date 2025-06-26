@@ -16,8 +16,9 @@
 
 use alloc::{format, string::String};
 
-use oak_proto_rust::oak::crypto::v1::{
-    Certificate, CertificatePayload, ProofOfFreshness, SubjectPublicKeyInfo, Validity,
+use oak_proto_rust::oak::{
+    crypto::v1::{Certificate, CertificatePayload, ProofOfFreshness, SubjectPublicKeyInfo},
+    Validity,
 };
 use oak_time::{Duration, Instant};
 use prost::{DecodeError, Message};

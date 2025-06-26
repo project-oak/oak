@@ -30,6 +30,7 @@ cc_library(
         ":utils",
         "//cc/crypto:common",
         "//cc/crypto:signing_key",
+        "//proto:validity_cc_proto",
         "//proto/crypto:certificate_cc_proto",
         "//proto/crypto:crypto_cc_proto",
         "@com_google_absl//absl/status",
