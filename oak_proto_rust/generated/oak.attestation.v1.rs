@@ -2,7 +2,7 @@
 /// The Transparent Release attachment for Oak Stage 0. Measurements
 /// are produced with:
 /// <https://github.com/project-oak/oak/tree/main/snp_measurement>
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FirmwareAttachment {
     /// Digest of the unmodified firmware-type binary. This field can remain
     /// empty for attestation verification. It is only needed if identifying
@@ -16,7 +16,7 @@ pub struct FirmwareAttachment {
 /// The Transparent Release attachment for bzImage-like kernels.
 /// Measurements are produced with:
 /// <https://github.com/project-oak/oak/tree/main/oak_kernel_measurement>
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelAttachment {
     /// Digest of the unmodified bzImage. This field can remain empty for
     /// attestation verification. It is only needed if identifying the
@@ -31,7 +31,7 @@ pub struct KernelAttachment {
     pub setup_data: ::core::option::Option<super::super::HexDigest>,
 }
 /// The Transparent Release attachment for MPMs.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MpmAttachment {
     /// The name of the MPM.
     #[prost(string, tag = "1")]
@@ -41,7 +41,7 @@ pub struct MpmAttachment {
     pub package_version: ::prost::alloc::string::String,
 }
 /// All the related measurements for Stage 0.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Stage0Measurements {
     /// Kernel setup data digest.
     #[prost(bytes = "vec", tag = "1")]
@@ -63,14 +63,14 @@ pub struct Stage0Measurements {
     pub kernel_cmdline: ::prost::alloc::string::String,
 }
 /// All the related measurements for Oak Container's Stage 1.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Stage1Measurements {
     /// System image digest.
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<super::super::RawDigest>,
 }
 /// All the related measurements for Oak Container's Stage 1.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OrchestratorMeasurements {
     #[prost(message, optional, tag = "1")]
     pub container_image: ::core::option::Option<super::super::RawDigest>,
@@ -83,7 +83,7 @@ pub struct OrchestratorMeasurements {
 /// An Event message contain what's necessary for an attestation verifier to
 /// verify the Event against a Reference Value.
 /// TODO: b/333748757 - Make other CB layers use this definition.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Event {
     /// Represents what is contained in the event. For example, the tag for
     /// TaskConfig for the Layer 2 is "layer2".
@@ -97,7 +97,7 @@ pub struct Event {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventLog {
     /// Holds serialized instances of the the \[`Event`\] message. The serialized
     /// form is used instead of `repeated Event events` as proto serialization is
@@ -114,7 +114,7 @@ pub struct EventLog {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RootLayerEvidence {
     /// The platform providing the attestation report.
     #[prost(enumeration = "TeePlatform", tag = "1")]
@@ -135,7 +135,7 @@ pub struct RootLayerEvidence {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LayerEvidence {
     /// Certificate signing current layer's measurements and the ECA key.
     ///
@@ -150,7 +150,7 @@ pub struct LayerEvidence {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationKeys {
     /// Certificate signing the encryption public key.
     ///
@@ -187,7 +187,7 @@ pub struct ApplicationKeys {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Evidence {
     /// Layer0 attestation evidence.
     #[prost(message, optional, tag = "1")]
@@ -218,7 +218,7 @@ pub struct Evidence {
 ///
 /// <<https://trustedcomputinggroup.org/wp-content/uploads/TCG_DICE_Attestation_Architecture_r22_02dec2020.pdf>>
 /// <<https://trustedcomputinggroup.org/wp-content/uploads/DICE-Layering-Architecture-r19_pub.pdf>>
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost_derive::Enumeration)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum TeePlatform {
     Unspecified = 0,
@@ -252,7 +252,7 @@ impl TeePlatform {
 }
 /// Message for passing embedded certificate authority information between
 /// layers. Will never appear in the evidence that is sent to the client.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CertificateAuthority {
     /// ECA private key that will be used by a layer to sign a certificate for the
     /// next layer.
@@ -260,7 +260,7 @@ pub struct CertificateAuthority {
     pub eca_private_key: ::prost::alloc::vec::Vec<u8>,
 }
 /// Message that is sent between DICE layers.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiceData {
     #[prost(message, optional, tag = "1")]
     pub evidence: ::core::option::Option<Evidence>,
@@ -269,7 +269,7 @@ pub struct DiceData {
 }
 /// The versions of the components in the AMD SEV-SNP platform Trusted Compute
 /// Base (TCB).
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP)
     /// bootloader.
@@ -285,9 +285,9 @@ pub struct TcbVersion {
     #[prost(uint32, tag = "4")]
     pub microcode: u32,
 }
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct SkipVerification {}
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VerifyingKey {
     /// The type of the verifying key.
     #[prost(enumeration = "KeyType", tag = "1")]
@@ -302,7 +302,7 @@ pub struct VerifyingKey {
     pub raw: ::prost::alloc::vec::Vec<u8>,
 }
 /// Verifies a single UTC timestamp.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct TimestampReferenceValue {
     /// Verification passes whenever the timestamp under verification is not before
     /// the specified timestamp.
@@ -317,7 +317,7 @@ pub struct TimestampReferenceValue {
 /// most of the time, but there may be more during key rotation/revocation.
 /// To revoke a key, simply add a new one, allow a grace period, and then
 /// don’t pass the old key here.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VerifyingKeySet {
     #[prost(message, repeated, tag = "1")]
     pub keys: ::prost::alloc::vec::Vec<VerifyingKey>,
@@ -330,7 +330,7 @@ pub struct VerifyingKeySet {
     pub signed_timestamp: ::core::option::Option<TimestampReferenceValue>,
 }
 /// Reference values that control how the endorsement is verified.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct VerifyingKeyReferenceValue {
     /// Nothing set is an error, need to have something set. An empty key set
     /// inside reference values is invalid.
@@ -341,7 +341,7 @@ pub struct VerifyingKeyReferenceValue {
 pub mod verifying_key_reference_value {
     /// Nothing set is an error, need to have something set. An empty key set
     /// inside reference values is invalid.
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         /// Deliberately disables verification: it will pass this check rather
         /// than error out.
@@ -356,13 +356,13 @@ pub mod verifying_key_reference_value {
 /// Specifies a list of claim types. Claims are assertions about artifacts made
 /// by the endorsing entity. An overview of the claims maintained by Oak can be
 /// found at: <https://github.com/project-oak/oak/tree/main/docs/tr/claim>
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ClaimReferenceValue {
     #[prost(string, repeated, tag = "1")]
     pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Verifies the transparency log entry, including signatures and the digest.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndorsementReferenceValue {
     /// The endorser's public verifying key for signature verification. The
     /// attestation verification requires that all endorsements need to be
@@ -395,14 +395,14 @@ pub struct EndorsementReferenceValue {
     #[prost(message, optional, tag = "5")]
     pub rekor: ::core::option::Option<VerifyingKeyReferenceValue>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BinaryReferenceValue {
     #[prost(oneof = "binary_reference_value::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<binary_reference_value::Type>,
 }
 /// Nested message and enum types in `BinaryReferenceValue`.
 pub mod binary_reference_value {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         /// Deliberately skips a verification step, rather than failing. For example:
         ///      root_layer { stage0 { skip {} } }
@@ -421,7 +421,7 @@ pub mod binary_reference_value {
 }
 /// Similar to the `Digests` message, but allows to specify digests for the
 /// split components of the bzImage separately.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelDigests {
     /// Contains admissible digests for the kernel image part of the kernel.
     #[prost(message, optional, tag = "2")]
@@ -432,14 +432,14 @@ pub struct KernelDigests {
 }
 /// Follows the lines of `BinaryReferenceValue`, but provides a custom proto
 /// to facilitate the digest matching.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelBinaryReferenceValue {
     #[prost(oneof = "kernel_binary_reference_value::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<kernel_binary_reference_value::Type>,
 }
 /// Nested message and enum types in `KernelBinaryReferenceValue`.
 pub mod kernel_binary_reference_value {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         Skip(super::SkipVerification),
@@ -450,7 +450,7 @@ pub mod kernel_binary_reference_value {
     }
 }
 /// Reference value for a file including its digests.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FileReferenceValue {
     /// Allowable digests for the file.
     #[prost(message, optional, tag = "1")]
@@ -463,7 +463,7 @@ pub struct FileReferenceValue {
 /// Reference value that provides a CA public key which can be used to verify CA
 /// certificates.
 /// TODO: b/399885537 - Implement Certificate Authority reference value.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct CertificateAuthorityReferenceValue {}
 /// Reference value for a public key.
 /// - \[`SkipVerification`\] means that client doesn't have any predefined
@@ -471,14 +471,14 @@ pub struct CertificateAuthorityReferenceValue {}
 /// evidence (for example using DICE).
 /// - \[`CertificateAuthorityReferenceValue`\] means that the client expects the
 /// public key to be signed by the Certificate Authority.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct PublicKeyReferenceValue {
     #[prost(oneof = "public_key_reference_value::Type", tags = "1, 2")]
     pub r#type: ::core::option::Option<public_key_reference_value::Type>,
 }
 /// Nested message and enum types in `PublicKeyReferenceValue`.
 pub mod public_key_reference_value {
-    #[derive(Clone, Copy, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         Skip(super::SkipVerification),
@@ -486,28 +486,28 @@ pub mod public_key_reference_value {
         Ca(super::CertificateAuthorityReferenceValue),
     }
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Regex {
     #[prost(string, tag = "1")]
     pub value: ::prost::alloc::string::String,
 }
 /// A match in at least one value is considered a success. At least one value
 /// must be specified, otherwise verification fails.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StringLiterals {
     #[prost(string, repeated, tag = "1")]
     pub value: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Reference value to match text via endorsement, or directly via constants
 /// or a regular expression.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TextReferenceValue {
     #[prost(oneof = "text_reference_value::Type", tags = "1, 4, 2, 3")]
     pub r#type: ::core::option::Option<text_reference_value::Type>,
 }
 /// Nested message and enum types in `TextReferenceValue`.
 pub mod text_reference_value {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         Skip(super::SkipVerification),
@@ -519,7 +519,7 @@ pub mod text_reference_value {
         StringLiterals(super::StringLiterals),
     }
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RootLayerReferenceValues {
     /// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
     /// Verification is skipped when not running in a TEE.
@@ -533,7 +533,7 @@ pub struct RootLayerReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub insecure: ::core::option::Option<InsecureReferenceValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevReferenceValues {
     /// Minimum accepted versions of all TCB components.
     #[prost(message, optional, tag = "5")]
@@ -545,20 +545,20 @@ pub struct AmdSevReferenceValues {
     #[prost(message, optional, tag = "4")]
     pub stage0: ::core::option::Option<BinaryReferenceValue>,
 }
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct IntelTdxReferenceValues {}
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InsecureReferenceValues {}
 /// Verifies that the field contains at least one of the given digests.
 /// No checks are performed if this is empty. A match in at least one
 /// digest is considered a success.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Digests {
     #[prost(message, repeated, tag = "1")]
     pub digests: ::prost::alloc::vec::Vec<super::super::RawDigest>,
 }
 /// Reference values of the kernel layer, as measured by stage0.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelLayerReferenceValues {
     /// Verifies the kernel based on endorsement.
     #[prost(message, optional, tag = "1")]
@@ -575,14 +575,14 @@ pub struct KernelLayerReferenceValues {
     #[prost(message, optional, tag = "6")]
     pub acpi: ::core::option::Option<BinaryReferenceValue>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemLayerReferenceValues {
     /// Verifies the system image binary based on endorsement.
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<BinaryReferenceValue>,
 }
 /// Represents an application running under Oak Restricted Kernel.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationLayerReferenceValues {
     /// Verifies the application binary based on endorsement.
     #[prost(message, optional, tag = "1")]
@@ -591,7 +591,7 @@ pub struct ApplicationLayerReferenceValues {
     #[prost(message, optional, tag = "2")]
     pub configuration: ::core::option::Option<BinaryReferenceValue>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContainerLayerReferenceValues {
     /// Verifies the container binary based on endorsement.
     #[prost(message, optional, tag = "1")]
@@ -601,14 +601,14 @@ pub struct ContainerLayerReferenceValues {
     pub configuration: ::core::option::Option<BinaryReferenceValue>,
 }
 /// Represents digest of an event.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub event: ::core::option::Option<BinaryReferenceValue>,
 }
 /// Represents expectations about public keys generated by the enclave
 /// application.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct ApplicationKeysReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub session_binding_public_key: ::core::option::Option<PublicKeyReferenceValue>,
@@ -617,7 +617,7 @@ pub struct ApplicationKeysReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub signing_public_key: ::core::option::Option<PublicKeyReferenceValue>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakRestrictedKernelReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
@@ -626,7 +626,7 @@ pub struct OakRestrictedKernelReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub application_layer: ::core::option::Option<ApplicationLayerReferenceValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakContainersReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
@@ -637,21 +637,21 @@ pub struct OakContainersReferenceValues {
     #[prost(message, optional, tag = "4")]
     pub container_layer: ::core::option::Option<ContainerLayerReferenceValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventReferenceValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReferenceValues {
     #[prost(oneof = "reference_values::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<reference_values::Type>,
 }
 /// Nested message and enum types in `ReferenceValues`.
 pub mod reference_values {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         OakRestrictedKernel(super::OakRestrictedKernelReferenceValues),
@@ -661,7 +661,7 @@ pub mod reference_values {
         Cb(super::CbReferenceValues),
     }
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost_derive::Enumeration)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum KeyType {
     /// A verifying key without a defined type is invalid.
@@ -694,7 +694,7 @@ impl KeyType {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Endorsement {
     /// The format of the serialized endorsement.
     #[prost(enumeration = "endorsement::Format", tag = "1")]
@@ -721,7 +721,7 @@ pub mod endorsement {
         Hash,
         PartialOrd,
         Ord,
-        ::prost_derive::Enumeration
+        ::prost::Enumeration
     )]
     #[repr(i32)]
     pub enum Format {
@@ -756,7 +756,7 @@ pub mod endorsement {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Signature {
     /// The ID of the key in a key set that was used to generate the
     /// signature.
@@ -772,7 +772,7 @@ pub struct Signature {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SignedEndorsement {
     /// The underlying unsigned endorsement.
     #[prost(message, optional, tag = "1")]
@@ -790,7 +790,7 @@ pub struct SignedEndorsement {
 /// Tink endorsement consists of a single Tink signature over the endorsed
 /// evidence.
 /// DEPRECATED: This message is no longer used
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TinkEndorsement {
     /// Serialized signature generated with a structured Tink keyset.
     #[prost(bytes = "vec", tag = "1")]
@@ -799,7 +799,7 @@ pub struct TinkEndorsement {
 /// Endorsement containing a certificate that signs one of the enclave public
 /// keys. The public key is specified by the certificate itself.
 /// Certificate is represented as a \[`oak.crypto.v1.Certificate`\] proto message.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CertificateAuthorityEndorsement {
     #[prost(message, optional, tag = "1")]
     pub certificate: ::core::option::Option<super::super::crypto::v1::Certificate>,
@@ -811,7 +811,7 @@ pub struct CertificateAuthorityEndorsement {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransparentReleaseEndorsement {
     /// JSON string comtaining the endorsement statement for the underlying binary.
     /// The format is described here:
@@ -837,7 +837,7 @@ pub struct TransparentReleaseEndorsement {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RootLayerEndorsements {
     /// The serialized TEE certificate(s). The details of the format and how the
     /// certificate(s) are encoded into this byte array are implementation
@@ -856,7 +856,7 @@ pub struct RootLayerEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelLayerEndorsements {
     #[prost(message, optional, tag = "1")]
     pub kernel: ::core::option::Option<TransparentReleaseEndorsement>,
@@ -872,7 +872,7 @@ pub struct KernelLayerEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemLayerEndorsements {
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<TransparentReleaseEndorsement>,
@@ -880,7 +880,7 @@ pub struct SystemLayerEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationLayerEndorsements {
     #[prost(message, optional, tag = "1")]
     pub binary: ::core::option::Option<TransparentReleaseEndorsement>,
@@ -890,7 +890,7 @@ pub struct ApplicationLayerEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContainerLayerEndorsements {
     #[prost(message, optional, tag = "1")]
     pub binary: ::core::option::Option<TransparentReleaseEndorsement>,
@@ -900,7 +900,7 @@ pub struct ContainerLayerEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakRestrictedKernelEndorsements {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerEndorsements>,
@@ -912,7 +912,7 @@ pub struct OakRestrictedKernelEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakContainersEndorsements {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerEndorsements>,
@@ -926,12 +926,12 @@ pub struct OakContainersEndorsements {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbEndorsements {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerEndorsements>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevSnpEndorsement {
     /// The serialized TEE certificate(s). The details of the format and how the
     /// certificate(s) are encoded into this byte array are implementation
@@ -943,13 +943,13 @@ pub struct AmdSevSnpEndorsement {
     #[prost(bytes = "vec", tag = "1")]
     pub tee_certificate: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FirmwareEndorsement {
     /// Endorsement of the stage0 firmware binary.
     #[prost(message, optional, tag = "1")]
     pub firmware: ::core::option::Option<SignedEndorsement>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelEndorsement {
     #[prost(message, optional, tag = "1")]
     pub kernel: ::core::option::Option<SignedEndorsement>,
@@ -962,19 +962,19 @@ pub struct KernelEndorsement {
     #[prost(message, optional, tag = "5")]
     pub acpi: ::core::option::Option<SignedEndorsement>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemEndorsement {
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<SignedEndorsement>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationEndorsement {
     #[prost(message, optional, tag = "1")]
     pub binary: ::core::option::Option<SignedEndorsement>,
     #[prost(message, optional, tag = "2")]
     pub configuration: ::core::option::Option<SignedEndorsement>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContainerEndorsement {
     #[prost(message, optional, tag = "1")]
     pub binary: ::core::option::Option<SignedEndorsement>,
@@ -984,7 +984,7 @@ pub struct ContainerEndorsement {
 /// Endorsement for a public key used to verify that an encrypted session is
 /// bound to the enclave's evidence.
 /// Next ID: 4
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionBindingPublicKeyEndorsement {
     /// Certificate created by the certificate authority that signs the session
     /// binding public key. If this field is not populated, use the oneof
@@ -1001,7 +1001,7 @@ pub struct SessionBindingPublicKeyEndorsement {
 pub mod session_binding_public_key_endorsement {
     /// DEPRECATED: All type fields should not be used in favor of `ca_endorsement`
     /// TODO: b/417151897 - Remove oneof type.
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         /// Certificate authority signature over the session binding public key
         /// generated by Tink.
@@ -1031,7 +1031,7 @@ pub mod session_binding_public_key_endorsement {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Endorsements {
     /// Endorsement that proves the TEE platform authenticity.
     #[prost(message, optional, tag = "8")]
@@ -1055,7 +1055,7 @@ pub mod endorsements {
     /// TODO: b/380407219 - Remove this field once Oak clients switch to policies.
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         OakRestrictedKernel(super::OakRestrictedKernelEndorsements),
@@ -1065,9 +1065,9 @@ pub mod endorsements {
         Cb(super::CbEndorsements),
     }
 }
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct VerificationSkipped {}
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawDigests {
     #[prost(message, repeated, tag = "1")]
     pub digests: ::prost::alloc::vec::Vec<super::super::RawDigest>,
@@ -1076,14 +1076,14 @@ pub struct RawDigests {
     #[prost(message, optional, tag = "3")]
     pub valid: ::core::option::Option<super::super::Validity>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExpectedDigests {
     #[prost(oneof = "expected_digests::Type", tags = "1, 2")]
     pub r#type: ::core::option::Option<expected_digests::Type>,
 }
 /// Nested message and enum types in `ExpectedDigests`.
 pub mod expected_digests {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         /// If the reference value was set to SkipVerification, we represent that
         /// here.
@@ -1097,7 +1097,7 @@ pub mod expected_digests {
 }
 /// The expected values for kernel image and setup data, computed from previously
 /// provided endorsements and reference values.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelExpectedValues {
     /// Allowable digests for the image.
     #[prost(message, optional, tag = "1")]
@@ -1106,7 +1106,7 @@ pub struct KernelExpectedValues {
     #[prost(message, optional, tag = "2")]
     pub setup_data: ::core::option::Option<ExpectedDigests>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub stage0_expected: ::core::option::Option<ExpectedDigests>,
@@ -1117,28 +1117,28 @@ pub struct AmdSevExpectedValues {
     #[prost(bool, tag = "3")]
     pub allow_debug: bool,
 }
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct IntelTdxExpectedValues {}
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InsecureExpectedValues {}
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExpectedRegex {
     #[prost(string, tag = "1")]
     pub value: ::prost::alloc::string::String,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExpectedStringLiterals {
     #[prost(string, repeated, tag = "1")]
     pub value: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TextExpectedValue {
     #[prost(oneof = "text_expected_value::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<text_expected_value::Type>,
 }
 /// Nested message and enum types in `TextExpectedValue`.
 pub mod text_expected_value {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         /// If the reference value was set to SkipVerification, we represent that
         /// here.
@@ -1150,7 +1150,7 @@ pub mod text_expected_value {
         StringLiterals(super::ExpectedStringLiterals),
     }
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RootLayerExpectedValues {
     /// Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
     /// Verification is skipped when not running in a TEE.
@@ -1165,7 +1165,7 @@ pub struct RootLayerExpectedValues {
     pub insecure: ::core::option::Option<InsecureExpectedValues>,
 }
 /// Reference values of the kernel layer, as measured by stage0.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelLayerExpectedValues {
     /// Verifies the kernel based on endorsement.
     #[prost(message, optional, tag = "1")]
@@ -1183,14 +1183,14 @@ pub struct KernelLayerExpectedValues {
     pub acpi: ::core::option::Option<ExpectedDigests>,
 }
 /// The expected binary digests for a system layer image.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemLayerExpectedValues {
     /// The allowable digest values for a system layer image.
     #[prost(message, optional, tag = "1")]
     pub system_image: ::core::option::Option<ExpectedDigests>,
 }
 /// The expected bundle and configuration digests for a container layer.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContainerLayerExpectedValues {
     /// The allowable digest values for a container bundle.
     #[prost(message, optional, tag = "1")]
@@ -1200,7 +1200,7 @@ pub struct ContainerLayerExpectedValues {
     pub config: ::core::option::Option<ExpectedDigests>,
 }
 /// The expected binary and configuration digests for an application layer.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationLayerExpectedValues {
     /// The allowable digest values for an application binary.
     #[prost(message, optional, tag = "1")]
@@ -1211,12 +1211,12 @@ pub struct ApplicationLayerExpectedValues {
     pub configuration: ::core::option::Option<ExpectedDigests>,
 }
 /// Represents digest of an event.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub event: ::core::option::Option<ExpectedDigests>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakRestrictedKernelExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
@@ -1225,7 +1225,7 @@ pub struct OakRestrictedKernelExpectedValues {
     #[prost(message, optional, tag = "3")]
     pub application_layer: ::core::option::Option<ApplicationLayerExpectedValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakContainersExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
@@ -1236,21 +1236,21 @@ pub struct OakContainersExpectedValues {
     #[prost(message, optional, tag = "4")]
     pub container_layer: ::core::option::Option<ContainerLayerExpectedValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerExpectedValues>,
     #[prost(message, repeated, tag = "5")]
     pub layers: ::prost::alloc::vec::Vec<EventExpectedValues>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExpectedValues {
     #[prost(oneof = "expected_values::Type", tags = "1, 2, 3")]
     pub r#type: ::core::option::Option<expected_values::Type>,
 }
 /// Nested message and enum types in `ExpectedValues`.
 pub mod expected_values {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag = "1")]
         OakRestrictedKernel(super::OakRestrictedKernelExpectedValues),
@@ -1263,7 +1263,7 @@ pub mod expected_values {
 /// Represents a verification result. Can be extended to return certain
 /// measurements and other detail to the client for further processing.
 /// Nomenclature follows RFC 9334.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestationResults {
     /// Indicates whether the verification passed and perhaps more.
     #[prost(enumeration = "attestation_results::Status", tag = "1")]
@@ -1307,7 +1307,7 @@ pub mod attestation_results {
         Hash,
         PartialOrd,
         Ord,
-        ::prost_derive::Enumeration
+        ::prost::Enumeration
     )]
     #[repr(i32)]
     pub enum Status {
@@ -1340,7 +1340,7 @@ pub mod attestation_results {
 }
 /// Attestation verification results for an individual event.
 /// TODO: b/366419879 - Implement descriptive per-event attestation results.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventAttestationResults {
     /// Map of artifacts extracted from current event.
     /// An example of an artifact could be a encryption public key recorded in the
@@ -1353,7 +1353,7 @@ pub struct EventAttestationResults {
 }
 /// Specifies a temporal range of validity for an endorsement.
 /// Deprecated: Use oak.Validity instead.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Validity {
     /// The time the endorsement first became valid. In milliseconds UTC since
     /// Unix Epoch.
@@ -1366,7 +1366,7 @@ pub struct Validity {
 }
 /// Details about the endorsement statement which can be passed across FFI
 /// boundaries.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndorsementDetails {
     /// Digest of the first subject in the endorsement.
     #[prost(message, optional, tag = "1")]
@@ -1383,7 +1383,7 @@ pub struct EndorsementDetails {
     pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Evidence values extracted from attestation evidence during verification.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ExtractedEvidence {
     /// Contains the public key for encryption. The key is serialized as an X25519
     /// octet string.
@@ -1398,7 +1398,7 @@ pub struct ExtractedEvidence {
 }
 /// Nested message and enum types in `ExtractedEvidence`.
 pub mod extracted_evidence {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum EvidenceValues {
         #[prost(message, tag = "1")]
         OakRestrictedKernel(super::OakRestrictedKernelData),
@@ -1411,14 +1411,14 @@ pub mod extracted_evidence {
     }
 }
 /// Values extracted from the root layer evidence.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RootLayerData {
     #[prost(oneof = "root_layer_data::Report", tags = "1, 2, 3")]
     pub report: ::core::option::Option<root_layer_data::Report>,
 }
 /// Nested message and enum types in `RootLayerData`.
 pub mod root_layer_data {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Report {
         /// Values extracted from an AMD SEV-SNP attestation report.
         #[prost(message, tag = "1")]
@@ -1432,7 +1432,7 @@ pub mod root_layer_data {
     }
 }
 /// Values extracted from an AMD SEV-SNP attestation report.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
     #[prost(bytes = "vec", tag = "1")]
@@ -1469,21 +1469,21 @@ pub struct AmdAttestationReport {
     pub vmpl: u32,
 }
 /// Values extracted from an Intel TDX attestation report.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IntelTdxAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
     #[prost(bytes = "vec", tag = "1")]
     pub report_data: ::prost::alloc::vec::Vec<u8>,
 }
 /// Values extracted from a fake attestation report when not running in a TEE.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct FakeAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
     #[prost(bytes = "vec", tag = "1")]
     pub report_data: ::prost::alloc::vec::Vec<u8>,
 }
 /// Values extracted from the the kernel layer evidence, as measured by stage0.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct KernelLayerData {
     /// Measured digests of the image part of the kernel.
     #[prost(message, optional, tag = "1")]
@@ -1510,7 +1510,7 @@ pub struct KernelLayerData {
 }
 /// Values extracted from the evidence that represents an application running
 /// under the Oak Restricted Kernel.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationLayerData {
     /// Measurement RawDigest of the application binary.
     #[prost(message, optional, tag = "1")]
@@ -1521,7 +1521,7 @@ pub struct ApplicationLayerData {
 }
 /// Values extracted from the evidence that represents the Oak Containers system
 /// image.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SystemLayerData {
     /// Measurement RawDigest of the system image.
     #[prost(message, optional, tag = "1")]
@@ -1529,7 +1529,7 @@ pub struct SystemLayerData {
 }
 /// Values extracted from the evidence that represents the Container Runtime
 /// Bundle used in Oak Containers.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ContainerLayerData {
     /// Measurement RawDigest of the container bundle.
     #[prost(message, optional, tag = "1")]
@@ -1551,7 +1551,7 @@ pub struct ContainerLayerData {
 }
 /// Event that contains public keys corresponding to key pairs generated at the
 /// application layer.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ApplicationKeysData {
     /// Key used to verify that an encrypted session is bound to the enclave's
     /// evidence.
@@ -1568,7 +1568,7 @@ pub struct ApplicationKeysData {
 }
 /// Event containing a public key used to verify that an encrypted session is
 /// bound to the enclave's evidence.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionBindingPublicKeyData {
     /// An ECDSA-P256 public key represented as a SEC1 encoded point:
     /// <<https://www.secg.org/sec1-v2.pdf#page=16>>
@@ -1576,14 +1576,14 @@ pub struct SessionBindingPublicKeyData {
     pub session_binding_public_key: ::prost::alloc::vec::Vec<u8>,
 }
 /// Values extracted from the evidence that represents an event.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventData {
     /// Measurement RawDigest of an event.
     #[prost(message, optional, tag = "1")]
     pub event: ::core::option::Option<super::super::RawDigest>,
 }
 /// Values extracted from the evidence for a restricted kernel application.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakRestrictedKernelData {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerData>,
@@ -1593,7 +1593,7 @@ pub struct OakRestrictedKernelData {
     pub application_layer: ::core::option::Option<ApplicationLayerData>,
 }
 /// Values extracted from the evidence for an Oak Containers instance.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakContainersData {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerData>,
@@ -1605,7 +1605,7 @@ pub struct OakContainersData {
     pub container_layer: ::core::option::Option<ContainerLayerData>,
 }
 /// Values extracted from the evidence for a CB instance.
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbData {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerData>,
@@ -1613,9 +1613,9 @@ pub struct CbData {
     pub layers: ::prost::alloc::vec::Vec<EventData>,
 }
 /// Oak Standalone currently skips all attestation
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct OakStandaloneData {}
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CollectedAttestation {
     #[prost(message, optional, tag = "1")]
     pub request_metadata: ::core::option::Option<collected_attestation::RequestMetadata>,
@@ -1629,7 +1629,7 @@ pub struct CollectedAttestation {
 }
 /// Nested message and enum types in `CollectedAttestation`.
 pub mod collected_attestation {
-    #[derive(Clone, PartialEq, ::prost_derive::Message)]
+    #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct RequestMetadata {
         /// URI from which the attestation was obtained.
         #[prost(string, tag = "1")]

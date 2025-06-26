@@ -23,5 +23,4 @@ fn main() {
         &oak_proto_build_utils::get_common_proto_path("../.."),
         Default::default(),
     );
-    oak_proto_build_utils::fix_prost_derives().unwrap();
 }

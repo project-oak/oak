@@ -21,7 +21,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Default::default(),
     );
 
-    oak_proto_build_utils::fix_prost_derives()?;
-
     Ok(())
 }

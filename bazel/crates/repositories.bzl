@@ -120,14 +120,20 @@ def create_oak_crate_repositories(
                 conditions = [Label("//:x86_64-none-setting"), Label("//:wasm32-none-setting")],
                 packages = OAK_NO_STD_CRATES.keys() + extra_no_std_packages.keys(),
                 # See comment on micro_rpc/BUILD.
-                overrides = {"prost-types": Label("@prost_types_oak_patched//:prost-types")},
+                overrides = {
+                    "prost-types": Label("@prost_types_oak_patched//:prost-types"),
+                    "prost": Label("@prost_types_oak_patched//:prost"),
+                },
             ),
             aliased_crates_repository(
                 name = "oak_no_std_no_avx_crates_index",
                 conditions = [Label("//:x86_64-none-no_avx-setting")],
                 packages = OAK_NO_STD_NO_AVX_CRATES.keys() + extra_no_std_no_avx_packages.keys(),
                 # See comment on micro_rpc/BUILD.
-                overrides = {"prost-types": Label("@prost_types_oak_patched//:prost-types")},
+                overrides = {
+                    "prost-types": Label("@prost_types_oak_patched//:prost-types"),
+                    "prost": Label("@prost_types_oak_patched//:prost"),
+                },
             ),
             aliased_crates_repository(
                 name = "oak_std_crates_index",

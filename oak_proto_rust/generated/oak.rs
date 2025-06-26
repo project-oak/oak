@@ -5,7 +5,7 @@
 ///
 /// The wire numbers are the codec IDs in
 /// <https://github.com/multiformats/multicodec/blob/master/table.csv>
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawDigest {
     #[prost(bytes = "vec", tag = "16")]
     pub psha2: ::prost::alloc::vec::Vec<u8>,
@@ -33,7 +33,7 @@ pub struct RawDigest {
 ///
 /// For example, the field sha2_256 could contain
 /// "82aac1adbfe3ada1244c1f54b7c949519e1f048067d0c3b236b7ae048fc7e227".
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HexDigest {
     #[prost(string, tag = "16")]
     pub psha2: ::prost::alloc::string::String,
@@ -58,7 +58,7 @@ pub struct HexDigest {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Variant {
     /// Unique payload identifier that also defines how to deserialize the `value`.
     #[prost(bytes = "vec", tag = "1")]
@@ -70,7 +70,7 @@ pub struct Variant {
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
 /// Defines a period of validity between two timestamps.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct Validity {
     /// Time when the valid period begins. The timestamp itself is included in
     /// the valid period.
@@ -83,7 +83,7 @@ pub struct Validity {
 }
 /// Offsets which produce a new `Validity` instance from either a single
 /// timestamp or an existing `Validity` instance.
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct ValidityOffset {
     /// Offset that produces `not_before`, perhaps negative.
     #[prost(message, optional, tag = "1")]

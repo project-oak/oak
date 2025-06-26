@@ -4,7 +4,7 @@
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndorsedEvidence {
     #[prost(message, optional, tag = "1")]
     pub evidence: ::core::option::Option<super::super::attestation::v1::Evidence>,
@@ -13,14 +13,14 @@ pub struct EndorsedEvidence {
         super::super::attestation::v1::Endorsements,
     >,
 }
-#[derive(Clone, Copy, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct GetEndorsedEvidenceRequest {}
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetEndorsedEvidenceResponse {
     #[prost(message, optional, tag = "1")]
     pub endorsed_evidence: ::core::option::Option<EndorsedEvidence>,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InvokeRequest {
     /// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
     /// <<https://www.rfc-editor.org/rfc/rfc9180.html>>
@@ -29,7 +29,7 @@ pub struct InvokeRequest {
         super::super::crypto::v1::EncryptedRequest,
     >,
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InvokeResponse {
     /// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
     /// <<https://www.rfc-editor.org/rfc/rfc9180.html>>
@@ -42,7 +42,7 @@ pub struct InvokeResponse {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestRequest {
     /// Maps unique IDs of attestation providers to the corresponding evidence.
     #[prost(btree_map = "string, message", tag = "1")]
@@ -55,7 +55,7 @@ pub struct AttestRequest {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestResponse {
     /// Maps unique IDs of attestation providers to the corresponding evidence.
     #[prost(btree_map = "string, message", tag = "1")]
@@ -69,7 +69,7 @@ pub struct AttestResponse {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NoiseHandshakeMessage {
     /// Noise Protocol ephemeral public key 'e'.
     /// <<http://www.noiseprotocol.org/noise.html#overview-of-handshake-state-machine>>
@@ -95,7 +95,7 @@ pub struct NoiseHandshakeMessage {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionBinding {
     /// Representation the serialized message cryptographically bound to the
     /// handshake and the associated data (e.g., a signature).
@@ -108,7 +108,7 @@ pub struct SessionBinding {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandshakeRequest {
     /// Bindings to the attestation evidence, per binding type.
     #[prost(btree_map = "string, message", tag = "3")]
@@ -124,7 +124,7 @@ pub struct HandshakeRequest {
 pub mod handshake_request {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum HandshakeType {
         #[prost(message, tag = "1")]
         NoiseHandshakeMessage(super::NoiseHandshakeMessage),
@@ -135,7 +135,7 @@ pub mod handshake_request {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct HandshakeResponse {
     /// Bindings to the attestation evidence, per binding type.
     #[prost(btree_map = "string, message", tag = "3")]
@@ -151,7 +151,7 @@ pub struct HandshakeResponse {
 pub mod handshake_response {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum HandshakeType {
         #[prost(message, tag = "1")]
         NoiseHandshakeMessage(super::NoiseHandshakeMessage),
@@ -161,7 +161,7 @@ pub mod handshake_response {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EncryptedMessage {
     #[prost(bytes = "vec", tag = "1")]
     #[serde(with = "crate::base64data")]
@@ -177,7 +177,7 @@ pub struct EncryptedMessage {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PlaintextMessage {
     #[prost(bytes = "vec", tag = "1")]
     pub plaintext: ::prost::alloc::vec::Vec<u8>,
@@ -188,7 +188,7 @@ pub struct PlaintextMessage {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionRequest {
     #[prost(oneof = "session_request::Request", tags = "1, 2, 3")]
     #[serde(flatten)]
@@ -198,7 +198,7 @@ pub struct SessionRequest {
 pub mod session_request {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Request {
         #[prost(message, tag = "1")]
         AttestRequest(super::AttestRequest),
@@ -222,7 +222,7 @@ pub mod session_request {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionRequestWithSessionId {
     /// Unique string to identify the session. This should be at least 128 bits of
     /// unique information.
@@ -237,7 +237,7 @@ pub struct SessionRequestWithSessionId {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SessionResponse {
     #[prost(oneof = "session_response::Response", tags = "1, 2, 3")]
     #[serde(flatten)]
@@ -247,7 +247,7 @@ pub struct SessionResponse {
 pub mod session_response {
     #[derive(serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Response {
         #[prost(message, tag = "1")]
         AttestResponse(super::AttestResponse),
@@ -257,14 +257,14 @@ pub mod session_response {
         EncryptedMessage(super::EncryptedMessage),
     }
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RequestWrapper {
     #[prost(oneof = "request_wrapper::Request", tags = "2, 3")]
     pub request: ::core::option::Option<request_wrapper::Request>,
 }
 /// Nested message and enum types in `RequestWrapper`.
 pub mod request_wrapper {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Request {
         #[prost(message, tag = "2")]
         InvokeRequest(super::InvokeRequest),
@@ -272,14 +272,14 @@ pub mod request_wrapper {
         GetEndorsedEvidenceRequest(super::GetEndorsedEvidenceRequest),
     }
 }
-#[derive(Clone, PartialEq, ::prost_derive::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ResponseWrapper {
     #[prost(oneof = "response_wrapper::Response", tags = "2, 3")]
     pub response: ::core::option::Option<response_wrapper::Response>,
 }
 /// Nested message and enum types in `ResponseWrapper`.
 pub mod response_wrapper {
-    #[derive(Clone, PartialEq, ::prost_derive::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Response {
         #[prost(message, tag = "2")]
         InvokeResponse(super::InvokeResponse),
