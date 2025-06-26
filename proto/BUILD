@@ -18,6 +18,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_python//python:proto.bzl", "py_proto_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -36,6 +37,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "digest_java_proto",
+    deps = [":digest_proto"],
+)
+
+py_proto_library(
+    name = "digest_py_pb2",
     deps = [":digest_proto"],
 )
 
@@ -58,6 +64,11 @@ java_proto_library(
     deps = [":validity_proto"],
 )
 
+py_proto_library(
+    name = "validity_py_pb2",
+    deps = [":validity_proto"],
+)
+
 proto_library(
     name = "variant_proto",
     srcs = ["variant.proto"],
@@ -73,17 +84,25 @@ java_proto_library(
     deps = [":variant_proto"],
 )
 
+py_proto_library(
+    name = "variant_py_pb2",
+    deps = [":variant_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
         ":digest_proto",
         ":digest_cc_proto",
         ":digest_java_proto",
+        ":digest_py_pb2",
         ":validity_proto",
         ":validity_cc_proto",
         ":validity_java_proto",
+        ":validity_py_pb2",
         ":variant_proto",
         ":variant_cc_proto",
         ":variant_java_proto",
+        ":variant_py_pb2",
     ],
 )
