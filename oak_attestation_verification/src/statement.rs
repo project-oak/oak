@@ -23,6 +23,7 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 use anyhow::Context;
 use oak_proto_rust::oak::HexDigest;
+use oak_time::Instant;
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
@@ -75,12 +76,33 @@ pub struct Validity {
     pub not_after: OffsetDateTime,
 }
 
-impl From<&oak_proto_rust::oak::attestation::v1::Validity> for Validity {
-    fn from(value: &oak_proto_rust::oak::attestation::v1::Validity) -> Validity {
+// From Rust struct to protocol buffer.
+impl From<&Validity> for oak_proto_rust::oak::Validity {
+    fn from(value: &Validity) -> oak_proto_rust::oak::Validity {
+        let not_before_millis = value.not_before.unix_timestamp_millis();
+        let not_after_millis = value.not_after.unix_timestamp_millis();
+        let not_before = Instant::from_unix_millis_i64(not_before_millis).into_timestamp();
+        let not_after = Instant::from_unix_millis_i64(not_after_millis).into_timestamp();
+        oak_proto_rust::oak::Validity { not_before: Some(not_before), not_after: Some(not_after) }
+    }
+}
+
+// From protocol buffer to Rust struct.
+impl From<&oak_proto_rust::oak::Validity> for Validity {
+    fn from(value: &oak_proto_rust::oak::Validity) -> Validity {
+        let not_before_nanos = 1_000_000
+            * Instant::from(value.not_before.expect("not_before missing")).into_unix_millis();
+        let not_after_nanos = 1_000_000
+            * Instant::from(value.not_after.expect("not_after missing")).into_unix_millis();
         Validity {
-            // Conversion is from milliseconds to seconds.
-            not_before: OffsetDateTime::from_unix_timestamp(value.not_before / 1000).unwrap(),
-            not_after: OffsetDateTime::from_unix_timestamp(value.not_after / 1000).unwrap(),
+            not_before: OffsetDateTime::from_unix_timestamp_nanos(
+                not_before_nanos.try_into().expect("failed to convert u128 to i128"),
+            )
+            .expect("failed to convert instant"),
+            not_after: OffsetDateTime::from_unix_timestamp_nanos(
+                not_after_nanos.try_into().expect("failed to convert u128 to i128"),
+            )
+            .expect("failed to convert instant"),
         }
     }
 }
@@ -262,10 +284,16 @@ mod tests {
     use std::fs;
 
     use oak_file_utils::data_path;
+    use oak_time::Instant;
+    use time::OffsetDateTime;
 
-    use super::{get_digest, parse_statement};
+    use super::{get_digest, parse_statement, Validity};
 
     const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
+
+    // Maximum supported value for conversion: 9999-12-31 23:59:59.0 +00:00:00
+    const MAX_VALUE_MILLIS: i64 = 253402300799000;
+    const MAX_VALUE_NANOS: i128 = 253402300799000_i128 * 1_000_000_i128;
 
     #[test]
     fn test_get_digest() {
@@ -277,5 +305,51 @@ mod tests {
             digest.sha2_256,
             "18c34d8cc737fb5709a99acb073cdc5ed8a404503f626cea6e0bad0a406002fc"
         );
+    }
+
+    #[test]
+    fn test_convert_validity_left_min() {
+        let expected = Validity {
+            // TODO: b/428142476 - Replace not_before with a value way in the past.
+            not_before: OffsetDateTime::from_unix_timestamp(0).unwrap(),
+            not_after: OffsetDateTime::UNIX_EPOCH,
+        };
+        let proto = oak_proto_rust::oak::Validity::from(&expected);
+        let actual = Validity::from(&proto);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_convert_validity_left_max() {
+        let expected = Validity {
+            not_before: OffsetDateTime::UNIX_EPOCH,
+            not_after: OffsetDateTime::from_unix_timestamp_nanos(MAX_VALUE_NANOS).unwrap(),
+        };
+        let proto = oak_proto_rust::oak::Validity::from(&expected);
+        let actual = Validity::from(&proto);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_convert_validity_right_min() {
+        let expected: oak_proto_rust::oak::Validity = oak_proto_rust::oak::Validity {
+            // TODO: b/428142476 - Replace not_before with a value way in the past.
+            not_before: Some(Instant::from_unix_millis_i64(0).into_timestamp()),
+            not_after: Some(Instant::from_unix_millis_i64(0).into_timestamp()),
+        };
+        let statement = Validity::from(&expected);
+        let actual = oak_proto_rust::oak::Validity::from(&statement);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_convert_validity_right_max() {
+        let expected: oak_proto_rust::oak::Validity = oak_proto_rust::oak::Validity {
+            not_before: Some(Instant::from_unix_millis_i64(0).into_timestamp()),
+            not_after: Some(Instant::from_unix_millis_i64(MAX_VALUE_MILLIS).into_timestamp()),
+        };
+        let statement = Validity::from(&expected);
+        let actual = oak_proto_rust::oak::Validity::from(&statement);
+        assert_eq!(expected, actual);
     }
 }

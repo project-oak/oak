@@ -118,26 +118,10 @@ fn test_verify_endorsement_success() {
         "{:?}",
         details
     );
-    assert!(details.validity.as_ref().unwrap().not_before == 1709113632000, "{:?}", details);
-    assert!(details.validity.as_ref().unwrap().not_after == 1740649632000, "{:?}", details);
-    assert!(
-        details.valid.as_ref().unwrap().not_before.unwrap()
-            == Instant::from_unix_millis(
-                details.validity.as_ref().unwrap().not_before.try_into().unwrap()
-            )
-            .into_timestamp(),
-        "{:?}",
-        details
-    );
-    assert!(
-        details.valid.as_ref().unwrap().not_after.unwrap()
-            == Instant::from_unix_millis(
-                details.validity.as_ref().unwrap().not_after.try_into().unwrap()
-            )
-            .into_timestamp(),
-        "{:?}",
-        details
-    );
+    let actual_not_before = Instant::from(details.valid.as_ref().unwrap().not_before.unwrap());
+    let actual_not_after = Instant::from(details.valid.as_ref().unwrap().not_after.unwrap());
+    assert!(actual_not_before.into_unix_millis() == 1709113632000, "{:?}", details);
+    assert!(actual_not_after.into_unix_millis() == 1740649632000, "{:?}", details);
     assert!(details.claim_types.len() == 2, "{:?}", details);
     assert!(
         details.claim_types[0] == "https://project-oak.github.io/oak/test_claim_1",

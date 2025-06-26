@@ -36,7 +36,7 @@ mod test_util;
 
 use anyhow::Context;
 use oak_proto_rust::oak::attestation::v1::{
-    EndorsementDetails, EndorsementReferenceValue, SignedEndorsement, Validity,
+    EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
 };
 use oak_time::Instant;
 pub use util::{
@@ -74,13 +74,8 @@ pub fn verify_endorsement(
             .context("failed to convert between signed and unsigned")?,
     );
 
-    #[allow(deprecated)]
     Ok(EndorsementDetails {
         subject_digest: Some(digest),
-        validity: Some(Validity {
-            not_before: validity.not_before.unix_timestamp_millis(),
-            not_after: validity.not_after.unix_timestamp_millis(),
-        }),
         valid: Some(oak_proto_rust::oak::Validity {
             not_before: Some(not_before.into_timestamp()),
             not_after: Some(not_after.into_timestamp()),

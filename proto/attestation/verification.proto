@@ -76,28 +76,13 @@ message EventAttestationResults {
   map<string, bytes> artifacts = 1;
 }
 
-// Specifies a temporal range of validity for an endorsement.
-// Deprecated: Use oak.Validity instead.
-message Validity {
-  option deprecated = true;
-
-  // The time the endorsement first became valid. In milliseconds UTC since
-  // Unix Epoch.
-  int64 not_before = 1;
-
-  // The time the endorsement was last valid. In milliseconds UTC since
-  // Unix Epoch.
-  int64 not_after = 2;
-}
-
 // Details about the endorsement statement which can be passed across FFI
 // boundaries.
 message EndorsementDetails {
+  reserved 2;
+
   // Digest of the first subject in the endorsement.
   RawDigest subject_digest = 1;
-
-  // Deprecated - use field `valid` instead.
-  Validity validity = 2 [deprecated = true];
 
   // Validity of the verified endorsement.
   oak.Validity valid = 4;

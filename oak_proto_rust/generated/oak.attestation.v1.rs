@@ -1351,19 +1351,6 @@ pub struct EventAttestationResults {
         ::prost::alloc::vec::Vec<u8>,
     >,
 }
-/// Specifies a temporal range of validity for an endorsement.
-/// Deprecated: Use oak.Validity instead.
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct Validity {
-    /// The time the endorsement first became valid. In milliseconds UTC since
-    /// Unix Epoch.
-    #[prost(int64, tag = "1")]
-    pub not_before: i64,
-    /// The time the endorsement was last valid. In milliseconds UTC since
-    /// Unix Epoch.
-    #[prost(int64, tag = "2")]
-    pub not_after: i64,
-}
 /// Details about the endorsement statement which can be passed across FFI
 /// boundaries.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1371,10 +1358,6 @@ pub struct EndorsementDetails {
     /// Digest of the first subject in the endorsement.
     #[prost(message, optional, tag = "1")]
     pub subject_digest: ::core::option::Option<super::super::RawDigest>,
-    /// Deprecated - use field `valid` instead.
-    #[deprecated]
-    #[prost(message, optional, tag = "2")]
-    pub validity: ::core::option::Option<Validity>,
     /// Validity of the verified endorsement.
     #[prost(message, optional, tag = "4")]
     pub valid: ::core::option::Option<super::super::Validity>,
