@@ -62,7 +62,7 @@ async fn start_server() -> Result<(
         .application_config(application_config_vec.clone())
         .build()
         .expect("failed to create Oak standalone elements");
-    let (_observer, metrics) = private_memory_server_lib::metrics::create_metrics();
+    let metrics = private_memory_server_lib::metrics::get_global_metrics();
     Ok((
         addr,
         db_addr,

@@ -70,14 +70,32 @@ impl DataBlobHandler for ExternalDbClient {
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId> {
         let id = id.unwrap_or_else(|| rand::rng().random::<u128>().to_string());
-        let data_blob = DataBlob { id: id.clone(), blob: data_blob.encode_to_vec() };
+        let blob = data_blob.encode_to_vec();
+        let blob_size = blob.len() as u64;
+        let data_blob = DataBlob { id: id.clone(), blob };
+        let start_time = tokio::time::Instant::now();
         let db_response = self
             .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
             .await
             .map_err(anyhow::Error::msg)?
             .into_inner();
-        debug!("db response {:#?}", db_response);
-        Ok(id)
+        if let Some(status) = db_response.status {
+            if status.success {
+                return Ok(id);
+            }
+        }
+        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+        if elapsed_time == 0 {
+            elapsed_time = 1;
+        }
+        let mut speed = blob_size / 1024 / elapsed_time;
+        if speed == 0 {
+            speed = 1;
+        }
+        crate::metrics::get_global_metrics()
+            .rpc_latency
+            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+        bail!("Failed to write data blob");
     }
 
     async fn add_blobs(
@@ -100,6 +118,7 @@ impl DataBlobHandler for ExternalDbClient {
     }
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob> {
+        let start_time = tokio::time::Instant::now();
         let db_response = self
             .read_data_blob(ReadDataBlobRequest { id: id.clone() })
             .await
@@ -108,7 +127,21 @@ impl DataBlobHandler for ExternalDbClient {
         if let Some(status) = db_response.status {
             if status.success && db_response.data_blob.is_some() {
                 let data_blob = db_response.data_blob.unwrap();
+                let blob_size = data_blob.blob.len() as u64;
                 let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)?;
+
+                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+                if elapsed_time == 0 {
+                    elapsed_time = 1;
+                }
+                let mut speed = blob_size / 1024 / elapsed_time;
+                if speed == 0 {
+                    speed = 1;
+                }
+                crate::metrics::get_global_metrics().rpc_latency.record(
+                    speed,
+                    &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")],
+                );
                 return Ok(data_blob);
             }
         }

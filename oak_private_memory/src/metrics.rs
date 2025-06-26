@@ -16,6 +16,7 @@
 
 use std::sync::Arc;
 
+use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
     metrics::{Counter, Histogram},
@@ -63,10 +64,18 @@ impl Metrics {
     }
 }
 
-pub fn create_metrics() -> (OakObserver, Arc<Metrics>) {
+fn create_metrics() -> (OakObserver, Arc<Metrics>) {
     let mut observer =
         OakObserver::create("http://10.0.2.100:8080".to_string(), "sealed_memory_service", vec![])
             .unwrap();
     let metrics = Arc::new(Metrics::new(&mut observer));
     (observer, metrics)
+}
+
+lazy_static! {
+    static ref GLOBAL_METRICS: (OakObserver, Arc<Metrics>) = create_metrics();
+}
+
+pub fn get_global_metrics() -> Arc<Metrics> {
+    GLOBAL_METRICS.1.clone()
 }

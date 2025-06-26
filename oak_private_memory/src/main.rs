@@ -50,8 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
-    let (_observer, metrics) = private_memory_server_lib::metrics::create_metrics();
-
+    let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
         listener,
         OakApplicationContext::new(

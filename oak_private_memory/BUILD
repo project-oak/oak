@@ -86,6 +86,7 @@ rust_library(
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:log",
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",

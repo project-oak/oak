@@ -64,7 +64,9 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             request.data_blob.unwrap(),
         )
         .await;
-        Ok(tonic::Response::new(WriteDataBlobResponse::default()))
+        Ok(tonic::Response::new(WriteDataBlobResponse {
+            status: Some(OpStatus { success: true, error_message: Default::default() }),
+        }))
     }
 
     async fn read_data_blob(
