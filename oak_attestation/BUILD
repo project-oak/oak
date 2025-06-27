@@ -40,6 +40,7 @@ rust_library(
         "@oak_crates_index//:hex",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:zeroize",
@@ -49,4 +50,7 @@ rust_library(
 rust_test(
     name = "oak_attestation_tests",
     crate = ":oak_attestation",
+    deps = [
+        "@oak_crates_index//:googletest",
+    ],
 )

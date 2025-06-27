@@ -28,6 +28,7 @@ use p256::ecdsa::VerifyingKey;
 use sha2::Digest;
 
 pub mod dice;
+pub mod public_key;
 
 /// Attester that can build an Event Log but doesn't use attestation mechanisms
 /// to sign the events. Can be used for tests or for use-cases that don't have
