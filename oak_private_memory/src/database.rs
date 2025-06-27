@@ -452,6 +452,15 @@ impl MemoryCache {
         Self { db_client, dek, content_cache }
     }
 
+    fn add_cache_entry(&mut self, blob_id: BlobId, memory: Memory) {
+        if self.content_cache.len() > 100 {
+            // TODO: b/412698203 - Add eviction to avoid OOM.
+            // Avoid OOM.
+            self.content_cache.clear();
+        }
+        self.content_cache.insert(blob_id.clone(), memory);
+    }
+
     async fn fetch_decrypt_decode_memory(&self, blob_id: &BlobId) -> anyhow::Result<Memory> {
         let encrypted_blob = self.db_client.clone().get_blob(blob_id).await?;
         let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
@@ -465,7 +474,7 @@ impl MemoryCache {
         }
         // If not in cache, fetch from external DB
         let memory = self.fetch_decrypt_decode_memory(blob_id).await?;
-        self.content_cache.insert(blob_id.clone(), memory.clone());
+        self.add_cache_entry(blob_id.clone(), memory.clone());
         Ok(memory)
     }
 
@@ -517,13 +526,7 @@ impl MemoryCache {
         // Store in external DB, explicitly providing the generated ID
         self.db_client.add_blob(encrypted_blob, Some(blob_id.clone())).await?;
 
-        if self.content_cache.len() > 100 {
-            // Avoid OOM.
-            self.content_cache.clear();
-        } else {
-            // Add to local cache
-            self.content_cache.insert(blob_id.clone(), memory);
-        }
+        self.add_cache_entry(blob_id.clone(), memory);
 
         Ok(blob_id)
     }

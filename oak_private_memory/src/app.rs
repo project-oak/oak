@@ -37,7 +37,7 @@ use crate::{
         DbMigration, IcingMetaDatabase, MemoryId,
     },
     encryption::{decrypt, encrypt, generate_nonce},
-    log::debug,
+    log::info,
     metrics,
 };
 
@@ -170,12 +170,12 @@ pub struct SealedMemoryHandler {
 
 impl Drop for SealedMemoryHandler {
     fn drop(&mut self) {
-        debug!("Dropping");
+        info!("Dropping");
         let session_context = std::mem::take(&mut self.session_context);
         // When this is called, we should perform cleanup routines like persisting
         // the in memory database to disks.
         Handle::current().spawn(async move {
-            debug!("Enter");
+            info!("Enter");
             // For test purpose. Will be removed soon
             if let Some(user_context) = session_context.lock().await.as_mut() {
                 let database = encrypt_database(
@@ -183,17 +183,17 @@ impl Drop for SealedMemoryHandler {
                     &user_context.dek,
                 );
                 if database.is_err() {
-                    debug!("Failed to serialize database");
+                    info!("Failed to serialize database");
                     return;
                 }
                 let database = database.unwrap();
-                debug!("Saving db size: {}", database.data.len());
-                debug!("Saving nonce: {}", database.nonce.len());
+                info!("Saving db size: {}", database.data.len());
+                info!("Saving nonce: {}", database.nonce.len());
                 let result = user_context
                     .database_service_client
                     .add_blob(database, Some(user_context.uid.clone()))
                     .await;
-                debug!("db response {:#?}", result);
+                info!("db response {:#?}", result);
             }
         });
     }
@@ -241,15 +241,15 @@ impl SealedMemoryHandler {
     ) -> anyhow::Result<SealedMemoryDatabaseServiceClient<Channel>> {
         let mut guard = self.db_client_cache.lock().await;
         if let Some(client) = guard.as_ref() {
-            debug!("Reusing cached DB client");
+            info!("Reusing cached DB client");
             return Ok(client.clone());
         }
 
-        debug!("Creating new DB client");
+        info!("Creating new DB client");
         let db_addr = self.application_config.database_service_host;
         // The format "http://<host>:<port>" is expected by tonic.
         let db_url = format!("http://{db_addr}");
-        debug!("Database service URL: {}", db_url);
+        info!("Database service URL: {}", db_url);
 
         let endpoint = Channel::from_shared(db_url.clone())
             .with_context(|| format!("Failed to create endpoint from URL: {}", db_url))?;
@@ -261,7 +261,7 @@ impl SealedMemoryHandler {
 
         let new_client = SealedMemoryDatabaseServiceClient::new(channel);
         *guard = Some(new_client.clone());
-        debug!("Successfully created and cached new DB client");
+        info!("Successfully created and cached new DB client");
         Ok(new_client)
     }
 
@@ -282,10 +282,10 @@ impl SealedMemoryHandler {
                 }
             }
         } else if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
-            debug!("Request is in binary proto format");
+            info!("Request is in binary proto format");
             Some(request)
         } else if let Ok(request) = serde_json::from_slice::<SealedMemoryRequest>(request_bytes) {
-            debug!("Request is in json format {:?}", request);
+            info!("Request is in json format {:?}", request);
             Some(request)
         } else {
             None
@@ -420,7 +420,7 @@ impl SealedMemoryHandler {
             let key_derivation_info =
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
 
-            debug!("User have been registered!, {}", uid);
+            info!("User have been registered!, {}", uid);
             return Ok(UserRegistrationResponse {
                 status: user_registration_response::Status::UserAlreadyExists.into(),
                 key_derivation_info: Some(key_derivation_info),
@@ -428,7 +428,7 @@ impl SealedMemoryHandler {
         }
 
         // User does not exist.
-        debug!("Registering new user: {}", uid);
+        info!("Registering new user: {}", uid);
 
         // Generate a 256-bit key for the user.
         let mut dek = [0u8; 32];
@@ -455,7 +455,7 @@ impl SealedMemoryHandler {
             .await
             .context("Failed to write blobs")?;
 
-        debug!("Successfully registered new user {}", uid);
+        info!("Successfully registered new user {}", uid);
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
@@ -512,9 +512,9 @@ impl SealedMemoryHandler {
                 let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
                 IcingMetaDatabase::new(&temp_path)?
             };
-            debug!("Loaded database successfully!!");
+            info!("Loaded database successfully!!");
         } else {
-            debug!("no blob for {}", uid);
+            info!("no blob for {}", uid);
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         };
 

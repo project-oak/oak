@@ -13,12 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::io::Write;
+
 use env_logger::Env;
+use log::LevelFilter;
 pub use log::{debug, error, info};
 
 pub fn init_logging(enable_logging: bool) {
     if enable_logging {
-        env_logger::init();
+        env_logger::Builder::new()
+            .format(|buf, record| {
+                writeln!(
+                    buf,
+                    "{}:{} [{}] - {}",
+                    record.file().unwrap_or("unknown"),
+                    record.line().unwrap_or(0),
+                    record.level(),
+                    record.args()
+                )
+            })
+            .filter(None, LevelFilter::Info)
+            .init();
     } else {
         disable_icing_logging();
         let env = Env::default().filter_or("RUST_LOG", "off");

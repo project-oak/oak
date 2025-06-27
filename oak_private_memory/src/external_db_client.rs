@@ -24,7 +24,7 @@ use sealed_memory_rust_proto::oak::private_memory::{
 };
 use tonic::transport::Channel;
 
-use crate::log::debug;
+use crate::log::info;
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
@@ -175,7 +175,7 @@ impl DataBlobHandler for ExternalDbClient {
             .await
             .map_err(anyhow::Error::msg)?
             .into_inner();
-        debug!("db response {:#?}", db_response);
+        info!("db response {:#?}", db_response);
         Ok(id)
     }
 
