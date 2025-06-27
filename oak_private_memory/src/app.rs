@@ -89,6 +89,7 @@ impl MemoryInterface for DatabaseWithCache {
         };
         let blob_id = self.cache.add_memory(memory.clone()).await.ok()?;
         let _ = self.meta_db().add_memory(memory, blob_id);
+        self.changed = true;
         Some(memory_id)
     }
 
@@ -111,6 +112,7 @@ impl MemoryInterface for DatabaseWithCache {
     }
 
     async fn reset_memory(&mut self) -> bool {
+        self.changed = true;
         self.meta_db().reset();
         true
     }
@@ -136,6 +138,7 @@ impl MemoryInterface for DatabaseWithCache {
     }
 
     async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
+        self.changed = true;
         self.meta_db().delete_memories(&ids)?;
         self.cache.delete_memories(&ids).await?;
         Ok(())
@@ -178,6 +181,10 @@ impl Drop for SealedMemoryHandler {
             info!("Enter");
             // For test purpose. Will be removed soon
             if let Some(user_context) = session_context.lock().await.as_mut() {
+                if !user_context.database.changed {
+                    info!("Database is not changed, skip saving");
+                    return;
+                }
                 let database = encrypt_database(
                     &user_context.database.export().encrypted_info.unwrap(),
                     &user_context.dek,
@@ -520,12 +527,15 @@ impl SealedMemoryHandler {
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
+        let mut database =
+            DatabaseWithCache::new(database, dek.clone(), db_client.clone(), key_derivation_info);
+        database.changed = true;
         *mutex_guard = Some(UserSessionContext {
-            dek: dek.clone(),
+            dek,
             uid,
             message_type,
-            database_service_client: db_client.clone(),
-            database: DatabaseWithCache::new(database, dek, db_client, key_derivation_info),
+            database_service_client: db_client,
+            database,
         });
 
         Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })

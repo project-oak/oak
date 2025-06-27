@@ -573,6 +573,7 @@ pub struct DatabaseWithCache {
     database: IcingMetaDatabase,
     pub cache: MemoryCache,
     key_derivation_info: KeyDerivationInfo,
+    pub(crate) changed: bool,
 }
 
 impl DatabaseWithCache {
@@ -582,7 +583,12 @@ impl DatabaseWithCache {
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
     ) -> Self {
-        Self { database, cache: MemoryCache::new(db_client, dek), key_derivation_info }
+        Self {
+            database,
+            cache: MemoryCache::new(db_client, dek),
+            key_derivation_info,
+            changed: false,
+        }
     }
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
