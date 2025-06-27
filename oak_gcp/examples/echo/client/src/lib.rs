@@ -16,10 +16,13 @@
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ClientSession,
-    ProtocolEngine, Session,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
+    ClientSession, Session,
 };
 use tonic::transport::{Channel, Uri};
 
@@ -53,17 +56,26 @@ impl EchoClient {
         )
         .context("could not create client session")?;
 
-        client_session
-            .init_session(&mut tx, &mut response_stream)
-            .await
-            .context("failed to handshake")?;
+        while !client_session.is_open() {
+            let request = client_session.next_init_message().expect("expected client init message");
+            tx.try_send(request).expect("failed to send to server");
+            if !client_session.is_open() {
+                let response = response_stream
+                    .message()
+                    .await
+                    .expect("expected a response")
+                    .expect("response was failure");
+                client_session
+                    .handle_init_message(response)
+                    .expect("failed to handle init response");
+            }
+        }
 
         Ok(EchoClient { client_session, response_stream, tx })
     }
 
     pub async fn echo(&mut self, request: &[u8]) -> Result<Vec<u8>> {
-        let request =
-            self.client_session.encrypt_request(request).context("failed to encrypt message")?;
+        let request = self.client_session.encrypt(request).context("failed to encrypt message")?;
 
         self.tx.try_send(request).context("couldn't send request to server")?;
 
@@ -74,63 +86,6 @@ impl EchoClient {
             .context("error getting response")?
             .context("didn't get any response")?;
 
-        self.client_session.decrypt_response(response).context("failed to decrypt response")
-    }
-}
-
-// TODO: b/381533311 - Move ClientSessionHelper to client SDK.
-#[async_trait::async_trait]
-trait ClientSessionHelper {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest>;
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>>;
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
-    ) -> anyhow::Result<()>;
-}
-
-#[async_trait::async_trait]
-impl ClientSessionHelper for oak_session::ClientSession {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest> {
-        self.write(PlaintextMessage { plaintext: request.to_vec() })
-            .context("couldn't write message to encrypt")?;
-
-        self.get_outgoing_message()
-            .context("error getting encrypted request")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted request"))
-    }
-
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>> {
-        self.put_incoming_message(session_response)
-            .context("failed to put response for decryption")?;
-
-        self.read()
-            .context("error reading decrypted response")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted response"))
-            .map(|p| p.plaintext)
-    }
-
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
-    ) -> Result<()> {
-        while !self.is_open() {
-            let init_request =
-                self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
-                    || anyhow::anyhow!("no init message provided, but session not initialized"),
-                )?;
-
-            send_request.try_send(init_request).context("failed to send init request")?;
-
-            if let Some(init_response) =
-                receive_response.message().await.context("failed to receive response")?
-            {
-                self.put_incoming_message(init_response)
-                    .context("error putting init_response response")?;
-            }
-        }
-        Ok(())
+        self.client_session.decrypt(response).context("failed to decrypt response")
     }
 }

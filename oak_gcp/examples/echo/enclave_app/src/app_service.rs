@@ -21,14 +21,17 @@
 /// may need to be configured in specific ways.
 use std::{pin::Pin, sync::Arc};
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_sdk_server_v1::ApplicationHandler;
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
     ServerSession, Session,
 };
 use tokio::net::TcpListener;
@@ -56,42 +59,6 @@ impl<T> IntoTonicResult<T> for anyhow::Result<T> {
     }
 }
 
-trait ServerSessionHelpers {
-    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>>;
-    fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse>;
-    fn init_session(
-        &mut self,
-        session_request: SessionRequest,
-    ) -> anyhow::Result<Option<SessionResponse>>;
-}
-
-impl ServerSessionHelpers for ServerSession {
-    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>> {
-        self.put_incoming_message(session_request).context("failed to put request")?;
-        Ok(self
-            .read()
-            .context("failed to read decrypted message")?
-            .ok_or_else(|| anyhow::anyhow!("empty plaintext response"))?
-            .plaintext)
-    }
-
-    fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse> {
-        self.write(PlaintextMessage { plaintext: response.to_vec() })
-            .context("failed to write response")?;
-        self.get_outgoing_message()
-            .context("failed get get encrypted response")?
-            .ok_or_else(|| anyhow::anyhow!("empty encrypted response"))
-    }
-
-    fn init_session(
-        &mut self,
-        session_request: SessionRequest,
-    ) -> anyhow::Result<Option<SessionResponse>> {
-        self.put_incoming_message(session_request).context("failed to put request")?;
-        self.get_outgoing_message().context("failed to get outgoing messge")
-    }
-}
-
 #[tonic::async_trait]
 impl EnclaveApplication for EnclaveApplicationImplementation {
     type OakSessionStream =
@@ -114,16 +81,18 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
             while let Some(request) = request_stream.next().await {
                 let session_request = request?;
                 if server_session.is_open() {
-                    let decrypted_request = server_session.decrypt_request(session_request)
+                    let decrypted_request = server_session.decrypt(session_request)
                         .into_tonic_result("failed to decrypt request")?;
                     let plaintext_response = application_handler.handle(&decrypted_request).await
                         .into_tonic_result("application failed")?;
-                    yield server_session.encrypt_response(&plaintext_response)
+                    yield server_session.encrypt(plaintext_response)
                         .into_tonic_result("failed to encrypt response")?;
 
-                } else if let Some(response) = server_session.init_session(session_request)
-                        .into_tonic_result("failed process handshake")? {
-                            yield response;
+                } else {
+                    server_session.handle_init_message(session_request).into_tonic_result("failed to handle init request")?;
+                    if !server_session.is_open() {
+                        yield server_session.next_init_message().into_tonic_result("failed to get init response")?;
+                    }
                 }
             }
         };
