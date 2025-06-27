@@ -13,6 +13,7 @@
 // limitations under the License.
 
 extern crate std;
+mod aggregators_tests;
 mod attestation_tests;
 mod encryptor_tests;
 mod handshake_tests;

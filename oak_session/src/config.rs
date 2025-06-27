@@ -48,7 +48,8 @@ use oak_crypto::{
 };
 
 use crate::{
-    attestation::{AttestationType, DefaultVerifierResultsAggregator, VerifierResultsAggregator},
+    aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
+    attestation::AttestationType,
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},

@@ -22,6 +22,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
+pub mod aggregators;
 pub mod attestation;
 pub mod channel;
 pub mod config;

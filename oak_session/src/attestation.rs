@@ -89,7 +89,6 @@ use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 
 use anyhow::{anyhow, Error, Ok};
@@ -170,72 +169,6 @@ pub trait AttestationHandler: Send {
     /// only be called once by design. It returns an error if the
     /// attestation process is not yet finished.
     fn take_attestation_verdict(self) -> Result<AttestationVerdict, Error>;
-}
-
-/// Defines the contract for aggregating multiple attestation results into a
-/// single verdict.
-///
-/// In scenarios where multiple attestation mechanisms are used (identified by
-/// different attestation IDs), an `VerifierResultsAggregator` determines the
-/// overall success or failure of the attestation phase based on the individual
-/// results.
-pub trait VerifierResultsAggregator: Send {
-    fn aggregate_attestation_results(
-        &self,
-        results: BTreeMap<String, VerifierResult>,
-    ) -> AttestationVerdict;
-}
-
-/// A default implementation of the `VerifierResultsAggregator` trait.
-///
-/// This aggregator requires that:
-/// 1. There is at least one attestation result provided.
-/// 2. All provided attestation results indicate success.
-///
-/// It operates on the principle that only evidence matching a configured peer
-/// verifier is considered, effectively performing an inner join between
-/// expected verifiers and received evidence.
-pub struct DefaultVerifierResultsAggregator {}
-
-impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
-    /// Aggregates results based on the default policy: at least one result, and
-    /// all must be successful.
-    ///
-    /// If `results` is empty, it returns `AttestationFailed` with a reason
-    /// indicating no matching results. If any result in the `results` map
-    /// has a `GenericFailure` status, it returns `AttestationFailed` with
-    /// details of the failures. Otherwise, it returns `AttestationPassed`
-    /// with the original results.
-    fn aggregate_attestation_results(
-        &self,
-        results: BTreeMap<String, VerifierResult>,
-    ) -> AttestationVerdict {
-        let failures: BTreeMap<&str, &str> = results
-            .iter()
-            .filter_map(|(id, v)| match v {
-                VerifierResult::Failure { result, .. } => {
-                    Some((id.as_str(), result.reason.as_str()))
-                }
-                VerifierResult::Missing => Some((id.as_str(), "Evidence not provided")),
-                _ => None,
-            })
-            .collect();
-        if !failures.is_empty() {
-            AttestationVerdict::AttestationFailed {
-                reason: format!(
-                    "Verification failed. {}",
-                    failures
-                        .iter()
-                        .map(|(id, reason)| format!("ID {}: {}", id, reason))
-                        .collect::<Vec<String>>()
-                        .join(";")
-                ),
-                attestation_results: results,
-            }
-        } else {
-            AttestationVerdict::AttestationPassed { attestation_results: results }
-        }
-    }
 }
 
 /// Client-side implementation of the `AttestationHandler`.

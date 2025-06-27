@@ -31,9 +31,10 @@ use oak_proto_rust::oak::{
 };
 
 use crate::{
+    aggregators::DefaultVerifierResultsAggregator,
     attestation::{
-        AttestationHandler, AttestationVerdict, ClientAttestationHandler,
-        DefaultVerifierResultsAggregator, ServerAttestationHandler, VerifierResult,
+        AttestationHandler, AttestationVerdict, ClientAttestationHandler, ServerAttestationHandler,
+        VerifierResult,
     },
     config::AttestationHandlerConfig,
     ProtocolEngine,
@@ -935,7 +936,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(
         client_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationFailed {
-            reason: "Verification failed. ID UNMATCHED_VERIFIER_ID: Evidence not provided",
+            reason: "No matching evidence is provided",
             ..
         })),
         "Attestation should fail with an unmatched verifier"
@@ -965,7 +966,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(
         server_attestation_provider.take_attestation_verdict(),
         ok(matches_pattern!(AttestationVerdict::AttestationFailed {
-            reason: "Verification failed. ID UNMATCHED_VERIFIER_ID: Evidence not provided",
+            reason: "No matching evidence is provided",
             ..
         })),
         "Attestation should fail with an unmatched verifier"
@@ -1298,7 +1299,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
             create_mock_endorser(),
         )]),
         peer_verifiers: BTreeMap::from([(
-            UNMATCHED_ATTESTER_ID.to_string(),
+            UNMATCHED_VERIFIER_ID.to_string(),
             create_passing_mock_verifier(),
         )]),
         attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
@@ -1313,7 +1314,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
     assert_that!(
         results.server,
         ok(matches_pattern!(AttestationVerdict::AttestationFailed {
-            reason: "Verification failed. ID UNMATCHED_ATTESTER_ID: Evidence not provided",
+            reason: "No matching evidence is provided",
             ..
         }))
     );
