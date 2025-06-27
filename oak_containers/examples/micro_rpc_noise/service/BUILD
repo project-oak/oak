@@ -25,7 +25,6 @@ rust_library(
     name = "micro_rpc_noise_service",
     srcs = [
         "lib.rs",
-        "session_helpers.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [

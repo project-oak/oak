@@ -13,16 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod session_helpers;
-
 use micro_rpc_noise_rust_proto::oak::containers::example::TrustedApplication;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ServerSession,
-    Session,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
+    ServerSession, Session,
 };
-
-use crate::session_helpers::ServerSessionHelpers;
 
 /// A simple single-session implementation of the service.
 pub struct TrustedApplicationService {
@@ -59,25 +58,22 @@ impl TrustedApplication for TrustedApplicationService {
         if self.server_session.is_open() {
             let bytes = self
                 .server_session
-                .decrypt_request(request)
+                .decrypt(request)
                 .map_err(|e| micro_rpc_err!("Failed to decrypt: {e}"))?;
             let response = micro_rpc_noise_application::handle(&bytes)
                 .map_err(|e| micro_rpc_err!("Application failed: {e}"))?;
             let encrypted_response = self
                 .server_session
-                .encrypt_response(&response)
+                .encrypt(response)
                 .map_err(|e| micro_rpc_err!("Failed to encrypt: {e}"))?;
             Ok(encrypted_response)
         } else {
-            let response = self
-                .server_session
-                .init_session(request)
-                .map_err(|e| micro_rpc_err!("Init message handling failed: {e}"))?;
-
-            match response {
-                Some(response) => Ok(response),
-                None => panic!("what do do?"),
-            }
+            self.server_session
+                .handle_init_message(request)
+                .map_err(|e| micro_rpc_err!("failed to handle init request: {e:?}"))?;
+            self.server_session
+                .next_init_message()
+                .map_err(|e| micro_rpc_err!("failed to get init response: {e:?}"))
         }
     }
 }
