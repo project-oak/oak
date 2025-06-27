@@ -486,6 +486,10 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.1.6",
     ),
     "ring": crate.spec(version = "0.17.14"),
+    "rmcp": crate.spec(
+        features = ["server", "transport-io"],
+        version = "0.1",
+    ),
     "rtnetlink": crate.spec(version = "0.14.1"),
     "serde_yaml": crate.spec(version = "0.9.30"),
     "signal-hook": crate.spec(version = "0.3.17"),
@@ -507,6 +511,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "tokio": crate.spec(
         features = [
             "fs",
+            "io-std",
             "io-util",
             "macros",
             "net",

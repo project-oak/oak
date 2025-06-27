@@ -29,12 +29,12 @@ export GOOGLE_API_KEY=YOUR_API_KEY_HERE
 To start an agent in an interactive environment run:
 
 ```bash
-adk run gemini_mcp
+adk run mcp/agent
 ```
 
 Example output:
 
-```bash
+```txt
 Running agent weather_agent, type exit to exit.
 [user]: What's the weather at my current location?
 [weather_agent]: The weather is sunny with a temperature of 30 degrees Celsius.
@@ -48,8 +48,8 @@ The agent already automatically starts the server, but you can also run it manua
 To build the server run:
 
 ```bash
-cd server
-cargo build -p mcp_server
+nix develop
+bazel build //mcp/server:mcp_server
 ```
 
 You can also inspect the server using the [MCP Inspector tool](https://github.com/modelcontextprotocol/inspector), which requires installing NPX:
@@ -61,5 +61,5 @@ sudo apt install nodejs npm
 To interact with the server run the MCP Inspector tool from the same directory:
 
 ```bash
-npx @modelcontextprotocol/inspector cargo run -p mcp_server
+npx @modelcontextprotocol/inspector nix develop --command sh -c 'cd .. && bazel run //mcp/server:mcp_server'
 ```

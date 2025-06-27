@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     info!("Starting weather service");
-    let service = WeatherService::default().serve(stdio()).await.inspect_err(|e| {
+    let service = WeatherService.serve(stdio()).await.inspect_err(|e| {
         error!("serving error: {:?}", e);
     })?;
     info!("Initialized weather service");

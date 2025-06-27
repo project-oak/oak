@@ -1,5 +1,5 @@
 {
-  "checksum": "803b82451a3301e30c68182c56aa3d5525eaf211eadaf6b5592dc591f7fb2459",
+  "checksum": "f22e0e6c256ea53a4cf7fc7c0e67961902a284028cd37d6277d07affce1d568d",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3161,9 +3161,15 @@
             "alloc",
             "android-tzdata",
             "clock",
+            "default",
             "iana-time-zone",
+            "js-sys",
             "now",
+            "oldtime",
+            "serde",
             "std",
+            "wasm-bindgen",
+            "wasmbind",
             "winapi",
             "windows-link"
           ],
@@ -3174,6 +3180,10 @@
             {
               "id": "num-traits 0.2.19",
               "target": "num_traits"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
             }
           ],
           "selects": {
@@ -7454,6 +7464,10 @@
               "target": "rlsf"
             },
             {
+              "id": "rmcp 0.1.5",
+              "target": "rmcp"
+            },
+            {
               "id": "rsa 0.9.8",
               "target": "rsa"
             },
@@ -7930,6 +7944,45 @@
         "version": "1.2.1"
       },
       "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "dyn-clone 1.0.19": {
+      "name": "dyn-clone",
+      "version": "1.0.19",
+      "package_url": "https://github.com/dtolnay/dyn-clone",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/dyn-clone/1.0.19/download",
+          "sha256": "1c7a8fb8a9fbf66c1f703fe16184d10ca0ee9d23be5b4436400408ba54a95005"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "dyn_clone",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "dyn_clone",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2018",
+        "version": "1.0.19"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -22834,6 +22887,174 @@
       ],
       "license_file": null
     },
+    "rmcp 0.1.5": {
+      "name": "rmcp",
+      "version": "0.1.5",
+      "package_url": "https://github.com/4t145/rmcp/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rmcp/0.1.5/download",
+          "sha256": "33a0110d28bd076f39e14bfd5b0340216dd18effeb5d02b43215944cc3e5c751"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rmcp",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rmcp",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "base64",
+            "default",
+            "macros",
+            "server",
+            "transport-async-rw",
+            "transport-io"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "base64 0.21.7",
+              "target": "base64"
+            },
+            {
+              "id": "chrono 0.4.41",
+              "target": "chrono"
+            },
+            {
+              "id": "futures 0.3.31",
+              "target": "futures"
+            },
+            {
+              "id": "pin-project-lite 0.2.16",
+              "target": "pin_project_lite"
+            },
+            {
+              "id": "schemars 0.8.22",
+              "target": "schemars"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.140",
+              "target": "serde_json"
+            },
+            {
+              "id": "thiserror 2.0.12",
+              "target": "thiserror"
+            },
+            {
+              "id": "tokio 1.45.1",
+              "target": "tokio"
+            },
+            {
+              "id": "tokio-util 0.7.15",
+              "target": "tokio_util"
+            },
+            {
+              "id": "tracing 0.1.41",
+              "target": "tracing"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2024",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "paste 1.0.15",
+              "target": "paste"
+            },
+            {
+              "id": "rmcp-macros 0.1.5",
+              "target": "rmcp_macros"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.1.5"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
+    "rmcp-macros 0.1.5": {
+      "name": "rmcp-macros",
+      "version": "0.1.5",
+      "package_url": "https://github.com/4t145/rmcp/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rmcp-macros/0.1.5/download",
+          "sha256": "a6e2b2fd7497540489fa2db285edd43b7ed14c49157157438664278da6e42a7a"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "rmcp_macros",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rmcp_macros",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.104",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2024",
+        "version": "0.1.5"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
     "rsa 0.9.8": {
       "name": "rsa",
       "version": "0.9.8",
@@ -23892,6 +24113,164 @@
       ],
       "license_file": "LICENSE-MIT"
     },
+    "schemars 0.8.22": {
+      "name": "schemars",
+      "version": "0.8.22",
+      "package_url": "https://github.com/GREsau/schemars",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/schemars/0.8.22/download",
+          "sha256": "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "schemars",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "schemars",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "derive",
+            "schemars_derive"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "dyn-clone 1.0.19",
+              "target": "dyn_clone"
+            },
+            {
+              "id": "schemars 0.8.22",
+              "target": "build_script_build"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.140",
+              "target": "serde_json"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "proc_macro_deps": {
+          "common": [
+            {
+              "id": "schemars_derive 0.8.22",
+              "target": "schemars_derive"
+            }
+          ],
+          "selects": {}
+        },
+        "version": "0.8.22"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "schemars_derive 0.8.22": {
+      "name": "schemars_derive",
+      "version": "0.8.22",
+      "package_url": "https://github.com/GREsau/schemars",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/schemars_derive/0.8.22/download",
+          "sha256": "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "schemars_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "schemars_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "serde_derive_internals 0.29.1",
+              "target": "serde_derive_internals"
+            },
+            {
+              "id": "syn 2.0.104",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.8.22"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "scopeguard 1.2.0": {
       "name": "scopeguard",
       "version": "1.2.0",
@@ -24359,6 +24738,7 @@
             "alloc",
             "default",
             "derive",
+            "rc",
             "serde_derive",
             "std"
           ],
@@ -24574,6 +24954,62 @@
         },
         "edition": "2015",
         "version": "1.0.219"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "serde_derive_internals 0.29.1": {
+      "name": "serde_derive_internals",
+      "version": "0.29.1",
+      "package_url": "https://github.com/serde-rs/serde",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/serde_derive_internals/0.29.1/download",
+          "sha256": "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "serde_derive_internals",
+            "crate_root": "lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "serde_derive_internals",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 2.0.104",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.29.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -38377,6 +38813,7 @@
     "regex-lite 0.1.6",
     "ring 0.17.14",
     "rlsf 0.2.1",
+    "rmcp 0.1.5",
     "rsa 0.9.8",
     "rtnetlink 0.14.1",
     "rustversion 1.0.21",
