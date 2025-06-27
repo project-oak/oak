@@ -474,6 +474,7 @@ dependencies = [
  "bitvec",
  "bytes",
  "ciborium",
+ "const-oid",
  "coset",
  "curve25519-dalek",
  "derive_builder",
@@ -518,6 +519,7 @@ dependencies = [
  "wasm-bindgen",
  "wasmi",
  "x509-cert",
+ "x509-verify",
  "x86_64",
  "zerocopy 0.8.25",
  "zeroize",
@@ -1698,6 +1700,34 @@ dependencies = [
  "const-oid",
  "der",
  "spki",
+]
+
+[[package]]
+name = "x509-ocsp"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e54e695a31f0fecb826cf59ae2093c941d7ef932a1f8508185dd23b29ce2e2e"
+dependencies = [
+ "const-oid",
+ "der",
+ "spki",
+ "x509-cert",
+]
+
+[[package]]
+name = "x509-verify"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c43a49bf845cd2f3aff9603a4276409dbf2b8fa4454d3e9501bf5b0028342964"
+dependencies = [
+ "const-oid",
+ "der",
+ "rsa",
+ "sha2",
+ "signature",
+ "spki",
+ "x509-cert",
+ "x509-ocsp",
 ]
 
 [[package]]

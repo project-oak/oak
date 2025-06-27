@@ -25,17 +25,28 @@ rust_library(
     name = "oak_attestation_gcp",
     srcs = glob(["src/**"]),
     deps = [
+        "@oak_crates_index//:base64",
+        "@oak_crates_index//:const-oid",
+        "@oak_crates_index//:hex",
         "@oak_crates_index//:http",
+        "@oak_crates_index//:jwt",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
+        "@oak_crates_index//:x509-cert",
+        "@oak_crates_index//:x509-verify",
     ],
 )
 
 rust_test(
     name = "oak_attestation_gcp_tests",
     crate = ":oak_attestation_gcp",
+    data = [
+        "//oak_attestation_gcp/testdata",
+    ],
     deps = [
+        "//oak_file_utils",
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:serde_json",
     ],

@@ -1,5 +1,5 @@
 {
-  "checksum": "d144f7fecd9e32af1da19b48b6c16317bc0d56207505cf8ac9eba65ae8003096",
+  "checksum": "3c7160d15f8b5ff4d6dca6e08e02a3123787a717f50f664c2391698fd3f621e5",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2922,6 +2922,10 @@
               "target": "ciborium"
             },
             {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
               "id": "coset 0.3.8",
               "target": "coset"
             },
@@ -3088,6 +3092,10 @@
             {
               "id": "x509-cert 0.2.5",
               "target": "x509_cert"
+            },
+            {
+              "id": "x509-verify 0.4.8",
+              "target": "x509_verify"
             },
             {
               "id": "x86_64 0.15.2",
@@ -8152,7 +8160,8 @@
         ],
         "crate_features": {
           "common": [
-            "force-soft"
+            "force-soft",
+            "oid"
           ],
           "selects": {}
         },
@@ -10463,6 +10472,151 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "x509-ocsp 0.2.1": {
+      "name": "x509-ocsp",
+      "version": "0.2.1",
+      "package_url": "https://github.com/RustCrypto/formats/tree/master/x509-ocsp",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x509-ocsp/0.2.1/download",
+          "sha256": "5e54e695a31f0fecb826cf59ae2093c941d7ef932a1f8508185dd23b29ce2e2e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x509_ocsp",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x509_ocsp",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
+              "id": "der 0.7.10",
+              "target": "der"
+            },
+            {
+              "id": "spki 0.7.3",
+              "target": "spki"
+            },
+            {
+              "id": "x509-cert 0.2.5",
+              "target": "x509_cert"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.1"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "x509-verify 0.4.8": {
+      "name": "x509-verify",
+      "version": "0.4.8",
+      "package_url": "https://github.com/bhesh/x509-verify/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x509-verify/0.4.8/download",
+          "sha256": "c43a49bf845cd2f3aff9603a4276409dbf2b8fa4454d3e9501bf5b0028342964"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x509_verify",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x509_verify",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "pem",
+            "rsa",
+            "sha2",
+            "x509"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
+              "id": "der 0.7.10",
+              "target": "der"
+            },
+            {
+              "id": "rsa 0.9.8",
+              "target": "rsa"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
+            },
+            {
+              "id": "signature 2.2.0",
+              "target": "signature"
+            },
+            {
+              "id": "spki 0.7.3",
+              "target": "spki"
+            },
+            {
+              "id": "x509-cert 0.2.5",
+              "target": "x509_cert"
+            },
+            {
+              "id": "x509-ocsp 0.2.1",
+              "target": "x509_ocsp"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.4.8"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
     "x86 0.52.0": {
       "name": "x86",
       "version": "0.52.0",
@@ -10945,6 +11099,7 @@
     "bitvec 1.0.1",
     "bytes 1.10.1",
     "ciborium 0.2.2",
+    "const-oid 0.9.6",
     "coset 0.3.8",
     "curve25519-dalek 4.1.3",
     "derive_builder 0.20.2",
@@ -10987,6 +11142,7 @@
     "uart_16550 0.3.2",
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
+    "x509-verify 0.4.8",
     "x86_64 0.15.2",
     "zerocopy 0.8.25",
     "zeroize 1.8.1"

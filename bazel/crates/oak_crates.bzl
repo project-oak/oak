@@ -59,6 +59,10 @@ def _common_crates(std):
             default_features = False,
             version = "0.2.1",
         ),
+        "const-oid": crate.spec(
+            default_features = False,
+            version = "0.9.6",
+        ),
         "coset": crate.spec(
             default_features = False,
             version = "0.3.7",
@@ -252,6 +256,11 @@ def _common_crates(std):
             features = ["pem"],
             version = "0.2.5",
         ),
+        "x509-verify": crate.spec(
+            version = "0.4.8",
+            default_features = False,
+            features = ["rsa", "sha2", "x509", "pem"],
+        ),
         "x86_64": crate.spec(version = "=0.15.2"),
         "zerocopy": crate.spec(
             default_features = False,
@@ -394,6 +403,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "jni": crate.spec(
         version = "0.21.1",
     ),
+    "jwt": crate.spec(version = "0.16.0"),
     "nix": crate.spec(
         features = [
             "fs",

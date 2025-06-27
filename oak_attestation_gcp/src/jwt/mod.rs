@@ -14,27 +14,32 @@
 // limitations under the License.
 //
 
-/// Representation of a JWT token.
-#[derive(Debug)]
-pub struct Token {
-    value: Vec<u8>,
+use jwt::{algorithm::AlgorithmType, header::JoseHeader};
+use serde::Deserialize;
+
+pub(crate) mod algorithm;
+
+/// Partial view of a JWT header with the fields interesting for the validation
+/// of the PKI flavour of Confidential Space JWT tokens.
+///
+/// https://cloud.google.com/confidential-computing/confidential-space/docs/connect-external-resources#attestation_token_structure
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct Header {
+    /// The algorithm used to sign the JWT.
+    ///
+    /// https://datatracker.ietf.org/doc/html/rfc7517#section-4.4
+    #[serde(rename = "alg")]
+    pub algorithm: AlgorithmType,
+
+    /// The x509 chain of the certificate used to sign the JWT.
+    ///
+    /// https://datatracker.ietf.org/doc/html/rfc7517#section-4.7
+    #[serde(rename = "x5c")]
+    pub x509_chain: Vec<String>,
 }
 
-impl Token {
-    /// Returns the underlying token value as a slice of bytes.
-    pub fn as_slice(&self) -> &[u8] {
-        self.value.as_slice()
-    }
-}
-
-impl From<String> for Token {
-    fn from(raw: String) -> Self {
-        Self { value: raw.into() }
-    }
-}
-
-impl From<Vec<u8>> for Token {
-    fn from(raw: Vec<u8>) -> Self {
-        Self { value: raw }
+impl JoseHeader for Header {
+    fn algorithm_type(&self) -> AlgorithmType {
+        self.algorithm
     }
 }

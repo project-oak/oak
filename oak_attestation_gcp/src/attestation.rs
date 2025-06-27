@@ -20,8 +20,6 @@ use std::{
     os::unix::net::UnixStream,
 };
 
-use crate::jwt;
-
 #[derive(thiserror::Error, Debug)]
 pub enum AttestationRequestError {
     #[error("{0}: {1}")]
@@ -40,7 +38,7 @@ use AttestationRequestError::{InternalError, OtherError};
 /// container image. It should not be used for attestation of a specific user
 /// session since it does not contain information about the user session (i.e. a
 /// nonce).
-pub fn read_confidential_space_attestation() -> Result<jwt::Token, AttestationRequestError> {
+pub fn read_confidential_space_attestation() -> Result<String, AttestationRequestError> {
     // The path to the Confidential Space attestation token file, as documented in
     // Google Cloud documentation[^1].
     //
@@ -48,10 +46,11 @@ pub fn read_confidential_space_attestation() -> Result<jwt::Token, AttestationRe
     const CONFIDENTIAL_SPACE_ATTESTATION_TOKEN_PATH: &str =
         "/run/container_launcher/attestation_verifier_claims_token";
 
-    let raw_token = fs::read(CONFIDENTIAL_SPACE_ATTESTATION_TOKEN_PATH).map_err(|e| {
+    let token_str = fs::read_to_string(CONFIDENTIAL_SPACE_ATTESTATION_TOKEN_PATH).map_err(|e| {
         InternalError("Failed to read Confidential Space attestation token".to_string(), e.into())
     })?;
-    Ok(raw_token.into())
+
+    Ok(token_str)
 }
 
 /// Requests a Confidential Space attestation token from the Confidential Space
@@ -76,7 +75,7 @@ pub fn read_confidential_space_attestation() -> Result<jwt::Token, AttestationRe
 pub fn request_attestation_token(
     audience: &str,
     nonce: &str,
-) -> Result<jwt::Token, AttestationRequestError> {
+) -> Result<String, AttestationRequestError> {
     const TEE_SERVER_SOCKET_PATH: &str = "/run/container_launcher/teeserver.sock";
 
     // Connect to the Unix domain socket.
@@ -104,7 +103,7 @@ pub fn request_attestation_token(
 
     let response = http_request(&stream, request)?;
 
-    Ok(response.into_body().into())
+    Ok(response.into_body())
 }
 
 // This is a helper function to make HTTP requests to the Confidential Space TEE
@@ -115,7 +114,7 @@ pub fn request_attestation_token(
 fn http_request(
     mut stream: &UnixStream,
     request: http::Request<String>,
-) -> Result<http::Response<Vec<u8>>, AttestationRequestError> {
+) -> Result<http::Response<String>, AttestationRequestError> {
     // Write the HTTP request to the stream.
     write!(&mut stream, "{} {} {:?}\r\n", request.method(), request.uri(), request.version())
         .map_err(|e| InternalError("Failed to write HTTP preamble".to_string(), e.into()))?;
@@ -231,7 +230,11 @@ fn http_request(
         }
     };
 
+    let body_str = String::from_utf8(body).map_err(|e| {
+        InternalError("Failed to convert HTTP response body to string".to_string(), e.into())
+    })?;
+
     builder
-        .body(body)
+        .body(body_str)
         .map_err(|e| InternalError("Failed to extract HTTP response body".to_string(), e.into()))
 }

@@ -1,5 +1,5 @@
 {
-  "checksum": "5df98f989b8a3d2c2f5ab1d8fe81980a2339a36ceed54d564c5ba96bd780847f",
+  "checksum": "f679a6b2cbb6ce8592449534ea233079659efb5aa0ce22cd84a2908dc824586e",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -6844,6 +6844,10 @@
               "target": "command_group"
             },
             {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
               "id": "coset 0.3.8",
               "target": "coset"
             },
@@ -6942,6 +6946,10 @@
             {
               "id": "jni 0.21.1",
               "target": "jni"
+            },
+            {
+              "id": "jwt 0.16.0",
+              "target": "jwt"
             },
             {
               "id": "lazy_static 1.5.0",
@@ -7250,6 +7258,10 @@
             {
               "id": "x509-cert 0.2.5",
               "target": "x509_cert"
+            },
+            {
+              "id": "x509-verify 0.4.8",
+              "target": "x509_verify"
             },
             {
               "id": "x86_64 0.15.2",
@@ -13925,6 +13937,77 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "jwt 0.16.0": {
+      "name": "jwt",
+      "version": "0.16.0",
+      "package_url": "http://github.com/mikkyang/rust-jwt",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/jwt/0.16.0/download",
+          "sha256": "6204285f77fe7d9784db3fdc449ecce1a0114927a51d5a41c4c7a292011c015f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "jwt",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "jwt",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "base64 0.13.1",
+              "target": "base64"
+            },
+            {
+              "id": "crypto-common 0.1.6",
+              "target": "crypto_common"
+            },
+            {
+              "id": "digest 0.10.7",
+              "target": "digest"
+            },
+            {
+              "id": "hmac 0.12.1",
+              "target": "hmac"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
+            },
+            {
+              "id": "serde_json 1.0.140",
+              "target": "serde_json"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.16.0"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
     },
     "lazy_static 1.5.0": {
       "name": "lazy_static",
@@ -23862,6 +23945,7 @@
         "crate_features": {
           "common": [
             "default",
+            "oid",
             "std"
           ],
           "selects": {}
@@ -35716,6 +35800,151 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "x509-ocsp 0.2.1": {
+      "name": "x509-ocsp",
+      "version": "0.2.1",
+      "package_url": "https://github.com/RustCrypto/formats/tree/master/x509-ocsp",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x509-ocsp/0.2.1/download",
+          "sha256": "5e54e695a31f0fecb826cf59ae2093c941d7ef932a1f8508185dd23b29ce2e2e"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x509_ocsp",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x509_ocsp",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
+              "id": "der 0.7.10",
+              "target": "der"
+            },
+            {
+              "id": "spki 0.7.3",
+              "target": "spki"
+            },
+            {
+              "id": "x509-cert 0.2.5",
+              "target": "x509_cert"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.1"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "x509-verify 0.4.8": {
+      "name": "x509-verify",
+      "version": "0.4.8",
+      "package_url": "https://github.com/bhesh/x509-verify/",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/x509-verify/0.4.8/download",
+          "sha256": "c43a49bf845cd2f3aff9603a4276409dbf2b8fa4454d3e9501bf5b0028342964"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "x509_verify",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "x509_verify",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "pem",
+            "rsa",
+            "sha2",
+            "x509"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "const-oid 0.9.6",
+              "target": "const_oid"
+            },
+            {
+              "id": "der 0.7.10",
+              "target": "der"
+            },
+            {
+              "id": "rsa 0.9.8",
+              "target": "rsa"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
+            },
+            {
+              "id": "signature 2.2.0",
+              "target": "signature"
+            },
+            {
+              "id": "spki 0.7.3",
+              "target": "spki"
+            },
+            {
+              "id": "x509-cert 0.2.5",
+              "target": "x509_cert"
+            },
+            {
+              "id": "x509-ocsp 0.2.1",
+              "target": "x509_ocsp"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.4.8"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": null
+    },
     "x86 0.52.0": {
       "name": "x86",
       "version": "0.52.0",
@@ -37149,6 +37378,7 @@
     "colored 2.2.0",
     "command-fds 0.3.0",
     "command-group 5.0.1",
+    "const-oid 0.9.6",
     "coset 0.3.8",
     "criterion 0.5.1",
     "criterion-macro 0.4.0",
@@ -37175,6 +37405,7 @@
     "ignore 0.4.23",
     "itertools 0.13.0",
     "jni 0.21.1",
+    "jwt 0.16.0",
     "lazy_static 1.5.0",
     "libm 0.2.15",
     "linked_list_allocator 0.10.5",
@@ -37254,6 +37485,7 @@
     "wasmtime 25.0.3",
     "which 5.0.0",
     "x509-cert 0.2.5",
+    "x509-verify 0.4.8",
     "x86_64 0.15.2",
     "xz2 0.1.7",
     "zerocopy 0.8.26",
