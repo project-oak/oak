@@ -20,23 +20,17 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "cc/containers/sdk/oak_session.h"
-#include "cc/crypto/common.h"
-#include "cc/crypto/server_encryptor.h"
 #include "cc/utils/status/status.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
+#include "grpcpp/support/sync_stream.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.pb.h"
-#include "proto/crypto/crypto.pb.h"
-#include "proto/session/service_streaming.pb.h"
 
 namespace oak::containers::hello_world_enclave_app {
 
 using ::oak::session::ServerSession;
 using ::oak::session::v1::PlaintextMessage;
-using ::oak::session::v1::RequestWrapper;
-using ::oak::session::v1::ResponseWrapper;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::oak::util::status::Annotate;
@@ -52,20 +46,11 @@ std::string EnclaveApplicationImpl::HandleRequest(absl::string_view request) {
                       application_config_.size(), " bytes.");
 }
 
-grpc::Status EnclaveApplicationImpl::LegacySession(
-    grpc::ServerContext* context,
-    grpc::ServerReaderWriter<ResponseWrapper, RequestWrapper>* stream) {
-  absl::Status status = oak_session_context_.OakSession(
-      stream, [this](absl::string_view request) -> absl::StatusOr<std::string> {
-        return HandleRequest(request);
-      });
-
-  return FromAbsl(status);
-}
-
 grpc::Status EnclaveApplicationImpl::OakSession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<SessionResponse, SessionRequest>* stream) {
+  stream->SendInitialMetadata();
+
   absl::StatusOr<std::unique_ptr<ServerSession>> session =
       ServerSession::Create(
           session::SessionConfigBuilder(session::AttestationType::kUnattested,

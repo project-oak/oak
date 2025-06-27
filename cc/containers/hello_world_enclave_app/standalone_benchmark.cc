@@ -21,27 +21,19 @@
 #include "absl/status/status_matchers.h"
 #include "absl/strings/substitute.h"
 #include "benchmark/benchmark.h"
-#include "cc/attestation/verification/insecure_attestation_verifier.h"
-#include "cc/client/client.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/standalone/oak_standalone.h"
 #include "cc/oak_session/client_session.h"
-#include "cc/transport/grpc_streaming_transport.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
 #include "oak_containers/examples/hello_world/proto/hello_world.grpc.pb.h"
 
 using ::oak::attestation::v1::AttestationResults;
-using ::oak::attestation::verification::InsecureAttestationVerifier;
-using ::oak::client::OakClient;
 using ::oak::containers::example::EnclaveApplication;
 using ::oak::containers::hello_world_enclave_app::EnclaveApplicationImpl;
-using ::oak::crypto::EncryptionKeyProvider;
-using ::oak::crypto::KeyPair;
 using ::oak::session::v1::EndorsedEvidence;
 using ::oak::session::v1::PlaintextMessage;
 using ::oak::session::v1::SessionResponse;
-using ::oak::transport::GrpcStreamingTransport;
 
 namespace oak::containers::sdk::standalone {
 
@@ -61,24 +53,7 @@ constexpr absl::string_view kApplicationConfig = "{}";
 class HelloWorldStandaloneBench : public benchmark::Fixture {
  public:
   void SetUp(benchmark::State& state) override {
-    // Set up our new Keypair and get an EndorsedEvidence from Rust.
-    absl::StatusOr<KeyPair> key_pair = KeyPair::Generate();
-    QCHECK_OK(key_pair);
-    absl::StatusOr<EndorsedEvidence> endorsed_evidence =
-        GetEndorsedEvidence(*key_pair);
-    QCHECK_OK(endorsed_evidence);
-
-    // Verify that the endorsed evidence is valid.
-    InsecureAttestationVerifier verifier;
-    absl::StatusOr<AttestationResults> attestation_results = verifier.Verify(
-        std::chrono::system_clock::now(), endorsed_evidence->evidence(),
-        endorsed_evidence->endorsements());
-    QCHECK_OK(attestation_results);
-
-    service_ = std::make_unique<EnclaveApplicationImpl>(
-        OakSessionContext(std::move(*endorsed_evidence),
-                          std::make_unique<EncryptionKeyProvider>(*key_pair)),
-        kApplicationConfig);
+    service_ = std::make_unique<EnclaveApplicationImpl>(kApplicationConfig);
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());
@@ -95,28 +70,6 @@ class HelloWorldStandaloneBench : public benchmark::Fixture {
   std::unique_ptr<grpc::Server> server_;
   std::unique_ptr<EnclaveApplication::Stub> stub_;
 };
-
-BENCHMARK_DEFINE_F(HelloWorldStandaloneBench, HPKEInvocation)
-(benchmark::State& state) {
-  std::string test_message = TestMessage(state.range(0));
-  grpc::ClientContext context;
-  auto transport =
-      std::make_unique<GrpcStreamingTransport>(stub_->LegacySession(&context));
-  InsecureAttestationVerifier verifier;
-  auto client = OakClient::Create(std::move(transport), verifier);
-  QCHECK_OK(client);
-
-  for (auto iter : state) {
-    auto result = (*client)->Invoke(test_message);
-    QCHECK_OK(result);
-    QCHECK(*result ==
-           absl::Substitute("Hello from the enclave, $1! Btw, the app has a "
-                            "config with a length of $0 bytes.",
-                            kApplicationConfig.size(), test_message));
-  }
-  state.SetBytesProcessed(int64_t(state.iterations()) *
-                          int64_t(state.range(0)));
-}
 
 BENCHMARK_DEFINE_F(HelloWorldStandaloneBench, NoiseInvocation)
 (benchmark::State& state) {
@@ -192,8 +145,6 @@ BENCHMARK_DEFINE_F(HelloWorldStandaloneBench, PlaintextInvocation)
                           int64_t(state.range(0)));
 }
 
-BENCHMARK_REGISTER_F(HelloWorldStandaloneBench, HPKEInvocation)
-    ->Range(2, 1 << 21);
 BENCHMARK_REGISTER_F(HelloWorldStandaloneBench, NoiseInvocation)
     ->Range(2, 1 << 21);
 BENCHMARK_REGISTER_F(HelloWorldStandaloneBench, PlaintextInvocation)

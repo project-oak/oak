@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use futures::{channel::mpsc, Stream, StreamExt};
@@ -21,7 +21,7 @@ use oak_hello_world_proto::oak::containers::example::{
     enclave_application_client::EnclaveApplicationClient,
     host_application_server::{HostApplication, HostApplicationServer},
 };
-use oak_proto_rust::oak::session::v1::{RequestWrapper, ResponseWrapper};
+use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use tokio::{net::TcpListener, sync::Mutex, time::Duration};
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::transport::{channel::Channel, Endpoint};
@@ -37,92 +37,35 @@ impl HostApplicationImpl {
     }
 }
 
-#[derive(Debug)]
-#[allow(clippy::large_enum_variant)]
-enum Action {
-    Receive(Option<Result<RequestWrapper, tonic::Status>>),
-    Send(Option<Result<ResponseWrapper, tonic::Status>>),
-}
-
-/// A generic helper method to pass messages between client and enclave app.
-///
-/// A standard Oak Containers host application is just a simple message
-/// forwarder. This function is an implementation of a generic bi-directional
-/// message forwarding strategy.
-///
-/// It's possible that we can move this into the Rust SDK as a host application
-/// helper.
-///
-/// `request_stream` is the stream of requests coming into a tonic gRPC handler
-/// from the client, typically the argument to the tonic handler method.
-///
-/// `upstream_starter` A function that initiates a streaming connection to an
-/// enclave application that exposes an oak streaming session protocol endpoint.
-/// The method receives an `rx` channel that's created internally by the
-/// forward_stream method, and will feed client requests to the enclave app.
-async fn forward_stream<Fut, E: std::fmt::Display>(
-    request_stream: tonic::Streaming<RequestWrapper>,
-    upstream_starter: impl FnOnce(mpsc::Receiver<RequestWrapper>) -> Fut,
-) -> Result<impl Stream<Item = Result<ResponseWrapper, tonic::Status>>, tonic::Status>
-where
-    Fut: Future<Output = Result<tonic::Response<tonic::Streaming<ResponseWrapper>>, E>>,
-{
-    let mut request_stream = request_stream;
-    let (mut tx, rx) = mpsc::channel(10);
-    let mut upstream = upstream_starter(rx)
-        .await
-        .map_err(|e| tonic::Status::internal(e.to_string()))?
-        .into_inner();
-
-    Ok(async_stream::try_stream! {
-        loop {
-            // This block waits for either a request message or a resposne message,
-            // so that it can forward the requests on to the TEE application, or
-            // forward the respones back to the client.
-            let action: Action = async {
-                tokio::select! {
-                    req = request_stream.next() => Action::Receive(req),
-                    resp = upstream.next() => Action::Send(resp),
-                }
-            }.await;
-
-
-            match action {
-                Action::Receive(req) => match req {
-                    None => break,
-                    Some(req) => tx
-                        .try_send(req.map_err(|err| tonic::Status::internal(format!("incoming request error: {err:?}")))?)
-                        .map_err(|err| tonic::Status::internal(format!("sending request failed: {err:?}")))?,
-                }
-                Action::Send(resp) => match resp {
-                    None => break,
-                    Some(resp) => yield resp.map_err(|err| tonic::Status::internal(format!("upstream response error: {err:?}")))?
-                }
-            }
-        }
-    })
-}
-
 #[tonic::async_trait]
 impl HostApplication for HostApplicationImpl {
-    type SessionStream =
-        Pin<Box<dyn Stream<Item = Result<ResponseWrapper, tonic::Status>> + Send + 'static>>;
+    type OakSessionStream =
+        Pin<Box<dyn Stream<Item = Result<SessionResponse, tonic::Status>> + Send + 'static>>;
 
-    async fn session(
+    async fn oak_session(
         &self,
-        client_request_stream: tonic::Request<tonic::Streaming<RequestWrapper>>,
-    ) -> Result<tonic::Response<Self::SessionStream>, tonic::Status> {
+        request_stream: tonic::Request<tonic::Streaming<SessionRequest>>,
+    ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
         // Clone the app implementation `Arc` so that we have a reference to use the in
         // callback below.
         let enclave_app = self.enclave_app.clone();
-        let enclave_response_stream_starter =
-            |rx| async move { enclave_app.lock().await.legacy_session(rx).await };
 
-        let response_stream =
-            forward_stream(client_request_stream.into_inner(), enclave_response_stream_starter)
-                .await?;
+        let mut request_stream = request_stream.into_inner();
+        let (mut tx, rx) = mpsc::channel(10);
+        let mut enclave_app_stream = enclave_app.lock().await.oak_session(rx).await?.into_inner();
 
-        Ok(tonic::Response::new(Box::pin(response_stream) as Self::SessionStream))
+        let response_stream = async_stream::try_stream! {
+            while let Some(req) = request_stream.next().await {
+                let req = req.map_err(|err| tonic::Status::internal(format!("incoming request error: {err:?}")))?;
+                println!("Host forwarding request {req:?}");
+                tx.try_send(req).map_err(|err| tonic::Status::internal(format!("sending request failed: {err:?}")))?;
+                let resp = enclave_app_stream.next().await.expect("should get response").map_err(|err| tonic::Status::internal(format!("upstream response error: {err:?}")))?;
+                println!("Host forwarding response {resp:?}");
+                yield resp
+            }
+        };
+
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::OakSessionStream))
     }
 }
 

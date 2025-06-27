@@ -19,13 +19,10 @@
 #include "absl/log/log.h"
 #include "absl/status/status_matchers.h"
 #include "absl/strings/substitute.h"
-#include "cc/attestation/verification/insecure_attestation_verifier.h"
-#include "cc/client/client.h"
 #include "cc/containers/hello_world_enclave_app/app_service.h"
 #include "cc/containers/sdk/standalone/oak_standalone.h"
 #include "cc/ffi/rust_bytes.h"
 #include "cc/oak_session/client_session.h"
-#include "cc/transport/grpc_streaming_transport.h"
 #include "gmock/gmock.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
@@ -38,41 +35,18 @@ namespace {
 
 using ::absl_testing::IsOk;
 using ::absl_testing::IsOkAndHolds;
-using ::oak::attestation::v1::AttestationResults;
-using ::oak::attestation::verification::InsecureAttestationVerifier;
-using ::oak::client::OakClient;
 using ::oak::containers::example::EnclaveApplication;
 using ::oak::containers::hello_world_enclave_app::EnclaveApplicationImpl;
-using ::oak::crypto::EncryptionKeyProvider;
-using ::oak::crypto::KeyPair;
 using ::oak::session::v1::EndorsedEvidence;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
-using ::oak::transport::GrpcStreamingTransport;
 using ::testing::Eq;
 
 constexpr absl::string_view kApplicationConfig = "{}";
 
 class HelloWorldStandaloneTest : public testing::Test {
   void SetUp() override {
-    // Set up our new Keypair and get an EndorsedEvidence from Rust.
-    absl::StatusOr<KeyPair> key_pair = KeyPair::Generate();
-    ASSERT_TRUE(key_pair.ok()) << key_pair.status();
-    absl::StatusOr<EndorsedEvidence> endorsed_evidence =
-        GetEndorsedEvidence(*key_pair);
-    ASSERT_THAT(endorsed_evidence, IsOk());
-
-    // Verify that the endorsed evidence is valid.
-    InsecureAttestationVerifier verifier;
-    absl::StatusOr<AttestationResults> attestation_results = verifier.Verify(
-        std::chrono::system_clock::now(), endorsed_evidence->evidence(),
-        endorsed_evidence->endorsements());
-    ASSERT_THAT(attestation_results, IsOk());
-
-    service_ = std::make_unique<EnclaveApplicationImpl>(
-        OakSessionContext(std::move(*endorsed_evidence),
-                          std::make_unique<EncryptionKeyProvider>(*key_pair)),
-        kApplicationConfig);
+    service_ = std::make_unique<EnclaveApplicationImpl>(kApplicationConfig);
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort("[::]:8080", grpc::InsecureServerCredentials());
@@ -88,22 +62,6 @@ class HelloWorldStandaloneTest : public testing::Test {
   std::unique_ptr<grpc::Server> server_;
   std::unique_ptr<EnclaveApplication::Stub> stub_;
 };
-
-TEST_F(HelloWorldStandaloneTest, LegacySessionReturnsResponse) {
-  grpc::ClientContext context;
-  auto transport =
-      std::make_unique<GrpcStreamingTransport>(stub_->LegacySession(&context));
-  InsecureAttestationVerifier verifier;
-  auto client = OakClient::Create(std::move(transport), verifier);
-  ASSERT_THAT(client, IsOk());
-
-  auto result = (*client)->Invoke("Standalone Test");
-  ASSERT_THAT(result,
-              IsOkAndHolds(Eq(absl::Substitute(
-                  "Hello from the enclave, Standalone Test! Btw, the app has a "
-                  "config with a length of $0 bytes.",
-                  kApplicationConfig.size()))));
-}
 
 TEST_F(HelloWorldStandaloneTest, OakSessionReturnsResponse) {
   absl::StatusOr<std::unique_ptr<session::ClientSession>> session =

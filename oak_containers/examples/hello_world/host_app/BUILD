@@ -27,7 +27,6 @@ rust_library(
         "src/launcher_args.rs",
         "src/lib.rs",
         "src/service.rs",
-        "tests/integration_test.rs",
     ],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
@@ -91,7 +90,10 @@ rust_test_suite(
         "//oak_containers/launcher:lib",
         "//oak_file_utils",
         "//oak_functions_test_utils",
+        "//oak_session",
         "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",

@@ -21,8 +21,6 @@
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/strings/string_view.h"
-#include "cc/containers/sdk/encryption_key_handle.h"
-#include "cc/containers/sdk/oak_session.h"
 #include "cc/containers/sdk/orchestrator_client.h"
 #include "cc/oak_session/server_session.h"
 #include "grpcpp/server_context.h"
@@ -35,17 +33,8 @@ namespace oak::containers::hello_world_enclave_app {
 class EnclaveApplicationImpl
     : public oak::containers::example::EnclaveApplication::Service {
  public:
-  EnclaveApplicationImpl(
-      oak::containers::sdk::OakSessionContext oak_session_context,
-      absl::string_view application_config)
-      : oak_session_context_(std::move(oak_session_context)),
-        application_config_(application_config) {}
-
-  grpc::Status LegacySession(
-      grpc::ServerContext* context,
-      grpc::ServerReaderWriter<oak::session::v1::ResponseWrapper,
-                               oak::session::v1::RequestWrapper>* stream)
-      override;
+  EnclaveApplicationImpl(absl::string_view application_config)
+      : application_config_(application_config) {}
 
   grpc::Status OakSession(
       grpc::ServerContext* context,
@@ -61,7 +50,6 @@ class EnclaveApplicationImpl
 
  private:
   std::string HandleRequest(absl::string_view request);
-  oak::containers::sdk::OakSessionContext oak_session_context_;
   const oak::session::v1::EndorsedEvidence endorsed_evidence_;
   const std::string application_config_;
 };

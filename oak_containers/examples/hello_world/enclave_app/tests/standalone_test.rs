@@ -17,14 +17,12 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::{Context, Result};
 use futures::channel::mpsc;
-use oak_client::{client::OakClient, verifier::InsecureAttestationVerifier};
-use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_hello_world_proto::oak::containers::example::enclave_application_client::EnclaveApplicationClient;
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
-use oak_sdk_server_v1::OakApplicationContext;
-use oak_sdk_standalone::Standalone;
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
     Session,
 };
 use tokio::net::TcpListener;
@@ -37,121 +35,15 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
     let listener = TcpListener::bind(addr).await?;
     let addr = listener.local_addr()?;
 
-    let standalone = Standalone::builder()
-        .application_config(APPLICATION_CONFIG.to_vec())
-        .build()
-        .expect("failed to create Oak standalone elements");
-
     Ok((
         addr,
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
-            OakApplicationContext::new(
-                Box::new(standalone.encryption_key_handle()),
-                standalone.endorsed_evidence(),
-                Box::new(
-                    oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
-                        application_config: APPLICATION_CONFIG.to_vec(),
-                    },
-                ),
-            ),
             Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
                 application_config: APPLICATION_CONFIG.to_vec()
             }),
         )),
     ))
-}
-
-#[tokio::test]
-async fn test_legacy() {
-    // Start server
-    let (addr, _join_handle) = start_server().await.unwrap();
-
-    let url = format!("http://{addr}");
-
-    println!("Connecting to test server on {}", url);
-
-    let channel = Channel::from_shared(url)
-        .context("couldn't create gRPC channel")
-        .unwrap()
-        .connect()
-        .await
-        .context("couldn't connect via gRPC channel")
-        .unwrap();
-
-    let mut client = EnclaveApplicationClient::new(channel);
-
-    let transport = GrpcStreamingTransport::new(|rx| client.legacy_session(rx))
-        .await
-        .expect("couldn't create GRPC streaming transport");
-
-    let attestation_verifier = InsecureAttestationVerifier {};
-
-    // Create client
-    let mut oak_client = OakClient::create(transport, &attestation_verifier).await.unwrap();
-
-    // Send single request, see the response
-    let app_config_len = APPLICATION_CONFIG.len();
-    assert_eq!(
-        String::from_utf8(oak_client.invoke(b"standalone user").await.unwrap()).unwrap(),
-        format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
-    );
-}
-
-#[async_trait::async_trait]
-trait ClientSessionHelper {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest>;
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>>;
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
-    ) -> anyhow::Result<()>;
-}
-
-#[async_trait::async_trait]
-impl ClientSessionHelper for oak_session::ClientSession {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SessionRequest> {
-        self.write(PlaintextMessage { plaintext: request.to_vec() })
-            .context("couldn't write message to encrypt")?;
-
-        self.get_outgoing_message()
-            .context("error getting encrypted request")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted request"))
-    }
-
-    fn decrypt_response(&mut self, session_response: SessionResponse) -> anyhow::Result<Vec<u8>> {
-        self.put_incoming_message(session_response)
-            .context("failed to put response for decryption")?;
-
-        self.read()
-            .context("error reading decrypted response")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted response"))
-            .map(|p| p.plaintext)
-    }
-
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SessionRequest>,
-        receive_response: &mut tonic::Streaming<SessionResponse>,
-    ) -> Result<()> {
-        while !self.is_open() {
-            let init_request =
-                self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
-                    || anyhow::anyhow!("no init message provided, but session not initialized"),
-                )?;
-
-            send_request.try_send(init_request).context("failed to send init request")?;
-
-            if let Some(init_response) =
-                receive_response.message().await.context("failed to receive response")?
-            {
-                self.put_incoming_message(init_response)
-                    .context("error putting init_response response")?;
-            }
-        }
-        Ok(())
-    }
 }
 
 #[tokio::test]
@@ -185,25 +77,31 @@ async fn test_noise() {
     )
     .expect("could not create client session");
 
-    client_session.init_session(&mut tx, &mut response_stream).await.expect("failed to handshake");
+    while !client_session.is_open() {
+        let request = client_session.next_init_message().expect("expected client init message");
+        tx.try_send(request).expect("failed to send to server");
+        if !client_session.is_open() {
+            let response = response_stream
+                .message()
+                .await
+                .expect("expected a response")
+                .expect("response was failure");
+            client_session.handle_init_message(response).expect("failed to handle init response");
+        }
+    }
 
-    let request =
-        client_session.encrypt_request(b"standalone user").expect("failed to encrypt message");
+    let request = client_session.encrypt(b"standalone user").expect("failed to send request");
+    tx.try_send(request).expect("failed to send request");
 
-    tx.try_send(request).expect("Could not send request to server");
-
-    let response = response_stream
+    let result = response_stream
         .message()
         .await
-        .expect("error getting response")
-        .expect("didn't get any repsonse");
-
-    let decrypted_response =
-        client_session.decrypt_response(response).expect("failed to decrypt response");
-
+        .expect("no response ready")
+        .expect("failed to get response");
+    let result = client_session.decrypt(result).expect("failed to decrypt result");
     let app_config_len = APPLICATION_CONFIG.len();
     assert_eq!(
-        String::from_utf8(decrypted_response).unwrap(),
+        String::from_utf8(result).unwrap(),
         format!("Hello from the enclave, standalone user! Btw, the app has a config with a length of {app_config_len} bytes."),
     );
 }
