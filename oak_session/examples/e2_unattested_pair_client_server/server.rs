@@ -17,32 +17,23 @@
 #[rustfmt::skip]
 // Wrapping this section in an unformatted module to control how we explain the imports.
 mod intro_import {
-    // We'll need to import a few types to use oak_session. Some of the imports are
-    // obvious, some less so.
-
-    // Let's start simple: of course we need the session type itself.
+    // The ServerSession is the core struct for working with a session on the server side.
     pub use oak_session::session::{ServerSession};
 
     // We will also need to configure the sessions. The types in the next block help with that.
     // Since the caller creates the `SessionConfig`, we only need to worry about that type,
     // and not the various types used to create it in the first example.
-    pub use oak_session::{ config::SessionConfig };
+    pub use oak_session::{config::SessionConfig };
 
     // The oak_session protocol uses protocol buffers as its main API.
     pub use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 
-    // Now, for a few less obvious imports: The traits that drive the session interface.
-
-    // This trait implements the "protocol" side of the session: sending/receiving messages on the
-    // communications channel. It provides the `get_outgoing_message` and `put_incoming_message`
-    // functions.
-    pub use oak_session::ProtocolEngine;
-
-    // This trait implements the "user" side of the session: writing messages to be encrypted, and
-    // reading messages that have been decrypted. It provides the `read` and `write` methods.
+    // This trait provides the `is_open` method that we need during initialization.
     pub use oak_session::Session;
-}
 
+    // These traits provide an easier-to-use interface over the ClientSession and ServerSession.
+    pub use oak_session::channel::{SessionInitializer, SessionChannel};
+}
 use std::sync::mpsc;
 
 pub use intro_import::*;
@@ -76,32 +67,25 @@ impl ServerComponent {
     pub fn run(mut self) {
         println!("Server starting");
         for req in self.req_rx.iter() {
-            let was_open = self.session.is_open();
-            self.session.put_incoming_message(req).expect("Failed to put incoming message.");
-            if !was_open {
-                // If the session isn't open, we must still be in the initialization phase.
-                // So we consume the request, and then send a response if there is one.
-                let maybe_response = self
-                    .session
-                    .get_outgoing_message()
-                    .expect("Failed to check for next outgoing message");
-                if let Some(resp) = maybe_response {
-                    self.resp_tx.send(resp).expect("failed to send response on channel");
-                }
+            if self.session.is_open() {
+                // If the server is open, we can decrypt the message, process it, and respond.
+                let mut request = self.session.decrypt(req).expect("failed to decrypt request");
+
+                request.reverse();
+
+                let response = self.session.encrypt(request).expect("failed to encrypt response");
+                self.resp_tx.send(response).expect("Failed to send response on channel");
             } else {
-                // The session is open. So just consume the message and response.
-                let mut request =
-                    self.session.read().expect("Failed to read decrypted message").expect(
-                        "Library error: expected decrypted message but nothing was provided",
-                    );
-                request.plaintext.reverse();
-                self.session.write(request).expect("failed to write request for encryption");
-                let enc_response = self
-                    .session
-                    .get_outgoing_message()
-                    .expect("Failed to get encrypted outgoing message")
-                    .expect("Library error");
-                self.resp_tx.send(enc_response).expect("Failed to send response on channel");
+                // If the session isn't open yet, we should assume the incoming message is an
+                // init message.
+                self.session.handle_init_message(req).expect("failed to handle init request");
+
+                // If the session still isn't open, we must have an init response to return.
+                if !self.session.is_open() {
+                    let next =
+                        self.session.next_init_message().expect("failed to get init response");
+                    self.resp_tx.send(next).expect("failed to send next init response")
+                }
             }
         }
         println!("Server completed.")

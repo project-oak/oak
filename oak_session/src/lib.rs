@@ -23,6 +23,7 @@ extern crate alloc;
 extern crate std;
 
 pub mod attestation;
+pub mod channel;
 pub mod config;
 pub mod encryptors;
 pub mod handshake;

@@ -14,8 +14,13 @@
 
 extern crate alloc;
 
-use std::{boxed::Box, string::ToString, vec::Vec};
+use std::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 
+use anyhow::Context;
 use googletest::prelude::*;
 use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
@@ -34,6 +39,7 @@ use oak_proto_rust::oak::{
 
 use crate::{
     attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
@@ -640,4 +646,121 @@ fn invoke_hello_world(client_session: &mut ClientSession, server_session: &mut S
         .expect("An error occurred while reading the decrypted incoming message")
         .expect("No decrypted incoming message was produced");
     assert_that!(decrypted_response.plaintext, eq("World".as_bytes()));
+}
+
+/// SessionChannel/SessionInitializer Tests
+#[googletest::gtest]
+#[tokio::test]
+async fn channel_unattested_nn_pair() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    channel_pair_test(client_config, server_config).await
+}
+
+#[googletest::gtest]
+#[tokio::test]
+async fn channel_nn_peer_self_succeeds() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+    channel_pair_test(client_config, server_config).await
+}
+
+#[googletest::gtest]
+#[tokio::test]
+async fn channel_bidi_nn_pair() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_session_binding_verifier_provider(),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+    channel_pair_test(client_config, server_config).await
+}
+
+async fn channel_pair_test(
+    client_config: SessionConfig,
+    server_config: SessionConfig,
+) -> anyhow::Result<()> {
+    // Use channels for simple client-server implementation.
+    let (client_tx, mut client_rx) = tokio::sync::mpsc::channel::<SessionRequest>(10);
+    let (server_tx, mut server_rx) = tokio::sync::mpsc::channel::<SessionResponse>(10);
+
+    // Start a server
+    let server_join: tokio::task::JoinHandle<anyhow::Result<()>> = tokio::task::spawn(async move {
+        let mut server_session = ServerSession::create(server_config)?;
+
+        // Handshake Sequence
+        while !server_session.is_open() {
+            let next_request =
+                client_rx.recv().await.context("failed to get next client message")?;
+            server_session
+                .handle_init_message(next_request)
+                .context("failed to handle init message")?;
+            if !server_session.is_open() {
+                let next_response = server_session
+                    .next_init_message()
+                    .context("failed to get next init message")?;
+                server_tx.send(next_response).await.context("failed to send response to client")?
+            }
+        }
+
+        // Receive a Request
+        let request: SessionRequest =
+            client_rx.recv().await.context("failed to receive client request")?;
+        let decrypted_request =
+            server_session.decrypt(request).context("failed to decrypt result")?;
+
+        // Process Request
+        let response = format!("Hello {}", String::from_utf8_lossy(decrypted_request.as_slice()));
+
+        // Send Response
+        let encrypted_response =
+            server_session.encrypt(response.as_bytes()).context("failed to encrypt respnose")?;
+        server_tx.send(encrypted_response).await.context("failed to send response")?;
+
+        // All done
+        Ok(())
+    });
+
+    let mut client_session = ClientSession::create(client_config)?;
+
+    // Handshake sequence
+    while !client_session.is_open() {
+        let request = client_session.next_init_message().expect("failed to get init messge");
+        client_tx.send(request).await.expect("failed to send init message");
+        let response = server_rx.recv().await.context("failed to get next server message")?;
+        client_session.handle_init_message(response).expect("failed to handle init response");
+    }
+
+    // Send Message
+    let message_to_server = client_session.encrypt(b"Mister Tester")?;
+    client_tx.send(message_to_server).await.context("Failed to send message to server")?;
+
+    // Receive Response
+    let response = server_rx.recv().await.context("Failed to get server response")?;
+    assert_that!(client_session.decrypt(response)?, eq(b"Hello Mister Tester"));
+
+    server_join.await.context("failed to join server")?.context("server result failed")
 }

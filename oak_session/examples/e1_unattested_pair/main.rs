@@ -17,9 +17,6 @@
 #[rustfmt::skip]
 // Wrapping this section in an unformatted module to control how we explain the imports.
 mod intro_import {
-    // We'll need to import a few types to use oak_session. Some of the imports are
-    // obvious, some less so.
-
     // The core types for working with sessions.
     pub use oak_session::{ClientSession, ServerSession};
 
@@ -30,19 +27,11 @@ mod intro_import {
         handshake::HandshakeType,
     };
 
-    // The oak_session protocol uses protocol buffers as its main API.
-    pub use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
-
-    // Now, for a few less obvious imports: The traits that drive the session interface.
-
-    // This trait implements the "protocol" side of the session: sending/receiving messages on the
-    // communications channel. It provides the `get_outgoing_message` and `put_incoming_message`
-    // functions.
-    pub use oak_session::ProtocolEngine;
-
-    // This trait implements the "user" side of the session: writing messages to be encrypted, and
-    // reading messages that have been decrypted. It provides the `read` and `write` methods.
+    // This trait provides the `is_open` method that we use during handshake.
     pub use oak_session::Session;
+
+    // These traits provide an easier-to-use interface over the ClientSession and ServerSession.
+    pub use oak_session::channel::{SessionInitializer, SessionChannel};
 }
 use intro_import::*;
 
@@ -76,26 +65,26 @@ fn main() {
     // Note that in most real use cases, the sender and receiver side will have a
     // loop like this. See unattested_pair_split for a more realistic example.
     while !client_session.is_open() && !server_session.is_open() {
-        // The client will send the next init request.
-        let init: SessionRequest = client_session
-            .get_outgoing_message()
-            .expect("Failure getting next message")
-            .expect("Library Bug: Expected another init message but didn't get one.");
-
-        // The server will receive the next init request
-        // A failure could occur if the client sends the wrong kind of message,
-        // for example, sending an encrypted message when the initialization
-        // sequence is still in process.
-        server_session.put_incoming_message(init).expect("Failed to put incoming message.");
+        if !client_session.is_open() {
+            // The client will send the next init request.
+            let request = client_session.next_init_message().expect("Failed to get init message");
+            // The server will receive the next init request
+            // A failure could occur if the client sends the wrong kind of message,
+            // for example, sending an encrypted message when the initialization
+            // sequence is still in process.
+            server_session
+                .handle_init_message(request)
+                .expect("server failed to handle init request");
+        }
 
         // The server *may* have a response.
-        let init_response: Option<SessionResponse> =
-            server_session.get_outgoing_message().expect("Failure getting next outgoing message");
+        if !server_session.is_open() {
+            let init_response =
+                server_session.next_init_message().expect("failed to get server init response");
 
-        if let Some(init_response) = init_response {
             client_session
-                .put_incoming_message(init_response)
-                .expect("Failed to put client incoming message");
+                .handle_init_message(init_response)
+                .expect("Failed to handle server init response");
         }
     }
 
@@ -104,23 +93,11 @@ fn main() {
     // Send one message client to server.
     let message = "Hello Server";
     println!("Client is writing: {message}");
-    client_session
-        .write(PlaintextMessage { plaintext: message.as_bytes().to_vec() })
-        .expect("Unable to write message.");
-
-    let out_to_server = client_session
-        .get_outgoing_message()
-        .expect("Failed getting next outgoing message")
-        .expect(
-            "Library bug: just wrote an message to encrypt but an encrypted output is not ready",
-        );
+    let to_server = client_session.encrypt(message).expect("failed to encrypt message");
 
     // Accept and decrypt the message at the server
-    server_session.put_incoming_message(out_to_server).expect("Failed to put the server message");
-    let server_read = server_session
-        .read()
-        .expect("Failure reading from session")
-        .expect("Library Bug: Failed to read a message");
-    let str_message = String::from_utf8_lossy(server_read.plaintext.as_slice());
+    let server_read =
+        server_session.decrypt(to_server).expect("failed to decrypt message at server");
+    let str_message = String::from_utf8_lossy(server_read.as_slice());
     println!("The server read back: {str_message}");
 }

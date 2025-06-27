@@ -22,20 +22,12 @@ package(
 )
 
 rust_library(
-    name = "client",
-    srcs = ["client.rs"],
-    deps = [
-        "//oak_proto_rust",
-        "//oak_session",
-    ],
-)
-
-rust_library(
     name = "server",
     srcs = ["server.rs"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",
+        "@oak_crates_index//:anyhow",
     ],
 )
 
@@ -43,10 +35,10 @@ rust_binary(
     name = "main",
     srcs = ["main.rs"],
     deps = [
-        ":client",
         ":server",
         "//oak_proto_rust",
         "//oak_session",
+        "@oak_crates_index//:anyhow",
     ],
 )
 

@@ -14,15 +14,21 @@
 // limitations under the License.
 //
 
+// Wrapping this section in an unformatted module to control how we explain the
+// imports.
 #[rustfmt::skip]
-// Wrapping this section in an unformatted module to control how we explain the imports.
 mod intro_import {
-    // Now that most of the session-related logic is moved into client/server
-    // components, the main includes are simpler to follow.
-
-    // Our sessions are now warpped in this components
+    // The server is now wrapped in this components
     pub use server::ServerComponent;
-    pub use client::Client;
+
+    // We'll work directly with the client session here.
+    pub use oak_session::session::ClientSession;
+
+    // These traits provide an easier-to-use interface over the ClientSession and ServerSession.
+    pub use oak_session::channel::{SessionInitializer, SessionChannel};
+
+    // This trait provides the `is_open` method that we use during handshake.
+    pub use oak_session::session::Session;
 
     // We will also need to configure the sessions. The types in the next block help with that.
     pub use oak_session::{
@@ -33,10 +39,11 @@ mod intro_import {
 }
 
 use intro_import::*;
+
 fn main() {
     let client_config: SessionConfig =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
-    let mut client = Client::new(client_config);
+    let mut client = ClientSession::create(client_config).expect("failed to create client");
 
     let server_config: SessionConfig =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
@@ -58,13 +65,14 @@ fn main() {
     // After that, the client may be expected a server response. So if it's still
     // not open, we expect to the next incoming message from the server to be an
     // init message, and act accordingly.
-    while !client.is_open() {
-        request_tx
-            .send(client.get_init_request().expect("Expected client to have init message ready."))
-            .expect("failed to send init request");
 
+    // Handshake sequence
+    while !client.is_open() {
+        let request = client.next_init_message().expect("failed to get client init message");
+        request_tx.send(request).expect("failed to send init requets");
         if !client.is_open() {
-            client.put_init_response(response_rx.recv().expect("Failed to receive init response"));
+            let response = response_rx.recv().expect("failed to get next server message");
+            client.handle_init_message(response).expect("failed to handle init response");
         }
     }
 
@@ -73,12 +81,12 @@ fn main() {
     println!("Client is writing: {message}");
 
     // Encrypt and send the message.
-    let out_to_server = client.encrypt_request(message.as_bytes());
+    let out_to_server = client.encrypt(message.as_bytes()).expect("failed to encrypt message");
     request_tx.send(out_to_server).expect("Failed to send response");
 
     // Receive and decrypt the response.
     let response = response_rx.recv().expect("Failed to read response");
-    let decrypted = client.decrypt_response(response);
+    let decrypted = client.decrypt(response).expect("Failed to decrypt message");
 
     // Print it out and shut the server down.
     let str_message = String::from_utf8_lossy(decrypted.as_slice());
