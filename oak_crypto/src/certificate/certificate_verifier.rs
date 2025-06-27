@@ -106,7 +106,7 @@ impl<V: Verifier> CertificateVerifier<V> {
         .context("couldn't verify certificate payload")?;
 
         // Verify certificate validity.
-        let current_time = Instant::from_unix_millis_i64(milliseconds_since_epoch);
+        let current_time = Instant::from_unix_millis(milliseconds_since_epoch);
         let validity = payload.validity.context("empty validity field")?;
         self.verify_validity(current_time, &validity)
             .context("couldn't verify certificate validity")?;

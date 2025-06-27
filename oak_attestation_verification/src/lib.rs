@@ -59,20 +59,8 @@ pub fn verify_endorsement(
     let s = endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
     let digest = hex_to_raw_digest(&statement::get_digest(&s)?)?;
     let validity = s.predicate.validity.context("missing validity in statement")?;
-    let not_before = Instant::from_unix_millis(
-        validity
-            .not_before
-            .unix_timestamp_millis()
-            .try_into()
-            .context("failed to convert between signed and unsigned")?,
-    );
-    let not_after = Instant::from_unix_millis(
-        validity
-            .not_after
-            .unix_timestamp_millis()
-            .try_into()
-            .context("failed to convert between signed and unsigned")?,
-    );
+    let not_before = Instant::from_unix_millis(validity.not_before.unix_timestamp_millis());
+    let not_after = Instant::from_unix_millis(validity.not_after.unix_timestamp_millis());
 
     Ok(EndorsementDetails {
         subject_digest: Some(digest),

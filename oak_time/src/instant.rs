@@ -14,11 +14,7 @@
 // limitations under the License.
 //
 
-//! Represents a specific moment in time, measured as the duration since the
-//! Unix epoch. The reason for this module is that `core::time::Duration` does
-//! not represent a duration since the Unix epoch, but rather a duration between
-//! two arbitrary points in time. Using Duration for this purpose is not a good
-//! idea, as it can lead to unexpected results.
+//! Represents a specific moment in time, measured with respect to Unix epoch.
 //!
 //! It offers ways to create `Instant`s from various representations (like
 //! milliseconds since epoch) and perform arithmetic operations (addition and
@@ -30,23 +26,23 @@
 //! "system time" or system time source. It also does not rely (by default) on
 //! the std library.
 
-use core::{
-    convert::{From, TryInto},
-    ops::{Add, AddAssign, Sub, SubAssign},
-};
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 // An anchor in time which can be used to create new Instant instances or learn
 // about where in time an Instant lies. This is similar to the
 // SystemTime::UNIX_EPOCH.
-pub const UNIX_EPOCH: Instant = Instant { unix_epoch_duration: core::time::Duration::new(0, 0) };
+pub const UNIX_EPOCH: Instant = Instant { nanoseconds: 0 };
+
+const MILLIS_TO_NANOS: i128 = 1_000_000;
+const SECONDS_TO_NANOS: i128 = 1_000_000_000;
 
 /// Represents a specific moment in time.
 ///
-/// Internally, it stores the duration since the Unix epoch (January 1, 1970,
-/// 00:00:00 UTC).
+/// Internally, it stores signed nanonseconds anchored at Unix epoch
+/// (January 1, 1970, 00:00:00 UTC).
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Instant {
-    unix_epoch_duration: core::time::Duration,
+    nanoseconds: i128,
 }
 
 impl Instant {
@@ -61,36 +57,15 @@ impl Instant {
     /// # Arguments
     ///
     /// * `unix_epoch_millis`: The number of milliseconds since the Unix epoch.
-    pub fn from_unix_millis(unix_epoch_millis: u64) -> Self {
-        UNIX_EPOCH + core::time::Duration::from_millis(unix_epoch_millis)
-    }
-
-    /// Creates a new `Instant` from the number of milliseconds since the Unix
-    /// epoch.
-    ///
-    /// # Arguments
-    ///
-    /// * `unix_epoch_millis`: The number of milliseconds since the Unix epoch.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `unix_epoch_millis` cannot be converted to `u64`.
-    pub fn from_unix_millis_i64(unix_epoch_millis: i64) -> Self {
-        let unix_epoch_millis: u64 = unix_epoch_millis
-            .try_into()
-            .expect("Failed to convert milliseconds (value: {unix_epoch_millis})");
-        UNIX_EPOCH + core::time::Duration::from_millis(unix_epoch_millis)
-    }
-
-    /// Converts this instant into a duration since the Unix epoch.
-    pub fn into_unix_epoch_duration(self) -> core::time::Duration {
-        self.unix_epoch_duration
+    pub fn from_unix_millis(unix_epoch_millis: i64) -> Self {
+        Instant { nanoseconds: MILLIS_TO_NANOS * unix_epoch_millis as i128 }
     }
 
     /// Converts this instant into the number of milliseconds since the Unix
     /// epoch.
-    pub fn into_unix_millis(self) -> u128 {
-        self.unix_epoch_duration.as_millis()
+    pub fn into_unix_millis(self) -> i64 {
+        let millis = self.nanoseconds / MILLIS_TO_NANOS;
+        i64::try_from(millis).expect("failed to convert from i128 to i64")
     }
 
     /// Converts this instant into a `prost_types::Timestamp`.
@@ -102,16 +77,17 @@ impl Instant {
     /// (`i64` and `i32`).
     #[cfg(feature = "prost")]
     pub fn into_timestamp(self) -> prost_types::Timestamp {
-        prost_types::Timestamp {
-            seconds: self
-                .unix_epoch_duration
-                .as_secs()
-                .try_into()
-                .expect("Failed to convert seconds (value: {self.unix_epoch_duration.as_secs()})"),
-            nanos: self.unix_epoch_duration.subsec_nanos().try_into().expect(
-                "Failed to convert nanoseconds (value: {self.unix_epoch_duration.as_secs()})",
-            ),
+        let mut seconds = i64::try_from(self.nanoseconds / SECONDS_TO_NANOS)
+            .expect("failed to convert i128 to i64");
+        let mut nanos = i32::try_from(self.nanoseconds % SECONDS_TO_NANOS)
+            .expect("failed to convert i128 to i32");
+        // The `nanos` field in Timestamp is always positive, so we need to
+        // adjust accordingly.
+        if nanos < 0 {
+            nanos += 1_000_000_000;
+            seconds -= 1;
         }
+        prost_types::Timestamp { seconds, nanos }
     }
 }
 
@@ -132,7 +108,8 @@ impl Add<core::time::Duration> for Instant {
     ///
     /// A new `Instant` representing the original instant advanced by `other`.
     fn add(self, other: core::time::Duration) -> Self::Output {
-        Self { unix_epoch_duration: self.unix_epoch_duration + other }
+        let nanos = self.nanoseconds + other.as_nanos() as i128;
+        Self { nanoseconds: nanos }
     }
 }
 
@@ -148,10 +125,11 @@ impl Sub<Instant> for Instant {
     /// # Returns
     ///
     /// A `core::time::Duration` representing the duration between `self` and
-    /// `other`. If `other` is later than `self`, the duration will be
-    /// negative (panics if `core::time::Duration` subtraction panics).
+    /// `other`. Panics if `other` is later than `self`.
     fn sub(self, other: Instant) -> Self::Output {
-        self.unix_epoch_duration - other.unix_epoch_duration
+        let diff = self.nanoseconds - other.nanoseconds;
+        let nanos = u64::try_from(diff).expect("failed to convert i128 to u64");
+        core::time::Duration::from_nanos(nanos)
     }
 }
 
@@ -165,7 +143,7 @@ impl AddAssign<core::time::Duration> for Instant {
     ///
     /// * `other`: The `core::time::Duration` to add.
     fn add_assign(&mut self, other: core::time::Duration) {
-        self.unix_epoch_duration += other;
+        self.nanoseconds += other.as_nanos() as i128;
     }
 }
 
@@ -186,7 +164,7 @@ impl Sub<core::time::Duration> for Instant {
     ///
     /// A new `Instant` representing the original instant moved back by `other`.
     fn sub(self, other: core::time::Duration) -> Self {
-        Self { unix_epoch_duration: self.unix_epoch_duration - other }
+        Self { nanoseconds: self.nanoseconds - other.as_nanos() as i128 }
     }
 }
 
@@ -195,7 +173,7 @@ impl Sub<core::time::Duration> for Instant {
 /// Allows subtracting a `core::time::Duration` from an `Instant` in-place.
 impl SubAssign<core::time::Duration> for Instant {
     fn sub_assign(&mut self, other: core::time::Duration) {
-        self.unix_epoch_duration -= other;
+        self.nanoseconds -= other.as_nanos() as i128;
     }
 }
 
@@ -214,7 +192,7 @@ impl TryFrom<std::time::SystemTime> for Instant {
     /// `std::time::SystemTimeError` if the `SystemTime` is before the Unix
     /// epoch.
     fn try_from(instant: std::time::SystemTime) -> std::result::Result<Self, Self::Error> {
-        Ok(UNIX_EPOCH + instant.duration_since(std::time::UNIX_EPOCH)?)
+        Ok(UNIX_EPOCH + instant.duration_since(std::time::UNIX_EPOCH).expect("failed"))
     }
 }
 
@@ -229,20 +207,10 @@ impl From<&prost_types::Timestamp> for Instant {
     /// # Arguments
     ///
     /// * `timestamp`: The `prost_types::Timestamp` to convert.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `seconds` or `nanos` fields of the `timestamp` cannot be
-    /// converted to their respective types (`u64` and `u32`).
     fn from(timestamp: &prost_types::Timestamp) -> Self {
-        let unix_epoch_duration = core::time::Duration::new(
-            timestamp
-                .seconds
-                .try_into()
-                .expect("Failed to convert seconds (value: {timestamp.seconds})"),
-            timestamp.nanos.try_into().expect("Failed to convert nanos (value: {timestamp.nanos})"),
-        );
-        UNIX_EPOCH + unix_epoch_duration
+        Instant {
+            nanoseconds: SECONDS_TO_NANOS * timestamp.seconds as i128 + timestamp.nanos as i128,
+        }
     }
 }
 
@@ -257,13 +225,10 @@ impl From<prost_types::Timestamp> for Instant {
     /// # Arguments
     ///
     /// * `timestamp`: The `prost_types::Timestamp` to convert.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `seconds` or `nanos` fields of the `timestamp` cannot be
-    /// converted to their respective types (`u64` and `u32`).
     fn from(timestamp: prost_types::Timestamp) -> Self {
-        Instant::from(&timestamp)
+        Instant {
+            nanoseconds: SECONDS_TO_NANOS * timestamp.seconds as i128 + timestamp.nanos as i128,
+        }
     }
 }
 
@@ -275,22 +240,19 @@ mod tests {
 
     use crate::instant::Instant;
 
-    #[googletest::test]
-    fn test_instant() {
-        let instant = Instant::from_unix_millis(1234567890);
-        assert_that!(
-            instant.into_unix_epoch_duration(),
-            eq(core::time::Duration::from_millis(1234567890))
-        );
-    }
+    // Minimum supported value for Timestamp: 0001-01-01 00:00:00.0 +00:00:00.
+    const MIN_VALUE_MILLIS: i64 = -62_135_596_800_000;
+    const MIN_VALUE_SECONDS: i64 = -62_135_596_800;
+
+    // Maximum supported value for Timestamp: 9999-12-31T23:59:59.999999999Z.
+    const MAX_VALUE_MILLIS: i64 = 253_402_300_799_000;
+    const MAX_VALUE_SECONDS: i64 = 253_402_300_799;
 
     #[googletest::test]
-    fn test_instant_from_unix_millis_i64() {
-        let instant = Instant::from_unix_millis_i64(1234567890_i64);
-        assert_that!(
-            instant.into_unix_epoch_duration(),
-            eq(core::time::Duration::from_millis(1234567890))
-        );
+    fn test_unix_millis_conversion_example() {
+        const EXPECTED_MILLIS: i64 = 1234567890;
+        let instant = Instant::from_unix_millis(EXPECTED_MILLIS);
+        assert_eq!(EXPECTED_MILLIS, instant.into_unix_millis());
     }
 
     #[googletest::test]
@@ -340,7 +302,7 @@ mod tests {
 
     #[cfg(feature = "prost")]
     #[googletest::test]
-    fn test_instant_from_prost_types() {
+    fn test_timestamp_to_instant_example() {
         let timestamp = prost_types::Timestamp { seconds: 12345, nanos: 67890 };
         let instant = Instant::from(timestamp);
         assert_that!(instant, eq(Instant::UNIX_EPOCH + core::time::Duration::new(12345, 67890)));
@@ -348,10 +310,91 @@ mod tests {
 
     #[cfg(feature = "prost")]
     #[googletest::test]
-    fn test_instant_into_prost_types() {
+    fn test_instant_to_timestamp_positive() {
         let instant = Instant::from_unix_millis(12345);
         let timestamp = instant.into_timestamp();
         let expected_timestamp = prost_types::Timestamp { seconds: 12, nanos: 345_000_000 };
         assert_that!(&timestamp, eq(&expected_timestamp));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_timestamp_to_instant_negative() {
+        let expected = prost_types::Timestamp { seconds: -12345, nanos: 67890 };
+        let instant = Instant::from(expected);
+        let actual = instant.into_timestamp();
+        assert_that!(expected, eq(actual));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_instant_to_timestamp_example() {
+        let expected_instant = Instant::from_unix_millis(-12345);
+        let actual_timestamp = expected_instant.into_timestamp();
+        assert_that!(
+            &actual_timestamp,
+            eq(&prost_types::Timestamp { seconds: -13, nanos: 655_000_000 })
+        );
+        let actual_instant = Instant::from(actual_timestamp);
+        assert_that!(expected_instant, eq(actual_instant));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_instant_to_timestamp_min() {
+        let expected_instant = Instant::from_unix_millis(MIN_VALUE_MILLIS);
+        let actual_timestamp = expected_instant.into_timestamp();
+        assert_that!(
+            &actual_timestamp,
+            eq(&prost_types::Timestamp { seconds: MIN_VALUE_SECONDS, nanos: 0 })
+        );
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_instant_to_timestamp_max() {
+        let expected_instant = Instant::from_unix_millis(MAX_VALUE_MILLIS);
+        let actual_timestamp = expected_instant.into_timestamp();
+        assert_that!(
+            &actual_timestamp,
+            eq(&prost_types::Timestamp { seconds: MAX_VALUE_SECONDS, nanos: 0 })
+        );
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_timetamp_conversion_left_min() {
+        let expected_instant = Instant::from_unix_millis(MIN_VALUE_MILLIS);
+        let actual_timestamp = expected_instant.into_timestamp();
+        let actual_instant = Instant::from(actual_timestamp);
+        assert_that!(expected_instant, eq(actual_instant));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_timetamp_conversion_left_max() {
+        let expected_instant = Instant::from_unix_millis(MAX_VALUE_MILLIS);
+        let actual_timestamp = expected_instant.into_timestamp();
+        let actual_instant = Instant::from(actual_timestamp);
+        assert_that!(expected_instant, eq(actual_instant));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_timetamp_conversion_right_min() {
+        let expected_timestamp = prost_types::Timestamp { seconds: MIN_VALUE_SECONDS, nanos: 0 };
+        let actual_instant = Instant::from(expected_timestamp);
+        let actual_timestamp = actual_instant.into_timestamp();
+        assert_that!(expected_timestamp, eq(actual_timestamp));
+    }
+
+    #[cfg(feature = "prost")]
+    #[googletest::test]
+    fn test_timetamp_conversion_right_max() {
+        let expected_timestamp =
+            prost_types::Timestamp { seconds: MAX_VALUE_SECONDS, nanos: 999_999_999 };
+        let actual_instant = Instant::from(expected_timestamp);
+        let actual_timestamp = actual_instant.into_timestamp();
+        assert_that!(expected_timestamp, eq(actual_timestamp));
     }
 }

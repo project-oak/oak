@@ -74,8 +74,8 @@ fn test_verify_certificate_success() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
         TEST_SIGNATURE,
     );
 
@@ -96,8 +96,8 @@ fn test_verify_certificate_signature_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
         TEST_BAD_SIGNATURE,
     );
 
@@ -122,8 +122,8 @@ fn test_verify_certificate_zero_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         // `not_after` is equal to `not_before`.
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
         TEST_SIGNATURE,
     );
     let result = verifier.verify(
@@ -144,8 +144,8 @@ fn test_verify_certificate_negative_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         // `not_after` is smaller than `not_before`.
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
         TEST_SIGNATURE,
     );
     let result = verifier.verify(
@@ -162,8 +162,8 @@ fn test_verify_certificate_validity_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 2).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 2).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
         TEST_SIGNATURE,
     );
 
@@ -184,8 +184,8 @@ fn test_verify_certificate_public_key_failure() {
     let certificate = create_test_certificate(
         TEST_BAD_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
         TEST_SIGNATURE,
     );
 
@@ -206,8 +206,8 @@ fn test_verify_certificate_purpose_failure() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_BAD_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
         TEST_SIGNATURE,
     );
 
@@ -228,8 +228,8 @@ fn test_verify_certificate_clock_skew() {
     let certificate = create_test_certificate(
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS - 5).into_timestamp(),
-        Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + 5).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 5).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 5).into_timestamp(),
         TEST_SIGNATURE,
     );
 
@@ -277,9 +277,8 @@ fn test_verify_certificate_validity_limit() {
         create_test_certificate(
             TEST_PUBLIC_KEY,
             TEST_PURPOSE_ID,
-            Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
-            Instant::from_unix_millis_i64(TEST_CURRENT_TIME_MILLISECONDS + validity)
-                .into_timestamp(),
+            Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+            Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + validity).into_timestamp(),
             TEST_SIGNATURE,
         )
     }
