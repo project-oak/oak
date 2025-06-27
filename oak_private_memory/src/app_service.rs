@@ -15,11 +15,14 @@
 
 use std::{pin::Pin, sync::Arc};
 
-use anyhow::{anyhow, Context};
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use anyhow::anyhow;
+use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_sdk_server_v1::{ApplicationHandler, OakApplicationContext};
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
     ServerSession, Session,
 };
 use opentelemetry::KeyValue;
@@ -59,39 +62,66 @@ impl SealedMemoryServiceImplementation {
         application_handler: &SealedMemoryHandler,
         server_session: &mut ServerSession,
         session_request: SessionRequest,
-    ) -> Result<Option<SessionResponse>, tonic::Status> {
+    ) -> tonic::Result<Option<SessionResponse>> {
         if server_session.is_open() {
-            let decrypted_request = server_session
-                .decrypt_request(session_request)
-                .into_tonic_result("failed to decrypt request")?;
-            let plaintext_response = application_handler.handle(&decrypted_request).await;
-            if plaintext_response.is_err() {
+            Self::handle_app_request(application_handler, server_session, session_request).await
+        } else {
+            Self::handle_init_request(application_handler, server_session, session_request).await
+        }
+    }
+
+    async fn handle_init_request(
+        application_handler: &SealedMemoryHandler,
+        server_session: &mut ServerSession,
+        session_request: SessionRequest,
+    ) -> tonic::Result<Option<SessionResponse>> {
+        application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "Handshake")]);
+        server_session
+            .handle_init_message(session_request)
+            .into_tonic_result("failed to handle init request")?;
+
+        // The server may optionally need to send an init response.
+        if !server_session.is_open() {
+            match server_session
+                .next_init_message()
+                .into_tonic_result("failed to get next init message")
+            {
+                Ok(r) => Ok(Some(r)),
+                Err(e) => {
+                    application_handler
+                        .metrics
+                        .rpc_failure_count
+                        .add(1, &[KeyValue::new("request_type", "Handshake")]);
+                    Err(e)
+                }
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn handle_app_request(
+        application_handler: &SealedMemoryHandler,
+        server_session: &mut ServerSession,
+        session_request: SessionRequest,
+    ) -> tonic::Result<Option<SessionResponse>> {
+        let decrypted_request = server_session
+            .decrypt(session_request)
+            .into_tonic_result("failed to decrypt request")?;
+
+        match application_handler.handle(&decrypted_request).await {
+            Err(e) => {
                 application_handler
                     .metrics
                     .rpc_failure_count
                     .add(1, &[KeyValue::new("request_type", "total")]);
+                Err(e).into_tonic_result("failed to handle message")
             }
-            let plaintext_response = plaintext_response.into_tonic_result("application failed")?;
-            Ok(Some(
+            Ok(plaintext_response) => Ok(Some(
                 server_session
-                    .encrypt_response(&plaintext_response)
+                    .encrypt(plaintext_response)
                     .into_tonic_result("failed to encrypt response")?,
-            ))
-        } else {
-            application_handler
-                .metrics
-                .rpc_count
-                .add(1, &[KeyValue::new("request_type", "Handshake")]);
-            let response = server_session
-                .init_session(session_request)
-                .into_tonic_result("failed process handshake");
-            if response.is_err() {
-                application_handler
-                    .metrics
-                    .rpc_failure_count
-                    .add(1, &[KeyValue::new("request_type", "Handshake")]);
-            }
-            response
+            )),
         }
     }
 }
@@ -103,42 +133,6 @@ trait IntoTonicResult<T> {
 impl<T> IntoTonicResult<T> for anyhow::Result<T> {
     fn into_tonic_result(self, context: &str) -> tonic::Result<T> {
         self.map_err(|e| tonic::Status::internal(format!("{context}: {e:?}")))
-    }
-}
-
-trait ServerSessionHelpers {
-    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>>;
-    fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse>;
-    fn init_session(
-        &mut self,
-        session_request: SessionRequest,
-    ) -> anyhow::Result<Option<SessionResponse>>;
-}
-
-impl ServerSessionHelpers for ServerSession {
-    fn decrypt_request(&mut self, session_request: SessionRequest) -> anyhow::Result<Vec<u8>> {
-        self.put_incoming_message(session_request).context("failed to put request")?;
-        Ok(self
-            .read()
-            .context("failed to read decrypted message")?
-            .ok_or_else(|| anyhow::anyhow!("empty plaintext response"))?
-            .plaintext)
-    }
-
-    fn encrypt_response(&mut self, response: &[u8]) -> anyhow::Result<SessionResponse> {
-        self.write(PlaintextMessage { plaintext: response.to_vec() })
-            .context("failed to write response")?;
-        self.get_outgoing_message()
-            .context("failed get get encrypted response")?
-            .ok_or_else(|| anyhow::anyhow!("empty encrypted response"))
-    }
-
-    fn init_session(
-        &mut self,
-        session_request: SessionRequest,
-    ) -> anyhow::Result<Option<SessionResponse>> {
-        self.put_incoming_message(session_request).context("failed to put request")?;
-        self.get_outgoing_message().context("failed to get outgoing messge")
     }
 }
 
@@ -167,13 +161,10 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
                 application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
                 debug!("Receive request!!");
                 let session_request = request?;
-
-                if let Some(response) = Self::handle_session_request(&application_handler,
-                    &mut server_session,
-                    session_request,
-                ).await? {
-                    yield response;
-                }
+                let response =
+                    Self::handle_session_request(&application_handler, &mut server_session, session_request)
+                    .await?;
+                if let Some(response) = response { yield response; }
             }
             debug!("Enclave Stream finished");
         };
@@ -196,15 +187,10 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
             while let Some(request) = request_stream.next().await {
                 application_handler.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
                 let session_request = request?.session_request.ok_or_else(|| tonic::Status::internal("failed to get session request"))?;
-
-                if let Some(response) = Self::handle_session_request(&application_handler,
-                    &mut server_session,
-                    session_request,
-                ).await? {
-                    yield SealedMemorySessionResponse {
-                        session_response: Some(response),
-                    };
-                }
+                let session_response =
+                    Self::handle_session_request(&application_handler, &mut server_session, session_request)
+                    .await?;
+                yield SealedMemorySessionResponse { session_response }
             }
             debug!("Enclave Stream finished");
         };

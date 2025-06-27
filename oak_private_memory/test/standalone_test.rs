@@ -15,14 +15,16 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use futures::channel::mpsc;
 use log::info;
-use oak_proto_rust::oak::session::v1::PlaintextMessage;
 use oak_sdk_server_v1::OakApplicationContext;
 use oak_sdk_standalone::Standalone;
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
     Session,
 };
 use private_memory_server_lib::{
@@ -90,77 +92,6 @@ async fn start_server() -> Result<(
     ))
 }
 
-#[async_trait::async_trait]
-trait ClientSessionHelper {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SealedMemorySessionRequest>;
-    fn decrypt_response(
-        &mut self,
-        session_response: SealedMemorySessionResponse,
-    ) -> anyhow::Result<Vec<u8>>;
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SealedMemorySessionRequest>,
-        receive_response: &mut tonic::Streaming<SealedMemorySessionResponse>,
-    ) -> anyhow::Result<()>;
-}
-
-#[async_trait::async_trait]
-impl ClientSessionHelper for oak_session::ClientSession {
-    fn encrypt_request(&mut self, request: &[u8]) -> anyhow::Result<SealedMemorySessionRequest> {
-        self.write(PlaintextMessage { plaintext: request.to_vec() })
-            .context("couldn't write message to encrypt")?;
-
-        Ok(SealedMemorySessionRequest {
-            session_request: Some(
-                self.get_outgoing_message()
-                    .context("error getting encrypted request")?
-                    .ok_or_else(|| anyhow::anyhow!("no encrypted request"))?,
-            ),
-        })
-    }
-
-    fn decrypt_response(
-        &mut self,
-        session_response: SealedMemorySessionResponse,
-    ) -> anyhow::Result<Vec<u8>> {
-        let session_response = session_response
-            .session_response
-            .ok_or_else(|| tonic::Status::internal("failed to get session response"))?;
-        self.put_incoming_message(session_response)
-            .context("failed to put response for decryption")?;
-        self.read()
-            .context("error reading decrypted response")?
-            .ok_or_else(|| anyhow::anyhow!("no encrypted response"))
-            .map(|p| p.plaintext)
-    }
-
-    async fn init_session(
-        &mut self,
-        send_request: &mut mpsc::Sender<SealedMemorySessionRequest>,
-        receive_response: &mut tonic::Streaming<SealedMemorySessionResponse>,
-    ) -> Result<()> {
-        while !self.is_open() {
-            let init_request =
-                self.get_outgoing_message().context("error getting init_message")?.ok_or_else(
-                    || anyhow::anyhow!("no init message provided, but session not initialized"),
-                )?;
-            let init_request = SealedMemorySessionRequest { session_request: Some(init_request) };
-            send_request.try_send(init_request).context("failed to send init request")?;
-
-            if let Some(init_response) =
-                receive_response.message().await.context("failed to receive response")?
-            {
-                let init_response = init_response
-                    .session_response
-                    .ok_or_else(|| tonic::Status::internal("failed to get session response"))?;
-                self.put_incoming_message(init_response)
-                    .context("error putting init_response response")?;
-            }
-        }
-        Ok(())
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 enum TestMode {
     BinaryProto,
@@ -189,9 +120,9 @@ async fn send_request_generic<T>(
         }
     };
 
-    let encrypted_request =
-        client_session.encrypt_request(&payload).expect("failed to encrypt message");
-    tx.try_send(encrypted_request).expect("Could not send request to server");
+    let encrypted_request = client_session.encrypt(payload).expect("failed to encrypt message");
+    tx.try_send(SealedMemorySessionRequest { session_request: Some(encrypted_request) })
+        .expect("Could not send request to server");
 }
 
 // Generic helper to receive a response based on TestMode
@@ -210,8 +141,9 @@ where
         .expect("error getting response")
         .expect("didn't get any repsonse");
 
-    let decrypted_response =
-        client_session.decrypt_response(response).expect("failed to decrypt response");
+    let decrypted_response = client_session
+        .decrypt(response.session_response.expect("empty session response"))
+        .expect("failed to decrypt response");
 
     let sealed_memory_response = match mode {
         TestMode::BinaryProto => SealedMemoryResponse::decode(decrypted_response.as_ref())
@@ -833,7 +765,7 @@ async fn test_add_get_reset_memory_all_modes() {
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
         .unwrap();
-        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
 
         execute_add_get_reset_memory_logic(
             &mut tx,
@@ -860,7 +792,8 @@ async fn test_embedding_search_all_modes() {
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
         .unwrap();
-        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
 
         execute_embedding_search_logic(&mut tx, &mut client_session, &mut response_stream, mode)
             .await;
@@ -882,7 +815,7 @@ async fn test_result_masking_all_modes() {
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
         .unwrap();
-        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
 
         execute_result_masking_logic(&mut tx, &mut client_session, &mut response_stream, mode)
             .await;
@@ -904,7 +837,7 @@ async fn test_boot_strap_all_modes() {
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
         .unwrap();
-        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
 
         execute_boot_strap_logic(&mut tx, &mut client_session, &mut response_stream, mode).await;
     }
@@ -981,8 +914,31 @@ async fn test_delete_memory_all_modes() {
             SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
         )
         .unwrap();
-        client_session.init_session(&mut tx, &mut response_stream).await.unwrap();
+
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
 
         execute_delete_memory_logic(&mut tx, &mut client_session, &mut response_stream, mode).await;
+    }
+}
+
+async fn init_client_session_wrapped(
+    client_session: &mut oak_session::ClientSession,
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
+) {
+    while !client_session.is_open() {
+        let request = client_session.next_init_message().expect("failed to get next init message");
+        tx.try_send(SealedMemorySessionRequest { session_request: Some(request) })
+            .expect("failed to send init request");
+        if !client_session.is_open() {
+            let response = response_stream
+                .message()
+                .await
+                .expect("empty init response")
+                .expect("failed to get init response");
+            client_session
+                .handle_init_message(response.session_response.expect("missing session response"))
+                .expect("failed to handle init response");
+        }
     }
 }
