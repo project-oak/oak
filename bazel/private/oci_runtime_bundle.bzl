@@ -20,6 +20,7 @@ def _oci_runtime_bundle_impl(ctx):
     bundle = ctx.outputs.bundle
     umoci = ctx.toolchains["//bazel/tools/umoci:toolchain_type"].umociinfo.bin
     yq = ctx.toolchains["@aspect_bazel_lib//lib:yq_toolchain_type"].yqinfo.bin
+    config_patch = ctx.attr.config_patch.replace('"', '\\"')
 
     # Since bazel doesn't support actions that create directory artifacts
     # containing symlinks, we use a shell script so that a single action can
@@ -33,6 +34,7 @@ def _oci_runtime_bundle_impl(ctx):
         substitutions = {
             "{{umoci}}": umoci.path,
             "{{yq}}": yq.path,
+            "{{config_patch}}": config_patch,
         },
     )
 
@@ -51,6 +53,10 @@ _oci_runtime_bundle = rule(
     attrs = {
         "image": attr.label(allow_single_file = True),
         "bundle": attr.output(),
+        "config_patch": attr.string(
+            default = "",
+            doc = "Patch for yq to apply to the OCI runtime bundle config.json",
+        ),
         "_tpl": attr.label(
             allow_single_file = True,
             default = ":oci_runtime_bundle.sh.tpl",

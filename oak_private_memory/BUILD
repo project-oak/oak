@@ -169,5 +169,6 @@ oci_image(
 
 oci_runtime_bundle(
     name = "bundle",
+    config_patch = 'with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .hard = 524288) | with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .soft = 524288)',
     image = ":image",
 )
