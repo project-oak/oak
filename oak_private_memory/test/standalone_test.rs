@@ -18,8 +18,6 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use anyhow::Result;
 use futures::channel::mpsc;
 use log::info;
-use oak_sdk_server_v1::OakApplicationContext;
-use oak_sdk_standalone::Standalone;
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -60,27 +58,12 @@ async fn start_server() -> Result<(
 
     let application_config_vec = serde_json::to_vec(&application_config)?;
 
-    let standalone = Standalone::builder()
-        .application_config(application_config_vec.clone())
-        .build()
-        .expect("failed to create Oak standalone elements");
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     Ok((
         addr,
         db_addr,
         tokio::spawn(private_memory_server_lib::app_service::create(
             listener,
-            OakApplicationContext::new(
-                Box::new(standalone.encryption_key_handle()),
-                standalone.endorsed_evidence(),
-                Box::new(
-                    private_memory_server_lib::app::SealedMemoryHandler::new(
-                        &application_config_vec,
-                        metrics.clone(),
-                    )
-                    .await,
-                ),
-            ),
             private_memory_server_lib::app::SealedMemoryHandler::new(
                 &application_config_vec,
                 metrics.clone(),

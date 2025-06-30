@@ -17,7 +17,6 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use oak_sdk_server_v1::ApplicationHandler;
 use opentelemetry::KeyValue;
 use prost::{Message, Name};
 use rand::Rng;
@@ -689,13 +688,12 @@ fn get_name<T: Name>(_x: &T) -> String {
     T::NAME.to_string()
 }
 
-#[async_trait::async_trait]
-impl ApplicationHandler for SealedMemoryHandler {
+impl SealedMemoryHandler {
     /// This implementation is quite simple, since there's just a single request
     /// that is a string. In a real implementation, we'd probably
     /// deserialize into a proto, and dispatch to various handlers from
     /// there.
-    async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         let request = self.deserialize_request(request_bytes).await;
         let mut message_type = None;
         let response = if request.is_none() {

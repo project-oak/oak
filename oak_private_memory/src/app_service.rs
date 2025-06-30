@@ -17,7 +17,6 @@ use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
-use oak_sdk_server_v1::{ApplicationHandler, OakApplicationContext};
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -37,8 +36,6 @@ use crate::{app::SealedMemoryHandler, log::debug, metrics};
 
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct SealedMemoryServiceImplementation {
-    #[allow(dead_code)]
-    oak_application_context: Arc<OakApplicationContext>,
     // Needed while we implement noise inline.
     application_handler: crate::app::SealedMemoryHandler,
     #[allow(dead_code)]
@@ -46,16 +43,8 @@ struct SealedMemoryServiceImplementation {
 }
 
 impl SealedMemoryServiceImplementation {
-    pub fn new(
-        oak_application_context: OakApplicationContext,
-        application_handler: SealedMemoryHandler,
-        metrics: Arc<metrics::Metrics>,
-    ) -> Self {
-        Self {
-            oak_application_context: Arc::new(oak_application_context),
-            application_handler,
-            metrics,
-        }
+    pub fn new(application_handler: SealedMemoryHandler, metrics: Arc<metrics::Metrics>) -> Self {
+        Self { application_handler, metrics }
     }
 
     async fn handle_session_request(
@@ -200,14 +189,12 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
 
 pub async fn create(
     listener: TcpListener,
-    oak_session_context: OakApplicationContext,
     application_handler: SealedMemoryHandler,
     metrics: Arc<metrics::Metrics>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(
             SealedMemoryServiceServer::new(SealedMemoryServiceImplementation::new(
-                oak_session_context,
                 application_handler,
                 metrics,
             ))

@@ -17,10 +17,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_sdk_containers::{
-    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
-};
-use oak_sdk_server_v1::OakApplicationContext;
+use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
 use private_memory_server_lib::log::debug;
 use tokio::net::TcpListener;
 
@@ -40,30 +37,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("failed to get application config")?;
 
-    let endorsed_evidence = orchestrator_client
-        .get_endorsed_evidence()
-        .await
-        .context("failed to get endorsed evidence")?;
-
-    let encryption_key_handle = InstanceEncryptionKeyHandle::create(&orchestrator_channel);
-
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
         listener,
-        OakApplicationContext::new(
-            Box::new(encryption_key_handle),
-            endorsed_evidence,
-            Box::new(
-                private_memory_server_lib::app::SealedMemoryHandler::new(
-                    &application_config,
-                    metrics.clone(),
-                )
-                .await,
-            ),
-        ),
         private_memory_server_lib::app::SealedMemoryHandler::new(
             &application_config,
             metrics.clone(),
