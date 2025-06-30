@@ -40,9 +40,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let join_handle =
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
-            Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
+            oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
                 application_config,
-            }),
+            },
         ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     println!("Enclave hello world app now serving!");

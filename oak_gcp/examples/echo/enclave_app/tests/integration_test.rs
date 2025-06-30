@@ -27,7 +27,7 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
         addr,
         tokio::spawn(oak_gcp_examples_echo_enclave_app::app_service::create(
             listener,
-            Box::new(oak_gcp_examples_echo_enclave_app::app::EchoHandler),
+            oak_gcp_examples_echo_enclave_app::app::EchoHandler,
         )),
     ))
 }

@@ -26,7 +26,6 @@ use oak_hello_world_proto::oak::containers::example::enclave_application_server:
     EnclaveApplication, EnclaveApplicationServer,
 };
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
-use oak_sdk_server_v1::ApplicationHandler;
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -37,14 +36,16 @@ use oak_session::{
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
+use crate::app::HelloWorldApplicationHandler;
+
 /// The struct that will hold the gRPC EnclaveApplication implementation.
 struct EnclaveApplicationImplementation {
     // Needed while we implement noise inline.
-    application_handler: Arc<Box<dyn ApplicationHandler>>,
+    application_handler: Arc<HelloWorldApplicationHandler>,
 }
 
 impl EnclaveApplicationImplementation {
-    pub fn new(application_handler: Box<dyn ApplicationHandler>) -> Self {
+    pub fn new(application_handler: HelloWorldApplicationHandler) -> Self {
         Self { application_handler: Arc::new(application_handler) }
     }
 }
@@ -126,7 +127,7 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
 
 pub async fn create(
     listener: TcpListener,
-    application_handler: Box<dyn ApplicationHandler>,
+    application_handler: HelloWorldApplicationHandler,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(EnclaveApplicationServer::new(EnclaveApplicationImplementation::new(

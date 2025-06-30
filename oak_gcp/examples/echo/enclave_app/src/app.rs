@@ -13,14 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_sdk_server_v1::ApplicationHandler;
-
 /// The actual business logic for the echo application.
 pub struct EchoHandler;
 
-#[async_trait::async_trait]
-impl ApplicationHandler for EchoHandler {
-    async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+impl EchoHandler {
+    pub async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         Ok(request_bytes.to_vec())
     }
 }

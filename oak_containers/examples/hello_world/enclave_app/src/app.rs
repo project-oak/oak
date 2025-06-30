@@ -13,20 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use oak_sdk_server_v1::ApplicationHandler;
-
 /// The actual business logic for the hello world application.
 pub struct HelloWorldApplicationHandler {
     pub application_config: Vec<u8>,
 }
 
-#[async_trait::async_trait]
-impl ApplicationHandler for HelloWorldApplicationHandler {
+impl HelloWorldApplicationHandler {
     /// This implementation is quite simple, since there's just a single request
     /// that is a string. In a real implementation, we'd probably
     /// deserialize into a proto, and dispatch to various handlers from
     /// there.
-    async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         let name = String::from_utf8_lossy(request_bytes);
         let config_len = self.application_config.len();
         Ok(

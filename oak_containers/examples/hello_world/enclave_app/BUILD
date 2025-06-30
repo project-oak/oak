@@ -36,7 +36,6 @@ rust_library(
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_crypto",
         "//oak_proto_rust",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
@@ -60,7 +59,6 @@ rust_test(
         "//oak_crypto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_sdk/standalone:oak_sdk_standalone",
         "//oak_session",
         "@oak_crates_index//:anyhow",
@@ -77,7 +75,6 @@ rust_binary(
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
         "//oak_sdk/containers:oak_sdk_containers",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:tokio",

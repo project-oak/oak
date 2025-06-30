@@ -39,9 +39,9 @@ async fn start_server() -> Result<(SocketAddr, tokio::task::JoinHandle<Result<()
         addr,
         tokio::spawn(oak_containers_examples_hello_world_enclave_app::app_service::create(
             listener,
-            Box::new(oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
-                application_config: APPLICATION_CONFIG.to_vec()
-            }),
+            oak_containers_examples_hello_world_enclave_app::app::HelloWorldApplicationHandler {
+                application_config: APPLICATION_CONFIG.to_vec(),
+            },
         )),
     ))
 }

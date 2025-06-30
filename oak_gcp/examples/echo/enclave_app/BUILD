@@ -35,7 +35,6 @@ rust_library(
         "//oak_crypto",
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
         "//oak_proto_rust",
-        "//oak_sdk/server/v1:oak_sdk_server_v1",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",

@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let join_handle = tokio::spawn(oak_gcp_examples_echo_enclave_app::app_service::create(
         listener,
-        Box::new(oak_gcp_examples_echo_enclave_app::app::EchoHandler),
+        oak_gcp_examples_echo_enclave_app::app::EchoHandler,
     ));
     println!("Enclave echo app now serving!");
     join_handle.await??;
