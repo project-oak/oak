@@ -19,7 +19,7 @@ use std::{
 };
 
 use clap::Parser;
-use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
+use oak_containers_agent::set_error_handler;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
 use oak_proto_rust::oak::functions::{config::ApplicationConfig, InitializeRequest};
@@ -33,8 +33,6 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
     #[arg(default_value = "")]
     wasm_path: String,
 }
@@ -66,14 +64,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let application_config = ApplicationConfig::default();
     let wasmtime_config = application_config.wasmtime_config.unwrap_or_default();
 
-    let metrics_config = MetricsConfig {
-        launcher_addr: args.launcher_addr,
-        scope: "oak_functions_standalone",
-        excluded_metrics: None,
-    };
-
-    let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
-
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), OAK_FUNCTIONS_STANDALONE_PORT);
 
     let oak_functions_session_args = OakFunctionsSessionArgs {
@@ -87,7 +77,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(addr).await?;
         serve::<WasmtimeHandler>(
             Box::new(TcpListenerStream::new(listener)),
-            oak_observer,
             wasmtime_config,
             oak_functions_session_args,
         )

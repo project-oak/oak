@@ -16,29 +16,26 @@
 
 #![feature(c_size_t)]
 
-use std::{
-    error::Error,
-    pin::Pin,
-    sync::{Arc, OnceLock},
-};
+use std::{error::Error, pin::Pin, sync::Arc};
 
 use anyhow::Context;
-use oak_containers_agent::metrics::OakObserver;
-use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
+use oak_functions_service::{instance::OakFunctionsInstance, Handler};
 use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
-use oak_proto_rust::oak::functions::{
-    standalone::{OakSessionRequest, OakSessionResponse},
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, ReserveRequest,
-    ReserveResponse,
+use oak_proto_rust::oak::{
+    functions::{
+        standalone::{OakSessionRequest, OakSessionResponse},
+        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+        FinishNextLookupDataResponse, InitializeRequest, ReserveRequest, ReserveResponse,
+    },
+    session::v1::{
+        session_request::Request, session_response::Response, EncryptedMessage, SessionResponse,
+    },
 };
-use opentelemetry::metrics::{Histogram, Meter};
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_stream::Stream;
+use tokio_stream::{Stream, StreamExt};
 use tonic::{codec::CompressionEncoding, transport::server::Connected};
-use tracing::Span;
 
 // Arguements to start up the Oak Functions Session Service.
 // While currently there is only one argument, in the future lookup data
@@ -49,71 +46,80 @@ pub struct OakFunctionsSessionArgs {
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsSessionService<H: Handler> {
-    instance_config: H::HandlerConfig,
-    instance: OnceLock<OakFunctionsInstance<H>>,
-    observer: Option<Arc<dyn Observer + Send + Sync>>,
+    instance: Arc<OakFunctionsInstance<H>>,
 }
 
 impl<H: Handler> OakFunctionsSessionService<H> {
     pub fn startup(
         instance_config: H::HandlerConfig,
-        observer: Option<Arc<dyn Observer + Send + Sync>>,
         oak_functions_session_args: OakFunctionsSessionArgs,
     ) -> Self {
-        let oak_functions_session_service =
-            OakFunctionsSessionService { instance_config, instance: OnceLock::new(), observer };
-        // Initialize the OakFuncitonsInstance.
-        if let Err(e) =
-            oak_functions_session_service.initialize(oak_functions_session_args.wasm_initialization)
-        {
-            eprintln!("Error initializing OakFunctionsSessionService: {:?}", e);
-            panic!("Initialization failed!"); // Or propagate the error
-        }
+        let instance = OakFunctionsInstance::new(
+            &oak_functions_session_args.wasm_initialization,
+            None,
+            instance_config.clone(),
+        )
+        .map_err(map_status)
+        .unwrap();
 
         // TODO: b/424407998 - Load lookup data via calls to `reserve`,
         // `finish_next_lookup_data`, and `extend_next_lookup_data`.
-        oak_functions_session_service
-    }
-
-    fn initialize(&self, request: InitializeRequest) -> tonic::Result<InitializeResponse> {
-        match self.instance.get() {
-            Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
-            None => {
-                let instance = OakFunctionsInstance::new(
-                    &request,
-                    self.observer.clone(),
-                    self.instance_config.clone(),
-                )
-                .map_err(map_status)?;
-                if self.instance.set(instance).is_err() {
-                    return Err(tonic::Status::failed_precondition("already initialized"));
-                }
-                Ok(InitializeResponse::default())
-            }
-        }
+        Self { instance: Arc::new(instance) }
     }
 
     pub fn extend_next_lookup_data(
         &self,
         request: ExtendNextLookupDataRequest,
     ) -> tonic::Result<ExtendNextLookupDataResponse> {
-        self.get_instance()?.extend_next_lookup_data(request).map_err(map_status)
+        self.get_instance().extend_next_lookup_data(request).map_err(map_status)
     }
 
     pub fn finish_next_lookup_data(
         &self,
         request: FinishNextLookupDataRequest,
     ) -> tonic::Result<FinishNextLookupDataResponse> {
-        self.get_instance()?.finish_next_lookup_data(request).map_err(map_status)
+        self.get_instance().finish_next_lookup_data(request).map_err(map_status)
     }
 
     pub fn reserve(&self, request: ReserveRequest) -> tonic::Result<ReserveResponse> {
-        self.get_instance()?.reserve(request).map_err(map_status)
+        self.get_instance().reserve(request).map_err(map_status)
+    }
+
+    async fn handle_request(
+        request: Result<OakSessionRequest, tonic::Status>,
+        instance_ref: &OakFunctionsInstance<H>,
+    ) -> Result<OakSessionResponse, tonic::Status> {
+        let oak_session_request = request?;
+        let session_request = oak_session_request
+            .request
+            .ok_or(tonic::Status::invalid_argument("No request in OakSessionRequest"))?;
+        let ciphertext: Result<Vec<u8>, tonic::Status> = match session_request
+            .request
+            .ok_or(tonic::Status::invalid_argument("No request in SessionRequest"))
+            .unwrap()
+        {
+            Request::EncryptedMessage(encrypted_message) => {
+                Ok(encrypted_message.ciphertext.clone())
+            }
+            _ => Err(tonic::Status::failed_precondition("No ciphertext")),
+        };
+        let invoke_response =
+            instance_ref.handle_user_request(ciphertext.unwrap()).map_err(map_status);
+        let oak_session_response = OakSessionResponse {
+            response: Some(SessionResponse {
+                response: Some(Response::EncryptedMessage(EncryptedMessage {
+                    ciphertext: invoke_response.unwrap(),
+                    associated_data: None,
+                    nonce: None,
+                })),
+            }),
+        };
+        Ok(oak_session_response)
     }
 
     #[allow(clippy::result_large_err)]
-    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
-        self.instance.get().ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
+    fn get_instance(&self) -> Arc<OakFunctionsInstance<H>> {
+        self.instance.clone()
     }
 }
 
@@ -140,91 +146,35 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
     tonic::Status::new(code, status.message)
 }
 
-type ServerStreaming =
-    Pin<Box<dyn Stream<Item = Result<OakSessionResponse, tonic::Status>> + Send>>;
-
 #[tonic::async_trait]
 impl<H> OakFunctionsSession for OakFunctionsSessionService<H>
 where
     H: Handler + 'static,
     H::HandlerType: Send + Sync,
 {
-    type OakSessionStream = ServerStreaming;
+    type OakSessionStream =
+        Pin<Box<dyn Stream<Item = Result<OakSessionResponse, tonic::Status>> + Send + 'static>>;
 
     async fn oak_session(
         &self,
-        _request: tonic::Request<tonic::Streaming<OakSessionRequest>>,
+        request: tonic::Request<tonic::Streaming<OakSessionRequest>>,
     ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
-        Err(tonic::Status::unimplemented("OakSession is not implemented"))
+        let instance: Arc<OakFunctionsInstance<H>> = self.get_instance();
+
+        let mut request_stream = request.into_inner();
+        let response_stream = async_stream::try_stream! {
+          while let Some(result_request) = request_stream.next().await {
+            match OakFunctionsSessionService::<H>::handle_request(result_request, &instance).await {
+              Ok(response) => yield response,
+              Err(e) => eprintln!("Error handling request: {}", e)
+            }
+          }
+        };
+        Ok(tonic::Response::new(Box::pin(response_stream) as Self::OakSessionStream))
     }
 }
-
-/// Creates a `trace::Span` for the currently active gRPC request.
-///
-/// The fields of the Span are filled out according to the OpenTelemetry
-/// specifications, if possible.
-fn create_trace<Body>(request: &http::Request<Body>) -> Span {
-    let uri = request.uri();
-    // The general format of a gRPC URI is `http://[::1]:1234/Foo/Bar``, where `Foo` is the service, and `Bar` is the method.
-    let mut parts = uri.path().rsplitn(3, '/');
-    let method = parts.next();
-    let service = parts.next();
-
-    // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-spans/ and
-    // https://opentelemetry.io/docs/specs/semconv/rpc/grpc/ for specifications on what OpenTelemetry
-    // expects the traces to look like. Unfortunately the OTel conventions say that
-    // the span name must be the full RPC method name, but Rust tracing wants
-    // the name to be static, so we'll need to figure something out in the
-    // future.
-    tracing::info_span!(
-        "request",
-        rpc.method = method,
-        rpc.service = service,
-        rpc.system = "grpc",
-        rpc.grpc.status_code = tracing::field::Empty,
-        server.address = uri.host(),
-        server.port = uri.port_u16()
-    )
-}
-
-struct OtelObserver {
-    wasm_initialization: Histogram<u64>,
-    wasm_invocation: Histogram<u64>,
-}
-
-impl OtelObserver {
-    pub fn new(meter: Meter) -> Self {
-        Self {
-            wasm_initialization: meter
-                .u64_histogram("wasm_initialization")
-                .with_unit("microseconds")
-                .with_description("Time spent setting up wasm sandbox for invocation")
-                .init(),
-            wasm_invocation: meter
-                .u64_histogram("wasm_invocation")
-                .with_unit("microseconds")
-                .with_description("Time spent on calling `main` in wasm sandbox")
-                .init(),
-        }
-    }
-}
-impl Observer for OtelObserver {
-    fn wasm_initialization(&self, duration: core::time::Duration) {
-        self.wasm_initialization.record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
-    }
-
-    fn wasm_invocation(&self, duration: core::time::Duration) {
-        self.wasm_invocation.record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
-    }
-}
-
-// Equivalent to `tonic::Code::Ok`.
-static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from_static("0");
 
 // Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
-const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
-
-// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB.
 // We're not sending traffic over a "real" network anyway, after all.
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
@@ -242,7 +192,6 @@ pub async fn serve<H>(
             > + Send
             + Unpin,
     >,
-    observer: OakObserver,
     handler_config: H::HandlerConfig,
     oak_functions_session_args: OakFunctionsSessionArgs,
 ) -> anyhow::Result<()>
@@ -251,27 +200,10 @@ where
     H::HandlerType: Send + Sync,
 {
     tonic::transport::Server::builder()
-        .layer(
-            tower_http::trace::TraceLayer::new_for_grpc().make_span_with(create_trace).on_response(
-                |response: &http::Response<_>, _latency, span: &Span| {
-                    // If the request is successful, there's no `grpc-status` header, thus we assume
-                    // the request was successful.
-                    let code = response
-                        .headers()
-                        .get(GRPC_STATUS_HEADER_CODE)
-                        .unwrap_or(&GRPC_SUCCESS)
-                        .to_str()
-                        .ok();
-                    span.record("rpc.grpc.status_code", code);
-                },
-            ),
-        )
         .layer(tower::load_shed::LoadShedLayer::new())
-        .layer(observer.create_monitoring_layer())
         .add_service(
             OakFunctionsSessionServer::new(OakFunctionsSessionService::<H>::startup(
                 handler_config,
-                Some(Arc::new(OtelObserver::new(observer.meter))),
                 oak_functions_session_args,
             ))
             .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)

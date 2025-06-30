@@ -20,19 +20,26 @@ use std::{
     time::Duration,
 };
 
-use oak_containers_agent::metrics::OakObserver;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
-use oak_proto_rust::oak::functions::{standalone::OakSessionRequest, InitializeRequest};
-use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
+use oak_proto_rust::oak::{
+    functions::{
+        standalone::{OakSessionRequest, OakSessionResponse},
+        InitializeRequest,
+    },
+    session::v1::{
+        session_request::Request, session_response::Response, EncryptedMessage, SessionRequest,
+        SessionResponse,
+    },
+};
 use tokio::net::TcpListener;
-use tokio_stream::wrappers::TcpListenerStream;
+use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 #[tokio::test]
 async fn test_echo() {
-    // To be used to load the WASM module.
+    // To be used to load the Wasm module.
     let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
     let (addr, stream) = {
@@ -51,7 +58,6 @@ async fn test_echo() {
 
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
-        OakObserver { meter: NoopMeterProvider::new().meter(""), metric_registry: Vec::new() },
         Default::default(),
         oak_functions_session_args,
     ));
@@ -68,12 +74,38 @@ async fn test_echo() {
         OakFunctionsSessionClient::new(channel).send_compressed(CompressionEncoding::Gzip)
     };
 
-    let iterator = tokio_stream::iter(vec![OakSessionRequest::default()]);
+    let ciphertext_message = "Hello World".as_bytes().to_vec();
 
-    let _ = oak_functions_session_client
-        .oak_session(iterator)
-        .await
-        .expect_err("OakSession is not implemented");
+    let iterator = tokio_stream::iter(vec![OakSessionRequest {
+        request: Some(SessionRequest {
+            request: Some(Request::EncryptedMessage(EncryptedMessage {
+                ciphertext: ciphertext_message.clone(),
+                associated_data: None,
+                nonce: None,
+            })),
+        }),
+    }]);
+
+    let response_stream = oak_functions_session_client.oak_session(iterator).await.unwrap();
+
+    let resp_stream: tonic::Streaming<OakSessionResponse> = response_stream.into_inner();
+
+    let response_vector: Vec<OakSessionResponse> =
+        resp_stream.map(|response| response.unwrap()).collect().await;
+
+    assert_eq!(response_vector.len(), 1);
+    assert_eq!(
+        response_vector[0],
+        OakSessionResponse {
+            response: Some(SessionResponse {
+                response: Some(Response::EncryptedMessage(EncryptedMessage {
+                    ciphertext: ciphertext_message,
+                    associated_data: None,
+                    nonce: None,
+                })),
+            })
+        }
+    );
 
     server_handle.abort();
     let _ = server_handle.await;
