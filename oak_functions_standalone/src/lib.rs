@@ -23,15 +23,17 @@ use oak_functions_service::{instance::OakFunctionsInstance, Handler};
 use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
-use oak_proto_rust::oak::{
-    functions::{
-        standalone::{OakSessionRequest, OakSessionResponse},
-        ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-        FinishNextLookupDataResponse, InitializeRequest, ReserveRequest, ReserveResponse,
-    },
-    session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, SessionResponse,
-    },
+use oak_proto_rust::oak::functions::{
+    standalone::{OakSessionRequest, OakSessionResponse},
+    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
+    FinishNextLookupDataResponse, InitializeRequest, ReserveRequest, ReserveResponse,
+};
+use oak_session::{
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
+    ServerSession, Session,
 };
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::{Stream, StreamExt};
@@ -85,38 +87,6 @@ impl<H: Handler> OakFunctionsSessionService<H> {
         self.get_instance().reserve(request).map_err(map_status)
     }
 
-    async fn handle_request(
-        request: Result<OakSessionRequest, tonic::Status>,
-        instance_ref: &OakFunctionsInstance<H>,
-    ) -> Result<OakSessionResponse, tonic::Status> {
-        let oak_session_request = request?;
-        let session_request = oak_session_request
-            .request
-            .ok_or(tonic::Status::invalid_argument("No request in OakSessionRequest"))?;
-        let ciphertext: Result<Vec<u8>, tonic::Status> = match session_request
-            .request
-            .ok_or(tonic::Status::invalid_argument("No request in SessionRequest"))
-            .unwrap()
-        {
-            Request::EncryptedMessage(encrypted_message) => {
-                Ok(encrypted_message.ciphertext.clone())
-            }
-            _ => Err(tonic::Status::failed_precondition("No ciphertext")),
-        };
-        let invoke_response =
-            instance_ref.handle_user_request(ciphertext.unwrap()).map_err(map_status);
-        let oak_session_response = OakSessionResponse {
-            response: Some(SessionResponse {
-                response: Some(Response::EncryptedMessage(EncryptedMessage {
-                    ciphertext: invoke_response.unwrap(),
-                    associated_data: None,
-                    nonce: None,
-                })),
-            }),
-        };
-        Ok(oak_session_response)
-    }
-
     #[allow(clippy::result_large_err)]
     fn get_instance(&self) -> Arc<OakFunctionsInstance<H>> {
         self.instance.clone()
@@ -159,14 +129,43 @@ where
         &self,
         request: tonic::Request<tonic::Streaming<OakSessionRequest>>,
     ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
+        let mut server_session: ServerSession = ServerSession::create(
+            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+        )
+        .map_err(|e| tonic::Status::internal(format!("could not create server session: {e:?}")))?;
+
         let instance: Arc<OakFunctionsInstance<H>> = self.get_instance();
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
           while let Some(result_request) = request_stream.next().await {
-            match OakFunctionsSessionService::<H>::handle_request(result_request, &instance).await {
-              Ok(response) => yield response,
-              Err(e) => eprintln!("Error handling request: {}", e)
+            let oak_session_request = result_request?;
+            let session_request = oak_session_request
+              .request
+              .ok_or(tonic::Status::invalid_argument("No request in OakSessionRequest"))?;
+            if server_session.is_open() {
+              let decrypted_request = server_session.decrypt(session_request).map_err(|e| tonic::Status::internal(format!("{e:?}")))?;
+
+              let invoke_response =
+                instance.handle_user_request(decrypted_request).map_err(map_status);
+
+              let session_response = server_session.encrypt(invoke_response.unwrap()).map_err(|e| tonic::Status::internal(format!("{e:?}")))?;
+
+              let oak_session_response = OakSessionResponse {
+                response: Some(session_response),
+              };
+
+              yield oak_session_response;
+
+            } else {
+              server_session.handle_init_message(session_request).map_err(|e| tonic::Status::internal(format!("{e:?}")))?;
+              if !server_session.is_open() {
+                let session_response = server_session.next_init_message().map_err(|e| tonic::Status::internal(format!("{e:?}")))?;
+                let oak_session_response = OakSessionResponse {
+                  response: Some(session_response),
+                };
+                yield oak_session_response;
+              }
             }
           }
         };

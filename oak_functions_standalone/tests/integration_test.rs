@@ -20,18 +20,20 @@ use std::{
     time::Duration,
 };
 
+use futures::channel::mpsc;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
-use oak_proto_rust::oak::{
-    functions::{
-        standalone::{OakSessionRequest, OakSessionResponse},
-        InitializeRequest,
-    },
-    session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, SessionRequest,
-        SessionResponse,
-    },
+use oak_proto_rust::oak::functions::{
+    standalone::{OakSessionRequest, OakSessionResponse},
+    InitializeRequest,
+};
+use oak_session::{
+    attestation::AttestationType,
+    channel::{SessionChannel, SessionInitializer},
+    config::SessionConfig,
+    handshake::HandshakeType,
+    Session,
 };
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
@@ -74,38 +76,65 @@ async fn test_echo() {
         OakFunctionsSessionClient::new(channel).send_compressed(CompressionEncoding::Gzip)
     };
 
-    let ciphertext_message = "Hello World".as_bytes().to_vec();
+    let (mut tx, rx) = mpsc::channel(10);
 
-    let iterator = tokio_stream::iter(vec![OakSessionRequest {
-        request: Some(SessionRequest {
-            request: Some(Request::EncryptedMessage(EncryptedMessage {
-                ciphertext: ciphertext_message.clone(),
-                associated_data: None,
-                nonce: None,
-            })),
-        }),
-    }]);
+    let response_stream = oak_functions_session_client.oak_session(rx).await.unwrap();
 
-    let response_stream = oak_functions_session_client.oak_session(iterator).await.unwrap();
+    let mut resp_stream: tonic::Streaming<OakSessionResponse> = response_stream.into_inner();
 
-    let resp_stream: tonic::Streaming<OakSessionResponse> = response_stream.into_inner();
+    let mut client_session = oak_session::ClientSession::create(
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+    )
+    .expect("could not create client session");
 
-    let response_vector: Vec<OakSessionResponse> =
-        resp_stream.map(|response| response.unwrap()).collect().await;
+    // Initialize encrypted channel.
+    while !client_session.is_open() {
+        let session_request =
+            client_session.next_init_message().expect("expected client init message");
+        let oak_session_request = OakSessionRequest { request: Some(session_request) };
+        tx.try_send(oak_session_request).expect("failed to send to server");
+        if !client_session.is_open() {
+            let oak_session_response = resp_stream
+                .message()
+                .await
+                .expect("expected a response")
+                .expect("response was failure");
+            client_session
+                .handle_init_message(oak_session_response.response.expect("no session response"))
+                .expect("failed to handle init response");
+            println!("Client handshake is done");
+        }
+    }
+
+    let test_message = "Hello World";
+
+    let encrypted_request = client_session
+        .encrypt(test_message.as_bytes().to_vec())
+        .expect("failed to encrypt message");
+    let oak_session_request = OakSessionRequest { request: Some(encrypted_request) };
+
+    // Send our request and close the channel since we have no more messages to
+    // send.
+    tx.try_send(oak_session_request).expect("failed to send message");
+    tx.close_channel();
+
+    let response_vector: Vec<String> = resp_stream
+        .map(|oak_session_response| {
+            let response_bytes = client_session.decrypt(
+                oak_session_response
+                    .expect("empty response")
+                    .response
+                    .expect("empty session response"),
+            );
+            println!("We received a response");
+            String::from_utf8(response_bytes.expect("unable to decrypt response"))
+                .expect("unable to convert bytes to string")
+        })
+        .collect()
+        .await;
 
     assert_eq!(response_vector.len(), 1);
-    assert_eq!(
-        response_vector[0],
-        OakSessionResponse {
-            response: Some(SessionResponse {
-                response: Some(Response::EncryptedMessage(EncryptedMessage {
-                    ciphertext: ciphertext_message,
-                    associated_data: None,
-                    nonce: None,
-                })),
-            })
-        }
-    );
+    assert_eq!(response_vector[0], test_message);
 
     server_handle.abort();
     let _ = server_handle.await;
