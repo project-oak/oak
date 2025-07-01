@@ -39,6 +39,8 @@ rust_library(
         "@oak_crates_index//:itertools",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:strum",
+        "@oak_crates_index//:thiserror",
     ],
 )
 

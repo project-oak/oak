@@ -51,11 +51,13 @@ use crate::{
     aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
     attestation::{AttestationPublisher, AttestationType},
     encryptors::OrderedChannelEncryptor,
+    generator::AssertionGenerator,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
     session_binding::{
         SessionBinder, SessionBindingVerifierProvider, SignatureBindingVerifierProvider,
     },
+    verifier::AssertionVerifier,
 };
 
 /// Top-level configuration for a secure session.
@@ -154,7 +156,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an Attester that generates [`Evidence`] for this party (self).
-    /// The `attester_id` is a string identifier that is sent alongside the
+    /// The `attestation_id` is a string identifier that is sent alongside the
     /// [`Evidence`]. The peer uses this ID to select the corresponding
     /// [`AttestationVerifier`] for verification.
     ///
@@ -173,7 +175,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an Attester by reference, retaining ownership of the attester
-    /// object. See [`add_self_attester`] for more details on `attester_id`.
+    /// object. See [`add_self_attester`] for more details on `attestation_id`.
     pub fn add_self_attester_ref(
         mut self,
         attester_id: String,
@@ -192,7 +194,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an Endorser that generates [`Endorsements`] for this party's (self)
-    /// [`Evidence`]. The `endorser_id` must match the `attester_id` of the
+    /// [`Evidence`]. The `endorser_id` must match the `attestation_id` of the
     /// [`Attester`] whose [`Evidence`] it is endorsing.
     ///
     /// Reference: <https://datatracker.ietf.org/doc/html/rfc9334#name-endorser-reference-value-pr>
@@ -228,6 +230,53 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Add an [`AssertionGenerator`] that generates an [`Assertion`] for this
+    /// party (self). The `assertion_id` is a string identifier that is sent
+    /// alongside the [`Assertion`]. The peer uses this ID to select the
+    /// corresponding [`AssertionVerifier`] for verification.
+    pub fn add_self_assertion_generator(
+        mut self,
+        assertion_id: String,
+        generator: Box<dyn AssertionGenerator>,
+    ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-attestation is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
+        self.config
+            .attestation_handler_config
+            .self_assertion_generators
+            .insert(assertion_id, generator.into());
+        self
+    }
+
+    /// Add an [`AssertionGenerator`] by reference, retaining ownership of the
+    /// generator object. See [`add_self_assertion_generator`] for more details
+    /// on `assertion_id`.
+    pub fn add_self_assertion_generator_ref(
+        mut self,
+        assertion_id: String,
+        generator: &Arc<dyn AssertionGenerator>,
+    ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::SelfUnidirectional
+            ),
+            "Self-attestation is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
+        self.config
+            .attestation_handler_config
+            .self_assertion_generators
+            .insert(assertion_id, generator.clone());
+        self
+    }
+
     /// Add an [`AttestationPublisher`] for this configuration.
     ///
     /// Only one publisher can be set per configuration. If you called this
@@ -238,8 +287,8 @@ impl SessionConfigBuilder {
     }
 
     /// Add an [`AttestationVerifier`] to verify [`Evidence`] and
-    /// [`Endorsements`] received from the peer. The `attester_id` is used
-    /// to match this verifier with the `attester_id` accompanying the
+    /// [`Endorsements`] received from the peer. The `attestation_id` is used
+    /// to match this verifier with the `attestation_id` accompanying the
     /// peer's [`Evidence`]. This method uses a default [`KeyExtractor`]
     /// ([`DefaultSigningKeyExtractor`]) to extract a key from the verified
     /// attestation results, which is then used to create a
@@ -274,7 +323,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an [`AttestationVerifier`] by reference, retaining ownership.
-    /// See [`add_peer_verifier`] for details on `attester_id` and default
+    /// See [`add_peer_verifier`] for details on `attestation_id` and default
     /// session binding verification.
     pub fn add_peer_verifier_ref(
         mut self,
@@ -303,7 +352,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an [`AttestationVerifier`] with a custom [`KeyExtractor`].
-    /// The `attester_id` matches the verifier to the peer's [`Evidence`].
+    /// The `attestation_id` matches the verifier to the peer's [`Evidence`].
     /// The provided `key_extractor` is used to derive a key from the peer's
     /// verified attestation results. This key is then used by a
     /// [`SignatureBindingVerifierProvider`] to verify that the peer's
@@ -364,7 +413,7 @@ impl SessionConfigBuilder {
     }
 
     /// Add an [`AttestationVerifier`] with a custom
-    /// [`SessionBindingVerifierProvider`]. The `attester_id` matches the
+    /// [`SessionBindingVerifierProvider`]. The `attestation_id` matches the
     /// verifier to the peer's [`Evidence`]. The `binding_verifier_provider`
     /// is directly used to create a verifier for the peer's session
     /// binding, offering maximum flexibility in how session binding is
@@ -423,6 +472,46 @@ impl SessionConfigBuilder {
         self
     }
 
+    pub fn add_peer_assertion_verifier(
+        mut self,
+        assertion_id: String,
+        verifier: Box<dyn AssertionVerifier>,
+    ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
+        self.config
+            .attestation_handler_config
+            .peer_assertion_verifiers
+            .insert(assertion_id, verifier.into());
+        self
+    }
+
+    pub fn add_peer_assertion_verifier_ref(
+        mut self,
+        assertion_id: String,
+        verifier: &Arc<dyn AssertionVerifier>,
+    ) -> Self {
+        assert!(
+            matches!(
+                self.config.attestation_type,
+                AttestationType::Bidirectional | AttestationType::PeerUnidirectional
+            ),
+            "Peer verification is not supported for attestation type {:?}",
+            self.config.attestation_type
+        );
+        self.config
+            .attestation_handler_config
+            .peer_assertion_verifiers
+            .insert(assertion_id, verifier.clone());
+        self
+    }
+
     /// Sets this party's static private key for the handshake.
     ///
     /// This key is used in handshake patterns that require the party to have a
@@ -463,7 +552,7 @@ impl SessionConfigBuilder {
     }
 
     /// Adds a [`SessionBinder`] used by this party to bind its attestation to
-    /// the current session's handshake. The `attester_id` associates this
+    /// the current session's handshake. The `attestation_id` associates this
     /// binder with a specific attestation flow/result, ensuring that the
     /// correct attestation context is bound.
     pub fn add_session_binder(
@@ -487,7 +576,7 @@ impl SessionConfigBuilder {
     }
 
     /// Adds a [`SessionBinder`] by reference, retaining ownership.
-    /// See [`add_session_binder`] for details on `attester_id`.
+    /// See [`add_session_binder`] for details on `attestation_id`.
     pub fn add_session_binder_ref(
         mut self,
         attester_id: String,
@@ -521,18 +610,24 @@ impl SessionConfigBuilder {
 #[allow(dead_code)]
 #[derive(Default)]
 pub struct AttestationHandlerConfig {
-    /// A map of attesters (keyed by `attester_id`) used by this party to
+    /// A map of attesters (keyed by `attestation_id`) used by this party to
     /// generate its own attestation [`Evidence`].
     pub self_attesters: BTreeMap<String, Arc<dyn Attester>>,
-    /// A map of endorsers (keyed by `attester_id`) used by this party to
+    /// A map of [`AssertionGenerator`]s (keyed by `assertion_id`) used by this
+    /// party to generate its own [`Assertion`]. Not yet used.
+    pub self_assertion_generators: BTreeMap<String, Arc<dyn AssertionGenerator>>,
+    /// A map of endorsers (keyed by `attestation_id`) used by this party to
     /// generate [`Endorsements`] for its own [`Evidence`]. The key must match
-    /// the `attester_id` of the evidence being endorsed.
+    /// the `attestation_id` of the evidence being endorsed.
     pub self_endorsers: BTreeMap<String, Arc<dyn Endorser>>,
-    /// A map of [`AttestationVerifier`]s (keyed by `attester_id`) used to
+    /// A map of [`AttestationVerifier`]s (keyed by `attestation_id`) used to
     /// verify [`EndorsedEvidence`] received from the peer. The key is used to
-    /// select the correct verifier based on the `attester_id` provided with the
-    /// peer's evidence.
+    /// select the correct verifier based on the `attestation_id` provided with
+    /// the peer's evidence.
     pub peer_verifiers: BTreeMap<String, Arc<dyn AttestationVerifier>>,
+    /// A map of [`AssertionVerifier`]s (keyed by `assertion_id`) used to
+    /// verify an [`Assertion`] received from the peer. Not yet used,
+    pub peer_assertion_verifiers: BTreeMap<String, Arc<dyn AssertionVerifier>>,
     /// Logic to combine multiple attestation verification results (if the peer
     /// provides evidence from different attesters) into a single overall
     /// [`AttestationVerdict`].
@@ -564,10 +659,10 @@ pub struct HandshakeHandlerConfig {
     /// The peer's static public key. Required for certain handshake patterns
     /// (e.g., Noise IK where this party is the responder, or Noise KK).
     pub peer_static_public_key: Option<Vec<u8>>,
-    /// A map of [`SessionBinder`]s (keyed by `attester_id`) used by this party
-    /// to create cryptographic bindings. These bindings link this party's
-    /// attestation (identified by `attester_id`) to the current session's
-    /// handshake hash.
+    /// A map of [`SessionBinder`]s (keyed by `attestation_id`) used by this
+    /// party to create cryptographic bindings. These bindings link this
+    /// party's attestation (identified by `attestation_id`) to the current
+    /// session's handshake hash.
     pub session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
 }
 

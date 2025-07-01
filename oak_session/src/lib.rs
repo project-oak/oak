@@ -27,10 +27,12 @@ pub mod attestation;
 pub mod channel;
 pub mod config;
 pub mod encryptors;
+pub mod generator;
 pub mod handshake;
 pub mod key_extractor;
 pub mod session;
 pub mod session_binding;
+pub mod verifier;
 
 #[cfg(test)]
 mod tests;

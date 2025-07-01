@@ -409,6 +409,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
@@ -463,6 +464,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID2.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
@@ -1133,6 +1135,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
@@ -1148,6 +1151,7 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID2.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
             create_passing_mock_verifier(),
@@ -1180,6 +1184,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
             create_failing_mock_verifier(),
@@ -1195,6 +1200,7 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
             MATCHED_ATTESTER_ID2.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
             create_failing_mock_verifier(),
@@ -1227,6 +1233,7 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
             create_passing_mock_verifier(),
@@ -1277,6 +1284,7 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+
         peer_verifiers: BTreeMap::from([(
             UNMATCHED_VERIFIER_ID.to_string(),
             create_passing_mock_verifier(),

@@ -38,8 +38,11 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
-/// Assertion that an attesting party is making to the verifying peer. Contains
-/// all evidence needed to verify the assertion.
+/// Assertion that an attesting party is making to the verifying peer. Assertion
+/// represents a claim that the attesting party is making to the verifying party,
+/// which the verifying party can use to make a decision on whether to proceed
+/// with establishing a secure session. and must contain all evidence needed to
+/// verify the assertion.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]

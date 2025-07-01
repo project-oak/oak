@@ -23,8 +23,11 @@ import "proto/session/messages.proto";
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
-// Assertion that an attesting party is making to the verifying peer. Contains
-// all evidence needed to verify the assertion.
+// Assertion that an attesting party is making to the verifying peer. Assertion
+// represents a claim that the attesting party is making to the verifying party,
+// which the verifying party can use to make a decision on whether to proceed
+// with establishing a secure session. and must contain all evidence needed to
+// verify the assertion.
 message Assertion {
   // Bytes of the assertion. We make no assumption about the format used: it can
   // be a serialized proto, JWT or any other data that the peer can use to make
