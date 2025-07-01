@@ -18,7 +18,7 @@
 //!
 //! It offers ways to create `Instant`s from various representations (like
 //! milliseconds since epoch) and perform arithmetic operations (addition and
-//! subtraction with `core::time::Duration`). It also includes conversions from
+//! subtraction with `Duration`). It also includes conversions from
 //! and to other time-related types like `std::time::SystemTime`
 //! and `prost_types::Timestamp` when the respective features are enabled.
 //!
@@ -26,7 +26,10 @@
 //! "system time" or system time source. It also does not rely (by default) on
 //! the std library.
 
-use core::ops::{Add, AddAssign, Sub, SubAssign};
+use core::{
+    ops::{Add, AddAssign, Sub, SubAssign},
+    time::Duration,
+};
 
 // An anchor in time which can be used to create new Instant instances or learn
 // about where in time an Instant lies. This is similar to the
@@ -51,21 +54,24 @@ impl Instant {
     // SystemTime::UNIX_EPOCH.
     pub const UNIX_EPOCH: Instant = UNIX_EPOCH;
 
+    /// Creates a new `Instant` from the number of seconds since the Unix
+    /// epoch.
+    ///
+    /// # Arguments
+    ///
+    /// * `unix_epoch_seconds`: The number of seconds since the Unix epoch.
+    pub const fn from_unix_seconds(unix_epoch_seconds: i64) -> Self {
+        Instant { nanoseconds: SECONDS_TO_NANOS * unix_epoch_seconds as i128 }
+    }
+
     /// Creates a new `Instant` from the number of milliseconds since the Unix
     /// epoch.
     ///
     /// # Arguments
     ///
     /// * `unix_epoch_millis`: The number of milliseconds since the Unix epoch.
-    pub fn from_unix_millis(unix_epoch_millis: i64) -> Self {
+    pub const fn from_unix_millis(unix_epoch_millis: i64) -> Self {
         Instant { nanoseconds: MILLIS_TO_NANOS * unix_epoch_millis as i128 }
-    }
-
-    /// Converts this instant into the number of milliseconds since the Unix
-    /// epoch.
-    pub fn into_unix_millis(self) -> i64 {
-        let millis = self.nanoseconds / MILLIS_TO_NANOS;
-        i64::try_from(millis).expect("failed to convert from i128 to i64")
     }
 
     /// Creates a new `Instant` from the number of nanoseconds since the Unix
@@ -74,8 +80,21 @@ impl Instant {
     /// # Arguments
     ///
     /// * `unix_epoch_nanos`: The number of nanoseconds since the Unix epoch.
-    pub fn from_unix_nanos(unix_epoch_nanos: i128) -> Self {
+    pub const fn from_unix_nanos(unix_epoch_nanos: i128) -> Self {
         Instant { nanoseconds: unix_epoch_nanos }
+    }
+
+    /// Converts this instant into the number of seconds since the Unix epoch.
+    pub fn into_unix_seconds(self) -> i64 {
+        let seconds = self.nanoseconds / SECONDS_TO_NANOS;
+        i64::try_from(seconds).expect("failed to convert from i128 to i64")
+    }
+
+    /// Converts this instant into the number of milliseconds since the Unix
+    /// epoch.
+    pub fn into_unix_millis(self) -> i64 {
+        let millis = self.nanoseconds / MILLIS_TO_NANOS;
+        i64::try_from(millis).expect("failed to convert from i128 to i64")
     }
 
     /// Converts this instant into the number of nanoseconds since the Unix
@@ -126,30 +145,30 @@ macro_rules! instant {
     };
 }
 
-/// Implements the `Add` trait for `Instant` and `core::time::Duration`.
+/// Implements the `Add` trait for `Instant` and `Duration`.
 ///
-/// Allows adding a `core::time::Duration` to an `Instant`, resulting in a new
+/// Allows adding a `Duration` to an `Instant`, resulting in a new
 /// `Instant`.
-impl Add<core::time::Duration> for Instant {
+impl Add<Duration> for Instant {
     type Output = Self;
 
-    /// Adds a `core::time::Duration` to this `Instant`.
+    /// Adds a `Duration` to this `Instant`.
     ///
     /// # Arguments
     ///
-    /// * `other`: The `core::time::Duration` to add.
+    /// * `other`: The `Duration` to add.
     ///
     /// # Returns
     ///
     /// A new `Instant` representing the original instant advanced by `other`.
-    fn add(self, other: core::time::Duration) -> Self::Output {
+    fn add(self, other: Duration) -> Self::Output {
         let nanos = self.nanoseconds + other.as_nanos() as i128;
         Self { nanoseconds: nanos }
     }
 }
 
 impl Sub<Instant> for Instant {
-    type Output = core::time::Duration;
+    type Output = Duration;
 
     /// Subtracts another `Instant` from this `Instant`.
     ///
@@ -159,55 +178,55 @@ impl Sub<Instant> for Instant {
     ///
     /// # Returns
     ///
-    /// A `core::time::Duration` representing the duration between `self` and
+    /// A `Duration` representing the duration between `self` and
     /// `other`. Panics if `other` is later than `self`.
     fn sub(self, other: Instant) -> Self::Output {
         let diff = self.nanoseconds - other.nanoseconds;
         let nanos = u64::try_from(diff).expect("failed to convert i128 to u64");
-        core::time::Duration::from_nanos(nanos)
+        Duration::from_nanos(nanos)
     }
 }
 
-/// Implements the `AddAssign` trait for `Instant` and `core::time::Duration`.
+/// Implements the `AddAssign` trait for `Instant` and `Duration`.
 ///
-/// Allows adding a `core::time::Duration` to an `Instant` in-place.
-impl AddAssign<core::time::Duration> for Instant {
-    /// Adds a `core::time::Duration` to this `Instant` in-place.
+/// Allows adding a `Duration` to an `Instant` in-place.
+impl AddAssign<Duration> for Instant {
+    /// Adds a `Duration` to this `Instant` in-place.
     ///
     /// # Arguments
     ///
-    /// * `other`: The `core::time::Duration` to add.
-    fn add_assign(&mut self, other: core::time::Duration) {
+    /// * `other`: The `Duration` to add.
+    fn add_assign(&mut self, other: Duration) {
         self.nanoseconds += other.as_nanos() as i128;
     }
 }
 
-/// Implements the `Sub` trait for `Instant` and `core::time::Duration`.
+/// Implements the `Sub` trait for `Instant` and `Duration`.
 ///
-/// Allows subtracting a `core::time::Duration` from an `Instant`, resulting in
+/// Allows subtracting a `Duration` from an `Instant`, resulting in
 /// a new `Instant`.
-impl Sub<core::time::Duration> for Instant {
+impl Sub<Duration> for Instant {
     type Output = Self;
 
-    /// Subtracts a `core::time::Duration` from this `Instant`.
+    /// Subtracts a `Duration` from this `Instant`.
     ///
     /// # Arguments
     ///
-    /// * `other`: The `core::time::Duration` to subtract.
+    /// * `other`: The `Duration` to subtract.
     ///
     /// # Returns
     ///
     /// A new `Instant` representing the original instant moved back by `other`.
-    fn sub(self, other: core::time::Duration) -> Self {
+    fn sub(self, other: Duration) -> Self {
         Self { nanoseconds: self.nanoseconds - other.as_nanos() as i128 }
     }
 }
 
-/// Implements the `SubAssign` trait for `Instant` and `core::time::Duration`.
+/// Implements the `SubAssign` trait for `Instant` and `Duration`.
 ///
-/// Allows subtracting a `core::time::Duration` from an `Instant` in-place.
-impl SubAssign<core::time::Duration> for Instant {
-    fn sub_assign(&mut self, other: core::time::Duration) {
+/// Allows subtracting a `Duration` from an `Instant` in-place.
+impl SubAssign<Duration> for Instant {
+    fn sub_assign(&mut self, other: Duration) {
         self.nanoseconds -= other.as_nanos() as i128;
     }
 }
@@ -297,6 +316,13 @@ mod tests {
     const MAX_VALUE_SECONDS: i64 = 253_402_300_799;
 
     #[googletest::test]
+    fn test_unix_seconds_conversion_example() {
+        const EXPECTED_SECONDS: i64 = 1234567890;
+        let instant = Instant::from_unix_seconds(EXPECTED_SECONDS);
+        assert_eq!(EXPECTED_SECONDS, instant.into_unix_seconds());
+    }
+
+    #[googletest::test]
     fn test_unix_millis_conversion_example() {
         const EXPECTED_MILLIS: i64 = 1234567890;
         let instant = Instant::from_unix_millis(EXPECTED_MILLIS);
@@ -313,7 +339,7 @@ mod tests {
     #[googletest::test]
     fn test_instant_add() {
         let instant = Instant::from_unix_millis(1000000000);
-        let new_instant = instant + core::time::Duration::from_millis(1000);
+        let new_instant = instant + Duration::from_millis(1000);
         assert_that!(new_instant, eq(Instant::from_unix_millis(1000001000)));
     }
 
@@ -322,27 +348,27 @@ mod tests {
         let instant = Instant::from_unix_millis(1000000000);
         let other = Instant::from_unix_millis(3000000000);
         let diff = other - instant;
-        assert_that!(diff, eq(core::time::Duration::from_millis(2000000000)));
+        assert_that!(diff, eq(Duration::from_millis(2000000000)));
     }
 
     #[googletest::test]
     fn test_instant_sub_duration() {
         let instant = Instant::from_unix_millis(1000000000);
-        let new_instant = instant - core::time::Duration::from_millis(1000);
+        let new_instant = instant - Duration::from_millis(1000);
         assert_that!(new_instant, eq(Instant::from_unix_millis(999999000)));
     }
 
     #[googletest::test]
     fn test_instant_add_assign() {
         let mut instant = Instant::from_unix_millis(1000000000);
-        instant += core::time::Duration::from_millis(1000);
+        instant += Duration::from_millis(1000);
         assert_that!(instant, eq(Instant::from_unix_millis(1000001000)));
     }
 
     #[googletest::test]
     fn test_instant_sub_assign() {
         let mut instant = Instant::from_unix_millis(1000000000);
-        instant -= core::time::Duration::from_millis(1000);
+        instant -= Duration::from_millis(1000);
         assert_that!(instant, eq(Instant::from_unix_millis(999999000)));
     }
 
@@ -374,7 +400,7 @@ mod tests {
     fn test_timestamp_to_instant_example() {
         let timestamp = prost_types::Timestamp { seconds: 12345, nanos: 67890 };
         let instant = Instant::from(timestamp);
-        assert_that!(instant, eq(Instant::UNIX_EPOCH + core::time::Duration::new(12345, 67890)));
+        assert_that!(instant, eq(Instant::UNIX_EPOCH + Duration::new(12345, 67890)));
     }
 
     #[cfg(feature = "prost")]
