@@ -124,7 +124,7 @@ impl DataBlobHandler for ExternalDbClient {
             .await
             .expect("Read blob fail!")
             .into_inner();
-        if let Some(status) = db_response.status {
+        if let Some(ref status) = db_response.status {
             if status.success && db_response.data_blob.is_some() {
                 let data_blob = db_response.data_blob.unwrap();
                 let blob_size = data_blob.blob.len() as u64;
@@ -145,7 +145,7 @@ impl DataBlobHandler for ExternalDbClient {
                 return Ok(data_blob);
             }
         }
-        bail!("Failed to read data blob");
+        bail!("Failed to read data blob, {:#?}", db_response);
     }
 
     async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>> {

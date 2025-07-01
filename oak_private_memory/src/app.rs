@@ -104,7 +104,13 @@ impl MemoryInterface for DatabaseWithCache {
 
     async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory> {
         if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id).unwrap() {
-            self.cache.get_memory_by_blob_id(&blob_id).await.ok()
+            self.cache.get_memory_by_blob_id(&blob_id).await.map_or_else(
+                |e| {
+                    info!("Failed to get memory by id: {:?}", e);
+                    None
+                },
+                Some,
+            )
         } else {
             None
         }

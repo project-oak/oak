@@ -453,7 +453,8 @@ impl MemoryCache {
     }
 
     fn add_cache_entry(&mut self, blob_id: BlobId, memory: Memory) {
-        if self.content_cache.len() > 100 {
+        const MAX_CACHE_SIZE: usize = 5;
+        if self.content_cache.len() > MAX_CACHE_SIZE {
             // TODO: b/412698203 - Add eviction to avoid OOM.
             // Avoid OOM.
             self.content_cache.clear();
