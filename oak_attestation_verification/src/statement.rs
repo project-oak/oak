@@ -79,28 +79,28 @@ pub struct Validity {
 // From Rust struct to protocol buffer.
 impl From<&Validity> for oak_proto_rust::oak::Validity {
     fn from(value: &Validity) -> oak_proto_rust::oak::Validity {
-        let not_before_millis = value.not_before.unix_timestamp_millis();
-        let not_after_millis = value.not_after.unix_timestamp_millis();
-        let not_before = Instant::from_unix_millis(not_before_millis).into_timestamp();
-        let not_after = Instant::from_unix_millis(not_after_millis).into_timestamp();
+        let not_before_nanos = value.not_before.unix_timestamp_nanos();
+        let not_after_nanos = value.not_after.unix_timestamp_nanos();
+        let not_before = Instant::from_unix_nanos(not_before_nanos).into_timestamp();
+        let not_after = Instant::from_unix_nanos(not_after_nanos).into_timestamp();
         oak_proto_rust::oak::Validity { not_before: Some(not_before), not_after: Some(not_after) }
     }
 }
 
 // From protocol buffer to Rust struct.
-impl From<&oak_proto_rust::oak::Validity> for Validity {
-    fn from(value: &oak_proto_rust::oak::Validity) -> Validity {
-        let not_before_nanos = 1_000_000_i128
-            * Instant::from(value.not_before.expect("not_before missing")).into_unix_millis()
-                as i128;
-        let not_after_nanos = 1_000_000_i128
-            * Instant::from(value.not_after.expect("not_after missing")).into_unix_millis() as i128;
-        Validity {
-            not_before: OffsetDateTime::from_unix_timestamp_nanos(not_before_nanos)
-                .expect("failed to convert instant"),
-            not_after: OffsetDateTime::from_unix_timestamp_nanos(not_after_nanos)
-                .expect("failed to convert instant"),
-        }
+impl TryFrom<&oak_proto_rust::oak::Validity> for Validity {
+    type Error = &'static str;
+
+    fn try_from(value: &oak_proto_rust::oak::Validity) -> Result<Self, Self::Error> {
+        let not_before_nanos =
+            Instant::from(value.not_before.ok_or("not_before missing")?).into_unix_nanos();
+        let not_after_nanos =
+            Instant::from(value.not_after.ok_or("not_after missing")?).into_unix_nanos();
+        let not_before = OffsetDateTime::from_unix_timestamp_nanos(not_before_nanos)
+            .map_err(|_err| "failed to convert instant")?;
+        let not_after = OffsetDateTime::from_unix_timestamp_nanos(not_after_nanos)
+            .map_err(|_err| "failed to convert instant")?;
+        Ok(Validity { not_before, not_after })
     }
 }
 
@@ -290,11 +290,11 @@ mod tests {
 
     // Minimum supported value for Timestamp: 0001-01-01 00:00:00.0 +00:00:00.
     const MIN_VALUE_MILLIS: i64 = -62_135_596_800_000;
-    const MIN_VALUE_NANOS: i128 = -62_135_596_800_000_000_000;
+    const MIN_VALUE_NANOS: i128 = 1_000_000 * MIN_VALUE_MILLIS as i128;
 
     // Maximum supported value for Timestamp: 9999-12-31 23:59:59.0 +00:00:00
     const MAX_VALUE_MILLIS: i64 = 253_402_300_799_000;
-    const MAX_VALUE_NANOS: i128 = 253_402_300_799_000_000_000;
+    const MAX_VALUE_NANOS: i128 = 1_000_000 * MAX_VALUE_MILLIS as i128;
 
     #[test]
     fn test_get_digest() {
@@ -315,7 +315,7 @@ mod tests {
             not_after: OffsetDateTime::UNIX_EPOCH,
         };
         let proto = oak_proto_rust::oak::Validity::from(&expected);
-        let actual = Validity::from(&proto);
+        let actual = Validity::try_from(&proto).expect("failed to convert");
         assert_eq!(expected, actual);
     }
 
@@ -326,7 +326,7 @@ mod tests {
             not_after: OffsetDateTime::from_unix_timestamp_nanos(MAX_VALUE_NANOS).unwrap(),
         };
         let proto = oak_proto_rust::oak::Validity::from(&expected);
-        let actual = Validity::from(&proto);
+        let actual = Validity::try_from(&proto).expect("failed to convert");
         assert_eq!(expected, actual);
     }
 
@@ -336,7 +336,7 @@ mod tests {
             not_before: Some(Instant::from_unix_millis(MIN_VALUE_MILLIS).into_timestamp()),
             not_after: Some(Instant::from_unix_millis(0).into_timestamp()),
         };
-        let statement = Validity::from(&expected);
+        let statement = Validity::try_from(&expected).expect("failed to convert");
         let actual = oak_proto_rust::oak::Validity::from(&statement);
         assert_eq!(expected, actual);
     }
@@ -347,7 +347,7 @@ mod tests {
             not_before: Some(Instant::from_unix_millis(0).into_timestamp()),
             not_after: Some(Instant::from_unix_millis(MAX_VALUE_MILLIS).into_timestamp()),
         };
-        let statement = Validity::from(&expected);
+        let statement = Validity::try_from(&expected).expect("failed to convert");
         let actual = oak_proto_rust::oak::Validity::from(&statement);
         assert_eq!(expected, actual);
     }

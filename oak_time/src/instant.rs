@@ -68,6 +68,22 @@ impl Instant {
         i64::try_from(millis).expect("failed to convert from i128 to i64")
     }
 
+    /// Creates a new `Instant` from the number of nanoseconds since the Unix
+    /// epoch.
+    ///
+    /// # Arguments
+    ///
+    /// * `unix_epoch_nanos`: The number of nanoseconds since the Unix epoch.
+    pub fn from_unix_nanos(unix_epoch_nanos: i128) -> Self {
+        Instant { nanoseconds: unix_epoch_nanos }
+    }
+
+    /// Converts this instant into the number of nanoseconds since the Unix
+    /// epoch.
+    pub fn into_unix_nanos(self) -> i128 {
+        self.nanoseconds
+    }
+
     /// Converts this instant into a `prost_types::Timestamp`.
     ///
     /// # Panics
@@ -253,6 +269,13 @@ mod tests {
         const EXPECTED_MILLIS: i64 = 1234567890;
         let instant = Instant::from_unix_millis(EXPECTED_MILLIS);
         assert_eq!(EXPECTED_MILLIS, instant.into_unix_millis());
+    }
+
+    #[googletest::test]
+    fn test_unix_nanos_conversion_example() {
+        const EXPECTED_NANOS: i128 = 1234567890123456;
+        let instant = Instant::from_unix_nanos(EXPECTED_NANOS);
+        assert_eq!(EXPECTED_NANOS, instant.into_unix_nanos());
     }
 
     #[googletest::test]
