@@ -107,6 +107,25 @@ impl Instant {
     }
 }
 
+/// Creates a new `Instant` from a literal date and time.
+///
+/// This macro is a convenience wrapper around `time::macros::datetime!`.
+///
+/// # Example
+///
+/// ```rust
+/// use oak_time::{instant, Instant};
+///
+/// let my_instant = instant!(2025-01-01 12:00:00 UTC);
+/// assert_eq!(my_instant, Instant::from_unix_millis(1735732800000));
+/// ```
+#[macro_export]
+macro_rules! instant {
+    ($($tt:tt)*) => {
+        $crate::instant::Instant::from(time::macros::datetime!($($tt)*))
+    };
+}
+
 /// Implements the `Add` trait for `Instant` and `core::time::Duration`.
 ///
 /// Allows adding a `core::time::Duration` to an `Instant`, resulting in a new
@@ -248,13 +267,26 @@ impl From<prost_types::Timestamp> for Instant {
     }
 }
 
+impl From<time::UtcDateTime> for Instant {
+    fn from(value: time::UtcDateTime) -> Self {
+        Instant::from_unix_nanos(value.unix_timestamp_nanos())
+    }
+}
+
+impl From<time::OffsetDateTime> for Instant {
+    fn from(value: time::OffsetDateTime) -> Self {
+        Instant::from_unix_nanos(value.unix_timestamp_nanos())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate std;
 
     use googletest::prelude::*;
+    use time::macros::{datetime, utc_datetime};
 
-    use crate::instant::Instant;
+    use super::*;
 
     // Minimum supported value for Timestamp: 0001-01-01 00:00:00.0 +00:00:00.
     const MIN_VALUE_MILLIS: i64 = -62_135_596_800_000;
@@ -321,6 +353,20 @@ mod tests {
         assert_that!(instant, eq(Instant::from_unix_millis(0)));
 
         Ok(())
+    }
+
+    #[googletest::test]
+    fn test_instant_from_utc_datetime() {
+        let source: time::UtcDateTime = utc_datetime!(2014-08-16 11:16);
+        let instant: Instant = source.into();
+        assert_that!(instant, eq(Instant::from_unix_millis(1408187760000)));
+    }
+
+    #[googletest::test]
+    fn test_instant_from_offset_datetime() {
+        let source: time::OffsetDateTime = datetime!(2014-08-16 11:16+02:00);
+        let instant: Instant = source.into();
+        assert_that!(instant, eq(Instant::from_unix_millis(1408180560000)));
     }
 
     #[cfg(feature = "prost")]
@@ -419,5 +465,32 @@ mod tests {
         let actual_instant = Instant::from(expected_timestamp);
         let actual_timestamp = actual_instant.into_timestamp();
         assert_that!(expected_timestamp, eq(actual_timestamp));
+    }
+
+    #[googletest::test]
+    fn test_instant_macro_parsing() {
+        // A valid RFC3339 string in UTC.
+        assert_that!(
+            instant!(2025-01-01 00:00:00 UTC),
+            eq(Instant::from_unix_millis(1735689600000))
+        );
+
+        // A valid RFC3339 string with milliseconds.
+        assert_that!(
+            instant!(2025-01-01 00:00:00.123 UTC),
+            eq(Instant::from_unix_millis(1735689600123))
+        );
+
+        // A valid RFC3339 string with a positive timezone offset.
+        assert_that!(
+            instant!(2025-01-01 02:00:00 +02:00),
+            eq(Instant::from_unix_millis(1735689600000))
+        );
+
+        // A valid RFC3339 string with a negative timezone offset.
+        assert_that!(
+            instant!(2024-12-31 22:00:00 -02:00),
+            eq(Instant::from_unix_millis(1735689600000))
+        );
     }
 }

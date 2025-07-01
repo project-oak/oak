@@ -29,6 +29,7 @@ rust_library(
     ],
     deps = [
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:time",
     ],
 )
 
