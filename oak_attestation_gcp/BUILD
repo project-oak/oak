@@ -24,7 +24,13 @@ package(
 rust_library(
     name = "oak_attestation_gcp",
     srcs = glob(["src/**"]),
+    compile_data = ["//oak_attestation_gcp:data/confidential_space_root.pem"],
     deps = [
+        "//oak_attestation_verification",
+        "//oak_attestation_verification_types",
+        "//oak_proto_rust",
+        "//oak_time",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:const-oid",
         "@oak_crates_index//:hex",
@@ -34,6 +40,7 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
+        "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:x509-verify",
     ],
@@ -41,6 +48,7 @@ rust_library(
 
 rust_test(
     name = "oak_attestation_gcp_tests",
+    compile_data = ["//oak_attestation_gcp/testdata"],
     crate = ":oak_attestation_gcp",
     data = [
         "//oak_attestation_gcp/testdata",
@@ -48,6 +56,8 @@ rust_test(
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde_json",
     ],
 )

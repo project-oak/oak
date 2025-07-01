@@ -16,19 +16,22 @@
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use jwt::{Token, Unverified, Verified, VerifyWithKey};
+use oak_time::Instant;
 use serde_json::Value;
 use x509_cert::{der::Decode, Certificate};
 use x509_verify::VerifyingKey;
 
-use crate::{
-    //der::{Base64DerError, FromBase64Der},
-    jwt::{algorithm::CertificateAlgorithm, Header},
-};
+use crate::jwt::{algorithm::CertificateAlgorithm, Header};
+
+pub const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
+    include_str!("../data/confidential_space_root.pem");
 
 #[derive(thiserror::Error, Debug)]
 pub enum AttestationVerificationError {
     #[error("Failed to verify JWT: {0}")]
     JWTError(#[from] jwt::Error),
+    #[error("Invalid format parsing field {0}: {1}")]
+    InvalidFormat(&'static str, &'static str),
     #[error("Failed to decode x5c: {0}")]
     X5CDecodeError(#[from] serde_json::Error),
     #[error("Invalid format parsing x5c: {0}")]
@@ -39,10 +42,16 @@ pub enum AttestationVerificationError {
     X509Base64DecodeError(#[from] base64::DecodeError),
     #[error("Failed to decode der: {0}")]
     X509DerDecodeError(x509_cert::der::Error),
-    #[error("Reference root sha256 mismatch: {0}")]
-    ReferenceRootSha256Mismatch(String),
     #[error("Unsupported signature algorithm")]
     UnsupportedSignatureAlgorithm,
+    #[error("Certificate validity not_before: {not_before:?} > {current_time:?}")]
+    X509ValidityNotBefore { not_before: Instant, current_time: Instant },
+    #[error("Certificate validity not_after: {not_after:?} > {current_time:?}")]
+    X509ValidityNotAfter { not_after: Instant, current_time: Instant },
+    #[error("Token validity nbf: {nbf:?} > {current_time:?}")]
+    JWTValidityNotBefore { nbf: Instant, current_time: Instant },
+    #[error("Token validity exp: {exp:?} < {current_time:?}")]
+    JWTValidityExpiration { exp: Instant, current_time: Instant },
 }
 
 // Convenience From implementations for errors that don't implement
@@ -65,11 +74,14 @@ impl From<x509_cert::der::Error> for AttestationVerificationError {
 ///
 /// The token is verified by checking the signature and the x5c chain in the
 /// token against the provided root certificate.
-/// TODO: b/426463266 - Check the x509 validity and token expiration.
 pub fn verify_attestation_token(
     token: Token<Header, Value, Unverified>,
     root: &Certificate,
+    current_time: &oak_time::Instant,
 ) -> Result<Token<Header, Value, Verified>, AttestationVerificationError> {
+    // Verify the validity of the root certificate.
+    verify_certificate_validity(root, current_time)?;
+
     let header = token.header();
 
     // Collect the x509 chain from base64 DER strings.
@@ -83,6 +95,7 @@ pub fn verify_attestation_token(
 
     let mut issuer: &Certificate = root;
     for subject in chain.iter().rev() {
+        verify_certificate_validity(issuer, current_time)?;
         VerifyingKey::try_from(issuer).and_then(|key| key.verify(subject))?;
         issuer = subject;
     }
@@ -91,5 +104,72 @@ pub fn verify_attestation_token(
 
     let verified = token.verify_with_key(&key)?;
 
+    verify_token_validity(&verified, current_time)?;
+
     Ok(verified)
+}
+
+fn verify_certificate_validity(
+    certificate: &Certificate,
+    current_time: &oak_time::Instant,
+) -> Result<(), AttestationVerificationError> {
+    use oak_time::UNIX_EPOCH;
+
+    let not_before =
+        UNIX_EPOCH + certificate.tbs_certificate.validity.not_before.to_unix_duration();
+    let not_after = UNIX_EPOCH + certificate.tbs_certificate.validity.not_after.to_unix_duration();
+
+    if not_before > *current_time {
+        Err(AttestationVerificationError::X509ValidityNotBefore {
+            not_before,
+            current_time: *current_time,
+        })
+    } else if *current_time > not_after {
+        Err(AttestationVerificationError::X509ValidityNotAfter {
+            not_after,
+            current_time: *current_time,
+        })
+    } else {
+        Ok(())
+    }
+}
+
+fn verify_token_validity(
+    token: &Token<Header, Value, Verified>,
+    current_time: &oak_time::Instant,
+) -> Result<(), AttestationVerificationError> {
+    let claims = token.claims();
+
+    let token_not_after = match &claims["exp"] {
+        Value::Number(exp) => {
+            let unix_seconds = exp
+                .as_i64()
+                .ok_or(AttestationVerificationError::InvalidFormat("exp", "expected a number"))?;
+            oak_time::Instant::from_unix_seconds(unix_seconds)
+        }
+        _ => return Err(AttestationVerificationError::InvalidFormat("exp", "expected a number")),
+    };
+    let token_not_before = match &claims["nbf"] {
+        Value::Number(exp) => {
+            let unix_seconds = exp
+                .as_i64()
+                .ok_or(AttestationVerificationError::InvalidFormat("nbf", "expected a number"))?;
+            oak_time::Instant::from_unix_seconds(unix_seconds)
+        }
+        _ => return Err(AttestationVerificationError::InvalidFormat("exp", "expected a number")),
+    };
+
+    if &token_not_before > current_time {
+        Err(AttestationVerificationError::JWTValidityNotBefore {
+            nbf: token_not_before,
+            current_time: *current_time,
+        })
+    } else if current_time > &token_not_after {
+        Err(AttestationVerificationError::JWTValidityExpiration {
+            exp: token_not_after,
+            current_time: *current_time,
+        })
+    } else {
+        Ok(())
+    }
 }

@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-pub mod attestation;
-pub mod verification;
+extern crate alloc;
 
-mod jwt;
+pub mod attestation;
+pub mod jwt;
+pub mod policy;
+pub mod verification;
 
 #[cfg(test)]
 mod tests {
@@ -26,13 +28,20 @@ mod tests {
     use googletest::prelude::*;
     use jwt::{Token, Unverified};
     use oak_file_utils::data_path;
+    use oak_time::Instant;
     use serde_json::Value;
+    use time::macros::datetime;
     use x509_cert::{der::DecodePem, Certificate};
 
     use crate::{
         jwt::Header,
         verification::{verify_attestation_token, AttestationVerificationError},
     };
+
+    // The time has been set inside the validity interval of the test token.
+    fn current_time() -> Instant {
+        Instant::from(datetime!(2025-06-23 15:00:00 UTC))
+    }
 
     #[test]
     fn validate_token_ok() -> Result<()> {
@@ -43,7 +52,7 @@ mod tests {
         let unverified_token: Token<Header, Value, Unverified> =
             Token::parse_unverified(&token_str)?;
 
-        verify_attestation_token(unverified_token, &root)?;
+        verify_attestation_token(unverified_token, &root, &current_time())?;
 
         Ok(())
     }
@@ -58,10 +67,60 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_that!(
-            unsafe { verify_attestation_token(unverified_token, &root).unwrap_err_unchecked() },
+            unsafe {
+                verify_attestation_token(unverified_token, &root, &current_time())
+                    .unwrap_err_unchecked()
+            },
             matches_pattern!(AttestationVerificationError::JWTError(matches_pattern!(
                 jwt::Error::InvalidSignature
             )))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_expired_token() -> Result<()> {
+        let token_str = read_testdata("valid.jwt");
+        let root = Certificate::from_pem(read_testdata("root.crt"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Value, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        // Advance the clock by about 1h
+        let expired_current_time = current_time() + core::time::Duration::from_secs(3600);
+
+        assert_that!(
+            unsafe {
+                verify_attestation_token(unverified_token, &root, &expired_current_time)
+                    .unwrap_err_unchecked()
+            },
+            matches_pattern!(AttestationVerificationError::JWTValidityExpiration { .. })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_expired_cert() -> Result<()> {
+        let token_str = read_testdata("valid.jwt");
+        let root = Certificate::from_pem(read_testdata("root.crt"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Value, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        // Advance the clock by about 100 years
+        let expired_current_time =
+            current_time() + core::time::Duration::from_secs(100 * 365 * 24 * 3600);
+
+        assert_that!(
+            unsafe {
+                verify_attestation_token(unverified_token, &root, &expired_current_time)
+                    .unwrap_err_unchecked()
+            },
+            matches_pattern!(AttestationVerificationError::X509ValidityNotAfter { .. })
         );
 
         Ok(())

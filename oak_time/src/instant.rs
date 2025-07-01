@@ -126,25 +126,6 @@ impl Instant {
     }
 }
 
-/// Creates a new `Instant` from a literal date and time.
-///
-/// This macro is a convenience wrapper around `time::macros::datetime!`.
-///
-/// # Example
-///
-/// ```rust
-/// use oak_time::{instant, Instant};
-///
-/// let my_instant = instant!(2025-01-01 12:00:00 UTC);
-/// assert_eq!(my_instant, Instant::from_unix_millis(1735732800000));
-/// ```
-#[macro_export]
-macro_rules! instant {
-    ($($tt:tt)*) => {
-        $crate::instant::Instant::from(time::macros::datetime!($($tt)*))
-    };
-}
-
 /// Implements the `Add` trait for `Instant` and `Duration`.
 ///
 /// Allows adding a `Duration` to an `Instant`, resulting in a new
@@ -497,25 +478,25 @@ mod tests {
     fn test_instant_macro_parsing() {
         // A valid RFC3339 string in UTC.
         assert_that!(
-            instant!(2025-01-01 00:00:00 UTC),
+            Instant::from(datetime!(2025-01-01 00:00:00 UTC)),
             eq(Instant::from_unix_millis(1735689600000))
         );
 
         // A valid RFC3339 string with milliseconds.
         assert_that!(
-            instant!(2025-01-01 00:00:00.123 UTC),
+            Instant::from(datetime!(2025-01-01 00:00:00.123 UTC)),
             eq(Instant::from_unix_millis(1735689600123))
         );
 
         // A valid RFC3339 string with a positive timezone offset.
         assert_that!(
-            instant!(2025-01-01 02:00:00 +02:00),
+            Instant::from(datetime!(2025-01-01 02:00:00 +02:00)),
             eq(Instant::from_unix_millis(1735689600000))
         );
 
         // A valid RFC3339 string with a negative timezone offset.
         assert_that!(
-            instant!(2024-12-31 22:00:00 -02:00),
+            Instant::from(datetime!(2024-12-31 22:00:00 -02:00)),
             eq(Instant::from_unix_millis(1735689600000))
         );
     }
