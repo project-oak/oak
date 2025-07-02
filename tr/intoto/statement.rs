@@ -36,18 +36,8 @@ use serde::{Deserialize, Serialize};
 /// versions will be rejected.
 const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
 
-/// Oldest predicate type for in-toto endorsement statements. References still
-/// exist, but fully removing it will be easy.
-#[deprecated = "Use PREDICATE_TYPE_V3"]
-const PREDICATE_TYPE_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
-
-/// Previous predicate type of in-toto endorsement statements. In operation.
-#[deprecated = "Use PREDICATE_TYPE_V3"]
-const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-release/claim/v2";
-
-/// Current predicate type of in-toto endorsement statements, which loses
-/// the `usage` field and adds claim types.
-const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
+/// Predicate type of in-toto endorsement statements.
+const PREDICATE_TYPE_V1: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
 /// An artifact identified by its name and digest.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -102,11 +92,6 @@ pub struct Claim {
 /// The predicate part of an endorsement subject.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct DefaultPredicate {
-    // Specifies how to interpret the endorsement subject.
-    // The `default` option is needed to support predicate V2.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub usage: String,
-
     /// The timestamp (encoded as an Epoch time) when the statement was created.
     #[serde(rename = "issuedOn", with = "oak_time::instant::rfc3339")]
     pub issued_on: Instant,
@@ -162,10 +147,9 @@ pub fn make_statement(
 
     DefaultStatement {
         _type: STATEMENT_TYPE.to_owned(),
-        predicate_type: PREDICATE_TYPE_V3.to_owned(),
+        predicate_type: PREDICATE_TYPE_V1.to_owned(),
         subject: vec![Subject { name: subject_name.to_string(), digest: digest_set }],
         predicate: DefaultPredicate {
-            usage: "".to_owned(), // Ignored with predicate V3, do not use.
             issued_on,
             validity: Some(Validity { not_before, not_after }),
             claims: claim_types.iter().map(|x| Claim { r#type: x.to_string() }).collect(),
@@ -182,15 +166,7 @@ impl DefaultStatement {
 
     fn validate_header(&self) -> anyhow::Result<()> {
         ensure!(self._type == STATEMENT_TYPE, "unsupported statement type");
-
-        #[allow(deprecated)] // We still need to validate the older types.
-        if self.predicate_type != PREDICATE_TYPE_V1
-            && self.predicate_type != PREDICATE_TYPE_V2
-            && self.predicate_type != PREDICATE_TYPE_V3
-        {
-            anyhow::bail!("unsupported predicate type");
-        }
-
+        ensure!(self.predicate_type == PREDICATE_TYPE_V1, "unsupported predicate type");
         Ok(())
     }
 

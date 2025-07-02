@@ -197,15 +197,11 @@ fn verify_endorser_public_key_ecdsa(
 }
 
 pub(crate) fn is_firmware_type(statement: &DefaultStatement) -> bool {
-    // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    statement.predicate.usage == "firmware"
-        || statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
+    statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
 }
 
 pub(crate) fn is_kernel_type(statement: &DefaultStatement) -> bool {
-    // TODO: b/369602264 - remove usage field in struct, remove checking it.
-    statement.predicate.usage == "kernel"
-        || statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
+    statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
 }
 
 #[cfg(test)]
