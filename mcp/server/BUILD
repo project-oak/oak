@@ -27,11 +27,17 @@ rust_binary(
         "src/*.rs",
     ]),
     deps = [
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "//oak_session",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
         "@oak_crates_index//:log",
         "@oak_crates_index//:rmcp",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )

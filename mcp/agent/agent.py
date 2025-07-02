@@ -15,12 +15,13 @@
 #
 
 from google.adk.agents import Agent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StdioConnectionParams
 import os
 
 
 TARGET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../server/Cargo.toml')
 BUILD_TARGET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '//mcp/server:mcp_server')
+TOOL_URL = 'http://localhost:5555'
 
 
 def get_user_location() -> dict:
@@ -50,15 +51,19 @@ root_agent = Agent(
     tools=[
         get_user_location,
         MCPToolset(
-            connection_params=StdioServerParameters(
-                command='nix',
-                args=[
-                    'develop',
-                    '--command',
-                    'sh',
-                    '-c',
-                    f'cd .. && bazel run {BUILD_TARGET}',
-                ],
+            connection_params=StdioConnectionParams(
+                server_params=StdioServerParameters(
+                    command='nix',
+                    args=[
+                        'develop',
+                        '--command',
+                        'sh',
+                        '-c',
+                        f'cd .. && bazel run {BUILD_TARGET} -- --tool-url {TOOL_URL}',
+                    ],
+                    timeout=30.0,
+                ),
+                timeout=30.0,
             ),
         )],
 )
