@@ -114,6 +114,18 @@ pub struct SignatureBinder {
     additional_data: Vec<u8>,
 }
 
+impl SignatureBinder {
+    /// Creates a new `SignatureBinder` with no additional data.
+    pub fn new(signer: Box<dyn Signer>) -> Self {
+        Self { signer, additional_data: Vec::new() }
+    }
+
+    /// Creates a new `SignatureBinder` with additional data.
+    pub fn new_with_additional_data(signer: Box<dyn Signer>, additional_data: Vec<u8>) -> Self {
+        Self { signer, additional_data }
+    }
+}
+
 impl SessionBinder for SignatureBinder {
     /// Signs the concatenation of `bound_data` and `self.additional_data`.
     /// Returns the resulting signature as a `Vec<u8>`.

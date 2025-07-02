@@ -21,7 +21,7 @@ use alloc::{
 
 use anyhow::Context;
 use jwt::Token;
-use oak_attestation_verification::decode_event_proto;
+use oak_attestation_verification::{decode_event_proto, policy::SESSION_BINDING_PUBLIC_KEY_ID};
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -35,9 +35,6 @@ use sha2::Digest;
 use x509_cert::Certificate;
 
 use crate::{jwt::Header, verification::verify_attestation_token};
-
-/// Public key used to verify that the Noise handshake transcript signature.
-pub const SESSION_BINDING_PUBLIC_KEY_ID: &str = "49c7206b-b7c3-4e53-ac27-904744b2fae4";
 
 // Private claim field in Confidential Space attestation tokens with
 // the attestation nonce.
@@ -85,7 +82,10 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
 
         // We expect only one nonce, therefore a scalar string rather than an array.
         let eat_nonce: String = String::deserialize(&claims[EAT_NONCE])?;
-        anyhow::ensure!(eat_nonce.contains(&public_key_hash));
+        anyhow::ensure!(
+            eat_nonce == public_key_hash,
+            "nonce mismatch: {public_key_hash} != {eat_nonce}"
+        );
 
         // TODO: b/426463266 - Verify claims about the platform/container
 

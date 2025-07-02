@@ -25,9 +25,9 @@ use alloc::{string::ToString, vec};
 
 use anyhow::Result;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
-use oak_proto_rust::oak::attestation::v1::{
-    Endorsements, Event, EventLog, Evidence, SessionBindingPublicKeyData,
-    SessionBindingPublicKeyEndorsement,
+use oak_proto_rust::oak::{
+    attestation::v1::{Endorsements, Event, EventLog, Evidence, SessionBindingPublicKeyData},
+    Variant,
 };
 use p256::ecdsa::VerifyingKey;
 use prost::Message;
@@ -80,19 +80,22 @@ impl Attester for PublicKeyAttester {
 /// An [`Endorser`] that provides an endorsement for a session binding public
 /// key. The endorsement is added as an Event into the endorsement event log,
 /// using the [`SessionBindingPublicKeyEndorsement`] proto message.
-pub struct PublicKeyEndorser {
-    endorsement: SessionBindingPublicKeyEndorsement,
+pub struct PublicKeyEndorser<E> {
+    endorsement: E,
 }
 
-impl PublicKeyEndorser {
+impl<E> PublicKeyEndorser<E> {
     /// Creates a new `PublicKeyEndorser` with the provided pre-computed
     /// endorsement.
-    pub fn new(endorsement: SessionBindingPublicKeyEndorsement) -> Self {
+    pub fn new(endorsement: E) -> Self {
         Self { endorsement }
     }
 }
 
-impl Endorser for PublicKeyEndorser {
+impl<E: Message + Clone> Endorser for PublicKeyEndorser<E>
+where
+    Variant: From<E>,
+{
     /// Wraps the provided [`SessionBindingPublicKeyEndorsement`] into the event
     /// log of the [`Endorsements`] endorsement type.
     ///
