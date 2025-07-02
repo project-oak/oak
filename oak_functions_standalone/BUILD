@@ -64,6 +64,9 @@ rust_binary(
     crate_features = [
         "deny_sensitive_logging",
     ],
+    data = [
+        "//oak_functions/examples/echo",
+    ],
     deps = [
         ":lib",
         "//oak_containers/agent",

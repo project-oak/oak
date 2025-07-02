@@ -33,7 +33,9 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "")]
+    // The wasm_path must be specified in the BUILD data dependency
+    // TODO: b/424407998 - Have wasm_path point to content addressable storage
+    #[arg(default_value = "oak_functions/examples/echo/echo.wasm")]
     wasm_path: String,
 }
 
