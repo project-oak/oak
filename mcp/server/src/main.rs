@@ -125,22 +125,29 @@ impl WeatherService {
     ) -> Result<CallToolResult, McpError> {
         info!("Requested weather for ({}, {})", latitude, longitude);
 
-        const EPSILON: f32 = 1e-5;
-        let result = if (latitude.abs() < EPSILON) && (longitude.abs() < EPSILON) {
-            let result = json!({
-                "status": "success",
-                "weather": "The weather is sunny with a temperature of 30 degrees Celsius.",
-            });
-            info!("Success: {:?}", result);
-            result
-        } else {
-            let result = json!({
-                "status": "error",
-                "error_message": format!("Weather information for ('{}','{}') is not available.", latitude, longitude),
-            });
-            warn!("Error: {:?}", result);
-            result
+        info!("Sending a tool request at: {}", self.tool_url);
+        let tool_result = self
+            .send_tool_request(b"The weather is sunny with a temperature of 20 degrees Celsius.")
+            .await;
+        let result = match tool_result {
+            Ok(tool_response_bytes) => {
+                let tool_response = String::from_utf8(tool_response_bytes)
+                    .expect("unable to convert tool response bytes to string");
+                info!("Received a tool response: {}", tool_response);
+                json!({
+                    "status": "success",
+                    "weather": tool_response,
+                })
+            }
+            Err(err) => {
+                warn!("Received an error: {:?}", err);
+                json!({
+                    "status": "error",
+                    "error_message": format!("Weather information for ('{}','{}') is not available.", latitude, longitude),
+                })
+            }
         };
+
         let result = Content::json(result).expect("couldn't serialize JSON resuls");
         Ok(CallToolResult::success(vec![result]))
     }

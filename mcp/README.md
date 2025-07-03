@@ -40,6 +40,19 @@ Running agent weather_agent, type exit to exit.
 [weather_agent]: The weather is sunny with a temperature of 30 degrees Celsius.
 ```
 
+## Running the Tool
+
+The weather tool is implemented as an [Oak Functions](../oak_functions_standalone/README.md) Wasm
+application.
+The Rust MCP server uses [Oak Session](../oak_session/README.md) to connect to the tool with an
+attested end-to-end encrypted channel.
+In order to start the tool, run the following command:
+
+```bash
+nix develop
+bazel run //oak_functions_standalone:oak_functions_standalone -- oak_functions/examples/echo/echo.wasm
+```
+
 ## Running the Server
 
 MCP Server is implemented using Rust MCP SDK: https://github.com/modelcontextprotocol/rust-sdk

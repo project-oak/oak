@@ -21,7 +21,7 @@ import os
 
 TARGET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../server/Cargo.toml')
 BUILD_TARGET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '//mcp/server:mcp_server')
-TOOL_URL = 'http://localhost:5555'
+TOOL_URL = 'http://localhost:8080'
 
 
 def get_user_location() -> dict:
