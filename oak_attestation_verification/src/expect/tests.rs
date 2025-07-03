@@ -23,18 +23,27 @@ use oak_proto_rust::oak::{
     },
     HexDigest,
 };
+use oak_time::Instant;
 use prost::Message;
-use time::ext::NumericalDuration;
 
 use crate::{
     endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE},
+    statement::Validity,
     test_util::{self, GetValidity},
-    util::{self, UnixTimestampMillis},
+    util,
 };
 
 // Same as raw_digest_from_contents, but emits hex encoded digest formats.
 fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
     util::raw_to_hex_digest(&util::raw_digest_from_contents(contents))
+}
+
+// Returns milliseconds UTC in the middle of the validity period.
+fn make_valid_now_utc_millis(validity: &Validity) -> i64 {
+    let not_before = Instant::from(validity.not_before);
+    let not_after = Instant::from(validity.not_after);
+    let middle = not_before + (not_after - not_before) / 2;
+    middle.into_unix_millis()
 }
 
 #[test]
@@ -59,9 +68,7 @@ fn test_get_expected_measurement_digest_validity() {
     // The reference_value should contain the public key corresponding the the
     // endorsement signing key.
     let reference_value = test_util::binary_reference_value_for_endorser_pk(public_key);
-    // Pretend it's a week into validity.
-    let now_utc_millis =
-        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
+    let now_utc_millis = make_valid_now_utc_millis(endorsement.validity());
 
     let expected_digests = super::get_expected_measurement_digest(
         now_utc_millis,
@@ -116,9 +123,7 @@ fn test_get_stage0_expected_values_validity() {
     // The reference_value should contain the public key corresponding the the
     // endorsement signing key.
     let reference_value = test_util::binary_reference_value_for_endorser_pk(public_key);
-    // Pretend it's a week into the validity period.
-    let now_utc_millis =
-        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
+    let now_utc_millis = make_valid_now_utc_millis(endorsement.validity());
     let expected_digests =
         super::get_stage0_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
             .expect("failed to get digests");
@@ -171,9 +176,7 @@ fn test_get_kernel_expected_values_validity() {
     // The reference_value should contain the public key corresponding the the
     // endorsement signing key.
     let reference_value = test_util::kernel_binary_reference_value_for_endorser_pk(public_key);
-    // Pretend it's a week into the validity period.
-    let now_utc_millis =
-        endorsement.validity().not_before.saturating_add((7).days()).unix_timestamp_millis();
+    let now_utc_millis = make_valid_now_utc_millis(endorsement.validity());
     let expected_digests =
         super::get_kernel_expected_values(now_utc_millis, Some(&tr_endorsement), &reference_value)
             .expect("failed to get digests");

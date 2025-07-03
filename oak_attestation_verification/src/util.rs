@@ -484,23 +484,5 @@ pub fn decode_protobuf_any<M: Message + Default>(
     })
 }
 
-/// Return a milliseconds-since-the-epoch timestamp value.
-///
-/// Endorsement validity structures in our JSON-based endorsements use
-/// milliseconds resolution, but [`OffsetDateTime`] provides only seconds or
-/// nanoseconds since the epoch.
-///
-/// This bridges a convenience gap, and helps with readability of code that
-/// works with validity times.
-pub trait UnixTimestampMillis {
-    fn unix_timestamp_millis(&self) -> i64;
-}
-
-impl UnixTimestampMillis for OffsetDateTime {
-    fn unix_timestamp_millis(&self) -> i64 {
-        self.unix_timestamp() * 1000
-    }
-}
-
 #[cfg(test)]
 mod tests;

@@ -38,10 +38,9 @@ use anyhow::Context;
 use oak_proto_rust::oak::attestation::v1::{
     EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
 };
-use oak_time::Instant;
 pub use util::{
     convert_pem_to_raw, decode_event_proto, decode_protobuf_any, hex_to_raw_digest,
-    raw_to_hex_digest, reference_values_from_evidence, UnixTimestampMillis,
+    raw_to_hex_digest, reference_values_from_evidence,
 };
 
 /// Verifies a signed endorsement against a reference value.
@@ -59,15 +58,10 @@ pub fn verify_endorsement(
     let s = endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
     let digest = hex_to_raw_digest(&statement::get_digest(&s)?)?;
     let validity = s.predicate.validity.context("missing validity in statement")?;
-    let not_before = Instant::from_unix_millis(validity.not_before.unix_timestamp_millis());
-    let not_after = Instant::from_unix_millis(validity.not_after.unix_timestamp_millis());
 
     Ok(EndorsementDetails {
         subject_digest: Some(digest),
-        valid: Some(oak_proto_rust::oak::Validity {
-            not_before: Some(not_before.into_timestamp()),
-            not_after: Some(not_after.into_timestamp()),
-        }),
+        valid: Some(oak_proto_rust::oak::Validity::from(&validity)),
         claim_types: s.predicate.claims.into_iter().map(|x| x.r#type).collect(),
     })
 }

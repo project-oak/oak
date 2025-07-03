@@ -29,8 +29,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use time::OffsetDateTime;
 
-use crate::util::UnixTimestampMillis;
-
 /// URI representing in-toto statements. We only use V1, earlier and later
 /// versions will be rejected.
 pub(crate) const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
@@ -172,10 +170,11 @@ pub(crate) fn validate_statement(
 
     match &statement.predicate.validity {
         Some(validity) => {
-            if validity.not_before.unix_timestamp_millis() > now_utc_millis {
+            let now = Instant::from_unix_millis(now_utc_millis);
+            if now < Instant::from(validity.not_before) {
                 anyhow::bail!("the claim is not yet applicable")
             }
-            if validity.not_after.unix_timestamp_millis() < now_utc_millis {
+            if Instant::from(validity.not_after) < now {
                 anyhow::bail!("the claim is no longer applicable")
             }
         }

@@ -118,10 +118,12 @@ fn test_verify_endorsement_success() {
         "{:?}",
         details
     );
+
     let actual_not_before = Instant::from(details.valid.as_ref().unwrap().not_before.unwrap());
     let actual_not_after = Instant::from(details.valid.as_ref().unwrap().not_after.unwrap());
-    assert!(actual_not_before.into_unix_millis() == 1709113632000, "{:?}", details);
-    assert!(actual_not_after.into_unix_millis() == 1740649632000, "{:?}", details);
+    assert!(actual_not_before.into_unix_millis() == 1_709_113_632_067, "{:?}", details);
+    assert!(actual_not_after.into_unix_millis() == 1_740_649_632_067, "{:?}", details);
+
     assert!(details.claim_types.len() == 2, "{:?}", details);
     assert!(
         details.claim_types[0] == "https://project-oak.github.io/oak/test_claim_1",
@@ -151,6 +153,51 @@ fn test_verify_endorsement_fails_too_late() {
     let result =
         verify_endorsement(TOO_LATE_UTC_MILLIS, &testdata.signed_endorsement, &testdata.ref_value);
     assert!(result.is_err(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_endorsement_at_not_before_boundary() {
+    let testdata = load_testdata();
+    let details = verify_endorsement(
+        testdata.now_utc_millis,
+        &testdata.signed_endorsement,
+        &testdata.ref_value,
+    )
+    .unwrap();
+    let not_before = Instant::from(details.valid.as_ref().unwrap().not_before.unwrap());
+    let not_before_millis = not_before.into_unix_millis();
+
+    let expected_success =
+        verify_endorsement(not_before_millis, &testdata.signed_endorsement, &testdata.ref_value);
+    let expected_failure = verify_endorsement(
+        not_before_millis - 1,
+        &testdata.signed_endorsement,
+        &testdata.ref_value,
+    );
+
+    assert!(expected_success.is_ok(), "{:?}", expected_success);
+    assert!(expected_failure.is_err(), "{:?}", expected_failure);
+}
+
+#[test]
+fn test_verify_endorsement_at_not_after_boundary() {
+    let testdata = load_testdata();
+    let details = verify_endorsement(
+        testdata.now_utc_millis,
+        &testdata.signed_endorsement,
+        &testdata.ref_value,
+    )
+    .unwrap();
+    let not_after = Instant::from(details.valid.as_ref().unwrap().not_after.unwrap());
+    let not_after_millis = not_after.into_unix_millis();
+
+    let expected_success =
+        verify_endorsement(not_after_millis, &testdata.signed_endorsement, &testdata.ref_value);
+    let expected_failure =
+        verify_endorsement(not_after_millis + 1, &testdata.signed_endorsement, &testdata.ref_value);
+
+    assert!(expected_success.is_ok(), "{:?}", expected_success);
+    assert!(expected_failure.is_err(), "{:?}", expected_failure);
 }
 
 #[test]
