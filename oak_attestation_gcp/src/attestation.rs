@@ -128,6 +128,10 @@ fn http_request(
     write!(&mut stream, "\r\n")
         .map_err(|e| InternalError("Failed to write HTTP request".to_string(), e.into()))?;
 
+    write!(&mut stream, "{}", request.body())
+        .map_err(|e| InternalError("Failed to write HTTP request body".to_string(), e.into()))?;
+    stream.flush().map_err(|e| InternalError("Failed to flush stream".to_string(), e.into()))?;
+
     // Read the response from the stream.
     let mut reader = BufReader::new(stream);
 
