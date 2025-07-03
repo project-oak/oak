@@ -100,6 +100,7 @@ rust_test(
     srcs = ["tests/integration_test.rs"],
     data = [
         "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
     ],
     deps = [
         ":lib",

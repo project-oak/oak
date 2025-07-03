@@ -22,7 +22,10 @@ use clap::Parser;
 use oak_containers_agent::set_error_handler;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
-use oak_proto_rust::oak::functions::{config::ApplicationConfig, InitializeRequest};
+use oak_proto_rust::oak::functions::{
+    config::ApplicationConfig, InitializeRequest, LookupDataChunk,
+};
+use prost::Message;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -35,8 +38,17 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Args {
     // The wasm_path must be specified in the BUILD data dependency
     // TODO: b/424407998 - Have wasm_path point to content addressable storage
-    #[arg(default_value = "oak_functions/examples/echo/echo.wasm")]
+    #[arg(short, long, default_value = "oak_functions/examples/echo/echo.wasm")]
     wasm_path: String,
+
+    #[arg(short, long, default_value = "")]
+    lookup_data_path: String,
+}
+
+// Parses lookup data from the `lookup_data_path` into a vector
+fn parse_lookup_data_chunk(lookup_data_path: String) -> LookupDataChunk {
+    let lookup_data_buffer = fs::read(lookup_data_path).expect("failed to read lookup data file");
+    LookupDataChunk::decode_length_delimited(&lookup_data_buffer[..]).unwrap()
 }
 
 #[tokio::main]
@@ -45,6 +57,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.wasm_path.is_empty() {
         panic!("--wasm_path must be specified")
+    }
+
+    let mut lookup_data_option: Option<LookupDataChunk> = None;
+
+    if !args.lookup_data_path.is_empty() {
+        println!("reading LookupDataChunk from: {}", args.lookup_data_path);
+        lookup_data_option = Some(parse_lookup_data_chunk(args.lookup_data_path));
     }
 
     // Use eprintln here, as normal logging would go through the OTLP connection,
@@ -73,6 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             constant_response_size: 100, // This value is ultimately ignored.
             wasm_module: fs::read(args.wasm_path).expect("failed to read wasm module"),
         },
+        lookup_data: lookup_data_option,
     };
 
     let server_handle = {

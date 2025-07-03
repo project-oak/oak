@@ -26,7 +26,7 @@ use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::oak::functions::{
     standalone::{OakSessionRequest, OakSessionResponse},
-    InitializeRequest,
+    InitializeRequest, LookupDataChunk, LookupDataEntry,
 };
 use oak_session::{
     attestation::AttestationType,
@@ -56,6 +56,7 @@ async fn test_echo() {
             constant_response_size: 100, // This value is ultimately ignored.
             wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
         },
+        lookup_data: None,
     };
 
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
@@ -102,7 +103,6 @@ async fn test_echo() {
             client_session
                 .handle_init_message(oak_session_response.response.expect("no session response"))
                 .expect("failed to handle init response");
-            println!("Client handshake is done");
         }
     }
 
@@ -135,6 +135,121 @@ async fn test_echo() {
 
     assert_eq!(response_vector.len(), 1);
     assert_eq!(response_vector[0], test_message);
+
+    server_handle.abort();
+    let _ = server_handle.await;
+}
+
+#[tokio::test]
+async fn test_lookup() {
+    let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
+
+    let (addr, stream) = {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let listener = TcpListener::bind(addr).await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        (addr, Box::new(TcpListenerStream::new(listener)))
+    };
+
+    let oak_functions_session_args = OakFunctionsSessionArgs {
+        wasm_initialization: InitializeRequest {
+            constant_response_size: 100, // This value is ultimately ignored.
+            wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
+        },
+        lookup_data: Some(LookupDataChunk {
+            items: vec![
+                LookupDataEntry {
+                    key: b"key_0".to_vec().into(),
+                    value: b"value_0".to_vec().into(),
+                },
+                LookupDataEntry {
+                    key: b"key_1".to_vec().into(),
+                    value: b"value_1".to_vec().into(),
+                },
+                LookupDataEntry {
+                    key: b"key_2".to_vec().into(),
+                    value: b"value_2".to_vec().into(),
+                },
+            ],
+        }),
+    };
+
+    let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
+        stream,
+        Default::default(),
+        oak_functions_session_args,
+    ));
+
+    let mut oak_functions_session_client: OakFunctionsSessionClient<
+        tonic::transport::channel::Channel,
+    > = {
+        let channel = Endpoint::from_shared(format!("http://{addr}"))
+            .expect("couldn't form channel")
+            .connect_timeout(Duration::from_secs(120))
+            .connect()
+            .await
+            .expect("couldn't connect to trusted app");
+        OakFunctionsSessionClient::new(channel).send_compressed(CompressionEncoding::Gzip)
+    };
+
+    let (mut tx, rx) = mpsc::channel(10);
+
+    let response_stream = oak_functions_session_client.oak_session(rx).await.unwrap();
+
+    let mut resp_stream: tonic::Streaming<OakSessionResponse> = response_stream.into_inner();
+
+    let mut client_session = oak_session::ClientSession::create(
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+    )
+    .expect("could not create client session");
+
+    // Initialize encrypted channel.
+    while !client_session.is_open() {
+        let session_request =
+            client_session.next_init_message().expect("expected client init message");
+        let oak_session_request = OakSessionRequest { request: Some(session_request) };
+        tx.try_send(oak_session_request).expect("failed to send to server");
+        if !client_session.is_open() {
+            let oak_session_response = resp_stream
+                .message()
+                .await
+                .expect("expected a response")
+                .expect("response was failure");
+            client_session
+                .handle_init_message(oak_session_response.response.expect("no session response"))
+                .expect("failed to handle init response");
+        }
+    }
+
+    // 2 keys in range and one not in the map.
+    let query_keys: Vec<Vec<u8>> = vec![b"key_0".to_vec(), b"key_2".to_vec(), b"key_9".to_vec()];
+
+    for key_query in query_keys {
+        let encrypted_request =
+            client_session.encrypt(key_query).expect("failed to encrypt message");
+        let oak_session_request = OakSessionRequest { request: Some(encrypted_request) };
+        tx.try_send(oak_session_request).expect("failed to send message");
+    }
+
+    tx.close_channel();
+
+    let response_vector: Vec<String> = resp_stream
+        .map(|oak_session_response| {
+            let response_bytes = client_session.decrypt(
+                oak_session_response
+                    .expect("empty response")
+                    .response
+                    .expect("empty session response"),
+            );
+            println!("We received a response");
+            String::from_utf8(response_bytes.expect("unable to decrypt response"))
+                .expect("unable to convert bytes to string")
+        })
+        .collect()
+        .await;
+
+    assert_eq!(response_vector.len(), 3);
+    assert_eq!(response_vector, vec!["value_0", "value_2", ""]);
 
     server_handle.abort();
     let _ = server_handle.await;

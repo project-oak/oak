@@ -24,9 +24,10 @@ use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
 use oak_proto_rust::oak::functions::{
+    extend_next_lookup_data_request::Data,
     standalone::{OakSessionRequest, OakSessionResponse},
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, ReserveRequest, ReserveResponse,
+    ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk,
+    ReserveRequest,
 };
 use oak_session::{
     attestation::AttestationType,
@@ -40,10 +41,9 @@ use tokio_stream::{Stream, StreamExt};
 use tonic::{codec::CompressionEncoding, transport::server::Connected};
 
 // Arguements to start up the Oak Functions Session Service.
-// While currently there is only one argument, in the future lookup data
-// arguments will be added.
 pub struct OakFunctionsSessionArgs {
     pub wasm_initialization: InitializeRequest,
+    pub lookup_data: Option<LookupDataChunk>,
 }
 
 // Instance of the OakFunctions service for Oak Containers.
@@ -64,27 +64,28 @@ impl<H: Handler> OakFunctionsSessionService<H> {
         .map_err(map_status)
         .unwrap();
 
-        // TODO: b/424407998 - Load lookup data via calls to `reserve`,
-        // `finish_next_lookup_data`, and `extend_next_lookup_data`.
+        let lookup_data_arg = oak_functions_session_args.lookup_data;
+
+        // Load lookup data, if provided.
+        match lookup_data_arg {
+            Some(lookup_data) => {
+                let entry_count = lookup_data.items.len() as u64;
+                let lookup_data_request: ExtendNextLookupDataRequest =
+                    ExtendNextLookupDataRequest { data: Some(Data::Chunk(lookup_data)) };
+                instance
+                    .reserve(ReserveRequest { additional_entries: (entry_count) })
+                    .expect("failed to reserve lookup data entries");
+                instance
+                    .extend_next_lookup_data(lookup_data_request)
+                    .expect("failed to lookup lookup data entry");
+                instance
+                    .finish_next_lookup_data(FinishNextLookupDataRequest {})
+                    .expect("failed to finish loading lookup data");
+            }
+            None => println!("no lookup data provided"),
+        }
+
         Self { instance: Arc::new(instance) }
-    }
-
-    pub fn extend_next_lookup_data(
-        &self,
-        request: ExtendNextLookupDataRequest,
-    ) -> tonic::Result<ExtendNextLookupDataResponse> {
-        self.get_instance().extend_next_lookup_data(request).map_err(map_status)
-    }
-
-    pub fn finish_next_lookup_data(
-        &self,
-        request: FinishNextLookupDataRequest,
-    ) -> tonic::Result<FinishNextLookupDataResponse> {
-        self.get_instance().finish_next_lookup_data(request).map_err(map_status)
-    }
-
-    pub fn reserve(&self, request: ReserveRequest) -> tonic::Result<ReserveResponse> {
-        self.get_instance().reserve(request).map_err(map_status)
     }
 
     #[allow(clippy::result_large_err)]
