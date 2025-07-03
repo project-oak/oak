@@ -1,4 +1,3 @@
-//
 // Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,30 +21,53 @@
 use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
+use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
-use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+use oak_proto_rust::oak::{
+    attestation::v1::ConfidentialSpaceEndorsement,
+    session::v1::{SessionRequest, SessionResponse},
+};
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
+    session_binding::{SessionBinder, SignatureBinder},
     ServerSession, Session,
 };
+use p256::ecdsa::{SigningKey, VerifyingKey};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
 use crate::app::EchoHandler;
 
+const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
+
 /// Holds the gRPC EnclaveApplication implementation.
-struct EnclaveApplicationImplementation {
+pub struct EnclaveApplicationImplementation {
     application_handler: Arc<EchoHandler>,
+    attester: Arc<dyn Attester>,
+    endorser: Arc<dyn Endorser>,
+    session_binder: Arc<dyn SessionBinder>,
 }
 
 impl EnclaveApplicationImplementation {
-    pub fn new(application_handler: EchoHandler) -> Self {
-        Self { application_handler: Arc::new(application_handler) }
+    pub fn new(
+        application_handler: EchoHandler,
+        binding_key: SigningKey,
+        endorsement: String,
+    ) -> Self {
+        Self {
+            application_handler: Arc::new(application_handler),
+            attester: Arc::new(PublicKeyAttester::new(VerifyingKey::from(&binding_key))),
+            endorser: Arc::new(PublicKeyEndorser::new(ConfidentialSpaceEndorsement {
+                jwt_token: endorsement,
+            })),
+            session_binder: Arc::new(SignatureBinder::new(Box::new(binding_key))),
+        }
     }
 }
 
@@ -70,7 +92,11 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
         let mut server_session = ServerSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+            SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+                .add_self_attester_ref(ATTESTATION_ID.to_owned(), &self.attester)
+                .add_self_endorser_ref(ATTESTATION_ID.to_owned(), &self.endorser)
+                .add_session_binder_ref(ATTESTATION_ID.to_owned(), &self.session_binder)
+                .build(),
         )
         .map_err(|e| tonic::Status::internal(format!("could not create server session: {e:?}")))?;
 
@@ -104,10 +130,14 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
 pub async fn create(
     listener: TcpListener,
     application_handler: EchoHandler,
+    binding_key: SigningKey,
+    endorsement: String,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(EnclaveApplicationServer::new(EnclaveApplicationImplementation::new(
             application_handler,
+            binding_key,
+            endorsement,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

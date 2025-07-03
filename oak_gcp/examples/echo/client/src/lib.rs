@@ -13,8 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
+use oak_attestation_gcp::{
+    policy::ConfidentialSpacePolicy, verification::CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+};
+use oak_attestation_verification::verifier::EventLogVerifier;
+use oak_attestation_verification_types::util::Clock;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
@@ -22,9 +32,24 @@ use oak_session::{
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
+    key_extractor::DefaultBindingKeyExtractor,
     ClientSession, Session,
 };
 use tonic::transport::{Channel, Uri};
+use x509_cert::{der::DecodePem, Certificate};
+
+const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
+
+struct SystemClock;
+
+impl Clock for SystemClock {
+    fn get_milliseconds_since_epoch(&self) -> i64 {
+        match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(n) => n.as_millis().try_into().unwrap(),
+            Err(_) => 0,
+        }
+    }
+}
 
 // A client for streaming requests to the Echo server over an E2EE Noise
 // Protocol session.
@@ -50,11 +75,22 @@ impl EchoClient {
 
         // We don't have a noise client impl yet, so we need to manage the session
         // manually.
-        // TODO: b/356389780 - Integrate Noise into the Oak Client.
-        let mut client_session = ClientSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-        )
-        .context("could not create client session")?;
+        let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
+            .expect("Failed to parse root certificate");
+        let policy = ConfidentialSpacePolicy::new(root);
+        let attestation_verifier =
+            EventLogVerifier::new(vec![Box::new(policy)], Arc::new(SystemClock {}));
+
+        let client_config: SessionConfig =
+            SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+                .add_peer_verifier_with_key_extractor(
+                    ATTESTATION_ID.to_string(),
+                    Box::new(attestation_verifier),
+                    Box::new(DefaultBindingKeyExtractor {}),
+                )
+                .build();
+        let mut client_session =
+            ClientSession::create(client_config).expect("Failed to create client session");
 
         while !client_session.is_open() {
             let request = client_session.next_init_message().expect("expected client init message");

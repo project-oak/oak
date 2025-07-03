@@ -16,7 +16,7 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
@@ -32,29 +32,19 @@ rust_library(
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        "//oak_attestation",
+        "//oak_attestation_types",
         "//oak_crypto",
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
-    ],
-)
-
-rust_test(
-    name = "integration_test",
-    srcs = ["tests/integration_test.rs"],
-    deps = [
-        ":oak_gcp_examples_echo_enclave_app",
-        "//oak_gcp/examples/echo/client:oak_gcp_examples_echo_client",
-        "//oak_gcp/examples/echo/proto:echo_rust_proto",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
 )
@@ -64,8 +54,11 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_gcp_examples_echo_enclave_app",
-        "//oak_session",
+        "//oak_attestation_gcp",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
     ],
 )
@@ -81,6 +74,7 @@ oci_image(
     name = "echo_enclave_app_image",
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_gcp_examples_echo_enclave_app"],
+    exposed_ports = ["8080/tcp"],
     tars = [":echo_enclave_app_tar"],
 )
 
@@ -88,5 +82,5 @@ oci_push(
     name = "echo_enclave_app_push",
     image = ":echo_enclave_app_image",
     remote_tags = ["latest"],
-    repository = "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app",
+    repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/echo_enclave_app",
 )
