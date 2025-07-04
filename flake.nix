@@ -74,6 +74,13 @@
             };
             # Minimal shell with only the dependencies needed to run the Rust tests.
             rust = with pkgs; mkShell {
+              # iconv is needed for the Rust toolchain to work correctly on macOS.
+              # See b/427475113 for more details.
+              # Here we expose an environment variable to allow checking the exact path of the
+              # iconv library, to be used when updating the absolute path in .bazelrc.
+              shellHook = ''
+                export ICONV_PATH="${iconv}"
+              '';
               inputsFrom = [
                 base
               ];
@@ -91,6 +98,7 @@
                 qemu_kvm
                 python312
                 wasm-pack
+                iconv
               ]
               ++
               # Linux-specific dependencies.

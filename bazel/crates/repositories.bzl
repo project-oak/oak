@@ -77,9 +77,9 @@ def create_oak_crate_repositories(
         packages = OAK_STD_CRATES | extra_packages,
         rust_version = RUST_NIGHTLY_VERSION,
         supported_platform_triples = [
+            "aarch64-apple-darwin",
             "x86_64-unknown-linux-gnu",
             "x86_64-unknown-none",
-            "aarch64-apple-darwin",
         ],
     )
 
@@ -91,6 +91,7 @@ def create_oak_crate_repositories(
         packages = OAK_NO_STD_CRATES | extra_no_std_packages,
         rust_version = RUST_NIGHTLY_VERSION,
         supported_platform_triples = [
+            "aarch64-apple-darwin",
             # Linux for dependencies of build scripts (they run on host):
             "x86_64-unknown-linux-gnu",
             "x86_64-unknown-none",

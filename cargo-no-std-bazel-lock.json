@@ -1,5 +1,5 @@
 {
-  "checksum": "f9bf23dd972ec9861b83b01811318b5a6eafc50391e1abeeb10e9929413aabae",
+  "checksum": "6aa81aec282e39c48254747159225d6c580f17c2b7184d7acb572ac8da30167b",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -11313,15 +11313,21 @@
     "direct-cargo-bazel-deps 0.0.1": ""
   },
   "conditions": {
+    "aarch64-apple-darwin": [
+      "aarch64-apple-darwin"
+    ],
     "aarch64-linux-android": [],
     "cfg(all(not(curve25519_dalek_backend = \"fiat\"), not(curve25519_dalek_backend = \"serial\"), target_arch = \"x86_64\"))": [
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
     ],
     "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [],
-    "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [],
+    "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [
+      "aarch64-apple-darwin"
+    ],
     "cfg(all(target_arch = \"loongarch64\", target_os = \"linux\"))": [],
     "cfg(any(target_arch = \"aarch64\", target_arch = \"x86_64\", target_arch = \"x86\"))": [
+      "aarch64-apple-darwin",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
     ],
@@ -11335,6 +11341,7 @@
     ],
     "cfg(curve25519_dalek_backend = \"fiat\")": [],
     "cfg(not(all(target_arch = \"arm\", target_os = \"none\")))": [
+      "aarch64-apple-darwin",
       "wasm32-unknown-unknown",
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
@@ -11346,6 +11353,7 @@
     ],
     "cfg(target_os = \"wasi\")": [],
     "cfg(unix)": [
+      "aarch64-apple-darwin",
       "x86_64-unknown-linux-gnu"
     ],
     "wasm32-unknown-unknown": [

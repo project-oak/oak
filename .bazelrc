@@ -11,6 +11,17 @@ common --host_cxxopt=-std=c++20
 # Use nightly rustc by default
 common --@rules_rust//rust/toolchain/channel=nightly
 
+# Workaround for macOS toolchain issues (see b/427475113).
+# Here we hardcode the path to the libiconv library, which is needed by the
+# `rules_rust` toolchain on macOS.
+# The library is provided by the `iconv` package in Nix. When the version
+# of `libiconv` changes, this path needs to be updated.
+# In the Nix shell, this path is exposed for convenience as the environment variable `ICONV_PATH`.
+# Environment variables are not supported in the bazelrc file, so we hardcode the path here.
+# Note the `/lib` suffix added to the base path.
+common --@rules_rust//:extra_rustc_flags=-L/nix/store/fhza62gkyw0mp1h2zls6pl1832zjjf26-libiconv-109/lib
+common --@rules_rust//:extra_exec_rustc_flags=-L/nix/store/fhza62gkyw0mp1h2zls6pl1832zjjf26-libiconv-109/lib
+
 # Use a custom workspace status command so that the git revision is included in
 # stamped binaries.
 common --workspace_status_command=bazel/workspace_status_command.sh
