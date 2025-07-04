@@ -1,5 +1,5 @@
 {
-  "checksum": "ad5467030d8142e8d4efd6d4d58fe2f38d577a08441ec4d20861159f56c6a4fa",
+  "checksum": "10463921983fbcbebcd9e1f8f8181191ce61ea2f00851471d83512e953e31250",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -5019,8 +5019,7 @@
         "edition": "2015",
         "rustc_flags": {
           "common": [
-            "-C",
-            "overflow-checks=false"
+            "--codegen=overflow-checks=false"
           ],
           "selects": {}
         },

@@ -278,7 +278,7 @@ OAK_NO_STD_ANNOTATIONS = {
     "linked_list_allocator": [crate.annotation(
         # overflow-checks are disabled for release builds, and for some reason Restricted Kernel
         # hits them in dev builds.  Let's disable them everywhere.
-        rustc_flags = ["-C", "overflow-checks=false"],
+        rustc_flags = ["--codegen=overflow-checks=false"],
     )],
 }
 

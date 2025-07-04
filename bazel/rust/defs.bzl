@@ -72,11 +72,11 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
         exec_triple = "x86_64-unknown-linux-gnu",
         extra_rustc_flags = {
             "x86_64-unknown-none": [
-                "-Clinker-flavor=gcc",
-                "-Crelocation-model=static",
-                "-Ctarget-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
-                "-Ctarget-cpu=x86-64-v3",
-                "-Clink-arg=-Wl,-zmax-page-size=0x200000",
+                "--codegen=linker-flavor=gcc",
+                "--codegen=relocation-model=static",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-cpu=x86-64-v3",
+                "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
             ],
         },
         extra_target_triples = {
@@ -113,9 +113,8 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
         extra_rustc_flags = {
             # Disabling AVX implies soft-float is needed.
             "x86_64-unknown-none": [
-                "-Clinker-flavor=gcc",
-                "-C",
-                "target-feature=+soft-float",
+                "--codegen=linker-flavor=gcc",
+                "--codegen=target-feature=+soft-float",
             ],
         },
         extra_target_triples = {

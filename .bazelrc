@@ -73,15 +73,15 @@ build:asan --linkopt -fsanitize=address
 build:asan --copt -Wno-error=maybe-uninitialized
 # The flags improve symbolication and rust stack trace expansion
 build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Zsanitizer=address
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cdebuginfo=full
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Ccodegen-units=1
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Clink-dead-code
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cpasses=sancov-module
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-level=4
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-pc-table
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-inline-8bit-counters
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-trace-compares
-build:asan --@rules_rust//rust/settings:extra_rustc_flag=-Cllvm-args=-sanitizer-coverage-stack-depth
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=debuginfo=full
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=codegen-units=1
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=link-dead-code
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=passes=sancov-module
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=llvm-args=-sanitizer-coverage-level=4
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=llvm-args=-sanitizer-coverage-pc-table
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=llvm-args=-sanitizer-coverage-inline-8bit-counters
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=llvm-args=-sanitizer-coverage-trace-compares
+build:asan --@rules_rust//rust/settings:extra_rustc_flag=--codegen=llvm-args=-sanitizer-coverage-stack-depth
 
 # Use a custom local bazelrc if present.
 #

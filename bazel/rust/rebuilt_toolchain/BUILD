@@ -55,7 +55,7 @@ rust_toolchain(
     dylib_ext = ".so",
     exec_triple = "x86_64-unknown-linux-gnu",
     extra_rustc_flags = [
-        "-Clinker-flavor=gcc",
+        "--codegen=linker-flavor=gcc",
         "--codegen=relocation-model=static",
         "--codegen=code-model=large",
         "--codegen=target-feature=+rdrand",

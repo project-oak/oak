@@ -20,14 +20,10 @@ load("//bazel:defs.bzl", "objcopy")
 load("//oak_kernel_measurement:rules.bzl", "kernel_measurement")
 
 _RK_WRAPPER_RUSTC_FLAGS = [
-    "-C",
-    "lto=true",  # Enable https://llvm.org/docs/LinkTimeOptimization.html.
-    "-C",
-    "panic=abort",
-    "-C",
-    "relocation-model=dynamic-no-pic",
-    "-C",
-    "opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
+    "--codegen=lto=true",  # Enable https://llvm.org/docs/LinkTimeOptimization.html.
+    "--codegen=panic=abort",
+    "--codegen=relocation-model=dynamic-no-pic",
+    "--codegen=opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
 ]
 
 def kernel_bzimage_and_measurements(name, payload, visibility = None):

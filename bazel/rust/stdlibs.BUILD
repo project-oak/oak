@@ -105,7 +105,7 @@ rust_library(
     rustc_flags = [
         "--codegen=relocation-model=static",
         "--codegen=code-model=large",
-        #"-Cpanic=abort",
+        #"--codegen=panic=abort",
         "--cap-lints=allow",
         "-Zmacro-backtrace",
     ],
