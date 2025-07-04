@@ -147,6 +147,7 @@
                 bc
                 bison
                 cpio
+                cosign
                 curl
                 docker
                 fakeroot
@@ -154,6 +155,7 @@
                 jq
                 libelf
                 perl
+                rekor-cli
                 strip-nondeterminism
                 ncurses
                 netcat
