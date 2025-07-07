@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    // Demo server. See ./mcp_server/README.md for details.
+    "demoServer": {
+      "command": "./bazel-bin/mcp/server/mcp_server",
+      "args": ["--tool-url=localhost:8080"],
+      "cwd": ".",
+      "timeout": 5000
+    }
+  }
+}
