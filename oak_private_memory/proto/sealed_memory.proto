@@ -63,6 +63,7 @@ message AddMemoryResponse {
 message GetMemoriesRequest {
   string tag = 1;
   int32 page_size = 2;
+  ResultMask result_mask = 3;
 }
 
 message GetMemoriesResponse {
@@ -110,6 +111,7 @@ message KeySyncResponse {
 
 message GetMemoryByIdRequest {
   string id = 1;
+  ResultMask result_mask = 2;
 }
 
 message GetMemoryByIdResponse {

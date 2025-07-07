@@ -216,7 +216,8 @@ async fn execute_add_get_reset_memory_logic(
         receive_response_generic(response_stream, client_session, mode).await;
 
     // GetMemoriesRequest
-    let get_memories_request_data = GetMemoriesRequest { tag: "tag".to_string(), page_size: 1 };
+    let get_memories_request_data =
+        GetMemoriesRequest { tag: "tag".to_string(), page_size: 1, result_mask: None };
     send_request_generic(tx, client_session, get_memories_request_data, None, mode).await;
     let (get_memories_response_1, _): (GetMemoriesResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -244,7 +245,8 @@ async fn execute_add_get_reset_memory_logic(
     assert_eq!(memory_value, 123456789);
 
     // GetMemoryByIdRequest
-    let get_memory_by_id_request_data = GetMemoryByIdRequest { id: memory_id_from_add.clone() };
+    let get_memory_by_id_request_data =
+        GetMemoryByIdRequest { id: memory_id_from_add.clone(), result_mask: None };
     send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
     let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -259,7 +261,8 @@ async fn execute_add_get_reset_memory_logic(
     assert!(reset_memory_response.success);
 
     // GetMemoriesRequest again
-    let get_memories_request_data_2 = GetMemoriesRequest { tag: "tag".to_string(), page_size: 10 };
+    let get_memories_request_data_2 =
+        GetMemoriesRequest { tag: "tag".to_string(), page_size: 10, result_mask: None };
     send_request_generic(tx, client_session, get_memories_request_data_2, None, mode).await;
     let (get_memories_response_2, _): (GetMemoriesResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -316,7 +319,8 @@ async fn execute_delete_memory_logic(
 
     // Verify items were added
     for id in &added_memory_ids {
-        let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id.clone() };
+        let get_memory_by_id_request_data =
+            GetMemoryByIdRequest { id: id.clone(), result_mask: None };
         send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
         let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
             receive_response_generic(response_stream, client_session, mode).await;
@@ -335,7 +339,8 @@ async fn execute_delete_memory_logic(
 
     // Verify deleted items are gone
     for id in &ids_to_delete {
-        let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id.clone() };
+        let get_memory_by_id_request_data =
+            GetMemoryByIdRequest { id: id.clone(), result_mask: None };
         send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
         let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
             receive_response_generic(response_stream, client_session, mode).await;
@@ -345,7 +350,8 @@ async fn execute_delete_memory_logic(
 
     // Verify the item that was NOT deleted still exists
     let id_not_deleted = added_memory_ids[1].clone();
-    let get_memory_by_id_request_data = GetMemoryByIdRequest { id: id_not_deleted.clone() };
+    let get_memory_by_id_request_data =
+        GetMemoryByIdRequest { id: id_not_deleted.clone(), result_mask: None };
     send_request_generic(tx, client_session, get_memory_by_id_request_data, None, mode).await;
     let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
         receive_response_generic(response_stream, client_session, mode).await;
@@ -496,6 +502,114 @@ async fn execute_embedding_search_logic(
         search_memory_response.results[0].memory.as_ref().unwrap().id,
         add_memory_response2.id
     );
+}
+
+async fn execute_get_masking_logic(
+    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
+    client_session: &mut oak_session::ClientSession,
+    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
+    mode: TestMode,
+) {
+    let pm_uid = format!(
+        "test_get_masking_{:?}_{}",
+        mode,
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+    );
+
+    // User Registration
+    let user_registration_request = UserRegistrationRequest {
+        key_encryption_key: TEST_EK.to_vec(),
+        pm_uid: pm_uid.clone(),
+        boot_strap_info: Some(KeyDerivationInfo::default()),
+    };
+    send_request_generic(tx, client_session, user_registration_request, None, mode).await;
+    let (user_reg_response, _): (UserRegistrationResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(user_reg_response.status, user_registration_response::Status::Success as i32);
+
+    // Key Sync
+    let key_sync_request_data =
+        KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: pm_uid.clone() };
+    send_request_generic(tx, client_session, key_sync_request_data, None, mode).await;
+    let (key_sync_response, _): (KeySyncResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(key_sync_response.status, key_sync_response::Status::Success as i32);
+
+    // Add a comprehensive memory item
+    let original_memory_id = "mask_test_mem_item_id_1".to_string();
+    let original_tags = vec!["tagMaskTestA".to_string(), "tagMaskTestB".to_string()];
+    let original_embedding =
+        Embedding { identifier: "mask_test_model".to_string(), values: vec![0.5, 0.5] };
+    let original_embeddings = vec![original_embedding.clone()];
+
+    let mut original_contents_map = std::collections::HashMap::new();
+    original_contents_map.insert(
+        "content_key_str".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::BytesVal("value_string_data".as_bytes().to_vec())),
+        },
+    );
+    original_contents_map.insert(
+        "content_key_int".to_string(),
+        MemoryValue { value: Some(memory_value::Value::Int64Val(98765)) },
+    );
+    let original_memory_content = MemoryContent { contents: original_contents_map.clone() };
+
+    let add_memory_request_data = AddMemoryRequest {
+        memory: Some(Memory {
+            id: original_memory_id.clone(),
+            tags: original_tags.clone(),
+            embeddings: original_embeddings.clone(),
+            content: Some(original_memory_content.clone()),
+        }),
+    };
+    send_request_generic(tx, client_session, add_memory_request_data, None, mode).await;
+    let (add_memory_response, _): (AddMemoryResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(add_memory_response.id, original_memory_id);
+
+    // Test GetMemoryById with a mask
+    info!("Test GetMemoryById with a mask");
+    let get_memory_by_id_request = GetMemoryByIdRequest {
+        id: original_memory_id.clone(),
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
+            include_content_fields: vec![],
+        }),
+    };
+    send_request_generic(tx, client_session, get_memory_by_id_request, None, mode).await;
+    let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert!(get_memory_by_id_response.success);
+    let mem_id_tags = get_memory_by_id_response.memory.as_ref().unwrap();
+    assert_eq!(mem_id_tags.id, original_memory_id);
+    assert_eq!(mem_id_tags.tags, original_tags);
+    assert!(mem_id_tags.embeddings.is_empty());
+    assert!(mem_id_tags.content.is_none());
+
+    // Test GetMemories with a mask
+    info!("Test GetMemories with a mask");
+    let get_memories_request = GetMemoriesRequest {
+        tag: "tagMaskTestA".to_string(),
+        page_size: 1,
+        result_mask: Some(ResultMask {
+            include_fields: vec![MemoryField::Content as i32],
+            include_content_fields: vec!["content_key_str".to_string()],
+        }),
+    };
+    send_request_generic(tx, client_session, get_memories_request, None, mode).await;
+    let (get_memories_response, _): (GetMemoriesResponse, i32) =
+        receive_response_generic(response_stream, client_session, mode).await;
+    assert_eq!(get_memories_response.memories.len(), 1);
+    let mem_cs = &get_memories_response.memories[0];
+    assert!(mem_cs.id.is_empty());
+    assert!(mem_cs.tags.is_empty());
+    assert!(mem_cs.embeddings.is_empty());
+    assert!(mem_cs.content.is_some());
+    let specific_contents = &mem_cs.content.as_ref().unwrap().contents;
+    assert_eq!(specific_contents.len(), 1);
+    assert!(specific_contents.contains_key("content_key_str"));
+    assert_eq!(specific_contents["content_key_str"], original_contents_map["content_key_str"]);
 }
 
 async fn execute_result_masking_logic(
@@ -802,6 +916,27 @@ async fn test_result_masking_all_modes() {
 
         execute_result_masking_logic(&mut tx, &mut client_session, &mut response_stream, mode)
             .await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_masking_all_modes() {
+    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let url = format!("http://{addr}");
+
+    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
+        info!("Testing Get Masking in {:?} mode", mode);
+        let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
+        let mut client = SealedMemoryServiceClient::new(channel);
+        let (mut tx, rx) = mpsc::channel(10);
+        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
+        let mut client_session = oak_session::ClientSession::create(
+            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
+        )
+        .unwrap();
+        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
+
+        execute_get_masking_logic(&mut tx, &mut client_session, &mut response_stream, mode).await;
     }
 }
 

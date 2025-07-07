@@ -362,7 +362,12 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let memories = database.get_memories_by_tag(request.tag, request.page_size).await;
+            let mut memories = database.get_memories_by_tag(request.tag, request.page_size).await;
+            if let Some(result_mask) = request.result_mask {
+                for memory in memories.iter_mut() {
+                    apply_mask_to_memory(memory, &result_mask);
+                }
+            }
             Ok(GetMemoriesResponse { memories })
         } else {
             bail!("You need to call key sync first")
@@ -377,8 +382,13 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let memory = database.get_memory_by_id(request.id).await;
+            let mut memory = database.get_memory_by_id(request.id).await;
             let success = memory.is_some();
+            if let Some(result_mask) = request.result_mask {
+                if let Some(memory) = memory.as_mut() {
+                    apply_mask_to_memory(memory, &result_mask);
+                }
+            }
             Ok(GetMemoryByIdResponse { memory, success })
         } else {
             bail!("You need to call key sync first")
