@@ -513,6 +513,7 @@ impl SealedMemoryHandler {
         } else {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
+        let mut newly_created_database = false;
         if let Ok(data_blob) = db_client.get_blob(&uid).await {
             let encrypted_info = decrypt_database(data_blob, &dek)?;
             database = if encrypted_info.icing_db.is_some() {
@@ -521,6 +522,7 @@ impl SealedMemoryHandler {
                     None,
                 )?
             } else {
+                newly_created_database = true;
                 let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
                 IcingMetaDatabase::new(&temp_path)?
             };
@@ -534,7 +536,7 @@ impl SealedMemoryHandler {
         let mut mutex_guard = self.session_context().await;
         let mut database =
             DatabaseWithCache::new(database, dek.clone(), db_client.clone(), key_derivation_info);
-        database.changed = true;
+        database.changed = newly_created_database;
         *mutex_guard = Some(UserSessionContext {
             dek,
             uid,
