@@ -19,6 +19,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+pub mod clock;
 pub mod instant;
 
+pub use clock::Clock;
 pub use instant::{Instant, UNIX_EPOCH};
