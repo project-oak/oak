@@ -212,25 +212,6 @@ impl SubAssign<Duration> for Instant {
     }
 }
 
-#[cfg(feature = "std")]
-impl TryFrom<std::time::SystemTime> for Instant {
-    type Error = std::time::SystemTimeError;
-    /// Tries to convert a `std::time::SystemTime` to an `Instant`.
-    ///
-    /// # Arguments
-    ///
-    /// * `instant`: The `std::time::SystemTime` to convert.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the `Instant` on success, or a
-    /// `std::time::SystemTimeError` if the `SystemTime` is before the Unix
-    /// epoch.
-    fn try_from(instant: std::time::SystemTime) -> std::result::Result<Self, Self::Error> {
-        Ok(UNIX_EPOCH + instant.duration_since(std::time::UNIX_EPOCH).expect("failed"))
-    }
-}
-
 /// Conditionally implements `From<prost_types::Timestamp>` for `Instant`
 /// when the `prost` feature is enabled.
 ///
@@ -351,15 +332,6 @@ mod tests {
         let mut instant = Instant::from_unix_millis(1000000000);
         instant -= Duration::from_millis(1000);
         assert_that!(instant, eq(Instant::from_unix_millis(999999000)));
-    }
-
-    #[cfg(feature = "std")]
-    #[googletest::test]
-    fn test_instant_from_std_time() -> std::result::Result<(), std::time::SystemTimeError> {
-        let instant: Instant = std::time::SystemTime::UNIX_EPOCH.try_into()?;
-        assert_that!(instant, eq(Instant::from_unix_millis(0)));
-
-        Ok(())
     }
 
     #[googletest::test]

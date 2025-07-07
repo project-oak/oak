@@ -13,5 +13,4 @@ googletest = { version = "*", default-features = false }
 
 [features]
 default = []
-std = []
 prost = []

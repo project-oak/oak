@@ -37,9 +37,24 @@ rust_test(
     name = "oak_time_test",
     crate = ":oak_time",
     crate_features = [
-        "std",
         "prost",
     ],
+    deps = [
+        "@oak_crates_index//:googletest",
+    ],
+)
+
+rust_library(
+    name = "oak_time_std",
+    srcs = glob(["std/**/*.rs"]),
+    deps = [
+        ":oak_time",
+    ],
+)
+
+rust_test(
+    name = "oak_time_std_test",
+    crate = ":oak_time_std",
     deps = [
         "@oak_crates_index//:googletest",
     ],
