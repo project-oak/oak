@@ -44,7 +44,7 @@ use oak_proto_rust::oak::{
     Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
-use oak_time::Clock;
+use oak_time::{Clock, Instant};
 use p256::ecdsa::VerifyingKey;
 use zerocopy::FromBytes;
 
@@ -104,8 +104,7 @@ impl AttestationVerifier for EventLogVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
-        // Get current time.
-        let milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
+        let verification_time = self.clock.get_time();
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence
@@ -114,10 +113,10 @@ impl AttestationVerifier for EventLogVerifier {
             .ok_or_else(|| anyhow::anyhow!("event log was not provided"))?;
         let event_endorsements = &endorsements.events;
         let event_attestation_results = verify_event_log(
+            verification_time,
             event_log,
             event_endorsements,
             self.event_policies.as_slice(),
-            milliseconds_since_epoch,
         )
         .context("couldn't verify event log")?;
 
@@ -161,8 +160,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
-        // Get current time.
-        let milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
+        let verification_time = self.clock.get_time();
 
         // Get DICE root layer evidence.
         let root_layer = &evidence
@@ -182,7 +180,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .as_ref()
             .context("AMD SEV-SNP endorsement wasn't provided in endorsements")?;
         self.platform_policy
-            .verify(attestation_report, platform_endorsement, milliseconds_since_epoch)
+            .verify(verification_time, attestation_report, platform_endorsement)
             .context("couldn't verify AMD SEV-SNP platform")?;
 
         // Verify that the DICE root ECA key is bound to the attestation report.
@@ -201,11 +199,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             .context("firmware endorsement wasn't provided in endorsements")?;
         let firmware_attestation_result = self
             .firmware_policy
-            .verify(
-                &attestation_report.data.measurement,
-                firmware_endorsement,
-                milliseconds_since_epoch,
-            )
+            .verify(verification_time, &attestation_report.data.measurement, firmware_endorsement)
             .context("couldn't verify firmware")?;
 
         // Verify event log and event endorsements with corresponding policies.
@@ -217,10 +211,10 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         event_attestation_results.push(firmware_attestation_result);
         if !endorsements.events.is_empty() {
             let results = verify_event_log(
+                verification_time,
                 event_log,
                 &endorsements.events,
                 self.event_policies.as_slice(),
-                milliseconds_since_epoch,
             )
             .context("couldn't verify event log")?;
 
@@ -259,7 +253,7 @@ impl AttestationVerifier for SoftwareRootedDiceAttestationVerifier {
         _endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
         // Get current time.
-        let _milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
+        let _ = self.clock.get_time();
 
         // Verify DICE chain integrity.
         // The output argument is ommited because last layer's certificate authority key
@@ -594,10 +588,10 @@ fn validate_that_event_log_is_captured_in_dice_layers(
 /// [`EventEndorsements`] with the same index. This means that mapping between
 /// Policies and Events is done via ordering.
 fn verify_event_log(
+    verification_time: Instant,
     event_log: &EventLog,
     event_endorsements: &[Variant],
     policies: &[Box<dyn EventPolicy>],
-    milliseconds_since_epoch: i64,
 ) -> anyhow::Result<Vec<EventAttestationResults>> {
     if policies.len() != event_log.encoded_events.len() {
         anyhow::bail!(
@@ -629,7 +623,7 @@ fn verify_event_log(
         izip!(policies.iter(), event_log.encoded_events.iter(), padded_event_endorsements.iter());
     verification_iterator
         .map(|(event_policy, event, event_endorsement)| {
-            event_policy.verify(event, event_endorsement, milliseconds_since_epoch)
+            event_policy.verify(verification_time, event, event_endorsement)
         })
         .collect::<Result<Vec<EventAttestationResults>, anyhow::Error>>()
 }

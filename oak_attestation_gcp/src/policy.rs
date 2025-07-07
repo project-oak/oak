@@ -29,6 +29,7 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_time::Instant;
 use serde::Deserialize;
 use serde_json::Value;
 use sha2::Digest;
@@ -57,27 +58,25 @@ impl ConfidentialSpacePolicy {
 impl Policy<[u8]> for ConfidentialSpacePolicy {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        let current_time = oak_time::Instant::from_unix_millis(milliseconds_since_epoch);
         let public_key_data = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
-            encoded_event,
+            evidence,
         )?;
 
-        let endorsement = <&Variant as TryInto<Option<ConfidentialSpaceEndorsement>>>::try_into(
-            encoded_endorsement,
-        )
-        .map_err(anyhow::Error::msg)?
-        .context("confidential space endorsement is not present")?;
+        let endorsement =
+            <&Variant as TryInto<Option<ConfidentialSpaceEndorsement>>>::try_into(endorsement)
+                .map_err(anyhow::Error::msg)?
+                .context("confidential space endorsement is not present")?;
 
         let public_key_hash = sha2::Sha256::digest(&public_key_data.session_binding_public_key);
         let public_key_hash = hex::encode(public_key_hash);
 
         let token: Token<Header, Value, _> = Token::parse_unverified(&endorsement.jwt_token)?;
-        let token = verify_attestation_token(token, &self.root_certificate, &current_time)?;
+        let token = verify_attestation_token(token, &self.root_certificate, &verification_time)?;
         let claims = token.claims();
 
         // We expect only one nonce, therefore a scalar string rather than an array.
@@ -130,11 +129,7 @@ mod tests {
         let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
 
         let policy = ConfidentialSpacePolicy::new(root_cert);
-        let result = policy.verify(
-            &event.encode_to_vec(),
-            &endorsement.into(),
-            current_time.into_unix_millis(),
-        );
+        let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }

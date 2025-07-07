@@ -31,6 +31,7 @@ rust_binary(
         "//oak_crypto",
         "//oak_crypto:oak_crypto_tink",
         "//oak_proto_rust",
+        "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:clap",

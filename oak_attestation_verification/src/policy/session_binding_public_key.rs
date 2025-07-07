@@ -32,6 +32,7 @@ use oak_proto_rust::{
         Variant,
     },
 };
+use oak_time::Instant;
 
 use crate::{policy::SESSION_BINDING_PUBLIC_KEY_ID, util::decode_event_proto};
 
@@ -69,9 +70,9 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
     // of running as many verification checks as possible (i.e. no fail-fast).
     pub fn report(
         &self,
+        verification_time: Instant,
         encoded_event: &[u8],
         encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
     ) -> SessionBindingPublicKeyVerificationReport {
         let event = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
@@ -111,7 +112,7 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
                                 EndorsementReport::Checked(self.certificate_verifier.report(
                                     &session_binding_public_key,
                                     &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
-                                    milliseconds_since_epoch,
+                                    verification_time.into_unix_millis(),
                                     &certificate,
                                 ))
                             }
@@ -133,23 +134,22 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
 impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
-            encoded_event,
+            evidence,
         )?;
         if event.session_binding_public_key.is_empty() {
             anyhow::bail!("session binding public key not found")
         }
 
-        let endorsement = <&Variant as TryInto<SessionBindingPublicKeyEndorsement>>::try_into(
-            encoded_endorsement,
-        )
-        .map_err(anyhow::Error::msg)
-        .context("certificate authority endorsement is not present")?;
+        let endorsement =
+            <&Variant as TryInto<SessionBindingPublicKeyEndorsement>>::try_into(endorsement)
+                .map_err(anyhow::Error::msg)
+                .context("certificate authority endorsement is not present")?;
 
         match endorsement.ca_endorsement {
             None => {
@@ -164,7 +164,7 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
                     .verify(
                         &event.session_binding_public_key,
                         &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
-                        milliseconds_since_epoch,
+                        verification_time.into_unix_millis(),
                         certificate,
                     )
                     .context("couldn't verify certificate for session binding public key")?;

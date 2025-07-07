@@ -22,6 +22,7 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_time::Instant;
 
 use crate::{
     compare::compare_kernel_layer_measurement_digests,
@@ -42,20 +43,20 @@ impl KernelPolicy {
 impl Policy<[u8]> for KernelPolicy {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let event =
             stage0_measurements_to_kernel_layer_data(decode_event_proto::<Stage0Measurements>(
                 "type.googleapis.com/oak.attestation.v1.Stage0Measurements",
-                encoded_event,
+                evidence,
             )?);
         let endorsement: Option<KernelEndorsement> =
-            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_kernel_event_expected_values(
-            milliseconds_since_epoch,
+            verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,
         )

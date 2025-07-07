@@ -36,6 +36,8 @@ use oak_time::Clock;
 /// [here](https://trustedcomputinggroup.org/wp-content/uploads/DICE-Attestation-Architecture-Version-1.1-Revision-18_pub.pdf).
 /// Our approach to using DICE for the TEE attestation is described in
 /// [this talk](https://assets-global.website-files.com/63c54a346e01f30e726f97cf/660e6af00e242f9c38cac561_DICE%20Attestation%20on%20AMD%20SEV-SNP%20-%20Juliette%20Pluto%20Ivan%20Petrov.pdf)
+///
+/// Deprecated and up for deletion - use AmdSevSnpAttestationVerifier instead.
 pub struct DiceAttestationVerifier {
     ref_values: ReferenceValues,
     clock: Arc<dyn Clock>,
@@ -54,12 +56,10 @@ impl AttestationVerifier for DiceAttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
-        match verify(
-            self.clock.get_time().into_unix_millis(),
-            evidence,
-            endorsements,
-            &self.ref_values,
-        ) {
+        let verification_time = self.clock.get_time();
+
+        match verify(verification_time.into_unix_millis(), evidence, endorsements, &self.ref_values)
+        {
             Ok(extracted_evidence) => Ok(AttestationResults {
                 status: attestation_results::Status::Success.into(),
                 extracted_evidence: Some(extracted_evidence),

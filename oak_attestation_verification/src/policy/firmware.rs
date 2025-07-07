@@ -29,6 +29,7 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_time::Instant;
 
 use crate::{
     compare::compare_firmware_layer_measurement_digests, expect::acquire_stage0_expected_values,
@@ -63,25 +64,25 @@ impl FirmwarePolicy {
 impl Policy<[u8]> for FirmwarePolicy {
     fn verify(
         &self,
-        firmware_measurement: &[u8],
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let endorsement: Option<FirmwareEndorsement> =
-            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_stage0_expected_values(
-            milliseconds_since_epoch,
+            verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,
         )
         .context("getting firmware layer values")?;
 
-        compare_firmware_layer_measurement_digests(firmware_measurement, &expected_values)
+        compare_firmware_layer_measurement_digests(evidence, &expected_values)
             .context("couldn't verify firmware layer")?;
 
         // This setup is used by CB until they implement their own firmware policy.
-        let initial_measurement = convert_amd_sev_snp_initial_measurement(firmware_measurement);
+        let initial_measurement = convert_amd_sev_snp_initial_measurement(evidence);
         const FIRMWARE_MEASUREMENT_ARTIFACT_KEY: &str = "firmware_measurement";
         let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
         artifacts.insert(

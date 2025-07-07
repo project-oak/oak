@@ -24,6 +24,7 @@ use oak_proto_rust::oak::{
     Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_time::Instant;
 
 use crate::{
     expect::get_amd_sev_snp_expected_values,
@@ -58,25 +59,24 @@ impl AmdSevSnpPolicy {
 impl Policy<AttestationReport> for AmdSevSnpPolicy {
     fn verify(
         &self,
-        attestation_report: &AttestationReport,
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &AttestationReport,
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let endorsement: AmdSevSnpEndorsement =
-            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         // Ensure the Attestation report is properly signed by the platform and the
         // corresponding certificate is signed by AMD.
         verify_amd_sev_snp_attestation_report_validity(
-            attestation_report,
+            evidence,
             &endorsement.tee_certificate,
-            milliseconds_since_epoch,
+            verification_time.into_unix_millis(),
         )
         .context("couldn't verify AMD SEV-SNP attestation validity")?;
 
         // Verify attestation report values.
-        let extracted_attestation_report =
-            convert_amd_sev_snp_attestation_report(attestation_report)?;
+        let extracted_attestation_report = convert_amd_sev_snp_attestation_report(evidence)?;
         let expected_values = get_amd_sev_snp_expected_values(&self.reference_values)
             .context("couldn't extract AMD SEV-SNP expected values from the endorsement")?;
         verify_amd_sev_attestation_report_values(&extracted_attestation_report, &expected_values)

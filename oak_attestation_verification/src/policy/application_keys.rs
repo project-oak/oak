@@ -27,6 +27,7 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_time::Instant;
 
 use crate::{
     policy::{
@@ -51,13 +52,13 @@ impl ApplicationKeysPolicy {
 impl Policy<[u8]> for ApplicationKeysPolicy {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        _encoded_endorsement: &Variant,
-        _milliseconds_since_epoch: i64,
+        _verification_time: Instant,
+        evidence: &[u8],
+        _endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ApplicationKeysData>(
             "type.googleapis.com/oak.attestation.v1.ApplicationKeysData",
-            encoded_event,
+            evidence,
         )?;
 
         // TODO: b/399885537 - Verify that the key is signed by the CA.

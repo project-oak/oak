@@ -15,22 +15,37 @@
 //
 
 use oak_proto_rust::oak::{attestation::v1::EventAttestationResults, Variant};
+use oak_time::Instant;
 
-/// Verification Policy that takes a generic evidence and endorsement and
-/// performs attestation verification.
+/// A verification policy takes generic evidence and endorsement and performs
+/// verification. Policies represent individual steps inside a verifier.
 ///
-/// Verification Policy correspond to the "Appraisal Policy for Evidence"
-/// provided by the RATS standard.
+/// The notion of policy corresponds to the "Appraisal Policy for Evidence"
+/// provided by the RATS standard:
 /// <https://datatracker.ietf.org/doc/html/rfc9334#section-8.5>
 pub trait Policy<V: ?Sized>: Send + Sync {
+    /// Invokes the policy on the given inputs.
+    ///
+    /// Args:
+    ///   verification_time: Expresses when the verification happens.
+    ///   evidence: The evidence from an event, encoded as `V`, that is about
+    ///       to be verified. `V` is `[u8]`` in most cases, but it doesn't
+    ///       have to be that way.
+    ///   endorsement: The endorsement to be included in the verification.
+    ///       The endorsement is encoded as Variant.
+    ///
+    /// Returns:
+    ///   Ok whenever the policy verification succeeded. In that case, the
+    ///   EventAttestationResults payload is passed back for processing by
+    ///   the attestation verifier.
     fn verify(
         &self,
+        verification_time: Instant,
         evidence: &V,
         endorsement: &Variant,
-        milliseconds_since_epoch: i64,
     ) -> anyhow::Result<EventAttestationResults>;
 }
 
-/// Verification Policy that takes an encoded Event and an encoded Event
-/// Endorsement and performs attestation verification for this specific Event.
+/// Policy that takes an byte-encoded event with accompanying encoded
+/// endorsement and performs attestation verification for this specific event.
 pub trait EventPolicy = Policy<[u8]>;

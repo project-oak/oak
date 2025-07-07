@@ -29,6 +29,7 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_time::Instant;
 
 use crate::{
     compare::compare_container_layer_measurement_digests,
@@ -55,19 +56,19 @@ impl ContainerPolicy {
 impl Policy<[u8]> for ContainerPolicy {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<ContainerLayerData>(
             "type.googleapis.com/oak.attestation.v1.ContainerLayerData",
-            encoded_event,
+            evidence,
         )?;
         let endorsement: Option<ContainerEndorsement> =
-            encoded_endorsement.try_into().map_err(anyhow::Error::msg)?;
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
 
         let expected_values = acquire_container_event_expected_values(
-            milliseconds_since_epoch,
+            verification_time.into_unix_millis(),
             endorsement.as_ref(),
             &self.reference_values,
         )

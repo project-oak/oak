@@ -22,6 +22,18 @@ use oak_proto_rust::oak::attestation::v1::{AttestationResults, Endorsements, Evi
 /// <https://datatracker.ietf.org/doc/html/rfc9334#name-verifier>
 #[cfg_attr(test, automock)]
 pub trait AttestationVerifier: Send + Sync {
+    /// Verifies an attestation given as endorsed evidence.
+    ///
+    /// Args:
+    ///   evidence: The evidence that is about to be verified.
+    ///   endorsements: The endorsements that are about to be verified.
+    ///
+    /// Returns:
+    ///   Ok whenever the attestation verification succeeded. In that case,
+    ///   the `AttestationResults`` payload is passed back to the caller.
+    ///
+    /// TODO: b/356629314 - Deduplicate the error in the Result and the status
+    /// in AttestationResults.
     fn verify(
         &self,
         evidence: &Evidence,

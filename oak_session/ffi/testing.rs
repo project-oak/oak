@@ -12,8 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 use anyhow::Result;
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_ffi_bytes::{BytesView, RustBytes};
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -108,7 +110,7 @@ pub unsafe extern "C" fn new_fake_attestation_verifier(
     )))
 }
 
-impl oak_attestation_verification_types::verifier::AttestationVerifier for FakeAttestationVerifier {
+impl AttestationVerifier for FakeAttestationVerifier {
     fn verify(
         &self,
         evidence: &Evidence,

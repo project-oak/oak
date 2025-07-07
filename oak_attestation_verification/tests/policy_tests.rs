@@ -88,7 +88,7 @@ const TEST_SIGNATURE: [u8; 4] = [8, 9, 10, 11];
 const TEST_WRONG_SIGNATURE: [u8; 4] = [12, 13, 14, 15];
 
 // A random time value used to parametrize test cases.
-const TEST_MILLISECONDS_SINCE_EPOCH: i64 = 1_000_000;
+const TEST_TIME: Instant = Instant::from_unix_millis(1_000_000);
 
 // For RK testdata: Pretend the tests runs on 01 July 2025, 12:00 UTC.
 const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1751371200000;
@@ -106,7 +106,7 @@ struct CbTestClock;
 
 impl Clock for TestClock {
     fn get_time(&self) -> Instant {
-        Instant::from_unix_millis(TEST_MILLISECONDS_SINCE_EPOCH)
+        TEST_TIME
     }
 }
 
@@ -215,7 +215,7 @@ fn create_public_key_evidence(session_binding_public_key: &[u8]) -> Evidence {
 }
 
 fn create_test_certificate(signature: &[u8]) -> Certificate {
-    let not_before = Timestamp { seconds: TEST_MILLISECONDS_SINCE_EPOCH / 1000, nanos: 0 };
+    let not_before = Timestamp { seconds: TEST_TIME.into_unix_seconds(), nanos: 0 };
     let not_after = Timestamp { seconds: not_before.seconds + 1, nanos: 999_999_999 };
     let validity = Validity { not_before: Some(not_before), not_after: Some(not_after) };
     let subject_public_key_info = SubjectPublicKeyInfo {
@@ -318,7 +318,7 @@ fn session_binding_key_policy_succeeds() {
         });
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
-    let result = policy.verify(event, endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, event, endorsement);
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 
@@ -343,7 +343,7 @@ fn session_binding_key_policy_fails_with_incorrect_event_id() {
     }
     .encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.verify(&event_wrong_id, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event_wrong_id, &endorsement);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -361,7 +361,7 @@ fn session_binding_key_policy_fails_with_incorrect_endorsement_id() {
         id: b"Wrong ID".to_vec(),
         value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
     };
-    let result = policy.verify(&event, &endorsement_wrong_id, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event, &endorsement_wrong_id);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -377,7 +377,7 @@ fn session_binding_key_policy_fails_with_empty_ca_endorsement() {
     let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
     let empty_ca_endorsement: Variant =
         SessionBindingPublicKeyEndorsement { ca_endorsement: None, ..Default::default() }.into();
-    let result = policy.verify(&event, &empty_ca_endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event, &empty_ca_endorsement);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -392,7 +392,7 @@ fn session_binding_key_policy_fails_with_incorrect_public_key() {
     // Incorrect public key.
     let event_wrong_key = create_public_key_event(&TEST_WRONG_PUBLIC_KEY).encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.verify(&event_wrong_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event_wrong_key, &endorsement);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -407,7 +407,7 @@ fn session_binding_key_policy_fails_with_empty_public_key() {
     // Empty public key.
     let event_empty_key = create_public_key_event(&[]).encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.verify(&event_empty_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event_empty_key, &endorsement);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -423,7 +423,7 @@ fn session_binding_key_policy_fails_with_invalid_signature() {
     let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
     let endorsement_wrong_signature: Variant =
         create_public_key_endorsement(&TEST_WRONG_SIGNATURE).into();
-    let result = policy.verify(&event, &endorsement_wrong_signature, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(TEST_TIME, &event, &endorsement_wrong_signature);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
 }
 
@@ -441,7 +441,7 @@ fn session_binding_key_policy_report_succeeds() {
         });
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
-    let result = policy.report(event, endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, event, endorsement);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -486,7 +486,7 @@ fn session_binding_key_policy_report_fails_with_incorrect_event_id() {
     }
     .encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.report(&event_wrong_id, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event_wrong_id, &endorsement);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -510,7 +510,7 @@ fn session_binding_key_policy_report_fails_with_incorrect_endorsement_id() {
         id: b"Wrong ID".to_vec(),
         value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
     };
-    let result = policy.report(&event, &endorsement_wrong_id, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event, &endorsement_wrong_id);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -532,7 +532,7 @@ fn session_binding_key_policy_report_fails_with_empty_ca_endorsement() {
     let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
     let empty_ca_endorsement: Variant =
         SessionBindingPublicKeyEndorsement { ca_endorsement: None, ..Default::default() }.into();
-    let result = policy.report(&event, &empty_ca_endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event, &empty_ca_endorsement);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -553,7 +553,7 @@ fn session_binding_key_policy_report_fails_with_incorrect_public_key() {
     // Incorrect public key.
     let event_wrong_key = create_public_key_event(&TEST_WRONG_PUBLIC_KEY).encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.report(&event_wrong_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event_wrong_key, &endorsement);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -588,7 +588,7 @@ fn session_binding_key_policy_report_fails_with_empty_public_key() {
     // Empty public key.
     let event_empty_key = create_public_key_event(&[]).encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
-    let result = policy.report(&event_empty_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event_empty_key, &endorsement);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -610,7 +610,7 @@ fn session_binding_key_policy_report_fails_with_invalid_signature() {
     let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
     let endorsement_wrong_signature: Variant =
         create_public_key_endorsement(&TEST_WRONG_SIGNATURE).into();
-    let result = policy.report(&event, &endorsement_wrong_signature, TEST_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.report(TEST_TIME, &event, &endorsement_wrong_signature);
     assert_matches!(
         result,
         SessionBindingPublicKeyVerificationReport {
@@ -696,11 +696,7 @@ fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
         },
     };
 
-    let result = policy.verify(
-        attestation_report,
-        &endorsement.into(),
-        d.make_valid_time().into_unix_millis(),
-    );
+    let result = policy.verify(d.make_valid_time(), attestation_report, &endorsement.into());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -717,11 +713,7 @@ fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
     let firmware_measurement = &extract_attestation_report(&d.evidence).unwrap().data.measurement;
     let firmware_endorsement = d.endorsements.initial.as_ref().unwrap();
 
-    let result = policy.verify(
-        firmware_measurement,
-        firmware_endorsement,
-        d.make_valid_time().into_unix_millis(),
-    );
+    let result = policy.verify(d.make_valid_time(), firmware_measurement, firmware_endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -735,7 +727,7 @@ fn oc_kernel_policy_verify_succeeds() {
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
     let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
+    let result = policy.verify(d.make_valid_time(), event, endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -749,7 +741,7 @@ fn oc_system_policy_verify_succeeds() {
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
     let endorsement = &d.endorsements.events[SYSTEM_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
+    let result = policy.verify(d.make_valid_time(), event, endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -764,7 +756,7 @@ fn oc_container_policy_verify_succeeds() {
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
     let endorsement = &d.endorsements.events[CONTAINER_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
+    let result = policy.verify(d.make_valid_time(), event, endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -806,6 +798,7 @@ fn oc_amd_sev_snp_verifier_succeeds() {
         event_policies,
         Arc::new(OcTestClock {}),
     );
+
     let result = verifier.verify(&d.evidence, &d.endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -821,7 +814,7 @@ fn rk_kernel_policy_verify_succeeds() {
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
     let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
+    let result = policy.verify(d.make_valid_time(), event, endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -837,7 +830,7 @@ fn rk_application_policy_verify_succeeds() {
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
     let endorsement = &d.endorsements.events[RK_APPLICATION_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
+    let result = policy.verify(d.make_valid_time(), event, endorsement);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -875,6 +868,7 @@ fn rk_amd_sev_snp_verifier_succeeds() {
         event_policies,
         Arc::new(RkTestClock {}),
     );
+
     let result = verifier.verify(&d.evidence, &d.endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.

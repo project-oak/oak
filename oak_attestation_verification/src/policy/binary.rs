@@ -20,6 +20,7 @@ use oak_proto_rust::oak::{
     attestation::v1::{EventAttestationResults, EventData, EventReferenceValues},
     Variant,
 };
+use oak_time::Instant;
 
 use crate::{
     compare::compare_event_measurement_digests, expect::acquire_event_expected_values,
@@ -39,18 +40,20 @@ impl BinaryPolicy {
 impl Policy<[u8]> for BinaryPolicy {
     fn verify(
         &self,
-        encoded_event: &[u8],
-        _encoded_endorsement: &Variant,
-        milliseconds_since_epoch: i64,
+        verification_time: Instant,
+        evidence: &[u8],
+        _endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
         let event = decode_event_proto::<EventData>(
             "type.googleapis.com/oak.attestation.v1.EventData",
-            encoded_event,
+            evidence,
         )?;
 
-        let expected_values =
-            acquire_event_expected_values(milliseconds_since_epoch, &self.reference_values)
-                .context("couldn't verify event endorsements")?;
+        let expected_values = acquire_event_expected_values(
+            verification_time.into_unix_millis(),
+            &self.reference_values,
+        )
+        .context("couldn't verify event endorsements")?;
 
         compare_event_measurement_digests(&event, &expected_values)
             .context("couldn't verify generic event")?;

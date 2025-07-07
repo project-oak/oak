@@ -33,6 +33,7 @@ rust_library(
     ]),
     deps = [
         "//oak_proto_rust",
+        "//oak_time",
         "@oak_crates_index//:anyhow",
     ],
 )

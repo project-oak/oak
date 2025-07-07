@@ -34,6 +34,7 @@ use oak_proto_rust::{
     attestation::SIGNATURE_BASED_ATTESTATION_ID,
     oak::{attestation::v1::CollectedAttestation, session::v1::EndorsedEvidence},
 };
+use oak_time::Instant;
 use prost::Message;
 
 static GOOGLE_IDENTITY_PUBLIC_KEYSET: &[u8; 459] =
@@ -79,41 +80,40 @@ macro_rules! print_indented_conditional {
 fn main() {
     let Flags { attestation } = Flags::parse();
 
-    let attestation_timestamp_millis = print_timestamp_report(&attestation);
+    let attestation_timestamp = print_timestamp_report(&attestation);
 
     // TODO: b/419209669 - push this loop (removing print statements) down into some
     // new attestation verification library function (with tests!); make it return
     // some combined result.
     for (attestation_type_id, endorsed_evidence) in attestation.endorsed_evidence.iter() {
         match attestation_type_id.as_str() {
-            SIGNATURE_BASED_ATTESTATION_ID => print_signature_based_attestation_report(
-                attestation_timestamp_millis,
-                endorsed_evidence,
-            ),
+            SIGNATURE_BASED_ATTESTATION_ID => {
+                print_signature_based_attestation_report(attestation_timestamp, endorsed_evidence)
+            }
             _ => println!("❓ Unrecognized attestation type ID: {}", attestation_type_id),
         }
     }
 }
 
-// Returns the timestamp (in millis since epoch) at which the provided
-// attestation was recorded. Prints out a report of any success/error states.
-fn print_timestamp_report(attestation: &CollectedAttestation) -> i64 {
+// Returns the timestamp at which the provided attestation was recorded.
+// Prints out a report of any success/error states.
+fn print_timestamp_report(attestation: &CollectedAttestation) -> Instant {
     let request_time =
         attestation.request_metadata.clone().unwrap_or_default().request_time.unwrap_or_default();
     match SystemTime::try_from(request_time) {
         Err(err) => {
             println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
-            0
+            Instant::UNIX_EPOCH
         }
         Ok(system_time) => match system_time.duration_since(UNIX_EPOCH) {
             Err(err) => {
                 println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
-                0
+                Instant::UNIX_EPOCH
             }
             Ok(duration_since_epoch) => match duration_since_epoch.as_millis().try_into() {
                 Err(err) => {
                     println!("❌ 🕠 Attestation timestamp is invalid: {:?}", err);
-                    0
+                    Instant::UNIX_EPOCH
                 }
                 Ok(millis) => {
                     print_indented_conditional!(
@@ -122,7 +122,7 @@ fn print_timestamp_report(attestation: &CollectedAttestation) -> i64 {
                         ("✅ 🕠 Attestation timestamp, in millis since epoch: {}", millis),
                         ("❌ 🕠 Attestation timestamp appears to be unset")
                     );
-                    millis
+                    Instant::from_unix_millis(millis)
                 }
             },
         },
@@ -130,7 +130,7 @@ fn print_timestamp_report(attestation: &CollectedAttestation) -> i64 {
 }
 
 fn print_signature_based_attestation_report(
-    attestation_timestamp_millis: i64,
+    attestation_timestamp: Instant,
     endorsed_evidence: &EndorsedEvidence,
 ) {
     let indent = 0;
@@ -192,7 +192,7 @@ fn print_signature_based_attestation_report(
             let signature_verifier = SignatureVerifier::new(tink_public_keyset);
             let certificate_verifier = CertificateVerifier::new(signature_verifier);
             let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
-            policy.report(event, endorsement, attestation_timestamp_millis)
+            policy.report(attestation_timestamp, event, endorsement)
         };
 
         match report.event {
