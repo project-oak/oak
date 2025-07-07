@@ -1,5 +1,5 @@
 {
-  "checksum": "5f4b076cb06624ce209d7241e0037dbf78aa9be4887c884054122fdbdb68491c",
+  "checksum": "0c36dee31681629475f386ed05b64781f23ba64ff31040f9842439ed43b229f4",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -6992,6 +6992,10 @@
             {
               "id": "nix 0.27.1",
               "target": "nix"
+            },
+            {
+              "id": "nom 8.0.0",
+              "target": "nom"
             },
             {
               "id": "oci-spec 0.6.7",
@@ -16159,6 +16163,59 @@
           ],
           "selects": {}
         }
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
+    "nom 8.0.0": {
+      "name": "nom",
+      "version": "8.0.0",
+      "package_url": "https://github.com/rust-bakery/nom",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/nom/8.0.0/download",
+          "sha256": "df9761775871bdef83bee530e60050f7e54b1105350d6884eb0fb4f46c2f9405"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "nom",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "nom",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "alloc"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "memchr 2.7.5",
+              "target": "memchr"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "8.0.0"
       },
       "license": "MIT",
       "license_ids": [
@@ -37850,6 +37907,7 @@
     "maplit 1.0.2",
     "mockall 0.13.1",
     "nix 0.27.1",
+    "nom 8.0.0",
     "oci-spec 0.6.7",
     "once_cell 1.21.3",
     "opentelemetry 0.26.0",

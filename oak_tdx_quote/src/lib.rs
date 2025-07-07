@@ -30,6 +30,10 @@ extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 
 use bitflags::bitflags;
+use nom::{
+    bytes::complete::take,
+    number::complete::{le_u16, le_u32, le_u64},
+};
 
 bitflags! {
     /// The attributes of the Trust Domain.
@@ -74,6 +78,33 @@ pub struct TdxQuoteHeader {
     pub user_data: [u8; 20],
 }
 
+impl TdxQuoteHeader {
+    /// Parses a TDX quote header from a byte slice.
+    #[allow(unused)]
+    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+        let (rest, version) = le_u16(bytes)?;
+        let (rest, att_key_type) = le_u16(rest)?;
+        let (rest, tee_type) = le_u32(rest)?;
+        let (rest, reserved) = le_u32(rest)?;
+        let (rest, qe_vendor_id) = take(16usize)(rest)?;
+        let (rest, user_data) = take(20usize)(rest)?;
+
+        Ok((
+            rest,
+            // Unwrapping is OK here since we know the slices must have the right length if we
+            // managed to get this far.
+            Self {
+                version,
+                att_key_type,
+                tee_type,
+                reserved,
+                qe_vendor_id: qe_vendor_id.try_into().unwrap(),
+                user_data: user_data.try_into().unwrap(),
+            },
+        ))
+    }
+}
+
 /// The body of a TDX quote.
 #[derive(Debug)]
 pub struct TdxQuoteBody {
@@ -107,6 +138,51 @@ pub struct TdxQuoteBody {
     pub rtmr_3: [u8; 48],
     /// Custom data provided by the TD.
     pub report_data: [u8; 64],
+}
+
+impl TdxQuoteBody {
+    /// Parses a TDX quote body from a byte slice.
+    #[allow(unused)]
+    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+        let (rest, tee_tcb_svn) = take(16usize)(bytes)?;
+        let (rest, mr_seam) = take(48usize)(rest)?;
+        let (rest, mrsigner_seam) = take(48usize)(rest)?;
+        let (rest, seam_attributes) = le_u64(rest)?;
+        let (rest, td_attributes) = le_u64(rest)?;
+        let (rest, xfam) = le_u64(rest)?;
+        let (rest, mr_td) = take(48usize)(rest)?;
+        let (rest, mr_config_id) = take(48usize)(rest)?;
+        let (rest, mr_owner) = take(48usize)(rest)?;
+        let (rest, mr_owner_config) = take(48usize)(rest)?;
+        let (rest, rtmr_0) = take(48usize)(rest)?;
+        let (rest, rtmr_1) = take(48usize)(rest)?;
+        let (rest, rtmr_2) = take(48usize)(rest)?;
+        let (rest, rtmr_3) = take(48usize)(rest)?;
+        let (rest, report_data) = take(64usize)(rest)?;
+
+        Ok((
+            rest,
+            // Unwrapping is OK here since we know the slices must have the right length if we
+            // managed to get this far.
+            Self {
+                tee_tcb_svn: tee_tcb_svn.try_into().unwrap(),
+                mr_seam: mr_seam.try_into().unwrap(),
+                mrsigner_seam: mrsigner_seam.try_into().unwrap(),
+                seam_attributes,
+                td_attributes: TdAttributes::from_bits_truncate(td_attributes),
+                xfam,
+                mr_td: mr_td.try_into().unwrap(),
+                mr_config_id: mr_config_id.try_into().unwrap(),
+                mr_owner: mr_owner.try_into().unwrap(),
+                mr_owner_config: mr_owner_config.try_into().unwrap(),
+                rtmr_0: rtmr_0.try_into().unwrap(),
+                rtmr_1: rtmr_1.try_into().unwrap(),
+                rtmr_2: rtmr_2.try_into().unwrap(),
+                rtmr_3: rtmr_3.try_into().unwrap(),
+                report_data: report_data.try_into().unwrap(),
+            },
+        ))
+    }
 }
 
 /// A parsed TDX quote.
@@ -169,10 +245,47 @@ pub struct EnclaveReportBody {
     pub isv_svn: u16,
     /// Reserved.
     pub reserved4: [u8; 60],
-    /// The ISV assigned family ID.
-    pub isv_family_id: [u8; 16],
     /// Data provided by the user.
     pub report_data: [u8; 64],
+}
+
+impl EnclaveReportBody {
+    /// Parses an enclave report body from a byte slice.
+    #[allow(unused)]
+    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+        let (rest, cpu_svn) = take(16usize)(bytes)?;
+        let (rest, misc_select) = le_u32(rest)?;
+        let (rest, reserved1) = take(28usize)(rest)?;
+        let (rest, attributes) = take(16usize)(rest)?;
+        let (rest, mr_enclave) = take(32usize)(rest)?;
+        let (rest, reserved2) = take(32usize)(rest)?;
+        let (rest, mr_signer) = take(32usize)(rest)?;
+        let (rest, reserved3) = take(96usize)(rest)?;
+        let (rest, isv_prod_id) = le_u16(rest)?;
+        let (rest, isv_svn) = le_u16(rest)?;
+        let (rest, reserved4) = take(60usize)(rest)?;
+        let (rest, report_data) = take(64usize)(rest)?;
+
+        Ok((
+            rest,
+            // Unwrapping is OK here since we know the slices must have the right length if we
+            // managed to get this far.
+            Self {
+                cpu_svn: cpu_svn.try_into().unwrap(),
+                misc_select,
+                reserved1: reserved1.try_into().unwrap(),
+                attributes: attributes.try_into().unwrap(),
+                mr_enclave: mr_enclave.try_into().unwrap(),
+                reserved2: reserved2.try_into().unwrap(),
+                mr_signer: mr_signer.try_into().unwrap(),
+                reserved3: reserved3.try_into().unwrap(),
+                isv_prod_id,
+                isv_svn,
+                reserved4: reserved4.try_into().unwrap(),
+                report_data: report_data.try_into().unwrap(),
+            },
+        ))
+    }
 }
 
 /// The signature over a quote and associated data.

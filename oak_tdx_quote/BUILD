@@ -38,5 +38,6 @@ rust_library(
     ]),
     deps = [
         "@oak_crates_index//:bitflags",
+        "@oak_crates_index//:nom",
     ],
 )

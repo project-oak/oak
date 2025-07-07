@@ -158,6 +158,13 @@ def _common_crates(std):
         "mockall": crate.spec(
             version = "0.13.0",
         ),
+        "nom": crate.spec(
+            default_features = False,
+            features = [
+                "alloc",
+            ],
+            version = "8.0.0",
+        ),
         "p256": crate.spec(
             default_features = False,
             features = [
