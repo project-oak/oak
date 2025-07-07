@@ -90,8 +90,8 @@ impl MemoryInterface for DatabaseWithCache {
         } else {
             memory.id.clone()
         };
-        let blob_id = self.cache.add_memory(memory.clone()).await.ok()?;
-        let _ = self.meta_db().add_memory(memory, blob_id);
+        let blob_id = self.cache.add_memory(&memory).await.ok()?;
+        let _ = self.meta_db().add_memory(&memory, blob_id);
         self.changed = true;
         Some(memory_id)
     }
