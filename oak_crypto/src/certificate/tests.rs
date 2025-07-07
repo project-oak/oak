@@ -15,7 +15,7 @@
 //
 
 use alloc::vec::Vec;
-use core::time::Duration;
+use core::{assert_matches::assert_matches, time::Duration};
 
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
@@ -24,7 +24,13 @@ use oak_time::Instant;
 use prost::Message;
 use prost_types::Timestamp;
 
-use crate::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
+use crate::{
+    certificate::certificate_verifier::{
+        CertificateVerificationReport, CertificateVerifier, PayloadDeserializationReport,
+        SignatureReport, SubjectPublicKeyReport, ValidityPeriodReport,
+    },
+    verifier::Verifier,
+};
 
 const TEST_PUBLIC_KEY: &[u8] = b"TEST_PUBLIC_KEY";
 const TEST_BAD_PUBLIC_KEY: &[u8] = b"TEST_BAD_PUBLIC_KEY";
@@ -311,4 +317,486 @@ fn test_verify_certificate_validity_limit() {
         &certificate_from_validity(11),
     );
     assert!(result.is_err(), "Expected verification to fail, but got success");
+}
+
+#[test]
+fn test_report_certificate_success() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_signature_failure() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        TEST_BAD_SIGNATURE,
+    );
+
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationFailed(_),
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_zero_validity_failure() {
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        // `not_after` is equal to `not_before`.
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: false,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_negative_validity_failure() {
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        // `not_after` is smaller than `not_before`.
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: false,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: false,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_validity_failure() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 2).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: false,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_public_key_failure() {
+    let certificate = create_test_certificate(
+        TEST_BAD_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: false,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_purpose_failure() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_BAD_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 1).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 1).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+
+    let verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: false
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_clock_skew() {
+    let certificate = create_test_certificate(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS - 5).into_timestamp(),
+        Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + 5).into_timestamp(),
+        TEST_SIGNATURE,
+    );
+
+    let allowed_clock_skew = Duration::from_millis(5);
+    let mut verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+    verifier.set_allowed_clock_skew(allowed_clock_skew);
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS - 7,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS + 7,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS - 11,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: false,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS + 11,
+        &certificate,
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: false,
+                }
+            }
+        }
+    );
+}
+
+#[test]
+fn test_report_certificate_validity_limit() {
+    fn certificate_from_validity(validity: i64) -> Certificate {
+        create_test_certificate(
+            TEST_PUBLIC_KEY,
+            TEST_PURPOSE_ID,
+            Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS).into_timestamp(),
+            Instant::from_unix_millis(TEST_CURRENT_TIME_MILLISECONDS + validity).into_timestamp(),
+            TEST_SIGNATURE,
+        )
+    }
+
+    let validity_limit = Duration::from_millis(10);
+    let mut verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+    verifier.set_validity_limit(validity_limit);
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(9),
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(10),
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: true,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
+
+    let result = verifier.report(
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_CURRENT_TIME_MILLISECONDS,
+        &certificate_from_validity(11),
+    );
+    assert_matches!(
+        result,
+        CertificateVerificationReport {
+            signature: SignatureReport::VerificationSucceeded,
+            serialized_payload: PayloadDeserializationReport::Succeeded {
+                subject_public_key: SubjectPublicKeyReport::Present {
+                    public_key_match: true,
+                    purpose_id_match: true
+                },
+                validity: ValidityPeriodReport::Present {
+                    validity_period_is_positive: true,
+                    validity_period_within_limit: false,
+                    validity_period_started_on_or_before_timestamp: true,
+                    validity_period_ended_at_or_after_timestamp: true,
+                }
+            }
+        }
+    );
 }

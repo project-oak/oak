@@ -15,6 +15,7 @@
 //
 
 #![no_std]
+#![feature(assert_matches)]
 
 extern crate alloc;
 extern crate static_assertions;
