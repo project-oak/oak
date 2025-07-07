@@ -23,7 +23,7 @@ use oak_proto_rust::oak::{
 use crate::{
     aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
     alloc::string::ToString,
-    attestation::{AttestationVerdict, VerifierResult},
+    attestation::{PeerAttestationVerdict, VerifierResult},
 };
 
 fn create_dummy_endorsed_evidence() -> EndorsedEvidence {
@@ -72,7 +72,7 @@ fn aggregated_attestation_succeeds() {
 
     assert_that!(
         aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(AttestationVerdict::AttestationPassed {
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
             attestation_results: unordered_elements_are!(
                 (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
                 (eq(MATCHED_ATTESTER_ID2), matches_pattern!(VerifierResult::Success { .. }),),
@@ -103,7 +103,7 @@ fn one_failed_verifier_aggregated_attestation_fails() {
 
     assert_that!(
         aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(AttestationVerdict::AttestationFailed {
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: starts_with("Verification failed"),
             attestation_results: unordered_elements_are!(
                 (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
@@ -121,7 +121,7 @@ fn unmatched_verifier_attestation_fails() {
 
     assert_that!(
         aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(AttestationVerdict::AttestationFailed {
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: "No matching evidence is provided",
             attestation_results: elements_are!((
                 eq(UNMATCHED_VERIFIER_ID),
@@ -150,7 +150,7 @@ fn additional_attestation_passes() {
 
     assert_that!(
         aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(AttestationVerdict::AttestationPassed {
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
             attestation_results: unordered_elements_are!(
                 (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
                 (eq(UNMATCHED_ATTESTER_ID), matches_pattern!(VerifierResult::Unverified { .. }),),
@@ -175,7 +175,7 @@ fn mix_successful_and_missing_passes() {
 
     assert_that!(
         aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(AttestationVerdict::AttestationPassed {
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
             attestation_results: unordered_elements_are!(
                 (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
                 (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),

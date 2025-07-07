@@ -27,15 +27,16 @@ use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
-    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence},
+    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence, SessionBinding},
 };
 
 use crate::{
     attestation::{
-        AttestationHandler, AttestationPublisher, AttestationVerdict, ClientAttestationHandler,
+        AttestationHandler, AttestationPublisher, ClientAttestationHandler, PeerAttestationVerdict,
         ServerAttestationHandler, VerifierResult,
     },
     config::AttestationHandlerConfig,
+    generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
     ProtocolEngine,
 };
 
@@ -66,6 +67,21 @@ mock! {
             evidence: &Evidence,
             endorsements: &Endorsements,
         ) -> anyhow::Result<AttestationResults>;
+    }
+}
+
+mock! {
+    TestAssertionGenerator {}
+    impl AssertionGenerator for TestAssertionGenerator {
+        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, AssertionGenerationError>;
+    }
+}
+
+mock! {
+    TestBindableAssertion {}
+    impl BindableAssertion for TestBindableAssertion {
+        fn assertion(&self) -> &Assertion;
+        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, AssertionGenerationError>;
     }
 }
 
@@ -128,9 +144,19 @@ fn create_mock_attestation_publisher(
     Some(Arc::new(publisher))
 }
 
+fn create_mock_assertion_generator(assertion: Assertion) -> Arc<dyn AssertionGenerator> {
+    let mut generator = MockTestAssertionGenerator::new();
+    generator.expect_generate().returning(move || {
+        let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
+        bindable_assertion.expect_assertion().return_const(assertion.clone());
+        Ok(bindable_assertion)
+    });
+    Arc::new(generator)
+}
+
 struct AttestationExchangeResults {
-    client: anyhow::Result<AttestationVerdict>,
-    server: anyhow::Result<AttestationVerdict>,
+    client: PeerAttestationVerdict,
+    server: PeerAttestationVerdict,
 }
 
 fn do_attestation_exchange(
@@ -153,8 +179,8 @@ fn do_attestation_exchange(
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     Ok(AttestationExchangeResults {
-        client: client_attestation_provider.take_attestation_verdict(),
-        server: server_attestation_provider.take_attestation_verdict(),
+        client: client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        server: server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
     })
 }
 
@@ -324,6 +350,62 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
 }
 
 #[googletest::test]
+fn client_with_assertion_generator_provides_request_with_assertion() -> anyhow::Result<()> {
+    let assertion: Assertion = Assertion { content: "test".as_bytes().to_vec() };
+
+    let client_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            MATCHED_ATTESTER_ID1.to_string(),
+            create_mock_assertion_generator(assertion.clone()),
+        )]),
+        ..Default::default()
+    };
+
+    let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
+
+    assert_that!(
+        client_attestation_provider.get_outgoing_message(),
+        ok(some(matches_pattern!(AttestRequest {
+            assertions: eq(&BTreeMap::from([(
+                MATCHED_ATTESTER_ID1.to_string(),
+                assertion.clone()
+            )])),
+            ..
+        })))
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn server_with_assertion_generator_provides_response_with_assertion() -> anyhow::Result<()> {
+    let assertion: Assertion = Assertion { content: "test".as_bytes().to_vec() };
+
+    let server_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            MATCHED_ATTESTER_ID1.to_string(),
+            create_mock_assertion_generator(assertion.clone()),
+        )]),
+        ..Default::default()
+    };
+
+    let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
+
+    let attest_request = AttestRequest::default();
+    assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
+
+    assert_that!(
+        server_attestation_provider.get_outgoing_message(),
+        ok(some(matches_pattern!(AttestResponse {
+            assertions: eq(&BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)])),
+            ..
+        })))
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
 fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
@@ -355,8 +437,8 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -446,8 +528,8 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -502,8 +584,8 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
     );
 
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -520,8 +602,8 @@ fn client_with_empty_peer_verifiers_fails() -> anyhow::Result<()> {
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. })),
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. }),
         "Attestation type should pass with an empty peer verifier map"
     );
 
@@ -539,8 +621,8 @@ fn server_with_empty_peer_verifiers_succeeds() -> anyhow::Result<()> {
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. })),
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. }),
         "Attestation should pass with an empty peer verifier map"
     );
 
@@ -571,8 +653,8 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: starts_with("Verification failed"),
             attestation_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
@@ -581,7 +663,7 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                     result: anything()
                 }),
             )),
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -612,8 +694,8 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: starts_with("Verification failed"),
             attestation_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
@@ -622,7 +704,7 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
                     result: anything()
                 }),
             )),
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -669,8 +751,8 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed {
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
             attestation_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
@@ -691,7 +773,7 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                     matches_pattern!(VerifierResult::Unverified { evidence: anything() })
                 )
             ),
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -738,8 +820,8 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed {
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
             attestation_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
@@ -760,7 +842,7 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
                     matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                 )
             ),
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -808,8 +890,8 @@ fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: starts_with("Verification failed"),
             attestation_results: unordered_elements_are!(
                 (
@@ -832,7 +914,7 @@ fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                     matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                 )
             ),
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -880,8 +962,8 @@ fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: starts_with("Verification failed"),
             attestation_results: unordered_elements_are!(
                 (
@@ -904,7 +986,7 @@ fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
                     matches_pattern!(VerifierResult::Unverified { evidence: anything() }),
                 )
             ),
-        })),
+        }),
         "Attestation type should fail with an unmatched verifier"
     );
 
@@ -928,11 +1010,11 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     // This failure should mention what evidence is missing instead.
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: "No matching evidence is provided",
             ..
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -956,11 +1038,11 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     // This failure should mention what evidence is missing instead.
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: "No matching evidence is provided",
             ..
-        })),
+        }),
         "Attestation should fail with an unmatched verifier"
     );
 
@@ -1000,8 +1082,8 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1040,8 +1122,8 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1078,8 +1160,8 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
     assert_that!(client_attestation_provider.put_incoming_message(ignored_response), ok(none()));
 
     assert_that!(
-        client_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1115,8 +1197,8 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
     assert_that!(server_attestation_provider.put_incoming_message(ignored_request), ok(none()));
 
     assert_that!(
-        server_attestation_provider.take_attestation_verdict(),
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1163,11 +1245,11 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
 
     assert_that!(
         results.client,
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
     assert_that!(
         results.server,
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1212,11 +1294,11 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
 
     assert_that!(
         results.client,
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed { .. })
     );
     assert_that!(
         results.server,
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed { .. })
     );
 
     Ok(())
@@ -1256,11 +1338,11 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
 
     assert_that!(
         results.client,
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
     assert_that!(
         results.server,
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
 
     Ok(())
@@ -1296,14 +1378,14 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
 
     assert_that!(
         results.client,
-        ok(matches_pattern!(AttestationVerdict::AttestationPassed { .. }))
+        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
     );
     assert_that!(
         results.server,
-        ok(matches_pattern!(AttestationVerdict::AttestationFailed {
+        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
             reason: "No matching evidence is provided",
             ..
-        }))
+        })
     );
 
     Ok(())

@@ -45,7 +45,7 @@ pub trait AssertionGenerator: Send + Sync {
 }
 
 /// Assertion that can be bound to the session
-pub trait BindableAssertion {
+pub trait BindableAssertion: Send + Sync {
     /// Returns the underlying assertion to be included in the verification.
     fn assertion(&self) -> &Assertion;
 

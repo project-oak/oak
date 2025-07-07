@@ -18,7 +18,7 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 
-use crate::attestation::{AttestationVerdict, VerifierResult};
+use crate::attestation::{PeerAttestationVerdict, VerifierResult};
 
 /// Defines the contract for aggregating multiple attestation results into a
 /// single verdict.
@@ -31,7 +31,7 @@ pub trait VerifierResultsAggregator: Send {
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, VerifierResult>,
-    ) -> AttestationVerdict;
+    ) -> PeerAttestationVerdict;
 }
 
 /// A default implementation of the `VerifierResultsAggregator` trait.
@@ -57,7 +57,7 @@ impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
     fn aggregate_attestation_results(
         &self,
         results: BTreeMap<String, VerifierResult>,
-    ) -> AttestationVerdict {
+    ) -> PeerAttestationVerdict {
         let mut has_match = false;
         let mut has_configured_verifier = false;
         let mut failures: BTreeMap<&String, &AttestationResults> = BTreeMap::new();
@@ -75,13 +75,13 @@ impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
             _ => {}
         });
         if has_configured_verifier && !has_match {
-            return AttestationVerdict::AttestationFailed {
+            return PeerAttestationVerdict::AttestationFailed {
                 reason: String::from("No matching evidence is provided"),
                 attestation_results: results,
             };
         }
         if !failures.is_empty() {
-            AttestationVerdict::AttestationFailed {
+            PeerAttestationVerdict::AttestationFailed {
                 reason: format!(
                     "Verification failed. {}",
                     failures
@@ -93,7 +93,7 @@ impl VerifierResultsAggregator for DefaultVerifierResultsAggregator {
                 attestation_results: results,
             }
         } else {
-            AttestationVerdict::AttestationPassed { attestation_results: results }
+            PeerAttestationVerdict::AttestationPassed { attestation_results: results }
         }
     }
 }
