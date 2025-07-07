@@ -72,8 +72,6 @@ rust_library(
         "RUSTC_BOOTSTRAP": "1",
     },
     rustc_flags = [
-        # TODO: b/359144829 - replace with select statement to support
-        # panic_immeditate_abort.
         "--codegen=code-model=large",
         "--codegen=relocation-model=static",
     ],
@@ -94,7 +92,6 @@ rust_library(
         "library/portable-simd/crates/core_simd/src/**/*.md",
     ]),
     crate_features = [
-        #"panic_immediate_abort",
         "no_std",
     ],
     crate_name = "core",
@@ -105,7 +102,6 @@ rust_library(
     rustc_flags = [
         "--codegen=relocation-model=static",
         "--codegen=code-model=large",
-        #"--codegen=panic=abort",
         "--cap-lints=allow",
         "-Zmacro-backtrace",
     ],
