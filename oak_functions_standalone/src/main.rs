@@ -19,7 +19,6 @@ use std::{
 };
 
 use clap::Parser;
-use oak_containers_agent::set_error_handler;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
 use oak_proto_rust::oak::functions::{
@@ -65,10 +64,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("reading LookupDataChunk from: {}", args.lookup_data_path);
         lookup_data_option = Some(parse_lookup_data_chunk(args.lookup_data_path));
     }
-
-    // Use eprintln here, as normal logging would go through the OTLP connection,
-    // which may no longer be valid.
-    set_error_handler(|err| eprintln!("oak_functions_standalone: OTLP error: {}", err))?;
 
     // This is a hack to get _some_ logging out of the binary, and should be
     // replaced with proper OTLP logging (or logging to journald, or something) in
