@@ -57,7 +57,8 @@ rust_binary(
         "deny_sensitive_logging",
     ],
     data = [
-        "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions_standalone/testdata:fake_weather_data.binarypb",
     ],
     deps = [
         ":lib",

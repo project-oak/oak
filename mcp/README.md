@@ -50,8 +50,19 @@ In order to start the tool, run the following command:
 
 ```bash
 nix develop
-bazel run //oak_functions_standalone:oak_functions_standalone -- oak_functions/examples/echo/echo.wasm
+bazel run //oak_functions_standalone:oak_functions_standalone
 ```
+
+By default, the application provides a lookup from location (lat, long) to
+temperature in Celsius. To lookup the temperature in any of those locations, the
+location must be specified as `(<lat>,<long>)` where `<lat>` and `<long>` must
+have two decimals of precision and (if necessary) include a leading 0.
+
+For example, for London has latitude 51.51 degrees North and longitude .13
+degrees West. To lookup the weather there, we pass the key `"(51.51,-0.13)"`.
+
+A full list of the data can be viewed on the [Oak Functions standalone testdata
+page](../oak_functions_standalone/testdata/README.md).
 
 ## Running the Server
 

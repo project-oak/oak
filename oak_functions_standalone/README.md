@@ -15,3 +15,8 @@ environment setup is instead done at the startup of the server.
 This server binary implements the gRPC service specified in
 oak/proto/oak_functions/standalone/oak_functions_session.proto and is intended
 to run on a Linux-based environment.
+
+As an example, the main binary performs basic temperature lookups from a limited
+set of latitude and longitude entries.
+
+To run: `bazel run //oak_functions_standalone:oak_functions_standalone`
