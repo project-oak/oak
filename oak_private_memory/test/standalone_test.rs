@@ -26,13 +26,13 @@ use oak_session::{
     Session,
 };
 use private_memory_server_lib::{
-    app::{RequestUnpacking, ResponsePacking},
+    app::{run_persistence_service, RequestUnpacking, ResponsePacking},
     app_config::ApplicationConfig,
 };
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::mpsc as tokio_mpsc};
 use tonic::transport::Channel;
 fn init_logging() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -44,6 +44,7 @@ async fn start_server() -> Result<(
     SocketAddr,
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
 )> {
     init_logging();
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
@@ -59,6 +60,8 @@ async fn start_server() -> Result<(
     let application_config_vec = serde_json::to_vec(&application_config)?;
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
+    let (persistence_tx, persistence_rx) = tokio_mpsc::unbounded_channel();
+    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
     Ok((
         addr,
         db_addr,
@@ -67,11 +70,13 @@ async fn start_server() -> Result<(
             private_memory_server_lib::app::SealedMemoryHandler::new(
                 &application_config_vec,
                 metrics.clone(),
+                persistence_tx,
             )
             .await,
             metrics,
         )),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
+        persistence_join_handle,
     ))
 }
 
@@ -849,7 +854,8 @@ async fn execute_boot_strap_logic(
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_get_reset_memory_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
@@ -876,7 +882,8 @@ async fn test_add_get_reset_memory_all_modes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_embedding_search_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
@@ -899,7 +906,8 @@ async fn test_embedding_search_all_modes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_result_masking_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
@@ -921,7 +929,8 @@ async fn test_result_masking_all_modes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_masking_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
@@ -942,7 +951,8 @@ async fn test_get_masking_all_modes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_boot_strap_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
@@ -1019,7 +1029,8 @@ fn proto_serialization_test() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_delete_memory_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let (addr, _db_addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
     let url = format!("http://{addr}");
 
     for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {

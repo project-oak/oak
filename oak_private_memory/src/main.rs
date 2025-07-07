@@ -23,6 +23,9 @@ use tokio::net::TcpListener;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
+use private_memory_server_lib::app::run_persistence_service;
+use tokio::sync::mpsc;
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     private_memory_server_lib::log::init_logging(true);
@@ -40,12 +43,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
+    let (persistence_tx, persistence_rx) = mpsc::unbounded_channel();
+    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
+
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
         listener,
         private_memory_server_lib::app::SealedMemoryHandler::new(
             &application_config,
             metrics.clone(),
+            persistence_tx.clone(),
         )
         .await,
         metrics,
@@ -53,6 +60,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");
     join_handle.await??;
+
+    drop(persistence_tx);
+    persistence_join_handle.await?;
+
     debug!("Done!!");
     Ok(())
 }

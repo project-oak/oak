@@ -23,7 +23,6 @@ use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    runtime::Handle,
     sync::{Mutex, MutexGuard},
     time::Instant,
 };
@@ -170,52 +169,60 @@ pub enum MessageType {
     Json,
 }
 
+use tokio::sync::mpsc;
+
+pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {
+    info!("Persistence service started");
+    while let Some(mut user_context) = rx.recv().await {
+        info!("Persistence service received a session to save");
+        if !user_context.database.changed {
+            info!("Database is not changed, skip saving");
+            continue;
+        }
+
+        if let Ok(exported_db) = user_context.database.export() {
+            if let Some(encrypted_info) = exported_db.encrypted_info.as_ref() {
+                match encrypt_database(encrypted_info, &user_context.dek) {
+                    Ok(database) => {
+                        info!("Saving db size: {}", database.data.len());
+                        info!("Saving nonce: {}", database.nonce.len());
+                        let result = user_context
+                            .database_service_client
+                            .add_blob(database, Some(user_context.uid.clone()))
+                            .await;
+                        info!("db response {:#?}", result);
+                    }
+                    Err(e) => {
+                        info!("Failed to serialize database: {:?}", e);
+                    }
+                }
+            } else {
+                info!("Encrypted info is empty, skip saving");
+            }
+        } else {
+            info!("Failed to export database, skip saving");
+        }
+    }
+    info!("Persistence service finished");
+}
+
 /// The actual business logic for the hello world application.
 pub struct SealedMemoryHandler {
     pub application_config: ApplicationConfig,
     pub session_context: Mutex<Option<UserSessionContext>>,
     db_client_cache: Mutex<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
     pub metrics: Arc<metrics::Metrics>,
+    persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
 }
 
 impl Drop for SealedMemoryHandler {
     fn drop(&mut self) {
-        info!("Dropping");
-        let session_context = std::mem::take(&mut self.session_context);
-        // When this is called, we should perform cleanup routines like persisting
-        // the in memory database to disks.
-        Handle::current().spawn(async move {
-            info!("Enter");
-            if let Some(user_context) = session_context.lock().await.as_mut() {
-                if !user_context.database.changed {
-                    info!("Database is not changed, skip saving");
-                    return;
-                }
-
-                if let Ok(exported_db) = user_context.database.export() {
-                    if let Some(encrypted_info) = exported_db.encrypted_info.as_ref() {
-                        match encrypt_database(encrypted_info, &user_context.dek) {
-                            Ok(database) => {
-                                info!("Saving db size: {}", database.data.len());
-                                info!("Saving nonce: {}", database.nonce.len());
-                                let result = user_context
-                                    .database_service_client
-                                    .add_blob(database, Some(user_context.uid.clone()))
-                                    .await;
-                                info!("db response {:#?}", result);
-                            }
-                            Err(e) => {
-                                info!("Failed to serialize database: {:?}", e);
-                            }
-                        }
-                    } else {
-                        info!("Encrypted info is empty, skip saving");
-                    }
-                } else {
-                    info!("Failed to export database, skip saving");
-                }
+        info!("Dropping handler and sending session context to persistence service");
+        if let Some(context) = self.session_context.get_mut().take() {
+            if let Err(e) = self.persistence_tx.send(context) {
+                info!("Failed to send session context to persistence service: {}", e);
             }
-        });
+        }
     }
 }
 
@@ -226,12 +233,17 @@ impl Clone for SealedMemoryHandler {
             session_context: Default::default(),
             db_client_cache: Default::default(),
             metrics: self.metrics.clone(),
+            persistence_tx: self.persistence_tx.clone(),
         }
     }
 }
 
 impl SealedMemoryHandler {
-    pub async fn new(application_config_bytes: &[u8], metrics: Arc<metrics::Metrics>) -> Self {
+    pub async fn new(
+        application_config_bytes: &[u8],
+        metrics: Arc<metrics::Metrics>,
+        persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    ) -> Self {
         let application_config: ApplicationConfig =
             serde_json::from_slice(application_config_bytes).expect("Invalid application config");
 
@@ -240,6 +252,7 @@ impl SealedMemoryHandler {
             session_context: Default::default(),
             db_client_cache: Mutex::new(None),
             metrics,
+            persistence_tx,
         }
     }
 
