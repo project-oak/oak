@@ -171,36 +171,29 @@ pub enum MessageType {
 
 use tokio::sync::mpsc;
 
+async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
+    if !user_context.database.changed {
+        info!("Database is not changed, skip saving");
+        return Ok(());
+    }
+
+    let exported_db = user_context.database.export()?;
+    let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
+    let database = encrypt_database(&encrypted_info, &user_context.dek)?;
+
+    info!("Saving db size: {}", database.data.len());
+
+    user_context.database_service_client.add_blob(database, Some(user_context.uid.clone())).await?;
+
+    Ok(())
+}
+
 pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {
     info!("Persistence service started");
     while let Some(mut user_context) = rx.recv().await {
         info!("Persistence service received a session to save");
-        if !user_context.database.changed {
-            info!("Database is not changed, skip saving");
-            continue;
-        }
-
-        if let Ok(exported_db) = user_context.database.export() {
-            if let Some(encrypted_info) = exported_db.encrypted_info.as_ref() {
-                match encrypt_database(encrypted_info, &user_context.dek) {
-                    Ok(database) => {
-                        info!("Saving db size: {}", database.data.len());
-                        info!("Saving nonce: {}", database.nonce.len());
-                        let result = user_context
-                            .database_service_client
-                            .add_blob(database, Some(user_context.uid.clone()))
-                            .await;
-                        info!("db response {:#?}", result);
-                    }
-                    Err(e) => {
-                        info!("Failed to serialize database: {:?}", e);
-                    }
-                }
-            } else {
-                info!("Encrypted info is empty, skip saving");
-            }
-        } else {
-            info!("Failed to export database, skip saving");
+        if let Err(e) = persist_database(&mut user_context).await {
+            info!("Failed to persist database: {:?}", e);
         }
     }
     info!("Persistence service finished");
