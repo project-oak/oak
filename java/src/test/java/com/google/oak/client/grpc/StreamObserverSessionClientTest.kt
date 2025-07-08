@@ -40,6 +40,7 @@ import javax.inject.Provider
 import kotlin.AutoCloseable
 import kotlin.jvm.optionals.getOrNull
 import kotlin.test.assertFailsWith
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -61,6 +62,11 @@ class StreamObserverSessionClientTest {
       .build()
   val stub = TestServiceGrpc.newStub(channel)
 
+  @After
+  fun cleanup() {
+    channel.shutdown()
+  }
+
   @Test
   fun client_startedSession_handshakesWithServer() {
     val client = StreamObserverSessionClient(unattestedConfigProvider())
@@ -69,7 +75,23 @@ class StreamObserverSessionClientTest {
       val responseObserver = WaitingResponseObserver()
       client.startSession(responseObserver) { stub.startSession(it) }
 
-      responseObserver.awaitOpen()
+      responseObserver.awaitOpen().onCompleted()
+      responseObserver.awaitCompleted()
+    }
+  }
+
+  @Test
+  fun client_startedSession_handshakesWithServer_checkForSessionLeaks() {
+    val client = StreamObserverSessionClient(unattestedConfigProvider())
+    val fakeService = FakeServiceImpl(unattestedConfigProvider()) { it }
+    startServer(fakeService).use {
+      repeat(2000) {
+        val responseObserver = WaitingResponseObserver()
+        client.startSession(responseObserver) { stub.startSession(it) }
+
+        responseObserver.awaitOpen().onCompleted()
+        responseObserver.awaitCompleted()
+      }
     }
   }
 
@@ -85,6 +107,11 @@ class StreamObserverSessionClientTest {
       assertTrue(
         (clientRequests as StreamObserverSessionClient.ClientSessionAccess).oakClientSession.isOpen
       )
+      clientRequests.onCompleted()
+      responseObserver.awaitCompleted()
+      assertFailsWith<IllegalStateException> {
+        (clientRequests as StreamObserverSessionClient.ClientSessionAccess).oakClientSession.isOpen
+      }
     }
   }
 
