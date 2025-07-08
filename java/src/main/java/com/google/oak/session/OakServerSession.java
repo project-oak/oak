@@ -128,10 +128,4 @@ public class OakServerSession implements AutoCloseable {
   private static native byte[] nativeGetSessionBindingToken(long nativePtr, byte[] info);
 
   private static native void nativeClose(long nativePtr);
-
-  @Deprecated
-  public static OakServerSession createServerUnattested() {
-    return new OakServerSession(
-        new OakSessionConfigBuilder(AttestationType.UNATTESTED, HandshakeType.NOISE_NN));
-  }
 }
