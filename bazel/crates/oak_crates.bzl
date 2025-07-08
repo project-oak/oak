@@ -250,7 +250,7 @@ def _common_crates(std):
                 "serde",
                 "parsing",
             ],
-            version = "0.3.36",
+            version = "0.3.38",
         ),
         "uart_16550": crate.spec(version = "0.3.0"),
         "wasmi": crate.spec(
@@ -530,7 +530,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "sync",
             "time",
         ],
-        version = "1.36.0",
+        version = "1.41.0",
     ),
     "tokio-stream": crate.spec(
         features = ["net"],
