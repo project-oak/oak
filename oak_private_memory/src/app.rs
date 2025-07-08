@@ -43,8 +43,12 @@ use crate::{
 #[async_trait]
 trait MemoryInterface {
     async fn add_memory(&mut self, memory: Memory) -> Option<MemoryId>;
-    async fn get_memories_by_tag(&mut self, tag: String, page_size: i32) -> Vec<Memory>;
-    async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory>;
+    async fn get_memories_by_tag(
+        &mut self,
+        tag: String,
+        page_size: i32,
+    ) -> anyhow::Result<Vec<Memory>>;
+    async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>>;
     async fn reset_memory(&mut self) -> bool;
     async fn search_memory(
         &mut self,
@@ -92,27 +96,25 @@ impl MemoryInterface for DatabaseWithCache {
         Some(memory_id)
     }
 
-    async fn get_memories_by_tag(&mut self, tag: String, page_size: i32) -> Vec<Memory> {
-        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag, page_size).unwrap();
+    async fn get_memories_by_tag(
+        &mut self,
+        tag: String,
+        page_size: i32,
+    ) -> anyhow::Result<Vec<Memory>> {
+        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag, page_size)?;
 
         if all_blob_ids.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
-        self.cache.get_memories_by_blob_ids(&all_blob_ids).await.unwrap()
+        self.cache.get_memories_by_blob_ids(&all_blob_ids).await
     }
 
-    async fn get_memory_by_id(&mut self, id: MemoryId) -> Option<Memory> {
-        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id).unwrap() {
-            self.cache.get_memory_by_blob_id(&blob_id).await.map_or_else(
-                |e| {
-                    info!("Failed to get memory by id: {:?}", e);
-                    None
-                },
-                Some,
-            )
+    async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>> {
+        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id)? {
+            self.cache.get_memory_by_blob_id(&blob_id).await.map(Some)
         } else {
-            None
+            Ok(None)
         }
     }
 
@@ -184,28 +186,34 @@ impl Drop for SealedMemoryHandler {
         // the in memory database to disks.
         Handle::current().spawn(async move {
             info!("Enter");
-            // For test purpose. Will be removed soon
             if let Some(user_context) = session_context.lock().await.as_mut() {
                 if !user_context.database.changed {
                     info!("Database is not changed, skip saving");
                     return;
                 }
-                let database = encrypt_database(
-                    &user_context.database.export().encrypted_info.unwrap(),
-                    &user_context.dek,
-                );
-                if database.is_err() {
-                    info!("Failed to serialize database");
-                    return;
+
+                if let Ok(exported_db) = user_context.database.export() {
+                    if let Some(encrypted_info) = exported_db.encrypted_info.as_ref() {
+                        match encrypt_database(encrypted_info, &user_context.dek) {
+                            Ok(database) => {
+                                info!("Saving db size: {}", database.data.len());
+                                info!("Saving nonce: {}", database.nonce.len());
+                                let result = user_context
+                                    .database_service_client
+                                    .add_blob(database, Some(user_context.uid.clone()))
+                                    .await;
+                                info!("db response {:#?}", result);
+                            }
+                            Err(e) => {
+                                info!("Failed to serialize database: {:?}", e);
+                            }
+                        }
+                    } else {
+                        info!("Encrypted info is empty, skip saving");
+                    }
+                } else {
+                    info!("Failed to export database, skip saving");
                 }
-                let database = database.unwrap();
-                info!("Saving db size: {}", database.data.len());
-                info!("Saving nonce: {}", database.nonce.len());
-                let result = user_context
-                    .database_service_client
-                    .add_blob(database, Some(user_context.uid.clone()))
-                    .await;
-                info!("db response {:#?}", result);
             }
         });
     }
@@ -308,24 +316,24 @@ impl SealedMemoryHandler {
         &self,
         response: &SealedMemoryResponse,
         message_type: Option<MessageType>,
-    ) -> Vec<u8> {
+    ) -> anyhow::Result<Vec<u8>> {
         if self.session_context_established().await {
             match self.get_message_type().await {
                 MessageType::BinaryProto => {
-                    return response.encode_to_vec();
+                    return Ok(response.encode_to_vec());
                 }
                 MessageType::Json => {
-                    return serde_json::to_vec(response).unwrap();
+                    return Ok(serde_json::to_vec(response)?);
                 }
             }
         }
         if let Some(message_type) = message_type {
             if message_type == MessageType::Json {
-                return serde_json::to_vec(response).unwrap();
+                return Ok(serde_json::to_vec(response)?);
             }
         }
         // Default to binary proto if the session is not established.
-        response.encode_to_vec()
+        Ok(response.encode_to_vec())
     }
 
     fn is_valid_key(key: &[u8]) -> bool {
@@ -343,11 +351,15 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let memory_id = database.add_memory(request.memory.unwrap()).await;
-            if let Some(memory_id) = memory_id {
-                Ok(AddMemoryResponse { id: memory_id.to_string() })
+            if let Some(memory) = request.memory {
+                let memory_id = database.add_memory(memory).await;
+                if let Some(memory_id) = memory_id {
+                    Ok(AddMemoryResponse { id: memory_id.to_string() })
+                } else {
+                    bail!("Failed to add memory!")
+                }
             } else {
-                bail!("Failed to add memory!")
+                bail!("memory not set in AddMemoryRequest")
             }
         } else {
             bail!("You need to call key sync first")
@@ -362,7 +374,7 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let mut memories = database.get_memories_by_tag(request.tag, request.page_size).await;
+            let mut memories = database.get_memories_by_tag(request.tag, request.page_size).await?;
             if let Some(result_mask) = request.result_mask {
                 for memory in memories.iter_mut() {
                     apply_mask_to_memory(memory, &result_mask);
@@ -382,7 +394,7 @@ impl SealedMemoryHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let mut memory = database.get_memory_by_id(request.id).await;
+            let mut memory = database.get_memory_by_id(request.id).await?;
             let success = memory.is_some();
             if let Some(result_mask) = request.result_mask {
                 if let Some(memory) = memory.as_mut() {
@@ -526,14 +538,12 @@ impl SealedMemoryHandler {
         let mut newly_created_database = false;
         if let Ok(data_blob) = db_client.get_blob(&uid).await {
             let encrypted_info = decrypt_database(data_blob, &dek)?;
-            database = if encrypted_info.icing_db.is_some() {
-                IcingMetaDatabase::import(
-                    &encrypted_info.icing_db.clone().unwrap().encode_to_vec(),
-                    None,
-                )?
+            database = if let Some(icing_db) = encrypted_info.icing_db.clone() {
+                IcingMetaDatabase::import(&icing_db.encode_to_vec(), None)?
             } else {
                 newly_created_database = true;
-                let temp_path = tempfile::tempdir()?.path().to_str().unwrap().to_string();
+                let temp_path =
+                    tempfile::tempdir()?.path().to_str().context("invalid temp path")?.to_string();
                 IcingMetaDatabase::new(&temp_path)?
             };
             info!("Loaded database successfully!!");
@@ -782,6 +792,6 @@ impl SealedMemoryHandler {
             response
         };
 
-        Ok(self.serialize_response(&response, message_type).await)
+        self.serialize_response(&response, message_type).await
     }
 }

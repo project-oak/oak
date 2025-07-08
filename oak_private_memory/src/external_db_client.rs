@@ -119,30 +119,28 @@ impl DataBlobHandler for ExternalDbClient {
 
     async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob> {
         let start_time = tokio::time::Instant::now();
-        let db_response = self
-            .read_data_blob(ReadDataBlobRequest { id: id.clone() })
-            .await
-            .expect("Read blob fail!")
-            .into_inner();
+        let db_response =
+            self.read_data_blob(ReadDataBlobRequest { id: id.clone() }).await?.into_inner();
         if let Some(ref status) = db_response.status {
-            if status.success && db_response.data_blob.is_some() {
-                let data_blob = db_response.data_blob.unwrap();
-                let blob_size = data_blob.blob.len() as u64;
-                let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)?;
+            if status.success {
+                if let Some(data_blob) = db_response.data_blob {
+                    let blob_size = data_blob.blob.len() as u64;
+                    let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)?;
 
-                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-                if elapsed_time == 0 {
-                    elapsed_time = 1;
+                    let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+                    if elapsed_time == 0 {
+                        elapsed_time = 1;
+                    }
+                    let mut speed = blob_size / 1024 / elapsed_time;
+                    if speed == 0 {
+                        speed = 1;
+                    }
+                    crate::metrics::get_global_metrics().rpc_latency.record(
+                        speed,
+                        &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")],
+                    );
+                    return Ok(data_blob);
                 }
-                let mut speed = blob_size / 1024 / elapsed_time;
-                if speed == 0 {
-                    speed = 1;
-                }
-                crate::metrics::get_global_metrics().rpc_latency.record(
-                    speed,
-                    &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")],
-                );
-                return Ok(data_blob);
             }
         }
         bail!("Failed to read data blob, {:#?}", db_response);
@@ -154,10 +152,10 @@ impl DataBlobHandler for ExternalDbClient {
         for id in ids {
             let mut client = self.clone();
             let id = id.clone();
-            result.push(tokio::spawn(async move { client.get_blob(&id).await.unwrap() }));
+            result.push(tokio::spawn(async move { client.get_blob(&id).await }));
         }
         let result = futures::future::join_all(result).await;
-        result.into_iter().map(|x| x.map_err(anyhow::Error::msg)).collect()
+        result.into_iter().map(|x| x.map_err(anyhow::Error::msg)?).collect()
     }
 
     async fn add_unencrypted_blob(
@@ -186,8 +184,10 @@ impl DataBlobHandler for ExternalDbClient {
             .map_err(anyhow::Error::msg)?
             .into_inner();
         if let Some(status) = db_response.status {
-            if status.success && db_response.data_blob.is_some() {
-                return Ok(db_response.data_blob.unwrap());
+            if status.success {
+                if let Some(data_blob) = db_response.data_blob {
+                    return Ok(data_blob);
+                }
             }
         }
         bail!("Failed to read unencrypted data blob with id: {}", id);

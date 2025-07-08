@@ -157,10 +157,16 @@ impl IcingMetaDatabase {
         let options_bytes = icing::get_default_icing_options(base_dir).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize();
-        ensure!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        ensure!(
+            result_proto.status.context("no status")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
 
         let result_proto = icing_search_engine.set_schema(&schema);
-        ensure!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        ensure!(
+            result_proto.status.context("no status")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
 
         Ok(Self { icing_search_engine, base_dir: base_dir.to_string() })
     }
@@ -182,10 +188,14 @@ impl IcingMetaDatabase {
             .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
             .build();
         let result = self.icing_search_engine.put(&doc);
-        if result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+        if result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
             debug!("{:?}", result);
         }
-        ensure!(result.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        ensure!(
+            result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
+        );
         Ok(())
     }
 
@@ -221,7 +231,8 @@ impl IcingMetaDatabase {
             &result_spec,
         );
 
-        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed: {:?}", search_result.status);
         }
@@ -249,7 +260,8 @@ impl IcingMetaDatabase {
             &result_spec,
         );
 
-        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
         }
@@ -355,13 +367,17 @@ impl IcingMetaDatabase {
         let search_result: icing::SearchResultProto =
             self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
 
-        if search_result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into())
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
         {
             bail!("Icing search failed for {:?}", search_result.status);
         }
 
-        let scores: Vec<f32> =
-            search_result.results.iter().map(|x| x.score.unwrap() as _).collect();
+        let scores: Vec<f32> = search_result
+            .results
+            .iter()
+            .map(|x| x.score.map(|s| s as f32).context("no score"))
+            .collect::<anyhow::Result<Vec<_>>>()?;
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         ensure!(blob_ids.len() == scores.len());
         Ok((blob_ids, scores))
@@ -371,7 +387,9 @@ impl IcingMetaDatabase {
         for memory_id in memory_ids {
             let result =
                 self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
-            if result.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+            if result.status.clone().context("no status")?.code
+                != Some(icing::status_proto::Code::Ok.into())
+            {
                 bail!("Failed to delete memory with id {}: {:?}", memory_id, result.status);
             }
         }
@@ -381,15 +399,16 @@ impl IcingMetaDatabase {
 
 impl DbMigration for IcingMetaDatabase {
     type ImportFrom = Vec<u8>;
-    type ExportTo = icing::IcingGroundTruthFiles;
-    fn export(&self) -> icing::IcingGroundTruthFiles {
+    type ExportTo = anyhow::Result<icing::IcingGroundTruthFiles>;
+    fn export(&self) -> Self::ExportTo {
         let result_proto =
             self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
-        let result_proto =
-            icing::PersistToDiskResultProto::decode(result_proto.as_slice()).unwrap();
-        assert!(result_proto.status.unwrap().code == Some(icing::status_proto::Code::Ok.into()));
+        let result_proto = icing::PersistToDiskResultProto::decode(result_proto.as_slice())?;
+        ensure!(
+            result_proto.status.context("no status")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
         icing::IcingGroundTruthFiles::new(&self.base_dir)
-            .expect("Failed to read ground truth files from base_dir")
     }
 
     /// Rebuild the icing database in `target_base_dir` given the content of the
@@ -399,7 +418,7 @@ impl DbMigration for IcingMetaDatabase {
             Some(dir) => dir.to_string(),
             _ => {
                 let temp_dir = tempdir()?;
-                temp_dir.path().to_str().unwrap().to_string()
+                temp_dir.path().to_str().context("invalid temp path")?.to_string()
             }
         };
         debug!("import to {:?}", base_dir_str);
@@ -411,7 +430,9 @@ impl DbMigration for IcingMetaDatabase {
         let options_bytes = icing::get_default_icing_options(&base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize();
-        if result_proto.status.clone().unwrap().code != Some(icing::status_proto::Code::Ok.into()) {
+        if result_proto.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
             bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
         }
 
@@ -508,7 +529,10 @@ impl MemoryCache {
         }
 
         // Collect results in the original order
-        Ok(blob_ids.iter().map(|id| results.remove(id).unwrap()).collect::<Vec<_>>())
+        blob_ids
+            .iter()
+            .map(|id| results.remove(id).context("id not found"))
+            .collect::<anyhow::Result<Vec<_>>>()
     }
 
     /// Encodes and encrypts a memory, returning the blob and a generated nonce.
@@ -596,15 +620,15 @@ impl DatabaseWithCache {
         &mut self.database
     }
 
-    pub fn export(&self) -> UserDb {
-        let icing_db = self.database.export();
-        UserDb {
+    pub fn export(&self) -> anyhow::Result<UserDb> {
+        let icing_db = self.database.export()?;
+        Ok(UserDb {
             encrypted_info: Some(EncryptedUserInfo { icing_db: Some(icing_db) }),
             plaintext_info: Some(PlainTextUserInfo {
                 key_derivation_info: Some(self.key_derivation_info.clone()),
                 wrapped_dek: None,
             }),
-        }
+        })
     }
 }
 
@@ -638,8 +662,9 @@ mod tests {
 
     #[gtest]
     fn basic_icing_search_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir().unwrap();
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+        let temp_dir = tempdir()?;
+        let mut icing_database =
+            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
 
         let memory = Memory {
             id: "Thisisanid".to_string(),
@@ -656,15 +681,15 @@ mod tests {
         let blob_id2 = 12346.to_string();
         icing_database.add_memory(memory2, blob_id2.clone())?;
 
-        let result = icing_database.get_memories_by_tag("the_tag".to_string(), 10).unwrap();
+        let result = icing_database.get_memories_by_tag("the_tag".to_string(), 10)?;
         expect_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
         Ok(())
     }
 
     #[gtest]
     fn icing_import_export_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir().unwrap();
-        let base_dir = temp_dir.path().to_str().unwrap();
+        let temp_dir = tempdir()?;
+        let base_dir = temp_dir.path().to_str().context("invalid temp path")?;
         let mut icing_database = IcingMetaDatabase::new(base_dir)?;
 
         let memory_id1 = "memory_id_export_1".to_string();
@@ -677,26 +702,24 @@ mod tests {
         icing_database.add_memory(memory1, blob_id1.clone())?;
 
         // Export the database
-        let exported_data = icing_database.export();
+        let exported_data = icing_database.export()?.encode_to_vec();
         let base_dir_str = icing_database.base_dir();
         let base_dir = std::path::Path::new(&base_dir_str);
         drop(icing_database); // Drop the original instance
         expect_false!(base_dir.exists());
 
         // Import into a new directory (or the same one after cleaning)
-        let import_temp_dir = tempdir().unwrap();
-        let import_base_dir = import_temp_dir.path().to_str().unwrap();
-        let imported_database =
-            IcingMetaDatabase::import(&exported_data.encode_to_vec(), Some(import_base_dir))
-                .unwrap();
+        let import_temp_dir = tempdir()?;
+        let import_base_dir = import_temp_dir.path().to_str().context("invalid temp path")?;
+        let imported_database = IcingMetaDatabase::import(&exported_data, Some(import_base_dir))?;
 
         // Verify data exists in the imported database
         expect_that!(
-            imported_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
+            imported_database.get_blob_id_by_memory_id(memory_id1)?,
             eq(&Some(blob_id1.clone()))
         );
         expect_that!(
-            imported_database.get_memories_by_tag("export_tag".to_string(), 10).unwrap(),
+            imported_database.get_memories_by_tag("export_tag".to_string(), 10)?,
             unordered_elements_are![eq(&blob_id1)]
         );
         Ok(())
@@ -704,8 +727,9 @@ mod tests {
 
     #[gtest]
     fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir().unwrap();
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+        let temp_dir = tempdir()?;
+        let mut icing_database =
+            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
 
         let memory_id1 = "memory_id_1".to_string();
         let blob_id1 = 54321.to_string();
@@ -720,18 +744,12 @@ mod tests {
         icing_database.add_memory(memory2, blob_id2.clone())?;
 
         // Test finding an existing blob ID
-        expect_that!(
-            icing_database.get_blob_id_by_memory_id(memory_id1).unwrap(),
-            eq(&Some(blob_id1))
-        );
+        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id1)?, eq(&Some(blob_id1)));
         // Test finding another existing blob ID
-        expect_that!(
-            icing_database.get_blob_id_by_memory_id(memory_id2).unwrap(),
-            eq(&Some(blob_id2))
-        );
+        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id2)?, eq(&Some(blob_id2)));
         // Test finding a non-existent blob ID
         expect_that!(
-            icing_database.get_blob_id_by_memory_id("non_existent_id".to_string()).unwrap(),
+            icing_database.get_blob_id_by_memory_id("non_existent_id".to_string())?,
             eq(&None)
         );
         Ok(())
@@ -739,8 +757,9 @@ mod tests {
 
     #[gtest]
     fn icing_embedding_search_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir().unwrap();
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path().to_str().unwrap())?;
+        let temp_dir = tempdir()?;
+        let mut icing_database =
+            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
 
         let memory_id1 = "memory_embed_1".to_string();
         let blob_id1 = 98765.to_string();
