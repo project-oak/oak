@@ -18,8 +18,8 @@ use jni::{
     sys::jlong,
     JNIEnv,
 };
-use oak_attestation_verification_types::util::Clock;
 use oak_jni_attestation_verification_clock::JNIClock;
+use oak_time::Clock;
 
 #[allow(non_snake_case)]
 #[no_mangle]
@@ -40,5 +40,5 @@ fn Java_com_google_oak_remote_1attestation_AttestationVerificationClockTest_rust
     _class: JClass,
     jni_clock_ptr: jlong,
 ) -> jlong {
-    unsafe { &*(jni_clock_ptr as *mut JNIClock) }.get_milliseconds_since_epoch() as jlong
+    (unsafe { &*(jni_clock_ptr as *mut JNIClock) }.get_time().into_unix_millis()) as jlong
 }

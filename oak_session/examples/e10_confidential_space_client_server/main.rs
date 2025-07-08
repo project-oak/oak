@@ -56,18 +56,7 @@ mod intro_import {
 use std::{str::FromStr, sync::Arc};
 
 use intro_import::*;
-use oak_attestation_verification_types::util::Clock;
-
-// In this example we're using pre-generated tokens and certificates. They have
-// short expiration times, so to ensure everything just works we have to use a
-// fake clock.
-struct FakeClock;
-impl Clock for FakeClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        // This time covers the validity of the root certificate and JWT.
-        1751329800000 // Tuesday, 1 July 2025 01:30:00 GMT+01:00
-    }
-}
+use oak_time::{clock::FixedClock, Instant};
 
 // In this simple example, we show the basics of passing messages back and forth
 // bewteen an Oak ClientSession and an Oak ServerSession. In most real-world
@@ -111,8 +100,12 @@ fn main() {
     // which is extracted from the evidence.
     let root = Certificate::from_pem(CSPACE_ROOT).expect("Failed to parse root certificate");
     let policy = ConfidentialSpacePolicy::new(root);
-    let attestation_verifier =
-        EventLogVerifier::new(vec![Box::new(policy)], Arc::new(FakeClock {}));
+    let attestation_verifier = EventLogVerifier::new(
+        vec![Box::new(policy)],
+        // Tuesday, 1 July 2025 01:30:00 GMT+01:00
+        // This time covers the validity of the root certificate and JWT.
+        Arc::new(FixedClock::at_instant(Instant::from_unix_seconds(1751329800))),
+    );
 
     let client_config: SessionConfig =
         SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)

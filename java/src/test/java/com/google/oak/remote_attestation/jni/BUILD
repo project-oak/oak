@@ -28,6 +28,7 @@ rust_library(
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation/jni:oak_jni_attestation_verification_clock",
         "//oak_attestation_verification_types",
+        "//oak_time",
         "@oak_crates_index//:jni",
     ],
     alwayslink = 1,

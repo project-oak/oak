@@ -28,6 +28,7 @@ rust_library(
         "//oak_attestation_verification",
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
+        "//oak_time",
         "@oak_crates_index//:anyhow",
     ],
 )

@@ -32,7 +32,6 @@ use hashbrown::HashSet;
 use itertools::izip;
 use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
-    util::Clock,
     verifier::AttestationVerifier,
 };
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
@@ -45,6 +44,7 @@ use oak_proto_rust::oak::{
     Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_time::Clock;
 use p256::ecdsa::VerifyingKey;
 use zerocopy::FromBytes;
 
@@ -105,7 +105,7 @@ impl AttestationVerifier for EventLogVerifier {
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
         // Get current time.
-        let milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+        let milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log = &evidence
@@ -162,7 +162,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
         // Get current time.
-        let milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+        let milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
 
         // Get DICE root layer evidence.
         let root_layer = &evidence
@@ -259,7 +259,7 @@ impl AttestationVerifier for SoftwareRootedDiceAttestationVerifier {
         _endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
         // Get current time.
-        let _milliseconds_since_epoch = self.clock.get_milliseconds_since_epoch();
+        let _milliseconds_since_epoch = self.clock.get_time().into_unix_millis();
 
         // Verify DICE chain integrity.
         // The output argument is ommited because last layer's certificate authority key

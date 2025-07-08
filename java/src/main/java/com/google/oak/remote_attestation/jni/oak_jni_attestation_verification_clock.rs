@@ -19,7 +19,7 @@ use jni::{
     objects::{GlobalRef, JObject},
     JNIEnv, JavaVM,
 };
-use oak_attestation_verification_types::util::Clock as AttestationClock;
+use oak_time::{Clock as AttestationClock, Instant};
 
 // An implementation of oak_attestation_type::util::Clock that gets time from a
 // Java-provided class.
@@ -69,7 +69,7 @@ impl JNIClock {
 }
 
 impl AttestationClock for JNIClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
+    fn get_time(&self) -> Instant {
         // Attaching an already attached thread is a no-op, so this should not be too
         // expensive for typical use cases.
         // If this fails, we can't do anything but bail, since we won't even have an env
@@ -81,10 +81,9 @@ impl AttestationClock for JNIClock {
                 Ok(r) => r,
                 Err(_) => {
                     // An exception will have been thrown.
-                    return 0;
+                    return Instant::UNIX_EPOCH;
                 }
             };
-
-        result.j().expect("Failed to unwrap as long")
+        Instant::from_unix_millis(result.j().expect("Failed to unwrap as long"))
     }
 }

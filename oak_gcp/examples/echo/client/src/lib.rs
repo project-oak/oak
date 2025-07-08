@@ -13,10 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
@@ -24,7 +21,6 @@ use oak_attestation_gcp::{
     policy::ConfidentialSpacePolicy, verification::CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::verifier::EventLogVerifier;
-use oak_attestation_verification_types::util::Clock;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
@@ -36,21 +32,11 @@ use oak_session::{
     session::AttestationEvidence,
     ClientSession, Session,
 };
+use oak_time::Clock;
 use tonic::transport::{Channel, Uri};
 use x509_cert::{der::DecodePem, Certificate};
 
 const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
-
-struct SystemClock;
-
-impl Clock for SystemClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(n) => n.as_millis().try_into().unwrap(),
-            Err(_) => 0,
-        }
-    }
-}
 
 // A client for streaming requests to the Echo server over an E2EE Noise
 // Protocol session.
@@ -61,7 +47,7 @@ pub struct EchoClient {
 }
 
 impl EchoClient {
-    pub async fn create<T: AsRef<str>>(url: T) -> Result<EchoClient> {
+    pub async fn create<T: AsRef<str>>(url: T, clock: Arc<dyn Clock>) -> Result<EchoClient> {
         let url = url.as_ref().to_owned();
         let uri = Uri::from_maybe_shared(url).context("invalid URI")?;
         let channel =
@@ -79,8 +65,7 @@ impl EchoClient {
         let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
             .expect("Failed to parse root certificate");
         let policy = ConfidentialSpacePolicy::new(root);
-        let attestation_verifier =
-            EventLogVerifier::new(vec![Box::new(policy)], Arc::new(SystemClock {}));
+        let attestation_verifier = EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 
         let client_config: SessionConfig =
             SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)

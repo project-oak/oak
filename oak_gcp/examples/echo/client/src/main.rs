@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
 
     let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
-    let mut client = oak_gcp_examples_echo_client::EchoClient::create(&opt.uri)
+    let mut client = oak_gcp_examples_echo_client::EchoClient::create(&opt.uri, clock.clone())
         .await
         .context("couldn't connect to server")?;
 

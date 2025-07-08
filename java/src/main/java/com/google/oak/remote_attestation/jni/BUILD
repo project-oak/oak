@@ -25,6 +25,7 @@ rust_library(
     srcs = ["oak_jni_attestation_verification_clock.rs"],
     deps = [
         "//oak_attestation_verification_types",
+        "//oak_time",
         "@oak_crates_index//:jni",
     ],
     alwayslink = 1,

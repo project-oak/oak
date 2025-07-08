@@ -40,7 +40,6 @@ use oak_attestation_verification::{
 };
 use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
-    util::Clock,
     verifier::AttestationVerifier,
 };
 use oak_crypto::{
@@ -68,6 +67,7 @@ use oak_proto_rust::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_time::{Clock, Instant};
 use prost::Message;
 use prost_types::Timestamp;
 use zerocopy::FromBytes;
@@ -122,26 +122,26 @@ struct OcTestClock;
 struct CbTestClock;
 
 impl Clock for TestClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        TEST_MILLISECONDS_SINCE_EPOCH
+    fn get_time(&self) -> Instant {
+        Instant::from_unix_millis(TEST_MILLISECONDS_SINCE_EPOCH)
     }
 }
 
 impl Clock for CbTestClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        CB_MILLISECONDS_SINCE_EPOCH
+    fn get_time(&self) -> Instant {
+        Instant::from_unix_millis(CB_MILLISECONDS_SINCE_EPOCH)
     }
 }
 
 impl Clock for OcTestClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        OC_MILLISECONDS_SINCE_EPOCH
+    fn get_time(&self) -> Instant {
+        Instant::from_unix_millis(OC_MILLISECONDS_SINCE_EPOCH)
     }
 }
 
 impl Clock for RkTestClock {
-    fn get_milliseconds_since_epoch(&self) -> i64 {
-        RK_MILLISECONDS_SINCE_EPOCH
+    fn get_time(&self) -> Instant {
+        Instant::from_unix_millis(RK_MILLISECONDS_SINCE_EPOCH)
     }
 }
 

@@ -24,10 +24,11 @@ extern crate alloc;
 use alloc::{string::ToString, sync::Arc};
 
 use oak_attestation_verification::verifier::verify;
-use oak_attestation_verification_types::{util::Clock, verifier::AttestationVerifier};
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
 };
+use oak_time::Clock;
 
 /// Attestation verifier verifying evidence produced by the DICE attestation.
 ///
@@ -54,7 +55,7 @@ impl AttestationVerifier for DiceAttestationVerifier {
         endorsements: &Endorsements,
     ) -> anyhow::Result<AttestationResults> {
         match verify(
-            self.clock.get_milliseconds_since_epoch(),
+            self.clock.get_time().into_unix_millis(),
             evidence,
             endorsements,
             &self.ref_values,

@@ -36,6 +36,7 @@ rust_binary(
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
         "//oak_session",
+        "//oak_time",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:x509-cert",
     ],
