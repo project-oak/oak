@@ -27,7 +27,10 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, vec::Vec};
+#[cfg(test)]
+extern crate std;
+
+use alloc::boxed::Box;
 
 use bitflags::bitflags;
 use nom::{
@@ -54,7 +57,7 @@ bitflags! {
 
 /// The header of a TDX quote.
 #[derive(Debug)]
-pub struct TdxQuoteHeader {
+pub struct TdxQuoteHeader<'a> {
     /// The version of the quote format. Must be 4.
     pub version: u16,
     /// The type of the attestation key used.
@@ -70,18 +73,18 @@ pub struct TdxQuoteHeader {
     /// The vendor ID of the Quoting Enclave.
     ///
     /// This must be 939A7233F79C4CA9940A0DB3957F0607 (Intel® SGX QE Vendor).
-    pub qe_vendor_id: [u8; 16],
+    pub qe_vendor_id: &'a [u8; 16],
     /// Custom user data.
     ///
     /// For the TDX DCAP Quote Generation Libraries the first 16 bytes contain a
     /// Platform Identifier.
-    pub user_data: [u8; 20],
+    pub user_data: &'a [u8; 20],
 }
 
-impl TdxQuoteHeader {
+impl<'a> TdxQuoteHeader<'a> {
     /// Parses a TDX quote header from a byte slice.
     #[allow(unused)]
-    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, version) = le_u16(bytes)?;
         let (rest, att_key_type) = le_u16(rest)?;
         let (rest, tee_type) = le_u32(rest)?;
@@ -107,13 +110,13 @@ impl TdxQuoteHeader {
 
 /// The body of a TDX quote.
 #[derive(Debug)]
-pub struct TdxQuoteBody {
+pub struct TdxQuoteBody<'a> {
     /// The security version number of the Trusted Execution Environment.
-    pub tee_tcb_svn: [u8; 16],
+    pub tee_tcb_svn: &'a [u8; 16],
     /// The measurement of the Intel TDX module.
-    pub mr_seam: [u8; 48],
+    pub mr_seam: &'a [u8; 48],
     /// The measurement of the TDX module signer.
-    pub mrsigner_seam: [u8; 48],
+    pub mrsigner_seam: &'a [u8; 48],
     /// The attributes of the TDX module.
     pub seam_attributes: u64,
     /// The attributes of the Trust Domain (TD).
@@ -121,29 +124,29 @@ pub struct TdxQuoteBody {
     /// The mask of CPU extended features for the TD.
     pub xfam: u64,
     /// The measurement of the initial contents of the TD.
-    pub mr_td: [u8; 48],
+    pub mr_td: &'a [u8; 48],
     /// The software-defined ID for the TD's configuration.
-    pub mr_config_id: [u8; 48],
+    pub mr_config_id: &'a [u8; 48],
     /// The software-defined ID for the TD's owner.
-    pub mr_owner: [u8; 48],
+    pub mr_owner: &'a [u8; 48],
     /// The software-defined ID for owner-defined configuration.
-    pub mr_owner_config: [u8; 48],
+    pub mr_owner_config: &'a [u8; 48],
     /// Runtime-extendable measurement register 0.
-    pub rtmr_0: [u8; 48],
+    pub rtmr_0: &'a [u8; 48],
     /// Runtime-extendable measurement register 1.
-    pub rtmr_1: [u8; 48],
+    pub rtmr_1: &'a [u8; 48],
     /// Runtime-extendable measurement register 2.
-    pub rtmr_2: [u8; 48],
+    pub rtmr_2: &'a [u8; 48],
     /// Runtime-extendable measurement register 3.
-    pub rtmr_3: [u8; 48],
+    pub rtmr_3: &'a [u8; 48],
     /// Custom data provided by the TD.
-    pub report_data: [u8; 64],
+    pub report_data: &'a [u8; 64],
 }
 
-impl TdxQuoteBody {
+impl<'a> TdxQuoteBody<'a> {
     /// Parses a TDX quote body from a byte slice.
     #[allow(unused)]
-    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, tee_tcb_svn) = take(16usize)(bytes)?;
         let (rest, mr_seam) = take(48usize)(rest)?;
         let (rest, mrsigner_seam) = take(48usize)(rest)?;
@@ -187,11 +190,11 @@ impl TdxQuoteBody {
 
 /// A parsed TDX quote.
 #[derive(Debug)]
-pub struct ParsedTdxQuote {
+pub struct ParsedTdxQuote<'a> {
     /// The header of the quote.
-    pub header: TdxQuoteHeader,
+    pub header: TdxQuoteHeader<'a>,
     /// The body of the quote.
-    pub body: TdxQuoteBody,
+    pub body: TdxQuoteBody<'a>,
 }
 
 /// The QE Certification Data.
@@ -199,60 +202,60 @@ pub struct ParsedTdxQuote {
 /// This enum contains the data required to verify the QE Report Signature.
 #[derive(Debug)]
 #[repr(u16)]
-pub enum QeCertificationData {
+pub enum QeCertificationData<'a> {
     /// Provisioning Certification Key (PCK) identifier: Platform Provisioning
     /// (PP) ID in plain text, CPU SVN, and Provisioning Certification
     /// Enclave (PCE) SVN.
-    PckIdentifierPpIdCpuSvnPceSvn(Vec<u8>) = 1,
+    PckIdentifierPpIdCpuSvnPceSvn(&'a [u8]) = 1,
     /// PCK identifier: PP ID encrypted using RSA-2048-OAEP, CPU SVN, and PCE
     /// SVN.
-    PckIdentifierPpIdRSA2048CpuSvnPceSvn(Vec<u8>) = 2,
+    PckIdentifierPpIdRSA2048CpuSvnPceSvn(&'a [u8]) = 2,
     /// PCK identifier: PP ID encrypted using RSA-3072-OAEP, CPU SVN, and PCE
     /// SVN.
-    PckIdentifierPpIdRSA3072CpuSvnPceSvn(Vec<u8>) = 3,
+    PckIdentifierPpIdRSA3072CpuSvnPceSvn(&'a [u8]) = 3,
     /// PCK Leaf Certificate in plain text (currently not supported).
-    PckLeafCert(Vec<u8>) = 4,
+    PckLeafCert(&'a [u8]) = 4,
     /// Concatenated PCK Cert Chain.
-    PckCertChain(Vec<u8>) = 5,
+    PckCertChain(&'a [u8]) = 5,
     /// QE Report Certification Data.
-    QeReportCertificationData(Box<QeReportCertificationData>) = 6,
+    QeReportCertificationData(Box<QeReportCertificationData<'a>>) = 6,
     /// Platform manifest (currently not supported).
-    PlatformManifest(Vec<u8>) = 7,
+    PlatformManifest(&'a [u8]) = 7,
 }
 
 /// The body of an enclave report.
 #[derive(Debug)]
-pub struct EnclaveReportBody {
+pub struct EnclaveReportBody<'a> {
     /// The security version of the hardware components.
-    pub cpu_svn: [u8; 16],
+    pub cpu_svn: &'a [u8; 16],
     /// Which SECS.MISCSELECT settings are used in the enclave.
     pub misc_select: u32,
     /// Reserved.
-    pub reserved1: [u8; 28],
+    pub reserved1: &'a [u8; 28],
     /// Any special capabilities the enclave possesses.
-    pub attributes: [u8; 16],
+    pub attributes: &'a [u8; 16],
     /// The hash of the enclave measurement.
-    pub mr_enclave: [u8; 32],
+    pub mr_enclave: &'a [u8; 32],
     /// Reserved.
-    pub reserved2: [u8; 32],
+    pub reserved2: &'a [u8; 32],
     /// The hash of the key used to sign the enclave.
-    pub mr_signer: [u8; 32],
+    pub mr_signer: &'a [u8; 32],
     /// Reserved.
-    pub reserved3: [u8; 96],
+    pub reserved3: &'a [u8; 96],
     /// The product ID of the enclave.
     pub isv_prod_id: u16,
     /// The security version of the enclave.
     pub isv_svn: u16,
     /// Reserved.
-    pub reserved4: [u8; 60],
+    pub reserved4: &'a [u8; 60],
     /// Data provided by the user.
-    pub report_data: [u8; 64],
+    pub report_data: &'a [u8; 64],
 }
 
-impl EnclaveReportBody {
+impl<'a> EnclaveReportBody<'a> {
     /// Parses an enclave report body from a byte slice.
     #[allow(unused)]
-    fn parse(bytes: &[u8]) -> nom::IResult<&[u8], Self> {
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, cpu_svn) = take(16usize)(bytes)?;
         let (rest, misc_select) = le_u32(rest)?;
         let (rest, reserved1) = take(28usize)(rest)?;
@@ -290,25 +293,104 @@ impl EnclaveReportBody {
 
 /// The signature over a quote and associated data.
 #[derive(Debug)]
-pub struct QuoteSignatureData {
+pub struct QuoteSignatureData<'a> {
     /// The ECDSA P-256 signature of the quote using the attestation key
     /// generated by the quoting enclave.
-    pub quote_signature: [u8; 64],
+    pub quote_signature: &'a [u8; 64],
     /// The public key of the attestation key generated by the quoting enclave.
-    pub ecdsa_attestation_key: [u8; 64],
+    pub ecdsa_attestation_key: &'a [u8; 64],
     /// The data required to validate the attestation key.
-    pub certification_data: QeCertificationData,
+    pub certification_data: QeCertificationData<'a>,
 }
 
 /// Certification data for a Quoting Enclave report.
 #[derive(Debug)]
-pub struct QeReportCertificationData {
+pub struct QeReportCertificationData<'a> {
     /// The bytes representing the report for the quoting enclave.
-    pub report_body: [u8; 384],
+    pub report_body: &'a [u8; 384],
     /// The signature over the report body.
-    pub signature: [u8; 64],
+    pub signature: &'a [u8; 64],
     /// Additional optional data covered by the signature.
-    pub authentication_data: Vec<u8>,
+    pub authentication_data: &'a [u8],
     /// The data required to validate the signature.
-    pub certification_data: QeCertificationData,
+    pub certification_data: QeCertificationData<'a>,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use googletest::prelude::*;
+    use oak_file_utils::data_path;
+    use oak_proto_rust::oak::attestation::v1::{Evidence, TeePlatform};
+    use prost::Message;
+
+    use super::*;
+
+    // TDX Oak Containers attestation
+    const OC_TDX_EVIDENCE_PATH: &str =
+        "oak_attestation_verification/testdata/oc_evidence_tdx.binarypb";
+
+    // Loads a valid Intel TDX evidence instance for Oak Containers.
+    fn get_oc_evidence_tdx() -> Evidence {
+        let serialized =
+            fs::read(data_path(OC_TDX_EVIDENCE_PATH)).expect("could not read evidence");
+        Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+    }
+
+    #[test]
+    fn parse_tdx_quote_header() {
+        let evidence = get_oc_evidence_tdx();
+        assert_that!(
+            evidence.root_layer.as_ref().expect("no root layer").platform,
+            eq(TeePlatform::IntelTdx as i32)
+        );
+        let quote_buffer = evidence
+            .root_layer
+            .as_ref()
+            .expect("no root layer")
+            .remote_attestation_report
+            .as_slice();
+        let (_, header) = TdxQuoteHeader::parse(quote_buffer).expect("header parsing failed");
+        // Currently version 4 is supported.
+        assert_that!(header.version, eq(4));
+        assert_that!(header.reserved, eq(0));
+        // Intel TDX.
+        assert_that!(header.tee_type, eq(0x00000081));
+        assert_that!(
+            header.qe_vendor_id,
+            // Intel SGX Quoting Enclave Vendor.
+            eq(&[
+                0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F,
+                0x06, 0x07
+            ])
+        );
+        assert_that!(header.user_data, eq(&[0u8; 20]));
+    }
+
+    #[test]
+    fn parse_tdx_quote_body() {
+        let evidence = get_oc_evidence_tdx();
+        assert_that!(
+            evidence.root_layer.as_ref().expect("no root layer").platform,
+            eq(TeePlatform::IntelTdx as i32)
+        );
+        let quote_buffer = evidence
+            .root_layer
+            .as_ref()
+            .expect("no root layer")
+            .remote_attestation_report
+            .as_slice();
+        let (rest, _) = TdxQuoteHeader::parse(quote_buffer).expect("header parsing failed");
+        let (_, body) = TdxQuoteBody::parse(rest).expect("body parsing failed");
+        assert_that!(body.seam_attributes, eq(0));
+        assert_that!(body.mr_config_id, eq(&[0u8; 48]));
+        assert_that!(body.mr_owner, eq(&[0u8; 48]));
+        assert_that!(body.mr_owner_config, eq(&[0u8; 48]));
+        assert_that!(body.rtmr_0, eq(&[0u8; 48]));
+        assert_that!(body.rtmr_1, eq(&[0u8; 48]));
+        assert_that!(body.rtmr_2, not(eq(&[0u8; 48])));
+        assert_that!(body.rtmr_3, eq(&[0u8; 48]));
+        assert_that!(body.report_data, eq(&[0u8; 64]));
+    }
 }

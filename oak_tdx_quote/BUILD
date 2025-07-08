@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 load("//bazel:defs.bzl", "any_platform")
 
 package(
@@ -39,5 +39,19 @@ rust_library(
     deps = [
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:nom",
+    ],
+)
+
+rust_test(
+    name = "oak_tdx_quote_tests",
+    crate = ":oak_tdx_quote",
+    data = [
+        "//oak_attestation_verification/testdata:oc_attestation_tdx",
+    ],
+    deps = [
+        "//oak_file_utils",
+        "//oak_proto_rust",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:prost",
     ],
 )
