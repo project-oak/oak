@@ -14,14 +14,24 @@
 // limitations under the License.
 //
 
+#![feature(assert_matches)]
+
+use core::assert_matches::assert_matches;
 use std::{fs, sync::Arc};
 
 use anyhow::Context;
 use oak_attestation_verification::{
     policy::{
-        application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
-        kernel::KernelPolicy, platform::AmdSevSnpPolicy,
-        session_binding_public_key::SessionBindingPublicKeyPolicy, system::SystemPolicy,
+        application::ApplicationPolicy,
+        container::ContainerPolicy,
+        firmware::FirmwarePolicy,
+        kernel::KernelPolicy,
+        platform::AmdSevSnpPolicy,
+        session_binding_public_key::{
+            EndorsementReport, EventDeserializationReport, SessionBindingPublicKeyPolicy,
+            SessionBindingPublicKeyVerificationReport,
+        },
+        system::SystemPolicy,
         SESSION_BINDING_PUBLIC_KEY_ID,
     },
     verifier::{
@@ -33,7 +43,13 @@ use oak_attestation_verification_types::{
     util::Clock,
     verifier::AttestationVerifier,
 };
-use oak_crypto::{certificate::certificate_verifier::CertificateVerifier, verifier::Verifier};
+use oak_crypto::{
+    certificate::certificate_verifier::{
+        CertificateVerificationReport, CertificateVerifier, PayloadDeserializationReport,
+        SignatureReport, SubjectPublicKeyReport, ValidityPeriodReport,
+    },
+    verifier::Verifier,
+};
 use oak_file_utils::data_path;
 use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
@@ -497,6 +513,213 @@ fn session_binding_key_policy_fails_with_invalid_signature() {
         create_public_key_endorsement(&TEST_WRONG_SIGNATURE).into();
     let result = policy.verify(&event, &endorsement_wrong_signature, TEST_MILLISECONDS_SINCE_EPOCH);
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
+}
+
+#[test]
+fn session_binding_key_policy_report_succeeds() {
+    let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
+    let endorsements = create_public_key_endorsements(&TEST_SIGNATURE);
+
+    let event = &evidence.event_log.as_ref().unwrap().encoded_events[CERTIFICATE_EVENT_INDEX];
+    let endorsement = &endorsements.events[CERTIFICATE_EVENT_INDEX];
+
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    let result = policy.report(event, endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
+            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
+                signature: SignatureReport::VerificationSucceeded,
+                serialized_payload: PayloadDeserializationReport::Succeeded {
+                    subject_public_key: SubjectPublicKeyReport::Present {
+                        public_key_match: true,
+                        purpose_id_match: true
+                    },
+                    validity: ValidityPeriodReport::Present {
+                        validity_period_is_positive: true,
+                        validity_period_within_limit: true,
+                        validity_period_started_on_or_before_timestamp: true,
+                        validity_period_ended_at_or_after_timestamp: true
+                    }
+                }
+            })
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_incorrect_event_id() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect event ID.
+    let event_wrong_id = Event {
+        tag: "session_binding_key".to_string(),
+        event: Some(prost_types::Any {
+            type_url: "wrong ID".to_string(),
+            value: SessionBindingPublicKeyData {
+                session_binding_public_key: TEST_PUBLIC_KEY.to_vec(),
+            }
+            .encode_to_vec(),
+        }),
+    }
+    .encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.report(&event_wrong_id, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Failed(_),
+            endorsement: EndorsementReport::InvalidEvent
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_incorrect_endorsement_id() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect endorsement ID.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let endorsement_wrong_id = Variant {
+        id: b"Wrong ID".to_vec(),
+        value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
+    };
+    let result = policy.report(&event, &endorsement_wrong_id, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
+            endorsement: EndorsementReport::DeserializationFailed(_)
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_empty_ca_endorsement() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Empty CA endorsement.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let empty_ca_endorsement: Variant =
+        SessionBindingPublicKeyEndorsement { ca_endorsement: None, ..Default::default() }.into();
+    let result = policy.report(&event, &empty_ca_endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
+            endorsement: EndorsementReport::MissingCertificateAuthorityEndorsement
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_incorrect_public_key() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Incorrect public key.
+    let event_wrong_key = create_public_key_event(&TEST_WRONG_PUBLIC_KEY).encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.report(&event_wrong_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
+            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
+                signature: SignatureReport::VerificationSucceeded,
+                serialized_payload: PayloadDeserializationReport::Succeeded {
+                    subject_public_key: SubjectPublicKeyReport::Present {
+                        public_key_match: false,
+                        purpose_id_match: true
+                    },
+                    validity: ValidityPeriodReport::Present {
+                        validity_period_is_positive: true,
+                        validity_period_within_limit: true,
+                        validity_period_started_on_or_before_timestamp: true,
+                        validity_period_ended_at_or_after_timestamp: true
+                    }
+                }
+            })
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_empty_public_key() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Empty public key.
+    let event_empty_key = create_public_key_event(&[]).encode_to_vec();
+    let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
+    let result = policy.report(&event_empty_key, &endorsement, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: false },
+            endorsement: EndorsementReport::InvalidEvent
+        }
+    );
+}
+
+#[test]
+fn session_binding_key_policy_report_fails_with_invalid_signature() {
+    let certificate_verifier: CertificateVerifier<TestSignatureVerifier> =
+        CertificateVerifier::new(TestSignatureVerifier {
+            expected_signature: TEST_SIGNATURE.to_vec(),
+        });
+    let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
+
+    // Invalid signature.
+    let event = create_public_key_event(&TEST_PUBLIC_KEY).encode_to_vec();
+    let endorsement_wrong_signature: Variant =
+        create_public_key_endorsement(&TEST_WRONG_SIGNATURE).into();
+    let result = policy.report(&event, &endorsement_wrong_signature, TEST_MILLISECONDS_SINCE_EPOCH);
+    assert_matches!(
+        result,
+        SessionBindingPublicKeyVerificationReport {
+            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
+            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
+                signature: SignatureReport::VerificationFailed(_),
+                serialized_payload: PayloadDeserializationReport::Succeeded {
+                    subject_public_key: SubjectPublicKeyReport::Present {
+                        public_key_match: true,
+                        purpose_id_match: true
+                    },
+                    validity: ValidityPeriodReport::Present {
+                        validity_period_is_positive: true,
+                        validity_period_within_limit: true,
+                        validity_period_started_on_or_before_timestamp: true,
+                        validity_period_ended_at_or_after_timestamp: true
+                    }
+                }
+            })
+        }
+    );
 }
 
 #[test]
