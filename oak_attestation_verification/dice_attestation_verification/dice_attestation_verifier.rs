@@ -17,6 +17,8 @@
 //! This module provides an implementation of the Attestation Verifier bases on
 //! verifying the DICE chain.
 
+#![no_std]
+
 extern crate alloc;
 
 use alloc::{string::ToString, sync::Arc};
