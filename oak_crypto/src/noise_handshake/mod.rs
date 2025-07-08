@@ -171,7 +171,7 @@ pub struct OrderedCrypter {
 /// It is created by |respond| and configured with a key for each traffic
 /// direction.
 impl OrderedCrypter {
-    fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
+    pub fn new(read_key: &[u8; SYMMETRIC_KEY_LEN], write_key: &[u8; SYMMETRIC_KEY_LEN]) -> Self {
         Self {
             read_key: (*read_key).into(),
             write_key: (*write_key).into(),
@@ -286,10 +286,10 @@ impl TryFrom<(OrderedCrypter, u32)> for UnorderedCrypter {
                 .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
             crypter_and_window_size
                 .0
-                .read_key
+                .write_key
                 .as_slice()
                 .try_into()
-                .map_err(|e| anyhow!("unexpected format of the read key: {e:#?}"))?,
+                .map_err(|e| anyhow!("unexpected format of the write key: {e:#?}"))?,
             crypter_and_window_size.1,
         ))
     }
