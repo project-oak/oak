@@ -36,6 +36,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "//oak_session",
+        "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",
@@ -50,9 +51,13 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_gcp_examples_echo_client",
+        "//oak_proto_rust",
+        "//oak_time",
+        "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
     ],
 )

@@ -33,6 +33,7 @@ use oak_session::{
     config::SessionConfig,
     handshake::HandshakeType,
     key_extractor::DefaultBindingKeyExtractor,
+    session::AttestationEvidence,
     ClientSession, Session,
 };
 use tonic::transport::{Channel, Uri};
@@ -123,5 +124,9 @@ impl EchoClient {
             .context("didn't get any response")?;
 
         self.client_session.decrypt(response).context("failed to decrypt response")
+    }
+
+    pub fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence> {
+        self.client_session.get_peer_attestation_evidence()
     }
 }

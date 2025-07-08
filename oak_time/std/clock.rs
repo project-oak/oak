@@ -31,6 +31,22 @@ impl Clock for SystemTimeClock {
     }
 }
 
+pub struct FrozenSystemTimeClock {
+    time: SystemTime,
+}
+
+impl Default for FrozenSystemTimeClock {
+    fn default() -> Self {
+        Self { time: SystemTime::now() }
+    }
+}
+
+impl Clock for FrozenSystemTimeClock {
+    fn get_time(&self) -> Instant {
+        instant::from_system_time(self.time)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
