@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
@@ -64,23 +64,22 @@ rust_binary(
 )
 
 pkg_tar(
-    name = "echo_enclave_app_tar",
+    name = "tar",
     srcs = [":bin/oak_gcp_examples_echo_enclave_app"],
     package_dir = "/usr/local/bin",
     strip_prefix = "/oak_gcp/examples/echo/enclave_app/bin",
 )
 
 oci_image(
-    name = "echo_enclave_app_image",
+    name = "image",
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_gcp_examples_echo_enclave_app"],
     exposed_ports = ["8080/tcp"],
-    tars = [":echo_enclave_app_tar"],
+    tars = [":tar"],
 )
 
-oci_push(
-    name = "echo_enclave_app_push",
-    image = ":echo_enclave_app_image",
-    remote_tags = ["latest"],
-    repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/echo_enclave_app",
+oci_load(
+    name = "load_image",
+    image = ":image",
+    repo_tags = ["echo_enclave_app:latest"],
 )
