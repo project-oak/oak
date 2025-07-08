@@ -89,6 +89,7 @@ rust_library(
     ],
 )
         """.format(prost_version = PROST_VERSION),
+        integrity = "sha256-dTNazgva+WrqzjmXkePVN8iPBpyWcACNcu+vKMlL6X0=",
         urls = [
             "https://github.com/tokio-rs/prost/archive/refs/tags/v{}.tar.gz".format(PROST_VERSION),
         ],
