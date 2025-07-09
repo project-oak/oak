@@ -48,7 +48,7 @@ fn main() {
     let server_config: SessionConfig =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
     let (server_component, request_tx, response_rx) = ServerComponent::new(server_config);
-    std::thread::spawn(move || {
+    let server_handle = std::thread::spawn(move || {
         server_component.run();
     });
 
@@ -92,4 +92,7 @@ fn main() {
     let str_message = String::from_utf8_lossy(decrypted.as_slice());
     println!("Server responded: {str_message}");
     drop(request_tx);
+
+    // Wait for server completion, so that the completion message is always printed.
+    server_handle.join().expect("failed to join server thread");
 }
