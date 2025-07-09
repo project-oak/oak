@@ -117,7 +117,6 @@ impl OakSessionHandler {
         &mut self,
         session_request: SessionRequest,
     ) -> tonic::Result<Option<SessionResponse>> {
-        self.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
         if self.server_session.is_open() {
             self.handle_app_request(session_request).await
         } else {
