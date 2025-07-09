@@ -35,8 +35,100 @@ use alloc::boxed::Box;
 use bitflags::bitflags;
 use nom::{
     bytes::complete::take,
+    error::ErrorKind,
     number::complete::{le_u16, le_u32, le_u64},
 };
+use strum_macros::FromRepr;
+use thiserror::Error;
+
+const QUOTE_HEADER_SIZE: usize = 48;
+const QUOTE_BODY_SIZE: usize = 584;
+
+/// Possible errors
+#[derive(Error, Debug)]
+pub enum TdxQuoteError {
+    #[error("the bytes does not represent a valid signed TDX quote")]
+    InvalidStructure(&'static str),
+    #[error("the quote signature verification failed")]
+    InvalidSignature,
+    #[error("the attestation key verification failed")]
+    InvalidAttestationKey,
+}
+
+impl From<nom::Err<(&[u8], ErrorKind)>> for TdxQuoteError {
+    fn from(_: nom::Err<(&[u8], ErrorKind)>) -> Self {
+        TdxQuoteError::InvalidStructure("parsing failed")
+    }
+}
+
+impl From<nom::Err<nom::error::Error<&[u8]>>> for TdxQuoteError {
+    fn from(_: nom::Err<nom::error::Error<&[u8]>>) -> Self {
+        TdxQuoteError::InvalidStructure("parsing failed")
+    }
+}
+
+/// Wrapper for the bytes that represent a signed Intel TDX attestation quote.
+pub struct TdxQuoteWrapper<'a> {
+    quote_bytes: &'a [u8],
+}
+
+impl<'a> TdxQuoteWrapper<'a> {
+    pub fn new(quote_bytes: &'a [u8]) -> Self {
+        Self { quote_bytes }
+    }
+
+    /// Gets the bytes the represent the TDX Quote data.
+    pub fn get_quote_data_bytes(&self) -> Result<&'a [u8], TdxQuoteError> {
+        let length = QUOTE_HEADER_SIZE + QUOTE_BODY_SIZE;
+        if length > self.quote_bytes.len() {
+            Err(TdxQuoteError::InvalidStructure("quote_bytes is too small"))
+        } else {
+            Ok(&self.quote_bytes[..length])
+        }
+    }
+
+    /// Parses the TDX Quote Header from the Quote Data bytes.
+    pub fn parse_quote_header(&self) -> Result<TdxQuoteHeader<'a>, TdxQuoteError> {
+        let bytes = self.get_quote_data_bytes()?;
+        let (_, header) = TdxQuoteHeader::parse(bytes)?;
+        Ok(header)
+    }
+
+    /// Parses the TDX Quote from the Quote Data bytes.
+    pub fn parse_quote(&self) -> Result<ParsedTdxQuote<'a>, TdxQuoteError> {
+        let bytes = self.get_quote_data_bytes()?;
+        let (bytes, header) = TdxQuoteHeader::parse(bytes)?;
+        let (bytes, body) = TdxQuoteBody::parse(bytes)?;
+        if !bytes.is_empty() {
+            Err(TdxQuoteError::InvalidStructure("quote_bytes contains unused bytes"))
+        } else {
+            Ok(ParsedTdxQuote { header, body })
+        }
+    }
+
+    /// Gets the bytes that represent the TDX Quote signature data.
+    pub fn get_signature_data_bytes(&self) -> Result<&'a [u8], TdxQuoteError> {
+        let length = QUOTE_HEADER_SIZE + QUOTE_BODY_SIZE;
+        if length + size_of::<u32>() > self.quote_bytes.len() {
+            return Err(TdxQuoteError::InvalidStructure("quote_bytes is too small"));
+        }
+        let result = &self.quote_bytes[length..];
+        let (result, length) = le_u32::<&[u8], (&[u8], ErrorKind)>(result)?;
+        let length = length as usize;
+        if length > result.len() {
+            Err(TdxQuoteError::InvalidStructure("signature data length is too large"))
+        } else {
+            Ok(&result[..length])
+        }
+    }
+
+    /// Parses the quote signature data.
+    pub fn parse_signature_data(&self) -> Result<QuoteSignatureData<'a>, TdxQuoteError> {
+        let bytes = self.get_signature_data_bytes()?;
+        let (_, signature_data) = QuoteSignatureData::parse(bytes)?;
+        Ok(signature_data)
+    }
+}
 
 bitflags! {
     /// The attributes of the Trust Domain.
@@ -83,7 +175,6 @@ pub struct TdxQuoteHeader<'a> {
 
 impl<'a> TdxQuoteHeader<'a> {
     /// Parses a TDX quote header from a byte slice.
-    #[allow(unused)]
     fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, version) = le_u16(bytes)?;
         let (rest, att_key_type) = le_u16(rest)?;
@@ -145,7 +236,6 @@ pub struct TdxQuoteBody<'a> {
 
 impl<'a> TdxQuoteBody<'a> {
     /// Parses a TDX quote body from a byte slice.
-    #[allow(unused)]
     fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, tee_tcb_svn) = take(16usize)(bytes)?;
         let (rest, mr_seam) = take(48usize)(rest)?;
@@ -197,6 +287,32 @@ pub struct ParsedTdxQuote<'a> {
     pub body: TdxQuoteBody<'a>,
 }
 
+/// The type of the Quoting Enclave (QE) certification data.
+///
+/// Note: This enum must remain exactly in sync with QeCertificationData.
+#[derive(Debug, FromRepr)]
+#[repr(u16)]
+pub enum QeCertificationDataType {
+    /// Provisioning Certification Key (PCK) identifier: Platform Provisioning
+    /// (PP) ID in plain text, CPU SVN, and Provisioning Certification
+    /// Enclave (PCE) SVN.
+    PckIdentifierPpIdCpuSvnPceSvn = 1,
+    /// PCK identifier: PP ID encrypted using RSA-2048-OAEP, CPU SVN, and PCE
+    /// SVN.
+    PckIdentifierPpIdRSA2048CpuSvnPceSvn = 2,
+    /// PCK identifier: PP ID encrypted using RSA-3072-OAEP, CPU SVN, and PCE
+    /// SVN.
+    PckIdentifierPpIdRSA3072CpuSvnPceSvn = 3,
+    /// PCK Leaf Certificate in plain text (currently not supported).
+    PckLeafCert = 4,
+    /// Concatenated PCK Cert Chain.
+    PckCertChain = 5,
+    /// QE Report Certification Data.
+    QeReportCertificationData = 6,
+    /// Platform manifest (currently not supported).
+    PlatformManifest = 7,
+}
+
 /// The QE Certification Data.
 ///
 /// This enum contains the data required to verify the QE Report Signature.
@@ -221,6 +337,47 @@ pub enum QeCertificationData<'a> {
     QeReportCertificationData(Box<QeReportCertificationData<'a>>) = 6,
     /// Platform manifest (currently not supported).
     PlatformManifest(&'a [u8]) = 7,
+}
+
+impl<'a> QeCertificationData<'a> {
+    /// Parses a TDX quote header from a byte slice.
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
+        let (rest, certification_data_type) = le_u16(bytes)?;
+        let (rest, length) = le_u32(rest)?;
+        let (rest, bytes) = take(length)(rest)?;
+        let certification_data_type =
+            QeCertificationDataType::from_repr(certification_data_type)
+                .ok_or(nom::Err::Failure(nom::error::Error::new(bytes, ErrorKind::Fail)))?;
+        match certification_data_type {
+            QeCertificationDataType::PckIdentifierPpIdCpuSvnPceSvn => {
+                Ok((rest, QeCertificationData::PckIdentifierPpIdCpuSvnPceSvn(bytes)))
+            }
+            QeCertificationDataType::PckIdentifierPpIdRSA2048CpuSvnPceSvn => {
+                Ok((rest, QeCertificationData::PckIdentifierPpIdRSA2048CpuSvnPceSvn(bytes)))
+            }
+            QeCertificationDataType::PckIdentifierPpIdRSA3072CpuSvnPceSvn => {
+                Ok((rest, QeCertificationData::PckIdentifierPpIdRSA3072CpuSvnPceSvn(bytes)))
+            }
+            QeCertificationDataType::PckLeafCert => {
+                Ok((rest, QeCertificationData::PckLeafCert(bytes)))
+            }
+            QeCertificationDataType::PckCertChain => {
+                Ok((rest, QeCertificationData::PckCertChain(bytes)))
+            }
+            QeCertificationDataType::QeReportCertificationData => {
+                let (_, report_certification_data) = QeReportCertificationData::parse(bytes)?;
+                Ok((
+                    rest,
+                    QeCertificationData::QeReportCertificationData(Box::new(
+                        report_certification_data,
+                    )),
+                ))
+            }
+            QeCertificationDataType::PlatformManifest => {
+                Ok((rest, QeCertificationData::PlatformManifest(bytes)))
+            }
+        }
+    }
 }
 
 /// The body of an enclave report.
@@ -254,7 +411,6 @@ pub struct EnclaveReportBody<'a> {
 
 impl<'a> EnclaveReportBody<'a> {
     /// Parses an enclave report body from a byte slice.
-    #[allow(unused)]
     fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let (rest, cpu_svn) = take(16usize)(bytes)?;
         let (rest, misc_select) = le_u32(rest)?;
@@ -303,6 +459,24 @@ pub struct QuoteSignatureData<'a> {
     pub certification_data: QeCertificationData<'a>,
 }
 
+impl<'a> QuoteSignatureData<'a> {
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
+        let (rest, quote_signature) = take(64usize)(bytes)?;
+        let (rest, ecdsa_attestation_key) = take(64usize)(rest)?;
+        let (rest, certification_data) = QeCertificationData::parse(rest)?;
+        Ok((
+            rest,
+            // Unwrapping is OK here since we know the slices must have the right length if
+            // we managed to get this far.
+            QuoteSignatureData {
+                quote_signature: quote_signature.try_into().unwrap(),
+                ecdsa_attestation_key: ecdsa_attestation_key.try_into().unwrap(),
+                certification_data,
+            },
+        ))
+    }
+}
+
 /// Certification data for a Quoting Enclave report.
 #[derive(Debug)]
 pub struct QeReportCertificationData<'a> {
@@ -316,8 +490,36 @@ pub struct QeReportCertificationData<'a> {
     pub certification_data: QeCertificationData<'a>,
 }
 
+impl<'a> QeReportCertificationData<'a> {
+    fn parse(bytes: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
+        let (rest, report_body) = take(384usize)(bytes)?;
+        let (rest, signature) = take(64usize)(rest)?;
+        let (rest, authentication_data_length) = le_u16(rest)?;
+        let (rest, authentication_data) = take(authentication_data_length as usize)(rest)?;
+        let (rest, certification_data) = QeCertificationData::parse(rest)?;
+        Ok((
+            rest,
+            // Unwrapping is OK here since we know the slices must have the right length if
+            // we managed to get this far.
+            QeReportCertificationData {
+                report_body: report_body.try_into().unwrap(),
+                signature: signature.try_into().unwrap(),
+                authentication_data,
+                certification_data,
+            },
+        ))
+    }
+
+    /// Parses the enclave report body.
+    pub fn parse_enclave_report_body(&self) -> Result<EnclaveReportBody, TdxQuoteError> {
+        let (_, result) = EnclaveReportBody::parse(self.report_body)?;
+        Ok(result)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
     use std::fs;
 
     use googletest::prelude::*;
@@ -338,23 +540,30 @@ mod tests {
         Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
     }
 
+    fn get_evidence_quote_bytes() -> Vec<u8> {
+        let evidence = get_oc_evidence_tdx();
+        evidence.root_layer.expect("no root layer").remote_attestation_report
+    }
+
     #[test]
-    fn parse_tdx_quote_header() {
+    fn ensure_evidence_is_for_tdx() {
         let evidence = get_oc_evidence_tdx();
         assert_that!(
             evidence.root_layer.as_ref().expect("no root layer").platform,
             eq(TeePlatform::IntelTdx as i32)
         );
-        let quote_buffer = evidence
-            .root_layer
-            .as_ref()
-            .expect("no root layer")
-            .remote_attestation_report
-            .as_slice();
-        let (_, header) = TdxQuoteHeader::parse(quote_buffer).expect("header parsing failed");
+    }
+
+    #[test]
+    fn parse_tdx_quote_header() {
+        let quote_buffer = get_evidence_quote_bytes();
+        let (_, header) =
+            TdxQuoteHeader::parse(quote_buffer.as_slice()).expect("header parsing failed");
         // Currently version 4 is supported.
         assert_that!(header.version, eq(4));
         assert_that!(header.reserved, eq(0));
+        // ECDSA-256-with-P-256 curve.
+        assert_that!(header.att_key_type, eq(2));
         // Intel TDX.
         assert_that!(header.tee_type, eq(0x00000081));
         assert_that!(
@@ -370,18 +579,9 @@ mod tests {
 
     #[test]
     fn parse_tdx_quote_body() {
-        let evidence = get_oc_evidence_tdx();
-        assert_that!(
-            evidence.root_layer.as_ref().expect("no root layer").platform,
-            eq(TeePlatform::IntelTdx as i32)
-        );
-        let quote_buffer = evidence
-            .root_layer
-            .as_ref()
-            .expect("no root layer")
-            .remote_attestation_report
-            .as_slice();
-        let (rest, _) = TdxQuoteHeader::parse(quote_buffer).expect("header parsing failed");
+        let quote_buffer = get_evidence_quote_bytes();
+        let (rest, _) =
+            TdxQuoteHeader::parse(quote_buffer.as_slice()).expect("header parsing failed");
         let (_, body) = TdxQuoteBody::parse(rest).expect("body parsing failed");
         assert_that!(body.seam_attributes, eq(0));
         assert_that!(body.mr_config_id, eq(&[0u8; 48]));
@@ -392,5 +592,78 @@ mod tests {
         assert_that!(body.rtmr_2, not(eq(&[0u8; 48])));
         assert_that!(body.rtmr_3, eq(&[0u8; 48]));
         assert_that!(body.report_data, eq(&[0u8; 64]));
+    }
+
+    #[test]
+    fn parse_tdx_quote_from_wrapper() {
+        let quote_buffer = get_evidence_quote_bytes();
+        let wrapper = TdxQuoteWrapper { quote_bytes: quote_buffer.as_slice() };
+
+        let quote = wrapper.parse_quote().expect("quote parsing failed");
+
+        // Currently version 4 is supported.
+        assert_that!(quote.header.version, eq(4));
+        assert_that!(quote.header.reserved, eq(0));
+        // Intel TDX.
+        assert_that!(quote.header.tee_type, eq(0x00000081));
+        assert_that!(
+            quote.header.qe_vendor_id,
+            // Intel SGX Quoting Enclave Vendor.
+            eq(&[
+                0x93, 0x9A, 0x72, 0x33, 0xF7, 0x9C, 0x4C, 0xA9, 0x94, 0x0A, 0x0D, 0xB3, 0x95, 0x7F,
+                0x06, 0x07
+            ])
+        );
+        assert_that!(quote.header.user_data, eq(&[0u8; 20]));
+        assert_that!(quote.body.seam_attributes, eq(0));
+        assert_that!(quote.body.mr_config_id, eq(&[0u8; 48]));
+        assert_that!(quote.body.mr_owner, eq(&[0u8; 48]));
+        assert_that!(quote.body.mr_owner_config, eq(&[0u8; 48]));
+        assert_that!(quote.body.rtmr_0, eq(&[0u8; 48]));
+        assert_that!(quote.body.rtmr_1, eq(&[0u8; 48]));
+        assert_that!(quote.body.rtmr_2, not(eq(&[0u8; 48])));
+        assert_that!(quote.body.rtmr_3, eq(&[0u8; 48]));
+        assert_that!(quote.body.report_data, eq(&[0u8; 64]));
+    }
+
+    #[test]
+    fn check_signature_data_length() {
+        let quote_buffer = get_evidence_quote_bytes();
+        let wrapper = TdxQuoteWrapper { quote_bytes: quote_buffer.as_slice() };
+        let signature_data =
+            wrapper.get_signature_data_bytes().expect("couldn't get signature data bytes");
+        let expected = quote_buffer.len() - QUOTE_HEADER_SIZE - QUOTE_BODY_SIZE - size_of::<u32>();
+        assert_that!(signature_data.len(), le(expected));
+    }
+
+    #[test]
+    fn parse_signature_data() {
+        let quote_buffer = get_evidence_quote_bytes();
+        let wrapper = TdxQuoteWrapper { quote_bytes: quote_buffer.as_slice() };
+
+        let signature_data = wrapper.parse_signature_data().expect("signature data parsing failed");
+
+        let report_certification =
+            if let QeCertificationData::QeReportCertificationData(report_certification) =
+                signature_data.certification_data
+            {
+                report_certification
+            } else {
+                panic!("signature data contains the wrong type of certification data");
+            };
+
+        std::assert!(std::matches!(
+            report_certification.certification_data,
+            QeCertificationData::PckCertChain(_)
+        ));
+
+        let enclave_report = report_certification
+            .parse_enclave_report_body()
+            .expect("enclave report parsing failed");
+        assert_that!(enclave_report.reserved1, eq(&[0u8; 28]));
+        assert_that!(enclave_report.reserved2, eq(&[0u8; 32]));
+        assert_that!(enclave_report.reserved3, eq(&[0u8; 96]));
+        assert_that!(enclave_report.reserved4, eq(&[0u8; 60]));
+        assert_that!(enclave_report.report_data, not(eq(&[0u8; 64])));
     }
 }
