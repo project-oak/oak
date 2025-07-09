@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
@@ -104,4 +106,29 @@ rust_test(
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
     ],
+)
+
+pkg_tar(
+    name = "oak_functions_standalone_tar",
+    srcs = [
+        ":oak_functions_standalone",
+        "//oak_functions/examples/echo",
+        "//oak_functions/examples/key_value_lookup",
+        "//oak_functions_standalone/testdata:fake_weather_data.binarypb",
+    ],
+    package_dir = "/usr/local/bin",
+)
+
+oci_image(
+    name = "oak_functions_standalone_image",
+    base = "@distroless_cc_debian12",
+    entrypoint = ["/usr/local/bin/oak_functions_standalone"],
+    exposed_ports = ["8080/tcp"],
+    tars = [":oak_functions_standalone_tar"],
+)
+
+oci_load(
+    name = "oak_functions_standalone_load_image",
+    image = ":oak_functions_standalone_image",
+    repo_tags = ["oak_functions_standalone:latest"],
 )

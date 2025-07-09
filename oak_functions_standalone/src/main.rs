@@ -37,24 +37,17 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 struct Args {
     // The wasm_path must be specified in the BUILD data dependency
     // TODO: b/424407998 - Have wasm_path point to content addressable storage
-    #[arg(
-        short,
-        long,
-        default_value = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm"
-    )]
+    #[arg(short, long, default_value = "usr/local/bin/key_value_lookup.wasm")]
     wasm_path: String,
 
-    #[arg(
-        short,
-        long,
-        default_value = "oak_functions_standalone/testdata/fake_weather_data.binarypb"
-    )]
+    #[arg(short, long, default_value = "usr/local/bin/fake_weather_data.binarypb")]
     lookup_data_path: String,
 }
 
 // Parses lookup data from the `lookup_data_path` into a vector
 fn parse_lookup_data_chunk(lookup_data_path: String) -> LookupDataChunk {
-    let lookup_data_buffer = fs::read(lookup_data_path).expect("failed to read lookup data file");
+    let lookup_data_buffer =
+        fs::read(lookup_data_path).expect("failed to read lookup data from file");
     LookupDataChunk::decode(lookup_data_buffer.as_slice()).unwrap()
 }
 
