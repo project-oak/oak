@@ -16,60 +16,25 @@
 #[cfg(test)]
 extern crate std;
 
-use alloc::vec::Vec;
-use std::fs;
+use test_util::endorsement_data::EndorsementData;
 
-use oak_file_utils::data_path;
-
-use crate::{
-    rekor::{parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature},
-    util::convert_pem_to_raw,
-};
-
-const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
-const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
-
-// Public key of the Rekor instance hosted by sigstore.dev. It is downloaded
-// from https://rekor.sigstore.dev/api/v1/log/publicKey.
-const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
-
-struct TestData {
-    endorsement: Vec<u8>,
-    log_entry: Vec<u8>,
-    rekor_public_key: Vec<u8>,
-}
-
-fn load_testdata() -> TestData {
-    let endorsement = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
-    let log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
-    let rekor_public_key_pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
-        .expect("couldn't read rekor public key");
-
-    let rekor_public_key =
-        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-
-    TestData { endorsement, log_entry, rekor_public_key }
-}
+use crate::rekor::{parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature};
 
 #[test]
 fn test_verify_rekor_signature_success() {
-    let testdata = load_testdata();
-    let log_entry = parse_rekor_log_entry(&testdata.log_entry).expect("could not parse log entry");
+    let d = EndorsementData::load();
+    let log_entry = parse_rekor_log_entry(&d.log_entry).expect("could not parse log entry");
 
-    let result = verify_rekor_signature(&log_entry, &testdata.rekor_public_key);
+    let result = verify_rekor_signature(&log_entry, &d.rekor_public_key);
 
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_verify_rekor_log_entry_success() {
-    let testdata = load_testdata();
+    let d = EndorsementData::load();
 
-    let result = verify_rekor_log_entry_ecdsa(
-        &testdata.log_entry,
-        &testdata.rekor_public_key,
-        &testdata.endorsement,
-    );
+    let result = verify_rekor_log_entry_ecdsa(&d.log_entry, &d.rekor_public_key, &d.endorsement);
 
     assert!(result.is_ok(), "{:?}", result);
 }

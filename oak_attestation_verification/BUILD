@@ -74,11 +74,11 @@ rust_test(
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
-        "//oak_attestation_verification/testdata:endorsement",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
+        ":test_util",
         "//oak_file_utils",
         "@oak_crates_index//:rand_core",
     ],
@@ -96,7 +96,6 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:certs",
-        "//oak_attestation_verification/testdata:endorsement",
         "//oak_attestation_verification/testdata:fake_attestation",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation",
@@ -106,6 +105,7 @@ rust_test_suite(
     ],
     deps = [
         ":oak_attestation_verification",
+        ":test_util",
         "//oak_attestation_verification_types",
         "//oak_crypto",
         "//oak_file_utils",
@@ -169,11 +169,11 @@ rust_test(
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
-        "//oak_attestation_verification/testdata:endorsement",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
+        ":test_util",
         "//oak_crypto",
         "//oak_file_utils",
         "@oak_crates_index//:rand_core",
@@ -194,7 +194,6 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:certs",
-        "//oak_attestation_verification/testdata:endorsement",
         "//oak_attestation_verification/testdata:fake_attestation",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation",
@@ -204,6 +203,7 @@ rust_test_suite(
     ],
     deps = [
         ":oak_attestation_verification_with_regex",
+        ":test_util",
         "//oak_attestation_verification_types",
         "//oak_crypto",
         "//oak_file_utils",
@@ -217,5 +217,21 @@ rust_test_suite(
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
+    ],
+)
+
+rust_library(
+    name = "test_util",
+    srcs = glob(["test_util/**"]),
+    data = [
+        "//oak_attestation_verification/testdata:endorsement",
+    ],
+    deps = [
+        "//oak_file_utils",
+        "//oak_proto_rust",
+        "//oak_time",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:time",
     ],
 )
