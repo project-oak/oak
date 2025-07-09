@@ -35,10 +35,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut orchestrator_client = OrchestratorClient::create(&orchestrator_channel);
 
-    let application_config = orchestrator_client
+    let application_config_bytes = orchestrator_client
         .get_application_config()
         .await
         .context("failed to get application config")?;
+
+    let application_config: private_memory_server_lib::app_config::ApplicationConfig =
+        serde_json::from_slice(application_config_bytes.as_slice())
+            .expect("Invalid application config");
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
@@ -49,19 +53,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let join_handle = tokio::spawn(private_memory_server_lib::app_service::create(
         listener,
-        private_memory_server_lib::app::SealedMemoryHandler::new(
-            &application_config,
-            metrics.clone(),
-            persistence_tx.clone(),
-        )
-        .await,
+        application_config,
         metrics,
+        persistence_tx,
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");
     join_handle.await??;
 
-    drop(persistence_tx);
     persistence_join_handle.await?;
 
     debug!("Done!!");

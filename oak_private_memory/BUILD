@@ -108,6 +108,7 @@ rust_binary(
         "@oak//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
     ],
 )

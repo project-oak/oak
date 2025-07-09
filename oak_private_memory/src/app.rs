@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
@@ -23,13 +23,12 @@ use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{Mutex, MutexGuard},
+    sync::{mpsc, Mutex, MutexGuard},
     time::Instant,
 };
 use tonic::transport::Channel;
 
 use crate::{
-    app_config::ApplicationConfig,
     database::{
         decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache,
         DbMigration, IcingMetaDatabase, MemoryId,
@@ -169,8 +168,6 @@ pub enum MessageType {
     Json,
 }
 
-use tokio::sync::mpsc;
-
 async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
     if !user_context.database.changed {
         info!("Database is not changed, skip saving");
@@ -199,16 +196,17 @@ pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSession
     info!("Persistence service finished");
 }
 
-/// The actual business logic for the hello world application.
-pub struct SealedMemoryHandler {
-    pub application_config: ApplicationConfig,
-    pub session_context: Mutex<Option<UserSessionContext>>,
+// The implementation for one active Oak Private Memory session.
+// A new instances of this struct is created per-request.
+pub struct SealedMemorySessionHandler {
+    database_service_host: SocketAddr,
+    session_context: Mutex<Option<UserSessionContext>>,
     db_client_cache: Mutex<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
-    pub metrics: Arc<metrics::Metrics>,
+    metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
 }
 
-impl Drop for SealedMemoryHandler {
+impl Drop for SealedMemorySessionHandler {
     fn drop(&mut self) {
         info!("Dropping handler and sending session context to persistence service");
         if let Some(context) = self.session_context.get_mut().take() {
@@ -219,31 +217,16 @@ impl Drop for SealedMemoryHandler {
     }
 }
 
-impl Clone for SealedMemoryHandler {
-    fn clone(&self) -> Self {
-        Self {
-            application_config: self.application_config.clone(),
-            session_context: Default::default(),
-            db_client_cache: Default::default(),
-            metrics: self.metrics.clone(),
-            persistence_tx: self.persistence_tx.clone(),
-        }
-    }
-}
-
-impl SealedMemoryHandler {
-    pub async fn new(
-        application_config_bytes: &[u8],
+impl SealedMemorySessionHandler {
+    pub fn new(
+        database_service_host: SocketAddr,
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     ) -> Self {
-        let application_config: ApplicationConfig =
-            serde_json::from_slice(application_config_bytes).expect("Invalid application config");
-
         Self {
-            application_config,
+            database_service_host,
             session_context: Default::default(),
-            db_client_cache: Mutex::new(None),
+            db_client_cache: Default::default(),
             metrics,
             persistence_tx,
         }
@@ -272,7 +255,7 @@ impl SealedMemoryHandler {
         }
 
         info!("Creating new DB client");
-        let db_addr = self.application_config.database_service_host;
+        let db_addr = self.database_service_host;
         // The format "http://<host>:<port>" is expected by tonic.
         let db_url = format!("http://{db_addr}");
         info!("Database service URL: {}", db_url);
@@ -722,7 +705,7 @@ fn get_name<T: Name>(_x: &T) -> String {
     T::NAME.to_string()
 }
 
-impl SealedMemoryHandler {
+impl SealedMemorySessionHandler {
     /// This implementation is quite simple, since there's just a single request
     /// that is a string. In a real implementation, we'd probably
     /// deserialize into a proto, and dispatch to various handlers from

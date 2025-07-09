@@ -57,8 +57,6 @@ async fn start_server() -> Result<(
 
     let application_config = ApplicationConfig { database_service_host: db_addr };
 
-    let application_config_vec = serde_json::to_vec(&application_config)?;
-
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio_mpsc::unbounded_channel();
     let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
@@ -67,13 +65,9 @@ async fn start_server() -> Result<(
         db_addr,
         tokio::spawn(private_memory_server_lib::app_service::create(
             listener,
-            private_memory_server_lib::app::SealedMemoryHandler::new(
-                &application_config_vec,
-                metrics.clone(),
-                persistence_tx,
-            )
-            .await,
+            application_config,
             metrics,
+            persistence_tx,
         )),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
