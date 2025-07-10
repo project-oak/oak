@@ -23,7 +23,6 @@ TARGET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../serve
 BUILD_TARGET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '//mcp/server:mcp_server')
 TOOL_URL = 'http://localhost:8080'
 
-
 def get_user_location() -> dict:
     '''Retrieves the current user's location.
 
@@ -33,8 +32,8 @@ def get_user_location() -> dict:
     return {
         'status': 'success',
         'coordinates': {
-            'latitude': 0.0,
-            'longitude': 0.0,
+            'latitude': 45.51,
+            'longitude': -122.68,
         },
     }
 

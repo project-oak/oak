@@ -126,9 +126,8 @@ impl WeatherService {
         info!("Requested weather for ({}, {})", latitude, longitude);
 
         info!("Sending a tool request at: {}", self.tool_url);
-        let tool_result = self
-            .send_tool_request(b"The weather is sunny with a temperature of 20 degrees Celsius.")
-            .await;
+        let tool_result =
+            self.send_tool_request(format!("({latitude},{longitude})").as_bytes()).await;
         let result = match tool_result {
             Ok(tool_response_bytes) => {
                 let tool_response = String::from_utf8(tool_response_bytes)
