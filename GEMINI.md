@@ -16,3 +16,14 @@ similar yourself (e.g. by running `bazel` directly in similar ways).
 ## Writing Tests
 
 This project uses `googletest` whenever possible for both C++ and Rust tests.
+
+## Rust
+
+If possible, Rust code should be compatible with `no_std`. Many of the traits
+and structs in `std` are also found in `core` and / or `alloc`, and those are
+usually fine to use everywhere. Try to use the most precise version.
+
+Tests usually need `std` to run, so if you create a module with testing helpers,
+make sure you gate that behind `#[cfg(test)]`, so it only gets built when
+testing, otherwise it will probably drag `std` into the main (non-test) build
+and break that.
