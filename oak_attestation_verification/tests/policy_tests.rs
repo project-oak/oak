@@ -70,28 +70,11 @@ use oak_sev_snp_attestation_report::AttestationReport;
 use oak_time::{Clock, Instant};
 use prost::Message;
 use prost_types::Timestamp;
+use test_util::attestation_data::AttestationData;
 use zerocopy::FromBytes;
-
-const OC_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/oc_evidence_20241205.binarypb";
-const OC_ENDORSEMENTS_PATH: &str =
-    "oak_attestation_verification/testdata/oc_endorsements_20241205.binarypb";
-const OC_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/oc_reference_values_20241205.binarypb";
-
-const RK_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/rk_evidence_20241205.binarypb";
-const RK_ENDORSEMENTS_PATH: &str =
-    "oak_attestation_verification/testdata/rk_endorsements_20241205.binarypb";
-const RK_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/rk_reference_values_20241205.binarypb";
 
 const CB_EVIDENCE_SR_PATH: &str =
     "oak_attestation_verification/testdata/cb_evidence_software_rooted.binarypb";
-const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
-const CB_ENDORSEMENTS_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
-const CB_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/cb_reference_values.binarypb";
 
 const CERTIFICATE_EVENT_INDEX: usize = 0;
 const KERNEL_EVENT_INDEX: usize = 0;
@@ -163,63 +146,29 @@ fn extract_attestation_report(evidence: &Evidence) -> anyhow::Result<&Attestatio
         .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))
 }
 
-// Loads a valid AMD SEV-SNP evidence instance for Oak Containers.
-fn load_oc_evidence() -> Evidence {
-    let serialized = fs::read(data_path(OC_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Loads a valid AMD SEV-SNP endorsements instance for Oak Containers.
-fn load_oc_endorsements() -> Endorsements {
-    let serialized =
-        fs::read(data_path(OC_ENDORSEMENTS_PATH)).expect("could not read endorsements");
-    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsements")
-}
-
-// Loads valid AMD SEV-SNP reference values instance for Oak Containers.
-fn load_oc_reference_values() -> OakContainersReferenceValues {
-    let serialized =
-        fs::read(data_path(OC_REFERENCE_VALUES_PATH)).expect("could not read reference values");
-    let reference_values =
-        ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference values");
-    let containers_reference_values = match reference_values.r#type.as_ref() {
+fn get_oc_reference_values(reference_values: &ReferenceValues) -> OakContainersReferenceValues {
+    let oc_reference_values = match reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakContainers(containers_reference_values)) => {
             containers_reference_values.clone()
         }
         _ => panic!("couldn't find Oak Containers reference values"),
     };
-    assert!(containers_reference_values.root_layer.is_some());
-    assert!(containers_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
-    assert!(containers_reference_values.kernel_layer.is_some());
-    assert!(containers_reference_values.system_layer.is_some());
-    assert!(containers_reference_values.container_layer.is_some());
-    containers_reference_values
+    assert!(oc_reference_values.root_layer.is_some());
+    assert!(oc_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
+    assert!(oc_reference_values.kernel_layer.is_some());
+    assert!(oc_reference_values.system_layer.is_some());
+    assert!(oc_reference_values.container_layer.is_some());
+    oc_reference_values
 }
 
-// Loads a valid AMD SEV-SNP evidence instance for Oak Restricted Kernel.
-fn load_rk_evidence() -> Evidence {
-    let serialized = fs::read(data_path(RK_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Loads a valid AMD SEV-SNP endorsements instance for Oak Restricted Kernel.
-fn load_rk_endorsements() -> Endorsements {
-    let serialized =
-        fs::read(data_path(RK_ENDORSEMENTS_PATH)).expect("could not read endorsements");
-    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsements")
-}
-
-// Loads valid AMD SEV-SNP reference values instance for Oak Restricted Kernel.
-fn load_rk_reference_values() -> OakRestrictedKernelReferenceValues {
-    let serialized =
-        fs::read(data_path(RK_REFERENCE_VALUES_PATH)).expect("could not read reference values");
-    let reference_values =
-        ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference values");
+fn get_rk_reference_values(
+    reference_values: &ReferenceValues,
+) -> OakRestrictedKernelReferenceValues {
     let rk_reference_values = match reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakRestrictedKernel(rk_reference_values)) => {
             rk_reference_values.clone()
         }
-        _ => panic!("couldn't find Oak RestrictedKernel reference values"),
+        _ => panic!("couldn't find Oak Restricted Kernel reference values"),
     };
     assert!(rk_reference_values.root_layer.is_some());
     assert!(rk_reference_values.kernel_layer.is_some());
@@ -227,27 +176,12 @@ fn load_rk_reference_values() -> OakRestrictedKernelReferenceValues {
     rk_reference_values
 }
 
-fn load_cb_evidence() -> Evidence {
-    let serialized = fs::read(data_path(CB_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
 fn load_cb_evidence_software_rooted() -> Evidence {
     let serialized = fs::read(data_path(CB_EVIDENCE_SR_PATH)).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
-fn load_cb_endorsements() -> Endorsements {
-    let serialized =
-        fs::read(data_path(CB_ENDORSEMENTS_PATH)).expect("could not read endorsements");
-    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsements")
-}
-
-fn load_cb_reference_values() -> CbReferenceValues {
-    let serialized =
-        fs::read(data_path(CB_REFERENCE_VALUES_PATH)).expect("could not read reference values");
-    let reference_values =
-        ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference values");
+fn get_cb_reference_values(reference_values: &ReferenceValues) -> CbReferenceValues {
     let cb_reference_values = match reference_values.r#type.as_ref() {
         Some(reference_values::Type::Cb(cb_reference_values)) => cb_reference_values.clone(),
         _ => panic!("couldn't find CB reference values"),
@@ -255,7 +189,6 @@ fn load_cb_reference_values() -> CbReferenceValues {
     assert!(cb_reference_values.root_layer.is_some());
     assert!(cb_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
     assert!(!cb_reference_values.layers.is_empty());
-
     cb_reference_values
 }
 
@@ -316,20 +249,6 @@ fn create_public_key_endorsements(signature: &[u8]) -> Endorsements {
     Endorsements { events: vec![ca_endorsement.into()], ..Default::default() }
 }
 
-lazy_static::lazy_static! {
-    static ref OC_EVIDENCE: Evidence = load_oc_evidence();
-    static ref OC_ENDORSEMENTS: Endorsements = load_oc_endorsements();
-    static ref OC_REFERENCE_VALUES: OakContainersReferenceValues = load_oc_reference_values();
-
-    static ref RK_EVIDENCE: Evidence = load_rk_evidence();
-    static ref RK_ENDORSEMENTS: Endorsements = load_rk_endorsements();
-    static ref RK_REFERENCE_VALUES: OakRestrictedKernelReferenceValues = load_rk_reference_values();
-
-    static ref CB_EVIDENCE: Evidence = load_cb_evidence();
-    static ref CB_ENDORSEMENTS: Endorsements = load_cb_endorsements();
-    static ref CB_REFERENCE_VALUES: CbReferenceValues = load_cb_reference_values();
-}
-
 #[test]
 fn cb_software_rooted_dice_verify_succeeds() {
     let evidence = load_cb_evidence_software_rooted();
@@ -343,9 +262,10 @@ fn cb_software_rooted_dice_verify_succeeds() {
 
 #[test]
 fn cb_dice_verify_succeeds() {
-    let evidence = load_cb_evidence();
+    let d = AttestationData::load_cb();
+    let ref_values = get_cb_reference_values(&d.reference_values);
     let platform_endorsement = AmdSevSnpEndorsement {
-        tee_certificate: match CB_ENDORSEMENTS.r#type.as_ref() {
+        tee_certificate: match d.endorsements.r#type.as_ref() {
             Some(endorsements::Type::Cb(e)) => {
                 e.root_layer.as_ref().unwrap().tee_certificate.to_vec()
             }
@@ -360,19 +280,11 @@ fn cb_dice_verify_succeeds() {
     };
 
     let platform_reference_values =
-        CB_REFERENCE_VALUES.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
+        ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
     let platform_policy = AmdSevSnpPolicy::new(platform_reference_values);
 
-    let firmware_reference_values = CB_REFERENCE_VALUES
-        .root_layer
-        .as_ref()
-        .unwrap()
-        .amd_sev
-        .as_ref()
-        .unwrap()
-        .stage0
-        .as_ref()
-        .unwrap();
+    let firmware_reference_values =
+        ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap().stage0.as_ref().unwrap();
     // TODO: b/375137648 - Use real reference once new endorsements are available.
     let mut skip_firmware_reference_values = firmware_reference_values.clone();
     skip_firmware_reference_values.r#type =
@@ -388,7 +300,7 @@ fn cb_dice_verify_succeeds() {
         Arc::new(CbTestClock {}),
     );
 
-    let result = verifier.verify(&evidence, &endorsements);
+    let result = verifier.verify(&d.evidence, &endorsements);
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 
@@ -769,12 +681,14 @@ fn event_log_verifier_fails() {
 
 #[test]
 fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
     let platform_reference_values =
-        OC_REFERENCE_VALUES.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
+        ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
     let policy = AmdSevSnpPolicy::new(platform_reference_values);
-    let attestation_report = extract_attestation_report(&OC_EVIDENCE).unwrap();
+    let attestation_report = extract_attestation_report(&d.evidence).unwrap();
     let endorsement = AmdSevSnpEndorsement {
-        tee_certificate: match OC_ENDORSEMENTS.r#type.as_ref() {
+        tee_certificate: match d.endorsements.r#type.as_ref() {
             Some(endorsements::Type::OakContainers(e)) => {
                 e.root_layer.as_ref().unwrap().tee_certificate.to_vec()
             }
@@ -782,8 +696,11 @@ fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
         },
     };
 
-    let result =
-        policy.verify(attestation_report, &endorsement.into(), OC_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(
+        attestation_report,
+        &endorsement.into(),
+        d.make_valid_time().into_unix_millis(),
+    );
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -791,23 +708,20 @@ fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
 
 #[test]
 fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
-    let firmware_reference_values = OC_REFERENCE_VALUES
-        .root_layer
-        .as_ref()
-        .unwrap()
-        .amd_sev
-        .as_ref()
-        .unwrap()
-        .stage0
-        .as_ref()
-        .unwrap();
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
+    let firmware_reference_values =
+        ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap().stage0.as_ref().unwrap();
     let policy = FirmwarePolicy::new(firmware_reference_values);
 
-    let firmware_measurement = &extract_attestation_report(&OC_EVIDENCE).unwrap().data.measurement;
-    let firmware_endorsement = OC_ENDORSEMENTS.initial.as_ref().unwrap();
+    let firmware_measurement = &extract_attestation_report(&d.evidence).unwrap().data.measurement;
+    let firmware_endorsement = d.endorsements.initial.as_ref().unwrap();
 
-    let result =
-        policy.verify(firmware_measurement, firmware_endorsement, OC_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(
+        firmware_measurement,
+        firmware_endorsement,
+        d.make_valid_time().into_unix_millis(),
+    );
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -815,12 +729,13 @@ fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
 
 #[test]
 fn oc_kernel_policy_verify_succeeds() {
-    let reference_values = OC_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
-    let policy = KernelPolicy::new(reference_values);
-    let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
-    let endorsement = &OC_ENDORSEMENTS.events[KERNEL_EVENT_INDEX];
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
+    let policy = KernelPolicy::new(ref_values.kernel_layer.as_ref().unwrap());
+    let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
+    let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -828,12 +743,13 @@ fn oc_kernel_policy_verify_succeeds() {
 
 #[test]
 fn oc_system_policy_verify_succeeds() {
-    let event_reference_values = OC_REFERENCE_VALUES.system_layer.as_ref().unwrap();
-    let policy = SystemPolicy::new(event_reference_values);
-    let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
-    let endorsement = &OC_ENDORSEMENTS.events[SYSTEM_EVENT_INDEX];
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
+    let policy = SystemPolicy::new(ref_values.system_layer.as_ref().unwrap());
+    let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
+    let endorsement = &d.endorsements.events[SYSTEM_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -841,13 +757,14 @@ fn oc_system_policy_verify_succeeds() {
 
 #[test]
 fn oc_container_policy_verify_succeeds() {
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
     // TODO: b/382550581 - Container reference values currently skip verification.
-    let event_reference_values = OC_REFERENCE_VALUES.container_layer.as_ref().unwrap();
-    let policy = ContainerPolicy::new(event_reference_values);
-    let event = &OC_EVIDENCE.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
-    let endorsement = &OC_ENDORSEMENTS.events[CONTAINER_EVENT_INDEX];
+    let policy = ContainerPolicy::new(ref_values.container_layer.as_ref().unwrap());
+    let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
+    let endorsement = &d.endorsements.events[CONTAINER_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, OC_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -855,26 +772,28 @@ fn oc_container_policy_verify_succeeds() {
 
 #[test]
 fn oc_amd_sev_snp_verifier_succeeds() {
+    let d = AttestationData::load_oc();
+    let ref_values = get_oc_reference_values(&d.reference_values);
     // Create platform and firmware policies.
     // TODO: b/398859203 - Remove root layer reference values once old reference
     // values have been updated.
-    let root_layer_reference_values = OC_REFERENCE_VALUES.root_layer.as_ref().unwrap();
+    let root_layer_ref_values = ref_values.root_layer.as_ref().unwrap();
     let platform_policy =
-        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
     let firmware_policy =
-        FirmwarePolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+        FirmwarePolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
 
     // Create kernel policy.
-    let reference_values = OC_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
+    let reference_values = ref_values.kernel_layer.as_ref().unwrap();
     let kernel_policy = KernelPolicy::new(reference_values);
 
     // Create system policy.
-    let event_reference_values = OC_REFERENCE_VALUES.system_layer.as_ref().unwrap();
+    let event_reference_values = ref_values.system_layer.as_ref().unwrap();
     let system_policy = SystemPolicy::new(event_reference_values);
 
     // Create container policy.
     // TODO: b/382550581 - Container reference values currently skip verification.
-    let event_reference_values = OC_REFERENCE_VALUES.container_layer.as_ref().unwrap();
+    let event_reference_values = ref_values.container_layer.as_ref().unwrap();
     let container_policy = ContainerPolicy::new(event_reference_values);
 
     let event_policies: Vec<Box<dyn Policy<[u8]>>> =
@@ -887,7 +806,7 @@ fn oc_amd_sev_snp_verifier_succeeds() {
         event_policies,
         Arc::new(OcTestClock {}),
     );
-    let result = verifier.verify(&OC_EVIDENCE, &OC_ENDORSEMENTS);
+    let result = verifier.verify(&d.evidence, &d.endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -895,12 +814,14 @@ fn oc_amd_sev_snp_verifier_succeeds() {
 
 #[test]
 fn rk_kernel_policy_verify_succeeds() {
-    let reference_values = RK_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
-    let policy = KernelPolicy::new(reference_values);
-    let event = &RK_EVIDENCE.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
-    let endorsement = &RK_ENDORSEMENTS.events[KERNEL_EVENT_INDEX];
+    let d = AttestationData::load_rk();
+    let ref_values = get_rk_reference_values(&d.reference_values);
+    let kernel_ref_values = ref_values.kernel_layer.as_ref().unwrap();
+    let policy = KernelPolicy::new(kernel_ref_values);
+    let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
+    let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, RK_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -908,13 +829,15 @@ fn rk_kernel_policy_verify_succeeds() {
 
 #[test]
 fn rk_application_policy_verify_succeeds() {
+    let d = AttestationData::load_rk();
+    let ref_values = get_rk_reference_values(&d.reference_values);
     // TODO: b/382550581 - Application reference values currently skip verification.
-    let reference_values = RK_REFERENCE_VALUES.application_layer.as_ref().unwrap();
-    let policy = ApplicationPolicy::new(reference_values);
-    let event = &RK_EVIDENCE.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
-    let endorsement = &RK_ENDORSEMENTS.events[RK_APPLICATION_EVENT_INDEX];
+    let app_ref_values = ref_values.application_layer.as_ref().unwrap();
+    let policy = ApplicationPolicy::new(app_ref_values);
+    let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
+    let endorsement = &d.endorsements.events[RK_APPLICATION_EVENT_INDEX];
 
-    let result = policy.verify(event, endorsement, RK_MILLISECONDS_SINCE_EPOCH);
+    let result = policy.verify(event, endorsement, d.make_valid_time().into_unix_millis());
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -922,23 +845,25 @@ fn rk_application_policy_verify_succeeds() {
 
 #[test]
 fn rk_amd_sev_snp_verifier_succeeds() {
+    let d = AttestationData::load_rk();
+    let ref_values = get_rk_reference_values(&d.reference_values);
     // Create platform and firmware policies.
     // TODO: b/398859203 - Remove root layer reference values once old reference
     // values have been updated.
-    let root_layer_reference_values = RK_REFERENCE_VALUES.root_layer.as_ref().unwrap();
+    let root_layer_ref_values = ref_values.root_layer.as_ref().unwrap();
     let platform_policy =
-        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
     let firmware_policy =
-        FirmwarePolicy::from_root_layer_reference_values(root_layer_reference_values).unwrap();
+        FirmwarePolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
 
     // Create kernel policy.
-    let reference_values = RK_REFERENCE_VALUES.kernel_layer.as_ref().unwrap();
-    let kernel_policy = KernelPolicy::new(reference_values);
+    let kernel_ref_values = ref_values.kernel_layer.as_ref().unwrap();
+    let kernel_policy = KernelPolicy::new(kernel_ref_values);
 
     // Create application policy.
     // TODO: b/382550581 - Application reference values currently skip verification.
-    let reference_values = RK_REFERENCE_VALUES.application_layer.as_ref().unwrap();
-    let application_policy = ApplicationPolicy::new(reference_values);
+    let app_ref_values = ref_values.application_layer.as_ref().unwrap();
+    let application_policy = ApplicationPolicy::new(app_ref_values);
 
     let event_policies: Vec<Box<dyn Policy<[u8]>>> =
         vec![Box::new(kernel_policy), Box::new(application_policy)];
@@ -950,7 +875,7 @@ fn rk_amd_sev_snp_verifier_succeeds() {
         event_policies,
         Arc::new(RkTestClock {}),
     );
-    let result = verifier.verify(&RK_EVIDENCE, &RK_ENDORSEMENTS);
+    let result = verifier.verify(&d.evidence, &d.endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());

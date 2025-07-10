@@ -94,13 +94,10 @@ rust_test_suite(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
-        "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:fake_attestation",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
-        "//oak_attestation_verification/testdata:oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
-        "//oak_attestation_verification/testdata:rk_attestation",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
@@ -114,7 +111,6 @@ rust_test_suite(
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
-        "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
@@ -192,13 +188,10 @@ rust_test_suite(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
-        "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:fake_attestation",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
-        "//oak_attestation_verification/testdata:oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
-        "//oak_attestation_verification/testdata:rk_attestation",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
@@ -212,7 +205,6 @@ rust_test_suite(
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
-        "@oak_crates_index//:lazy_static",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:x509-cert",
@@ -224,7 +216,10 @@ rust_library(
     name = "test_util",
     srcs = glob(["test_util/**"]),
     data = [
+        "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:oc_attestation",
+        "//oak_attestation_verification/testdata:rk_attestation",
     ],
     deps = [
         "//oak_file_utils",
@@ -232,6 +227,7 @@ rust_library(
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:time",
     ],
 )

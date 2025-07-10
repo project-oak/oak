@@ -44,6 +44,7 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use prost::Message;
+use test_util::attestation_data::AttestationData;
 
 // Transparent Release endorsement
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
@@ -57,12 +58,6 @@ const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor
 const OC_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/oc_vcek_milan.der";
 const GENOA_VCEK_CERT_DER: &str = "oak_attestation_verification/testdata/vcek_genoa.der";
 const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
-
-// CB attestation
-const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
-const CB_ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
-const CB_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/cb_reference_values.binarypb";
 
 // Fake attestation
 const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
@@ -86,25 +81,6 @@ const RK_OBSOLETE_EVIDENCE_PATH: &str =
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC. This date must
 // be valid with respect to the endorsement behind ENDORSEMENT_PATH.
 const NOW_UTC_MILLIS: i64 = 1709294400000;
-
-// Creates a valid AMD SEV-SNP evidence instance for a CB setup.
-fn create_cb_evidence() -> Evidence {
-    let serialized = fs::read(data_path(CB_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Creates a valid AMD SEV-SNP endorsement instance for a CB setup.
-fn create_cb_endorsements() -> Endorsements {
-    let serialized = fs::read(data_path(CB_ENDORSEMENT_PATH)).expect("could not read endorsement");
-    Endorsements::decode(serialized.as_slice()).expect("could not decode endorsement")
-}
-
-// Creates valid AMD SEV-SNP reference values instance for a CB setup.
-fn create_cb_reference_values() -> ReferenceValues {
-    let serialized =
-        fs::read(data_path(CB_REFERENCE_VALUES_PATH)).expect("could not read references");
-    ReferenceValues::decode(serialized.as_slice()).expect("could not decode references")
-}
 
 // Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
 fn create_oc_evidence() -> Evidence {
@@ -413,15 +389,18 @@ fn verify_containers_explicit_reference_values() {
 
 #[test]
 fn verify_cb_succeeds() {
-    let evidence = create_cb_evidence();
-    let endorsements = create_cb_endorsements();
-    let reference_values = create_cb_reference_values();
+    let d = AttestationData::load_cb();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let r = verify(
+        d.make_valid_time().into_unix_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    );
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("code={} reason={}", p.status, p.reason);
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);

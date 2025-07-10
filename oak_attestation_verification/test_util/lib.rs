@@ -16,4 +16,5 @@
 
 // Test-only library with functions needed in both unit and integration tests.
 
+pub mod attestation_data;
 pub mod endorsement_data;
