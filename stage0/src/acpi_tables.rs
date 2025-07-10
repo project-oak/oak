@@ -62,7 +62,7 @@
 use alloc::vec::Vec;
 use core::{
     any::type_name,
-    fmt::Display,
+    fmt::{Debug, Display},
     marker::PhantomData,
     mem::size_of,
     ops::{Deref, DerefMut, Range},
@@ -82,7 +82,7 @@ type ResultStaticErr<T> = Result<T, &'static str>;
 /// Used to locate either the RSDT or XSDT in memory.
 ///
 /// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-#[derive(FromBytes, IntoBytes, Debug, Immutable)]
+#[derive(FromBytes, IntoBytes, Immutable)]
 #[repr(C, packed)]
 pub struct Rsdp {
     /// Signature: "RSD PTR " (note the trailing space).
@@ -102,12 +102,14 @@ pub struct Rsdp {
     /// 32-bit physical address of the RSDT.
     pub rsdt_address: u32,
 
-    // ACPI 2.0 fields.
+    // ACPI 2.0 fields. Only valid if revision >= 2.
+    // Don't make these fields public directly as we'll need to ensure the ony way to access them
+    // is if revision correct.
     /// Length of the table, including the header.
     length: u32,
 
     /// 64-bit physical address of the XSDT.
-    pub xsdt_address: u64,
+    xsdt_address: u64,
 
     /// Checksum of the entire table, including both checksum fields.
     extended_checksum: u8,
@@ -116,6 +118,28 @@ pub struct Rsdp {
     _reserved: [u8; 3],
 }
 static_assertions::assert_eq_size!(Rsdp, [u8; 36usize]);
+
+impl Debug for Rsdp {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let rsdt_address = self.rsdt_address;
+
+        let mut s = f.debug_struct("Rsdp");
+        s.field("signature", &self.signature)
+            .field("checksum", &self.checksum)
+            .field("oemid", &self.oemid)
+            .field("revision", &self.revision)
+            .field("rsdt_address", &rsdt_address);
+        if self.revision >= 2 {
+            let length = self.length;
+            let xsdt_address = self.xsdt_address;
+            s.field("length", &length)
+                .field("xsdt_address", &xsdt_address)
+                .field("extended_checksum", &self.extended_checksum)
+                .field("_reserved", &self._reserved);
+        }
+        s.finish()
+    }
+}
 
 impl Rsdp {
     pub fn validate<P: Platform>(&self) -> ResultStaticErr<()> {
@@ -134,7 +158,7 @@ impl Rsdp {
             return Err("Invalid RSDP checksum");
         }
 
-        if self.revision > 2 {
+        if self.revision >= 2 {
             let checksum = self.as_bytes().iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
 
             if checksum != 0 {
@@ -164,7 +188,7 @@ impl Rsdp {
     }
 
     pub fn xsdt(&self) -> Option<ResultStaticErr<&Xsdt>> {
-        if self.xsdt_address == 0 {
+        if self.revision < 2 || self.xsdt_address == 0 {
             None
         } else {
             Some(Xsdt::new(VirtAddr::new(self.xsdt_address)))
@@ -174,7 +198,7 @@ impl Rsdp {
     /// # Safety
     /// Caller must ensure only one mut ref exists at a time.
     pub unsafe fn xsdt_mut(&mut self) -> Option<ResultStaticErr<&mut Xsdt>> {
-        if self.xsdt_address == 0 {
+        if self.revision < 2 || self.xsdt_address == 0 {
             None
         } else {
             Some(Xsdt::new_mut(VirtAddr::new(self.xsdt_address)))
