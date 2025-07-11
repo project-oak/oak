@@ -1,5 +1,5 @@
 {
-  "checksum": "3d16804eca55986b80fcdb4eaea3973dc464b260a1fb4048bb35750b86c4c785",
+  "checksum": "dbd69cfc6c6fdbd3f1977dfd7d7e97d72ed53cb7530dd5b546a7f1a9d70a3be2",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1378,6 +1378,64 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "chrono 0.4.41": {
+      "name": "chrono",
+      "version": "0.4.41",
+      "package_url": "https://github.com/chronotope/chrono",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/chrono/0.4.41/download",
+          "sha256": "c469d952047f47f91b68d1cba3f10d63c11d73e4636f24f08daf0278abf01c4d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "chrono",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "chrono",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "serde"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "num-traits 0.2.19",
+              "target": "num_traits"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.4.41"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE.txt"
     },
     "ciborium 0.2.2": {
       "name": "ciborium",
@@ -2916,6 +2974,10 @@
             {
               "id": "bytes 1.10.1",
               "target": "bytes"
+            },
+            {
+              "id": "chrono 0.4.41",
+              "target": "chrono"
             },
             {
               "id": "ciborium 0.2.2",
@@ -11510,6 +11572,7 @@
     "bitflags 2.5.0",
     "bitvec 1.0.1",
     "bytes 1.10.1",
+    "chrono 0.4.41",
     "ciborium 0.2.2",
     "const-oid 0.9.6",
     "coset 0.3.8",

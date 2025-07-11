@@ -55,6 +55,13 @@ def _common_crates(std):
             default_features = std,
             version = "1.6.1",
         ),
+        "chrono": crate.spec(
+            default_features = std,
+            features = [
+                "serde",
+            ],
+            version = "0.4.31",
+        ),
         "ciborium": crate.spec(
             default_features = False,
             version = "0.2.1",
@@ -372,14 +379,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.1.77",
     ),
     "bmrng": crate.spec(version = "0.5.2"),
-    "chrono": crate.spec(
-        default_features = False,
-        features = [
-            "std",
-            "clock",
-        ],
-        version = "0.4.31",
-    ),
     "clap": crate.spec(
         features = [
             "derive",
