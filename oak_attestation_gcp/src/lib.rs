@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![feature(try_blocks)]
+
 extern crate alloc;
 
 pub mod attestation;
@@ -120,7 +122,7 @@ mod tests {
                 verify_attestation_token(unverified_token, &root, &expired_current_time)
                     .unwrap_err_unchecked()
             },
-            matches_pattern!(AttestationVerificationError::X509ValidityNotAfter { .. })
+            matches_pattern!(AttestationVerificationError::JWTValidityExpiration { .. })
         );
 
         Ok(())
