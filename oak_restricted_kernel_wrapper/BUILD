@@ -29,3 +29,9 @@ kernel_bzimage_and_measurements(
     name = "oak_restricted_kernel_wrapper_simple_io_channel",
     payload = "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel",
 )
+
+kernel_bzimage_and_measurements(
+    name = "stage0_test_kernel",
+    payload = "//stage0/testing:test_kernel",
+    visibility = ["//stage0:__subpackages__"],
+)
