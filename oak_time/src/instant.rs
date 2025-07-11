@@ -15,6 +15,8 @@
 //
 
 //! Represents a specific moment in time, measured with respect to Unix epoch.
+//! Doesn't offer support for time zones: any I/O or operations are done in
+//! terms of UTC.
 //!
 //! It offers ways to create `Instant`s from various representations (like
 //! milliseconds since epoch) and perform arithmetic operations (addition and
@@ -26,6 +28,7 @@
 //! "system time" or system time source. It also does not rely (by default) on
 //! the std library.
 
+use alloc::{format, string::String};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
 use crate::Duration;
@@ -150,6 +153,27 @@ impl From<chrono::DateTime<chrono::Utc>> for Instant {
         let nanos = value.timestamp_subsec_nanos();
         Self::from_seconds_nanos(seconds, nanos as i32)
     }
+}
+
+/// Parses a timestamp given as RFC3339-encoded string into an Instant.
+impl TryFrom<&str> for Instant {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        use chrono::{DateTime, Utc};
+        let utc: DateTime<Utc> = DateTime::parse_from_rfc3339(value)
+            .map_err(|err| format!("failed to parse RFC3339 timestamp: {:?}", err))?
+            .into();
+        Ok(Self::from(utc))
+    }
+}
+
+/// Generates instances from human-readable RFC3339 strings. Useful in tests.
+#[macro_export]
+macro_rules! make_instant {
+    ($date:literal) => {
+        Instant::try_from($date).expect("bad RFC3339 date")
+    };
 }
 
 /// Implements the `Add` trait for `Instant` and `Duration`.
@@ -281,6 +305,55 @@ impl From<time::UtcDateTime> for Instant {
 impl From<time::OffsetDateTime> for Instant {
     fn from(value: time::OffsetDateTime) -> Self {
         Instant::from_unix_nanos(value.unix_timestamp_nanos())
+    }
+}
+
+/// Support [RFC3339 format] on serializing and deserializing an [`Instant`].
+/// Use this module in combination with serde's [`#[with]`][with] attribute.
+///
+/// On deserialization the time zone is lost, so serialized timestamps will
+/// always be in UTC. Even though this has some partial support for time zones,
+/// they should be avoided altogether.
+///
+/// [RFC3339 format]: https://tools.ietf.org/html/rfc3339#section-5.6
+/// [with]: https://serde.rs/field-attrs.html#with
+pub mod rfc3339 {
+    use core::fmt;
+
+    use chrono::{DateTime, Utc};
+    use serde::{
+        de::{self, Visitor},
+        Deserializer, Serializer,
+    };
+
+    use super::Instant;
+
+    /// Serializes an [`Instant`] to RFC3339 format.
+    pub fn serialize<S: Serializer>(instant: &Instant, serializer: S) -> Result<S::Ok, S::Error> {
+        let utc: DateTime<Utc> = (*instant).into();
+        serializer.serialize_str(&utc.to_rfc3339())
+    }
+
+    /// Deserializes an [`Instant`] from its RFC3339 representation.
+    pub fn deserialize<'a, D: Deserializer<'a>>(deserializer: D) -> Result<Instant, D::Error> {
+        struct DateVisitor;
+
+        impl Visitor<'_> for DateVisitor {
+            type Value = Instant;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("RFC3339 timestamp encoded as string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Instant::try_from(value).map_err(E::custom)
+            }
+        }
+
+        deserializer.deserialize_str(DateVisitor)
     }
 }
 

@@ -58,6 +58,7 @@ def _common_crates(std):
         "chrono": crate.spec(
             default_features = std,
             features = [
+                "alloc",
                 "serde",
             ],
             version = "0.4.31",

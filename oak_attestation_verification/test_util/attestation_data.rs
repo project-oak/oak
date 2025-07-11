@@ -20,9 +20,8 @@ use std::fs;
 
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ReferenceValues};
-use oak_time::Instant;
+use oak_time::{make_instant, Instant};
 use prost::Message;
-use time::macros::utc_datetime;
 
 const OC_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/oc_evidence_20241205.binarypb";
@@ -72,8 +71,8 @@ impl AttestationData {
     // Containers.
     pub fn load_oc() -> AttestationData {
         AttestationData {
-            valid_not_before: Instant::from(utc_datetime!(2025-05-27 06:06:03.987000)),
-            valid_not_after: Instant::from(utc_datetime!(2025-08-25 06:06:03.471000)),
+            valid_not_before: make_instant!("2025-05-27T06:06:03.987000Z"),
+            valid_not_after: make_instant!("2025-08-25T06:06:03.471000Z"),
             evidence: load_evidence(OC_EVIDENCE_PATH),
             endorsements: load_endorsements(OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(OC_REFERENCE_VALUES_PATH),
@@ -85,8 +84,8 @@ impl AttestationData {
     pub fn load_genoa_oc() -> AttestationData {
         AttestationData {
             // Validity is not used since there are no endorsements.
-            valid_not_before: Instant::from(utc_datetime!(2024-01-01 00:00:00.000000)),
-            valid_not_after: Instant::from(utc_datetime!(2024-12-31 23:00:00.000000)),
+            valid_not_before: make_instant!("2024-01-01T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2024-12-31 23:00:00.000000Z"),
             evidence: load_evidence(GENOA_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(GENOA_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(GENOA_OC_REFERENCE_VALUES_PATH),
@@ -98,8 +97,8 @@ impl AttestationData {
     pub fn load_turin_oc() -> AttestationData {
         AttestationData {
             // Validity is not used since there are no endorsements.
-            valid_not_before: Instant::from(utc_datetime!(2025-01-01 00:00:00.000000)),
-            valid_not_after: Instant::from(utc_datetime!(2025-12-31 23:00:00.000000)),
+            valid_not_before: make_instant!("2025-01-01T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-12-31T23:00:00.000000Z"),
             evidence: load_evidence(TURIN_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(TURIN_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(TURIN_OC_REFERENCE_VALUES_PATH),
@@ -110,8 +109,8 @@ impl AttestationData {
     /// Restricted Kernel.
     pub fn load_rk() -> AttestationData {
         AttestationData {
-            valid_not_before: Instant::from(utc_datetime!(2025-06-17 06:05:52.482000)),
-            valid_not_after: Instant::from(utc_datetime!(2025-09-15 06:05:52.151000)),
+            valid_not_before: make_instant!("2025-06-17T06:05:52.482000Z"),
+            valid_not_after: make_instant!("2025-09-15T06:05:52.151000Z"),
             evidence: load_evidence(RK_EVIDENCE_PATH),
             endorsements: load_endorsements(RK_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(RK_REFERENCE_VALUES_PATH),
@@ -123,8 +122,8 @@ impl AttestationData {
         AttestationData {
             // Not clear what the correct validity dates are (at least not obvious
             // from the text form). Probably irrelevant.
-            valid_not_before: Instant::from(utc_datetime!(2025-01-01 00:00:00.000000)),
-            valid_not_after: Instant::from(utc_datetime!(2025-12-31 00:00:00.000000)),
+            valid_not_before: make_instant!("2025-01-01 00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-12-31T00:00:00.000000Z"),
             evidence: load_evidence(CB_EVIDENCE_PATH),
             endorsements: load_endorsements(CB_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(CB_REFERENCE_VALUES_PATH),

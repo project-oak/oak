@@ -23,7 +23,6 @@ use oak_proto_rust::oak::{
     },
     HexDigest,
 };
-use oak_time::Instant;
 use prost::Message;
 
 use crate::{
@@ -40,9 +39,7 @@ fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
 
 // Returns milliseconds UTC in the middle of the validity period.
 fn make_valid_now_utc_millis(validity: &Validity) -> i64 {
-    let not_before = Instant::from(validity.not_before);
-    let not_after = Instant::from(validity.not_after);
-    let middle = not_before + (not_after - not_before) / 2;
+    let middle = validity.not_before + (validity.not_after - validity.not_before) / 2;
     middle.into_unix_millis()
 }
 

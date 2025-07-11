@@ -61,7 +61,6 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
-        "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
     ],
@@ -158,7 +157,6 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
-        "@oak_crates_index//:time",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:zerocopy",
     ],
@@ -242,7 +240,6 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:time",
     ],
 )
 

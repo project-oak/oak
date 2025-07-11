@@ -168,6 +168,7 @@ mod tests {
     use core::assert_matches::assert_matches;
 
     use oak_proto_rust::oak::attestation::v1::Event;
+    use oak_time::make_instant;
     use prost::Message;
     use x509_cert::{
         der::{self, DecodePem},
@@ -185,9 +186,7 @@ mod tests {
         const PUBLIC_KEY: &str = include_str!("../testdata/confidential_space_public_key.pem");
         const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
             include_str!("../testdata/confidential_space_root.pem");
-
-        let current_time: oak_time::Instant =
-            time::macros::datetime!(2025-07-01 17:31:32 UTC).into();
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
 
         let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
         let event = create_public_key_event(&public_key);
@@ -210,9 +209,7 @@ mod tests {
         const PUBLIC_KEY: &str = include_str!("../testdata/confidential_space_public_key.pem");
         const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
             include_str!("../testdata/confidential_space_root.pem");
-
-        let current_time: oak_time::Instant =
-            time::macros::datetime!(2025-07-01 17:31:32 UTC).into();
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
 
         let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
         let event = create_public_key_event(&public_key);

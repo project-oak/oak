@@ -1,5 +1,5 @@
 {
-  "checksum": "e8e6292349e473eb130b8388662f7111b5ca47da39ecf740fc6ae89d0ba0f90a",
+  "checksum": "0f84271b88f9580c620371e15e57355ce9bdd18c3b6a61d506ac31375f220c9e",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1410,6 +1410,7 @@
         ],
         "crate_features": {
           "common": [
+            "alloc",
             "serde"
           ],
           "selects": {}

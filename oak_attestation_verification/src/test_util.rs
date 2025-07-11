@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use alloc::collections::btree_map::BTreeMap;
-
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, kernel_binary_reference_value, verifying_key_reference_value,
@@ -25,29 +23,23 @@ use oak_proto_rust::oak::{
     },
     RawDigest,
 };
+use oak_time::{make_instant, Instant};
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
-use time::macros::datetime;
 
-use crate::statement::{self, Claim, DefaultPredicate, DefaultStatement, Statement, Subject};
+use crate::statement::{
+    self, make_statement, serialize_statement, DefaultPredicate, DefaultStatement, Statement,
+};
 
 /// A simple fake endorsement for basic generic testing purposes.
 pub fn fake_endorsement(digest: &RawDigest, claim_types: Vec<&str>) -> DefaultStatement {
-    let map_digest = raw_digest_to_map(digest);
-
-    DefaultStatement {
-        _type: statement::STATEMENT_TYPE.to_owned(),
-        predicate_type: statement::PREDICATE_TYPE_V3.to_owned(),
-        subject: vec![Subject { name: "fake_subject_name".to_string(), digest: map_digest }],
-        predicate: DefaultPredicate {
-            usage: "".to_owned(), // Ignored with predicate V3, do not use.
-            issued_on: datetime!(2024-10-01 12:08 UTC),
-            validity: Some(statement::Validity {
-                not_before: datetime!(2024-09-01 12:00 UTC),
-                not_after: datetime!(2024-12-01 12:00 UTC),
-            }),
-            claims: claim_types.iter().map(|x| Claim { r#type: x.to_string() }).collect(),
-        },
-    }
+    make_statement(
+        "fake_subject_name",
+        digest,
+        make_instant!("2024-10-01T12:08:00Z"),
+        make_instant!("2024-09-01T12:00:00Z"),
+        make_instant!("2024-12-01T12:00:00Z"),
+        claim_types,
+    )
 }
 
 /// Serialize the provided endorsement, sign it, and return both.
@@ -56,7 +48,7 @@ pub fn serialize_and_sign_endorsement(
     signing_key: ecdsa::SigningKey<NistP256>,
 ) -> (Vec<u8>, ecdsa::der::Signature<NistP256>) {
     let serialized_endorsement =
-        serde_json::to_vec(&endorsement).expect("couldn't serialize test endorsement");
+        serialize_statement(endorsement).expect("couldn't serialize endorsement");
 
     let endorsement_signature: ecdsa::Signature<p256::NistP256> =
         signing_key.sign(&serialized_endorsement);
@@ -112,30 +104,6 @@ fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceVal
         }),
         ..Default::default()
     }
-}
-
-fn raw_digest_to_map(h: &RawDigest) -> BTreeMap<String, String> {
-    let mut map = BTreeMap::<String, String>::new();
-
-    macro_rules! insert_if_present {
-        ($field:ident) => {
-            if !h.$field.is_empty() {
-                map.insert(stringify!($field).into(), hex::encode(&h.$field));
-            }
-        };
-    }
-
-    insert_if_present!(psha2);
-    insert_if_present!(sha1);
-    insert_if_present!(sha2_256);
-    insert_if_present!(sha2_512);
-    insert_if_present!(sha3_512);
-    insert_if_present!(sha3_384);
-    insert_if_present!(sha3_256);
-    insert_if_present!(sha3_224);
-    insert_if_present!(sha2_384);
-
-    map
 }
 
 pub trait GetValidity {

@@ -24,9 +24,8 @@ use oak_proto_rust::oak::attestation::v1::{
     Signature, SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey,
     VerifyingKeyReferenceValue, VerifyingKeySet,
 };
-use oak_time::Instant;
+use oak_time::{make_instant, Instant};
 use p256::pkcs8::Document;
-use time::macros::utc_datetime;
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
@@ -103,8 +102,8 @@ impl EndorsementData {
             endorser_public_key,
             rekor_public_key,
 
-            valid_not_before: Instant::from(utc_datetime!(2024-02-28 09:47:12.067000)),
-            valid_not_after: Instant::from(utc_datetime!(2025-02-27 09:47:12.067000)),
+            valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
+            valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
             signed_endorsement: SignedEndorsement {
                 endorsement: Some(endorsement),
                 signature: Some(Signature { key_id: KEY_ID, raw: signature.clone() }),

@@ -19,15 +19,14 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, vec, vec::Vec};
 
 use anyhow::Context;
-use oak_proto_rust::oak::HexDigest;
+use oak_proto_rust::oak::{HexDigest, RawDigest};
 use oak_time::Instant;
-use serde::Deserialize;
-#[cfg(feature = "std")]
-use serde::Serialize;
-use time::OffsetDateTime;
+use serde::{Deserialize, Serialize};
+
+use crate::alloc::{borrow::ToOwned, string::ToString};
 
 /// URI representing in-toto statements. We only use V1, earlier and later
 /// versions will be rejected.
@@ -50,38 +49,30 @@ pub(crate) const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr
 pub type DigestSet = BTreeMap<String, String>;
 
 /// An artifact identified by its name and digest.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Subject {
     pub name: String,
     pub digest: DigestSet,
 }
 
 /// Validity time range of an endorsement statement.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Validity {
-    /// The timestamp (encoded as an Epoch time) from which the claim is
-    /// effective.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "notBefore")]
-    pub not_before: OffsetDateTime,
+    /// The timestamp from which the claim is effective.
+    #[serde(rename = "notBefore", with = "oak_time::instant::rfc3339")]
+    pub not_before: Instant,
 
-    /// The timestamp (encoded as an Epoch time) from which the claim no longer
-    /// applies to the artifact.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "notAfter")]
-    pub not_after: OffsetDateTime,
+    /// The timestamp after which the claim no longer applies to the artifact.
+    #[serde(rename = "notAfter", with = "oak_time::instant::rfc3339")]
+    pub not_after: Instant,
 }
 
 // From Rust struct to protocol buffer.
 impl From<&Validity> for oak_proto_rust::oak::Validity {
     fn from(value: &Validity) -> oak_proto_rust::oak::Validity {
-        let not_before_nanos = value.not_before.unix_timestamp_nanos();
-        let not_after_nanos = value.not_after.unix_timestamp_nanos();
-        let not_before = Instant::from_unix_nanos(not_before_nanos).into_timestamp();
-        let not_after = Instant::from_unix_nanos(not_after_nanos).into_timestamp();
-        oak_proto_rust::oak::Validity { not_before: Some(not_before), not_after: Some(not_after) }
+        let not_before = Some(value.not_before.into_timestamp());
+        let not_after = Some(value.not_after.into_timestamp());
+        oak_proto_rust::oak::Validity { not_before, not_after }
     }
 }
 
@@ -90,42 +81,32 @@ impl TryFrom<&oak_proto_rust::oak::Validity> for Validity {
     type Error = &'static str;
 
     fn try_from(value: &oak_proto_rust::oak::Validity) -> Result<Self, Self::Error> {
-        let not_before_nanos =
-            Instant::from(value.not_before.ok_or("not_before missing")?).into_unix_nanos();
-        let not_after_nanos =
-            Instant::from(value.not_after.ok_or("not_after missing")?).into_unix_nanos();
-        let not_before = OffsetDateTime::from_unix_timestamp_nanos(not_before_nanos)
-            .map_err(|_err| "failed to convert instant")?;
-        let not_after = OffsetDateTime::from_unix_timestamp_nanos(not_after_nanos)
-            .map_err(|_err| "failed to convert instant")?;
+        let not_before = Instant::from(value.not_before.ok_or("not_before missing")?);
+        let not_after = Instant::from(value.not_after.ok_or("not_after missing")?);
         Ok(Validity { not_before, not_after })
     }
 }
 
 // A single claim about the endorsement subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Claim {
     pub r#type: String,
 }
 
 /// The predicate part of an endorsement subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct DefaultPredicate {
     // Specifies how to interpret the endorsement subject.
     // The `default` option is needed to support predicate V2.
-    #[serde(default, rename = "usage")]
+    #[serde(default)]
     pub usage: String,
 
     /// The timestamp (encoded as an Epoch time) when the statement was created.
-    #[serde(with = "time::serde::rfc3339")]
-    #[serde(rename = "issuedOn")]
-    pub issued_on: OffsetDateTime,
+    #[serde(rename = "issuedOn", with = "oak_time::instant::rfc3339")]
+    pub issued_on: Instant,
 
     /// Validity duration of this statement.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "validity")]
     pub validity: Option<Validity>,
 
     #[serde(default)]
@@ -133,8 +114,7 @@ pub struct DefaultPredicate {
 }
 
 /// Represents a generic statement that binds a predicate to a subject.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Statement<P> {
     pub _type: String,
     #[serde(rename = "predicateType")]
@@ -145,9 +125,38 @@ pub struct Statement<P> {
 
 pub type DefaultStatement = Statement<DefaultPredicate>;
 
-/// Converts the given byte array into an endorsement statement.
+/// Parses the given serialized JSON into an endorsement statement.
 pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {
-    serde_json::from_slice(bytes).map_err(|error| anyhow::anyhow!("failed to parse: {}", error))
+    serde_json::from_slice(bytes).context("failed to parse endorsement statement")
+}
+
+/// Serializes an endorsement statement as JSON.
+pub fn serialize_statement(statement: &DefaultStatement) -> anyhow::Result<Vec<u8>> {
+    serde_json::to_vec(statement).context("failed to serialize endorsement statement")
+}
+
+/// Creates an endorsement statement from ingredients.
+pub fn make_statement(
+    subject_name: &str,
+    digest: &RawDigest,
+    issued_on: Instant,
+    not_before: Instant,
+    not_after: Instant,
+    claim_types: Vec<&str>,
+) -> DefaultStatement {
+    let map_digest = raw_digest_to_map(digest);
+
+    DefaultStatement {
+        _type: STATEMENT_TYPE.to_owned(),
+        predicate_type: PREDICATE_TYPE_V3.to_owned(),
+        subject: vec![Subject { name: subject_name.to_string(), digest: map_digest }],
+        predicate: DefaultPredicate {
+            usage: "".to_owned(), // Ignored with predicate V3, do not use.
+            issued_on,
+            validity: Some(Validity { not_before, not_after }),
+            claims: claim_types.iter().map(|x| Claim { r#type: x.to_string() }).collect(),
+        },
+    }
 }
 
 /// Checks that the given endorsement statement is valid, based on timestamp
@@ -171,10 +180,10 @@ pub(crate) fn validate_statement(
     match &statement.predicate.validity {
         Some(validity) => {
             let now = Instant::from_unix_millis(now_utc_millis);
-            if now < Instant::from(validity.not_before) {
+            if now < validity.not_before {
                 anyhow::bail!("the claim is not yet applicable")
             }
-            if Instant::from(validity.not_after) < now {
+            if validity.not_after < now {
                 anyhow::bail!("the claim is no longer applicable")
             }
         }
@@ -274,6 +283,30 @@ pub fn get_digest<T>(statement: &Statement<T>) -> anyhow::Result<HexDigest> {
     Ok(digest)
 }
 
+fn raw_digest_to_map(h: &RawDigest) -> BTreeMap<String, String> {
+    let mut map = BTreeMap::<String, String>::new();
+
+    macro_rules! insert_if_present {
+        ($field:ident) => {
+            if !h.$field.is_empty() {
+                map.insert(stringify!($field).into(), hex::encode(&h.$field));
+            }
+        };
+    }
+
+    insert_if_present!(psha2);
+    insert_if_present!(sha1);
+    insert_if_present!(sha2_256);
+    insert_if_present!(sha2_512);
+    insert_if_present!(sha3_512);
+    insert_if_present!(sha3_384);
+    insert_if_present!(sha3_256);
+    insert_if_present!(sha3_224);
+    insert_if_present!(sha2_384);
+
+    map
+}
+
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -281,7 +314,6 @@ mod tests {
 
     use oak_file_utils::data_path;
     use oak_time::Instant;
-    use time::OffsetDateTime;
 
     use super::{get_digest, parse_statement, Validity};
 
@@ -310,8 +342,8 @@ mod tests {
     #[test]
     fn test_convert_validity_left_min() {
         let expected = Validity {
-            not_before: OffsetDateTime::from_unix_timestamp_nanos(MIN_VALUE_NANOS).unwrap(),
-            not_after: OffsetDateTime::UNIX_EPOCH,
+            not_before: Instant::from_unix_nanos(MIN_VALUE_NANOS),
+            not_after: Instant::from_unix_nanos(0),
         };
         let proto = oak_proto_rust::oak::Validity::from(&expected);
         let actual = Validity::try_from(&proto).expect("failed to convert");
@@ -321,8 +353,8 @@ mod tests {
     #[test]
     fn test_convert_validity_left_max() {
         let expected = Validity {
-            not_before: OffsetDateTime::UNIX_EPOCH,
-            not_after: OffsetDateTime::from_unix_timestamp_nanos(MAX_VALUE_NANOS).unwrap(),
+            not_before: Instant::from_unix_nanos(0),
+            not_after: Instant::from_unix_nanos(MAX_VALUE_NANOS),
         };
         let proto = oak_proto_rust::oak::Validity::from(&expected);
         let actual = Validity::try_from(&proto).expect("failed to convert");

@@ -180,8 +180,8 @@ fn list_endorsements(
                 match &details.valid {
                     Some(v) => {
                         let vstruct = Validity::try_from(v).expect("failed to convert validity");
-                        println!("        Not before:  {}", vstruct.not_before);
-                        println!("        Not after:   {}", vstruct.not_after);
+                        println!("        Not before:  {:?}", vstruct.not_before);
+                        println!("        Not after:   {:?}", vstruct.not_after);
                     }
                     None => {
                         println!("        Validity:    missing");

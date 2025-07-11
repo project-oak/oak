@@ -33,9 +33,8 @@ mod tests {
     use googletest::prelude::*;
     use jwt::{Token, Unverified};
     use oak_file_utils::data_path;
-    use oak_time::{Duration, Instant};
+    use oak_time::{make_instant, Duration, Instant};
     use serde_json::Value;
-    use time::macros::datetime;
     use x509_cert::{der::DecodePem, Certificate};
 
     use crate::{
@@ -48,7 +47,7 @@ mod tests {
 
     // The time has been set inside the validity interval of the test token.
     fn current_time() -> Instant {
-        Instant::from(datetime!(2025-06-23 15:00:00 UTC))
+        make_instant!("2025-06-23T15:00:00Z")
     }
 
     #[test]
