@@ -14,6 +14,8 @@
 
 pub mod endorse;
 
+use std::io::Write;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -24,8 +26,8 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn run(&self) {
-        self.command.run();
+    pub fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
+        self.command.run(writer)
     }
 }
 
@@ -35,9 +37,9 @@ pub enum ImageCommands {
 }
 
 impl ImageCommands {
-    pub fn run(&self) {
+    pub fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
         match self {
-            Self::Endorse(args) => args.run(),
+            Self::Endorse(args) => args.run(writer),
         }
     }
 }

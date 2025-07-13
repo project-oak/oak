@@ -19,10 +19,15 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 use anyhow::Context;
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Duration, FixedOffset};
 use oak_proto_rust::oak::HexDigest;
 use serde::{Deserialize, Serialize};
 
@@ -123,6 +128,31 @@ pub struct Statement<P> {
 }
 
 pub type DefaultStatement = Statement<DefaultPredicate>;
+
+pub struct DefaultStatementOptions {
+    pub issued_on: DateTime<FixedOffset>,
+    pub validity: Duration,
+    pub claims: Vec<String>,
+}
+
+impl Statement<DefaultPredicate> {
+    pub fn new(subject: Subject, options: DefaultStatementOptions) -> Self {
+        let not_before = options.issued_on;
+        let not_after = options.issued_on + options.validity;
+
+        DefaultStatement {
+            _type: STATEMENT_TYPE.to_string(),
+            predicate_type: PREDICATE_TYPE_V3.to_string(),
+            subject: vec![subject],
+            predicate: DefaultPredicate {
+                usage: "".to_string(),
+                issued_on: options.issued_on,
+                validity: Some(Validity { not_before, not_after }),
+                claims: options.claims.into_iter().map(|claim| Claim { r#type: claim }).collect(),
+            },
+        }
+    }
+}
 
 /// Converts the given byte array into an endorsement statement.
 pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {

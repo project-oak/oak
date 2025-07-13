@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -37,7 +38,12 @@ rust_binary(
     srcs = glob(["main/**/*.rs"]),
     deps = [
         ":doremint",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:chrono",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:toml",
     ],
 )
 
@@ -45,10 +51,22 @@ rust_test(
     name = "unit_tests",
     crate = ":doremint",
     data = [
+        "//doremint/testdata:claims.toml",
         "//doremint/testdata:endorsement.json",
     ],
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:prost-types",
     ],
+)
+
+sh_test(
+    name = "cli_tests",
+    srcs = ["cli_tests.sh"],
+    data = [
+        ":cli",
+        "//doremint/testdata:claims.toml",
+        "//doremint/testdata:golden.json",
+    ],
+    env = {"CLI": "$(location :cli)"},
 )

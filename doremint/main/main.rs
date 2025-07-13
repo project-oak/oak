@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod flags;
 mod image;
+
+use std::io::Write;
 
 use clap::{Parser, Subcommand};
 
@@ -21,11 +24,18 @@ use clap::{Parser, Subcommand};
 struct Args {
     #[command(subcommand)]
     command: Commands,
+    #[arg(
+        long,
+        global = true,
+        help = "Path to write the output to. Use '-' for stdout.",
+        default_value = "-"
+    )]
+    output: flags::Output,
 }
 
 impl Args {
-    fn run(&self) {
-        self.command.run();
+    fn run(&mut self, writer: &mut dyn Write) -> anyhow::Result<()> {
+        self.command.run(writer)
     }
 }
 
@@ -35,14 +45,22 @@ enum Commands {
 }
 
 impl Commands {
-    fn run(&self) {
+    fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
         match self {
-            Self::Image(args) => args.run(),
+            Self::Image(args) => args.run(writer),
         }
     }
 }
 
 fn main() {
-    let args = Args::parse();
-    args.run();
+    let mut args = Args::parse();
+    let result = (|| {
+        let mut writer = args.output.open()?;
+        args.run(&mut writer)
+    })();
+
+    if let Err(err) = result {
+        eprintln!("Error: {err:?}");
+        std::process::exit(1);
+    }
 }
