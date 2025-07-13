@@ -17,7 +17,6 @@
 use std::fs;
 
 use oak_attestation_verification::{
-    convert_pem_to_raw,
     expect::get_expected_values,
     reference_values_from_evidence,
     verifier::{
@@ -31,28 +30,18 @@ use oak_proto_rust::oak::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
         text_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, ClaimReferenceValue,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
-        EndorsementReferenceValue, Endorsements, Evidence, ExpectedValues, InsecureReferenceValues,
-        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues, KeyType,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, Regex, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TextReferenceValue, TransparentReleaseEndorsement,
-        VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Digests, Endorsements, Evidence, ExpectedValues,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
     },
     RawDigest,
 };
 use prost::Message;
-use test_util::attestation_data::AttestationData;
-
-// Transparent Release endorsement
-const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
-const SIGNATURE_PATH: &str = "oak_attestation_verification/testdata/endorsement.json.sig";
-const LOG_ENTRY_PATH: &str = "oak_attestation_verification/testdata/logentry.json";
-const ENDORSER_PUBLIC_KEY_PATH: &str =
-    "oak_attestation_verification/testdata/endorser_public_key.pem";
-const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
+use test_util::{attestation_data::AttestationData, endorsement_data::EndorsementData};
 
 // Certificates
 const OC_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/oc_vcek_milan.der";
@@ -115,31 +104,17 @@ fn create_fake_expected_values() -> ExpectedValues {
     ExpectedValues::decode(serialized.as_slice()).expect("could not decode fake expected values")
 }
 
-// Creates an endorsement for the instance in test data which happens to be
-// a stage1 endorsement.
-fn create_stage1_endorsement() -> TransparentReleaseEndorsement {
-    let endorsement = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
-    let endorsement_signature =
-        fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
-    let rekor_log_entry = fs::read(data_path(LOG_ENTRY_PATH)).expect("couldn't read log entry");
-
-    TransparentReleaseEndorsement {
-        endorsement,
-        subject: vec![],
-        endorsement_signature,
-        rekor_log_entry,
-    }
-}
-
 // Creates mock endorsements for an Oak Containers chain.
 fn create_oc_endorsements() -> Endorsements {
+    let d = EndorsementData::load();
     let vcek_milan_cert =
         fs::read(data_path(OC_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
     let kernel_layer = KernelLayerEndorsements {
         kernel: None,
         kernel_cmd_line: None,
-        init_ram_fs: Some(create_stage1_endorsement()),
+        // The testdata endorsement happens to be oak_orchestrator.
+        init_ram_fs: Some(d.tr_endorsement),
         memory_map: None,
         acpi: None,
     };
@@ -221,57 +196,11 @@ fn create_genoa_oc_reference_values() -> ReferenceValues {
     ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference")
 }
 
-// Creates a good public-key based BinaryReferenceValue to verify the
-// endorsement behind `oak_attestation_verification/testdata:endorsement`.
-// This happens to be stage1 for no reason. The subject name there is
-// incorrect but this is irrelevant for the test.
-//
-// TODO: b/379268663 - Stop populating the old-style fields endorser_public_key
-//                     and rekor_public_key.
-fn create_stage1_reference_value() -> BinaryReferenceValue {
-    let endorser_public_key_pem = fs::read_to_string(data_path(ENDORSER_PUBLIC_KEY_PATH))
-        .expect("couldn't read endorser public key");
-    let rekor_public_key_pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
-        .expect("couldn't read Rekor public key");
-    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
-        .expect("failed to convert endorser key");
-    let rekor_public_key =
-        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
-
-    let endorser_key = VerifyingKey {
-        r#type: KeyType::EcdsaP256Sha256.into(),
-        key_id: 1, // Unused since this is legacy attestation verification.
-        raw: endorser_public_key.clone(),
-    };
-    let rekor_key = VerifyingKey {
-        r#type: KeyType::EcdsaP256Sha256.into(),
-        key_id: 0, // Unused
-        raw: rekor_public_key.clone(),
-    };
-
-    let claim_types = vec![
-        "https://project-oak.github.io/oak/test_claim_1".to_owned(),
-        "https://project-oak.github.io/oak/test_claim_2".to_owned(),
-    ];
-
-    BinaryReferenceValue {
-        r#type: Some(binary_reference_value::Type::Endorsement(EndorsementReferenceValue {
-            endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
-            required_claims: Some(ClaimReferenceValue { claim_types }),
-            rekor: Some(VerifyingKeyReferenceValue {
-                r#type: Some(oak_proto_rust::oak::attestation::v1::verifying_key_reference_value::Type::Verify(
-                    VerifyingKeySet { keys: [rekor_key].to_vec(), ..Default::default() },
-                ))
-            }),
-            ..Default::default()
-        })),
-    }
-}
-
 // Creates valid reference values for an Oak Containers chain.
 // All endorsements are skipped with the exception of the one which happens
 // to be available under testdata.
 fn create_oc_reference_values() -> ReferenceValues {
+    let d = EndorsementData::load();
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
@@ -294,8 +223,8 @@ fn create_oc_reference_values() -> ReferenceValues {
                 )],
             })),
         }),
-        // Insert the stage1 reference value where it belongs.
-        init_ram_fs: Some(create_stage1_reference_value()),
+        // The testdata endorsement happens to be oak_orchestrator.
+        init_ram_fs: Some(BinaryReferenceValue {r#type: Some(binary_reference_value::Type::Endorsement(d.ref_value))}),
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),
     };

@@ -21,7 +21,8 @@ use std::fs;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType,
-    Signature, SignedEndorsement, VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    Signature, SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey,
+    VerifyingKeyReferenceValue, VerifyingKeySet,
 };
 use oak_time::Instant;
 use p256::pkcs8::Document;
@@ -43,6 +44,9 @@ const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
 pub struct EndorsementData {
     // Direct access to data, needed for legacy endorsement verification.
+    //
+    // TODO: b/379268663 - Stop populating the old-style fields endorser_public_key
+    //                     and rekor_public_key.
     pub endorsement: Vec<u8>,
     pub signature: Vec<u8>,
     pub log_entry: Vec<u8>,
@@ -55,6 +59,9 @@ pub struct EndorsementData {
     pub valid_not_after: Instant,
     pub signed_endorsement: SignedEndorsement,
     pub ref_value: EndorsementReferenceValue,
+
+    // Legacy endorsement.
+    pub tr_endorsement: TransparentReleaseEndorsement,
 }
 
 impl EndorsementData {
@@ -89,7 +96,7 @@ impl EndorsementData {
         };
 
         EndorsementData {
-            endorsement: serialized,
+            endorsement: serialized.clone(),
             signature: signature.clone(),
             log_entry: log_entry.clone(),
             rekor_public_key_pem,
@@ -117,6 +124,13 @@ impl EndorsementData {
                     ),
                 }),
                 ..Default::default()
+            },
+
+            tr_endorsement: TransparentReleaseEndorsement {
+                endorsement: serialized.clone(),
+                subject: vec![],
+                endorsement_signature: signature.clone(),
+                rekor_log_entry: log_entry.clone(),
             },
         }
     }
