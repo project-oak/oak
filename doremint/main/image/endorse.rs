@@ -14,10 +14,11 @@
 
 use std::{fs, io::Write};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use chrono::{DateTime, Duration, FixedOffset};
 use clap::Parser;
 use doremint::statement::{DefaultStatement, DefaultStatementOptions, DigestSet, Subject};
+use oci_spec::distribution::Reference;
 use serde::Deserialize;
 
 use crate::flags::{parse_current_time, parse_validity};
@@ -26,9 +27,7 @@ use crate::flags::{parse_current_time, parse_validity};
 #[command(about = "Endorse a container image")]
 pub struct EndorseArgs {
     #[arg(long)]
-    pub image_ref: String,
-    #[arg(long)]
-    pub image_digest: String,
+    pub image: Reference,
     #[arg(long, value_parser = parse_validity, help = "A duration string indicating how long the endorsement is valid for, e.g., '30d', '12h', '1w'")]
     pub valid_for: Duration,
     #[arg(long)]
@@ -54,11 +53,14 @@ impl EndorseArgs {
         let claims: Claims = toml::from_str(&claims_file_content)
             .with_context(|| format!("could not parse claims file {}", self.claims_file))?;
 
-        let name = self.image_ref.clone();
-        let (alg, val) =
-            self.image_digest.split_once(':').context("invalid image digest format")?;
-        let subject =
-            Subject { name, digest: DigestSet::from([(alg.to_string(), val.to_string())]) };
+        let image_name = self.image.to_string();
+        let image_digest =
+            self.image.digest().ok_or_else(|| anyhow!("image reference must have a digest"))?;
+        let (alg, val) = image_digest.split_once(':').context("invalid image digest format")?;
+        let subject = Subject {
+            name: image_name,
+            digest: DigestSet::from([(alg.to_string(), val.to_string())]),
+        };
 
         let statement = DefaultStatement::new(
             subject,
@@ -69,7 +71,7 @@ impl EndorseArgs {
             },
         );
 
-        serde_json::to_writer(writer, &statement)
+        serde_json::to_writer_pretty(writer, &statement)
             .context("could not serialize statement to JSON")?;
 
         Ok(())

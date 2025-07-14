@@ -41,6 +41,7 @@ rust_binary(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:chrono",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:toml",

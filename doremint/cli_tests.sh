@@ -34,11 +34,11 @@ test_default_issued_at_flag() {
     local output_file=$(mktemp)
 
     # Time is hard to test, so we just test that it doesn't fail
-    $CLI --output="$output_file" image endorse \
-      --image-ref=example.com/app \
-      --image-digest=sha256:deadbeef \
+    $CLI image endorse \
+      --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
-      --claims-file="$CLAIMS_FILE"
+      --claims-file="$CLAIMS_FILE" \
+      --output="$output_file"
 }
 
 # shellcheck disable=SC2317
@@ -47,12 +47,12 @@ test_output_flag() {
     set -e
     local output_file=$(mktemp)    
 
-    $CLI --output="$output_file" image endorse \
-      --image-ref=example.com/app \
-      --image-digest=sha256:deadbeef \
+    $CLI image endorse \
+      --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
       --claims-file="$CLAIMS_FILE" \
-      --issued-on=2025-01-01T00:00:00Z
+      --issued-on=2025-01-01T00:00:00Z \
+      --output="$output_file"
 
     diff "$GOLDEN_FILE" "$output_file"
 }
@@ -63,8 +63,7 @@ test_stdout() {
     local output_file=$(mktemp)
 
     $CLI image endorse \
-      --image-ref=example.com/app \
-      --image-digest=sha256:deadbeef \
+      --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
       --claims-file="$CLAIMS_FILE" \
       --issued-on=2025-01-01T00:00:00Z > "$output_file"
