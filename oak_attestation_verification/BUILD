@@ -231,3 +231,17 @@ rust_library(
         "@oak_crates_index//:time",
     ],
 )
+
+# Invoke by:
+# bazel run oak_attestation_verification:benches -- --bench
+rust_test(
+    name = "benches",
+    srcs = ["tests/benchmarks.rs"],
+    deps = [
+        ":oak_attestation_verification",
+        ":test_util",
+        "//oak_attestation_verification_types",
+        "//oak_proto_rust",
+        "//oak_time",
+    ],
+)
