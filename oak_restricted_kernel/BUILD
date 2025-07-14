@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
@@ -58,10 +59,15 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "@oak_crates_index//:zeroize",
 ]
 
+cc_library(
+    name = "bootstrap",
+    srcs = ["boot.s"],
+    linkstatic = True,
+)
+
 rust_library(
     name = "oak_restricted_kernel_virtio_console_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/boot/boot.s"],
     crate_features = [
         "virtio_console_channel",
     ],
@@ -70,6 +76,7 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
+        ":bootstrap",
         "@oak_crates_index//:virtio-drivers",
     ],
 )
@@ -77,7 +84,6 @@ rust_library(
 rust_library(
     name = "oak_restricted_kernel_vsock_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/boot/boot.s"],
     crate_features = [
         "vsock_channel",
     ],
@@ -86,6 +92,7 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
+        ":bootstrap",
         "//oak_virtio",
     ],
 )
@@ -93,7 +100,6 @@ rust_library(
 rust_library(
     name = "oak_restricted_kernel_serial_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/boot/boot.s"],
     crate_features = [
         "serial_channel",
     ],
@@ -102,6 +108,7 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
+        ":bootstrap",
         "@oak_crates_index//:uart_16550",
     ],
 )
@@ -109,7 +116,6 @@ rust_library(
 rust_library(
     name = "oak_restricted_kernel_simple_io_channel",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["src/boot/boot.s"],
     crate_features = [
         "simple_io_channel",
     ],
@@ -118,6 +124,7 @@ rust_library(
         "//:x86_64-none-setting",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
+        ":bootstrap",
         "//oak_simple_io",
     ],
 )

@@ -24,8 +24,6 @@ use spinning_top::Spinlock;
 use uart_16550::SerialPort;
 use x86_64::instructions::{hlt, interrupts::int3};
 
-core::arch::global_asm!(include_str!("boot.s"), options(att_syntax, raw));
-
 // Base I/O port for the first serial port in the system
 static SERIAL_BASE: u16 = 0x3f8;
 

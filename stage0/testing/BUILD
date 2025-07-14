@@ -26,13 +26,13 @@ rust_binary(
     srcs = [
         "test_kernel.rs",
     ],
-    compile_data = ["boot.s"],
     linker_script = "//oak_restricted_kernel:layout.ld",
     # Use `firmware` instead of `unknown-none` as we don't set up SSE/AVX.
     platform = "//:x86_64-firmware",
     tags = ["no-clippy"],
     deps = [
         "//oak_linux_boot_params",
+        "//oak_restricted_kernel:bootstrap",
         "@oak_crates_index//:log",
         "@oak_crates_index//:spinning_top",
         "@oak_crates_index//:uart_16550",
