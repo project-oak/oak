@@ -45,19 +45,12 @@ use test_util::{attestation_data::AttestationData, endorsement_data::Endorsement
 
 // Certificates
 const OC_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/oc_vcek_milan.der";
-const GENOA_VCEK_CERT_DER: &str = "oak_attestation_verification/testdata/vcek_genoa.der";
 const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
 
 // Fake attestation
 const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
-
-// AMD Genoa attestation with Oak Containers
-const GENOA_OC_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/genoa_oc_evidence.binarypb";
-const GENOA_OC_REFERENCE_PATH: &str =
-    "oak_attestation_verification/testdata/genoa_oc_reference_values.binarypb";
 
 // Legacy Oak Containers attestation
 const OC_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
@@ -160,40 +153,6 @@ fn create_rk_endorsements() -> Endorsements {
         // TODO: b/375137648 - Populate `events` proto field.
         ..Default::default()
     }
-}
-
-// Creates a valid AMD SEV-SNP evidence instance for Oak Containers running in
-// Genoa CPU.
-fn create_genoa_oc_evidence() -> Evidence {
-    let serialized = fs::read(data_path(GENOA_OC_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Create a valid endorsement for Oak container.
-fn create_genoa_oc_endorsements() -> Endorsements {
-    let vcek_milan_cert =
-        fs::read(data_path(GENOA_VCEK_CERT_DER)).expect("could not read TEE cert");
-    let root_layer = oak_proto_rust::oak::attestation::v1::RootLayerEndorsements {
-        tee_certificate: vcek_milan_cert,
-        stage0: None,
-    };
-    let ends = oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
-        root_layer: Some(root_layer),
-        container_layer: None,
-        kernel_layer: None,
-        system_layer: None,
-    };
-    oak_proto_rust::oak::attestation::v1::Endorsements {
-        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
-        // TODO: b/375137648 - Populate `events` proto field.
-        ..Default::default()
-    }
-}
-
-fn create_genoa_oc_reference_values() -> ReferenceValues {
-    let serialized =
-        fs::read(data_path(GENOA_OC_REFERENCE_PATH)).expect("could not read reference");
-    ReferenceValues::decode(serialized.as_slice()).expect("could not decode reference")
 }
 
 // Creates valid reference values for an Oak Containers chain.
@@ -1586,16 +1545,19 @@ fn restricted_kernel_application_config_fails() {
 }
 
 #[test]
-fn verify_genoa() {
-    let evidence = create_genoa_oc_evidence();
-    let endorsements = create_genoa_oc_endorsements();
-    let reference_values = create_genoa_oc_reference_values();
+fn verify_oc_genoa() {
+    let d = AttestationData::load_oc_legacy_genoa();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let r = verify(
+        d.make_valid_time().into_unix_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    );
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("code={} reason={}", p.status, p.reason);
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);

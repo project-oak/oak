@@ -71,10 +71,10 @@ filegroup(
 )
 
 # Attestation for an Oak Containers stack running on AMD Genoa platform.
-# The endorsements are generated during the test.
 filegroup(
     name = "genoa_oc_attestation",
     srcs = [
+        "genoa_oc_endorsements.binarypb",
         "genoa_oc_evidence.binarypb",
         "genoa_oc_reference_values.binarypb",
     ],

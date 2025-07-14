@@ -1,5 +1,5 @@
 # proto-file: proto/attestation/evidence.proto
-# proto-message: oak.attestaton.v1.Evidence
+# proto-message: oak.attestation.v1.Evidence
 #
 # Attestation evidence generated Generated on March 31 2025.
 # `cb_evidence.binarypb` is the same instance in serialized binary format.

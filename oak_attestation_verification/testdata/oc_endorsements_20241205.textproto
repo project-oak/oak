@@ -1,5 +1,5 @@
 # proto-file: proto/attestation/endorsement.proto
-# proto-message: oak.attestaton.v1.Endorsements
+# proto-message: oak.attestation.v1.Endorsements
 #
 # Valid real-world endorsements for an Oak Containers chain, used for testing.
 # Created on 2024-12-05, last updated on 2025-05-27.

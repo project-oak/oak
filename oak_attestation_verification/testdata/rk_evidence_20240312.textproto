@@ -1,5 +1,5 @@
 # proto-file: proto/attestation/evidence.proto
-# proto-message: oak.attestaton.v1.Evidence
+# proto-message: oak.attestation.v1.Evidence
 #
 # Valid real-world evidence for a Restricted Kernel chain, used for testing.
 # Generated on 2024-03-12. `oc_evidence.binarypb` is the same instance in

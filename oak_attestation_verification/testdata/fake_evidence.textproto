@@ -1,5 +1,5 @@
 # proto-file: proto/attestation/evidence.proto
-# proto-message: oak.attestaton.v1.Evidence
+# proto-message: oak.attestation.v1.Evidence
 #
 # Attestation evidence generated when not running on a TEE.
 # Generated on Feb 23 2024. `fake_evidence.binarypb` is the same instance in

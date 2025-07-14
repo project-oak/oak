@@ -1,5 +1,5 @@
 # proto-file: proto/attestation/evidence.proto
-# proto-message: oak.attestaton.v1.Evidence
+# proto-message: oak.attestation.v1.Evidence
 #
 # Example evidence for an Oak Containers chain running on Intel TDX.
 # Created on 2025-05-16.
