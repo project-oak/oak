@@ -129,12 +129,7 @@ impl SessionConfigBuilder {
     /// endorsers, or verifiers), handshake (no static keys or session binders),
     /// and encryption (using `OrderedChannelEncryptorProvider`).
     fn new(attestation_type: AttestationType, handshake_type: HandshakeType) -> Self {
-        let attestation_handler_config = AttestationHandlerConfig {
-            self_attesters: BTreeMap::new(),
-            self_endorsers: BTreeMap::new(),
-            peer_verifiers: BTreeMap::new(),
-            attestation_results_aggregator: Box::new(DefaultVerifierResultsAggregator {}),
-        };
+        let attestation_handler_config = AttestationHandlerConfig::default();
 
         let handshake_handler_config = HandshakeHandlerConfig {
             handshake_type,
@@ -515,6 +510,7 @@ impl SessionConfigBuilder {
 /// Instances are typically created and populated via the
 /// [`SessionConfigBuilder`].
 #[allow(dead_code)]
+#[derive(Default)]
 pub struct AttestationHandlerConfig {
     /// A map of attesters (keyed by `attester_id`) used by this party to
     /// generate its own attestation [`Evidence`].
@@ -532,6 +528,12 @@ pub struct AttestationHandlerConfig {
     /// provides evidence from different attesters) into a single overall
     /// [`AttestationVerdict`].
     pub attestation_results_aggregator: Box<dyn VerifierResultsAggregator>,
+}
+
+impl Default for alloc::boxed::Box<dyn VerifierResultsAggregator> {
+    fn default() -> Self {
+        alloc::boxed::Box::new(DefaultVerifierResultsAggregator {})
+    }
 }
 
 /// Configuration for the cryptographic handshake phase of a session.
