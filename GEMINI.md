@@ -27,3 +27,21 @@ Tests usually need `std` to run, so if you create a module with testing helpers,
 make sure you gate that behind `#[cfg(test)]`, so it only gets built when
 testing, otherwise it will probably drag `std` into the main (non-test) build
 and break that.
+
+## Adding Crate Dependencies
+
+To add a new crate dependency to the project, you need to:
+
+1. **Add the crate to `bazel/crates/oak_crates.bzl`**. Be mindful of the
+    following:
+    - **Dependency Group:** Add the crate to the appropriate dictionary.
+      - `_common_crates`: For crates that are used in both `std` and `no_std`
+        environments.
+      - `OAK_NO_STD_CRATES`: For crates that are only used in `no_std`
+        environments.
+      - `OAK_STD_CRATES`: For crates that are only used in `std` environments.
+    - **Features:** Carefully select the features for each crate. For `no_std`
+      builds, it's critical to set `default_features = False` and only enable
+      the features that are compatible with a `no_std` environment (e.g.,
+      `alloc`).
+2. **Run `just bazel-repin-all`** to update the lockfiles and BUILD files.
