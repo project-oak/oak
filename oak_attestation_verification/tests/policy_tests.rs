@@ -67,7 +67,7 @@ use oak_proto_rust::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
-use oak_time::{Clock, Instant};
+use oak_time::{clock::FixedClock, Instant};
 use prost::Message;
 use prost_types::Timestamp;
 use test_util::attestation_data::AttestationData;
@@ -89,44 +89,6 @@ const TEST_WRONG_SIGNATURE: [u8; 4] = [12, 13, 14, 15];
 
 // A random time value used to parametrize test cases.
 const TEST_TIME: Instant = Instant::from_unix_millis(1_000_000);
-
-// For RK testdata: Pretend the tests runs on 01 July 2025, 12:00 UTC.
-const RK_MILLISECONDS_SINCE_EPOCH: i64 = 1751371200000;
-
-// For OC testdata: Pretend the tests runs on 01 June 2025, 12:00 UTC.
-const OC_MILLISECONDS_SINCE_EPOCH: i64 = 1748779200000;
-
-// For CB testdata: Pretend the tests runs on 01 Jan 2025, 12:00 UTC.
-const CB_MILLISECONDS_SINCE_EPOCH: i64 = 1736942400000;
-
-struct TestClock;
-struct RkTestClock;
-struct OcTestClock;
-struct CbTestClock;
-
-impl Clock for TestClock {
-    fn get_time(&self) -> Instant {
-        TEST_TIME
-    }
-}
-
-impl Clock for CbTestClock {
-    fn get_time(&self) -> Instant {
-        Instant::from_unix_millis(CB_MILLISECONDS_SINCE_EPOCH)
-    }
-}
-
-impl Clock for OcTestClock {
-    fn get_time(&self) -> Instant {
-        Instant::from_unix_millis(OC_MILLISECONDS_SINCE_EPOCH)
-    }
-}
-
-impl Clock for RkTestClock {
-    fn get_time(&self) -> Instant {
-        Instant::from_unix_millis(RK_MILLISECONDS_SINCE_EPOCH)
-    }
-}
 
 struct TestSignatureVerifier {
     pub expected_signature: Vec<u8>,
@@ -251,10 +213,11 @@ fn create_public_key_endorsements(signature: &[u8]) -> Endorsements {
 
 #[test]
 fn cb_software_rooted_dice_verify_succeeds() {
+    let clock = FixedClock::at_instant(TEST_TIME);
     let evidence = load_cb_evidence_software_rooted();
     let endorsements = Endorsements::default();
 
-    let verifier = SoftwareRootedDiceAttestationVerifier::new(Arc::new(CbTestClock {}));
+    let verifier = SoftwareRootedDiceAttestationVerifier::new(Arc::new(clock));
 
     let result = verifier.verify(&evidence, &endorsements);
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -263,6 +226,7 @@ fn cb_software_rooted_dice_verify_succeeds() {
 #[test]
 fn cb_dice_verify_succeeds() {
     let d = AttestationData::load_cb();
+    let clock = FixedClock::at_instant(d.make_valid_time());
     let ref_values = get_cb_reference_values(&d.reference_values);
     let platform_endorsement = AmdSevSnpEndorsement {
         tee_certificate: match d.endorsements.r#type.as_ref() {
@@ -297,7 +261,7 @@ fn cb_dice_verify_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(CbTestClock {}),
+        Arc::new(clock),
     );
 
     let result = verifier.verify(&d.evidence, &endorsements);
@@ -636,6 +600,7 @@ fn session_binding_key_policy_report_fails_with_invalid_signature() {
 
 #[test]
 fn event_log_verifier_succeeds() {
+    let clock = FixedClock::at_instant(TEST_TIME);
     let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
     let endorsements = create_public_key_endorsements(&TEST_SIGNATURE);
 
@@ -646,7 +611,7 @@ fn event_log_verifier_succeeds() {
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
-    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(clock));
     let result = verifier.verify(&evidence, &endorsements);
 
     // TODO: b/356631062 - Verify detailed attestation results.
@@ -663,6 +628,7 @@ fn event_log_verifier_succeeds() {
 
 #[test]
 fn event_log_verifier_fails() {
+    let clock = FixedClock::at_instant(TEST_TIME);
     let evidence = create_public_key_evidence(&TEST_PUBLIC_KEY);
     let endorsements = create_public_key_endorsements(&TEST_WRONG_SIGNATURE);
 
@@ -673,7 +639,7 @@ fn event_log_verifier_fails() {
     let policy = SessionBindingPublicKeyPolicy::new(certificate_verifier);
 
     // Create verifier.
-    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(TestClock {}));
+    let verifier = EventLogVerifier::new(vec![Box::new(policy)], Arc::new(clock));
     let result = verifier.verify(&evidence, &endorsements);
 
     assert!(result.is_err(), "Succeeded but expected a failure: {:?}", result.ok().unwrap());
@@ -765,6 +731,7 @@ fn oc_container_policy_verify_succeeds() {
 #[test]
 fn oc_amd_sev_snp_verifier_succeeds() {
     let d = AttestationData::load_oc();
+    let clock = FixedClock::at_instant(d.make_valid_time());
     let ref_values = get_oc_reference_values(&d.reference_values);
     // Create platform and firmware policies.
     // TODO: b/398859203 - Remove root layer reference values once old reference
@@ -796,7 +763,7 @@ fn oc_amd_sev_snp_verifier_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(OcTestClock {}),
+        Arc::new(clock),
     );
 
     let result = verifier.verify(&d.evidence, &d.endorsements);
@@ -839,6 +806,7 @@ fn rk_application_policy_verify_succeeds() {
 #[test]
 fn rk_amd_sev_snp_verifier_succeeds() {
     let d = AttestationData::load_rk();
+    let clock = FixedClock::at_instant(d.make_valid_time());
     let ref_values = get_rk_reference_values(&d.reference_values);
     // Create platform and firmware policies.
     // TODO: b/398859203 - Remove root layer reference values once old reference
@@ -866,7 +834,7 @@ fn rk_amd_sev_snp_verifier_succeeds() {
         platform_policy,
         Box::new(firmware_policy),
         event_policies,
-        Arc::new(RkTestClock {}),
+        Arc::new(clock),
     );
 
     let result = verifier.verify(&d.evidence, &d.endorsements);
