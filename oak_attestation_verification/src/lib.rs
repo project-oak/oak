@@ -24,6 +24,7 @@ pub(crate) mod compare;
 pub(crate) mod endorsement;
 pub mod expect;
 pub mod extract;
+pub(crate) mod intel;
 pub(crate) mod platform;
 pub mod policy;
 pub(crate) mod rekor;

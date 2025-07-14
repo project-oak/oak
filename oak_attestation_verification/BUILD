@@ -25,7 +25,10 @@ package(
 rust_library(
     name = "oak_attestation_verification",
     srcs = glob(["src/**"]),
-    compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
+    compile_data = [
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/data:intel_pck_root",
+    ],
     target_compatible_with = any_platform([
         "//:aarch64-apple-setting",
         "//:x86_64-linux-setting",
@@ -39,9 +42,11 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
+        "//oak_tdx_quote",
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:const-oid",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:ecdsa",
         "@oak_crates_index//:hashbrown",
@@ -75,6 +80,7 @@ rust_test(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
+        "//oak_attestation_verification/testdata:oc_attestation_tdx",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [
@@ -121,7 +127,10 @@ rust_test_suite(
 rust_library(
     name = "oak_attestation_verification_with_regex",
     srcs = glob(["src/**"]),
-    compile_data = ["//oak_attestation_verification/data:amd_ask_certs"],
+    compile_data = [
+        "//oak_attestation_verification/data:amd_ask_certs",
+        "//oak_attestation_verification/data:intel_pck_root",
+    ],
     crate_features = ["regex"],
     deps = [
         "//oak_attestation_verification_types",
@@ -129,9 +138,11 @@ rust_library(
         "//oak_dice",
         "//oak_proto_rust",
         "//oak_sev_snp_attestation_report",
+        "//oak_tdx_quote",
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:const-oid",
         "@oak_crates_index//:coset",
         "@oak_crates_index//:ecdsa",
         "@oak_crates_index//:hashbrown",
@@ -166,6 +177,7 @@ rust_test(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
+        "//oak_attestation_verification/testdata:oc_attestation_tdx",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
     deps = [

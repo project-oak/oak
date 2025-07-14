@@ -46,3 +46,12 @@ filegroup(
         "ask_milan.pem",
     ],
 )
+
+filegroup(
+    name = "intel_pck_root",
+    srcs = [
+        # Downloaded from
+        # <https://certificates.trustedservices.intel.com/Intel_SGX_Provisioning_Certification_RootCA.pem>
+        "Intel_SGX_Provisioning_Certification_RootCA.pem",
+    ],
+)
