@@ -15,14 +15,19 @@
 
 use std::time::SystemTime;
 
-use oak_time::instant::{Instant, UNIX_EPOCH};
+use oak_time::{duration::Duration, instant::Instant};
 
 /// Converts a SystemTime to an Instant.
 pub fn from_system_time(instant: SystemTime) -> Instant {
-    match instant.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => UNIX_EPOCH + duration,
-        Err(err) => UNIX_EPOCH - err.duration(),
-    }
+    let duration_from_epoch = match instant.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => Duration::from_nanos(
+            i128::try_from(duration.as_nanos()).expect("failed to convert u128 to i128"),
+        ),
+        Err(err) => Duration::from_nanos(
+            -i128::try_from(err.duration().as_nanos()).expect("failed to convert u128 to i128"),
+        ),
+    };
+    Instant::UNIX_EPOCH + duration_from_epoch
 }
 
 #[cfg(test)]
@@ -30,30 +35,25 @@ mod tests {
     use std::time::{Duration, SystemTime};
 
     use googletest::prelude::*;
-    use oak_time::UNIX_EPOCH;
 
     use super::*;
 
     #[googletest::test]
     fn test_from_system_time_after_epoch() {
-        let duration = Duration::from_secs(12345);
-        let system_time = SystemTime::UNIX_EPOCH + duration;
-        let expected_instant = UNIX_EPOCH + duration;
+        let system_time = SystemTime::UNIX_EPOCH + Duration::from_secs(12345);
+        let expected_instant = Instant::from_unix_seconds(12345);
         assert_that!(from_system_time(system_time), eq(expected_instant));
     }
 
     #[googletest::test]
     fn test_from_system_time_before_epoch() {
-        let duration = Duration::from_secs(54321);
-        let system_time = SystemTime::UNIX_EPOCH - duration;
-        let expected_instant = UNIX_EPOCH - duration;
+        let system_time = SystemTime::UNIX_EPOCH - Duration::from_secs(54321);
+        let expected_instant = Instant::from_unix_seconds(-54321);
         assert_that!(from_system_time(system_time), eq(expected_instant));
     }
 
     #[googletest::test]
     fn test_from_system_time_at_epoch() {
-        let system_time = SystemTime::UNIX_EPOCH;
-        let expected_instant = UNIX_EPOCH;
-        assert_that!(from_system_time(system_time), eq(expected_instant));
+        assert_that!(from_system_time(SystemTime::UNIX_EPOCH), eq(Instant::UNIX_EPOCH));
     }
 }

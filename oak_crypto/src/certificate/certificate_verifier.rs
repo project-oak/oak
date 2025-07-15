@@ -15,12 +15,11 @@
 //
 
 use alloc::{format, string::String};
-use core::time::Duration;
 
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SubjectPublicKeyInfo, Validity,
 };
-use oak_time::Instant;
+use oak_time::{Duration, Instant};
 use prost::{DecodeError, Message};
 
 use crate::verifier::Verifier;

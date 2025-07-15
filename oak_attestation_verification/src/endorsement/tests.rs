@@ -18,6 +18,7 @@ extern crate std;
 
 use alloc::vec::Vec;
 
+use oak_time::Duration;
 use test_util::endorsement_data::EndorsementData;
 
 use crate::{
@@ -39,7 +40,7 @@ fn test_validate_endorsement_statement_success() {
 fn test_validate_endorsement_statement_fails_too_early() {
     let d = EndorsementData::load();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
-    let too_early = d.valid_not_before - core::time::Duration::from_secs(24 * 3_600);
+    let too_early = d.valid_not_before - Duration::from_seconds(24 * 3_600);
 
     let result = validate_statement(too_early.into_unix_millis(), &[], &statement);
     assert!(result.is_err(), "{:?}", result);
@@ -49,7 +50,7 @@ fn test_validate_endorsement_statement_fails_too_early() {
 fn test_validate_statement_fails_too_late() {
     let d = EndorsementData::load();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
-    let too_late = d.valid_not_after + core::time::Duration::from_secs(24 * 3_600);
+    let too_late = d.valid_not_after + Duration::from_seconds(24 * 3_600);
 
     let result = validate_statement(too_late.into_unix_millis(), &[], &statement);
 

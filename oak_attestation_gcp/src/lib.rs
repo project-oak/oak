@@ -33,7 +33,7 @@ mod tests {
     use googletest::prelude::*;
     use jwt::{Token, Unverified};
     use oak_file_utils::data_path;
-    use oak_time::Instant;
+    use oak_time::{Duration, Instant};
     use serde_json::Value;
     use time::macros::datetime;
     use x509_cert::{der::DecodePem, Certificate};
@@ -181,7 +181,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         // Advance the clock by about 1h
-        let expired_current_time = current_time() + core::time::Duration::from_secs(3600);
+        let expired_current_time = current_time() + Duration::from_seconds(3600);
 
         assert_matches!(
             unsafe {
@@ -204,7 +204,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         // Advance the clock by about 1h
-        let expired_current_time = current_time() + core::time::Duration::from_secs(3600);
+        let expired_current_time = current_time() + Duration::from_seconds(3600);
 
         assert_matches!(
             report_attestation_token(unverified_token, &root, &expired_current_time),
@@ -250,8 +250,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         // Advance the clock by about 100 years
-        let expired_current_time =
-            current_time() + core::time::Duration::from_secs(100 * 365 * 24 * 3600);
+        let expired_current_time = current_time() + Duration::from_seconds(100 * 365 * 24 * 3600);
 
         assert_matches!(
             unsafe {
@@ -274,8 +273,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         // Advance the clock by about 100 years
-        let expired_current_time =
-            current_time() + core::time::Duration::from_secs(100 * 365 * 24 * 3600);
+        let expired_current_time = current_time() + Duration::from_seconds(100 * 365 * 24 * 3600);
 
         assert_matches!(
             report_attestation_token(unverified_token, &root, &expired_current_time),

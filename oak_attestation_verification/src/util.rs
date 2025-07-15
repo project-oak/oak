@@ -32,10 +32,10 @@ use oak_proto_rust::oak::{
     },
     HexDigest, RawDigest,
 };
-use oak_time::Instant;
+use oak_time::{Duration, Instant};
 use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
-use prost_types::{Any, Timestamp};
+use prost_types::Any;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
@@ -138,19 +138,12 @@ pub fn verify_timestamp(
     // if not_before_relative is set, check that the given timestamp is not
     // after the current time plus that (signed) duration.
     if let Some(not_before_relative) = &reference_value.not_before_relative {
-        // TODO: b/431922035 - Introduce a signed duration.
-        // We need signed, so std::core::Duration is useless. As an ugly
-        // workaround convert protobuf::Duration to protobuf::Timestamp
-        // so we can work with it, then compare as nanoseconds.
-        let offset = Instant::from(Timestamp {
-            seconds: not_before_relative.seconds,
-            nanos: not_before_relative.nanos,
-        });
-        if timestamp.into_unix_nanos() < current_time.into_unix_nanos() + offset.into_unix_nanos() {
+        let offset = Duration::from(not_before_relative);
+        if timestamp < current_time + offset {
             anyhow::bail!(
                 "Timestamp is out of range: timestamp = {:?}, range [{:?}, {:?}]",
                 timestamp,
-                current_time.into_unix_millis() + offset.into_unix_millis(),
+                current_time + offset,
                 current_time
             );
         }

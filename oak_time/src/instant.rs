@@ -26,10 +26,9 @@
 //! "system time" or system time source. It also does not rely (by default) on
 //! the std library.
 
-use core::{
-    ops::{Add, AddAssign, Sub, SubAssign},
-    time::Duration,
-};
+use core::ops::{Add, AddAssign, Sub, SubAssign};
+
+use crate::Duration;
 
 // An anchor in time which can be used to create new Instant instances or learn
 // about where in time an Instant lies. This is similar to the
@@ -170,7 +169,7 @@ impl Add<Duration> for Instant {
     ///
     /// A new `Instant` representing the original instant advanced by `other`.
     fn add(self, other: Duration) -> Self::Output {
-        let nanos = self.nanoseconds + other.as_nanos() as i128;
+        let nanos = self.nanoseconds + other.into_nanos();
         Self { nanoseconds: nanos }
     }
 }
@@ -186,12 +185,10 @@ impl Sub<Instant> for Instant {
     ///
     /// # Returns
     ///
-    /// A `Duration` representing the duration between `self` and
-    /// `other`. Panics if `other` is later than `self`.
+    /// A `Duration` representing the signed duration between `self` and
+    /// `other`.
     fn sub(self, other: Instant) -> Self::Output {
-        let diff = self.nanoseconds - other.nanoseconds;
-        let nanos = u64::try_from(diff).expect("failed to convert i128 to u64");
-        Duration::from_nanos(nanos)
+        Duration::from_nanos(self.nanoseconds - other.nanoseconds)
     }
 }
 
@@ -205,7 +202,7 @@ impl AddAssign<Duration> for Instant {
     ///
     /// * `other`: The `Duration` to add.
     fn add_assign(&mut self, other: Duration) {
-        self.nanoseconds += other.as_nanos() as i128;
+        self.nanoseconds += other.into_nanos();
     }
 }
 
@@ -226,7 +223,7 @@ impl Sub<Duration> for Instant {
     ///
     /// A new `Instant` representing the original instant moved back by `other`.
     fn sub(self, other: Duration) -> Self {
-        Self { nanoseconds: self.nanoseconds - other.as_nanos() as i128 }
+        Self { nanoseconds: self.nanoseconds - other.into_nanos() }
     }
 }
 
@@ -235,7 +232,7 @@ impl Sub<Duration> for Instant {
 /// Allows subtracting a `Duration` from an `Instant` in-place.
 impl SubAssign<Duration> for Instant {
     fn sub_assign(&mut self, other: Duration) {
-        self.nanoseconds -= other.as_nanos() as i128;
+        self.nanoseconds -= other.into_nanos();
     }
 }
 
@@ -380,7 +377,10 @@ mod tests {
     fn test_timestamp_to_instant_example() {
         let timestamp = prost_types::Timestamp { seconds: 12345, nanos: 67890 };
         let instant = Instant::from(timestamp);
-        assert_that!(instant, eq(Instant::UNIX_EPOCH + Duration::new(12345, 67890)));
+        assert_that!(
+            instant,
+            eq(Instant::UNIX_EPOCH + Duration::from_nanos(12345 * SECONDS_TO_NANOS + 67890))
+        );
     }
 
     #[cfg(feature = "prost")]

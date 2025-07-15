@@ -18,7 +18,7 @@ use oak_attestation_verification::{raw_to_hex_digest, verify_endorsement};
 use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value, SkipVerification, VerifyingKeyReferenceValue,
 };
-use oak_time::Instant;
+use oak_time::{Duration, Instant};
 use test_util::endorsement_data::EndorsementData;
 
 #[test]
@@ -62,7 +62,7 @@ fn test_verify_endorsement_success() {
 #[test]
 fn test_verify_endorsement_fails_too_early() {
     let d = EndorsementData::load();
-    let too_early = d.valid_not_before - core::time::Duration::from_secs(3_600);
+    let too_early = d.valid_not_before - Duration::from_seconds(3_600);
     let result =
         verify_endorsement(too_early.into_unix_millis(), &d.signed_endorsement, &d.ref_value);
     assert!(result.is_err(), "{:?}", result);
@@ -71,7 +71,7 @@ fn test_verify_endorsement_fails_too_early() {
 #[test]
 fn test_verify_endorsement_fails_too_late() {
     let d = EndorsementData::load();
-    let too_late = d.valid_not_after + core::time::Duration::from_secs(3_600);
+    let too_late = d.valid_not_after + Duration::from_seconds(3_600);
 
     let result =
         verify_endorsement(too_late.into_unix_millis(), &d.signed_endorsement, &d.ref_value);

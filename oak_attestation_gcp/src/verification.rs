@@ -220,11 +220,18 @@ fn verify_certificate_validity(
     certificate: &Certificate,
     current_time: &oak_time::Instant,
 ) -> Result<(), AttestationVerificationError> {
-    use oak_time::UNIX_EPOCH;
-
-    let not_before =
-        UNIX_EPOCH + certificate.tbs_certificate.validity.not_before.to_unix_duration();
-    let not_after = UNIX_EPOCH + certificate.tbs_certificate.validity.not_after.to_unix_duration();
+    // TODO: b/427595536 - Need to deduplicate the Validity protos, then
+    // this can go away.
+    let not_before_nanos =
+        certificate.tbs_certificate.validity.not_before.to_unix_duration().as_nanos();
+    let not_after_nanos =
+        certificate.tbs_certificate.validity.not_after.to_unix_duration().as_nanos();
+    let not_before = Instant::from_unix_nanos(
+        i128::try_from(not_before_nanos).expect("failed to convert u128 to i128"),
+    );
+    let not_after = Instant::from_unix_nanos(
+        i128::try_from(not_after_nanos).expect("failed to convert u128 to i128"),
+    );
 
     if not_before > *current_time {
         Err(AttestationVerificationError::X509ValidityNotBefore {

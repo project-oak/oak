@@ -17,7 +17,9 @@
 #![no_std]
 
 pub mod clock;
+pub mod duration;
 pub mod instant;
 
 pub use clock::Clock;
+pub use duration::Duration;
 pub use instant::{Instant, UNIX_EPOCH};

@@ -49,28 +49,20 @@ impl Clock for FrozenSystemTimeClock {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::SystemTime;
 
     use googletest::prelude::*;
-    use oak_time::UNIX_EPOCH as OAK_UNIX_EPOCH;
 
     use super::*;
+    use crate::instant::from_system_time;
 
     #[googletest::test]
     fn test_system_time_clock_returns_current_time() {
         let clock = SystemTimeClock;
 
-        let now_before = match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(d) => OAK_UNIX_EPOCH + d,
-            Err(e) => OAK_UNIX_EPOCH - e.duration(),
-        };
-
+        let now_before = from_system_time(SystemTime::now());
         let time_from_clock = clock.get_time();
-
-        let now_after = match SystemTime::now().duration_since(UNIX_EPOCH) {
-            Ok(d) => OAK_UNIX_EPOCH + d,
-            Err(e) => OAK_UNIX_EPOCH - e.duration(),
-        };
+        let now_after = from_system_time(SystemTime::now());
 
         assert_that!(time_from_clock, ge(now_before));
         assert_that!(time_from_clock, le(now_after));

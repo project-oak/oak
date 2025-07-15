@@ -15,12 +15,12 @@
 //
 
 use alloc::vec::Vec;
-use core::{assert_matches::assert_matches, time::Duration};
+use core::assert_matches::assert_matches;
 
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
 };
-use oak_time::Instant;
+use oak_time::{Duration, Instant};
 use prost::Message;
 use prost_types::Timestamp;
 
