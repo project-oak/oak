@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod client;
 pub mod endorse;
-
-use std::io::Write;
+pub mod verify;
 
 use clap::{Parser, Subcommand};
 
@@ -26,20 +26,22 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
-        self.command.run(writer)
+    pub async fn run(&self) -> anyhow::Result<()> {
+        self.command.run().await
     }
 }
 
 #[derive(Subcommand, Debug)]
 pub enum ImageCommands {
-    Endorse(endorse::EndorseArgs),
+    Endorse(endorse::EndorseCommand),
+    Verify(verify::VerifyCommand),
 }
 
 impl ImageCommands {
-    pub fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
+    pub async fn run(&self) -> anyhow::Result<()> {
         match self {
-            Self::Endorse(args) => args.run(writer),
+            Self::Endorse(args) => args.run().await,
+            Self::Verify(args) => args.run().await,
         }
     }
 }

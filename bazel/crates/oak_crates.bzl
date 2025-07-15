@@ -427,7 +427,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "0.27.1",
     ),
-    "oci-client": crate.spec(version = "0.15.0"),
+    "oci-client": crate.spec(
+        default_features = False,
+        version = "0.15.0",
+        features = [
+            "rustls-tls",
+        ],
+    ),
     "oci-spec": crate.spec(version = "0.8.1"),
     "once_cell": crate.spec(version = "1.19.0"),
     # TODO b/350061567 - Remove opentelemetry version pins

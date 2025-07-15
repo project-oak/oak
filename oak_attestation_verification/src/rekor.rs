@@ -23,17 +23,14 @@ use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use oak_time::Instant;
-use serde::Deserialize;
-#[cfg(feature = "std")]
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa, verify_timestamp};
 
 /// Struct representing a Rekor LogEntry. See
 /// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>
 /// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct LogEntry {
     /// We cannot directly use the type `Body` here, since body is
     /// Base64-encoded.
@@ -62,8 +59,7 @@ pub struct LogEntry {
 }
 
 /// Struct representing the body in a Rekor LogEntry.
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Body {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
@@ -73,8 +69,7 @@ pub struct Body {
 
 /// Struct representing the `spec` in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Spec {
     pub data: Data,
     pub signature: GenericSignature,
@@ -82,16 +77,14 @@ pub struct Spec {
 
 /// Struct representing the hashed data in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Data {
     pub hash: Hash,
 }
 
 /// Struct representing a hash digest.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Hash {
     /// The algorithm used for this hash. Example: `sha256`.
     pub algorithm: String,
@@ -102,8 +95,7 @@ pub struct Hash {
 
 /// Struct representing a signature in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct GenericSignature {
     /// Base64-encoded content that is signed.
     pub content: String,
@@ -118,8 +110,7 @@ pub struct GenericSignature {
 
 /// Struct representing a public key included in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
-#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PublicKey {
     /// Base64-encoded public key.
     pub content: String,
@@ -129,8 +120,7 @@ pub struct PublicKey {
 /// verification object in Rekor also contains an inclusion proof. Since we
 /// currently don't verify the inclusion proof in the client, it is omitted from
 /// this struct.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = "std", derive(Serialize))]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct LogEntryVerification {
     // Base64-encoded signature over the body, integratedTime, logID, and logIndex.
     #[serde(rename = "signedEntryTimestamp")]

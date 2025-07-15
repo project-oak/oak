@@ -13,12 +13,14 @@
 // limitations under the License.
 
 use std::{
-    fs::File,
+    fs,
     io::{self, Write},
 };
 
 use anyhow::Context;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
+use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
+use serde::Deserialize;
 
 #[derive(Clone, Debug)]
 pub enum Output {
@@ -31,8 +33,8 @@ impl Output {
         let writer: Box<dyn Write> = match self {
             Output::Stdout => Box::new(io::stdout()),
             Output::File(path) => Box::new(
-                File::create(path)
-                    .with_context(|| format!("could not create output file {}", path))?,
+                fs::File::create(path)
+                    .with_context(|| format!("could not create output file {path}"))?,
             ),
         };
         Ok(writer)
@@ -41,7 +43,7 @@ impl Output {
 
 impl From<&str> for Output {
     fn from(path: &str) -> Self {
-        if path == "-" {
+        if path == "-" || path.is_empty() {
             Output::Stdout
         } else {
             Output::File(path.to_string())
@@ -49,7 +51,21 @@ impl From<&str> for Output {
     }
 }
 
-pub(crate) fn parse_validity(valid_for: &str) -> anyhow::Result<Duration> {
+#[derive(Default, Debug, Clone, Deserialize)]
+pub struct Claims {
+    pub claims: Vec<String>,
+}
+
+pub(crate) fn parse_claims(path: &str) -> anyhow::Result<Claims> {
+    let content =
+        fs::read_to_string(path).with_context(|| format!("could not read claims file {path}"))?;
+    let claims: Claims =
+        toml::from_str(&content).with_context(|| format!("could not parse claims file {path}"))?;
+
+    Ok(claims)
+}
+
+pub(crate) fn parse_duration(valid_for: &str) -> anyhow::Result<Duration> {
     if let Some(hours) = valid_for.strip_suffix('h') {
         let hours = hours.parse::<i64>().context("could not parse number of hours")?;
         Ok(Duration::hours(hours))
@@ -70,4 +86,10 @@ pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<DateTime<FixedOf
     } else {
         DateTime::parse_from_rfc3339(value).context("could not parse rfc3339 timestamp")
     }
+}
+
+pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<VerifyingKey, anyhow::Error> {
+    let public_key_pem = fs::read_to_string(key_path)?;
+    VerifyingKey::from_public_key_pem(&public_key_pem)
+        .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))
 }

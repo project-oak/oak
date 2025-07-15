@@ -37,7 +37,7 @@ test_default_issued_at_flag() {
     $CLI image endorse \
       --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
-      --claims-file="$CLAIMS_FILE" \
+      --claims="$CLAIMS_FILE" \
       --output="$output_file"
 }
 
@@ -45,12 +45,12 @@ test_default_issued_at_flag() {
 test_output_flag() {
     # `set -e` inside the function ensures that it fails on the first error.
     set -e
-    local output_file=$(mktemp)    
+    local output_file=$(mktemp)
 
     $CLI image endorse \
       --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
-      --claims-file="$CLAIMS_FILE" \
+      --claims="$CLAIMS_FILE" \
       --issued-on=2025-01-01T00:00:00Z \
       --output="$output_file"
 
@@ -65,7 +65,7 @@ test_stdout() {
     $CLI image endorse \
       --image=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
       --valid-for=24h \
-      --claims-file="$CLAIMS_FILE" \
+      --claims="$CLAIMS_FILE" \
       --issued-on=2025-01-01T00:00:00Z > "$output_file"
 
     diff "$GOLDEN_FILE" "$output_file"

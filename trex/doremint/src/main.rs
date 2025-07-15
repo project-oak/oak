@@ -12,30 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![feature(try_blocks)]
+
 mod flags;
 mod image;
 
-use std::io::Write;
-
 use clap::{Parser, Subcommand};
+use oci_spec::distribution::Reference;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[command(subcommand)]
     command: Commands,
+
     #[arg(
         long,
         global = true,
         help = "Path to write the output to. Use '-' for stdout.",
-        default_value = "-"
+        default_value = ""
     )]
-    output: flags::Output,
+    output: Option<flags::Output>,
+
+    #[arg(long, global = true, help = "An OCI Image reference")]
+    pub image: Option<Reference>,
+
+    #[arg(
+        long,
+        global = true,
+        help = "Path to a file containing claims about an image",
+        value_parser = flags::parse_claims,
+    )]
+    pub claims: Option<flags::Claims>,
 }
 
 impl Args {
-    fn run(&mut self, writer: &mut dyn Write) -> anyhow::Result<()> {
-        self.command.run(writer)
+    async fn run(&mut self) -> anyhow::Result<()> {
+        self.command.run().await
     }
 }
 
@@ -45,21 +58,20 @@ enum Commands {
 }
 
 impl Commands {
-    fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
+    async fn run(&self) -> anyhow::Result<()> {
         match self {
-            Self::Image(args) => args.run(writer),
+            Self::Image(args) => args.run().await,
         }
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut args = Args::parse();
-    let result = (|| {
-        let mut writer = args.output.open()?;
-        args.run(&mut writer)
-    })();
 
-    if let Err(err) = result {
+    let result = args.run();
+
+    if let Err(err) = result.await {
         eprintln!("Error: {err:?}");
         std::process::exit(1);
     }

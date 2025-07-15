@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fs, io::Write};
-
 use anyhow::Context;
 use chrono::{DateTime, Duration, FixedOffset};
 use clap::Parser;
 use endorsement::intoto::{EndorsementOptions, EndorsementStatement, Validity};
 use oci_spec::distribution::Reference;
-use serde::Deserialize;
 
-use crate::flags::{parse_current_time, parse_validity};
+use crate::flags::{self, parse_current_time, parse_duration};
 
 #[derive(Parser, Debug)]
 #[command(about = "Endorse a container image")]
-pub struct EndorseArgs {
-    #[arg(long)]
+pub struct EndorseCommand {
+    #[arg(from_global)]
     pub image: Reference,
-    #[arg(long, value_parser = parse_validity, help = "A duration string indicating how long the endorsement is valid for, e.g., '30d', '12h', '1w'")]
+
+    #[arg(from_global)]
+    pub claims: flags::Claims,
+
+    #[arg(long, value_parser = parse_duration, help = "A duration string indicating how long the endorsement is valid for, e.g., '30d', '12h', '1w'")]
     pub valid_for: Duration,
-    #[arg(long)]
-    pub claims_file: String,
+
     #[arg(
         long,
         help = "A fixed timestamp for issuing the endorsement, in RFC3339 format",
@@ -39,19 +39,14 @@ pub struct EndorseArgs {
         default_value = ""
     )]
     pub issued_on: DateTime<FixedOffset>,
+
+    #[arg(from_global)]
+    output: flags::Output,
 }
 
-#[derive(Deserialize)]
-struct Claims {
-    claims: Vec<String>,
-}
-
-impl EndorseArgs {
-    pub fn run(&self, writer: &mut dyn Write) -> anyhow::Result<()> {
-        let claims_file_content = fs::read_to_string(&self.claims_file)
-            .with_context(|| format!("could not read claims file {}", self.claims_file))?;
-        let claims: Claims = toml::from_str(&claims_file_content)
-            .with_context(|| format!("could not parse claims file {}", self.claims_file))?;
+impl EndorseCommand {
+    pub async fn run(&self) -> anyhow::Result<()> {
+        let writer = self.output.open()?;
 
         let statement = EndorsementStatement::from_container_image(
             &self.image,
@@ -61,7 +56,7 @@ impl EndorseArgs {
                     not_before: self.issued_on,
                     not_after: self.issued_on + self.valid_for,
                 },
-                claims: claims.claims,
+                claims: self.claims.claims.clone(),
             },
         )?;
 
