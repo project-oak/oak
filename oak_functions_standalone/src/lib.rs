@@ -19,36 +19,97 @@
 use std::{error::Error, pin::Pin, sync::Arc};
 
 use anyhow::Context;
+use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_functions_service::{instance::OakFunctionsInstance, Handler};
 use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
-use oak_proto_rust::oak::functions::{
-    extend_next_lookup_data_request::Data,
-    standalone::{OakSessionRequest, OakSessionResponse},
-    ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk,
-    ReserveRequest,
+use oak_proto_rust::oak::{
+    attestation::v1::ConfidentialSpaceEndorsement,
+    functions::{
+        extend_next_lookup_data_request::Data,
+        standalone::{OakSessionRequest, OakSessionResponse},
+        ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest,
+        LookupDataChunk, ReserveRequest,
+    },
 };
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
+    session_binding::{SessionBinder, SignatureBinder},
     ServerSession, Session,
 };
+use p256::ecdsa::{SigningKey, VerifyingKey};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::{Stream, StreamExt};
 use tonic::{codec::CompressionEncoding, transport::server::Connected};
 
+// Static string used as the attester id and endorser id when creating the
+// attestation.
+const ATTESTATION_ID: &str = "04k-func710n5-574nd4l0n3-4773574710n";
+
 // Arguements to start up the Oak Functions Session Service.
+// Note that lookup data and attestation are optional features for the service.
+// The AttestaionArgs help construct a SelfUnidirectional attestation type.
 pub struct OakFunctionsSessionArgs {
     pub wasm_initialization: InitializeRequest,
+    pub attestation_args: AttestationArgs,
     pub lookup_data: Option<LookupDataChunk>,
+}
+
+// Arguements for attestation support with Oak Functions.
+pub struct AttestationArgs {
+    pub attestation_type: AttestationType,
+    pub binding_key: Option<SigningKey>,
+    pub endorsement: Option<String>,
+}
+
+// Attestation parameters. The attester, endorser, and session_binder should not
+// be populated if the attestation type does not require the server to produce
+// an attestation report.
+// This struct has only a `new` method and is purely meant to group the objects
+// responsible for attestation under one single struct.
+pub struct AttestationGenerationDetails {
+    attestation_type: AttestationType,
+    attester: Option<Arc<dyn Attester>>,
+    endorser: Option<Arc<dyn Endorser>>,
+    session_binder: Option<Arc<dyn SessionBinder>>,
+}
+
+impl AttestationGenerationDetails {
+    pub fn create(attestation_args: AttestationArgs) -> Result<Self, tonic::Status> {
+        if attestation_args.attestation_type == AttestationType::Unattested {
+            return Ok(Self {
+                attestation_type: AttestationType::Unattested,
+                attester: None,
+                endorser: None,
+                session_binder: None,
+            });
+        }
+        let binding_key = attestation_args
+            .binding_key
+            .ok_or(tonic::Status::invalid_argument("no binding key"))?;
+        let endorsement = attestation_args
+            .endorsement
+            .ok_or(tonic::Status::invalid_argument("no endorsement"))?;
+        Ok(Self {
+            attestation_type: attestation_args.attestation_type,
+            attester: Some(Arc::new(PublicKeyAttester::new(VerifyingKey::from(&binding_key)))),
+            endorser: Some(Arc::new(PublicKeyEndorser::new(ConfidentialSpaceEndorsement {
+                jwt_token: endorsement,
+            }))),
+            session_binder: Some(Arc::new(SignatureBinder::new(Box::new(binding_key)))),
+        })
+    }
 }
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsSessionService<H: Handler> {
     instance: Arc<OakFunctionsInstance<H>>,
+    attestation_generation: Arc<AttestationGenerationDetails>,
 }
 
 impl<H: Handler> OakFunctionsSessionService<H> {
@@ -85,7 +146,11 @@ impl<H: Handler> OakFunctionsSessionService<H> {
             None => println!("no lookup data provided"),
         }
 
-        Self { instance: Arc::new(instance) }
+        let attestation_details =
+            AttestationGenerationDetails::create(oak_functions_session_args.attestation_args)
+                .expect("unable to initialize attestation");
+
+        Self { instance: Arc::new(instance), attestation_generation: Arc::new(attestation_details) }
     }
 
     #[allow(clippy::result_large_err)]
@@ -130,10 +195,52 @@ where
         &self,
         request: tonic::Request<tonic::Streaming<OakSessionRequest>>,
     ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
-        let mut server_session: ServerSession = ServerSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-        )
-        .map_err(|e| tonic::Status::internal(format!("could not create server session: {e:?}")))?;
+        let mut server_session: ServerSession =
+            match self.attestation_generation.attestation_type {
+                AttestationType::Unattested => ServerSession::create(
+                    SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN)
+                        .build(),
+                )
+                .map_err(|e| {
+                    tonic::Status::internal(format!(
+                        "error creating Unattested server session: {e:?}"
+                    ))
+                }),
+                AttestationType::SelfUnidirectional => ServerSession::create(
+                    SessionConfig::builder(
+                        AttestationType::SelfUnidirectional,
+                        HandshakeType::NoiseNN,
+                    )
+                    .add_self_attester_ref(
+                        ATTESTATION_ID.to_owned(),
+                        self.attestation_generation.attester.as_ref().expect("no attester"),
+                    )
+                    .add_self_endorser_ref(
+                        ATTESTATION_ID.to_owned(),
+                        self.attestation_generation.endorser.as_ref().expect("no endorser"),
+                    )
+                    .add_session_binder_ref(
+                        ATTESTATION_ID.to_owned(),
+                        self.attestation_generation
+                            .session_binder
+                            .as_ref()
+                            .expect("no session binder"),
+                    )
+                    .build(),
+                )
+                .map_err(|e| {
+                    tonic::Status::internal(format!(
+                        "error creating SelfUnidirectional server session: {e:?}"
+                    ))
+                }),
+                AttestationType::PeerUnidirectional => Err(tonic::Status::unimplemented(
+                    "no support for attestation type: PeerUnidirectional",
+                )),
+                AttestationType::Bidirectional => Err(tonic::Status::unimplemented(
+                    "no support for attestation type: Bidirectional",
+                )),
+            }
+            .expect("server session failed");
 
         let instance: Arc<OakFunctionsInstance<H>> = self.get_instance();
 

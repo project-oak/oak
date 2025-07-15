@@ -129,7 +129,7 @@ pub enum AttestationVerdict {
 /// The terms "Self" and "Peer" are relative to the party configuring the
 /// attestation. For a client, "Self" is the client and "Peer" is the server.
 /// For a server, "Self" is the server and "Peer" is the client.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AttestationType {
     /// Both parties perform attestation and verify each other's evidence.
     Bidirectional,

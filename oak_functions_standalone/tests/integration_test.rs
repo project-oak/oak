@@ -22,7 +22,7 @@ use std::{
 
 use futures::channel::mpsc;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_functions_standalone::{serve, OakFunctionsSessionArgs};
+use oak_functions_standalone::{serve, AttestationArgs, OakFunctionsSessionArgs};
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::oak::functions::{
     standalone::{OakSessionRequest, OakSessionResponse},
@@ -55,6 +55,11 @@ async fn test_echo() {
         wasm_initialization: InitializeRequest {
             constant_response_size: 100, // This value is ultimately ignored.
             wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
+        },
+        attestation_args: AttestationArgs {
+            attestation_type: AttestationType::Unattested,
+            binding_key: None,
+            endorsement: None,
         },
         lookup_data: None,
     };
@@ -155,6 +160,11 @@ async fn test_lookup() {
         wasm_initialization: InitializeRequest {
             constant_response_size: 100, // This value is ultimately ignored.
             wasm_module: fs::read(wasm_path).expect("failed to read wasm module"),
+        },
+        attestation_args: AttestationArgs {
+            attestation_type: AttestationType::Unattested,
+            binding_key: None,
+            endorsement: None,
         },
         lookup_data: Some(LookupDataChunk {
             items: vec![
