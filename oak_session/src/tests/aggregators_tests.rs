@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::{
-    boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
 };
@@ -24,8 +23,11 @@ use oak_proto_rust::oak::{
     session::v1::EndorsedEvidence,
 };
 use oak_session::{
-    aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
-    attestation::{PeerAttestationVerdict, VerifierResult},
+    aggregators::{
+        AggregatedVerificationError, DefaultLegacyVerifierResultsAggregator,
+        LegacyVerifierResultsAggregator,
+    },
+    attestation::VerifierResult,
 };
 
 fn create_dummy_endorsed_evidence() -> EndorsedEvidence {
@@ -54,7 +56,7 @@ const UNMATCHED_VERIFIER_ID: &str = "UNMATCHED_VERIFIER_ID";
 
 #[googletest::test]
 fn aggregated_attestation_succeeds() {
-    let aggregator = DefaultVerifierResultsAggregator {};
+    let aggregator = DefaultLegacyVerifierResultsAggregator {};
     let attestation_results = BTreeMap::from([
         (
             MATCHED_ATTESTER_ID1.to_string(),
@@ -71,21 +73,12 @@ fn aggregated_attestation_succeeds() {
             },
         ),
     ]);
-
-    assert_that!(
-        aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
-            attestation_results: unordered_elements_are!(
-                (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
-                (eq(MATCHED_ATTESTER_ID2), matches_pattern!(VerifierResult::Success { .. }),),
-            ),
-        })
-    );
+    assert_that!(aggregator.process_assertion_results(&attestation_results), ok(anything()));
 }
 
 #[googletest::test]
 fn one_failed_verifier_aggregated_attestation_fails() {
-    let aggregator = DefaultVerifierResultsAggregator {};
+    let aggregator = DefaultLegacyVerifierResultsAggregator {};
     let attestation_results = BTreeMap::from([
         (
             MATCHED_ATTESTER_ID1.to_string(),
@@ -102,40 +95,27 @@ fn one_failed_verifier_aggregated_attestation_fails() {
             },
         ),
     ]);
-
     assert_that!(
-        aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: starts_with("Verification failed"),
-            attestation_results: unordered_elements_are!(
-                (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
-                (eq(MATCHED_ATTESTER_ID2), matches_pattern!(VerifierResult::Failure { .. }),),
-            ),
-        })
+        aggregator.process_assertion_results(&attestation_results),
+        err(matches_pattern!(AggregatedVerificationError::LegacyVerificationFailure { .. }))
     );
 }
 
 #[googletest::test]
 fn unmatched_verifier_attestation_fails() {
-    let aggregator = DefaultVerifierResultsAggregator {};
+    let aggregator = DefaultLegacyVerifierResultsAggregator {};
     let attestation_results: BTreeMap<String, VerifierResult> =
         BTreeMap::from([(UNMATCHED_VERIFIER_ID.to_string(), VerifierResult::Missing)]);
 
     assert_that!(
-        aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "No matching evidence is provided",
-            attestation_results: elements_are!((
-                eq(UNMATCHED_VERIFIER_ID),
-                matches_pattern!(VerifierResult::Missing),
-            ),),
-        })
+        aggregator.process_assertion_results(&attestation_results),
+        err(matches_pattern!(AggregatedVerificationError::NoMatchedLegacyVerifier))
     );
 }
 
 #[googletest::test]
 fn additional_attestation_passes() {
-    let aggregator = DefaultVerifierResultsAggregator {};
+    let aggregator = DefaultLegacyVerifierResultsAggregator {};
     let attestation_results = BTreeMap::from([
         (
             MATCHED_ATTESTER_ID1.to_string(),
@@ -149,21 +129,12 @@ fn additional_attestation_passes() {
             VerifierResult::Unverified { evidence: create_dummy_endorsed_evidence() },
         ),
     ]);
-
-    assert_that!(
-        aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
-            attestation_results: unordered_elements_are!(
-                (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
-                (eq(UNMATCHED_ATTESTER_ID), matches_pattern!(VerifierResult::Unverified { .. }),),
-            ),
-        })
-    );
+    assert_that!(aggregator.process_assertion_results(&attestation_results), ok(anything()));
 }
 
 #[googletest::test]
-fn mix_successful_and_missing_passes() {
-    let aggregator = DefaultVerifierResultsAggregator {};
+fn mix_successful_verifier_and_missing_passes() {
+    let aggregator = DefaultLegacyVerifierResultsAggregator {};
     let attestation_results = BTreeMap::from([
         (
             MATCHED_ATTESTER_ID1.to_string(),
@@ -175,13 +146,5 @@ fn mix_successful_and_missing_passes() {
         (UNMATCHED_VERIFIER_ID.to_string(), VerifierResult::Missing),
     ]);
 
-    assert_that!(
-        aggregator.aggregate_attestation_results(attestation_results),
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed {
-            attestation_results: unordered_elements_are!(
-                (eq(MATCHED_ATTESTER_ID1), matches_pattern!(VerifierResult::Success { .. }),),
-                (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(VerifierResult::Missing),),
-            ),
-        })
-    );
+    assert_that!(aggregator.process_assertion_results(&attestation_results), ok(anything()));
 }

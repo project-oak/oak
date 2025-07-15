@@ -32,18 +32,21 @@ use oak_crypto::{
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, EndorsedEvidence, PlaintextMessage,
-        SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response, Assertion, EndorsedEvidence,
+        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
     },
 };
 use oak_session::{
+    aggregators::PassThrough,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
+    generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
     session::{AttestationEvidence, AttestationPublisher},
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
+    verifier::{AssertionVerificationError, AssertionVerifier, VerifiedAssertion},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
@@ -139,6 +142,44 @@ impl AttestationPublisher for TestAttestationPublisher {
     }
 }
 
+mock! {
+    TestAssertionVerifier {}
+    impl AssertionVerifier for TestAssertionVerifier {
+        fn verify_assertion(
+            &self,
+            assertion: &Assertion,
+        ) -> core::result::Result<Box<dyn VerifiedAssertion>, AssertionVerificationError>;
+    }
+}
+
+mock! {
+    #[derive(Debug)]
+    TestVerifiedAssertion {}
+    impl VerifiedAssertion for TestVerifiedAssertion {
+        fn assertion(&self) -> &Assertion;
+        fn verify_binding(
+            &self,
+            bound_data: &[u8],
+            binding: &SessionBinding,
+        ) -> core::result::Result<(), AssertionVerificationError>;
+    }
+}
+
+mock! {
+    TestAssertionGenerator {}
+    impl AssertionGenerator for TestAssertionGenerator {
+        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, AssertionGenerationError>;
+    }
+}
+
+mock! {
+    TestBindableAssertion {}
+    impl BindableAssertion for TestBindableAssertion {
+        fn assertion(&self) -> &Assertion;
+        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, AssertionGenerationError>;
+    }
+}
+
 fn create_mock_attester() -> Box<dyn Attester> {
     let mut attester = MockTestAttester::new();
     attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
@@ -190,6 +231,28 @@ fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVeri
         .expect_create_session_binding_verifier()
         .returning(|_| Ok(create_mock_session_binding_verifier()));
     Box::new(session_binding_verifier_provider)
+}
+
+fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn AssertionGenerator> {
+    let mut generator = MockTestAssertionGenerator::new();
+    generator.expect_generate().returning(move || {
+        let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
+        bindable_assertion.expect_assertion().return_const(assertion.clone());
+        bindable_assertion.expect_bind().returning(|_| Ok(SessionBinding::default()));
+        Ok(bindable_assertion)
+    });
+    Box::new(generator)
+}
+
+fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Box<dyn AssertionVerifier> {
+    let mut verifier = MockTestAssertionVerifier::new();
+    verifier.expect_verify_assertion().returning(move |_| {
+        let mut verified_assertion = Box::new(MockTestVerifiedAssertion::new());
+        verified_assertion.expect_assertion().return_const(assertion.clone());
+        verified_assertion.expect_verify_binding().returning(|_, _| Ok(()));
+        Ok(verified_assertion)
+    });
+    Box::new(verifier)
 }
 
 #[derive(Debug, PartialEq)]
@@ -336,6 +399,7 @@ fn pairwise_nn_self_unattested_compatible() -> anyhow::Result<()> {
 fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
     let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
 
+    let assertion = Assertion { content: "test".as_bytes().to_vec() };
     let client_config =
         SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
             .add_peer_verifier_with_key_extractor(
@@ -343,6 +407,11 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
                 create_passing_mock_verifier(),
                 create_mock_key_extractor(),
             )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_assertion_verifier(assertion.clone()),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
                 &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
             )
@@ -351,6 +420,10 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
         SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
             .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_mock_assertion_generator(assertion),
+            )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
 

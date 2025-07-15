@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 use alloc::{boxed::Box, string::String};
+use core::fmt::Debug;
 
 #[cfg(test)]
 use mockall::automock;
@@ -21,12 +21,14 @@ use strum::Display;
 use thiserror::Error;
 
 /// Errors that can occur during assertion verification.
-#[derive(Error, Debug, Display)]
+#[derive(Clone, Error, Debug, Display)]
 pub enum AssertionVerificationError {
     //  #[error("Generic verification error")]
     GenericFailure { error_msg: String },
     //  #[error("Generic verification error")]
     BindingVerificationFailure { error_msg: String },
+    //  #[error("Peer assertion missing")]
+    PeerAssertionMissing,
 }
 
 /// Represents an assertion that has been successfully verified.
@@ -34,7 +36,7 @@ pub enum AssertionVerificationError {
 /// This trait provides a common interface for interacting with verified
 /// assertions, allowing access to the original assertion data and enabling
 /// further verification steps, namely, session binding.
-pub trait VerifiedAssertion: Send + Sync {
+pub trait VerifiedAssertion: Send + Sync + Debug {
     fn assertion(&self) -> &Assertion;
 
     /// Verifies the session binding associated with an assertion,
@@ -57,11 +59,12 @@ pub trait VerifiedAssertion: Send + Sync {
 /// the `Success` and `Failure`` states that can be represented by the `Result`
 /// enum it includes `Missing` and `Unverified` cases which can be treated
 /// differently by the results aggregator.
+#[derive(Debug)]
 pub enum AssertionVerifierResult {
     /// Verifier yielded a success result.
     ///
     /// Contains the original `Assertion`` and its extracted `Payload``.
-    Success { assertion: Box<dyn VerifiedAssertion> },
+    Success { verified_assertion: Box<dyn VerifiedAssertion> },
     /// Verifier returned a failure.
     ///
     /// Contains the original `Assertion` and the `VerificationError` detailing

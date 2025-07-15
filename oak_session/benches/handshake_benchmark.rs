@@ -39,7 +39,8 @@ fn process_kk_handshake() {
         },
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
@@ -57,7 +58,8 @@ fn process_kk_handshake() {
         false,
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
@@ -78,7 +80,8 @@ fn process_nk_handshake() {
         },
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
@@ -96,7 +99,8 @@ fn process_nk_handshake() {
         false,
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
@@ -116,7 +120,8 @@ fn process_nn_handshake() {
         },
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),
@@ -134,7 +139,8 @@ fn process_nn_handshake() {
         false,
         AttestationState {
             peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
-                attestation_results: BTreeMap::new(),
+                legacy_verification_results: BTreeMap::new(),
+                assertion_verification_results: BTreeMap::new(),
             },
             self_assertions: BTreeMap::new(),
             peer_session_binding_verifiers: BTreeMap::new(),

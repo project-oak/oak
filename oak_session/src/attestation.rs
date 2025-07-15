@@ -89,10 +89,11 @@ use alloc::{
     boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
+    sync::Arc,
     vec::Vec,
 };
 
-use anyhow::{anyhow, Error, Ok};
+use anyhow::{anyhow, Error};
 use itertools::{EitherOrBoth, Itertools};
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults},
@@ -101,9 +102,11 @@ use oak_proto_rust::oak::{
 use prost::Message;
 
 use crate::{
+    aggregators::AggregatedVerificationError,
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
     generator::BindableAssertion,
     session_binding::SessionBindingVerifier,
+    verifier::{AssertionVerifier, AssertionVerifierResult},
     ProtocolEngine,
 };
 
@@ -112,8 +115,8 @@ use crate::{
 /// This enum is marked `#[must_use]` to ensure that the `AttestationFailed`
 /// variant is explicitly handled, preventing accidental ignoring of attestation
 /// failures.
-#[derive(Debug)]
 #[must_use = "this `PeerAttestationVerdict` may be an `AttestationFailed` variant, which should be handled"]
+#[derive(Debug)]
 pub enum PeerAttestationVerdict {
     /// Indicates that the attestation process completed successfully.
     ///
@@ -121,28 +124,68 @@ pub enum PeerAttestationVerdict {
     /// was successfully verified. This map can be used by other parts of the
     /// session establishment process, for instance, to extract keys for session
     /// binding.
-    AttestationPassed { attestation_results: BTreeMap<String, VerifierResult> },
+    AttestationPassed {
+        legacy_verification_results: BTreeMap<String, VerifierResult>,
+        assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+    },
 
     /// Indicates that the attestation process failed.
     ///
     /// Provides a general `reason` for the failure and a map of
     /// `attestation_results` for specific attestation IDs for further details.
-    AttestationFailed { reason: String, attestation_results: BTreeMap<String, VerifierResult> },
+    AttestationFailed {
+        reason: String,
+        legacy_verification_results: BTreeMap<String, VerifierResult>,
+        assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+    },
 }
 
 impl PeerAttestationVerdict {
-    /// Retrieved the underlying individual attestation results from the
+    /// Retrieves the underlying individual attestation results from the
     /// attestation verdict. Results can be retrieved whether the overall
     /// attestation verdict is pass or fail.
-    pub fn get_attestation_results(&self) -> &BTreeMap<String, VerifierResult> {
+    pub fn get_legacy_verification_results(&self) -> &BTreeMap<String, VerifierResult> {
         match self {
-            PeerAttestationVerdict::AttestationPassed { attestation_results } => {
-                attestation_results
+            PeerAttestationVerdict::AttestationPassed { legacy_verification_results, .. } => {
+                legacy_verification_results
             }
-            PeerAttestationVerdict::AttestationFailed { attestation_results, .. } => {
-                attestation_results
+            PeerAttestationVerdict::AttestationFailed { legacy_verification_results, .. } => {
+                legacy_verification_results
             }
         }
+    }
+
+    /// Retrieves the underlying individual assertion verification results from
+    /// the attestation verdict. Results can be retrieved whether the
+    /// overall attestation verdict is pass or fail.
+    pub fn get_assertion_verification_results(&self) -> &BTreeMap<String, AssertionVerifierResult> {
+        match self {
+            PeerAttestationVerdict::AttestationPassed {
+                assertion_verification_results, ..
+            } => assertion_verification_results,
+            PeerAttestationVerdict::AttestationFailed {
+                assertion_verification_results, ..
+            } => assertion_verification_results,
+        }
+    }
+
+    /// Checks whether any evidence or assertions were provided by the peer that
+    /// would require session binding.
+    ///
+    /// This is true if any of the verification results are not in the `Missing`
+    /// state, which implies that some form of attestation was attempted.
+    pub fn needs_session_bindings(&self) -> bool {
+        self.get_assertion_verification_results().iter().any(|(_, v)| match v {
+            AssertionVerifierResult::Success { .. }
+            | AssertionVerifierResult::Failure { .. }
+            | AssertionVerifierResult::Unverified { .. } => true,
+            AssertionVerifierResult::Missing => false,
+        }) | self.get_legacy_verification_results().iter().any(|(_, v)| match v {
+            VerifierResult::Success { .. }
+            | VerifierResult::Failure { .. }
+            | VerifierResult::Unverified { .. } => true,
+            VerifierResult::Missing => false,
+        })
     }
 }
 
@@ -264,7 +307,7 @@ impl ClientAttestationHandler {
                         let endorsements = config
                             .self_endorsers
                             .get(id)
-                            .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                            .map(|endorser| endorser.endorse(Some(&evidence)))
                             .transpose()?;
                         let endorsed_evidence =
                             EndorsedEvidence { evidence: Some(evidence), endorsements };
@@ -292,8 +335,8 @@ impl AttestationHandler for ClientAttestationHandler {
     fn take_attestation_state(mut self) -> Result<AttestationState, Error> {
         let verdict =
             self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))?;
-        let attestation_results = verdict.get_attestation_results();
-        let peer_session_binding_verifiers = attestation_results.iter().filter_map(|(id, result)| {
+        let verification_results = verdict.get_legacy_verification_results();
+        let peer_session_binding_verifiers = verification_results.iter().filter_map(|(id, result)| {
                 match result {
                     // Session binding verifiers can only be created from successfully verified evidence.
                     VerifierResult::Success { result, .. } => {
@@ -358,13 +401,24 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
         }
-        self.attestation_result =
-            Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
-                combine_attestation_results(
-                    &self.config.peer_verifiers,
-                    incoming_message.endorsed_evidence,
-                )?,
-            ));
+        let legacy_results = combine_attestation_results(
+            &self.config.peer_verifiers,
+            incoming_message.endorsed_evidence,
+        )?;
+        let assertion_results = combine_assertion_results(
+            &self.config.peer_assertion_verifiers,
+            incoming_message.assertions,
+        );
+        self.attestation_result = Some(combine_legacy_and_assertion_aggregated_verification(
+            self.config
+                .legacy_attestation_results_aggregator
+                .process_assertion_results(&legacy_results),
+            self.config
+                .assertion_attestation_aggregator
+                .process_assertion_results(&assertion_results),
+            legacy_results,
+            assertion_results,
+        ));
         Ok(Some(()))
     }
 }
@@ -417,7 +471,7 @@ impl ServerAttestationHandler {
                         let endorsements = config
                             .self_endorsers
                             .get(id)
-                            .map(|endorser| Ok(endorser.endorse(Some(&evidence))?))
+                            .map(|endorser| endorser.endorse(Some(&evidence)))
                             .transpose()?;
                         let endorsed_evidence =
                             EndorsedEvidence { evidence: Some(evidence), endorsements };
@@ -445,8 +499,8 @@ impl AttestationHandler for ServerAttestationHandler {
     fn take_attestation_state(mut self) -> Result<AttestationState, Error> {
         let verdict =
             self.attestation_result.take().ok_or(anyhow!("attestation is not complete"))?;
-        let attestation_results = verdict.get_attestation_results();
-        let peer_session_binding_verifiers = attestation_results.iter().filter_map(|(id, result)| {
+        let verification_results = verdict.get_legacy_verification_results();
+        let peer_session_binding_verifiers = verification_results.iter().filter_map(|(id, result)| {
                 match result {
                     // Session binding verifiers can only be created from successfully verified evidence.
                     VerifierResult::Success { result, .. } => {
@@ -510,13 +564,24 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
         }
-        self.attestation_result =
-            Some(self.config.attestation_results_aggregator.aggregate_attestation_results(
-                combine_attestation_results(
-                    &self.config.peer_verifiers,
-                    incoming_message.endorsed_evidence,
-                )?,
-            ));
+        let legacy_results = combine_attestation_results(
+            &self.config.peer_verifiers,
+            incoming_message.endorsed_evidence,
+        )?;
+        let assertion_results = combine_assertion_results(
+            &self.config.peer_assertion_verifiers,
+            incoming_message.assertions,
+        );
+        self.attestation_result = Some(combine_legacy_and_assertion_aggregated_verification(
+            self.config
+                .legacy_attestation_results_aggregator
+                .process_assertion_results(&legacy_results),
+            self.config
+                .assertion_attestation_aggregator
+                .process_assertion_results(&assertion_results),
+            legacy_results,
+            assertion_results,
+        ));
         Ok(Some(()))
     }
 }
@@ -526,15 +591,11 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
 /// This function performs a merge-join between the set of verifiers (keyed by
 /// attestation ID) and the set of received endorsed evidence (also keyed by
 /// attestation ID). For each matching pair, it invokes the `verify` method of
-/// the `AttestationVerifier`.
+/// the `AttestationVerifier`. For unmatched verifiers or evidence it creates a
+/// `VerifierResult::Missing` or `VerifierResult::Unverified` result
+/// respectively.`
 ///
-/// It effectively filters the `attested_evidence` to only include entries for
-/// which a corresponding verifier is configured, and then collects their
-/// verification outcomes.
-///
-/// Returns a map of `AttestationResults` keyed by attestation ID for all
-/// successfully processed (though not necessarily successfully verified)
-/// evidence.
+/// Returns a map of `VerifierResult` keyed by attestation ID.
 fn combine_attestation_results(
     verifiers: &BTreeMap<String, PeerAttestationVerifier>,
     attested_evidence: BTreeMap<String, EndorsedEvidence>,
@@ -579,6 +640,87 @@ fn combine_attestation_results(
         .collect::<Result<BTreeMap<String, VerifierResult>, Error>>()
 }
 
+/// Combines received `assertions` with configured `assertion_verifiers`.
+///
+/// This function performs a merge-join between the set of verifiers (keyed by
+/// ID) and the set of received endorsed evidence (also keyed by
+/// ID). For each matching pair, it invokes the `verify` method of
+/// the `AsertionVerifier`. For unmatched verifiers or evidence it creates a
+/// `AssertionVerifierResult::Missing` or `AssertionVerifierResult::Unverified`
+/// result respectively.`
+///
+/// Returns a map of `AssertionVerifierResult` keyed by ID for all
+/// successfully processed (though not necessarily successfully verified)
+/// evidence.
+fn combine_assertion_results(
+    assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+    assertions: BTreeMap<String, Assertion>,
+) -> BTreeMap<String, AssertionVerifierResult> {
+    assertion_verifiers
+        .iter()
+        .merge_join_by(assertions, |(id1, _), (id2, _)| Ord::cmp(id1, &id2))
+        .map(|v| match v {
+            EitherOrBoth::Both((_, verifier), (id, assertion)) => {
+                match verifier.verify_assertion(&assertion) {
+                    Ok(verified_assertion) => {
+                        (id.clone(), AssertionVerifierResult::Success { verified_assertion })
+                    }
+                    Err(error) => {
+                        (id.clone(), AssertionVerifierResult::Failure { assertion, error })
+                    }
+                }
+            }
+            EitherOrBoth::Left((id, _)) => (id.clone(), AssertionVerifierResult::Missing),
+            EitherOrBoth::Right((id, assertion)) => {
+                (id.clone(), AssertionVerifierResult::Unverified { assertion })
+            }
+        })
+        .collect()
+}
+
+/// Combines the aggregated results of legacy and assertion-based verification
+/// into a single verdict.
+///
+/// If both legacy and assertion verification succeed, it returns
+/// `AttestationPassed`. If either fails, it returns `AttestationFailed` with a
+/// reason string detailing the failure(s). The detailed results for both are
+/// included in the verdict regardless of the outcome.
+fn combine_legacy_and_assertion_aggregated_verification(
+    legacy_result: Result<(), AggregatedVerificationError>,
+    assertion_result: Result<(), AggregatedVerificationError>,
+    legacy_verification_results: BTreeMap<String, VerifierResult>,
+    assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+) -> PeerAttestationVerdict {
+    match (legacy_result, assertion_result) {
+        (Ok(()), Ok(())) => PeerAttestationVerdict::AttestationPassed {
+            legacy_verification_results,
+            assertion_verification_results,
+        },
+        (Ok(()), Err(err)) => PeerAttestationVerdict::AttestationFailed {
+            reason: format!("Assertion verification failed: {err:#}"),
+            legacy_verification_results,
+            assertion_verification_results,
+        },
+        (Err(err), Ok(())) => PeerAttestationVerdict::AttestationFailed {
+            reason: format!("Legacy verification failed: {err:#}"),
+            legacy_verification_results,
+            assertion_verification_results,
+        },
+        (Err(legacy_err), Err(assertion_err)) => PeerAttestationVerdict::AttestationFailed {
+            reason: format!(
+                "Legacy verification failed: {legacy_err:#}. Assertion verification failed: {assertion_err:#}"
+            ),
+            legacy_verification_results,
+            assertion_verification_results,
+        },
+    }
+}
+
+/// Serializes a map of assertions into a deterministic byte vector.
+///
+/// The serialization format is `id:content|id:content|...`, where `id` is the
+/// assertion ID string, encoded as a protobuf message. This is used to create a
+/// stable input for the attestation binding token.
 fn serialize_assertions(assertions: BTreeMap<String, Assertion>) -> Vec<u8> {
     assertions
         .into_iter()

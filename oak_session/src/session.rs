@@ -83,7 +83,8 @@ use crate::{
         HandshakeHandlerBuilder, HandshakeState, ServerHandshakeHandler,
         ServerHandshakeHandlerBuilder,
     },
-    session_binding::SessionBindingVerifier,
+    session_binding::{create_session_binding_token, SessionBindingVerifier},
+    verifier::AssertionVerifierResult,
     ProtocolEngine,
 };
 
@@ -306,16 +307,8 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 // be bound to the session. Even if the evidence hasn't been verified the peer
                 // is expected (and required) to send the bindings for the evidence that it
                 // supplies.
-                let expect_peer_bindings = attestation_state
-                    .peer_attestation_verdict
-                    .get_attestation_results()
-                    .iter()
-                    .any(|(_, v)| match v {
-                        VerifierResult::Success { .. }
-                        | VerifierResult::Failure { .. }
-                        | VerifierResult::Unverified { .. } => true,
-                        VerifierResult::Missing => false,
-                    });
+                let expect_peer_bindings =
+                    attestation_state.peer_attestation_verdict.needs_session_bindings();
                 *self = Step::Handshake {
                     encryptor_provider,
                     attestation_publisher,
@@ -328,6 +321,12 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 verify_session_binding(
                     &attestation_state.peer_session_binding_verifiers,
                     &handshake_result.handshake_state.peer_session_bindings,
+                    handshake_result.handshake_state.handshake_binding_token.as_slice(),
+                )?;
+                verify_assertion_session_binding(
+                    attestation_state.peer_attestation_verdict.get_assertion_verification_results(),
+                    &handshake_result.handshake_state.peer_assertion_bindings,
+                    attestation_state.attestation_binding_token.as_slice(),
                     handshake_result.handshake_state.handshake_binding_token.as_slice(),
                 )?;
                 if let Some(publisher) = attestation_publisher {
@@ -796,15 +795,51 @@ fn verify_session_binding(
     bindings: &BTreeMap<String, SessionBinding>,
     handshake_binding_token: &[u8],
 ) -> Result<(), Error> {
-    for (verifier_id, binding_verifier) in binding_verifiers {
+    for (id, binding_verifier) in binding_verifiers {
         binding_verifier.verify_binding(
             handshake_binding_token,
             bindings
-                .get(verifier_id)
-                .ok_or(anyhow!("handshake message doesn't have a binding for ID {verifier_id}"))?
+                .get(id)
+                .ok_or(anyhow!("peer hasn't sent a session binding for ID {id}"))?
                 .binding
                 .as_slice(),
         )?;
+    }
+    Ok(())
+}
+
+/// Verifies the received session `assertion_bindings` against the provided
+/// `verified_assertions`.
+///
+/// For each `VerifiedAssertion` in `verified_assertions`, this function:
+/// 1. Retrieves the corresponding `SessionBinding` from the
+///    `assertion_bindings` map.
+/// 2. Calls `verify_binding` on the assertion with the session binding token
+///    derived from the handshake and all supplied and presented attestation
+///    evidence.
+///
+/// This ensures that for each attested identity, its purported binding to the
+/// current session and all the evidence exchanged during its initialization
+/// (via `attestation_binding_token` and `handshake_hash`) is cryptographically
+/// valid. An error is returned if any verification fails, or if
+/// providers/bindings are missing.
+fn verify_assertion_session_binding(
+    verified_assertions: &BTreeMap<String, AssertionVerifierResult>,
+    assertion_bindings: &BTreeMap<String, SessionBinding>,
+    attestation_binding_token: &[u8],
+    handshake_hash: &[u8],
+) -> Result<(), Error> {
+    let assertion_bound_data =
+        create_session_binding_token(attestation_binding_token, handshake_hash);
+    for (id, result) in verified_assertions {
+        if let AssertionVerifierResult::Success { verified_assertion: assertion } = result {
+            let binding = assertion_bindings
+                .get(id)
+                .ok_or(anyhow!("peer hasn't sent an assertion binding for ID {id}"))?;
+            assertion
+                .verify_binding(assertion_bound_data.as_slice(), binding)
+                .context("couldn't verify the assertion binding for ID {id}")?;
+        }
     }
     Ok(())
 }
@@ -817,7 +852,7 @@ impl AttestationEvidence {
         Self {
             evidence: attestation_state
                 .peer_attestation_verdict
-                .get_attestation_results()
+                .get_legacy_verification_results()
                 .iter()
                 .filter_map(|(id, verifier_result)| match verifier_result {
                     VerifierResult::Success { evidence, .. }

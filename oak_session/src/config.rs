@@ -48,7 +48,10 @@ use oak_crypto::{
 };
 
 use crate::{
-    aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
+    aggregators::{
+        AssertionResultsAggregator, DefaultLegacyVerifierResultsAggregator, Empty,
+        LegacyVerifierResultsAggregator,
+    },
     attestation::AttestationType,
     encryptors::OrderedChannelEncryptor,
     generator::AssertionGenerator,
@@ -584,8 +587,42 @@ impl SessionConfigBuilder {
         self
     }
 
+    /// Sets a custom [`LegacyVerifierResultsAggregator`] for combining legacy
+    /// attestation verification results.
+    ///
+    /// This allows overriding the default
+    /// [`DefaultLegacyVerifierResultsAggregator`].
+    pub fn set_legacy_attestation_results_aggregator(
+        mut self,
+        aggregator: Box<dyn LegacyVerifierResultsAggregator>,
+    ) -> Self {
+        self.config.attestation_handler_config.legacy_attestation_results_aggregator = aggregator;
+        self
+    }
+
+    /// Sets a custom [`AssertionResultsAggregator`] for combining assertion
+    /// verification results.
+    ///
+    /// This allows overriding the default [`Empty`] aggregator.
+    pub fn set_assertion_attestation_aggregator(
+        mut self,
+        aggregator: Box<dyn AssertionResultsAggregator>,
+    ) -> Self {
+        self.config.attestation_handler_config.assertion_attestation_aggregator = aggregator;
+        self
+    }
+
     /// Consumes the builder and returns the configured [`SessionConfig`].
     pub fn build(self) -> SessionConfig {
+        assert!(
+            self.config
+                .attestation_handler_config
+                .assertion_attestation_aggregator
+                .is_compatible_with_configuration(
+                    &self.config.attestation_handler_config.peer_assertion_verifiers
+                ),
+            "Assertion attestation aggregator is not compatible with the configured peer assertion verifiers",
+        );
         self.config
     }
 }
@@ -593,7 +630,12 @@ impl SessionConfigBuilder {
 /// A container for a peer's attestation verifier and a provider for a verifier
 /// for the session binding.
 pub struct PeerAttestationVerifier {
+    /// The [`AttestationVerifier`] used to verify the peer's
+    /// [`EndorsedEvidence`].
     pub verifier: Arc<dyn AttestationVerifier>,
+    /// A provider that creates a [`SessionBindingVerifier`] from the peer's
+    /// successfully verified attestation results. This is used to verify that
+    /// the peer has bound its attestation to the current session.
     pub binding_verifier_provider: Arc<dyn SessionBindingVerifierProvider>,
 }
 
@@ -622,15 +664,30 @@ pub struct AttestationHandlerConfig {
     /// A map of [`AssertionVerifier`]s (keyed by `assertion_id`) used to
     /// verify an [`Assertion`] received from the peer. Not yet used,
     pub peer_assertion_verifiers: BTreeMap<String, Arc<dyn AssertionVerifier>>,
-    /// Logic to combine multiple attestation verification results (if the peer
-    /// provides evidence from different attesters) into a single overall
-    /// [`AttestationVerdict`].
-    pub attestation_results_aggregator: Box<dyn VerifierResultsAggregator>,
+    /// Logic to combine multiple attestation verification results in the legacy
+    /// format (if the peer provides evidence from different attesters) into
+    /// a single overall [`AttestationVerdict`]. Both
+    /// `legacy_attestation_results_aggregator` and
+    /// `assertion_attestation_aggregator` must succeed for the attestation to
+    /// succeed.
+    pub legacy_attestation_results_aggregator: Box<dyn LegacyVerifierResultsAggregator>,
+    /// Logic to combine multiple assertion verification results (if the peer
+    /// provides multiple assertions) into a single overall
+    /// [`AttestationVerdict`]. Both `legacy_attestation_results_aggregator`
+    /// and `assertion_attestation_aggregator` must succeed for the
+    /// attestation to succeed.
+    pub assertion_attestation_aggregator: Box<dyn AssertionResultsAggregator>,
 }
 
-impl Default for alloc::boxed::Box<dyn VerifierResultsAggregator> {
+impl Default for alloc::boxed::Box<dyn LegacyVerifierResultsAggregator> {
     fn default() -> Self {
-        alloc::boxed::Box::new(DefaultVerifierResultsAggregator {})
+        alloc::boxed::Box::new(DefaultLegacyVerifierResultsAggregator {})
+    }
+}
+
+impl Default for alloc::boxed::Box<dyn AssertionResultsAggregator> {
+    fn default() -> Self {
+        alloc::boxed::Box::new(Empty {})
     }
 }
 
