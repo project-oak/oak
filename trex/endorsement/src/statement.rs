@@ -293,7 +293,7 @@ mod tests {
 
     use super::*;
 
-    const ENDORSEMENT_PATH: &str = "doremint/testdata/endorsement.json";
+    const ENDORSEMENT_PATH: &str = "trex/doremint/testdata/endorsement.json";
 
     // Minimum supported value for Timestamp: 0001-01-01 00:00:00.0 +00:00:00.
     const MIN_VALUE_SECONDS: i64 = -62_135_596_800;

@@ -6,8 +6,8 @@
 set +e
 
 # The path to the CLI, as seen from the test's runfiles directory.
-CLAIMS_FILE="./doremint/testdata/claims.toml"
-GOLDEN_FILE="./doremint/testdata/golden.json"
+CLAIMS_FILE="./trex/doremint/testdata/claims.toml"
+GOLDEN_FILE="./trex/doremint/testdata/golden.json"
 
 # If there's any failure, this will be set to 1.
 overall_status=0

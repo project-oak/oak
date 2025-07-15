@@ -17,7 +17,7 @@ use std::{fs, io::Write};
 use anyhow::{anyhow, Context};
 use chrono::{DateTime, Duration, FixedOffset};
 use clap::Parser;
-use doremint::statement::{DefaultStatement, DefaultStatementOptions, DigestSet, Subject};
+use endorsement::statement::{DefaultStatement, DefaultStatementOptions, DigestSet, Subject};
 use oci_spec::distribution::Reference;
 use serde::Deserialize;
 
