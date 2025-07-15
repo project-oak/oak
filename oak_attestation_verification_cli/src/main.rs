@@ -26,8 +26,7 @@ use oak_attestation_verification::policy::session_binding_public_key::{
     EndorsementReport, EventDeserializationReport, SessionBindingPublicKeyPolicy,
 };
 use oak_crypto::certificate::certificate_verifier::{
-    CertificateVerifier, PayloadDeserializationReport, SignatureReport, SubjectPublicKeyReport,
-    ValidityPeriodReport,
+    CertificateVerificationReport, CertificateVerifier,
 };
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::{
@@ -238,93 +237,29 @@ fn print_signature_based_attestation_report(
                     indent,
                     "✅ 📜 Certificate authority endorsement includes certificate"
                 );
-                match certificate_verification_report.signature {
-                    SignatureReport::Missing => {
-                        print_indented!(indent, "❌ 📜 Certificate is missing signature info")
+                match certificate_verification_report {
+                    Err(err) => {
+                        print_indented!(indent, "❌ 📜 Certificate verification failed: {}", err)
                     }
-                    SignatureReport::VerificationFailed(err) => {
-                        print_indented!(
-                            indent,
-                            "❌ 📜 Certificate signature verification failed: {}",
-                            err
-                        )
-                    }
-                    SignatureReport::VerificationSucceeded => {
-                        print_indented!(
-                            indent,
-                            "✅ 📜 Certificate signature verification succeeded"
-                        )
-                    }
-                }
-                match certificate_verification_report.serialized_payload {
-                    PayloadDeserializationReport::Failed(err) => print_indented!(
-                        indent,
-                        "❌ 📜 Certificate payload deserialization failed: {}",
-                        err
-                    ),
-                    PayloadDeserializationReport::Succeeded { subject_public_key, validity } => {
-                        print_indented!(
-                            indent,
-                            "✅ 📜 Certificate payload deserialization succeeded"
-                        );
-                        let indent = indent + 1;
-                        match subject_public_key {
-                            SubjectPublicKeyReport::Missing => print_indented!(
-                                indent,
-                                "❌ 📜 🔑 Certificate payload is missing subject public key info"
-                            ),
-                            SubjectPublicKeyReport::Present {
-                                public_key_match,
-                                purpose_id_match,
-                            } => {
-                                print_indented!(
-                                    indent,
-                                    "✅ 📜 🔑 Certificate payload includes subject public key info"
-                                );
-                                print_indented_conditional!(indent,
-                                                public_key_match,
-                                                ("✅ 📜 🔑 Certificate payload subject public key matches expected subject public key"),
-                                                ("❌ 📜 🔑 Certificate payload subject public key does not match expected subject public key")
-                                            );
-                                print_indented_conditional!(indent,
-                                                purpose_id_match,
-                                                ("✅ 📜 🔑 Certificate payload subject public key purpose matches expected subject public key purpose"),
-                                                ("❌ 📜 🔑 Certificate payload subject public key purpose does not match expected subject public key purpose")
-                                            );
+                    Ok(CertificateVerificationReport { validity, verification }) => {
+                        match validity {
+                            Err(err) => {
+                                print_indented!(indent, "❌ 📜 Certificate is invalid: {}", err)
+                            }
+                            Ok(()) => {
+                                print_indented!(indent, "✅ 📜 Certificate is valid")
                             }
                         }
-                        match validity {
-                            ValidityPeriodReport::Missing => {
-                                print_indented!(indent, "❌ Certificate is missing validity period")
+                        match verification {
+                            Err(err) => {
+                                print_indented!(
+                                    indent,
+                                    "❌ 📜 Certificate verification failed: {}",
+                                    err
+                                )
                             }
-                            ValidityPeriodReport::Present {
-                                validity_period_is_positive,
-                                validity_period_within_limit,
-                                validity_period_started_on_or_before_timestamp,
-                                validity_period_ended_at_or_after_timestamp,
-                            } => {
-                                print_indented_conditional!(
-                                    indent,
-                                    validity_period_is_positive,
-                                    ("✅ 📜 Certificate validity period is valid"),
-                                    ("❌ 📜 Certificate validity period is invalid")
-                                );
-                                print_indented_conditional!(
-                                    indent,
-                                    validity_period_within_limit,
-                                    ("✅ 📜 Certificate validity period is within limits"),
-                                    ("❌ 📜 Certificate validity period exceeds limits")
-                                );
-                                print_indented_conditional!(indent,
-                                                validity_period_started_on_or_before_timestamp,
-                                                ("✅ 📜 Certificate validity period begun at or before attestation timestamp"),
-                                                ("❌ 📜 Certificate validity period begun after attestation timestamp")
-                                            );
-                                print_indented_conditional!(indent,
-                                                validity_period_ended_at_or_after_timestamp,
-                                                ("✅ 📜 Certificate validity period ended at or after attestation timestamp"),
-                                                ("❌ 📜 Certificate validity period ended before attestation timestamp")
-                                            );
+                            Ok(()) => {
+                                print_indented!(indent, "✅ 📜 Certificate verification succeeded")
                             }
                         }
                     }

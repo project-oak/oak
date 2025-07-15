@@ -75,6 +75,7 @@ rust_library(
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:static_assertions",
+        "@oak_crates_index//:thiserror",
         "@oak_crates_index//:zeroize",
     ],
 )

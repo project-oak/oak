@@ -43,10 +43,7 @@ use oak_attestation_verification_types::{
     verifier::AttestationVerifier,
 };
 use oak_crypto::{
-    certificate::certificate_verifier::{
-        CertificateVerificationReport, CertificateVerifier, PayloadDeserializationReport,
-        SignatureReport, SubjectPublicKeyReport, ValidityPeriodReport,
-    },
+    certificate::certificate_verifier::{CertificateVerificationReport, CertificateVerifier},
     verifier::Verifier,
 };
 use oak_file_utils::data_path;
@@ -410,21 +407,10 @@ fn session_binding_key_policy_report_succeeds() {
         result,
         SessionBindingPublicKeyVerificationReport {
             event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
-                signature: SignatureReport::VerificationSucceeded,
-                serialized_payload: PayloadDeserializationReport::Succeeded {
-                    subject_public_key: SubjectPublicKeyReport::Present {
-                        public_key_match: true,
-                        purpose_id_match: true
-                    },
-                    validity: ValidityPeriodReport::Present {
-                        validity_period_is_positive: true,
-                        validity_period_within_limit: true,
-                        validity_period_started_on_or_before_timestamp: true,
-                        validity_period_ended_at_or_after_timestamp: true
-                    }
-                }
-            })
+            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+                validity: Ok(()),
+                verification: Ok(()),
+            }))
         }
     );
 }
@@ -522,21 +508,10 @@ fn session_binding_key_policy_report_fails_with_incorrect_public_key() {
         result,
         SessionBindingPublicKeyVerificationReport {
             event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
-                signature: SignatureReport::VerificationSucceeded,
-                serialized_payload: PayloadDeserializationReport::Succeeded {
-                    subject_public_key: SubjectPublicKeyReport::Present {
-                        public_key_match: false,
-                        purpose_id_match: true
-                    },
-                    validity: ValidityPeriodReport::Present {
-                        validity_period_is_positive: true,
-                        validity_period_within_limit: true,
-                        validity_period_started_on_or_before_timestamp: true,
-                        validity_period_ended_at_or_after_timestamp: true
-                    }
-                }
-            })
+            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+                validity: Ok(()),
+                verification: Err(_)
+            }))
         }
     );
 }
@@ -579,21 +554,10 @@ fn session_binding_key_policy_report_fails_with_invalid_signature() {
         result,
         SessionBindingPublicKeyVerificationReport {
             event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(CertificateVerificationReport {
-                signature: SignatureReport::VerificationFailed(_),
-                serialized_payload: PayloadDeserializationReport::Succeeded {
-                    subject_public_key: SubjectPublicKeyReport::Present {
-                        public_key_match: true,
-                        purpose_id_match: true
-                    },
-                    validity: ValidityPeriodReport::Present {
-                        validity_period_is_positive: true,
-                        validity_period_within_limit: true,
-                        validity_period_started_on_or_before_timestamp: true,
-                        validity_period_ended_at_or_after_timestamp: true
-                    }
-                }
-            })
+            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+                validity: Ok(()),
+                verification: Err(_)
+            }))
         }
     );
 }

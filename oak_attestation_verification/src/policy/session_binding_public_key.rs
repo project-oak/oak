@@ -19,7 +19,9 @@ use alloc::{collections::BTreeMap, string::ToString};
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_crypto::{
-    certificate::certificate_verifier::{CertificateVerificationReport, CertificateVerifier},
+    certificate::certificate_verifier::{
+        CertificateVerificationError, CertificateVerificationReport, CertificateVerifier,
+    },
     verifier::Verifier,
 };
 use oak_proto_rust::{
@@ -54,7 +56,7 @@ pub enum EndorsementReport {
     MissingCertificateAuthorityEndorsement,
     MissingCertificate,
     InvalidEvent,
-    Checked(CertificateVerificationReport),
+    Checked(Result<CertificateVerificationReport, CertificateVerificationError>),
 }
 
 pub struct SessionBindingPublicKeyPolicy<V: Verifier> {

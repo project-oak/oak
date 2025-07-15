@@ -16,6 +16,7 @@
 
 #![no_std]
 #![feature(assert_matches)]
+#![feature(try_blocks)]
 
 extern crate alloc;
 extern crate static_assertions;

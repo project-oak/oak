@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
+use alloc::{format, string::String};
 use core::time::Duration;
 
-use anyhow::{anyhow, Context};
 use oak_proto_rust::oak::crypto::v1::{
     Certificate, CertificatePayload, SubjectPublicKeyInfo, Validity,
 };
@@ -25,40 +25,42 @@ use prost::{DecodeError, Message};
 
 use crate::verifier::Verifier;
 
+#[derive(thiserror::Error, Debug)]
+pub enum CertificateVerificationError {
+    #[error("Missing field: {0}")]
+    MissingField(&'static str),
+    #[error("Failed to decode proto: {0}")]
+    ProtoDecodeError(DecodeError),
+    #[error("Signature verification failed: {0}")]
+    SignatureVerificationError(#[from] anyhow::Error),
+    #[error("Subject public key mismatch; expected {expected} but got {actual}")]
+    SubjectPublicKeyMismatch { expected: String, actual: String },
+    #[error("Purpose ID mismatch; expected {expected} but got {actual}")]
+    PurposeIdMismatch { expected: String, actual: String },
+    #[error("Invalid certificate validity period; {not_before:?} is not strictly earlier than {not_after:?}")]
+    ValidityPeriodInvalid { not_before: Instant, not_after: Instant },
+    #[error("Certificate validity period {period:?} exceeds the limit {limit:?}")]
+    ValidityPeriodTooLong { period: Duration, limit: Duration },
+    #[error("Certificate validity period begins at (skewed) {skewed_not_before:?}, after {current_time:?}")]
+    ValidityPeriodNotYetStarted { skewed_not_before: Instant, current_time: Instant },
+    #[error("Certificate validity period ends at (skewed) {skewed_not_after:?}, before {current_time:?}")]
+    ValidityPeriodExpired { skewed_not_after: Instant, current_time: Instant },
+    #[error("Unknown error: {0}")]
+    UnknownError(&'static str),
+}
+
+// Manual [From] implementation required because DecodeError is missing
+// required traits (to be able to use `#[from]`) in no-std environments.
+impl From<DecodeError> for CertificateVerificationError {
+    fn from(e: DecodeError) -> CertificateVerificationError {
+        CertificateVerificationError::ProtoDecodeError(e)
+    }
+}
+
 #[derive(Debug)]
 pub struct CertificateVerificationReport {
-    pub signature: SignatureReport,
-    pub serialized_payload: PayloadDeserializationReport,
-}
-
-#[derive(Debug)]
-pub enum SignatureReport {
-    Missing,
-    VerificationFailed(anyhow::Error),
-    VerificationSucceeded,
-}
-
-#[derive(Debug)]
-pub enum PayloadDeserializationReport {
-    Failed(DecodeError),
-    Succeeded { subject_public_key: SubjectPublicKeyReport, validity: ValidityPeriodReport },
-}
-
-#[derive(Debug)]
-pub enum SubjectPublicKeyReport {
-    Missing,
-    Present { public_key_match: bool, purpose_id_match: bool },
-}
-
-#[derive(Debug)]
-pub enum ValidityPeriodReport {
-    Missing,
-    Present {
-        validity_period_is_positive: bool,
-        validity_period_within_limit: bool,
-        validity_period_started_on_or_before_timestamp: bool,
-        validity_period_ended_at_or_after_timestamp: bool,
-    },
+    pub validity: Result<(), CertificateVerificationError>,
+    pub verification: Result<(), CertificateVerificationError>,
 }
 
 /// Struct that verifies the validity of the [`Certificate`] proto, which
@@ -76,15 +78,19 @@ pub struct CertificateVerifier<V: Verifier> {
     /// The default `None` value means that any certificate validity is
     /// accepted. If set, then the certificate verifier will only accept
     /// certificates with the validity duration less or equal than
-    /// `validity_limit`. This only checks the validity provided by the
+    /// `max_validity_duration`. This only checks the validity provided by the
     /// certificate itself, i.e. doesn't consider the `allowed_clock_skew`.
-    validity_limit: Option<Duration>,
+    max_validity_duration: Option<Duration>,
 }
 
 impl<V: Verifier> CertificateVerifier<V> {
     /// Creates a new instance of [`CertificateVerifier`].
     pub fn new(signature_verifier: V) -> Self {
-        Self { signature_verifier, allowed_clock_skew: Duration::default(), validity_limit: None }
+        Self {
+            signature_verifier,
+            allowed_clock_skew: Duration::default(),
+            max_validity_duration: None,
+        }
     }
 
     /// Sets acceptable time period before the certificate validity starts and
@@ -94,8 +100,15 @@ impl<V: Verifier> CertificateVerifier<V> {
     }
 
     /// Sets maximum accepted certificate validity duration.
-    pub fn set_validity_limit(&mut self, validity_limit: Duration) {
-        self.validity_limit = Some(validity_limit);
+    pub fn set_max_validity_duration(&mut self, max_validity_duration: Duration) {
+        self.max_validity_duration = Some(max_validity_duration);
+    }
+
+    /// Sets maximum accepted certificate validity duration.
+    // TODO: b/419209669 - remove this once callers are migrated to
+    // set_max_validity_duration().
+    pub fn set_validity_limit(&mut self, max_validity_duration: Duration) {
+        self.max_validity_duration = Some(max_validity_duration);
     }
 }
 
@@ -112,42 +125,17 @@ impl<V: Verifier> CertificateVerifier<V> {
         purpose_id: &[u8],
         milliseconds_since_epoch: i64,
         certificate: &Certificate,
-    ) -> anyhow::Result<()> {
-        // Verify that certificate payload is signed correctly.
-        let signature = certificate
-            .signature_info
-            .as_ref()
-            .context("empty signature_info field")?
-            .signature
-            .as_ref();
-        self.signature_verifier
-            .verify(&certificate.serialized_payload, signature)
-            .context("couldn't verify certificate signature")?;
-
-        // Deserialize certificate payload.
-        let payload = CertificatePayload::decode(certificate.serialized_payload.as_ref()).map_err(
-            |error| anyhow!("couldn't deserialize certificate payload proto: {:?}", error),
-        )?;
-
-        // Verify public key info.
-        let subject_public_key_info = payload
-            .subject_public_key_info
-            .as_ref()
-            .context("empty subject_public_key_info field")?;
-        self.verify_subject_public_key_info(
-            subject_public_key,
-            purpose_id,
-            subject_public_key_info,
-        )
-        .context("couldn't verify certificate payload")?;
-
-        // Verify certificate validity.
-        let current_time = Instant::from_unix_millis(milliseconds_since_epoch);
-        let validity = payload.validity.context("empty validity field")?;
-        self.verify_validity(current_time, &validity)
-            .context("couldn't verify certificate validity")?;
-
-        Ok(())
+    ) -> Result<(), CertificateVerificationError> {
+        match self.report(subject_public_key, purpose_id, milliseconds_since_epoch, certificate)? {
+            CertificateVerificationReport { validity: Ok(()), verification: Ok(()) } => Ok(()),
+            CertificateVerificationReport { validity, verification } => {
+                validity?;
+                verification?;
+                Err(CertificateVerificationError::UnknownError(
+                    "CertificateVerificationReport verification failed",
+                ))
+            }
+        }
     }
 
     pub fn report(
@@ -156,52 +144,37 @@ impl<V: Verifier> CertificateVerifier<V> {
         purpose_id: &[u8],
         milliseconds_since_epoch: i64,
         certificate: &Certificate,
-    ) -> CertificateVerificationReport {
-        // Verify that certificate payload is signed correctly.
-        let signature_report = match certificate.signature_info.as_ref() {
-            None => SignatureReport::Missing,
-            Some(signature_info) => match self
-                .signature_verifier
-                .verify(&certificate.serialized_payload, signature_info.signature.as_ref())
-            {
-                Ok(_) => SignatureReport::VerificationSucceeded,
-                Err(err) => SignatureReport::VerificationFailed(err),
+    ) -> Result<CertificateVerificationReport, CertificateVerificationError> {
+        let payload = CertificatePayload::decode(certificate.serialized_payload.as_ref())?;
+        let subject_public_key_info = payload.subject_public_key_info.as_ref().ok_or(
+            CertificateVerificationError::MissingField(
+                "CertificatePayload.subject_public_key_info",
+            ),
+        )?;
+        let validity = payload
+            .validity
+            .ok_or(CertificateVerificationError::MissingField("CertificatePayload.validity"))?;
+
+        Ok(CertificateVerificationReport {
+            validity: self
+                .verify_validity(Instant::from_unix_millis(milliseconds_since_epoch), &validity),
+            verification: try {
+                let signature = certificate
+                    .signature_info
+                    .as_ref()
+                    .ok_or(CertificateVerificationError::MissingField(
+                        "Certificate.signature_info",
+                    ))?
+                    .signature
+                    .as_ref();
+                self.signature_verifier.verify(&certificate.serialized_payload, signature)?;
+                self.verify_subject_public_key_info(
+                    subject_public_key,
+                    purpose_id,
+                    subject_public_key_info,
+                )?;
             },
-        };
-
-        // Deserialize certificate payload.
-        let payload_deserialization_report =
-            match CertificatePayload::decode(certificate.serialized_payload.as_ref()) {
-                Err(err) => PayloadDeserializationReport::Failed(err),
-                Ok(payload) => PayloadDeserializationReport::Succeeded {
-                    subject_public_key: match payload.subject_public_key_info.as_ref() {
-                        None => SubjectPublicKeyReport::Missing,
-                        Some(subject_public_key_info) => {
-                            let certificate_payload_subject_public_key =
-                                &subject_public_key_info.public_key;
-                            let certificate_payload_purpose_id =
-                                &subject_public_key_info.purpose_id;
-                            SubjectPublicKeyReport::Present {
-                                public_key_match: certificate_payload_subject_public_key
-                                    == subject_public_key,
-                                purpose_id_match: certificate_payload_purpose_id == purpose_id,
-                            }
-                        }
-                    },
-                    validity: match payload.validity {
-                        None => ValidityPeriodReport::Missing,
-                        Some(validity) => self.report_validity(
-                            Instant::from_unix_millis(milliseconds_since_epoch),
-                            &validity,
-                        ),
-                    },
-                },
-            };
-
-        CertificateVerificationReport {
-            signature: signature_report,
-            serialized_payload: payload_deserialization_report,
-        }
+        })
     }
 
     fn verify_subject_public_key_info(
@@ -209,17 +182,21 @@ impl<V: Verifier> CertificateVerifier<V> {
         expected_subject_public_key: &[u8],
         expected_purpose_id: &[u8],
         subject_public_key_info: &SubjectPublicKeyInfo,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), CertificateVerificationError> {
         let subject_public_key = &subject_public_key_info.public_key;
         let purpose_id = &subject_public_key_info.purpose_id;
-        anyhow::ensure!(
-            subject_public_key == expected_subject_public_key,
-            "unexpected subject public key {subject_public_key:?}, expected {expected_subject_public_key:?}",
-        );
-        anyhow::ensure!(
-            purpose_id == expected_purpose_id,
-            "unexpected purpose ID {purpose_id:?}, expected {expected_purpose_id:?}",
-        );
+        if subject_public_key != expected_subject_public_key {
+            return Err(CertificateVerificationError::SubjectPublicKeyMismatch {
+                expected: format!("{expected_subject_public_key:?}"),
+                actual: format!("{subject_public_key:?}"),
+            });
+        }
+        if purpose_id != expected_purpose_id {
+            return Err(CertificateVerificationError::PurposeIdMismatch {
+                expected: format!("{expected_purpose_id:?}"),
+                actual: format!("{purpose_id:?}"),
+            });
+        }
         Ok(())
     }
 
@@ -233,73 +210,58 @@ impl<V: Verifier> CertificateVerifier<V> {
     /// the [`Validity::not_before`] and added to the [`Validity::not_after`]
     /// before verification to account for devices with skewed clocks.
     // TODO: b/429956843 - consolidate Validity verification.
-    fn verify_validity(&self, current_time: Instant, validity: &Validity) -> anyhow::Result<()> {
-        let not_before: Instant =
-            validity.not_before.as_ref().context("Validity.not_before field is empty")?.into();
-        let not_after: Instant =
-            validity.not_after.as_ref().context("Validity.not_after field is empty")?.into();
+    fn verify_validity(
+        &self,
+        current_time: Instant,
+        validity: &Validity,
+    ) -> Result<(), CertificateVerificationError> {
+        let not_before: Instant = validity
+            .not_before
+            .as_ref()
+            .ok_or(CertificateVerificationError::MissingField("Validity.not_before"))?
+            .into();
+        let not_after: Instant = validity
+            .not_after
+            .as_ref()
+            .ok_or(CertificateVerificationError::MissingField("Validity.not_after"))?
+            .into();
 
-        anyhow::ensure!(
-            not_before < not_after,
-            "not_before timestamp ({:?}) is not strictly earlier than not_after timestamp ({:?})",
-            not_before,
-            not_after,
-        );
+        if not_before >= not_after {
+            return Err(CertificateVerificationError::ValidityPeriodInvalid {
+                not_before,
+                not_after,
+            });
+        }
 
         // Discard certificates with validity duration longer than
-        // [`CertificateVerifier::validity_limit`], if this value is not `None`.
-        if let Some(validity_limit) = self.validity_limit {
+        // [`CertificateVerifier::max_validity_duration`], if this value is not `None`.
+        if let Some(max_validity_duration) = self.max_validity_duration {
             let validity_duration = not_after - not_before;
-            anyhow::ensure!(
-                validity_duration <= validity_limit,
-                "certificate validity duration ({:?}) exceeds the maximum allowed validity duration ({:?})",
-                validity_duration, self.validity_limit,
-            )
+            if validity_duration > max_validity_duration {
+                return Err(CertificateVerificationError::ValidityPeriodTooLong {
+                    period: validity_duration,
+                    limit: max_validity_duration,
+                });
+            }
         }
 
         // Account for skewed clock if [`CertificateVerifier::allowed_clock_skew`] is
         // non-zero.
         let skewed_not_before = not_before - self.allowed_clock_skew;
         let skewed_not_after = not_after + self.allowed_clock_skew;
-
-        anyhow::ensure!(
-            current_time >= skewed_not_before,
-            "certificate validity period ({:?}) hasn't started yet (current time is {:?})",
-            skewed_not_before,
-            current_time,
-        );
-        anyhow::ensure!(
-            current_time <= skewed_not_after,
-            "certificate expired ({:?}) (current time is {:?})",
-            skewed_not_after,
-            current_time,
-        );
+        if current_time < skewed_not_before {
+            return Err(CertificateVerificationError::ValidityPeriodNotYetStarted {
+                skewed_not_before,
+                current_time,
+            });
+        }
+        if current_time > skewed_not_after {
+            return Err(CertificateVerificationError::ValidityPeriodExpired {
+                skewed_not_after,
+                current_time,
+            });
+        }
 
         Ok(())
-    }
-
-    // TODO: b/429956843 - consolidate Validity verification.
-    fn report_validity(&self, current_time: Instant, validity: &Validity) -> ValidityPeriodReport {
-        let not_before: Instant = match validity.not_before.as_ref() {
-            None => return ValidityPeriodReport::Missing,
-            Some(not_before) => not_before.into(),
-        };
-        let not_after: Instant = match validity.not_after.as_ref() {
-            None => return ValidityPeriodReport::Missing,
-            Some(not_after) => not_after.into(),
-        };
-        let skewed_not_before = not_before - self.allowed_clock_skew;
-        let skewed_not_after = not_after + self.allowed_clock_skew;
-        ValidityPeriodReport::Present {
-            validity_period_is_positive: not_before < not_after,
-            validity_period_within_limit: if let Some(validity_limit) = self.validity_limit {
-                let validity_duration = not_after - not_before;
-                validity_duration <= validity_limit
-            } else {
-                true
-            },
-            validity_period_started_on_or_before_timestamp: current_time >= skewed_not_before,
-            validity_period_ended_at_or_after_timestamp: current_time <= skewed_not_after,
-        }
     }
 }
