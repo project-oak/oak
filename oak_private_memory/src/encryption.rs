@@ -13,24 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aes_gcm::{
+use aes_gcm_siv::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
-    Aes256Gcm, Key,
+    Aes256GcmSiv, Key, Nonce,
 };
 use anyhow::{anyhow, Error};
 
 pub fn generate_nonce() -> Vec<u8> {
-    Aes256Gcm::generate_nonce(&mut OsRng).to_vec()
+    Aes256GcmSiv::generate_nonce(&mut OsRng).to_vec()
 }
 
 pub fn encrypt(key: &[u8], nonce: &[u8], message: &[u8]) -> Result<Vec<u8>, Error> {
-    let key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(key);
-    cipher.encrypt(nonce.into(), message).map_err(|x| anyhow!("{}", x))
+    let key = Key::<Aes256GcmSiv>::from_slice(key);
+    let cipher = Aes256GcmSiv::new(key);
+    cipher.encrypt(Nonce::from_slice(nonce), message).map_err(|x| anyhow!("{}", x))
 }
 
 pub fn decrypt(key: &[u8], nonce: &[u8], message: &[u8]) -> Result<Vec<u8>, Error> {
-    let key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(key);
-    cipher.decrypt(nonce.into(), message).map_err(|x| anyhow!("{}", x))
+    let key = Key::<Aes256GcmSiv>::from_slice(key);
+    let cipher = Aes256GcmSiv::new(key);
+    cipher.decrypt(Nonce::from_slice(nonce), message).map_err(|x| anyhow!("{}", x))
 }

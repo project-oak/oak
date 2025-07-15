@@ -79,7 +79,7 @@ rust_library(
         "@oak//oak_crypto",
         "@oak//oak_proto_rust",
         "@oak//oak_session",
-        "@oak_crates_index//:aes-gcm",
+        "@oak_crates_index//:aes-gcm-siv",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:async-stream",
         "@oak_crates_index//:env_logger",

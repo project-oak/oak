@@ -1,5 +1,5 @@
 {
-  "checksum": "a38338f127a5100769222d78188453421b1bf83abe9ebb7f6b69e00716e82cd1",
+  "checksum": "901e4e0531e05f860e67343ea117d2506d10cd9853707f5bde5a7e59b574146b",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -345,6 +345,87 @@
         "version": "0.10.3"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "aes-gcm-siv 0.11.1": {
+      "name": "aes-gcm-siv",
+      "version": "0.11.1",
+      "package_url": "https://github.com/RustCrypto/AEADs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/aes-gcm-siv/0.11.1/download",
+          "sha256": "ae0784134ba9375416d469ec31e7c5f9fa94405049cf08c5ce5b4698be673e0d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "aes_gcm_siv",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "aes_gcm_siv",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "aes",
+            "alloc",
+            "default",
+            "getrandom"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "aead 0.5.2",
+              "target": "aead"
+            },
+            {
+              "id": "aes 0.8.4",
+              "target": "aes"
+            },
+            {
+              "id": "cipher 0.4.4",
+              "target": "cipher"
+            },
+            {
+              "id": "ctr 0.9.2",
+              "target": "ctr"
+            },
+            {
+              "id": "polyval 0.6.2",
+              "target": "polyval"
+            },
+            {
+              "id": "subtle 2.6.1",
+              "target": "subtle"
+            },
+            {
+              "id": "zeroize 1.8.1",
+              "target": "zeroize"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.11.1"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -7287,6 +7368,10 @@
             {
               "id": "aes-gcm 0.10.3",
               "target": "aes_gcm"
+            },
+            {
+              "id": "aes-gcm-siv 0.11.1",
+              "target": "aes_gcm_siv"
             },
             {
               "id": "aml 0.16.4",
@@ -40893,6 +40978,7 @@
     "acpi 5.2.0",
     "aead 0.5.2",
     "aes-gcm 0.10.3",
+    "aes-gcm-siv 0.11.1",
     "aml 0.16.4",
     "anyhow 1.0.98",
     "arrayvec 0.7.6",

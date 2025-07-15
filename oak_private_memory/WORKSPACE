@@ -94,6 +94,7 @@ load("@rules_rust//crate_universe:defs.bzl", "crate")
 
 create_oak_crate_repositories(
     extra_packages = {
+        "aes-gcm-siv": crate.spec(version = "0.11.1"),
         "codespan-reporting": crate.spec(version = "0.12.0"),
         "cxx": crate.spec(version = "1.0.157"),
         "cxx-build": crate.spec(version = "1.0.157"),
