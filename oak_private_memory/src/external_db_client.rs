@@ -88,13 +88,8 @@ impl DataBlobHandler for ExternalDbClient {
         if elapsed_time == 0 {
             elapsed_time = 1;
         }
-        let mut speed = blob_size / 1024 / elapsed_time;
-        if speed == 0 {
-            speed = 1;
-        }
-        crate::metrics::get_global_metrics()
-            .rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+        let speed = blob_size / 1024 / elapsed_time;
+        crate::metrics::get_global_metrics().record_db_save_speed(speed);
         bail!("Failed to write data blob");
     }
 
@@ -131,14 +126,8 @@ impl DataBlobHandler for ExternalDbClient {
                     if elapsed_time == 0 {
                         elapsed_time = 1;
                     }
-                    let mut speed = blob_size / 1024 / elapsed_time;
-                    if speed == 0 {
-                        speed = 1;
-                    }
-                    crate::metrics::get_global_metrics().rpc_latency.record(
-                        speed,
-                        &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")],
-                    );
+                    let speed = blob_size / 1024 / elapsed_time;
+                    crate::metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(data_blob);
                 }
             }

@@ -17,8 +17,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::{bail, Context};
 use async_trait::async_trait;
-use opentelemetry::KeyValue;
-use prost::{Message, Name};
+use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -36,6 +35,7 @@ use crate::{
     encryption::{decrypt, encrypt, generate_nonce},
     log::{debug, info},
     metrics,
+    metrics::RequestMetricName,
 };
 
 #[async_trait]
@@ -733,10 +733,6 @@ impl_packing!(Response => SearchMemoryResponse);
 impl_packing!(Response => DeleteMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
 
-fn get_name<T: Name>(_x: &T) -> String {
-    T::NAME.to_string()
-}
-
 impl SealedMemorySessionHandler {
     /// This implementation is quite simple, since there's just a single request
     /// that is a string. In a real implementation, we'd probably
@@ -753,19 +749,8 @@ impl SealedMemorySessionHandler {
             let request_id = request.request_id;
             let request_variant = request.request.context("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
 
-            let metric_request_type_name = match &request_variant {
-                sealed_memory_request::Request::UserRegistrationRequest(r) => get_name(r),
-                sealed_memory_request::Request::KeySyncRequest(r) => get_name(r),
-                sealed_memory_request::Request::AddMemoryRequest(r) => get_name(r),
-                sealed_memory_request::Request::GetMemoriesRequest(r) => get_name(r),
-                sealed_memory_request::Request::ResetMemoryRequest(r) => get_name(r),
-                sealed_memory_request::Request::GetMemoryByIdRequest(r) => get_name(r),
-                sealed_memory_request::Request::SearchMemoryRequest(r) => get_name(r),
-                sealed_memory_request::Request::DeleteMemoryRequest(r) => get_name(r),
-            };
-            self.metrics
-                .rpc_count
-                .add(1, &[KeyValue::new("request_type", metric_request_type_name.clone())]);
+            let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
+            self.metrics.inc_requests(metric_name.clone());
 
             let start_time = Instant::now();
             let mut response = match request_variant {
@@ -799,17 +784,8 @@ impl SealedMemorySessionHandler {
                     self.delete_memory_handler(request).await?.into_response()
                 }
             };
-            let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-            // Round up as 1ms.
-            if elapsed_time == 0 {
-                elapsed_time = 1;
-            }
-            self.metrics
-                .rpc_latency
-                .record(elapsed_time, &[KeyValue::new("request_type", metric_request_type_name)]);
-            self.metrics
-                .rpc_latency
-                .record(elapsed_time, &[KeyValue::new("request_type", "total")]);
+            let elapsed_time = start_time.elapsed().as_millis() as u64;
+            self.metrics.record_latency(elapsed_time, metric_name);
             response.request_id = request_id;
             response
         };

@@ -14,23 +14,44 @@
 // limitations under the License.
 //
 
+//! This file contains all of the logic for calculating an recording metrics
+/// in the Private Memory server application.
+///
+/// When adding new metrics, try to create clear, easy-to-use API additions, so
+/// that the usage site needs just a line or two of code to correctly record the
+/// metrics.
 use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
     metrics::{Counter, Histogram},
-    KeyValue,
+    KeyValue, Value,
 };
+use prost::Name;
+use sealed_memory_rust_proto::prelude::v1::*;
 
 pub struct Metrics {
     // Total number of RPCs received by the private memory server.
-    pub rpc_count: Counter<u64>,
+    rpc_count: Counter<u64>,
     // Number of RPCs that failed.
-    pub rpc_failure_count: Counter<u64>,
+    rpc_failure_count: Counter<u64>,
     // Latency of each RPC.
-    pub rpc_latency: Histogram<u64>,
+    rpc_latency: Histogram<u64>,
 }
+
+/// The possible metrics request types.
+/// This enum is private, it's wrapped by the public [`RequestMetricName`] type
+/// which exposes constructors for creating types in a specific way.
+#[derive(Clone, Debug)]
+enum RequestMetricNameInner {
+    SealedMemoryRequest(String),
+    Handshake,
+    Total,
+}
+
+#[derive(Clone, Debug)]
+pub struct RequestMetricName(RequestMetricNameInner);
 
 impl Metrics {
     pub fn new(observer: &mut OakObserver) -> Self {
@@ -62,6 +83,50 @@ impl Metrics {
         observer.register_metric(rpc_latency.clone());
         Self { rpc_count, rpc_failure_count, rpc_latency }
     }
+
+    /// Increment the number of requests received of the given type.
+    /// This should be called unconditionally for the given metric name, whether
+    /// the request fails or not.
+    ///
+    /// The special [`RequestMetricName::Total`] should be incremented in
+    /// addition to the specific request type.
+    pub fn inc_requests(&self, name: RequestMetricName) {
+        self.rpc_count.add(1, &[KeyValue::new("request_type", name)]);
+    }
+
+    /// Record a failure for the given request metric name.
+    pub fn inc_failures(&self, name: RequestMetricName) {
+        self.rpc_failure_count.add(1, &[KeyValue::new("request_type", name)]);
+    }
+
+    /// Record a latency value for the given request.
+    /// Calling this function will automatically record  latency for the "total"
+    /// requests group as well.
+    pub fn record_latency(&self, elapsed_time_ms: u64, name: RequestMetricName) {
+        // Round up as 1ms.
+        let elapsed_time_ms = std::cmp::max(1, elapsed_time_ms);
+
+        self.rpc_latency.record(elapsed_time_ms, &[KeyValue::new("request_type", name)]);
+        self.rpc_latency.record(elapsed_time_ms, &[KeyValue::new("request_type", "total")]);
+    }
+
+    /// Record the time it took to save the DB.
+    pub fn record_db_save_speed(&self, speed: u64) {
+        // Round up as 1ms.
+        let speed = std::cmp::max(1, speed);
+
+        self.rpc_latency
+            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+    }
+
+    /// Record the time it took to load the DB.
+    pub fn record_db_load_speed(&self, speed: u64) {
+        // Round up as 1ms.
+        let speed = std::cmp::max(1, speed);
+
+        self.rpc_latency
+            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+    }
 }
 
 fn create_metrics() -> (OakObserver, Arc<Metrics>) {
@@ -78,4 +143,43 @@ lazy_static! {
 
 pub fn get_global_metrics() -> Arc<Metrics> {
     GLOBAL_METRICS.1.clone()
+}
+
+fn get_name<T: Name>(_x: &T) -> String {
+    T::NAME.to_string()
+}
+
+impl From<RequestMetricName> for Value {
+    fn from(name: RequestMetricName) -> Value {
+        match name.0 {
+            RequestMetricNameInner::SealedMemoryRequest(variant) => variant.into(),
+            RequestMetricNameInner::Handshake => "Handshake".into(),
+            RequestMetricNameInner::Total => "total".into(),
+        }
+    }
+}
+
+impl RequestMetricName {
+    pub fn total() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::Total)
+    }
+
+    pub fn handshake() -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::Handshake)
+    }
+
+    pub fn new_sealed_memory_request(
+        variant: &sealed_memory_request::Request,
+    ) -> RequestMetricName {
+        RequestMetricName(RequestMetricNameInner::SealedMemoryRequest(match variant {
+            sealed_memory_request::Request::UserRegistrationRequest(r) => get_name(r),
+            sealed_memory_request::Request::KeySyncRequest(r) => get_name(r),
+            sealed_memory_request::Request::AddMemoryRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetMemoriesRequest(r) => get_name(r),
+            sealed_memory_request::Request::ResetMemoryRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetMemoryByIdRequest(r) => get_name(r),
+            sealed_memory_request::Request::SearchMemoryRequest(r) => get_name(r),
+            sealed_memory_request::Request::DeleteMemoryRequest(r) => get_name(r),
+        }))
+    }
 }

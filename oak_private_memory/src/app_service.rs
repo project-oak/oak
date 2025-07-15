@@ -24,7 +24,6 @@ use oak_session::{
     handshake::HandshakeType,
     ServerSession, Session,
 };
-use opentelemetry::KeyValue;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
@@ -37,6 +36,7 @@ use crate::{
     app_config::ApplicationConfig,
     log::debug,
     metrics,
+    metrics::RequestMetricName,
 };
 
 // The struct that holds the service implementation.
@@ -98,7 +98,7 @@ impl OakSessionHandler {
         &mut self,
         request: tonic::Result<SealedMemorySessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
-        self.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
+        self.metrics.inc_requests(RequestMetricName::total());
         let session_request = request?
             .session_request
             .ok_or_else(|| tonic::Status::internal("failed to get session request"))?;
@@ -109,7 +109,7 @@ impl OakSessionHandler {
         &mut self,
         session_request: tonic::Result<SessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
-        self.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "total")]);
+        self.metrics.inc_requests(RequestMetricName::total());
         self.handle_session_request(session_request?).await
     }
 
@@ -128,7 +128,7 @@ impl OakSessionHandler {
         &mut self,
         session_request: SessionRequest,
     ) -> tonic::Result<Option<SessionResponse>> {
-        self.metrics.rpc_count.add(1, &[KeyValue::new("request_type", "Handshake")]);
+        self.metrics.inc_requests(RequestMetricName::handshake());
         self.server_session
             .handle_init_message(session_request)
             .into_tonic_result("failed to handle init request")?;
@@ -142,9 +142,7 @@ impl OakSessionHandler {
             {
                 Ok(r) => Ok(Some(r)),
                 Err(e) => {
-                    self.metrics
-                        .rpc_failure_count
-                        .add(1, &[KeyValue::new("request_type", "Handshake")]);
+                    self.metrics.inc_failures(RequestMetricName::handshake());
                     Err(e)
                 }
             }
@@ -164,7 +162,7 @@ impl OakSessionHandler {
 
         match self.application_handler.handle(&decrypted_request).await {
             Err(e) => {
-                self.metrics.rpc_failure_count.add(1, &[KeyValue::new("request_type", "total")]);
+                self.metrics.inc_failures(RequestMetricName::total());
                 Err(e).into_tonic_result("failed to handle message")
             }
             Ok(plaintext_response) => Ok(Some(
