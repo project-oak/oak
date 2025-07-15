@@ -28,6 +28,7 @@ rust_library(
         "prost",
     ],
     deps = [
+        "@oak_crates_index//:chrono",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:time",
     ],

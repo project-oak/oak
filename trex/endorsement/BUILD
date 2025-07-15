@@ -23,7 +23,7 @@ rust_library(
     name = "endorsement",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "//oak_proto_rust",
+        "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:chrono",
         "@oak_crates_index//:prost-types",
@@ -36,8 +36,7 @@ rust_test(
     name = "unit_tests",
     crate = ":endorsement",
     data = [
-        "//trex/doremint/testdata:claims.toml",
-        "//trex/doremint/testdata:endorsement.json",
+        "//trex/endorsement/testdata:endorsement.json",
     ],
     deps = [
         "//oak_file_utils",

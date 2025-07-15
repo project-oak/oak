@@ -112,6 +112,15 @@ impl Instant {
     /// (`i64` and `i32`).
     #[cfg(feature = "prost")]
     pub fn into_timestamp(self) -> prost_types::Timestamp {
+        let (seconds, nanos) = self.into_second_nanos();
+        prost_types::Timestamp { seconds, nanos }
+    }
+
+    fn from_seconds_nanos(seconds: i64, nanos: i32) -> Self {
+        Instant { nanoseconds: SECONDS_TO_NANOS * seconds as i128 + nanos as i128 }
+    }
+
+    fn into_second_nanos(self) -> (i64, i32) {
         let mut seconds = i64::try_from(self.nanoseconds / SECONDS_TO_NANOS)
             .expect("failed to convert i128 to i64");
         let mut nanos = i32::try_from(self.nanoseconds % SECONDS_TO_NANOS)
@@ -122,7 +131,25 @@ impl Instant {
             nanos += 1_000_000_000;
             seconds -= 1;
         }
-        prost_types::Timestamp { seconds, nanos }
+        (seconds, nanos)
+    }
+}
+
+/// Convert an instant into a DateTime in UTC
+impl From<Instant> for chrono::DateTime<chrono::Utc> {
+    fn from(value: Instant) -> Self {
+        let (seconds, nanos) = value.into_second_nanos();
+        // It's OK to convert nanos to u32 because nanos will always be >= 0.
+        chrono::DateTime::from_timestamp(seconds, nanos as u32).expect("out of range instant")
+    }
+}
+
+/// Convert a DateTime in UTC into an Instant
+impl From<chrono::DateTime<chrono::Utc>> for Instant {
+    fn from(value: chrono::DateTime<chrono::Utc>) -> Self {
+        let seconds = value.timestamp();
+        let nanos = value.timestamp_subsec_nanos();
+        Self::from_seconds_nanos(seconds, nanos as i32)
     }
 }
 
@@ -471,5 +498,21 @@ mod tests {
             Instant::from(datetime!(2024-12-31 22:00:00 -02:00)),
             eq(Instant::from_unix_millis(1735689600000))
         );
+    }
+
+    #[googletest::test]
+    fn test_instant_into_chrono_datetime() {
+        let instant = Instant::from_unix_millis(1735689600123);
+        let datetime: chrono::DateTime<chrono::Utc> = instant.into();
+        assert_that!(datetime.to_rfc3339(), eq("2025-01-01T00:00:00.123+00:00"));
+    }
+
+    #[googletest::test]
+    fn test_instant_from_chrono_datetime() {
+        let datetime = chrono::DateTime::parse_from_rfc3339("2025-01-01T00:00:00.123+00:00")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let instant: Instant = datetime.into();
+        assert_that!(instant, eq(Instant::from_unix_millis(1735689600123)));
     }
 }

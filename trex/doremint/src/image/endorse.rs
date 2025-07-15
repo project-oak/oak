@@ -17,7 +17,7 @@ use std::{fs, io::Write};
 use anyhow::{anyhow, Context};
 use chrono::{DateTime, Duration, FixedOffset};
 use clap::Parser;
-use endorsement::statement::{DefaultStatement, DefaultStatementOptions, DigestSet, Subject};
+use endorsement::intoto::{DigestSet, EndorsementOptions, EndorsementStatement, Subject, Validity};
 use oci_spec::distribution::Reference;
 use serde::Deserialize;
 
@@ -62,11 +62,14 @@ impl EndorseArgs {
             digest: DigestSet::from([(alg.to_string(), val.to_string())]),
         };
 
-        let statement = DefaultStatement::new(
+        let statement = EndorsementStatement::new(
             subject,
-            DefaultStatementOptions {
+            EndorsementOptions {
                 issued_on: self.issued_on,
-                validity: self.valid_for,
+                validity: Validity {
+                    not_before: self.issued_on,
+                    not_after: self.issued_on + self.valid_for,
+                },
                 claims: claims.claims,
             },
         );

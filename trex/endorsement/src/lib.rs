@@ -14,4 +14,7 @@
 
 #![no_std]
 
-pub mod statement;
+pub mod intoto;
+
+#[cfg(test)]
+extern crate std;
