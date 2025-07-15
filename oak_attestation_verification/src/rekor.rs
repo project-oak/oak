@@ -22,10 +22,10 @@ use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
+use oak_time::Instant;
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
-use time::OffsetDateTime;
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa, verify_timestamp};
 
@@ -40,6 +40,8 @@ pub struct LogEntry {
     #[serde(rename = "body")]
     pub body: String,
 
+    // The timestamp when this entry was added to the log. In seconds since
+    // Unix Epoch UTC.
     #[serde(rename = "integratedTime")]
     pub integrated_time: usize,
 
@@ -49,7 +51,7 @@ pub struct LogEntry {
     #[serde(rename = "logID")]
     pub log_id: String,
 
-    /// Minimum: 0
+    /// The serial number in the index; starts counting from zero.
     #[serde(rename = "logIndex")]
     pub log_index: u64,
 
@@ -91,7 +93,10 @@ pub struct Data {
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct Hash {
+    /// The algorithm used for this hash. Example: `sha256`.
     pub algorithm: String,
+
+    /// The hex-encoded value of the hash specified via the `algorithm` field.
     pub value: String,
 }
 
@@ -100,9 +105,13 @@ pub struct Hash {
 #[derive(Debug, Deserialize, PartialEq)]
 #[cfg_attr(feature = "std", derive(Serialize))]
 pub struct GenericSignature {
-    /// Base64 content that is signed.
+    /// Base64-encoded content that is signed.
     pub content: String,
+
+    /// The format of the signature. Example: `x509`.
     pub format: String,
+
+    /// The public key to verify the signature.
     #[serde(rename = "publicKey")]
     pub public_key: PublicKey,
 }
@@ -144,8 +153,9 @@ pub fn verify_rekor_log_entry(
     // If the TimestampReferenceValues field is set, we need to validate the time
     // the Rekor log was integrated.
     if let Some(signed_timestamp) = &rekor_key_set.signed_timestamp {
-        let integrated_timestamp = parse_rekor_log_entry_integrated_time(&log_entry)?;
-        verify_timestamp(now_utc_millis, &integrated_timestamp, signed_timestamp)
+        let current_time = Instant::from_unix_millis(now_utc_millis);
+        let timestamp = Instant::from_unix_seconds(log_entry.integrated_time.try_into()?);
+        verify_timestamp(current_time, timestamp, signed_timestamp)
             .context("verifying rekor integrate timestamp")?;
     }
 
@@ -237,11 +247,6 @@ pub fn parse_rekor_log_entry_body(log_entry: &LogEntry) -> anyhow::Result<Body> 
 
     serde_json::from_slice(&body_bytes)
         .map_err(|error| anyhow::anyhow!("couldn't parse log entry body: {error}"))
-}
-
-fn parse_rekor_log_entry_integrated_time(log_entry: &LogEntry) -> anyhow::Result<OffsetDateTime> {
-    let unix_timestamp: i64 = log_entry.integrated_time.try_into().unwrap();
-    OffsetDateTime::from_unix_timestamp(unix_timestamp).map_err(|e| anyhow::anyhow!(e))
 }
 
 /// JSON representation, canonicalized based on RFC 8785, of the subset of

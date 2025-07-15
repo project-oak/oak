@@ -32,11 +32,11 @@ use oak_proto_rust::oak::{
     },
     HexDigest, RawDigest,
 };
+use oak_time::Instant;
 use p256::pkcs8::{der::Decode, DecodePublicKey};
 use prost::Message;
-use prost_types::Any;
+use prost_types::{Any, Timestamp};
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use time::{Duration, OffsetDateTime};
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 
@@ -118,34 +118,39 @@ pub fn verify_signature_ecdsa(
 /// Verifies the given timestamp is valid based on the current time and the
 /// TimestampReferenceValue.
 pub fn verify_timestamp(
-    now_utc_millis: i64,
-    timestamp: &OffsetDateTime,
+    current_time: Instant,
+    timestamp: Instant,
     reference_value: &TimestampReferenceValue,
 ) -> anyhow::Result<()> {
-    // if not_before_absolute is set, check that the timestamp is not before that
-    // time.
+    // if not_before_absolute is set, check that the timestamp is not before
+    // that time.
     if let Some(not_before_absolute) = &reference_value.not_before_absolute {
-        let not_before_absolute_time = OffsetDateTime::UNIX_EPOCH
-            + Duration::new(not_before_absolute.seconds, not_before_absolute.nanos);
-        if *timestamp < not_before_absolute_time {
+        let not_before_absolute_time = Instant::from(not_before_absolute);
+        if timestamp < not_before_absolute_time {
             anyhow::bail!(
                 "Timestamp is too early: timestamp = {:?}, must not be before = {:?}",
-                *timestamp,
+                timestamp,
                 not_before_absolute_time
             );
         }
     }
 
-    // if not_before_relative is set, check that the given timestamp is after or
-    // equal to the current time plus that (signed) duration.
+    // if not_before_relative is set, check that the given timestamp is not
+    // after the current time plus that (signed) duration.
     if let Some(not_before_relative) = &reference_value.not_before_relative {
-        let offset = Duration::new(not_before_relative.seconds, not_before_relative.nanos);
-        let current_time = OffsetDateTime::UNIX_EPOCH + Duration::milliseconds(now_utc_millis);
-        if *timestamp < current_time + offset {
+        // TODO: b/431922035 - Introduce a signed duration.
+        // We need signed, so std::core::Duration is useless. As an ugly
+        // workaround convert protobuf::Duration to protobuf::Timestamp
+        // so we can work with it, then compare as nanoseconds.
+        let offset = Instant::from(Timestamp {
+            seconds: not_before_relative.seconds,
+            nanos: not_before_relative.nanos,
+        });
+        if timestamp.into_unix_nanos() < current_time.into_unix_nanos() + offset.into_unix_nanos() {
             anyhow::bail!(
                 "Timestamp is out of range: timestamp = {:?}, range [{:?}, {:?}]",
-                *timestamp,
-                current_time + offset,
+                timestamp,
+                current_time.into_unix_millis() + offset.into_unix_millis(),
                 current_time
             );
         }
