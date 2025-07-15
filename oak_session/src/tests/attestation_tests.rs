@@ -22,18 +22,18 @@ use alloc::{
 };
 
 use googletest::prelude::*;
-use mockall::mock;
+use mockall::{mock, predicate as mockp};
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
-    session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
+    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
 use crate::{
     attestation::{
-        AttestationHandler, AttestationVerdict, ClientAttestationHandler, ServerAttestationHandler,
-        VerifierResult,
+        AttestationHandler, AttestationPublisher, AttestationVerdict, ClientAttestationHandler,
+        ServerAttestationHandler, VerifierResult,
     },
     config::AttestationHandlerConfig,
     ProtocolEngine,
@@ -66,6 +66,17 @@ mock! {
             evidence: &Evidence,
             endorsements: &Endorsements,
         ) -> anyhow::Result<AttestationResults>;
+    }
+}
+
+mock! {
+    TestAttestationPublisher {}
+    impl AttestationPublisher for TestAttestationPublisher {
+        fn publish(&
+            self,
+            endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
+            assertions: BTreeMap<String, Assertion>
+        );
     }
 }
 
@@ -102,6 +113,19 @@ fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
         })
     });
     Arc::new(verifier)
+}
+
+fn create_mock_attestation_publisher(
+    expected_endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
+    expected_assertions: BTreeMap<String, Assertion>,
+) -> Option<Arc<dyn AttestationPublisher>> {
+    let mut publisher = MockTestAttestationPublisher::new();
+    publisher
+        .expect_publish()
+        .with(mockp::eq(expected_endorsed_evidence), mockp::eq(expected_assertions))
+        .return_const(())
+        .times(1);
+    Some(Arc::new(publisher))
 }
 
 struct AttestationExchangeResults {
@@ -161,7 +185,13 @@ fn unattested_client_attestation_provides_empty_request() -> anyhow::Result<()> 
 
 #[googletest::test]
 fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
-    let client_config = AttestationHandlerConfig::default();
+    let client_config = AttestationHandlerConfig {
+        attestation_publisher: create_mock_attestation_publisher(
+            BTreeMap::default(),
+            BTreeMap::default(),
+        ),
+        ..Default::default()
+    };
 
     let mut client_attestation_provider = ClientAttestationHandler::create(client_config)?;
 
@@ -177,7 +207,13 @@ fn unattested_client_attestation_accepts_response() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn unattested_server_attestation_accepts_request() -> anyhow::Result<()> {
-    let server_config = AttestationHandlerConfig::default();
+    let server_config = AttestationHandlerConfig {
+        attestation_publisher: create_mock_attestation_publisher(
+            BTreeMap::default(),
+            BTreeMap::default(),
+        ),
+        ..Default::default()
+    };
 
     let mut server_attestation_provider = ServerAttestationHandler::create(server_config)?;
 
@@ -216,6 +252,10 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+        attestation_publisher: create_mock_attestation_publisher(
+            BTreeMap::default(),
+            BTreeMap::default(),
+        ),
         ..Default::default()
     };
 
@@ -235,8 +275,7 @@ fn self_attested_client_provides_request_accepts_response() -> anyhow::Result<()
         })))
     );
 
-    let attest_response =
-        AttestResponse { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
+    let attest_response = AttestResponse { ..Default::default() };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
     Ok(())
@@ -253,6 +292,10 @@ fn self_attested_server_accepts_request_provides_response() -> anyhow::Result<()
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
+        attestation_publisher: create_mock_attestation_publisher(
+            BTreeMap::default(),
+            BTreeMap::default(),
+        ),
         ..Default::default()
     };
 

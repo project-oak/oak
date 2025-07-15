@@ -49,7 +49,7 @@ use oak_crypto::{
 
 use crate::{
     aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
-    attestation::AttestationType,
+    attestation::{AttestationPublisher, AttestationType},
     encryptors::OrderedChannelEncryptor,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
@@ -225,6 +225,15 @@ impl SessionConfigBuilder {
             self.config.attestation_type
         );
         self.config.attestation_handler_config.self_endorsers.insert(endorser_id, endorser.clone());
+        self
+    }
+
+    /// Add an [`AttestationPublisher`] for this configuration.
+    ///
+    /// Only one publisher can be set per configuration. If you called this
+    /// function multiple times, only the most recent one will be added.
+    pub fn add_attestation_publisher(mut self, publisher: &Arc<dyn AttestationPublisher>) -> Self {
+        self.config.attestation_handler_config.attestation_publisher = Some(publisher.clone());
         self
     }
 
@@ -528,6 +537,10 @@ pub struct AttestationHandlerConfig {
     /// provides evidence from different attesters) into a single overall
     /// [`AttestationVerdict`].
     pub attestation_results_aggregator: Box<dyn VerifierResultsAggregator>,
+    /// An [`AttestationPublisher`] can optionally be provided. If it is, it
+    /// will be called when the session receives an [`EndorsedEvidence`] from
+    /// the peer, before verification occurs.
+    pub attestation_publisher: Option<Arc<dyn AttestationPublisher>>,
 }
 
 impl Default for alloc::boxed::Box<dyn VerifierResultsAggregator> {

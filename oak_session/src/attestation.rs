@@ -96,7 +96,7 @@ use itertools::{EitherOrBoth, Itertools};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults},
-    session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
+    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence},
 };
 
 use crate::{config::AttestationHandlerConfig, ProtocolEngine};
@@ -122,6 +122,24 @@ pub enum AttestationVerdict {
     /// Provides a general `reason` for the failure and a map of
     /// `attestation_results` for specific attestation IDs for further details.
     AttestationFailed { reason: String, attestation_results: BTreeMap<String, VerifierResult> },
+}
+
+/// An [`AttestationPublisher`] can be added to a session configuration to allow
+/// publishing received evidence to an external component.
+pub trait AttestationPublisher: Send + Sync {
+    /// The session will call this method whenever it receives a new
+    /// [`EndorsedEvidence`] from the peer.
+    ///
+    /// Keep in mind that the function will be called from the session state
+    /// machine execution thread. So, implementation of a publisher should not
+    /// perform any long-running or blocking operations. In most cases, the best
+    /// approach is to queue the provided [`EndorsedEvidence`] for eventual
+    /// processing.
+    fn publish(
+        &self,
+        endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
+        assertions: BTreeMap<String, Assertion>,
+    );
 }
 
 /// Defines the configuration for the attestation flow between two parties.
@@ -262,6 +280,13 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
         &mut self,
         incoming_message: AttestResponse,
     ) -> anyhow::Result<Option<()>> {
+        if let Some(publisher) = &self.config.attestation_publisher {
+            publisher.publish(
+                incoming_message.endorsed_evidence.clone(),
+                incoming_message.assertions.clone(),
+            );
+        }
+
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
@@ -368,6 +393,13 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
         &mut self,
         incoming_message: AttestRequest,
     ) -> anyhow::Result<Option<()>> {
+        if let Some(publisher) = &self.config.attestation_publisher {
+            publisher.publish(
+                incoming_message.endorsed_evidence.clone(),
+                incoming_message.assertions.clone(),
+            );
+        }
+
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
