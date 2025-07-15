@@ -22,9 +22,7 @@ use std::{
 use anyhow::Result;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use clap::Parser;
-use oak_attestation_verification::policy::session_binding_public_key::{
-    EndorsementReport, EventDeserializationReport, SessionBindingPublicKeyPolicy,
-};
+use oak_attestation_verification::policy::session_binding_public_key::SessionBindingPublicKeyPolicy;
 use oak_crypto::certificate::certificate_verifier::{
     CertificateVerificationReport, CertificateVerifier,
 };
@@ -194,72 +192,47 @@ fn print_signature_based_attestation_report(
             policy.report(attestation_timestamp, event, endorsement)
         };
 
-        match report.event {
-            EventDeserializationReport::Failed(err) => {
-                print_indented!(indent, "❌ Attestation event deserialization failed: {}", err)
+        match report {
+            Err(err) => {
+                print_indented!(indent, "❌ Attestation verification failed: {}", err)
             }
-            EventDeserializationReport::Succeeded { has_session_binding_public_key } => {
-                print_indented!(indent, "✅ Attestation event deserialized successfully");
+            Ok(session_binding_public_key_verification_report) => {
+                print_indented!(indent, "Attestation verification:");
                 let indent = indent + 1;
-                print_indented_conditional!(
-                    indent,
-                    has_session_binding_public_key,
-                    ("✅ 🔑 Attestation event has a session binding public key"),
-                    ("❌ 🔑 Attestation event is missing a session binding public key")
-                );
-            }
-        }
-
-        match report.endorsement {
-            EndorsementReport::DeserializationFailed(err) => {
-                print_indented!(indent, "❌ Endorsement deserialization failed: {}", err)
-            }
-            EndorsementReport::MissingCertificateAuthorityEndorsement => {
-                print_indented!(
-                    indent,
-                    "❌ 📜 Endorsement is missing certificate authority endorsement"
-                )
-            }
-            EndorsementReport::MissingCertificate => print_indented!(
-                indent,
-                "❌ 📜 Certificate authority endorsement is missing certificate"
-            ),
-            EndorsementReport::InvalidEvent => {
-                print_indented!(indent, "❌ Event is invalid")
-            }
-            EndorsementReport::Checked(certificate_verification_report) => {
-                print_indented!(
-                    indent,
-                    "✅ 📜 Certificate authority endorsement deserialized successfully"
-                );
-                let indent = indent + 1;
-                print_indented!(
-                    indent,
-                    "✅ 📜 Certificate authority endorsement includes certificate"
-                );
-                match certificate_verification_report {
+                match session_binding_public_key_verification_report.endorsement {
                     Err(err) => {
-                        print_indented!(indent, "❌ 📜 Certificate verification failed: {}", err)
+                        print_indented!(
+                            indent,
+                            "❌ Endorsement certificate verification failed: {}",
+                            err
+                        );
                     }
                     Ok(CertificateVerificationReport { validity, verification }) => {
                         match validity {
                             Err(err) => {
-                                print_indented!(indent, "❌ 📜 Certificate is invalid: {}", err)
+                                print_indented!(
+                                    indent,
+                                    "❌ 📜 Endorsement certificate is invalid: {}",
+                                    err
+                                )
                             }
                             Ok(()) => {
-                                print_indented!(indent, "✅ 📜 Certificate is valid")
+                                print_indented!(indent, "✅ 📜 Endorsement certificate is valid")
                             }
                         }
                         match verification {
                             Err(err) => {
                                 print_indented!(
                                     indent,
-                                    "❌ 📜 Certificate verification failed: {}",
+                                    "❌ 📜 Endorsement certificate verification failed: {}",
                                     err
                                 )
                             }
                             Ok(()) => {
-                                print_indented!(indent, "✅ 📜 Certificate verification succeeded")
+                                print_indented!(
+                                    indent,
+                                    "✅ 📜 Endorsement certificate verification succeeded"
+                                )
                             }
                         }
                     }

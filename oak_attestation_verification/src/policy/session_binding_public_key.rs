@@ -14,9 +14,8 @@
 // limitations under the License.
 //
 
-use alloc::{collections::BTreeMap, string::ToString};
+use alloc::{collections::BTreeMap, string::ToString, vec::Vec};
 
-use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_crypto::{
     certificate::certificate_verifier::{
@@ -40,23 +39,18 @@ use crate::{policy::SESSION_BINDING_PUBLIC_KEY_ID, util::decode_event_proto};
 
 #[derive(Debug)]
 pub struct SessionBindingPublicKeyVerificationReport {
-    pub event: EventDeserializationReport,
-    pub endorsement: EndorsementReport,
+    session_binding_public_key: Vec<u8>,
+    pub endorsement: Result<CertificateVerificationReport, CertificateVerificationError>,
 }
 
-#[derive(Debug)]
-pub enum EventDeserializationReport {
-    Failed(anyhow::Error),
-    Succeeded { has_session_binding_public_key: bool },
-}
-
-#[derive(Debug)]
-pub enum EndorsementReport {
-    DeserializationFailed(&'static str),
-    MissingCertificateAuthorityEndorsement,
-    MissingCertificate,
-    InvalidEvent,
-    Checked(Result<CertificateVerificationReport, CertificateVerificationError>),
+#[derive(thiserror::Error, Debug)]
+pub enum SessionBindingPublicKeyVerificationError {
+    #[error("Missing field: {0}")]
+    MissingField(&'static str),
+    #[error("Failed to decode proto: {0}")]
+    ProtoDecodeError(#[from] anyhow::Error),
+    #[error("Failed to decode Variant: {0}")]
+    VariantDecodeError(&'static str),
 }
 
 pub struct SessionBindingPublicKeyPolicy<V: Verifier> {
@@ -75,58 +69,41 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
         verification_time: Instant,
         encoded_event: &[u8],
         encoded_endorsement: &Variant,
-    ) -> SessionBindingPublicKeyVerificationReport {
+    ) -> Result<SessionBindingPublicKeyVerificationReport, SessionBindingPublicKeyVerificationError>
+    {
         let event = decode_event_proto::<SessionBindingPublicKeyData>(
             "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
             encoded_event,
-        );
-
-        let session_binding_public_key;
-        let event_report = match event {
-            Err(err) => {
-                session_binding_public_key = Option::None;
-                EventDeserializationReport::Failed(err)
-            }
-            Ok(event) => {
-                if !event.session_binding_public_key.is_empty() {
-                    session_binding_public_key = Option::Some(event.session_binding_public_key);
-                } else {
-                    session_binding_public_key = Option::None;
-                }
-                EventDeserializationReport::Succeeded {
-                    has_session_binding_public_key: session_binding_public_key.is_some(),
-                }
-            }
-        };
-
-        let endorsement_report =
-            match <&Variant as TryInto<SessionBindingPublicKeyEndorsement>>::try_into(
-                encoded_endorsement,
-            ) {
-                Err(err) => EndorsementReport::DeserializationFailed(err),
-                Ok(endorsement) => match endorsement.ca_endorsement {
-                    None => EndorsementReport::MissingCertificateAuthorityEndorsement,
-                    Some(ca_endorsement) => match ca_endorsement.certificate {
-                        None => EndorsementReport::MissingCertificate,
-                        Some(certificate) => match session_binding_public_key {
-                            None => EndorsementReport::InvalidEvent,
-                            Some(session_binding_public_key) => {
-                                EndorsementReport::Checked(self.certificate_verifier.report(
-                                    &session_binding_public_key,
-                                    &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
-                                    verification_time.into_unix_millis(),
-                                    &certificate,
-                                ))
-                            }
-                        },
-                    },
-                },
-            };
-
-        SessionBindingPublicKeyVerificationReport {
-            event: event_report,
-            endorsement: endorsement_report,
+        )?;
+        if event.session_binding_public_key.is_empty() {
+            return Err(SessionBindingPublicKeyVerificationError::MissingField(
+                "SessionBindingPublicKeyData.session_binding_public_key",
+            ));
         }
+
+        let ca_endorsement = <&Variant as TryInto<SessionBindingPublicKeyEndorsement>>::try_into(
+            encoded_endorsement,
+        )
+        .map_err(SessionBindingPublicKeyVerificationError::VariantDecodeError)?
+        .ca_endorsement
+        .ok_or(SessionBindingPublicKeyVerificationError::MissingField(
+            "SessionBindingPublicKeyEndorsement.ca_endorsement",
+        ))?;
+        let certificate = ca_endorsement.certificate.as_ref().ok_or(
+            SessionBindingPublicKeyVerificationError::MissingField(
+                "CertificateAuthorityEndorsement.certificate",
+            ),
+        )?;
+
+        Ok(SessionBindingPublicKeyVerificationReport {
+            session_binding_public_key: event.session_binding_public_key.clone(),
+            endorsement: self.certificate_verifier.report(
+                &event.session_binding_public_key,
+                &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
+                verification_time.into_unix_millis(),
+                certificate,
+            ),
+        })
     }
 }
 
@@ -140,45 +117,29 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        let event = decode_event_proto::<SessionBindingPublicKeyData>(
-            "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
-            evidence,
-        )?;
-        if event.session_binding_public_key.is_empty() {
-            anyhow::bail!("session binding public key not found")
-        }
-
-        let endorsement =
-            <&Variant as TryInto<SessionBindingPublicKeyEndorsement>>::try_into(endorsement)
-                .map_err(anyhow::Error::msg)
-                .context("certificate authority endorsement is not present")?;
-
-        match endorsement.ca_endorsement {
-            None => {
-                anyhow::bail!("SessionBindingPublicKeyEndorsement.ca_endorsement field is empty")
+        match self.report(verification_time, evidence, endorsement)? {
+            SessionBindingPublicKeyVerificationReport {
+                session_binding_public_key,
+                endorsement:
+                    Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) }),
+            } => {
+                // TODO: b/356631062 - Return detailed attestation results.
+                Ok(EventAttestationResults {
+                    artifacts: BTreeMap::from([(
+                        SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
+                        session_binding_public_key.to_vec(),
+                    )]),
+                })
             }
-            Some(certificate_authority_endorsement) => {
-                let certificate = certificate_authority_endorsement
-                    .certificate
-                    .as_ref()
-                    .context("certificate is not present in the CertificateAuthorityEndorsement")?;
-                self.certificate_verifier
-                    .verify(
-                        &event.session_binding_public_key,
-                        &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
-                        verification_time.into_unix_millis(),
-                        certificate,
-                    )
-                    .context("couldn't verify certificate for session binding public key")?;
+            SessionBindingPublicKeyVerificationReport {
+                session_binding_public_key: _,
+                endorsement,
+            } => {
+                let endorsement = endorsement?;
+                endorsement.validity?;
+                endorsement.verification?;
+                anyhow::bail!("SessionBindingPublicKeyVerificationReport verification failed")
             }
         }
-
-        // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults {
-            artifacts: BTreeMap::from([(
-                SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                event.session_binding_public_key.to_vec(),
-            )]),
-        })
     }
 }

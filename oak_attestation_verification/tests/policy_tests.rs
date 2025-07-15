@@ -28,7 +28,7 @@ use oak_attestation_verification::{
         kernel::KernelPolicy,
         platform::AmdSevSnpPolicy,
         session_binding_public_key::{
-            EndorsementReport, EventDeserializationReport, SessionBindingPublicKeyPolicy,
+            SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationError,
             SessionBindingPublicKeyVerificationReport,
         },
         system::SystemPolicy,
@@ -405,13 +405,13 @@ fn session_binding_key_policy_report_succeeds() {
     let result = policy.report(TEST_TIME, event, endorsement);
     assert_matches!(
         result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+        Ok(SessionBindingPublicKeyVerificationReport {
+            endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
                 verification: Ok(()),
-            }))
-        }
+            }),
+            ..
+        })
     );
 }
 
@@ -437,13 +437,7 @@ fn session_binding_key_policy_report_fails_with_incorrect_event_id() {
     .encode_to_vec();
     let endorsement: Variant = create_public_key_endorsement(&TEST_SIGNATURE).into();
     let result = policy.report(TEST_TIME, &event_wrong_id, &endorsement);
-    assert_matches!(
-        result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Failed(_),
-            endorsement: EndorsementReport::InvalidEvent
-        }
-    );
+    assert_matches!(result, Err(SessionBindingPublicKeyVerificationError::ProtoDecodeError(_)));
 }
 
 #[test]
@@ -461,13 +455,7 @@ fn session_binding_key_policy_report_fails_with_incorrect_endorsement_id() {
         value: create_public_key_endorsement(&TEST_SIGNATURE).encode_to_vec(),
     };
     let result = policy.report(TEST_TIME, &event, &endorsement_wrong_id);
-    assert_matches!(
-        result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::DeserializationFailed(_)
-        }
-    );
+    assert_matches!(result, Err(SessionBindingPublicKeyVerificationError::VariantDecodeError(_)));
 }
 
 #[test]
@@ -485,10 +473,9 @@ fn session_binding_key_policy_report_fails_with_empty_ca_endorsement() {
     let result = policy.report(TEST_TIME, &event, &empty_ca_endorsement);
     assert_matches!(
         result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::MissingCertificateAuthorityEndorsement
-        }
+        Err(SessionBindingPublicKeyVerificationError::MissingField(
+            "SessionBindingPublicKeyEndorsement.ca_endorsement"
+        ))
     );
 }
 
@@ -506,13 +493,13 @@ fn session_binding_key_policy_report_fails_with_incorrect_public_key() {
     let result = policy.report(TEST_TIME, &event_wrong_key, &endorsement);
     assert_matches!(
         result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+        Ok(SessionBindingPublicKeyVerificationReport {
+            endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
                 verification: Err(_)
-            }))
-        }
+            }),
+            ..
+        })
     );
 }
 
@@ -530,10 +517,9 @@ fn session_binding_key_policy_report_fails_with_empty_public_key() {
     let result = policy.report(TEST_TIME, &event_empty_key, &endorsement);
     assert_matches!(
         result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: false },
-            endorsement: EndorsementReport::InvalidEvent
-        }
+        Err(SessionBindingPublicKeyVerificationError::MissingField(
+            "SessionBindingPublicKeyData.session_binding_public_key"
+        ))
     );
 }
 
@@ -552,13 +538,13 @@ fn session_binding_key_policy_report_fails_with_invalid_signature() {
     let result = policy.report(TEST_TIME, &event, &endorsement_wrong_signature);
     assert_matches!(
         result,
-        SessionBindingPublicKeyVerificationReport {
-            event: EventDeserializationReport::Succeeded { has_session_binding_public_key: true },
-            endorsement: EndorsementReport::Checked(Ok(CertificateVerificationReport {
+        Ok(SessionBindingPublicKeyVerificationReport {
+            endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
                 verification: Err(_)
-            }))
-        }
+            }),
+            ..
+        })
     );
 }
 
