@@ -22,13 +22,13 @@ extern crate alloc;
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
-    vec,
     vec::Vec,
 };
 use core::str::FromStr;
 
-use anyhow::{ensure, Context};
+use anyhow::{anyhow, ensure, Context};
 use chrono::{DateTime, FixedOffset};
+use oci_spec::distribution::Reference as OciReference;
 use serde::{Deserialize, Serialize};
 
 /// URI representing in-toto statements. We only use V1, earlier and later
@@ -49,6 +49,19 @@ pub struct Subject {
     pub name: String,
     /// A map from algorithm name to lowercase hex-encoded value of the digest.
     pub digest: DigestSet,
+}
+
+/// Converts an OCI image reference to an endorsement Subject.
+impl TryFrom<&OciReference> for Subject {
+    type Error = anyhow::Error;
+
+    fn try_from(image: &OciReference) -> Result<Self, Self::Error> {
+        let name = image.repository().to_string();
+        let digest = image.digest().ok_or_else(|| anyhow!("image reference must have a digest"))?;
+        let (alg, digest) = digest.split_once(':').context("invalid image digest format")?;
+
+        Ok(Subject { name, digest: DigestSet::from([(alg.to_string(), digest.to_string())]) })
+    }
 }
 
 /// Validity time range of an endorsement statement.
@@ -97,9 +110,23 @@ pub struct Statement<P> {
     #[serde(rename = "predicateType")]
     predicate_type: String,
     /// The subject of the statement.
-    pub subject: Vec<Subject>,
+    /// In-ToTo statements allow more than one subject, but
+    /// we don't want that and require exactly one.
+    subject: [Subject; 1],
     /// The predicate of the statement.
-    pub predicate: P,
+    predicate: P,
+}
+
+impl<P> Statement<P> {
+    /// The subject this statement applies to.
+    pub fn subject(&self) -> &Subject {
+        &self.subject[0]
+    }
+
+    /// The predicate this statement applies to.
+    pub fn predicate(&self) -> &P {
+        &self.predicate
+    }
 }
 
 /// An endorsement statement, which is a [`Statement`] with an
@@ -123,7 +150,7 @@ impl EndorsementStatement {
         EndorsementStatement {
             _type: STATEMENT_TYPE.to_string(),
             predicate_type: PREDICATE_TYPE_V3.to_string(),
-            subject: vec![subject],
+            subject: [subject],
             predicate: EndorsementPredicate {
                 issued_on: options.issued_on,
                 validity: options.validity,
@@ -132,15 +159,29 @@ impl EndorsementStatement {
         }
     }
 
+    /// Creates a new endorsement statement for an OCI container image
+    /// based on the image's reference.
+    ///
+    /// The image reference must use digests.
+    pub fn from_container_image(
+        image: &OciReference,
+        options: EndorsementOptions,
+    ) -> anyhow::Result<Self> {
+        Ok(Self::new(image.try_into()?, options))
+    }
+
     /// Checks that the endorsement statement is valid, based on timestamp
     /// and required claims.
     pub fn validate(
         &self,
         validation_time: oak_time::Instant,
+        subject: &Subject,
         claims: &[&str],
     ) -> anyhow::Result<()> {
         // Convert to DateTime<Utc> since that's what the Statement representation uses.
         let validation_time: DateTime<chrono::Utc> = validation_time.into();
+
+        ensure!(self.subject() == subject, "subject mismatch");
 
         ensure!(self._type == STATEMENT_TYPE, "unsupported statement type");
         ensure!(self.predicate_type == PREDICATE_TYPE_V3, "unsupported predicate type");
@@ -181,23 +222,24 @@ impl TryFrom<&[u8]> for EndorsementStatement {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{boxed::Box, fs, vec};
 
     use chrono::Duration;
+    use googletest::prelude::*;
     use oak_file_utils::data_path;
 
     use super::*;
 
     const ENDORSEMENT_PATH: &str = "trex/endorsement/testdata/endorsement.json";
 
-    #[test]
+    #[gtest]
     fn parse_string() -> anyhow::Result<()> {
         let raw = fs::read_to_string(data_path(ENDORSEMENT_PATH))?;
         let parsed: EndorsementStatement = raw.parse()?;
 
-        assert_eq!(
+        assert_that!(
             parsed,
-            EndorsementStatement::new(
+            eq(&EndorsementStatement::new(
                 Subject {
                     name: "oak_orchestrator".to_string(),
                     digest: BTreeMap::from([(
@@ -217,20 +259,20 @@ mod tests {
                         "https://project-oak.github.io/oak/test_claim_2".to_string(),
                     ]
                 }
-            )
+            ))
         );
 
         Ok(())
     }
 
-    #[test]
+    #[gtest]
     fn parse_bytes() -> anyhow::Result<()> {
         let raw = fs::read(data_path(ENDORSEMENT_PATH))?;
         let parsed = EndorsementStatement::try_from(raw.as_slice())?;
 
-        assert_eq!(
+        assert_that!(
             parsed,
-            EndorsementStatement::new(
+            eq(&EndorsementStatement::new(
                 Subject {
                     name: "oak_orchestrator".to_string(),
                     digest: BTreeMap::from([(
@@ -250,7 +292,7 @@ mod tests {
                         "https://project-oak.github.io/oak/test_claim_2".to_string(),
                     ]
                 }
-            )
+            ))
         );
 
         Ok(())
@@ -271,69 +313,166 @@ mod tests {
         )
     }
 
-    #[test]
-    fn validate_happy_path() -> anyhow::Result<()> {
+    #[gtest]
+    fn from_container_image_happy_path() -> anyhow::Result<()> {
+        let image_reference =
+            "example.com/repository/image@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".parse()?;
         let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
-        let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
+        let options = EndorsementOptions {
+            issued_on: now,
+            validity: Validity { not_before: now, not_after: now + Duration::days(1) },
+            claims: vec!["claim1".to_string()],
+        };
 
-        let validation_time = now + Duration::hours(1);
-        statement.validate(validation_time.to_utc().into(), &["claim1"])?;
+        let statement = EndorsementStatement::from_container_image(&image_reference, options)?;
+
+        assert_that!(
+            statement,
+            matches_pattern!(EndorsementStatement {
+                subject: elements_are![eq(&Subject {
+                    name: "repository/image".to_string(),
+                    digest: BTreeMap::from([(
+                        "sha256".to_string(),
+                        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                            .to_string()
+                    )])
+                })],
+                ..
+            })
+        );
 
         Ok(())
     }
 
-    #[test]
-    fn validate_unsupported_statement_type() {
-        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z").unwrap();
+    #[gtest]
+    fn from_container_image_no_digest() -> anyhow::Result<()> {
+        let image_reference = "example.com/repository/image:latest".parse()?;
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
+        let options = EndorsementOptions {
+            issued_on: now,
+            validity: Validity { not_before: now, not_after: now + Duration::days(1) },
+            claims: vec![],
+        };
+
+        let result = EndorsementStatement::from_container_image(&image_reference, options);
+
+        assert_that!(result, err(displays_as(eq("image reference must have a digest"))));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn validate_happy_path() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
+        let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
+
+        let ref_claims = ["claim1"];
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
+
+        let validation_time = now + Duration::hours(1);
+        statement.validate(validation_time.to_utc().into(), &ref_subject, &ref_claims)?;
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn validate_subject_mismatch() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
+        let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
+
+        let ref_claims = ["claim1"];
+        let ref_subject = Subject {
+            name: "other_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
+
+        let validation_time = now + Duration::hours(1);
+        let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &ref_claims);
+        assert_that!(result, err(displays_as(eq("subject mismatch"))));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn validate_unsupported_statement_type() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let mut statement = create_test_statement(now, Duration::days(1), vec![]);
         statement._type = "unsupported".to_string();
 
-        let result = statement.validate(now.to_utc().into(), &[]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "unsupported statement type");
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
+        let result = statement.validate(now.to_utc().into(), &ref_subject, &[]);
+        assert_that!(result, err(displays_as(eq("unsupported statement type"))));
+
+        Ok(())
     }
 
-    #[test]
-    fn validate_unsupported_predicate_type() {
-        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z").unwrap();
+    #[gtest]
+    fn validate_unsupported_predicate_type() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let mut statement = create_test_statement(now, Duration::days(1), vec![]);
         statement.predicate_type = "unsupported".to_string();
 
-        let result = statement.validate(now.to_utc().into(), &[]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "unsupported predicate type");
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
+        let result = statement.validate(now.to_utc().into(), &ref_subject, &[]);
+        assert_that!(result, err(displays_as(eq("unsupported predicate type"))));
+
+        Ok(())
     }
 
-    #[test]
-    fn validate_before_not_before() {
-        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z").unwrap();
+    #[gtest]
+    fn validate_before_not_before() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let statement = create_test_statement(now, Duration::days(1), vec![]);
 
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
         let validation_time = now - Duration::hours(1);
-        let result = statement.validate(validation_time.to_utc().into(), &[]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "the claim is not yet applicable");
+        let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &[]);
+        assert_that!(result, err(displays_as(eq("the claim is not yet applicable"))));
+
+        Ok(())
     }
 
-    #[test]
-    fn validate_after_not_after() {
-        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z").unwrap();
+    #[gtest]
+    fn validate_after_not_after() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let statement = create_test_statement(now, Duration::days(1), vec![]);
 
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
         let validation_time = now + Duration::days(2);
-        let result = statement.validate(validation_time.to_utc().into(), &[]);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "the claim is no longer applicable");
+        let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &[]);
+        assert_that!(result, err(displays_as(eq("the claim is no longer applicable"))));
+
+        Ok(())
     }
 
-    #[test]
-    fn validate_missing_claim() {
-        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z").unwrap();
+    #[gtest]
+    fn validate_missing_claim() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
-        let expectations = &["claim2"];
+        let ref_claims = ["claim2"];
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "00".to_string())]),
+        };
 
-        let result = statement.validate(now.to_utc().into(), expectations);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "required claim type not found");
+        let result = statement.validate(now.to_utc().into(), &ref_subject, &ref_claims);
+        assert_that!(result, err(displays_as(eq("required claim type not found"))));
+
+        Ok(())
     }
 }

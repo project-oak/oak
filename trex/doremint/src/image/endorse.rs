@@ -14,10 +14,10 @@
 
 use std::{fs, io::Write};
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use chrono::{DateTime, Duration, FixedOffset};
 use clap::Parser;
-use endorsement::intoto::{DigestSet, EndorsementOptions, EndorsementStatement, Subject, Validity};
+use endorsement::intoto::{EndorsementOptions, EndorsementStatement, Validity};
 use oci_spec::distribution::Reference;
 use serde::Deserialize;
 
@@ -53,17 +53,8 @@ impl EndorseArgs {
         let claims: Claims = toml::from_str(&claims_file_content)
             .with_context(|| format!("could not parse claims file {}", self.claims_file))?;
 
-        let image_name = self.image.to_string();
-        let image_digest =
-            self.image.digest().ok_or_else(|| anyhow!("image reference must have a digest"))?;
-        let (alg, val) = image_digest.split_once(':').context("invalid image digest format")?;
-        let subject = Subject {
-            name: image_name,
-            digest: DigestSet::from([(alg.to_string(), val.to_string())]),
-        };
-
-        let statement = EndorsementStatement::new(
-            subject,
+        let statement = EndorsementStatement::from_container_image(
+            &self.image,
             EndorsementOptions {
                 issued_on: self.issued_on,
                 validity: Validity {
@@ -72,7 +63,7 @@ impl EndorseArgs {
                 },
                 claims: claims.claims,
             },
-        );
+        )?;
 
         serde_json::to_writer_pretty(writer, &statement)
             .context("could not serialize statement to JSON")?;

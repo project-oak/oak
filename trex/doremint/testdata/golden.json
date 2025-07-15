@@ -3,7 +3,7 @@
   "predicateType": "https://project-oak.github.io/oak/tr/endorsement/v1",
   "subject": [
     {
-      "name": "example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "name": "app",
       "digest": {
         "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
       }

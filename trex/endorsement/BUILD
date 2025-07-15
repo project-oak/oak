@@ -26,6 +26,7 @@ rust_library(
         "//oak_time",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:chrono",
+        "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
@@ -40,6 +41,7 @@ rust_test(
     ],
     deps = [
         "//oak_file_utils",
+        "@oak_crates_index//:googletest",
         "@oak_crates_index//:prost-types",
     ],
 )
