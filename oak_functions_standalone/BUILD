@@ -132,6 +132,9 @@ oci_image(
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_functions_standalone"],
     exposed_ports = ["8080/tcp"],
+    labels = {
+        "tee.launch_policy.allow_cmd_override": "true",
+    },
     tars = [":oak_functions_standalone_tar"],
 )
 

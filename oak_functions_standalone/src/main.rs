@@ -56,7 +56,7 @@ struct Args {
     lookup_data_path: String,
 
     #[arg(short, long, value_enum, default_value_t = AttestationTypeParam::Unattested)]
-    attestation: AttestationTypeParam,
+    attestation_type: AttestationTypeParam,
 }
 
 // Parses lookup data from the `lookup_data_path` into a vector
@@ -114,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         lookup_data_option = Some(parse_lookup_data_chunk(args.lookup_data_path));
     }
 
-    let attestation_args = create_attestation_args_for_gcp(args.attestation);
+    let attestation_args = create_attestation_args_for_gcp(args.attestation_type);
 
     // This is a hack to get _some_ logging out of the binary, and should be
     // replaced with proper OTLP logging (or logging to journald, or something) in
