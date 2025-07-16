@@ -65,12 +65,17 @@ impl OakFunctionsClient {
             client.oak_session(rx).await.context("couldn't send stream request")?.into_inner();
 
         let mut client_session = match attestation_type {
-            AttestationType::Unattested => ClientSession::create(
-                SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-            )
-            .expect("Failed to create client session"),
+            AttestationType::Unattested => {
+                println!("creating unattested client session");
+                ClientSession::create(
+                    SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN)
+                        .build(),
+                )
+                .expect("Failed to create client session")
+            }
 
             AttestationType::PeerUnidirectional => {
+                println!("creating peer unidirectional client session");
                 let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
                     .expect("Failed to parse root certificate");
                 let policy = ConfidentialSpacePolicy::new(root);
