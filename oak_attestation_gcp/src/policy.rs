@@ -19,7 +19,6 @@ use alloc::{
     string::{String, ToString},
 };
 
-use anyhow::Context;
 use jwt::Token;
 use oak_attestation_verification::{decode_event_proto, policy::SESSION_BINDING_PUBLIC_KEY_ID};
 use oak_attestation_verification_types::policy::Policy;
@@ -35,7 +34,53 @@ use serde_json::Value;
 use sha2::Digest;
 use x509_cert::Certificate;
 
-use crate::{jwt::Header, verification::verify_attestation_token};
+use crate::verification::{
+    report_attestation_token, AttestationTokenVerificationReport, AttestationVerificationError,
+};
+
+#[derive(Debug)]
+pub struct ConfidentialSpaceVerificationReport {
+    session_binding_public_key: Vec<u8>,
+    pub public_key_verification: Result<(), ConfidentialSpaceVerificationError>,
+    pub token_report: AttestationTokenVerificationReport,
+}
+
+impl ConfidentialSpaceVerificationReport {
+    pub fn into_session_binding_public_key(
+        self,
+    ) -> Result<Vec<u8>, ConfidentialSpaceVerificationError> {
+        match self {
+            ConfidentialSpaceVerificationReport {
+                session_binding_public_key,
+                public_key_verification: Ok(()),
+                token_report,
+            } => Ok(token_report.into_checked_token().map(|_| session_binding_public_key)?),
+            ConfidentialSpaceVerificationReport {
+                session_binding_public_key: _,
+                public_key_verification: Err(err),
+                token_report: _,
+            } => Err(err),
+        }
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ConfidentialSpaceVerificationError {
+    #[error("Missing field: {0}")]
+    MissingField(&'static str),
+    #[error("Failed to decode proto: {0}")]
+    ProtoDecodeError(#[from] anyhow::Error),
+    #[error("Failed to decode Variant: {0}")]
+    VariantDecodeError(&'static str),
+    #[error("Failed to parse Token: {0}")]
+    TokenParseError(#[from] jwt::error::Error),
+    #[error("Token public key mismatch; expected {expected} but got {actual}")]
+    TokenClaimPublicKeyMismatch { expected: String, actual: String },
+    #[error("Failed to deserialize nonce: {0}")]
+    NonceDeserializeError(#[from] serde_json::error::Error),
+    #[error("Failed to verify Token: {0}")]
+    TokenVerificationError(#[from] AttestationVerificationError),
+}
 
 // Private claim field in Confidential Space attestation tokens with
 // the attestation nonce.
@@ -50,6 +95,36 @@ impl ConfidentialSpacePolicy {
     pub fn new(root_certificate: Certificate) -> Self {
         Self { root_certificate }
     }
+
+    pub fn report(
+        &self,
+        verification_time: Instant,
+        evidence: &[u8],
+        endorsement: &Variant,
+    ) -> Result<ConfidentialSpaceVerificationReport, ConfidentialSpaceVerificationError> {
+        let public_key_data = decode_event_proto::<SessionBindingPublicKeyData>(
+            "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
+            evidence,
+        )?;
+
+        let endorsement: ConfidentialSpaceEndorsement = endorsement
+            .try_into()
+            .map_err(ConfidentialSpaceVerificationError::VariantDecodeError)?;
+
+        let token = Token::parse_unverified(&endorsement.jwt_token)?;
+        let public_key_verification =
+            verify_claims_public_key(token.claims(), &public_key_data.session_binding_public_key);
+        let token_report =
+            report_attestation_token(token, &self.root_certificate, &verification_time);
+
+        // TODO: b/426463266 - Verify claims about the platform/container
+
+        Ok(ConfidentialSpaceVerificationReport {
+            session_binding_public_key: public_key_data.session_binding_public_key.clone(),
+            public_key_verification,
+            token_report,
+        })
+    }
 }
 
 // We have to use [`Policy<[u8]>`] instead of [`EventPolicy`], because
@@ -62,44 +137,36 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        let public_key_data = decode_event_proto::<SessionBindingPublicKeyData>(
-            "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData",
-            evidence,
-        )?;
-
-        let endorsement =
-            <&Variant as TryInto<Option<ConfidentialSpaceEndorsement>>>::try_into(endorsement)
-                .map_err(anyhow::Error::msg)?
-                .context("confidential space endorsement is not present")?;
-
-        let public_key_hash = sha2::Sha256::digest(&public_key_data.session_binding_public_key);
-        let public_key_hash = hex::encode(public_key_hash);
-
-        let token: Token<Header, Value, _> = Token::parse_unverified(&endorsement.jwt_token)?;
-        let token = verify_attestation_token(token, &self.root_certificate, &verification_time)?;
-        let claims = token.claims();
-
-        // We expect only one nonce, therefore a scalar string rather than an array.
-        let eat_nonce: String = String::deserialize(&claims[EAT_NONCE])?;
-        anyhow::ensure!(
-            eat_nonce == public_key_hash,
-            "nonce mismatch: {public_key_hash} != {eat_nonce}"
-        );
-
-        // TODO: b/426463266 - Verify claims about the platform/container
-
-        // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults {
             artifacts: BTreeMap::from([(
                 SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                public_key_data.session_binding_public_key.to_vec(),
+                self.report(verification_time, evidence, endorsement)?
+                    .into_session_binding_public_key()?,
             )]),
         })
     }
 }
 
+fn verify_claims_public_key(
+    claims: &Value,
+    expected_public_key: &Vec<u8>,
+) -> Result<(), ConfidentialSpaceVerificationError> {
+    let public_key_hash = hex::encode(sha2::Sha256::digest(expected_public_key));
+    // We expect only one nonce, therefore a scalar string rather than an array.
+    let eat_nonce = String::deserialize(&claims[EAT_NONCE])?;
+    if eat_nonce != public_key_hash {
+        return Err(ConfidentialSpaceVerificationError::TokenClaimPublicKeyMismatch {
+            expected: public_key_hash,
+            actual: eat_nonce,
+        });
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
+    use core::assert_matches::assert_matches;
+
     use oak_proto_rust::oak::attestation::v1::Event;
     use prost::Message;
     use x509_cert::{
@@ -108,6 +175,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::verification::{CertificateReport, IssuerReport};
 
     #[test]
     fn confidential_space_policy_verify_succeeds() {
@@ -132,6 +200,52 @@ mod tests {
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn confidential_space_policy_report_succeeds() {
+        // The time has been set inside the validity interval of the test token and the
+        // root certificate.
+        const TOKEN: &str = include_str!("../testdata/confidential_space_valid.jwt");
+        const PUBLIC_KEY: &str = include_str!("../testdata/confidential_space_public_key.pem");
+        const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
+            include_str!("../testdata/confidential_space_root.pem");
+
+        let current_time: oak_time::Instant =
+            time::macros::datetime!(2025-07-01 17:31:32 UTC).into();
+
+        let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
+        let event = create_public_key_event(&public_key);
+
+        let endorsement = ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned() };
+
+        let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
+
+        let policy = ConfidentialSpacePolicy::new(root_cert);
+        let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert_matches!(
+            result,
+            Ok(ConfidentialSpaceVerificationReport {
+                ref session_binding_public_key,
+                public_key_verification: Ok(()),
+                token_report: AttestationTokenVerificationReport{
+                    validity: Ok(()),
+                    verification: Ok(_),
+                    issuer_report: Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(
+                            Ok(CertificateReport {
+                                validity: Ok(()),
+                                verification: Ok(()),
+                                issuer_report: box IssuerReport::SelfSigned,
+                            })
+                        ),
+                    })
+                }
+            }) if *session_binding_public_key == public_key,
+        );
     }
 
     fn create_public_key_event(session_binding_public_key: &[u8]) -> Event {

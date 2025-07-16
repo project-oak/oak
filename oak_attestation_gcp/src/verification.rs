@@ -79,43 +79,7 @@ pub fn verify_attestation_token(
     root: &Certificate,
     current_time: &oak_time::Instant,
 ) -> Result<Token<Header, Value, Verified>, AttestationVerificationError> {
-    match report_attestation_token(token, root, current_time) {
-        AttestationTokenVerificationReport {
-            validity: Ok(()),
-            verification: Ok(verified_token),
-            issuer_report,
-        } => {
-            let mut current_report = issuer_report;
-            loop {
-                match current_report? {
-                    CertificateReport { validity: Ok(()), verification: Ok(()), issuer_report } => {
-                        match *issuer_report {
-                            IssuerReport::SelfSigned => return Ok(verified_token),
-                            IssuerReport::OtherCertificate(certificate_report) => {
-                                current_report = certificate_report;
-                            }
-                        }
-                    }
-                    CertificateReport { validity, verification, issuer_report: _ } => {
-                        // This matches any non-Ok cases.
-                        validity?;
-                        verification?;
-                        return Err(AttestationVerificationError::UnknownError(
-                            "CertificateReport verification failed",
-                        ));
-                    }
-                }
-            }
-        }
-        AttestationTokenVerificationReport { validity, verification, issuer_report: _ } => {
-            // This matches any non-Ok cases.
-            validity?;
-            verification?;
-            Err(AttestationVerificationError::UnknownError(
-                "AttestationTokenVerificationReport verification failed",
-            ))
-        }
-    }
+    report_attestation_token(token, root, current_time).into_checked_token()
 }
 
 /// Contains the results of (as complete as possible) verification of a JWT.
@@ -135,6 +99,52 @@ impl fmt::Debug for AttestationTokenVerificationReport {
             .field("validity", &self.validity)
             .field("issuer_report", &self.issuer_report)
             .finish_non_exhaustive()
+    }
+}
+
+impl AttestationTokenVerificationReport {
+    pub fn into_checked_token(
+        self,
+    ) -> Result<Token<Header, Value, Verified>, AttestationVerificationError> {
+        match self {
+            AttestationTokenVerificationReport {
+                validity: Ok(()),
+                verification: Ok(verified_token),
+                issuer_report,
+            } => {
+                let mut current_report = issuer_report;
+                loop {
+                    match current_report? {
+                        CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report,
+                        } => match *issuer_report {
+                            IssuerReport::SelfSigned => return Ok(verified_token),
+                            IssuerReport::OtherCertificate(certificate_report) => {
+                                current_report = certificate_report;
+                            }
+                        },
+                        CertificateReport { validity, verification, issuer_report: _ } => {
+                            // This matches any non-Ok cases.
+                            validity?;
+                            verification?;
+                            return Err(AttestationVerificationError::UnknownError(
+                                "CertificateReport verification failed",
+                            ));
+                        }
+                    }
+                }
+            }
+            AttestationTokenVerificationReport { validity, verification, issuer_report: _ } => {
+                // This matches any non-Ok cases.
+                validity?;
+                verification?;
+                Err(AttestationVerificationError::UnknownError(
+                    "AttestationTokenVerificationReport verification failed",
+                ))
+            }
+        }
     }
 }
 
