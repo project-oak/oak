@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use alloc::fmt;
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use jwt::{Token, Unverified, Verified, VerifyWithKey};
 use oak_time::Instant;
@@ -127,6 +129,16 @@ pub struct AttestationTokenVerificationReport {
     pub issuer_report: Result<CertificateReport, AttestationVerificationError>,
 }
 
+impl fmt::Debug for AttestationTokenVerificationReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AttestationTokenVerificationReport")
+            .field("validity", &self.validity)
+            .field("issuer_report", &self.issuer_report)
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Debug)]
 pub enum IssuerReport {
     /// The result of verifying an issuer which is itself another certificate
     /// in the certificate chain.
@@ -136,6 +148,7 @@ pub enum IssuerReport {
 }
 
 /// Contains the results of verifying a certificate in a certificate chain.
+#[derive(Debug)]
 pub struct CertificateReport {
     /// Whether or not the certificate is valid (with respect to a timestamp).
     pub validity: Result<(), AttestationVerificationError>,
