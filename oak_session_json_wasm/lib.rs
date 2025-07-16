@@ -21,6 +21,45 @@ use oak_session::{
 use prost::Message;
 use wasm_bindgen::prelude::*;
 
+/// This is copied from oak_session/src/attestation.rs.
+#[wasm_bindgen]
+pub enum OakAttestationType {
+    Bidirectional,
+    SelfUnidirectional,
+    PeerUnidirectional,
+    Unattested,
+}
+
+impl From<OakAttestationType> for AttestationType {
+    fn from(attestation_type: OakAttestationType) -> Self {
+        match attestation_type {
+            OakAttestationType::Bidirectional => AttestationType::Bidirectional,
+            OakAttestationType::SelfUnidirectional => AttestationType::SelfUnidirectional,
+            OakAttestationType::PeerUnidirectional => AttestationType::PeerUnidirectional,
+            OakAttestationType::Unattested => AttestationType::Unattested,
+        }
+    }
+}
+
+/// This is copied from oak_session/src/handshake.rs.
+#[wasm_bindgen]
+pub enum OakHandshakeType {
+    NoiseKK,
+    NoiseKN,
+    NoiseNK,
+    NoiseNN,
+}
+
+impl From<OakHandshakeType> for HandshakeType {
+    fn from(handshake_type: OakHandshakeType) -> Self {
+        match handshake_type {
+            OakHandshakeType::NoiseKK => HandshakeType::NoiseKK,
+            OakHandshakeType::NoiseKN => HandshakeType::NoiseKN,
+            OakHandshakeType::NoiseNK => HandshakeType::NoiseNK,
+            OakHandshakeType::NoiseNN => HandshakeType::NoiseNN,
+        }
+    }
+}
 #[wasm_bindgen]
 pub struct WasmClientSession {
     inner: ClientSession,
@@ -35,9 +74,15 @@ pub enum PutIncomingMessageResult {
 #[wasm_bindgen]
 impl WasmClientSession {
     #[wasm_bindgen(constructor)]
-    pub fn create_unattested_noise_nn_session() -> Result<WasmClientSession, JsValue> {
-        let config =
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    pub fn create_oak_session(
+        attestation_type: OakAttestationType,
+        handshake_type: OakHandshakeType,
+    ) -> Result<WasmClientSession, JsValue> {
+        let config = SessionConfig::builder(
+            AttestationType::from(attestation_type),
+            HandshakeType::from(handshake_type),
+        )
+        .build();
         let inner = ClientSession::create(config).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
         Ok(WasmClientSession { inner })
