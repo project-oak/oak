@@ -38,6 +38,7 @@ use anyhow::Context;
 use oak_proto_rust::oak::attestation::v1::{
     EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
 };
+pub use rekor::verify_rekor_log_entry;
 pub use util::{
     convert_pem_to_raw, decode_event_proto, decode_protobuf_any, hex_to_raw_digest,
     raw_to_hex_digest, reference_values_from_evidence,
