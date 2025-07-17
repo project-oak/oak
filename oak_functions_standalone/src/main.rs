@@ -13,10 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    fs,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use clap::{Parser, ValueEnum};
 use oak_attestation_gcp::attestation::request_attestation_token;
@@ -52,29 +49,8 @@ enum AttestationTypeParam {
 #[derive(Parser, Debug)]
 struct Args {
     // TODO: b/424407998 - Have wasm_path point to content addressable storage
-    #[arg(
-        long,
-        help = "The path to the wasm module at runtime. For example: 'usr/local/bin/key_value_lookup.wasm'",
-        hide_short_help = true,
-        default_value = ""
-    )]
-    wasm_path: String,
-
-    #[arg(
-        long,
-        help = "The URI for fetching the wasm logic",
-        hide_short_help = true,
-        default_value = ""
-    )]
+    #[arg(long, help = "The URI for fetching the wasm logic")]
     wasm_uri: String,
-
-    #[arg(
-        long,
-        help = "The path to the serialized LookupDataChunk data. For example: 'usr/local/bin/fake_weather_data.binarypb'",
-        hide_short_help = true,
-        default_value = ""
-    )]
-    lookup_data_path: String,
 
     #[arg(
         long,
@@ -141,32 +117,13 @@ fn create_attestation_args_for_gcp(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let only_one_wasm_arguement_set = args.wasm_uri.is_empty() ^ args.wasm_path.is_empty();
-    if !only_one_wasm_arguement_set {
-        panic!("one of --wasm_path or --wasm_uri must be specified")
-    }
-
-    if !args.lookup_data_path.is_empty() && !args.lookup_data_uri.is_empty() {
-        panic!("only one of --lookup_data_path or --lookup_data_uri must be specified")
-    }
-
-    let wasm_module_bytes: Vec<u8> = if !args.wasm_path.is_empty() {
-        fs::read(args.wasm_path).expect("failed to read wasm module")
-    } else if !args.wasm_uri.is_empty() {
+    let wasm_module_bytes: Vec<u8> = if !args.wasm_uri.is_empty() {
         fetch_data_from_uri(&args.wasm_uri).expect("unable to fetch Wasm data")
     } else {
-        // This case should never happen
-        panic!("--wasm_path or --wasm_uri must be specified")
+        panic!("--wasm_uri must be specified")
     };
 
-    let lookup_data_option: Option<LookupDataChunk> = if !args.lookup_data_path.is_empty() {
-        let lookup_data_path = args.lookup_data_path;
-        // Parses lookup data from the `lookup_data_path` into a vector
-        println!("reading LookupDataChunk from: {}", lookup_data_path);
-        let lookup_data_buffer =
-            fs::read(lookup_data_path).expect("failed to read lookup data from file");
-        Some(LookupDataChunk::decode(lookup_data_buffer.as_slice()).unwrap())
-    } else if !args.lookup_data_uri.is_empty() {
+    let lookup_data_option: Option<LookupDataChunk> = if !args.lookup_data_uri.is_empty() {
         let uri = &args.lookup_data_uri;
         // Issues an HTTP GET request to fetch the lookup data
         println!("reading LookupDataChunk from: {}", uri);
