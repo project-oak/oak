@@ -66,7 +66,7 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
     // of running as many verification checks as possible (i.e. no fail-fast).
     pub fn report(
         &self,
-        verification_time: Instant,
+        current_time: Instant,
         encoded_event: &[u8],
         encoded_endorsement: &Variant,
     ) -> Result<SessionBindingPublicKeyVerificationReport, SessionBindingPublicKeyVerificationError>
@@ -98,9 +98,9 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
         Ok(SessionBindingPublicKeyVerificationReport {
             session_binding_public_key: event.session_binding_public_key.clone(),
             endorsement: self.certificate_verifier.report(
+                current_time,
                 &event.session_binding_public_key,
                 &SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
-                verification_time.into_unix_millis(),
                 certificate,
             ),
         })
@@ -113,11 +113,11 @@ impl<V: Verifier> SessionBindingPublicKeyPolicy<V> {
 impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
     fn verify(
         &self,
-        verification_time: Instant,
+        current_time: Instant,
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        match self.report(verification_time, evidence, endorsement)? {
+        match self.report(current_time, evidence, endorsement)? {
             SessionBindingPublicKeyVerificationReport {
                 session_binding_public_key,
                 endorsement:

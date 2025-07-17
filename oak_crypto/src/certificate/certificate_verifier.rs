@@ -111,21 +111,20 @@ impl<V: Verifier> CertificateVerifier<V> {
     }
 }
 
-// TODO: b/407715638 - Use [`core::time`] instead of `i64` milliseconds.
 /// Verifies the validity of the [`Certificate`] proto, which includes:
-/// - Verifying its validity: check that `milliseconds_since_epoch` falls
-///   withing the period defined by [`Validity`].
+/// - Verifying its validity: check that `current_time` falls within the period
+///   defined by [`Validity`].
 /// - Check that the payload contains expected [`subject_public_key`] and
 ///   [`purpose_id`].
 impl<V: Verifier> CertificateVerifier<V> {
     pub fn verify(
         &self,
+        current_time: Instant,
         subject_public_key: &[u8],
         purpose_id: &[u8],
-        milliseconds_since_epoch: i64,
         certificate: &Certificate,
     ) -> Result<(), CertificateVerificationError> {
-        match self.report(subject_public_key, purpose_id, milliseconds_since_epoch, certificate)? {
+        match self.report(current_time, subject_public_key, purpose_id, certificate)? {
             CertificateVerificationReport { validity: Ok(()), verification: Ok(()) } => Ok(()),
             CertificateVerificationReport { validity, verification } => {
                 validity?;
@@ -139,9 +138,9 @@ impl<V: Verifier> CertificateVerifier<V> {
 
     pub fn report(
         &self,
+        current_time: Instant,
         subject_public_key: &[u8],
         purpose_id: &[u8],
-        milliseconds_since_epoch: i64,
         certificate: &Certificate,
     ) -> Result<CertificateVerificationReport, CertificateVerificationError> {
         let payload = CertificatePayload::decode(certificate.serialized_payload.as_ref())?;
@@ -155,8 +154,7 @@ impl<V: Verifier> CertificateVerifier<V> {
             .ok_or(CertificateVerificationError::MissingField("CertificatePayload.validity"))?;
 
         Ok(CertificateVerificationReport {
-            validity: self
-                .verify_validity(Instant::from_unix_millis(milliseconds_since_epoch), &validity),
+            validity: self.verify_validity(current_time, &validity),
             verification: try {
                 let signature = certificate
                     .signature_info
@@ -199,11 +197,7 @@ impl<V: Verifier> CertificateVerifier<V> {
         Ok(())
     }
 
-    /// Verifies that the certificate is valid at
-    /// `current_time_milliseconds_since_epoch`. Verification is done by
-    /// checking that `current_time_milliseconds_since_epoch` value is
-    /// between [`Validity::not_before`] and [`Validity::not_after`]
-    /// (inclusive).
+    /// Verifies that the certificate is valid at `current_time`.
     ///
     /// Also, if [`::allowed_clock_skew`] is not zero, then it's subtracted from
     /// the [`Validity::not_before`] and added to the [`Validity::not_after`]
