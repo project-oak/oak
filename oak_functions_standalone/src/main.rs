@@ -45,25 +45,63 @@ enum AttestationTypeParam {
     SelfUnidirectional,
 }
 
+// For both the Wasm and lookup data arguments, either their paths or URLs must
+// be provided. If both are provided in either case, the program will panic.
+// Note that all path arguements must be built into the container to ensure that
+// they are accessible at runtime.
 #[derive(Parser, Debug)]
 struct Args {
-    // The wasm_path must be specified in the BUILD data dependency
     // TODO: b/424407998 - Have wasm_path point to content addressable storage
-    #[arg(short, long, default_value = "usr/local/bin/key_value_lookup.wasm")]
+    #[arg(
+        long,
+        help = "The path to the wasm module at runtime. For example: 'usr/local/bin/key_value_lookup.wasm'",
+        hide_short_help = true,
+        default_value = ""
+    )]
     wasm_path: String,
 
-    #[arg(short, long, default_value = "usr/local/bin/fake_weather_data.binarypb")]
+    #[arg(
+        long,
+        help = "The URI for fetching the wasm logic",
+        hide_short_help = true,
+        default_value = ""
+    )]
+    wasm_uri: String,
+
+    #[arg(
+        long,
+        help = "The path to the serialized LookupDataChunk data. For example: 'usr/local/bin/fake_weather_data.binarypb'",
+        hide_short_help = true,
+        default_value = ""
+    )]
     lookup_data_path: String,
 
-    #[arg(short, long, value_enum, default_value_t = AttestationTypeParam::Unattested)]
+    #[arg(
+        long,
+        help = "The URI for fetching the serialized LookupDataChunk data",
+        hide_short_help = true,
+        default_value = ""
+    )]
+    lookup_data_uri: String,
+
+    // Peer attestation verification is currently unsuported.
+    #[arg(
+        short,
+        long,
+        value_enum,
+        default_value_t = AttestationTypeParam::Unattested,
+        help = "The attestation scheme for the server. By default, no attestation is generated",
+        hide_short_help = true,
+    )]
     attestation_type: AttestationTypeParam,
 }
 
-// Parses lookup data from the `lookup_data_path` into a vector
-fn parse_lookup_data_chunk(lookup_data_path: String) -> LookupDataChunk {
-    let lookup_data_buffer =
-        fs::read(lookup_data_path).expect("failed to read lookup data from file");
-    LookupDataChunk::decode(lookup_data_buffer.as_slice()).unwrap()
+fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    println!("fetching data from uri: {uri}");
+    let response = ureq::get(uri).call()?;
+    let mut buffer = Vec::new();
+    response.into_reader().read_to_end(&mut buffer)?;
+    Ok(buffer)
 }
 
 // Constructs the attestation arguement for the Oak Functions server.
@@ -103,16 +141,40 @@ fn create_attestation_args_for_gcp(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    if args.wasm_path.is_empty() {
-        panic!("--wasm_path must be specified")
+    let only_one_wasm_arguement_set = args.wasm_uri.is_empty() ^ args.wasm_path.is_empty();
+    if !only_one_wasm_arguement_set {
+        panic!("one of --wasm_path or --wasm_uri must be specified")
     }
 
-    let mut lookup_data_option: Option<LookupDataChunk> = None;
-
-    if !args.lookup_data_path.is_empty() {
-        println!("reading LookupDataChunk from: {}", args.lookup_data_path);
-        lookup_data_option = Some(parse_lookup_data_chunk(args.lookup_data_path));
+    if !args.lookup_data_path.is_empty() && !args.lookup_data_uri.is_empty() {
+        panic!("only one of --lookup_data_path or --lookup_data_uri must be specified")
     }
+
+    let wasm_module_bytes: Vec<u8> = if !args.wasm_path.is_empty() {
+        fs::read(args.wasm_path).expect("failed to read wasm module")
+    } else if !args.wasm_uri.is_empty() {
+        fetch_data_from_uri(&args.wasm_uri).expect("unable to fetch Wasm data")
+    } else {
+        // This case should never happen
+        panic!("--wasm_path or --wasm_uri must be specified")
+    };
+
+    let lookup_data_option: Option<LookupDataChunk> = if !args.lookup_data_path.is_empty() {
+        let lookup_data_path = args.lookup_data_path;
+        // Parses lookup data from the `lookup_data_path` into a vector
+        println!("reading LookupDataChunk from: {}", lookup_data_path);
+        let lookup_data_buffer =
+            fs::read(lookup_data_path).expect("failed to read lookup data from file");
+        Some(LookupDataChunk::decode(lookup_data_buffer.as_slice()).unwrap())
+    } else if !args.lookup_data_uri.is_empty() {
+        let uri = &args.lookup_data_uri;
+        // Issues an HTTP GET request to fetch the lookup data
+        println!("reading LookupDataChunk from: {}", uri);
+        let lookup_data_bytes = fetch_data_from_uri(uri).expect("unable to fetch lookup data");
+        Some(LookupDataChunk::decode(lookup_data_bytes.as_slice()).unwrap())
+    } else {
+        None
+    };
 
     let attestation_args = create_attestation_args_for_gcp(args.attestation_type);
 
@@ -136,7 +198,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let oak_functions_session_args = OakFunctionsSessionArgs {
         wasm_initialization: InitializeRequest {
             constant_response_size: 100, // This value is ultimately ignored.
-            wasm_module: fs::read(args.wasm_path).expect("failed to read wasm module"),
+            wasm_module: wasm_module_bytes,
         },
         attestation_args,
         lookup_data: lookup_data_option,

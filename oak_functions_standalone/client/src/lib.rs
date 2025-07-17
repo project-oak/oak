@@ -23,7 +23,10 @@ use oak_attestation_gcp::{
 };
 use oak_attestation_verification::verifier::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
-use oak_proto_rust::oak::functions::standalone::{OakSessionRequest, OakSessionResponse};
+use oak_proto_rust::oak::{
+    attestation::v1::{collected_attestation::RequestMetadata, CollectedAttestation},
+    functions::standalone::{OakSessionRequest, OakSessionResponse},
+};
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -136,5 +139,19 @@ impl OakFunctionsClient {
         self.client_session
             .decrypt(response.response.context("no session response")?)
             .context("failed to decrypt response")
+    }
+
+    pub fn fetch_attestation(
+        &self,
+        uri: String,
+        clock: Arc<dyn Clock>,
+    ) -> Result<CollectedAttestation> {
+        let evidence = self.client_session.get_peer_attestation_evidence()?;
+        let request_metadata =
+            RequestMetadata { uri, request_time: Some(clock.get_time().into_timestamp()) };
+        Ok(CollectedAttestation {
+            request_metadata: Some(request_metadata),
+            endorsed_evidence: evidence.evidence,
+        })
     }
 }

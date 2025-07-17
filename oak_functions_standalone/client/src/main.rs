@@ -66,6 +66,13 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("couldn't connect to server")?;
 
+    if attestation_type == AttestationType::PeerUnidirectional {
+        println!(
+            "Attestation: {:?}",
+            client.fetch_attestation(opt.uri, clock).expect("unable to parse attestation")
+        );
+    }
+
     println!("Request: {}", opt.request);
     let decrypted_response = String::from_utf8(
         client.invoke(opt.request.as_bytes()).await.context("couldn't send request")?,

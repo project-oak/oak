@@ -61,10 +61,6 @@ rust_binary(
     crate_features = [
         "deny_sensitive_logging",
     ],
-    data = [
-        "//oak_functions/examples/key_value_lookup",
-        "//oak_functions_standalone/testdata:fake_weather_data.binarypb",
-    ],
     deps = [
         ":lib",
         "//oak_attestation_gcp",
@@ -82,6 +78,7 @@ rust_binary(
         "@oak_crates_index//:tikv-jemallocator",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:ureq",
     ],
 )
 
