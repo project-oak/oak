@@ -64,3 +64,24 @@ pub mod option_bytes {
         d.deserialize_option(OptionVisitor)
     }
 }
+
+pub mod repeated_bytes {
+    use alloc::vec::Vec;
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    pub fn serialize<S: Serializer>(v: &[Vec<u8>], s: S) -> Result<S::Ok, S::Error> {
+        let base64_strings: Vec<String> = v.iter().map(|bytes| STANDARD.encode(bytes)).collect();
+        base64_strings.serialize(s)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<Vec<u8>>, D::Error> {
+        let base64_strings: Vec<String> = Vec::deserialize(d)?;
+        base64_strings
+            .into_iter()
+            .map(|s| STANDARD.decode(s.as_bytes()).map_err(serde::de::Error::custom))
+            .collect()
+    }
+}

@@ -144,6 +144,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data::option_bytes\")]");
     }
 
+    let repeated_bytes_fields = ["oak.attestation.v1.EventLog.encoded_events"];
+    for bytes_field in repeated_bytes_fields {
+        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data::repeated_bytes\")]");
+    }
+
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
     Ok(())
