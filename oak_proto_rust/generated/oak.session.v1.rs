@@ -229,6 +229,7 @@ pub struct EncryptedMessage {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PlaintextMessage {
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub plaintext: ::prost::alloc::vec::Vec<u8>,
 }
 /// Request message for the Oak protocol attested secure session.
@@ -276,6 +277,7 @@ pub struct SessionRequestWithSessionId {
     /// Unique string to identify the session. This should be at least 128 bits of
     /// unique information.
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub session_id: ::prost::alloc::vec::Vec<u8>,
     #[prost(message, optional, tag = "2")]
     pub request: ::core::option::Option<SessionRequest>,

@@ -123,6 +123,7 @@ pub struct RootLayerEvidence {
     /// TEE-specific attestation report acting as a non-standard certificate for
     /// the Layer0 ECA public key.
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub remote_attestation_report: ::prost::alloc::vec::Vec<u8>,
     /// Serialized ECA public key for Layer0 that is signed by the remote
     /// attestation report.
@@ -130,6 +131,7 @@ pub struct RootLayerEvidence {
     /// Represented as a SEC1 encoded point.
     /// <<https://www.secg.org/sec1-v2.pdf#page=16>>
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub eca_public_key: ::prost::alloc::vec::Vec<u8>,
 }
 /// DICE layer evidence containing a certificate signed by the previous layer.
@@ -143,6 +145,7 @@ pub struct LayerEvidence {
     /// Represented as a CBOR/COSE/CWT ECA certificate.
     /// <<https://www.rfc-editor.org/rfc/rfc8392.html>>
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub eca_certificate: ::prost::alloc::vec::Vec<u8>,
 }
 /// Keys used by the application to derive encryption session keys and to sign
@@ -158,12 +161,14 @@ pub struct ApplicationKeys {
     /// Represented as a CBOR/COSE/CWT ECA certificate.
     /// <<https://www.rfc-editor.org/rfc/rfc8392.html>>
     #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
     pub encryption_public_key_certificate: ::prost::alloc::vec::Vec<u8>,
     /// Certificate signing the signing public key.
     ///
     /// Represented as a CBOR/COSE/CWT ECA certificate.
     /// <<https://www.rfc-editor.org/rfc/rfc8392.html>>
     #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
     pub signing_public_key_certificate: ::prost::alloc::vec::Vec<u8>,
     /// Certificate signing the group encryption public key as part of Key
     /// Provisioning.
@@ -171,6 +176,7 @@ pub struct ApplicationKeys {
     /// Represented as a CBOR/COSE/CWT ECA certificate.
     /// <<https://www.rfc-editor.org/rfc/rfc8392.html>>
     #[prost(bytes = "vec", tag = "3")]
+    #[serde(with = "crate::base64data")]
     pub group_encryption_public_key_certificate: ::prost::alloc::vec::Vec<u8>,
     /// Certificate signing the group signing public key as part of Key
     /// Provisioning.
@@ -178,6 +184,7 @@ pub struct ApplicationKeys {
     /// Represented as a CBOR/COSE/CWT ECA certificate.
     /// <<https://www.rfc-editor.org/rfc/rfc8392.html>>
     #[prost(bytes = "vec", tag = "4")]
+    #[serde(with = "crate::base64data")]
     pub group_signing_public_key_certificate: ::prost::alloc::vec::Vec<u8>,
 }
 /// Attestation Evidence used by the client to the identity of firmware and

@@ -106,8 +106,21 @@ cargo_build_script(
         "@com_google_protobuf//:protoc",
     ],
     deps = [
+        ":annotation",
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
+        "@oak_crates_index//:serde",
+    ],
+)
+
+rust_library(
+    name = "annotation",
+    srcs = ["annotation.rs"],
+    deps = [
+        "//oak_proto_build_utils",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-build",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
     ],
 )

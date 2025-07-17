@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+use std::collections::HashSet;
+
+use annotation::AnnotationInfo;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let included_protos = oak_proto_build_utils::get_common_proto_path("..");
@@ -48,17 +51,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/session/session.proto",
         "../third_party/google/profile.proto",
     ];
-    let mut config = prost_build::Config::new();
 
-    config.btree_map(["."]);
-
-    config.bytes(vec![
-        ".oak.containers.GetImageResponse".to_string(),
-        ".oak.functions.LookupDataEntry".to_string(),
-        ".oak.functions.ExtendNextLookupDataRequest".to_string(),
-    ]);
-
-    let annotate_types = [
+    let mut needed_types = HashSet::new();
+    for t in [
         "oak.session.v1.Assertion",
         "oak.session.v1.AttestRequest",
         "oak.session.v1.AttestResponse",
@@ -91,63 +86,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.Endorsement",
         "oak.attestation.v1.EventLog",
         "oak.Variant",
-    ];
-
-    let oneof_field_names = [
-        "oak.session.v1.HandshakeRequest.handshake_type",
-        "oak.session.v1.HandshakeResponse.handshake_type",
-        "oak.session.v1.SessionRequest.request",
-        "oak.session.v1.SessionResponse.response",
-        "oak.attestation.v1.Endorsements.type",
-    ];
-    for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
-        config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");
-        config.type_attribute(message_type, "#[serde(rename_all = \"camelCase\")]");
+    ] {
+        needed_types.insert(t.to_string());
     }
+    let mut annotations = AnnotationInfo::collect_annotations(
+        &proto_paths,
+        &included_protos,
+        "oak",
+        Some(&needed_types),
+    )?;
 
-    for message_type in annotate_types.iter() {
-        config.type_attribute(message_type, "#[serde(default)]");
-    }
+    // setting optional to non-scalar fields make it not distringuishable.
+    annotations
+        .optional_bytes_fields
+        .insert("oak.session.v1.EncryptedMessage.associated_data".to_string());
+    annotations.optional_bytes_fields.insert("oak.session.v1.EncryptedMessage.nonce".to_string());
 
-    for message_type in oneof_field_names {
-        config.field_attribute(message_type, "#[serde(flatten)]");
-    }
+    assert!(needed_types.difference(&annotations.annotate_types).count() == 0);
 
-    let bytes_fields = [
-        "oak.session.v1.Assertion.content",
-        "oak.session.v1.EncryptedMessage.ciphertext",
-        "oak.session.v1.NoiseHandshakeMessage.ephemeral_public_key",
-        "oak.session.v1.NoiseHandshakeMessage.static_public_key",
-        "oak.session.v1.NoiseHandshakeMessage.ciphertext",
-        "oak.session.v1.SessionBinding.binding",
-        "oak.attestation.v1.Signature.raw",
-        "oak.attestation.v1.Endorsement.serialized",
-        "oak.attestation.v1.Endorsement.subject",
-        "oak.attestation.v1.SignedEndorsement.rekor_log_entry",
-        "oak.attestation.v1.TransparentReleaseEndorsement.endorsement",
-        "oak.attestation.v1.TransparentReleaseEndorsement.subject",
-        "oak.attestation.v1.TransparentReleaseEndorsement.endorsement_signature",
-        "oak.attestation.v1.TransparentReleaseEndorsement.rekor_log_entry",
-        "oak.attestation.v1.RootLayerEndorsements.tee_certificate",
-        "oak.Variant.id",
-        "oak.Variant.value",
-    ];
-    for bytes_field in bytes_fields {
-        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data\")]");
-    }
+    let mut config = prost_build::Config::new();
 
-    let optional_bytes_fields = [
-        "oak.session.v1.EncryptedMessage.associated_data",
-        "oak.session.v1.EncryptedMessage.nonce",
-    ];
-    for bytes_field in optional_bytes_fields {
-        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data::option_bytes\")]");
-    }
+    config.btree_map(["."]);
 
-    let repeated_bytes_fields = ["oak.attestation.v1.EventLog.encoded_events"];
-    for bytes_field in repeated_bytes_fields {
-        config.field_attribute(bytes_field, "#[serde(with=\"crate::base64data::repeated_bytes\")]");
-    }
+    config.bytes(vec![
+        ".oak.containers.GetImageResponse".to_string(),
+        ".oak.functions.LookupDataEntry".to_string(),
+        ".oak.functions.ExtendNextLookupDataRequest".to_string(),
+    ]);
+
+    annotations.apply(&mut config);
 
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 
