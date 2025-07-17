@@ -62,6 +62,7 @@ rust_library(
         "src/app.rs",
         "src/app_config.rs",
         "src/app_service.rs",
+        "src/client.rs",
         "src/database.rs",
         "src/encryption.rs",
         "src/external_db_client.rs",
@@ -69,7 +70,9 @@ rust_library(
         "src/log.rs",
         "src/metrics.rs",
     ],
-    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
     deps = [
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
@@ -125,6 +128,33 @@ cc_test(
 rust_test(
     name = "standalone_test",
     srcs = ["test/standalone_test.rs"],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    deps = [
+        ":private_memory_server_lib",
+        ":private_memory_test_database_server_lib",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_client",
+        "@oak//oak_client/tonic:oak_client_tonic",
+        "@oak//oak_crypto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_proto_rust/grpc",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:futures-util",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_test(
+    name = "client_test",
+    srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         ":private_memory_server_lib",

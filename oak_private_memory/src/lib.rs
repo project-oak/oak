@@ -16,6 +16,7 @@
 pub mod app;
 pub mod app_config;
 pub mod app_service;
+pub mod client;
 pub mod database;
 pub mod encryption;
 pub mod external_db_client;

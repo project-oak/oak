@@ -19,24 +19,15 @@ use std::{
 };
 
 use anyhow::Result;
-use futures::channel::mpsc;
 use log::info;
-use oak_session::{
-    attestation::AttestationType,
-    channel::{SessionChannel, SessionInitializer},
-    config::SessionConfig,
-    handshake::HandshakeType,
-    Session,
-};
 use private_memory_server_lib::{
-    app::{run_persistence_service, RequestUnpacking, ResponsePacking},
+    app::run_persistence_service,
     app_config::ApplicationConfig,
+    client::{PrivateMemoryClient, SerializationFormat},
 };
 use prost::Message;
-use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{net::TcpListener, sync::mpsc as tokio_mpsc};
-use tonic::{transport::Channel, Streaming};
 
 fn init_logging() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -77,654 +68,78 @@ async fn start_server() -> Result<(
     ))
 }
 
-#[derive(Clone, Copy, Debug)]
-enum TestMode {
-    BinaryProto,
-    Json,
-}
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_get_reset_memory_all_modes() {
+    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
+    let url = format!("http://{addr}");
+    let pm_uid = "test_add_get_reset_user";
 
-struct TestHarness {
-    client_session: oak_session::ClientSession,
-    tx: mpsc::Sender<SealedMemorySessionRequest>,
-    response_stream: Streaming<SealedMemorySessionResponse>,
-    mode: TestMode,
-    pm_uid: String,
-}
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
 
-impl TestHarness {
-    async fn new(mode: TestMode, test_name: &str) -> Self {
-        let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-            start_server().await.unwrap();
-        let url = format!("http://{addr}");
-        let channel = Channel::from_shared(url.clone()).unwrap().connect().await.unwrap();
-        let mut client = SealedMemoryServiceClient::new(channel);
-        let (mut tx, rx) = mpsc::channel(10);
-        let mut response_stream = client.start_session(rx).await.unwrap().into_inner();
-        let mut client_session = oak_session::ClientSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-        )
-        .unwrap();
-        init_client_session_wrapped(&mut client_session, &mut tx, &mut response_stream).await;
-
-        let pm_uid = format!(
-            "{}_{:?}_{}",
-            test_name,
-            mode,
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+        let mut contents_map = HashMap::new();
+        contents_map.insert(
+            "text_data".to_string(),
+            MemoryValue {
+                value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
+            },
         );
-
-        Self { client_session, tx, response_stream, mode, pm_uid }
-    }
-
-    async fn register_and_sync_user(&mut self) {
-        // User Registration
-        let user_registration_request = UserRegistrationRequest {
-            key_encryption_key: TEST_EK.to_vec(),
-            pm_uid: self.pm_uid.clone(),
-            boot_strap_info: Some(KeyDerivationInfo::default()),
-        };
-        let (user_reg_response, _): (UserRegistrationResponse, i32) =
-            self.send_and_receive(user_registration_request, None).await;
-        assert_eq!(user_reg_response.status, user_registration_response::Status::Success as i32);
-
-        // Key Sync
-        let key_sync_request_id = 0xeadbeef;
-        let key_sync_request_data =
-            KeySyncRequest { key_encryption_key: TEST_EK.to_vec(), pm_uid: self.pm_uid.clone() };
-        let (key_sync_response, returned_id): (KeySyncResponse, i32) =
-            self.send_and_receive(key_sync_request_data, Some(key_sync_request_id)).await;
-        assert_eq!(returned_id, key_sync_request_id);
-        assert_eq!(key_sync_response.status, key_sync_response::Status::Success as i32);
-    }
-
-    async fn send_request<T>(&mut self, request_data: T, request_id: Option<i32>)
-    where
-        T: RequestUnpacking,
-    {
-        let mut sealed_memory_request = request_data.into_request();
-        if let Some(id) = request_id {
-            sealed_memory_request.request_id = id;
-        }
-
-        let payload = match self.mode {
-            TestMode::BinaryProto => sealed_memory_request.encode_to_vec(),
-            TestMode::Json => {
-                serde_json::to_vec(&sealed_memory_request).expect("JSON serialization failed")
-            }
-        };
-
-        let encrypted_request =
-            self.client_session.encrypt(payload).expect("failed to encrypt message");
-        self.tx
-            .try_send(SealedMemorySessionRequest { session_request: Some(encrypted_request) })
-            .expect("Could not send request to server");
-    }
-
-    async fn receive_response<T>(&mut self) -> (T, i32)
-    where
-        T: ResponsePacking,
-    {
-        let response = self
-            .response_stream
-            .message()
-            .await
-            .expect("error getting response")
-            .expect("didn't get any repsonse");
-
-        let decrypted_response = self
-            .client_session
-            .decrypt(response.session_response.expect("empty session response"))
-            .expect("failed to decrypt response");
-
-        let sealed_memory_response = match self.mode {
-            TestMode::BinaryProto => SealedMemoryResponse::decode(decrypted_response.as_ref())
-                .expect("Not a valid proto response"),
-            TestMode::Json => serde_json::from_slice::<SealedMemoryResponse>(&decrypted_response)
-                .expect("Not a valid JSON response"),
-        };
-        let request_id = sealed_memory_response.request_id;
-        let specific_response = T::from_response(sealed_memory_response)
-            .expect("A different type of response was parsed!");
-
-        (specific_response, request_id)
-    }
-
-    async fn send_and_receive<I, O>(&mut self, request_data: I, request_id: Option<i32>) -> (O, i32)
-    where
-        I: RequestUnpacking,
-        O: ResponsePacking,
-    {
-        self.send_request(request_data, request_id).await;
-        self.receive_response().await
-    }
-}
-
-fn create_add_memory_request() -> AddMemoryRequest {
-    let mut contents_map = HashMap::new();
-    contents_map.insert(
-        "text_data".to_string(),
-        MemoryValue {
-            value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
-        },
-    );
-    contents_map.insert(
-        "string_data".to_string(),
-        MemoryValue {
-            value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
-        },
-    );
-    contents_map.insert(
-        "int64_data".to_string(),
-        MemoryValue { value: Some(memory_value::Value::Int64Val(123456789)) },
-    );
-    AddMemoryRequest {
-        memory: Some(Memory {
+        contents_map.insert(
+            "string_data".to_string(),
+            MemoryValue {
+                value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
+            },
+        );
+        contents_map.insert(
+            "int64_data".to_string(),
+            MemoryValue { value: Some(memory_value::Value::Int64Val(123456789)) },
+        );
+        let memory_to_add = Memory {
             id: "".to_string(),
             content: Some(MemoryContent { contents: contents_map }),
             tags: vec!["tag".to_string()],
             ..Default::default()
-        }),
-    }
-}
-
-async fn execute_add_get_reset_memory_logic(harness: &mut TestHarness) {
-    let add_memory_request_data = create_add_memory_request();
-    let (add_memory_response, _): (AddMemoryResponse, i32) =
-        harness.send_and_receive(add_memory_request_data.clone(), None).await;
-    let memory_id_from_add = add_memory_response.id;
-    let _: (AddMemoryResponse, i32) = harness.send_and_receive(add_memory_request_data, None).await;
-
-    // GetMemoriesRequest
-    let get_memories_request_data =
-        GetMemoriesRequest { tag: "tag".to_string(), page_size: 1, result_mask: None };
-    let (get_memories_response_1, _): (GetMemoriesResponse, i32) =
-        harness.send_and_receive(get_memories_request_data, None).await;
-    assert_eq!(get_memories_response_1.memories.len(), 1);
-
-    let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
-    assert_eq!(memory_content.contents.len(), 3);
-    assert_eq!(
-        memory_content.contents["text_data"].value,
-        Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec()))
-    );
-    assert_eq!(
-        memory_content.contents["string_data"].value,
-        Some(memory_value::Value::StringVal("this is a test string".to_string()))
-    );
-    assert_eq!(
-        memory_content.contents["int64_data"].value,
-        Some(memory_value::Value::Int64Val(123456789))
-    );
-
-    // GetMemoryByIdRequest
-    let get_memory_by_id_request_data =
-        GetMemoryByIdRequest { id: memory_id_from_add.clone(), result_mask: None };
-    let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
-        harness.send_and_receive(get_memory_by_id_request_data, None).await;
-    assert!(get_memory_by_id_response.memory.is_some());
-    assert_eq!(memory_id_from_add, get_memory_by_id_response.memory.unwrap().id);
-
-    // ResetMemoryRequest
-    let reset_memory_request_data = ResetMemoryRequest::default();
-    let (reset_memory_response, _): (ResetMemoryResponse, i32) =
-        harness.send_and_receive(reset_memory_request_data, None).await;
-    assert!(reset_memory_response.success);
-
-    // GetMemoriesRequest again
-    let get_memories_request_data_2 =
-        GetMemoriesRequest { tag: "tag".to_string(), page_size: 10, result_mask: None };
-    let (get_memories_response_2, _): (GetMemoriesResponse, i32) =
-        harness.send_and_receive(get_memories_request_data_2, None).await;
-    assert_eq!(get_memories_response_2.memories.len(), 0);
-}
-
-async fn execute_delete_memory_logic(harness: &mut TestHarness) {
-    // Add a few memory items
-    let mut added_memory_ids = Vec::new();
-    for i in 0..3 {
-        let add_memory_request_data = AddMemoryRequest {
-            memory: Some(Memory {
-                id: "".to_string(), // Let server generate ID
-                content: None,
-                tags: vec![format!("delete_tag_{}", i)],
-                ..Default::default()
-            }),
         };
-        let (add_memory_response, _): (AddMemoryResponse, i32) =
-            harness.send_and_receive(add_memory_request_data, None).await;
-        added_memory_ids.push(add_memory_response.id);
-    }
 
-    // Verify items were added
-    for id in &added_memory_ids {
-        let get_memory_by_id_request_data =
-            GetMemoryByIdRequest { id: id.clone(), result_mask: None };
-        let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
-            harness.send_and_receive(get_memory_by_id_request_data, None).await;
+        let add_memory_response = client.add_memory(memory_to_add.clone()).await.unwrap();
+        let memory_id_from_add = add_memory_response.id;
+        client.add_memory(memory_to_add).await.unwrap();
+
+        // GetMemoriesRequest
+        let get_memories_response_1 = client.get_memories("tag", 1, None).await.unwrap();
+        assert_eq!(get_memories_response_1.memories.len(), 1);
+
+        let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
+        assert_eq!(memory_content.contents.len(), 3);
+        assert_eq!(
+            memory_content.contents["text_data"].value,
+            Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec()))
+        );
+        assert_eq!(
+            memory_content.contents["string_data"].value,
+            Some(memory_value::Value::StringVal("this is a test string".to_string()))
+        );
+        assert_eq!(
+            memory_content.contents["int64_data"].value,
+            Some(memory_value::Value::Int64Val(123456789))
+        );
+
+        // GetMemoryByIdRequest
+        let get_memory_by_id_response =
+            client.get_memory_by_id(&memory_id_from_add, None).await.unwrap();
         assert!(get_memory_by_id_response.success);
-        assert!(get_memory_by_id_response.memory.is_some());
-        assert_eq!(get_memory_by_id_response.memory.unwrap().id, *id);
-    }
+        assert_eq!(memory_id_from_add, get_memory_by_id_response.memory.unwrap().id);
 
-    // Delete some of the memory items
-    let ids_to_delete = vec![added_memory_ids[0].clone(), added_memory_ids[2].clone()];
-    let delete_memory_request_data = DeleteMemoryRequest { ids: ids_to_delete.clone() };
-    let (delete_memory_response, _): (DeleteMemoryResponse, i32) =
-        harness.send_and_receive(delete_memory_request_data, None).await;
-    assert!(delete_memory_response.success);
+        // ResetMemoryRequest
+        let reset_memory_response = client.reset_memory().await.unwrap();
+        assert!(reset_memory_response.success);
 
-    // Verify deleted items are gone
-    for id in &ids_to_delete {
-        let get_memory_by_id_request_data =
-            GetMemoryByIdRequest { id: id.clone(), result_mask: None };
-        let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
-            harness.send_and_receive(get_memory_by_id_request_data, None).await;
-        assert!(!get_memory_by_id_response.success);
-        assert!(get_memory_by_id_response.memory.is_none());
-    }
-
-    // Verify the item that was NOT deleted still exists
-    let id_not_deleted = added_memory_ids[1].clone();
-    let get_memory_by_id_request_data =
-        GetMemoryByIdRequest { id: id_not_deleted.clone(), result_mask: None };
-    let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
-        harness.send_and_receive(get_memory_by_id_request_data, None).await;
-    assert!(get_memory_by_id_response.success);
-    assert!(get_memory_by_id_response.memory.is_some());
-    assert_eq!(get_memory_by_id_response.memory.unwrap().id, id_not_deleted);
-
-    // Attempt to delete a non-existent ID
-    let non_existent_id = "non_existent_memory_id".to_string();
-    let delete_memory_request_data_non_existent =
-        DeleteMemoryRequest { ids: vec![non_existent_id.clone()] };
-    let (delete_memory_response_non_existent, _): (DeleteMemoryResponse, i32) =
-        harness.send_and_receive(delete_memory_request_data_non_existent, None).await;
-    assert!(!delete_memory_response_non_existent.success);
-}
-
-async fn execute_embedding_search_logic(harness: &mut TestHarness) {
-    let embedding1 =
-        Embedding { identifier: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] };
-    let embedding2 =
-        Embedding { identifier: "test_model2".to_string(), values: vec![0.0, 1.0, 0.0] };
-    let mut contents_map1 = HashMap::new();
-    contents_map1.insert(
-        "item_text_1".to_string(),
-        MemoryValue {
-            value: Some(memory_value::Value::BytesVal("this is a test item 1".as_bytes().to_vec())),
-        },
-    );
-    let request1 = AddMemoryRequest {
-        memory: Some(Memory {
-            id: "".to_string(),
-            content: Some(MemoryContent { contents: contents_map1 }),
-            embeddings: vec![embedding1, embedding2],
-            tags: Vec::new(),
-        }),
-    };
-    let (add_memory_response1, _): (AddMemoryResponse, i32) =
-        harness.send_and_receive(request1, None).await;
-
-    let embedding3 =
-        Embedding { identifier: "test_model".to_string(), values: vec![1.0, 0.0, 0.0] };
-    let embedding4 =
-        Embedding { identifier: "test_model".to_string(), values: vec![0.0, 1.0, 0.0] };
-    let mut contents_map2 = HashMap::new();
-    contents_map2.insert(
-        "item_text_2".to_string(),
-        MemoryValue {
-            value: Some(memory_value::Value::BytesVal("this is a test item 2".as_bytes().to_vec())),
-        },
-    );
-    let request2 = AddMemoryRequest {
-        memory: Some(Memory {
-            id: "".to_string(),
-            content: Some(MemoryContent { contents: contents_map2 }),
-            embeddings: vec![embedding3, embedding4],
-            tags: Vec::new(),
-        }),
-    };
-    let (add_memory_response2, _): (AddMemoryResponse, i32) =
-        harness.send_and_receive(request2, None).await;
-
-    let search_embedding =
-        Embedding { identifier: "test_model".to_string(), values: vec![1.0, 1.0, 0.0] };
-    let embedding_query =
-        EmbeddingQuery { embedding: vec![search_embedding], ..Default::default() };
-    let search_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
-    };
-    let search_request =
-        SearchMemoryRequest { query: Some(search_query), page_size: 10, ..Default::default() };
-    let (search_memory_response, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request, None).await;
-
-    assert_eq!(search_memory_response.results.len(), 2);
-    assert_eq!(
-        search_memory_response.results[0].memory.as_ref().unwrap().id,
-        add_memory_response2.id
-    );
-    assert_eq!(
-        search_memory_response.results[1].memory.as_ref().unwrap().id,
-        add_memory_response1.id
-    );
-
-    // memory2 will have score [0, 1.0, 0] x [1.0, 2.0, 0] = 2.0 (the second
-    // embedding got filtered out because it has score 1.0 < 1.5) memory1 is
-    // filtered out because its only embedding has score 1.0 < 1.5
-    let search_embedding =
-        Embedding { identifier: "test_model".to_string(), values: vec![1.0, 2.0, 0.0] };
-    let score_range = ScoreRange { min: 2.0, max: 3.0 };
-    let embedding_query = EmbeddingQuery {
-        embedding: vec![search_embedding],
-        score_range: Some(score_range),
-        ..Default::default()
-    };
-    let search_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(embedding_query)),
-    };
-    let search_request =
-        SearchMemoryRequest { query: Some(search_query), page_size: 10, ..Default::default() };
-    let (search_memory_response, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request, None).await;
-
-    assert_eq!(search_memory_response.results.len(), 1);
-    assert_eq!(
-        search_memory_response.results[0].memory.as_ref().unwrap().id,
-        add_memory_response2.id
-    );
-}
-
-fn create_comprehensive_memory_item() -> (AddMemoryRequest, HashMap<String, MemoryValue>) {
-    let original_memory_id = "mask_test_mem_item_id_1".to_string();
-    let original_tags = vec!["tagMaskTestA".to_string(), "tagMaskTestB".to_string()];
-    let original_embedding =
-        Embedding { identifier: "mask_test_model".to_string(), values: vec![0.5, 0.5] };
-    let original_embeddings = vec![original_embedding.clone()];
-
-    let mut original_contents_map = HashMap::new();
-    original_contents_map.insert(
-        "content_key_str".to_string(),
-        MemoryValue {
-            value: Some(memory_value::Value::BytesVal("value_string_data".as_bytes().to_vec())),
-        },
-    );
-    original_contents_map.insert(
-        "content_key_int".to_string(),
-        MemoryValue { value: Some(memory_value::Value::Int64Val(98765)) },
-    );
-    let original_memory_content = MemoryContent { contents: original_contents_map.clone() };
-
-    let add_memory_request_data = AddMemoryRequest {
-        memory: Some(Memory {
-            id: original_memory_id.clone(),
-            tags: original_tags.clone(),
-            embeddings: original_embeddings.clone(),
-            content: Some(original_memory_content.clone()),
-        }),
-    };
-    (add_memory_request_data, original_contents_map)
-}
-
-async fn execute_get_masking_logic(harness: &mut TestHarness) {
-    let (add_memory_request_data, original_contents_map) = create_comprehensive_memory_item();
-    let original_memory_id = add_memory_request_data.memory.as_ref().unwrap().id.clone();
-    let original_tags = add_memory_request_data.memory.as_ref().unwrap().tags.clone();
-
-    let (add_memory_response, _): (AddMemoryResponse, i32) =
-        harness.send_and_receive(add_memory_request_data, None).await;
-    assert_eq!(add_memory_response.id, original_memory_id);
-
-    // Test GetMemoryById with a mask
-    info!("Test GetMemoryById with a mask");
-    let get_memory_by_id_request = GetMemoryByIdRequest {
-        id: original_memory_id.clone(),
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
-            include_content_fields: vec![],
-        }),
-    };
-    let (get_memory_by_id_response, _): (GetMemoryByIdResponse, i32) =
-        harness.send_and_receive(get_memory_by_id_request, None).await;
-    assert!(get_memory_by_id_response.success);
-    let mem_id_tags = get_memory_by_id_response.memory.as_ref().unwrap();
-    assert_eq!(mem_id_tags.id, original_memory_id);
-    assert_eq!(mem_id_tags.tags, original_tags);
-    assert!(mem_id_tags.embeddings.is_empty());
-    assert!(mem_id_tags.content.is_none());
-
-    // Test GetMemories with a mask
-    info!("Test GetMemories with a mask");
-    let get_memories_request = GetMemoriesRequest {
-        tag: "tagMaskTestA".to_string(),
-        page_size: 1,
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Content as i32],
-            include_content_fields: vec!["content_key_str".to_string()],
-        }),
-    };
-    let (get_memories_response, _): (GetMemoriesResponse, i32) =
-        harness.send_and_receive(get_memories_request, None).await;
-    assert_eq!(get_memories_response.memories.len(), 1);
-    let mem_cs = &get_memories_response.memories[0];
-    assert!(mem_cs.id.is_empty());
-    assert!(mem_cs.tags.is_empty());
-    assert!(mem_cs.embeddings.is_empty());
-    assert!(mem_cs.content.is_some());
-    let specific_contents = &mem_cs.content.as_ref().unwrap().contents;
-    assert_eq!(specific_contents.len(), 1);
-    assert!(specific_contents.contains_key("content_key_str"));
-    assert_eq!(specific_contents["content_key_str"], original_contents_map["content_key_str"]);
-}
-
-async fn execute_result_masking_logic(harness: &mut TestHarness) {
-    let (add_memory_request_data, original_contents_map) = create_comprehensive_memory_item();
-    let original_memory_id = add_memory_request_data.memory.as_ref().unwrap().id.clone();
-    let original_tags = add_memory_request_data.memory.as_ref().unwrap().tags.clone();
-    let original_embeddings = add_memory_request_data.memory.as_ref().unwrap().embeddings.clone();
-
-    let (add_memory_response, _): (AddMemoryResponse, i32) =
-        harness.send_and_receive(add_memory_request_data, None).await;
-    assert_eq!(add_memory_response.id, original_memory_id);
-
-    // Search query that will find the item
-    let search_embedding_for_query = Embedding {
-        identifier: "mask_test_model".to_string(), // Match identifier
-        values: vec![0.5, 0.5],
-    };
-    let embedding_query_for_search = EmbeddingQuery {
-        embedding: vec![search_embedding_for_query.clone()],
-        ..Default::default()
-    };
-    let search_query_clause = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(
-            embedding_query_for_search.clone(),
-        )),
-    };
-
-    // Test Case 1: No ResultMask (result_mask field is None)
-    info!("Test Case 1: No ResultMask (all fields expected)");
-    let search_request_no_mask = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: None,
-    };
-    let (response_no_mask, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_no_mask, None).await;
-    assert_eq!(response_no_mask.results.len(), 1);
-    let mem_no_mask = response_no_mask.results[0].memory.as_ref().unwrap();
-    assert_eq!(mem_no_mask.id, original_memory_id);
-    assert_eq!(mem_no_mask.tags, original_tags);
-    assert_eq!(mem_no_mask.embeddings, original_embeddings);
-    assert_eq!(mem_no_mask.content.as_ref().unwrap().contents, original_contents_map);
-
-    // Test Case 2: Empty include_fields (no top-level fields expected)
-    info!("Test Case 2: Empty include_fields");
-    let search_request_empty_fields = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: Some(ResultMask { include_fields: vec![], include_content_fields: vec![] }),
-    };
-    let (response_empty_fields, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_empty_fields, None).await;
-    assert_eq!(response_empty_fields.results.len(), 1);
-    let mem_empty_fields = response_empty_fields.results[0].memory.as_ref().unwrap();
-    assert!(mem_empty_fields.id.is_empty(), "ID should be empty");
-    assert!(mem_empty_fields.tags.is_empty(), "Tags should be empty");
-    assert!(mem_empty_fields.embeddings.is_empty(), "Embeddings should be empty");
-    assert!(mem_empty_fields.content.is_none(), "Content should be None");
-
-    // Test Case 3: Specific top-level fields (ID and TAGS)
-    info!("Test Case 3: Specific top-level fields (ID and TAGS)");
-    let search_request_id_tags = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
-            include_content_fields: vec![],
-        }),
-    };
-    let (response_id_tags, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_id_tags, None).await;
-    assert_eq!(response_id_tags.results.len(), 1);
-    let mem_id_tags = response_id_tags.results[0].memory.as_ref().unwrap();
-    assert_eq!(mem_id_tags.id, original_memory_id);
-    assert_eq!(mem_id_tags.tags, original_tags);
-    assert!(mem_id_tags.embeddings.is_empty());
-    assert!(mem_id_tags.content.is_none());
-
-    // Test Case 4: CONTENT included, specific content_fields ("content_key_str")
-    info!("Test Case 4: CONTENT with specific content_fields");
-    let search_request_content_specific = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Content as i32],
-            include_content_fields: vec!["content_key_str".to_string()],
-        }),
-    };
-    let (response_content_specific, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_content_specific, None).await;
-    assert_eq!(response_content_specific.results.len(), 1);
-    let mem_cs = response_content_specific.results[0].memory.as_ref().unwrap();
-    assert!(mem_cs.id.is_empty());
-    assert!(mem_cs.tags.is_empty());
-    assert!(mem_cs.embeddings.is_empty());
-    assert!(mem_cs.content.is_some());
-    let specific_contents = &mem_cs.content.as_ref().unwrap().contents;
-    assert_eq!(specific_contents.len(), 1);
-    assert!(specific_contents.contains_key("content_key_str"));
-    assert_eq!(specific_contents["content_key_str"], original_contents_map["content_key_str"]);
-
-    // Test Case 5: CONTENT included, empty content_fields (all content sub-fields
-    // expected)
-    info!("Test Case 5: CONTENT with empty content_fields");
-    let search_request_content_all_sub = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Content as i32],
-            include_content_fields: vec![],
-        }),
-    };
-    let (response_content_all_sub, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_content_all_sub, None).await;
-    assert_eq!(response_content_all_sub.results.len(), 1);
-    let mem_cas = response_content_all_sub.results[0].memory.as_ref().unwrap();
-    assert!(mem_cas.id.is_empty());
-    assert!(mem_cas.tags.is_empty());
-    assert!(mem_cas.embeddings.is_empty());
-    assert!(mem_cas.content.is_some());
-    assert_eq!(mem_cas.content.as_ref().unwrap().contents, original_contents_map);
-
-    // Test Case 6: CONTENT *not* included, but content_fields specified
-    info!("Test Case 6: ID included, content_fields specified (CONTENT not in include_fields)");
-    let search_request_id_stray_content = SearchMemoryRequest {
-        query: Some(search_query_clause.clone()),
-        page_size: 1,
-        result_mask: Some(ResultMask {
-            include_fields: vec![MemoryField::Id as i32],
-            include_content_fields: vec!["content_key_str".to_string()], // Should be ignored
-        }),
-    };
-    let (response_id_stray, _): (SearchMemoryResponse, i32) =
-        harness.send_and_receive(search_request_id_stray_content, None).await;
-    assert_eq!(response_id_stray.results.len(), 1);
-    let mem_is = response_id_stray.results[0].memory.as_ref().unwrap();
-    assert_eq!(mem_is.id, original_memory_id);
-    assert!(mem_is.tags.is_empty());
-    assert!(mem_is.embeddings.is_empty());
-    assert!(mem_is.content.is_none());
-}
-
-async fn execute_boot_strap_logic(harness: &mut TestHarness) {
-    let user_registration_request = UserRegistrationRequest {
-        key_encryption_key: TEST_EK.to_vec(),
-        pm_uid: harness.pm_uid.clone(),
-        boot_strap_info: Some(KeyDerivationInfo::default()),
-    };
-
-    // First registration: Success
-    let (user_reg_response1, _): (UserRegistrationResponse, i32) =
-        harness.send_and_receive(user_registration_request.clone(), None).await;
-    assert_eq!(user_reg_response1.status, user_registration_response::Status::Success as i32);
-
-    // Second registration: UserAlreadyExists
-    let (user_reg_response2, _): (UserRegistrationResponse, i32) =
-        harness.send_and_receive(user_registration_request, None).await;
-    assert_eq!(
-        user_reg_response2.status,
-        user_registration_response::Status::UserAlreadyExists as i32
-    );
-    assert!(user_reg_response2.key_derivation_info.is_some());
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_add_get_reset_memory_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Add/Get/Reset in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "add_get_reset").await;
-        harness.register_and_sync_user().await;
-        execute_add_get_reset_memory_logic(&mut harness).await;
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_embedding_search_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Embedding Search in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "embedding_search").await;
-        harness.register_and_sync_user().await;
-        execute_embedding_search_logic(&mut harness).await;
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_result_masking_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Result Masking in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "result_masking").await;
-        harness.register_and_sync_user().await;
-        execute_result_masking_logic(&mut harness).await;
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_get_masking_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Get Masking in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "get_masking").await;
-        harness.register_and_sync_user().await;
-        execute_get_masking_logic(&mut harness).await;
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_boot_strap_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Bootstrap in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "boot_strap").await;
-        execute_boot_strap_logic(&mut harness).await;
+        // GetMemoriesRequest again
+        let get_memories_response_2 = client.get_memories("tag", 10, None).await.unwrap();
+        assert_eq!(get_memories_response_2.memories.len(), 0);
     }
 }
 
@@ -782,36 +197,4 @@ fn proto_serialization_test() {
     let json_str6 = r#"{"int64Val":"12345"}"#;
     let memory_value_from_string_num = serde_json::from_str::<MemoryValue>(json_str6).unwrap();
     assert_eq!(memory_value.encode_to_vec(), memory_value_from_string_num.encode_to_vec());
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn test_delete_memory_all_modes() {
-    for &mode in [TestMode::BinaryProto, TestMode::Json].iter() {
-        info!("Testing Delete Memory in {:?} mode", mode);
-        let mut harness = TestHarness::new(mode, "delete_memory").await;
-        harness.register_and_sync_user().await;
-        execute_delete_memory_logic(&mut harness).await;
-    }
-}
-
-async fn init_client_session_wrapped(
-    client_session: &mut oak_session::ClientSession,
-    tx: &mut mpsc::Sender<SealedMemorySessionRequest>,
-    response_stream: &mut tonic::Streaming<SealedMemorySessionResponse>,
-) {
-    while !client_session.is_open() {
-        let request = client_session.next_init_message().expect("failed to get next init message");
-        tx.try_send(SealedMemorySessionRequest { session_request: Some(request) })
-            .expect("failed to send init request");
-        if !client_session.is_open() {
-            let response = response_stream
-                .message()
-                .await
-                .expect("empty init response")
-                .expect("failed to get init response");
-            client_session
-                .handle_init_message(response.session_response.expect("missing session response"))
-                .expect("failed to handle init response");
-        }
-    }
 }
