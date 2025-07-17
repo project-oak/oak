@@ -1,6 +1,6 @@
 """Create rules for nixpkgs-provided pkgs"""
 
-load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl", "nixpkgs_package")
+load("@rules_nixpkgs_core//:nixpkgs.bzl", "nixpkgs_package")
 
 def setup_nix_kernels():
     nixpkgs_package(

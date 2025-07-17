@@ -296,6 +296,8 @@
     "https://bcr.bazel.build/modules/rules_license/0.0.8/MODULE.bazel": "5669c6fe49b5134dbf534db681ad3d67a2d49cfc197e4a95f1ca2fd7f3aebe96",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/MODULE.bazel": "a7fda60eefdf3d8c827262ba499957e4df06f659330bbe6cdbdb975b768bb65c",
     "https://bcr.bazel.build/modules/rules_license/1.0.0/source.json": "a52c89e54cc311196e478f8382df91c15f7a2bfdf4c6cd0e2675cc2ff0b56efb",
+    "https://bcr.bazel.build/modules/rules_nixpkgs_core/0.13.0/MODULE.bazel": "b826d994220017d44c8a4e55435c2c2e6b4733eaaff69fff65232e0010afcb7b",
+    "https://bcr.bazel.build/modules/rules_nixpkgs_core/0.13.0/source.json": "c542b96a9d6ab189bd1a65da43e6c7b8be5f1099876ffba35cd9d2275f82740e",
     "https://bcr.bazel.build/modules/rules_nodejs/5.8.2/MODULE.bazel": "6bc03c8f37f69401b888023bf511cb6ee4781433b0cb56236b2e55a21e3a026a",
     "https://bcr.bazel.build/modules/rules_nodejs/6.3.0/MODULE.bazel": "45345e4aba35dd6e4701c1eebf5a4e67af4ed708def9ebcdc6027585b34ee52d",
     "https://bcr.bazel.build/modules/rules_nodejs/6.3.0/source.json": "1254ffd8d0d908a19c67add7fb5e2a1f604df133bc5d206425264293e2e537fc",
@@ -385,6 +387,86 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "//bazel/nix:extensions.bzl%nix_repos": {
+      "general": {
+        "bzlTransitiveDigest": "lGNOdDCUkXYyCXaIXMwEuy+eZV5fVXxdPpvFOflwZTA=",
+        "usagesDigest": "kMxCUePOwpTagjHCHzykBoJs75RwnPpD3909mUuqQ1g=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "nixpkgs": {
+            "bzlFile": "@@rules_nixpkgs_core~//:nixpkgs.bzl",
+            "ruleClassName": "_nixpkgs_local_repository",
+            "attributes": {
+              "unmangled_name": "nixpkgs",
+              "nix_file_deps": [
+                "@@//:flake.lock"
+              ],
+              "nix_file_content": "",
+              "nix_flake_lock_file": "@@//:flake.lock"
+            }
+          },
+          "nix_vanilla_linux_kernel": {
+            "bzlFile": "@@rules_nixpkgs_core~//:nixpkgs.bzl",
+            "ruleClassName": "_nixpkgs_package",
+            "attributes": {
+              "unmangled_name": "nix_vanilla_linux_kernel",
+              "attribute_path": "",
+              "nix_file": "@@//oak_containers/kernel:vanilla-kernel.nix",
+              "nix_file_deps": {
+                "@@//oak_containers/kernel:kernel-common.nix": "@//oak_containers/kernel:kernel-common.nix",
+                "@@//oak_containers/kernel:kernel_version.txt": "@//oak_containers/kernel:kernel_version.txt",
+                "@@//oak_containers/kernel/configs/6.12.25:minimal.config": "@//oak_containers/kernel/configs/6.12.25:minimal.config"
+              },
+              "nix_file_content": "",
+              "repository": "@@_main~nix_repos~nixpkgs//:nixpkgs",
+              "repositories": {},
+              "build_file_content": "exports_files([\"bzImage\"])",
+              "nixopts": [],
+              "quiet": false,
+              "fail_not_supported": true
+            }
+          },
+          "nix_linux_kernel": {
+            "bzlFile": "@@rules_nixpkgs_core~//:nixpkgs.bzl",
+            "ruleClassName": "_nixpkgs_package",
+            "attributes": {
+              "unmangled_name": "nix_linux_kernel",
+              "attribute_path": "",
+              "nix_file": "@@//oak_containers/kernel:kernel.nix",
+              "nix_file_deps": {
+                "@@//oak_containers/kernel:kernel-common.nix": "@//oak_containers/kernel:kernel-common.nix",
+                "@@//oak_containers/kernel:kernel_version.txt": "@//oak_containers/kernel:kernel_version.txt",
+                "@@//oak_containers/kernel/configs/6.12.25:minimal.config": "@//oak_containers/kernel/configs/6.12.25:minimal.config",
+                "@@//oak_containers/kernel/patches:virtio-dma.patch": "@//oak_containers/kernel/patches:virtio-dma.patch",
+                "@@//oak_containers/kernel/patches:tdx-probe-roms.patch": "@//oak_containers/kernel/patches:tdx-probe-roms.patch",
+                "@@//oak_containers/kernel/patches:rtmr-enable.patch": "@//oak_containers/kernel/patches:rtmr-enable.patch"
+              },
+              "nix_file_content": "",
+              "repository": "@@_main~nix_repos~nixpkgs//:nixpkgs",
+              "repositories": {},
+              "build_file_content": "exports_files([\"bzImage\"])",
+              "nixopts": [],
+              "quiet": false,
+              "fail_not_supported": true
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "",
+            "rules_nixpkgs_core",
+            "rules_nixpkgs_core~"
+          ],
+          [
+            "rules_nixpkgs_core~",
+            "bazel_skylib",
+            "bazel_skylib~"
+          ]
+        ]
+      }
+    },
     "@@apple_support~//crosstool:setup.bzl%apple_cc_configure_extension": {
       "general": {
         "bzlTransitiveDigest": "7ii+gFxWSxHhQPrBxfMEHhtrGvHmBTvsh+KOyGunP/s=",

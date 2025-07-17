@@ -62,19 +62,3 @@ create_oak_crate_repositories()
 load("//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
-
-load("//bazel/nix:deps.bzl", "load_nixpkgs_repositories")
-
-load_nixpkgs_repositories()
-
-load("//bazel/nix:defs.bzl", "setup_nixpkgs_dependencies")
-
-setup_nixpkgs_dependencies()
-
-load("//bazel/nix:repo.bzl", "create_nix_flake_repo")
-
-create_nix_flake_repo()
-
-load("//oak_containers/kernel:pkgs.bzl", "setup_nix_kernels")
-
-setup_nix_kernels()

@@ -82,6 +82,13 @@ register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
 
 bazel_dep(name = "rules_kotlin", version = "2.1.4")
 
+##### Nix pkgs
+
+bazel_dep(name = "rules_nixpkgs_core", version = "0.13.0")
+
+nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos")
+use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
+
 ##### OCI
 
 bazel_dep(name = "rules_oci", version = "2.2.6")
