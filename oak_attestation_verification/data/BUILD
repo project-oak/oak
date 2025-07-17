@@ -30,12 +30,13 @@ package(
 # convert and compare against the repository copies. However, the mentioned
 # URL uses a custom AMD format - the files used here can be obtained directly
 # from https://kdsintf.amd.com/vcek/v1/${PRODUCT_NAME}/cert_chain, where
-# PRODUCT_NAME is `Genoa` or `Milan`.
+# PRODUCT_NAME is `Genoa`, `Milan` or `Turin`.
 filegroup(
     name = "amd_ark_certs",
     srcs = [
         "ark_genoa.pem",
         "ark_milan.pem",
+        "ark_turin.pem",
     ],
 )
 
@@ -44,6 +45,7 @@ filegroup(
     srcs = [
         "ask_genoa.pem",
         "ask_milan.pem",
+        "ask_turin.pem",
     ],
 )
 

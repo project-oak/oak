@@ -18,14 +18,20 @@ extern crate std;
 
 use std::eprintln;
 
-use x509_cert::{certificate::Version, der::DecodePem, Certificate};
+use x509_cert::{
+    certificate::{CertificateInner, Version},
+    der::DecodePem,
+    Certificate,
+};
 
 use crate::amd::verify_cert_signature;
 
 const ARK_MILAN_CERT_PEM: &str = include_str!("../../data/ark_milan.pem");
 const ARK_GENOA_CERT_PEM: &str = include_str!("../../data/ark_genoa.pem");
+const ARK_TURIN_CERT_PEM: &str = include_str!("../../data/ark_turin.pem");
 const ASK_MILAN_CERT_PEM: &str = include_str!("../../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../../data/ask_genoa.pem");
+const ASK_TURIN_CERT_PEM: &str = include_str!("../../data/ask_turin.pem");
 const VCEK_MILAN_CERT_PEM: &str = include_str!("../../testdata/oc_vcek_milan.pem");
 
 // Verifies validity of a matching ARK, ASK certificate pair.
@@ -54,11 +60,15 @@ fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn load_cert(path: &str) -> CertificateInner {
+    Certificate::from_pem(path).expect("could not parse cert")
+}
+
 #[test]
-fn print_all_certs() {
-    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
-    let vcek = Certificate::from_pem(VCEK_MILAN_CERT_PEM).expect("could not parse cert");
+fn print_all_milan_certs() {
+    let ark = load_cert(ARK_MILAN_CERT_PEM);
+    let ask = load_cert(ASK_MILAN_CERT_PEM);
+    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
     eprint_exts(&ark).expect("error");
     eprint_exts(&ask).expect("error");
     eprint_exts(&vcek).expect("error");
@@ -66,63 +76,92 @@ fn print_all_certs() {
 
 #[test]
 fn milan_ark_signs_itself() {
-    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_MILAN_CERT_PEM);
     assert!(verify_cert_signature(&ark, &ark).is_ok());
 }
 
 #[test]
 fn milan_ark_signs_ask() {
-    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_MILAN_CERT_PEM);
+    let ask = load_cert(ASK_MILAN_CERT_PEM);
     assert!(verify_cert_signature(&ark, &ask).is_ok());
 }
 
 #[test]
 fn milan_ask_signs_vcek() {
-    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
-    let vcek = Certificate::from_pem(VCEK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ask = load_cert(ASK_MILAN_CERT_PEM);
+    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
 #[test]
 fn genoa_ark_signs_itself() {
-    let ark = x509_cert::Certificate::from_pem(ARK_GENOA_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_GENOA_CERT_PEM);
     assert!(verify_cert_signature(&ark, &ark).is_ok());
 }
 
 #[test]
 fn genoa_ark_signs_ask() {
-    let ark = Certificate::from_pem(ARK_GENOA_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_GENOA_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_GENOA_CERT_PEM);
+    let ask = load_cert(ASK_GENOA_CERT_PEM);
     assert!(verify_cert_signature(&ark, &ask).is_ok());
 }
 
-// Negative test just to double check.
 #[test]
-fn genoa_ark_does_not_sign_milan_ask() {
-    let ark = Certificate::from_pem(ARK_GENOA_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
-    assert!(verify_cert_signature(&ark, &ask).is_err());
+fn turin_ark_signs_itself() {
+    let ark = load_cert(ARK_TURIN_CERT_PEM);
+    assert!(verify_cert_signature(&ark, &ark).is_ok());
 }
 
-// Negative test just to double check.
+#[test]
+fn turin_ark_signs_ask() {
+    let ark = load_cert(ARK_TURIN_CERT_PEM);
+    let ask = load_cert(ASK_TURIN_CERT_PEM);
+    assert!(verify_cert_signature(&ark, &ask).is_ok());
+}
+
 #[test]
 fn milan_ark_does_not_sign_vcek() {
-    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
-    let vcek = Certificate::from_pem(VCEK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_MILAN_CERT_PEM);
+    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
     assert!(verify_cert_signature(&ark, &vcek).is_err());
+}
+
+// Negative tests just to double check that ARK does not sign ASK when the
+// CPU model doesn't match.
+#[test]
+fn ark_does_not_sign_ask() {
+    let arks = [ARK_MILAN_CERT_PEM, ARK_GENOA_CERT_PEM, ARK_TURIN_CERT_PEM];
+    let asks = [ASK_MILAN_CERT_PEM, ASK_GENOA_CERT_PEM, ASK_TURIN_CERT_PEM];
+    for (i, ark_path) in arks.iter().enumerate() {
+        let ark = load_cert(ark_path);
+        for (j, ask_path) in asks.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            let ask = load_cert(ask_path);
+            assert!(verify_cert_signature(&ark, &ask).is_err());
+        }
+    }
 }
 
 #[test]
 fn validate_milan() {
-    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_MILAN_CERT_PEM);
+    let ask = load_cert(ASK_MILAN_CERT_PEM);
     assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
 }
 
 #[test]
 fn validate_genoa() {
-    let ark = Certificate::from_pem(ARK_GENOA_CERT_PEM).expect("could not parse cert");
-    let ask = Certificate::from_pem(ASK_GENOA_CERT_PEM).expect("could not parse cert");
+    let ark = load_cert(ARK_GENOA_CERT_PEM);
+    let ask = load_cert(ASK_GENOA_CERT_PEM);
+    assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
+}
+
+#[test]
+fn validate_turin() {
+    let ark = load_cert(ARK_TURIN_CERT_PEM);
+    let ask = load_cert(ASK_TURIN_CERT_PEM);
     assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
 }
