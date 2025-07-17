@@ -35,12 +35,15 @@ use x509_cert::{
 use zerocopy::FromBytes;
 
 use crate::{
-    amd::{product_name, verify_attestation_report_signature, verify_cert_signature},
+    amd::{
+        get_product_name, verify_attestation_report_signature, verify_cert_signature, ProductName,
+    },
     util::hash_sha2_256,
 };
 
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
+const ASK_TURIN_CERT_PEM: &str = include_str!("../data/ask_turin.pem");
 
 /// Verifies the signature chain for the attestation report included in the
 /// root.
@@ -92,17 +95,17 @@ pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
 ) -> anyhow::Result<()> {
     // We demand that product-specific ASK signs the VCEK.
     let vcek = Certificate::from_der(serialized_certificate)
-        .map_err(|_err| anyhow::anyhow!("couldn't parse VCEK certificate"))?;
+        .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
 
-    let ask = if product_name(&vcek)?.contains("Milan") {
-        Certificate::from_pem(ASK_MILAN_CERT_PEM)
-            .map_err(|_err| anyhow::anyhow!("couldn't parse Milan ASK certificate"))?
-    } else if product_name(&vcek)?.contains("Genoa") {
-        Certificate::from_pem(ASK_GENOA_CERT_PEM)
-            .map_err(|_err| anyhow::anyhow!("couldn't parse Genoa ASK certificate"))?
-    } else {
-        anyhow::bail!("unsupported AMD product");
+    let product_name = get_product_name(&vcek)?;
+    let ask_cert_pem = match product_name {
+        ProductName::Invalid => anyhow::bail!("unsupported AMD product"),
+        ProductName::Milan => ASK_MILAN_CERT_PEM,
+        ProductName::Genoa => ASK_GENOA_CERT_PEM,
+        ProductName::Turin => ASK_TURIN_CERT_PEM,
     };
+    let ask = Certificate::from_pem(ask_cert_pem)
+        .map_err(|_err| anyhow::anyhow!("couldn't parse ASK certificate for {:?}", product_name))?;
 
     // TODO(#4747): user current date as part of VCEK verification.
     verify_cert_signature(&ask, &vcek).context("couldn't verify VCEK certificate")?;
@@ -175,21 +178,27 @@ pub fn verify_amd_sev_attestation_report_values(
     Ok(())
 }
 
+fn tcb_version_struct_to_proto(
+    as_struct: &oak_sev_snp_attestation_report::TcbVersion,
+) -> TcbVersion {
+    TcbVersion {
+        boot_loader: as_struct.boot_loader.into(),
+        tee: as_struct.tee.into(),
+        snp: as_struct.snp.into(),
+        microcode: as_struct.microcode.into(),
+        // TODO: b/396666645 - Extend proto.
+        // fmc: as_struct.fmc.into(),
+    }
+}
+
 pub fn convert_amd_sev_snp_attestation_report(
     report: &AttestationReport,
 ) -> anyhow::Result<AmdAttestationReport> {
-    let current_tcb = Some(TcbVersion {
-        boot_loader: report.data.current_tcb.boot_loader.into(),
-        tee: report.data.current_tcb.tee.into(),
-        snp: report.data.current_tcb.snp.into(),
-        microcode: report.data.current_tcb.microcode.into(),
-    });
-    let reported_tcb = Some(TcbVersion {
-        boot_loader: report.data.reported_tcb.boot_loader.into(),
-        tee: report.data.reported_tcb.tee.into(),
-        snp: report.data.reported_tcb.snp.into(),
-        microcode: report.data.reported_tcb.microcode.into(),
-    });
+    let current_tcb_struct = report.data.get_current_tcb_version();
+    let reported_tcb_struct = report.data.get_reported_tcb_version();
+    let current_tcb = Some(tcb_version_struct_to_proto(&current_tcb_struct));
+    let reported_tcb = Some(tcb_version_struct_to_proto(&reported_tcb_struct));
+
     let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
     let hardware_id = report.data.chip_id.as_ref().to_vec();
     let initial_measurement = report.data.measurement.as_ref().to_vec();

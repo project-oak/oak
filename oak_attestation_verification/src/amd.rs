@@ -26,7 +26,7 @@ use x509_cert::{
     der::{referenced::OwnedToRef, Encode},
     Certificate,
 };
-use zerocopy::{FromZeros, IntoBytes};
+use zerocopy::IntoBytes;
 
 // The keys in the key-value map of X509 certificates are Object Identifiers
 // (OIDs) which have a global registry. The present OIDs are taken from
@@ -39,6 +39,7 @@ const TEE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704
 const SNP_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.3");
 const CHIP_ID_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.4");
 const UCODE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.8");
+const FMC_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.9");
 
 pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyhow::Result<()> {
     anyhow::ensure!(
@@ -66,7 +67,17 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
         .map_err(|_err| anyhow::anyhow!("signature verification failed"))
 }
 
-pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
+/// The AMD EPYC CPU model.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ProductName {
+    Invalid = 0,
+    Milan = 1,
+    Genoa = 2,
+    Turin = 3,
+}
+
+/// Extracts the product name from the VCEK certificate.
+pub fn get_product_name(cert: &Certificate) -> anyhow::Result<ProductName> {
     let exts = cert
         .tbs_certificate
         .extensions
@@ -76,8 +87,17 @@ pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
         .iter()
         .find(|&ext| ext.extn_id == PRODUCT_NAME_OID)
         .ok_or_else(|| anyhow::anyhow!("no product name found in cert"))?;
-    String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
-        .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))
+    let raw = String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
+        .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))?;
+    if raw.contains("Turin") {
+        Ok(ProductName::Turin)
+    } else if raw.contains("Genoa") {
+        Ok(ProductName::Genoa)
+    } else if raw.contains("Milan") {
+        Ok(ProductName::Milan)
+    } else {
+        Ok(ProductName::Invalid)
+    }
 }
 
 fn chip_id(cert: &Certificate) -> anyhow::Result<[u8; 64]> {
@@ -106,8 +126,9 @@ fn chip_id(cert: &Certificate) -> anyhow::Result<[u8; 64]> {
     Ok(result)
 }
 
-fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
-    let mut tcb = TcbVersion::new_zeroed();
+/// Parses the TCB version contained in the VCEK certificate.
+fn parse_tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
+    let mut tcb = TcbVersion { ..Default::default() };
     for ext in vcek
         .tbs_certificate
         .extensions
@@ -125,6 +146,8 @@ fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
             tcb.snp = arr[last];
         } else if ext.extn_id == UCODE_OID {
             tcb.microcode = arr[last];
+        } else if ext.extn_id == FMC_OID {
+            tcb.fmc = arr[last];
         }
     }
     Ok(tcb)
@@ -139,36 +162,18 @@ pub fn verify_attestation_report_signature(
     let vcek_chip_id = chip_id(vcek)?;
     anyhow::ensure!(
         arpt_chip_id == vcek_chip_id,
-        "chip id differs attestation={} vcek={}",
+        "chip id differs: reported={} vcek={}",
         hex::encode(arpt_chip_id),
         hex::encode(vcek_chip_id)
     );
 
-    let arpt_tcb = &report.data.reported_tcb;
-    let vcek_tcb = tcb_version(vcek)?;
+    let reported_tcb = report.data.get_reported_tcb_version();
+    let vcek_tcb = parse_tcb_version(vcek)?;
     anyhow::ensure!(
-        arpt_tcb.snp == vcek_tcb.snp,
-        "mismatch in snp field of TCB version: report={} vcek={}",
-        arpt_tcb.snp,
-        vcek_tcb.snp
-    );
-    anyhow::ensure!(
-        arpt_tcb.microcode == vcek_tcb.microcode,
-        "mismatch in microcode field of TCB version: report={} vcek={}",
-        arpt_tcb.microcode,
-        vcek_tcb.microcode
-    );
-    anyhow::ensure!(
-        arpt_tcb.tee == vcek_tcb.tee,
-        "mismatch in tee field of TCB version: report={} vcek={}",
-        arpt_tcb.tee,
-        vcek_tcb.tee
-    );
-    anyhow::ensure!(
-        arpt_tcb.boot_loader == vcek_tcb.boot_loader,
-        "mismatch in boot_loader field of TCB version: report={} vcek={}",
-        arpt_tcb.boot_loader,
-        vcek_tcb.boot_loader
+        reported_tcb == vcek_tcb,
+        "mismatch in TCB version: reported={:?} vcek={:?}",
+        reported_tcb,
+        vcek_tcb
     );
     anyhow::ensure!(
         report.data.get_signature_algo() == Some(SigningAlgorithm::EcdsaP384Sha384),

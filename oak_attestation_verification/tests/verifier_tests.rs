@@ -1545,8 +1545,46 @@ fn restricted_kernel_application_config_fails() {
 }
 
 #[test]
-fn verify_oc_genoa() {
-    let d = AttestationData::load_oc_legacy_genoa();
+fn verify_milan_oc_success() {
+    let d = AttestationData::load_oc();
+
+    let r = verify(
+        d.make_valid_time().into_unix_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    );
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_genoa_oc_success() {
+    let d = AttestationData::load_genoa_oc();
+
+    let r = verify(
+        d.make_valid_time().into_unix_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    );
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_turin_oc_success() {
+    let d = AttestationData::load_turin_oc();
 
     let r = verify(
         d.make_valid_time().into_unix_millis(),

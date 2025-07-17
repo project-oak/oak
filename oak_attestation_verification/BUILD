@@ -103,7 +103,6 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:fake_attestation",
-        "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
@@ -204,7 +203,6 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:certs",
         "//oak_attestation_verification/testdata:fake_attestation",
-        "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation_legacy",
         "//oak_attestation_verification/testdata:rk_attestation_legacy",
     ],
@@ -232,8 +230,10 @@ rust_library(
     data = [
         "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:oc_attestation",
         "//oak_attestation_verification/testdata:rk_attestation",
+        "//oak_attestation_verification/testdata:turin_oc_attestation",
     ],
     deps = [
         "//oak_file_utils",

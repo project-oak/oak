@@ -33,6 +33,8 @@ const ASK_MILAN_CERT_PEM: &str = include_str!("../../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../../data/ask_genoa.pem");
 const ASK_TURIN_CERT_PEM: &str = include_str!("../../data/ask_turin.pem");
 const VCEK_MILAN_CERT_PEM: &str = include_str!("../../testdata/oc_vcek_milan.pem");
+const VCEK_GENOA_CERT_PEM: &str = include_str!("../../testdata/vcek_genoa.pem");
+const VCEK_TURIN_CERT_PEM: &str = include_str!("../../testdata/vcek_turin.pem");
 
 // Verifies validity of a matching ARK, ASK certificate pair.
 //
@@ -91,6 +93,20 @@ fn milan_ark_signs_ask() {
 fn milan_ask_signs_vcek() {
     let ask = load_cert(ASK_MILAN_CERT_PEM);
     let vcek = load_cert(VCEK_MILAN_CERT_PEM);
+    assert!(verify_cert_signature(&ask, &vcek).is_ok());
+}
+
+#[test]
+fn genoa_ask_signs_vcek() {
+    let ask = load_cert(ASK_GENOA_CERT_PEM);
+    let vcek = load_cert(VCEK_GENOA_CERT_PEM);
+    assert!(verify_cert_signature(&ask, &vcek).is_ok());
+}
+
+#[test]
+fn turin_ask_signs_vcek() {
+    let ask = load_cert(ASK_TURIN_CERT_PEM);
+    let vcek = load_cert(VCEK_TURIN_CERT_PEM);
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 

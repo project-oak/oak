@@ -51,6 +51,14 @@ const GENOA_OC_ENDORSEMENTS_PATH: &str =
 const GENOA_OC_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/genoa_oc_reference_values.binarypb";
 
+// AMD Turin attestation with Oak Containers.
+const TURIN_OC_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/turin_oc_evidence.binarypb";
+const TURIN_OC_ENDORSEMENTS_PATH: &str =
+    "oak_attestation_verification/testdata/turin_oc_endorsements.binarypb";
+const TURIN_OC_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/turin_oc_reference_values.binarypb";
+
 pub struct AttestationData {
     pub valid_not_before: Instant,
     pub valid_not_after: Instant,
@@ -60,7 +68,8 @@ pub struct AttestationData {
 }
 
 impl AttestationData {
-    /// Loads a current attestation example for Oak Containers.
+    // Loads an attestation example involving an AMD Milan CPU running Oak
+    // Containers.
     pub fn load_oc() -> AttestationData {
         AttestationData {
             valid_not_before: Instant::from(utc_datetime!(2025-05-27 06:06:03.987000)),
@@ -71,7 +80,9 @@ impl AttestationData {
         }
     }
 
-    pub fn load_oc_legacy_genoa() -> AttestationData {
+    // Loads an attestation example involving an AMD Genoa CPU running Oak
+    // Containers.
+    pub fn load_genoa_oc() -> AttestationData {
         AttestationData {
             // Validity is not used since there are no endorsements.
             valid_not_before: Instant::from(utc_datetime!(2024-01-01 00:00:00.000000)),
@@ -82,7 +93,21 @@ impl AttestationData {
         }
     }
 
-    /// Loads a current attestation example for Oak Restricted Kernel.
+    // Loads an attestation example involving an AMD Turin CPU running Oak
+    // Containers.
+    pub fn load_turin_oc() -> AttestationData {
+        AttestationData {
+            // Validity is not used since there are no endorsements.
+            valid_not_before: Instant::from(utc_datetime!(2025-01-01 00:00:00.000000)),
+            valid_not_after: Instant::from(utc_datetime!(2025-12-31 23:00:00.000000)),
+            evidence: load_evidence(TURIN_OC_EVIDENCE_PATH),
+            endorsements: load_endorsements(TURIN_OC_ENDORSEMENTS_PATH),
+            reference_values: load_reference_values(TURIN_OC_REFERENCE_VALUES_PATH),
+        }
+    }
+
+    /// Loads an attestation example involving an AMD Milan CPU running Oak
+    /// Restricted Kernel.
     pub fn load_rk() -> AttestationData {
         AttestationData {
             valid_not_before: Instant::from(utc_datetime!(2025-06-17 06:05:52.482000)),
@@ -93,7 +118,7 @@ impl AttestationData {
         }
     }
 
-    /// Loads a current attestation example for CB.
+    /// Loads an attestation example for CB.
     pub fn load_cb() -> AttestationData {
         AttestationData {
             // Not clear what the correct validity dates are (at least not obvious

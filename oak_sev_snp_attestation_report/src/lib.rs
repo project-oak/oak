@@ -70,6 +70,11 @@ impl AttestationReport {
 /// See Table 22 of the specification.
 pub const REPORT_DATA_SIZE: usize = 64;
 
+/// A byte array which is interpreted depending on the CPU model.
+///
+/// See Tables 3 and 4 of the specification.
+pub type RawTcbVersion = [u8; 8];
+
 /// The data contained in an attestation report.
 ///
 /// See Table 22 of the specification.
@@ -98,7 +103,7 @@ pub struct AttestationReportData {
     /// The current version of each of the components in the Trusted Computing
     /// Base (TCB). This could be different from the committed value during
     /// provisional execution when firmware is being updated.
-    pub current_tcb: TcbVersion,
+    pub current_tcb: RawTcbVersion,
     /// Information about the platform.
     ///
     /// Use `AttestationReportData::get_platform_info` to try to convert this to
@@ -133,7 +138,7 @@ pub struct AttestationReportData {
     pub report_id_ma: [u8; 32],
     /// The reported TCB version that was used to generate the versioned chip
     /// endorsement key (VCEK) used to sign this report.
-    pub reported_tcb: TcbVersion,
+    pub reported_tcb: RawTcbVersion,
     /// Family ID (combined Extended Family ID and Family ID).
     pub cpuid_fam_id: u8,
     /// Model (combined Extended Model and Model fields).
@@ -148,7 +153,7 @@ pub struct AttestationReportData {
     /// use only the first 8 bytes and the rest is zeroed out.
     pub chip_id: [u8; 64],
     /// The committed TCB version.
-    pub committed_tcb: TcbVersion,
+    pub committed_tcb: RawTcbVersion,
     /// The build number of the current secure firmware ABI version.
     pub current_build: u8,
     /// The minor number of the current secure firmware ABI version.
@@ -167,7 +172,7 @@ pub struct AttestationReportData {
     _reserved_2: u8,
     /// The value of the current TCB version when the guest was launched or
     /// imported.
-    pub launch_tcb: TcbVersion,
+    pub launch_tcb: RawTcbVersion,
     /// Reserved.
     _reserved_3: [u8; 168],
 }
@@ -183,7 +188,49 @@ impl AttestationReportData {
         PlatformInfo::from_bits_truncate(self.platform_info)
     }
 
-    // Gets the key used to sign this report.
+    /// Switch to decide whether Table 3 or Table 4 applies.
+    ///
+    /// Right now this only makes the Turin test attestation example pass.
+    /// Needs refinement - the assignment of CPU IDs and product names
+    /// (resp. TCB version encoding) in the spec is somewhat ambiguous.
+    fn has_legacy_tcb_version_encoding(&self) -> bool {
+        self.cpuid_fam_id != 0x1a
+    }
+
+    /// Parses the TCB version from the 8-byte RawTcbVersion.
+    ///
+    /// See Tables 3 and 4 of the specification.
+    fn parse_raw_tcb_version(&self, raw: RawTcbVersion) -> TcbVersion {
+        if self.has_legacy_tcb_version_encoding() {
+            TcbVersion {
+                boot_loader: raw[0],
+                microcode: raw[7],
+                snp: raw[6],
+                tee: raw[1],
+                ..Default::default()
+            }
+        } else {
+            TcbVersion {
+                boot_loader: raw[1],
+                microcode: raw[7],
+                snp: raw[3],
+                tee: raw[2],
+                fmc: raw[0],
+            }
+        }
+    }
+
+    /// Gets the current TCB version as Rust struct.
+    pub fn get_current_tcb_version(&self) -> TcbVersion {
+        self.parse_raw_tcb_version(self.current_tcb)
+    }
+
+    /// Gets the reported TCB version as Rust struct.
+    pub fn get_reported_tcb_version(&self) -> TcbVersion {
+        self.parse_raw_tcb_version(self.reported_tcb)
+    }
+
+    /// Gets the key used to sign this report.
     pub fn get_signing_key(&self) -> Option<SigningKey> {
         // Only bits 2, 3, 4 are of interest, mask out the rest and shift.
         SigningKey::from_repr((self.key & 0b11100) >> 2)
@@ -307,25 +354,21 @@ impl GuestPolicy {
 }
 
 /// The version of all the components in the Trusted Computing Base (TCB).
-///
-/// See Table 3 of the specification.
-#[repr(C)]
-#[derive(Debug, IntoBytes, FromBytes, Immutable)]
+#[derive(Debug, Default, Immutable, PartialEq)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP)
     /// bootloader.
     pub boot_loader: u8,
     /// The current SVN of the PSP operating system.
     pub tee: u8,
-    /// Reserved.
-    _reserved: [u8; 4],
     /// The current SVN of the SNP firmware.
     pub snp: u8,
     /// The lowest current patch level of all the CPU cores.
     pub microcode: u8,
+    /// The current SVN of the Flexible Memory Controller (FMC) firmware.
+    /// Zero for Milan and Genoa models.
+    pub fmc: u8,
 }
-
-static_assertions::assert_eq_size!(TcbVersion, u64);
 
 bitflags! {
     /// Flags indicating allowed policy options.

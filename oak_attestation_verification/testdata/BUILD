@@ -36,14 +36,30 @@ filegroup(
         # test evidence proto. The additional parameters in the URL encode the reported
         # TCB version in the attestation report.
         #
-        # URL for downloading the VCEK cert:
+        # To convert between `der` and `pem`:
+        #     openssl x509 -inform der -outform pem -in c.der -out c.pem
+        #
+        # The contents of the `der` file sits in the endorsement under
+        # `root_layer.tee_certificate`. So this is redundant.
+        # TODO: b/433172153 - Load from endorsements and remove these copies.
+        #
+        # Downloaded from
         # https://kdsintf.amd.com/vcek/v1/Milan/cd3c4e6b5b64026ac135d76f888ea6bcc1351ec610d64b0af4028422b84c17ad2571905acfe2eb2181c119df4241e94a926d1b06c02e82845416202151212fdd?ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
         # ARPT reported TCB version: ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
         # ARPT current  TCB version: ucodeSPL=209&snpSPL=14&teeSPL=0&blSPL=3
         "oc_vcek_milan.der",
         "oc_vcek_milan.pem",
         "rk_vcek_milan.der",
+
+        # Downloaded from
+        # https://kdsintf.amd.com/vcek/v1/Genoa/d2421d976f95ce0ba849b7cc5c789122f1e59c77a037272c137ae4d188bb102adbc7c53d0302bff82a432c94a305dec7a7a270ceb19a10f04a83316c6486968d?ucodeSPL=62&snpSPL=15&teeSPL=0&blSPL=7
         "vcek_genoa.der",
+        "vcek_genoa.pem",
+
+        # Downloaded from
+        # https://kdsintf.amd.com/vcek/v1/Turin/3b42092f69c656d3?ucodeSPL=71&snpSPL=2&teeSPL=0&blSPL=1&fmcSPL=0
+        "vcek_turin.der",
+        "vcek_turin.pem",
     ],
 )
 
@@ -124,5 +140,15 @@ filegroup(
     srcs = [
         "rk_evidence.binarypb",
         "rk_evidence_20240312.binarypb",
+    ],
+)
+
+# Attestation for an Oak Containers stack running on AMD Turin platform.
+filegroup(
+    name = "turin_oc_attestation",
+    srcs = [
+        "turin_oc_endorsements.binarypb",
+        "turin_oc_evidence.binarypb",
+        "turin_oc_reference_values.binarypb",
     ],
 )

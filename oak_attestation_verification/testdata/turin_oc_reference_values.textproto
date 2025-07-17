@@ -1,0 +1,93 @@
+# proto-file: third_party/oak/proto/attestation/reference_value.proto
+# proto-message: oak.attestation.v1.ReferenceValues
+#
+# Digest-based reference values matching an Oak Containers chain running
+# on an AMD Turin machine.
+#
+oak_containers {
+  root_layer {
+    amd_sev {
+      stage0 {
+        skip {
+        }
+      }
+      # TODO: b/396666645 - Extend prototcol buffers and adapt verification.
+      # Right now the fields are not identified correctly, so we just set them
+      # all to zero to unblock the verification.
+      min_tcb_version {
+        boot_loader: 0
+        tee: 0
+        snp: 0
+        microcode: 0
+        # fmc: 0
+      }
+    }
+  }
+  kernel_layer {
+    kernel {
+      digests {
+        image {
+          digests {
+            sha2_256: "\xf9\xd0XBG\xb4l\xc24\xa8b\xaa\x8c\xd0\x87e\xb3\x84\x05\x02\"S\xa7\x8b\x9a\xf1\x89\xc4\xce\xdb\xe4G"
+          }
+        }
+        setup_data {
+          digests {
+            sha2_256: "u\xf0\x91\xda\x89\xce\x81\xe9\xde\xcb7\x8c;r\xa9H\xae\xd5\x89&\x12%k:n\x83\x05\xed\x03N\xc3\x9a"
+          }
+        }
+      }
+    }
+    init_ram_fs {
+      digests {
+        digests {
+          sha2_256: "kY6\x8ec\xf0\x13\x18\x1c\xf3\xe0\x83\xbd\xc3\xd0\xfd\xa0*Oo\x9e\x93\x97\x02#L@TLb\x0f<"
+        }
+      }
+    }
+    memory_map {
+      digests {
+        digests {
+          sha2_256: "j^\xbf\xfd::\xfc\xfc]\xa8_\x1b\x9b[,\xd0\x99\xf1R\x94c\xa3\xc7DU\xa9P\x97\x14\n\xaa\x88"
+        }
+      }
+    }
+    acpi {
+      digests {
+        digests {
+          sha2_256: "\xdcp\xeb\x9b\x93{\xc7$$\xdb*\xd0hd(r#\xd0\x08XHQ>\x16\x95\x88\xa0\x01\xcefD%"
+        }
+      }
+    }
+    kernel_cmd_line_text {
+      string_literals {
+        value: " console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size=10000000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off loglevel=7 -- --launcher-addr=vsock://2:42927"
+      }
+    }
+  }
+  system_layer {
+    system_image {
+      digests {
+        digests {
+          sha2_256: "\xa4\x0b\x91YP\x12n=V]J4\x81is\xeb\xecT\xbd\x87!Ypoj\x9e\\\xbd\xedHV\x93"
+        }
+      }
+    }
+  }
+  container_layer {
+    binary {
+      digests {
+        digests {
+          sha2_256: "\xc25\xbe\x82\x1c6\x9a\xdey\xdd\xfd\xb9\xc6>]\x89R)\xc8[~\xd3 \xf7\xbd\xa5\xf1O\xf5\xcb@\""
+        }
+      }
+    }
+    configuration {
+      digests {
+        digests {
+          sha2_256: "\xe3\xb0\xc4B\x98\xfc\x1c\x14\x9a\xfb\xf4\xc8\x99o\xb9$\'\xaeA\xe4d\x9b\x93L\xa4\x95\x99\x1bxR\xb8U"
+        }
+      }
+    }
+  }
+}
