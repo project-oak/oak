@@ -57,6 +57,7 @@ The evidence describing this layer is outlined below.
 sev_snp:
   current_tcb:
     boot_loader: 3
+    fmc: 0
     microcode: 209
     snp: 20
     tee: 0
@@ -66,6 +67,7 @@ sev_snp:
   report_data: 8fc67415b81201f189f2d19cbe57aa66f7282916b5b9e6cca83ab8688f4499d30000000000000000000000000000000000000000000000000000000000000000
   reported_tcb:
     boot_loader: 3
+    fmc: 0
     microcode: 209
     snp: 20
     tee: 0
@@ -137,6 +139,7 @@ amd_sev:
   allow_debug: false
   min_tcb_version:
     boot_loader: 3
+    fmc: 0
     microcode: 209
     snp: 20
     tee: 0

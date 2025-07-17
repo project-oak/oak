@@ -110,6 +110,7 @@ fn create_endorsement(
 
 // Creates valid endorsements and matching reference values for an Oak
 // Containers chain.
+#[allow(deprecated)]
 fn create_oc_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
@@ -178,7 +179,10 @@ fn create_oc_endorsements_reference_values(
             r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
                 root_layer: Some(RootLayerReferenceValues {
                     amd_sev: Some(AmdSevReferenceValues {
-                        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209 }),
+                        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209, fmc: 0 }),
+                        milan: None,
+                        genoa: None,
+                        turin: None,
                         allow_debug: false,
                         stage0: Some(skip.clone()),
                     }),
@@ -213,6 +217,7 @@ fn create_oc_endorsements_reference_values(
 
 // Creates valid endorsements and matching reference values for a restricted
 // kernel application.
+#[allow(deprecated)]
 fn create_rk_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
@@ -275,7 +280,11 @@ fn create_rk_endorsements_reference_values(
                                 tee: 0,
                                 snp: 20,
                                 microcode: 209,
+                                fmc: 0,
                             }),
+                            milan: None,
+                            genoa: None,
+                            turin: None,
                             allow_debug: false,
                             stage0: Some(skip.clone()),
                         }),

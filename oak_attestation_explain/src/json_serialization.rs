@@ -311,12 +311,13 @@ pub fn serialize_tcb_version(instance: &TcbVersion) -> serde_json::Value {
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let TcbVersion { boot_loader, tee, snp, microcode } = instance;
+    let TcbVersion { boot_loader, tee, snp, microcode, fmc } = instance;
     json!({
         "boot_loader": boot_loader,
         "tee": tee,
         "snp": snp,
         "microcode": microcode,
+        "fmc": fmc,
     })
 }
 
@@ -613,6 +614,29 @@ pub fn serialize_text_reference_value(instance: &TextReferenceValue) -> serde_js
     }
 }
 
+pub fn serialize_tcb_version_reference_value(
+    instance: &TcbVersionReferenceValue,
+) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let TcbVersionReferenceValue { r#type } = instance;
+    match r#type {
+        Some(tcb_version_reference_value::Type::Skip(instance)) => {
+            json!({
+                "skip": serialize_skip_verification(instance)
+            })
+        }
+        Some(tcb_version_reference_value::Type::Minimum(instance)) => {
+            json!({
+                "minimum": serialize_tcb_version(instance)
+            })
+        }
+        None => json!(null),
+    }
+}
+
 pub fn serialize_root_layer_reference_values(
     instance: &RootLayerReferenceValues,
 ) -> serde_json::Value {
@@ -633,9 +657,14 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let AmdSevReferenceValues { min_tcb_version, allow_debug, stage0 } = instance;
+    #[allow(deprecated)]
+    let AmdSevReferenceValues { min_tcb_version, milan, genoa, turin, allow_debug, stage0 } =
+        instance;
     json!({
         "min_tcb_version": min_tcb_version.as_ref().map(serialize_tcb_version),
+        "milan": milan.as_ref().map(serialize_tcb_version_reference_value),
+        "genoa": genoa.as_ref().map(serialize_tcb_version_reference_value),
+        "turin": turin.as_ref().map(serialize_tcb_version_reference_value),
         "allow_debug": allow_debug,
         "stage0": stage0.as_ref().map(serialize_binary_reference_value),
     })

@@ -381,9 +381,13 @@ pub fn reference_values_from_evidence(evidence: ExtractedEvidence) -> ReferenceV
 fn root_layer_reference_values_from_evidence(
     root_layer: RootLayerData,
 ) -> RootLayerReferenceValues {
+    #[allow(deprecated)]
     let amd_sev = root_layer.report.clone().and_then(|report| match report {
         Report::SevSnp(r) => Some(AmdSevReferenceValues {
             min_tcb_version: r.current_tcb,
+            milan: None,
+            genoa: None,
+            turin: None,
             stage0: Some(BinaryReferenceValue {
                 r#type: Some(binary_reference_value::Type::Digests(Digests {
                     digests: vec![RawDigest {

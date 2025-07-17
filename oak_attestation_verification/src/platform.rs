@@ -186,8 +186,7 @@ fn tcb_version_struct_to_proto(
         tee: as_struct.tee.into(),
         snp: as_struct.snp.into(),
         microcode: as_struct.microcode.into(),
-        // TODO: b/396666645 - Extend proto.
-        // fmc: as_struct.fmc.into(),
+        fmc: as_struct.fmc.into(),
     }
 }
 

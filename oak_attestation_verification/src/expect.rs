@@ -208,6 +208,7 @@ pub(crate) fn get_root_layer_expected_values(
 ) -> anyhow::Result<RootLayerExpectedValues> {
     // Propagate each of the existing reference value for a TEE platform to the
     // corresponding expected value.
+    #[allow(deprecated)]
     let amd_sev = if let Some(amd_sev_values) = reference_values.amd_sev.as_ref() {
         let stage0_expected = get_stage0_expected_values(
             now_utc_millis,
@@ -230,6 +231,7 @@ pub(crate) fn get_root_layer_expected_values(
     Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
 }
 
+#[allow(deprecated)]
 pub(crate) fn get_amd_sev_snp_expected_values(
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<AmdSevExpectedValues> {

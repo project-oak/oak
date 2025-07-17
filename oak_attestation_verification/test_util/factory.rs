@@ -16,13 +16,13 @@
 
 use oak_proto_rust::oak::attestation::v1::{
     binary_reference_value, endorsements, kernel_binary_reference_value, reference_values,
-    text_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-    Endorsements, KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
-    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-    RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerReferenceValues,
-    TcbVersion, TextReferenceValue,
+    tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
+    ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
+    ContainerLayerReferenceValues, Endorsements, KernelBinaryReferenceValue,
+    KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersReferenceValues,
+    OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
+    SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
 };
 
 use crate::endorsement_data::EndorsementData;
@@ -59,9 +59,22 @@ pub fn create_oc_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
+    let tcb_version_ref_value = TcbVersionReferenceValue {
+        r#type: Some(tcb_version_reference_value::Type::Skip(SkipVerification {})),
+    };
 
+    #[allow(deprecated)]
     let amd_sev = AmdSevReferenceValues {
-        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209 }),
+        min_tcb_version: Some(TcbVersion {
+            boot_loader: 3,
+            tee: 0,
+            snp: 20,
+            microcode: 209,
+            fmc: 0,
+        }),
+        milan: Some(tcb_version_ref_value),
+        genoa: Some(tcb_version_ref_value),
+        turin: Some(tcb_version_ref_value),
         allow_debug: false,
         stage0: Some(skip.clone()),
     };
@@ -103,9 +116,16 @@ pub fn create_rk_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
+    let tcb_version_ref_value = TcbVersionReferenceValue {
+        r#type: Some(tcb_version_reference_value::Type::Skip(SkipVerification {})),
+    };
 
+    #[allow(deprecated)]
     let amd_sev = AmdSevReferenceValues {
         min_tcb_version: Some(TcbVersion { ..Default::default() }),
+        milan: Some(tcb_version_ref_value),
+        genoa: Some(tcb_version_ref_value),
+        turin: Some(tcb_version_ref_value),
         allow_debug: false,
         stage0: Some(skip.clone()),
     };

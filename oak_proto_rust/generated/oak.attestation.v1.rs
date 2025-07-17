@@ -292,6 +292,12 @@ pub struct TcbVersion {
     /// The lowest current patch level of all the CPU cores.
     #[prost(uint32, tag = "4")]
     pub microcode: u32,
+    /// The current SVN of the Flexible Memory Controller (FMC) firmware. FMC is
+    /// a component in the CPU that manages communication between the processor
+    /// and memory. Field is used with AMD Turin CPUs, otherwise it must be zero
+    /// or unpopulated.
+    #[prost(uint32, tag = "5")]
+    pub fmc: u32,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct SkipVerification {}
@@ -541,11 +547,59 @@ pub struct RootLayerReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub insecure: ::core::option::Option<InsecureReferenceValues>,
 }
+/// Reference value that matches a TCB version.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TcbVersionReferenceValue {
+    #[prost(oneof = "tcb_version_reference_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<tcb_version_reference_value::Type>,
+}
+/// Nested message and enum types in `TcbVersionReferenceValue`.
+pub mod tcb_version_reference_value {
+    #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        /// Skips this check. As elsewhere, an empty `type` oneof makes verification
+        /// fail.
+        ///
+        /// Caveat: `skip {}` happens to behave identically to `minimum {}`. It is
+        /// recommended to avoid using `minimum {}`, but this is not enforced.
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        /// Requires a minimum TCB version reported in the attestation. Verification
+        /// checks that, separately for each field, the actual value is >= the
+        /// reference value. Leaving any field unpopulated (and hence == 0) will
+        /// always pass verification since version numbers are unsigned.
+        #[prost(message, tag = "2")]
+        Minimum(super::TcbVersion),
+    }
+}
+/// Collection of reference values for an AMD SEV-SNP hardware root.
+/// NEXT_ID: 9
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevReferenceValues {
-    /// Minimum accepted versions of all TCB components.
+    /// Deprecated: Minimum accepted versions of all TCB components.
+    /// Do not use this field, instead specify per-model TCB versions through
+    /// the fields below.
+    #[deprecated]
     #[prost(message, optional, tag = "5")]
     pub min_tcb_version: ::core::option::Option<TcbVersion>,
+    /// Minimum acceptable TCB version for AMD EPYC Milan CPUs.
+    ///
+    /// Depending on the CPU model of the underlying machine, exactly one of the
+    /// `TcbVersionReferenceValue`-type fields is evaluated.
+    /// If the field corresponding to the CPU model is not populated, verification
+    /// fails. This can serve as a reminder to add reference values upon
+    /// introducing a new model to the pool. In general however, we recommend to
+    /// fill in all per-model fields, then there will be no such disruption.
+    #[prost(message, optional, tag = "6")]
+    pub milan: ::core::option::Option<TcbVersionReferenceValue>,
+    /// Minimum acceptable TCB version for AMD EPYC Genoa CPUs.
+    /// See field `milan` for details.
+    #[prost(message, optional, tag = "7")]
+    pub genoa: ::core::option::Option<TcbVersionReferenceValue>,
+    /// Minimum acceptable TCB version for AMD EPYC Turin CPUs.
+    /// See field `milan` for details.
+    #[prost(message, optional, tag = "8")]
+    pub turin: ::core::option::Option<TcbVersionReferenceValue>,
     /// If true, will skip the check that the TEE is not in debug mode.
     #[prost(bool, tag = "3")]
     pub allow_debug: bool,

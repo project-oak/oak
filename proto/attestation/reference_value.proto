@@ -229,9 +229,51 @@ message RootLayerReferenceValues {
   InsecureReferenceValues insecure = 3;
 }
 
+// Reference value that matches a TCB version.
+message TcbVersionReferenceValue {
+  oneof type {
+    // Skips this check. As elsewhere, an empty `type` oneof makes verification
+    // fail.
+    //
+    // Caveat: `skip {}` happens to behave identically to `minimum {}`. It is
+    // recommended to avoid using `minimum {}`, but this is not enforced.
+    SkipVerification skip = 1;
+
+    // Requires a minimum TCB version reported in the attestation. Verification
+    // checks that, separately for each field, the actual value is >= the
+    // reference value. Leaving any field unpopulated (and hence == 0) will
+    // always pass verification since version numbers are unsigned.
+    TcbVersion minimum = 2;
+  }
+}
+
+// Collection of reference values for an AMD SEV-SNP hardware root.
+// NEXT_ID: 9
 message AmdSevReferenceValues {
-  // Minimum accepted versions of all TCB components.
-  TcbVersion min_tcb_version = 5;
+  reserved 1, 2;
+
+  // Deprecated: Minimum accepted versions of all TCB components.
+  // Do not use this field, instead specify per-model TCB versions through
+  // the fields below.
+  TcbVersion min_tcb_version = 5 [deprecated = true];
+
+  // Minimum acceptable TCB version for AMD EPYC Milan CPUs.
+  //
+  // Depending on the CPU model of the underlying machine, exactly one of the
+  // `TcbVersionReferenceValue`-type fields is evaluated.
+  // If the field corresponding to the CPU model is not populated, verification
+  // fails. This can serve as a reminder to add reference values upon
+  // introducing a new model to the pool. In general however, we recommend to
+  // fill in all per-model fields, then there will be no such disruption.
+  TcbVersionReferenceValue milan = 6;
+
+  // Minimum acceptable TCB version for AMD EPYC Genoa CPUs.
+  // See field `milan` for details.
+  TcbVersionReferenceValue genoa = 7;
+
+  // Minimum acceptable TCB version for AMD EPYC Turin CPUs.
+  // See field `milan` for details.
+  TcbVersionReferenceValue turin = 8;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;

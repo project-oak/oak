@@ -272,11 +272,12 @@ fn verify_fails_with_manipulated_root_public_key() {
     ));
 }
 
+#[allow(deprecated)]
 #[test]
 fn verify_fails_with_unsupported_tcb_version() {
     let mut d = AttestationData::load_milan_oc_legacy();
 
-    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0 };
+    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0, fmc: 0 };
     match d.reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakContainers(rfs)) => {
             rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
@@ -492,6 +493,7 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
     assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn containers_invalid_boot_loader_fails() {
     let d = AttestationData::load_milan_oc_legacy();
@@ -517,6 +519,7 @@ fn containers_invalid_boot_loader_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn containers_invalid_microcode_fails() {
     let d = AttestationData::load_milan_oc_legacy();
@@ -542,6 +545,7 @@ fn containers_invalid_microcode_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn containers_invalid_tcb_snp_fails() {
     let d = AttestationData::load_milan_oc_legacy();
@@ -567,6 +571,7 @@ fn containers_invalid_tcb_snp_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn containers_invalid_tcb_tee_fails() {
     let d = AttestationData::load_milan_oc_legacy();
@@ -909,6 +914,7 @@ fn containers_invalid_container_config_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn verify_rk_invalid_boot_loader_fails() {
     let d = AttestationData::load_milan_rk_legacy();
@@ -934,6 +940,7 @@ fn verify_rk_invalid_boot_loader_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn verify_rk_invalid_microcode_fails() {
     let d = AttestationData::load_milan_rk_legacy();
@@ -959,6 +966,7 @@ fn verify_rk_invalid_microcode_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn restricted_kernel_invalid_tcb_snp_fails() {
     let d = AttestationData::load_milan_rk_legacy();
@@ -983,6 +991,7 @@ fn restricted_kernel_invalid_tcb_snp_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
+#[allow(deprecated)]
 #[test]
 fn restricted_kernel_invalid_tcb_tee_fails() {
     let d = AttestationData::load_milan_rk_legacy();

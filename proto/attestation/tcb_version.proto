@@ -27,10 +27,19 @@ message TcbVersion {
   // The current security version number (SVN) of the secure processor (PSP)
   // bootloader.
   uint32 boot_loader = 1;
+
   // The current SVN of the PSP operating system.
   uint32 tee = 2;
+
   // The current SVN of the SNP firmware.
   uint32 snp = 3;
+
   // The lowest current patch level of all the CPU cores.
   uint32 microcode = 4;
+
+  // The current SVN of the Flexible Memory Controller (FMC) firmware. FMC is
+  // a component in the CPU that manages communication between the processor
+  // and memory. Field is used with AMD Turin CPUs, otherwise it must be zero
+  // or unpopulated.
+  uint32 fmc = 5;
 }
