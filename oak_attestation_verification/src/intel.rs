@@ -19,17 +19,78 @@
 
 use anyhow::{anyhow, Context};
 use const_oid::db::rfc5912::ECDSA_WITH_SHA_256;
-use oak_tdx_quote::QeCertificationData;
-use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
+use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
+use p256::{
+    ecdsa::{signature::Verifier, Signature, VerifyingKey},
+    EncodedPoint,
+};
 use x509_cert::{
     der::{referenced::OwnedToRef, DecodePem, Encode},
     Certificate,
 };
 
+use crate::util::hash_sha2_256;
+
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
 
+/// Verifies that the TDX Attestation Quote is correctly signed and that the
+/// entire chain of trust is valid all the way to the Provisioning Certification
+/// Key (PCK) root certificate.
 #[allow(unused)]
-fn verify_quote_cert_chain_and_extract_leaf(
+pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Result<()> {
+    let signature_data = quote.parse_signature_data().context("signature data parsing failed")?;
+
+    let report_certification = match signature_data.certification_data {
+        QeCertificationData::QeReportCertificationData(report_certification) => {
+            Ok(report_certification)
+        }
+        _ => Err(anyhow!("signature data contains the wrong type of certification data")),
+    }?;
+
+    // Verify that the PCK certificate chain is valid.
+    let pck_leaf =
+        verify_quote_cert_chain_and_extract_leaf(&report_certification.certification_data)
+            .context("invalid certificate chain")?;
+
+    // Verify that the Quoting Enclave report is signed using the PCK leaf
+    // certificate.
+    let pck_verifying_key = extract_ecdsa_verifying_key(&pck_leaf)?;
+    let qe_signature = Signature::from_bytes(report_certification.signature.into())
+        .map_err(|_err| anyhow::anyhow!("couldn't parse QE Report signature"))?;
+    pck_verifying_key
+        .verify(report_certification.report_body, &qe_signature)
+        .map_err(|_err| anyhow::anyhow!("QE Report signature verification failed"))?;
+
+    // Verify that the Attestation Key is bound to the Quoting Enclave Report.
+    let qe_report = report_certification
+        .parse_enclave_report_body()
+        .context("couldn't parse enclave report body")?;
+    let mut key_binding_data = signature_data.ecdsa_attestation_key.to_vec();
+    key_binding_data.extend_from_slice(report_certification.authentication_data);
+    anyhow::ensure!(
+        hash_sha2_256(key_binding_data.as_slice()) == qe_report.report_data[..32],
+        "attestation key is not bound to quoting enclave report"
+    );
+    anyhow::ensure!(
+        [0u8; 32] == qe_report.report_data[32..],
+        "unexpected data in quoting enclave report data"
+    );
+
+    // Verify that the Quote data is signed using the Attestation Key.
+    let attestation_key = VerifyingKey::from_encoded_point(&EncodedPoint::from_untagged_bytes(
+        signature_data.ecdsa_attestation_key.into(),
+    ))
+    .map_err(|_err| anyhow::anyhow!("couldn't parse attestation public key"))?;
+    let quote_signature = Signature::from_bytes(signature_data.quote_signature.into())
+        .map_err(|_err| anyhow::anyhow!("couldn't parse quote signature"))?;
+    attestation_key
+        .verify(quote.get_quote_data_bytes()?, &quote_signature)
+        .map_err(|_err| anyhow::anyhow!("quote signature verification failed"))?;
+
+    Ok(())
+}
+
+pub fn verify_quote_cert_chain_and_extract_leaf(
     certification_data: &QeCertificationData,
 ) -> anyhow::Result<Certificate> {
     let mut certificates = if let &QeCertificationData::PckCertChain(chain) = certification_data {
@@ -65,11 +126,7 @@ fn verify_ecdsa_cert_signature(signer: &Certificate, signee: &Certificate) -> an
         signee.signature_algorithm
     );
 
-    let verifying_key = {
-        let pubkey_info = signer.tbs_certificate.subject_public_key_info.owned_to_ref();
-        VerifyingKey::from_sec1_bytes(pubkey_info.subject_public_key.raw_bytes())
-            .map_err(|_err| anyhow::anyhow!("could not parse ECDSA P256 public key"))?
-    };
+    let verifying_key = extract_ecdsa_verifying_key(signer)?;
 
     let message = signee
         .tbs_certificate
@@ -81,6 +138,12 @@ fn verify_ecdsa_cert_signature(signer: &Certificate, signee: &Certificate) -> an
     verifying_key
         .verify(&message, &signature)
         .map_err(|_err| anyhow::anyhow!("signature verification failed"))
+}
+
+fn extract_ecdsa_verifying_key(certificate: &Certificate) -> anyhow::Result<VerifyingKey> {
+    let pubkey_info = certificate.tbs_certificate.subject_public_key_info.owned_to_ref();
+    VerifyingKey::from_sec1_bytes(pubkey_info.subject_public_key.raw_bytes())
+        .map_err(|_err| anyhow::anyhow!("could not parse ECDSA P256 public key"))
 }
 
 #[cfg(test)]

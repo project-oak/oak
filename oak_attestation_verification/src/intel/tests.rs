@@ -24,7 +24,10 @@ use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use prost::Message;
 use x509_cert::der::DecodePem;
 
-use super::{verify_ecdsa_cert_signature, verify_quote_cert_chain_and_extract_leaf, PCK_ROOT};
+use super::{
+    verify_ecdsa_cert_signature, verify_intel_tdx_quote_validity,
+    verify_quote_cert_chain_and_extract_leaf, PCK_ROOT,
+};
 
 // TDX Oak Containers attestation
 const OC_TDX_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence_tdx.binarypb";
@@ -68,4 +71,56 @@ fn pck_chain_validation_passes() {
         leaf.tbs_certificate.subject.to_string(),
         "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate"
     );
+}
+
+#[test]
+fn valid_tdx_quote_validation_passes() {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(&wrapper).is_ok());
+}
+
+#[test]
+fn tdx_quote_with_invalid_pck_chain_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a character in the PEM-encoded PCK leaf cert
+    // (`oak_tdx_quote::QeReportCertificationData::certification_data` which will be
+    // parsed from bytes 1258..4939 of the evidence).
+    quote_buffer[1299] = b'v';
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+}
+
+#[test]
+fn tdx_quote_with_invalid_qe_report_signature_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in the QE report signature
+    // (`oak_tdx_quote::QeReportCertificationData::signature` which will be
+    // parsed from bytes 1154..1218 of the evidence).
+    quote_buffer[1210] = 0;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+}
+
+#[test]
+fn tdx_quote_with_invalid_attestation_key_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in the attestation key
+    // (`oak_tdx_quote::QuoteSignatureData::ecdsa_attestation_key` which will be
+    // parsed from bytes 700..764 of the evidence).
+
+    quote_buffer[701] = 0;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+}
+
+#[test]
+fn tdx_quote_with_invalid_attestation_signature_fails() {
+    let mut quote_buffer = get_evidence_quote_bytes();
+    // Change a byte in the quote signature
+    // (`oak_tdx_quote::QuoteSignatureData::quote_signature` which will be parsed
+    // from bytes 636..700 of the evidence).
+    quote_buffer[637] = 0;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
 }
