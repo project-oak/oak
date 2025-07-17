@@ -17,7 +17,11 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Result;
-use private_memory_server_lib::{app_config::ApplicationConfig, client::PrivateMemoryClient};
+use client::{PrivateMemoryClient, SerializationFormat};
+use private_memory_server_lib::{
+    app::{app_service, run_persistence_service},
+    app_config::ApplicationConfig,
+};
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::net::TcpListener;
 
@@ -41,22 +45,14 @@ async fn start_server() -> Result<(
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
-    let persistence_join_handle =
-        tokio::spawn(private_memory_server_lib::app::run_persistence_service(persistence_rx));
+    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
     Ok((
         addr,
-        tokio::spawn(private_memory_server_lib::app_service::create(
-            listener,
-            application_config,
-            metrics,
-            persistence_tx,
-        )),
+        tokio::spawn(app_service::create(listener, application_config, metrics, persistence_tx)),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
     ))
 }
-
-use private_memory_server_lib::client::SerializationFormat;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_client() {

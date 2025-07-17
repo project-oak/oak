@@ -12,10 +12,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![feature(negative_impls)]
 use std::collections::HashMap;
 
 use anyhow::{bail, ensure, Context};
+use encryption::{decrypt, encrypt, generate_nonce};
+pub use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use icing::IcingGroundTruthFilesHelper;
+use log::debug;
 use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -23,12 +27,6 @@ use sealed_memory_rust_proto::oak::private_memory::{
     ScoreRange, SearchMemoryRequest, UserDb,
 };
 use tempfile::tempdir;
-
-pub use crate::external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
-use crate::{
-    encryption::{decrypt, encrypt, generate_nonce},
-    log::debug,
-};
 
 // The unique id for a memory, responding to `struct Memory`.
 // It doesn't have a 1:1 mapping to BlobId, as a single memory
@@ -598,7 +596,7 @@ pub struct DatabaseWithCache {
     database: IcingMetaDatabase,
     pub cache: MemoryCache,
     key_derivation_info: KeyDerivationInfo,
-    pub(crate) changed: bool,
+    pub changed: bool,
 }
 
 impl DatabaseWithCache {

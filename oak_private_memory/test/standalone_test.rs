@@ -19,11 +19,11 @@ use std::{
 };
 
 use anyhow::Result;
+use client::{PrivateMemoryClient, SerializationFormat};
 use log::info;
 use private_memory_server_lib::{
-    app::run_persistence_service,
+    app::{app_service, run_persistence_service},
     app_config::ApplicationConfig,
-    client::{PrivateMemoryClient, SerializationFormat},
 };
 use prost::Message;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -57,12 +57,7 @@ async fn start_server() -> Result<(
     let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
     Ok((
         addr,
-        tokio::spawn(private_memory_server_lib::app_service::create(
-            listener,
-            application_config,
-            metrics,
-            persistence_tx,
-        )),
+        tokio::spawn(app_service::create(listener, application_config, metrics, persistence_tx)),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
     ))

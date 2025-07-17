@@ -15,8 +15,17 @@
 
 use std::{net::SocketAddr, sync::Arc};
 
+pub mod app_service;
+
 use anyhow::{bail, Context};
 use async_trait::async_trait;
+use database::{
+    decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache, DbMigration,
+    IcingMetaDatabase, MemoryId,
+};
+use encryption::{decrypt, encrypt, generate_nonce};
+use log::{debug, info};
+use metrics::RequestMetricName;
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
@@ -26,17 +35,6 @@ use tokio::{
     time::Instant,
 };
 use tonic::transport::Channel;
-
-use crate::{
-    database::{
-        decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache,
-        DbMigration, IcingMetaDatabase, MemoryId,
-    },
-    encryption::{decrypt, encrypt, generate_nonce},
-    log::{debug, info},
-    metrics,
-    metrics::RequestMetricName,
-};
 
 #[async_trait]
 trait MemoryInterface {

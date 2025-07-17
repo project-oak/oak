@@ -13,12 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #![feature(negative_impls)]
-pub mod app;
-pub mod app_config;
-pub mod app_service;
-pub mod client;
-pub mod database;
-pub mod encryption;
-pub mod external_db_client;
-pub mod log;
-pub mod metrics;
+pub use app;
+pub use app_config;
+pub use database;
+pub use encryption;
+pub use external_db_client;
+pub use log;
+pub use metrics;

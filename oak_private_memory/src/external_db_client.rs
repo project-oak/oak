@@ -15,6 +15,7 @@
 
 use anyhow::{bail, ensure};
 use async_trait::async_trait;
+use log::info;
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
@@ -23,8 +24,6 @@ use sealed_memory_rust_proto::oak::private_memory::{
     WriteBlobsRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
 };
 use tonic::transport::Channel;
-
-use crate::log::info;
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
@@ -89,7 +88,7 @@ impl DataBlobHandler for ExternalDbClient {
             elapsed_time = 1;
         }
         let speed = blob_size / 1024 / elapsed_time;
-        crate::metrics::get_global_metrics().record_db_save_speed(speed);
+        metrics::get_global_metrics().record_db_save_speed(speed);
         bail!("Failed to write data blob");
     }
 
@@ -127,7 +126,7 @@ impl DataBlobHandler for ExternalDbClient {
                         elapsed_time = 1;
                     }
                     let speed = blob_size / 1024 / elapsed_time;
-                    crate::metrics::get_global_metrics().record_db_load_speed(speed);
+                    metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(data_blob);
                 }
             }

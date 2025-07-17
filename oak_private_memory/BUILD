@@ -57,47 +57,147 @@ rust_test(
 )
 
 rust_library(
-    name = "private_memory_server_lib",
+    name = "app_config",
+    srcs = ["src/app_config.rs"],
+    deps = [
+        "@oak_crates_index//:serde",
+    ],
+)
+
+rust_library(
+    name = "encryption",
+    srcs = ["src/encryption.rs"],
+    deps = [
+        "@oak_crates_index//:aes-gcm-siv",
+        "@oak_crates_index//:anyhow",
+    ],
+)
+
+rust_library(
+    name = "log",
+    srcs = ["src/log.rs"],
+    deps = [
+        "//src/icing",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+    ],
+)
+
+rust_library(
+    name = "metrics",
+    srcs = ["src/metrics.rs"],
+    deps = [
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_containers/agent:oak_containers_agent",
+        "@oak_crates_index//:lazy_static",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:prost",
+    ],
+)
+
+rust_library(
+    name = "external_db_client",
+    srcs = ["src/external_db_client.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    deps = [
+        ":log",
+        ":metrics",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_library(
+    name = "database",
+    srcs = ["src/database.rs"],
+    deps = [
+        ":encryption",
+        ":external_db_client",
+        ":log",
+        "//proto:sealed_memory_rust_proto",
+        "//src/icing",
+        "@cxx.rs//:cxx",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:tempfile",
+    ],
+)
+
+rust_library(
+    name = "app",
     srcs = [
         "src/app.rs",
-        "src/app_config.rs",
         "src/app_service.rs",
-        "src/client.rs",
-        "src/database.rs",
-        "src/encryption.rs",
-        "src/external_db_client.rs",
-        "src/lib.rs",
-        "src/log.rs",
-        "src/metrics.rs",
     ],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    deps = [
+        ":app_config",
+        ":database",
+        ":encryption",
+        ":log",
+        ":metrics",
+        "//proto:sealed_memory_rust_proto",
+        "//proto/grpc:sealed_memory_grpc_proto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:async-stream",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tempfile",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_library(
+    name = "private_memory_server_lib",
+    srcs = [
+        "src/lib.rs",
+    ],
+    deps = [
+        ":app",
+        ":app_config",
+        ":database",
+        ":encryption",
+        ":external_db_client",
+        ":log",
+        ":metrics",
+    ],
+)
+
+rust_library(
+    name = "client",
+    srcs = ["src/client.rs"],
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
     deps = [
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
-        "//src/icing",
-        "@cxx.rs//:cxx",
-        "@oak//oak_containers/agent:oak_containers_agent",
-        "@oak//oak_crypto",
         "@oak//oak_proto_rust",
         "@oak//oak_session",
-        "@oak_crates_index//:aes-gcm-siv",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:async-stream",
-        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:futures",
-        "@oak_crates_index//:lazy_static",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:rand",
-        "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:tempfile",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
     ],
 )
@@ -130,6 +230,7 @@ rust_test(
     srcs = ["test/standalone_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         "//proto:sealed_memory_rust_proto",
@@ -157,6 +258,7 @@ rust_test(
     srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         "//proto:sealed_memory_rust_proto",
