@@ -26,6 +26,7 @@ rust_binary(
     srcs = glob(["src/**"]),
     compile_data = glob(["data/**"]),
     deps = [
+        "//oak_attestation_gcp",
         "//oak_attestation_verification",
         "//oak_attestation_verification_types",
         "//oak_crypto",
@@ -33,8 +34,8 @@ rust_binary(
         "//oak_proto_rust",
         "//oak_time",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:base64",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:x509-cert",
     ],
 )

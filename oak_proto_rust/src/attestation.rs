@@ -19,3 +19,10 @@
 /// the client.
 #[allow(dead_code)]
 pub const SIGNATURE_BASED_ATTESTATION_ID: &str = "95553023-358f-4f8c-b75c-e6e185cc05ca";
+
+/// Attestation type where the session binding key is included in a JWT which
+/// itself is signed by a certificate chain whose root is GCP Confidential
+/// Space's root certificate (see
+/// https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims).
+#[allow(dead_code)]
+pub const CONFIDENTIAL_SPACE_ATTESTATION_ID: &str = "d4d3e98d-334f-4f6d-9e84-d0291f9dbcdd";

@@ -13,6 +13,11 @@ into the `justfile` to see a few example recipes. Feel free to call `just`
 directly, or look at how some of those recipes are defined, and do something
 similar yourself (e.g. by running `bazel` directly in similar ways).
 
+## Writing Code
+
+After editing files, please run `just format` - at least once, at the end of
+completing all edits - to format the code appropriately.
+
 ## Writing Tests
 
 This project uses `googletest` whenever possible for both C++ and Rust tests.

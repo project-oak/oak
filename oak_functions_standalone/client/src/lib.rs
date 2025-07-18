@@ -23,9 +23,12 @@ use oak_attestation_gcp::{
 };
 use oak_attestation_verification::verifier::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
-use oak_proto_rust::oak::{
-    attestation::v1::{collected_attestation::RequestMetadata, CollectedAttestation},
-    functions::standalone::{OakSessionRequest, OakSessionResponse},
+use oak_proto_rust::{
+    attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
+    oak::{
+        attestation::v1::{collected_attestation::RequestMetadata, CollectedAttestation},
+        functions::standalone::{OakSessionRequest, OakSessionResponse},
+    },
 };
 use oak_session::{
     attestation::AttestationType,
@@ -38,8 +41,6 @@ use oak_session::{
 use oak_time::Clock;
 use tonic::transport::{Channel, Uri};
 use x509_cert::{der::DecodePem, Certificate};
-
-const ATTESTATION_ID: &str = "04k-func710n5-574nd4l0n3-4773574710n";
 
 /// A client for streaming requests to the Oak Functions Standalone server over
 /// an E2EE Noise Protocol session.
@@ -91,7 +92,7 @@ impl OakFunctionsClient {
                         HandshakeType::NoiseNN,
                     )
                     .add_peer_verifier_with_key_extractor(
-                        ATTESTATION_ID.to_string(),
+                        CONFIDENTIAL_SPACE_ATTESTATION_ID.to_string(),
                         Box::new(attestation_verifier),
                         Box::new(DefaultBindingKeyExtractor {}),
                     )

@@ -25,13 +25,16 @@ use oak_functions_service::{instance::OakFunctionsInstance, Handler};
 use oak_grpc::oak::functions::standalone::oak_functions_session_server::{
     OakFunctionsSession, OakFunctionsSessionServer,
 };
-use oak_proto_rust::oak::{
-    attestation::v1::ConfidentialSpaceEndorsement,
-    functions::{
-        extend_next_lookup_data_request::Data,
-        standalone::{OakSessionRequest, OakSessionResponse},
-        ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest,
-        LookupDataChunk, ReserveRequest,
+use oak_proto_rust::{
+    attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
+    oak::{
+        attestation::v1::ConfidentialSpaceEndorsement,
+        functions::{
+            extend_next_lookup_data_request::Data,
+            standalone::{OakSessionRequest, OakSessionResponse},
+            ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest,
+            LookupDataChunk, ReserveRequest,
+        },
     },
 };
 use oak_session::{
@@ -46,10 +49,6 @@ use p256::ecdsa::{SigningKey, VerifyingKey};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::{Stream, StreamExt};
 use tonic::{codec::CompressionEncoding, transport::server::Connected};
-
-// Static string used as the attester id and endorser id when creating the
-// attestation.
-const ATTESTATION_ID: &str = "04k-func710n5-574nd4l0n3-4773574710n";
 
 // Arguements to start up the Oak Functions Session Service.
 // Note that lookup data and attestation are optional features for the service.
@@ -212,15 +211,15 @@ where
                         HandshakeType::NoiseNN,
                     )
                     .add_self_attester_ref(
-                        ATTESTATION_ID.to_owned(),
+                        CONFIDENTIAL_SPACE_ATTESTATION_ID.to_owned(),
                         self.attestation_generation.attester.as_ref().expect("no attester"),
                     )
                     .add_self_endorser_ref(
-                        ATTESTATION_ID.to_owned(),
+                        CONFIDENTIAL_SPACE_ATTESTATION_ID.to_owned(),
                         self.attestation_generation.endorser.as_ref().expect("no endorser"),
                     )
                     .add_session_binder_ref(
-                        ATTESTATION_ID.to_owned(),
+                        CONFIDENTIAL_SPACE_ATTESTATION_ID.to_owned(),
                         self.attestation_generation
                             .session_binder
                             .as_ref()
