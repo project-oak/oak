@@ -27,9 +27,12 @@ rust_binary(
         "src/*.rs",
     ]),
     deps = [
+        "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "//oak_session",
+        "//oak_time",
+        "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",

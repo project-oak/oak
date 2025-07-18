@@ -14,19 +14,15 @@
 // limitations under the License.
 //
 
-use anyhow::Result;
+use std::sync::Arc;
+
+use anyhow::{Context, Result};
 use clap::Parser;
-use futures::StreamExt;
 use log::{error, info, warn};
-use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
-use oak_proto_rust::oak::functions::standalone::OakSessionRequest;
-use oak_session::{
-    attestation::AttestationType,
-    channel::{SessionChannel, SessionInitializer},
-    config::SessionConfig,
-    handshake::HandshakeType,
-    session::{ClientSession, Session},
-};
+use oak_functions_standalone_client_lib::OakFunctionsClient;
+use oak_session::attestation::AttestationType;
+use oak_time::Clock;
+use oak_time_std::clock::FrozenSystemTimeClock;
 use rmcp::{
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
@@ -39,7 +35,6 @@ use rmcp::{
     transport::stdio,
     Error as McpError, RoleServer, ServerHandler, ServiceExt,
 };
-use tonic::transport::Channel;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -61,56 +56,14 @@ impl WeatherService {
     pub async fn send_tool_request(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         info!("Connecting to the weather tool at: {}", self.tool_url);
 
-        // Create client.
-        let channel = Channel::from_shared(self.tool_url.to_string())
-            .expect("couldn't create gRPC channel")
-            .connect()
-            .await
-            .expect("couldn't connect via gRPC channel");
+        let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
-        let mut client = OakFunctionsSessionClient::new(channel);
+        let mut client =
+            OakFunctionsClient::create(&self.tool_url, AttestationType::PeerUnidirectional, clock)
+                .await
+                .context("couldn't connect to server")?;
 
-        // Start bidirectional stream.
-        let (mut tx, rx) = futures::channel::mpsc::channel(10);
-        let mut response_stream =
-            client.oak_session(rx).await.expect("failed to start stream").into_inner();
-
-        // Perform Handshake.
-        let mut client_session = ClientSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-        )
-        .expect("failed to create client session");
-
-        while !client_session.is_open() {
-            let request = client_session.next_init_message().expect("expected client init message");
-            let oak_functions_request = OakSessionRequest { request: Some(request) };
-            tx.try_send(oak_functions_request).expect("failed to send to server");
-            if !client_session.is_open() {
-                let response = response_stream
-                    .next()
-                    .await
-                    .expect("expected a response")
-                    .expect("response was failure");
-                client_session
-                    .handle_init_message(response.response.expect("no response provided"))
-                    .expect("failed to handle init response");
-            }
-        }
-
-        let request = client_session.encrypt(request_bytes).expect("failed to send request");
-        let oak_functions_request = OakSessionRequest { request: Some(request) };
-        tx.try_send(oak_functions_request).expect("failed to send request");
-
-        let result = response_stream
-            .next()
-            .await
-            .expect("no response ready")
-            .expect("failed to get response");
-        let result = client_session
-            .decrypt(result.response.expect("no response provided"))
-            .expect("failed to decrypt result");
-
-        Ok(result)
+        client.invoke(request_bytes).await.context("couldn't send request")
     }
 
     #[tool(description = "Provides current weather for specified coordinates")]
