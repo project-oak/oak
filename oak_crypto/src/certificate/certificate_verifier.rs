@@ -62,6 +62,21 @@ pub struct CertificateVerificationReport {
     pub verification: Result<(), CertificateVerificationError>,
 }
 
+impl CertificateVerificationReport {
+    pub fn into_checked(self) -> Result<(), CertificateVerificationError> {
+        match self {
+            CertificateVerificationReport { validity: Ok(()), verification: Ok(()) } => Ok(()),
+            CertificateVerificationReport { validity, verification } => {
+                validity?;
+                verification?;
+                Err(CertificateVerificationError::UnknownError(
+                    "CertificateVerificationReport verification failed",
+                ))
+            }
+        }
+    }
+}
+
 /// Struct that verifies the validity of the [`Certificate`] proto, which
 /// includes verifying its validity and that it contains expected fields.
 /// It relies on the [`Verifier`] to verify that [`Certificate::signature_info`]
@@ -124,16 +139,7 @@ impl<V: Verifier> CertificateVerifier<V> {
         purpose_id: &[u8],
         certificate: &Certificate,
     ) -> Result<(), CertificateVerificationError> {
-        match self.report(current_time, subject_public_key, purpose_id, certificate)? {
-            CertificateVerificationReport { validity: Ok(()), verification: Ok(()) } => Ok(()),
-            CertificateVerificationReport { validity, verification } => {
-                validity?;
-                verification?;
-                Err(CertificateVerificationError::UnknownError(
-                    "CertificateVerificationReport verification failed",
-                ))
-            }
-        }
+        self.report(current_time, subject_public_key, purpose_id, certificate)?.into_checked()
     }
 
     pub fn report(

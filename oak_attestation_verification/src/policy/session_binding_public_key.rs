@@ -43,6 +43,25 @@ pub struct SessionBindingPublicKeyVerificationReport {
     pub endorsement: Result<CertificateVerificationReport, CertificateVerificationError>,
 }
 
+impl SessionBindingPublicKeyVerificationReport {
+    fn into_session_binding_public_key(
+        self,
+    ) -> Result<Vec<u8>, SessionBindingPublicKeyVerificationError> {
+        match self {
+            SessionBindingPublicKeyVerificationReport {
+                session_binding_public_key,
+                endorsement: Ok(certificate_verification_report),
+            } => Ok(certificate_verification_report
+                .into_checked()
+                .map(|_| session_binding_public_key)?),
+            SessionBindingPublicKeyVerificationReport {
+                session_binding_public_key: _,
+                endorsement: Err(err),
+            } => Err(SessionBindingPublicKeyVerificationError::CertificateVerificationError(err)),
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum SessionBindingPublicKeyVerificationError {
     #[error("Missing field: {0}")]
@@ -51,6 +70,8 @@ pub enum SessionBindingPublicKeyVerificationError {
     ProtoDecodeError(#[from] anyhow::Error),
     #[error("Failed to decode Variant: {0}")]
     VariantDecodeError(&'static str),
+    #[error("Certificate verification failed: {0}")]
+    CertificateVerificationError(#[from] CertificateVerificationError),
 }
 
 pub struct SessionBindingPublicKeyPolicy<V: Verifier> {
@@ -117,29 +138,12 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        match self.report(current_time, evidence, endorsement)? {
-            SessionBindingPublicKeyVerificationReport {
-                session_binding_public_key,
-                endorsement:
-                    Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) }),
-            } => {
-                // TODO: b/356631062 - Return detailed attestation results.
-                Ok(EventAttestationResults {
-                    artifacts: BTreeMap::from([(
-                        SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                        session_binding_public_key.to_vec(),
-                    )]),
-                })
-            }
-            SessionBindingPublicKeyVerificationReport {
-                session_binding_public_key: _,
-                endorsement,
-            } => {
-                let endorsement = endorsement?;
-                endorsement.validity?;
-                endorsement.verification?;
-                anyhow::bail!("SessionBindingPublicKeyVerificationReport verification failed")
-            }
-        }
+        Ok(EventAttestationResults {
+            artifacts: BTreeMap::from([(
+                SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
+                self.report(current_time, evidence, endorsement)?
+                    .into_session_binding_public_key()?,
+            )]),
+        })
     }
 }
