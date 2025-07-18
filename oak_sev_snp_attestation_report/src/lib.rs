@@ -143,7 +143,9 @@ pub struct AttestationReportData {
     /// Reserved.
     _reserved_0: [u8; 21],
     /// Identifier unique to the chip, unless the ID has been masked in
-    /// configuration in which case it is all zeroes.
+    /// configuration in which case it is all zeroes. Older CPU models
+    /// (Milan, Genoa) use the full 64 bytes, newer models (Turin and beyond)
+    /// use only the first 8 bytes and the rest is zeroed out.
     pub chip_id: [u8; 64],
     /// The committed TCB version.
     pub committed_tcb: TcbVersion,

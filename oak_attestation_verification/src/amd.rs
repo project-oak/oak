@@ -91,11 +91,18 @@ fn chip_id(cert: &Certificate) -> anyhow::Result<[u8; 64]> {
         .find(|&ext| ext.extn_id == CHIP_ID_OID)
         .ok_or_else(|| anyhow::anyhow!("no chip ID found in cert"))?;
     let chip_id = chip_id_ext.extn_value.as_bytes().to_vec();
-    anyhow::ensure!(chip_id.len() == 64, "length of chip ID value is not 64");
+    // From Turin (and later) AMD reduced the length of the Chip ID from 64 to
+    // 8 bytes. We need to be prepared for both cases. See Note 4 in
+    // Section 3.1. of
+    // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
+    anyhow::ensure!(
+        chip_id.len() == 8 || chip_id.len() == 64,
+        "unexpected length of chip ID value"
+    );
 
     // Copy into array of fixed length.
     let mut result = [0; 64];
-    result.copy_from_slice(&chip_id[0..64]);
+    result[0..chip_id.len()].copy_from_slice(&chip_id);
     Ok(result)
 }
 
