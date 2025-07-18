@@ -21,21 +21,31 @@ use alloc::{boxed::Box, collections::BTreeMap};
 use criterion::{criterion_group, criterion_main, Criterion};
 use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_session::{
+    attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,
     handshake::{ClientHandshakeHandler, HandshakeType, ServerHandshakeHandler},
     ProtocolEngine,
 };
-
 fn process_kk_handshake() {
     let initiator_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_identity_key: Box<dyn IdentityKeyHandle> = Box::new(IdentityKey::generate());
     let responder_public_key = responder_identity_key.get_public_key().unwrap();
-    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
-        handshake_type: HandshakeType::NoiseKK,
-        self_static_private_key: Some(responder_identity_key),
-        peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
-        session_binders: BTreeMap::new(),
-    })
+    let client_handshaker = ClientHandshakeHandler::create(
+        HandshakeHandlerConfig {
+            handshake_type: HandshakeType::NoiseKK,
+            self_static_private_key: Some(responder_identity_key),
+            peer_static_public_key: Some(initiator_identity_key.get_public_key().unwrap()),
+            session_binders: BTreeMap::new(),
+        },
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
+    )
     .unwrap();
     let server_handshaker = ServerHandshakeHandler::new(
         HandshakeHandlerConfig {
@@ -45,18 +55,36 @@ fn process_kk_handshake() {
             session_binders: BTreeMap::new(),
         },
         false,
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
     );
     do_handshake(client_handshaker, server_handshaker);
 }
 
 fn process_nk_handshake() {
     let identity_key = Box::new(IdentityKey::generate());
-    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
-        handshake_type: HandshakeType::NoiseNK,
-        self_static_private_key: None,
-        peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
-        session_binders: BTreeMap::new(),
-    })
+    let client_handshaker = ClientHandshakeHandler::create(
+        HandshakeHandlerConfig {
+            handshake_type: HandshakeType::NoiseNK,
+            self_static_private_key: None,
+            peer_static_public_key: Some(identity_key.get_public_key().unwrap()),
+            session_binders: BTreeMap::new(),
+        },
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
+    )
     .unwrap();
     let server_handshaker = ServerHandshakeHandler::new(
         HandshakeHandlerConfig {
@@ -66,17 +94,35 @@ fn process_nk_handshake() {
             session_binders: BTreeMap::new(),
         },
         false,
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
     );
     do_handshake(client_handshaker, server_handshaker);
 }
 
 fn process_nn_handshake() {
-    let client_handshaker = ClientHandshakeHandler::create(HandshakeHandlerConfig {
-        handshake_type: HandshakeType::NoiseNN,
-        self_static_private_key: None,
-        peer_static_public_key: None,
-        session_binders: BTreeMap::new(),
-    })
+    let client_handshaker = ClientHandshakeHandler::create(
+        HandshakeHandlerConfig {
+            handshake_type: HandshakeType::NoiseNN,
+            self_static_private_key: None,
+            peer_static_public_key: None,
+            session_binders: BTreeMap::new(),
+        },
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
+    )
     .unwrap();
     let server_handshaker = ServerHandshakeHandler::new(
         HandshakeHandlerConfig {
@@ -86,6 +132,14 @@ fn process_nn_handshake() {
             session_binders: BTreeMap::new(),
         },
         false,
+        AttestationState {
+            peer_attestation_verdict: PeerAttestationVerdict::AttestationPassed {
+                attestation_results: BTreeMap::new(),
+            },
+            self_assertions: BTreeMap::new(),
+            peer_session_binding_verifiers: BTreeMap::new(),
+            attestation_binding_token: Vec::new(),
+        },
     );
     do_handshake(client_handshaker, server_handshaker);
 }

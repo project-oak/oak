@@ -77,6 +77,7 @@ use derive_builder::Builder;
 use mockall::automock;
 use oak_crypto::{signer::Signer, verifier::Verifier};
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
+use sha2::Digest;
 
 use crate::key_extractor::KeyExtractor;
 
@@ -250,6 +251,27 @@ impl SessionBindingVerifierProvider for SignatureBindingVerifierProvider {
                 .map_err(|err| anyhow!("couldn't build SignatureBindingVerifier: {}", err))?,
         ))
     }
+}
+
+/// An INFO string used when calculating the session binding token.
+const SESSION_BINDING_INFO_STRING: &[u8; 36] = b"04abb564-eeb9-42b7-8091-4d67cdb4d536";
+
+/// Derives a session binding token combining the data from the session
+/// initialization steps to bind the session to the supplied attestations.
+///
+/// * `attestation_binding_token` - Combined data from the attestation step;
+///   binds all supplied evidence to the session.
+/// * `handshake_hash` - The hash of the handshake binds the handshake step. It
+///   is unique to the established session.
+pub fn create_session_binding_token(
+    attestation_binding_token: &[u8],
+    handshake_hash: &[u8],
+) -> Vec<u8> {
+    let mut ctx = sha2::Sha256::new();
+    ctx.update(attestation_binding_token);
+    ctx.update(handshake_hash);
+    ctx.update(SESSION_BINDING_INFO_STRING);
+    ctx.finalize().to_vec()
 }
 
 #[cfg(test)]

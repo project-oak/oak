@@ -48,7 +48,7 @@
 //!       data.
 //!     - `handshake_hash`: The hash of the handshake transcript, used for
 //!       binding.
-//!     - `session_bindings`: Bindings (e.g., signatures) received from the
+//!     - `peer_session_bindings`: Bindings (e.g., signatures) received from the
 //!       peer, linking their attestation to this handshake.
 //! - **`HandshakeHandler` Trait**: Defines the core interface for performing a
 //!   handshake. It includes methods for obtaining the derived `session_keys`
@@ -100,7 +100,12 @@ use oak_proto_rust::oak::session::v1::{
     NoiseHandshakeMessage, SessionBinding,
 };
 
-use crate::{config::HandshakeHandlerConfig, session_binding::SessionBinder, ProtocolEngine};
+use crate::{
+    attestation::AttestationState,
+    config::HandshakeHandlerConfig,
+    session_binding::{create_session_binding_token, SessionBinder},
+    ProtocolEngine,
+};
 
 /// Specifies the type of Noise Protocol Framework handshake pattern to be used.
 ///
@@ -124,17 +129,26 @@ pub struct HandshakeResult {
     /// established during the handshake. The crypter id used by an
     /// `Encryptor` to protect application messages.
     pub crypter: OrderedCrypter,
+    /// The state of the completed handshake, including the handshake hash and
+    /// any peer bindings.
+    pub handshake_state: HandshakeState,
+}
+
+/// Contains the state of a completed handshake.
+pub struct HandshakeState {
     /// A cryptographic hash of the entire transcript of messages exchanged
     /// during the handshake. This hash is crucial for binding the
     /// attestation results to the handshake, ensuring that the attested
     /// peer is the one participating in this specific handshake.
-    pub handshake_hash: Vec<u8>,
+    pub handshake_binding_token: Vec<u8>,
     /// Session bindings received from the peer. These are typically signatures
-    /// or MACs over the `handshake_hash` (or related data), created using
+    /// or MACs over the session binding token (or related data), created using
     /// keys derived from the peer's attestation. Verifying these bindings
     /// confirms the link between the attested identity and the current
     /// session.
-    pub session_bindings: BTreeMap<String, SessionBinding>,
+    pub peer_session_bindings: BTreeMap<String, SessionBinding>,
+    /// Bindings for assertions received from the peer.
+    pub peer_assertion_bindings: BTreeMap<String, SessionBinding>,
 }
 
 /// A trait for building a `HandshakeHandler` instance.
@@ -155,7 +169,11 @@ pub trait HandshakeHandlerBuilder<T: HandshakeHandler>: Send {
     /// The lifetime of the returned `HandshakeHandler` is owned by the caller.
     /// Configuration data is typically moved into the builder and then into the
     /// `HandshakeHandler`.
-    fn build(self: Box<Self>, expect_peer_bindings: bool) -> Result<T, Error>;
+    fn build(
+        self: Box<Self>,
+        expect_peer_bindings: bool,
+        attestation_state: AttestationState,
+    ) -> Result<T, Error>;
 }
 
 /// A builder for creating `ClientHandshakeHandler` instances.
@@ -171,8 +189,9 @@ impl HandshakeHandlerBuilder<ClientHandshakeHandler> for ClientHandshakeHandlerB
     fn build(
         self: Box<Self>,
         _expect_peer_bindings: bool,
+        attestation_state: AttestationState,
     ) -> Result<ClientHandshakeHandler, Error> {
-        ClientHandshakeHandler::create(self.config)
+        ClientHandshakeHandler::create(self.config, attestation_state)
     }
 }
 
@@ -186,8 +205,12 @@ pub struct ServerHandshakeHandlerBuilder {
 
 impl HandshakeHandlerBuilder<ServerHandshakeHandler> for ServerHandshakeHandlerBuilder {
     /// Constructs a `ServerHandshakeHandler` using the stored configuration.
-    fn build(self: Box<Self>, expect_peer_bindings: bool) -> Result<ServerHandshakeHandler, Error> {
-        Ok(ServerHandshakeHandler::new(self.config, expect_peer_bindings))
+    fn build(
+        self: Box<Self>,
+        expect_peer_bindings: bool,
+        attestation_state: AttestationState,
+    ) -> Result<ServerHandshakeHandler, Error> {
+        Ok(ServerHandshakeHandler::new(self.config, expect_peer_bindings, attestation_state))
     }
 }
 
@@ -197,23 +220,14 @@ impl HandshakeHandlerBuilder<ServerHandshakeHandler> for ServerHandshakeHandlerB
 /// to establish shared session keys and a handshake hash. Implementations are
 /// stateful and use the `ProtocolEngine` trait to exchange handshake messages.
 pub trait HandshakeHandler: Send {
-    /// Retrieves the crypter derived from the completed handshake.
+    /// Retrieves the result of the completed handshake including the derived
+    /// crypter. Also passes along the attestation state so that it could be
+    /// used later in the session.
     ///
-    /// This method consumes the crypter, meaning it can typically only be
-    /// called once successfully. It returns an error if the handshake is
+    /// This method consumes aelf, meaning it can only be
+    /// called once. It returns an error if the handshake is
     /// not yet complete keys are not ready. Can only be called once.
-    fn take_crypter(self) -> Result<OrderedCrypter, Error>;
-
-    /// Gets the hash of the completed handshake without consuming the stored
-    /// handshake results.
-    ///
-    /// This hash is vital for session binding. This method does not consume the
-    /// hash, allowing it to be accessed multiple times if needed (e.g., for
-    /// logging or multiple binding verifications, though typically used
-    /// once by the `Session`). Returns an error if the handshake is not yet
-    /// complete. The lifetime of the returned slice is tied to the
-    /// `HandshakeHandler` instance.
-    fn get_handshake_hash(&self) -> Result<&[u8], Error>;
+    fn take_handshake_result(self) -> Result<(HandshakeResult, AttestationState), Error>;
 
     /// Checks if the handshake process is fully complete.
     ///
@@ -239,6 +253,10 @@ pub struct ClientHandshakeHandler {
     /// The `session_binders` are used to generate the follow-up message
     /// containing the client's session binding.
     session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
+    /// The state from the preceding attestation phase, which is carried through
+    /// the handshake and used for binding attestation information to the
+    /// session.
+    attestation_state: AttestationState,
     /// The initial handshake message sent to the server.
     initial_message: Option<HandshakeRequest>,
     /// The follow-up handshake message sent to the server.
@@ -259,7 +277,10 @@ impl ClientHandshakeHandler {
     ///
     /// The `handshake_handler_config` is consumed, and its owned data (like
     /// keys) is moved into the `ClientHandshakeHandler`.
-    pub fn create(handshake_handler_config: HandshakeHandlerConfig) -> anyhow::Result<Self> {
+    pub fn create(
+        handshake_handler_config: HandshakeHandlerConfig,
+        attestation_state: AttestationState,
+    ) -> anyhow::Result<Self> {
         let handshake_type = handshake_handler_config.handshake_type;
         let peer_static_public_key = handshake_handler_config.peer_static_public_key.clone();
         let mut handshake_initiator = match handshake_type {
@@ -305,6 +326,7 @@ impl ClientHandshakeHandler {
         Ok(Self {
             handshake_initiator,
             session_binders: handshake_handler_config.session_binders,
+            attestation_state,
             initial_message: Some(initial_message),
             followup_message: None,
             handshake_result: None,
@@ -313,18 +335,13 @@ impl ClientHandshakeHandler {
 }
 
 impl HandshakeHandler for ClientHandshakeHandler {
-    /// Retrieves the session keys. See `HandshakeHandler::take_crypter`.
-    fn take_crypter(mut self) -> Result<OrderedCrypter, Error> {
-        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.crypter)
-    }
-
-    /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
-    fn get_handshake_hash(&self) -> Result<&[u8], Error> {
-        Ok(&self
-            .handshake_result
-            .as_ref()
-            .ok_or(anyhow!("handshake is not complete"))?
-            .handshake_hash)
+    /// Retrieves the handshake result. See
+    /// `HandshakeHandler::take_handshake_result`.
+    fn take_handshake_result(mut self) -> Result<(HandshakeResult, AttestationState), Error> {
+        Ok((
+            self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?,
+            self.attestation_state,
+        ))
     }
 
     /// Checks if the client's handshake is complete.
@@ -365,8 +382,8 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
     /// - It uses the `HandshakeInitiator` to process the server's Noise
     ///   protocol message.
     /// - On successful processing, it extracts the `OrderedCrypter`,
-    ///   `handshake_hash`, and any `session_bindings` sent by the server,
-    ///   storing them in `handshake_result`.
+    ///   `handshake_binding_token`, and any `peer_session_bindings` sent by the
+    ///   server, storing them in `handshake_result`.
     /// - If client `session_binders` are configured, this method prepares the
     ///   `followup_message` with the client's own bindings, which will be sent
     ///   via a subsequent call to `get_outgoing_message`.
@@ -391,26 +408,46 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
                     .map_err(|e| anyhow!("Error processing response: {e:?}"))
                     .map(|(handshake_hash, crypter)| HandshakeResult {
                         crypter,
-                        handshake_hash: handshake_hash.to_vec(),
-                        session_bindings: incoming_message.attestation_bindings,
+                        handshake_state: HandshakeState {
+                            handshake_binding_token: handshake_hash.to_vec(),
+                            peer_session_bindings: incoming_message.attestation_bindings,
+                            peer_assertion_bindings: incoming_message.assertion_bindings,
+                        },
                     })?;
-                if !self.session_binders.is_empty() {
+                if !self.session_binders.is_empty()
+                    || !self.attestation_state.self_assertions.is_empty()
+                {
+                    let assertion_bound_data = create_session_binding_token(
+                        self.attestation_state.attestation_binding_token.as_slice(),
+                        handshake_result.handshake_state.handshake_binding_token.as_slice(),
+                    );
                     self.followup_message = Some(HandshakeRequest {
                         r#handshake_type: None,
                         attestation_bindings: self
                             .session_binders
                             .iter()
                             .map(|(id, binder)| {
-                                Ok((
+                                (
                                     id.clone(),
                                     SessionBinding {
-                                        binding: binder
-                                            .bind(handshake_result.handshake_hash.as_slice()),
+                                        binding: binder.bind(
+                                            handshake_result
+                                                .handshake_state
+                                                .handshake_binding_token
+                                                .as_slice(),
+                                        ),
                                     },
-                                ))
+                                )
+                            })
+                            .collect(),
+                        assertion_bindings: self
+                            .attestation_state
+                            .self_assertions
+                            .iter()
+                            .map(|(id, assertion)| {
+                                Ok((id.clone(), assertion.bind(assertion_bound_data.as_slice())?))
                             })
                             .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
-                        ..Default::default()
                     });
                 }
 
@@ -432,13 +469,27 @@ impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHand
 /// true.
 #[allow(dead_code)]
 pub struct ServerHandshakeHandler {
+    /// The type of Noise handshake to perform.
     handshake_type: HandshakeType,
+    /// The server's static private key.
     self_identity_key: Option<Box<dyn IdentityKeyHandle>>,
+    /// The peer's static public key, if required by the handshake type.
     peer_public_key: Option<Vec<u8>>,
+    /// Binders used to generate session bindings from the server's attestation.
     session_binders: BTreeMap<String, Arc<dyn SessionBinder>>,
+    /// Whether to expect a follow-up message with the client's session
+    /// bindings.
     client_binding_expected: bool,
+    /// The state from the preceding attestation phase, which is carried through
+    /// the handshake and used for binding attestation information to the
+    /// session.
+    attestation_state: AttestationState,
+    /// The Noise protocol response, kept temporarily if a follow-up message is
+    /// expected from the client.
     noise_response: Option<Response>,
+    /// The generated handshake response to be sent to the client.
     handshake_response: Option<HandshakeResponse>,
+    /// The result of a successfully completed handshake.
     handshake_result: Option<HandshakeResult>,
 }
 
@@ -455,6 +506,7 @@ impl ServerHandshakeHandler {
     pub fn new(
         handshake_handler_config: HandshakeHandlerConfig,
         client_binding_expected: bool,
+        attestation_state: AttestationState,
     ) -> Self {
         Self {
             handshake_type: handshake_handler_config.handshake_type,
@@ -462,6 +514,7 @@ impl ServerHandshakeHandler {
             peer_public_key: handshake_handler_config.peer_static_public_key,
             session_binders: handshake_handler_config.session_binders,
             client_binding_expected,
+            attestation_state,
             noise_response: None,
             handshake_response: None,
             handshake_result: None,
@@ -470,18 +523,13 @@ impl ServerHandshakeHandler {
 }
 
 impl HandshakeHandler for ServerHandshakeHandler {
-    /// Retrieves the session keys. See `HandshakeHandler::take_crypter`.
-    fn take_crypter(mut self) -> Result<OrderedCrypter, Error> {
-        Ok(self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?.crypter)
-    }
-
-    /// Gets the handshake hash. See `HandshakeHandler::get_handshake_hash`.
-    fn get_handshake_hash(&self) -> Result<&[u8], Error> {
-        Ok(&self
-            .handshake_result
-            .as_ref()
-            .ok_or(anyhow!("handshake is not complete"))?
-            .handshake_hash)
+    /// Retrieves the handshake result. See
+    /// `HandshakeHandler::take_handshake_result`.
+    fn take_handshake_result(mut self) -> Result<(HandshakeResult, AttestationState), Error> {
+        Ok((
+            self.handshake_result.take().ok_or(anyhow!("handshake is not complete"))?,
+            self.attestation_state,
+        ))
     }
 
     /// Checks if the server's handshake is complete.
@@ -513,7 +561,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
     ///
     /// If `client_binding_expected` is true, this method may be called again to
     /// process the client's follow-up binding message, at which point the
-    /// client's `session_bindings` are stored.
+    /// client's `peer_session_bindings` are stored.
     fn put_incoming_message(
         &mut self,
         incoming_message: HandshakeRequest,
@@ -525,8 +573,11 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
         if let Some(noise_response) = self.noise_response.take() {
             self.handshake_result = Some(HandshakeResult {
                 crypter: noise_response.crypter,
-                handshake_hash: noise_response.handshake_hash.to_vec(),
-                session_bindings: incoming_message.attestation_bindings,
+                handshake_state: HandshakeState {
+                    handshake_binding_token: noise_response.handshake_hash.to_vec(),
+                    peer_session_bindings: incoming_message.attestation_bindings,
+                    peer_assertion_bindings: incoming_message.assertion_bindings,
+                },
             });
         } else {
             let noise_response = match incoming_message.r#handshake_type {
@@ -558,6 +609,10 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                 }
                 None => return Err(anyhow!("Missing handshake_type")),
             };
+            let assertion_bound_data = create_session_binding_token(
+                self.attestation_state.attestation_binding_token.as_slice(),
+                noise_response.handshake_hash.as_slice(),
+            );
             self.handshake_response = Some(HandshakeResponse {
                 r#handshake_type: Some(handshake_response::HandshakeType::NoiseHandshakeMessage(
                     NoiseHandshakeMessage {
@@ -575,23 +630,33 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                     .session_binders
                     .iter()
                     .map(|(id, binder)| {
-                        Ok((
+                        (
                             id.clone(),
                             SessionBinding {
                                 binding: binder.bind(noise_response.handshake_hash.as_slice()),
                             },
-                        ))
+                        )
+                    })
+                    .collect(),
+                assertion_bindings: self
+                    .attestation_state
+                    .self_assertions
+                    .iter()
+                    .map(|(id, assertion)| {
+                        Ok((id.clone(), assertion.bind(assertion_bound_data.as_slice())?))
                     })
                     .collect::<Result<BTreeMap<String, SessionBinding>, Error>>()?,
-                ..Default::default()
             });
             if self.client_binding_expected {
                 self.noise_response = Some(noise_response);
             } else {
                 self.handshake_result = Some(HandshakeResult {
                     crypter: noise_response.crypter,
-                    handshake_hash: noise_response.handshake_hash.to_vec(),
-                    session_bindings: BTreeMap::new(),
+                    handshake_state: HandshakeState {
+                        handshake_binding_token: noise_response.handshake_hash.to_vec(),
+                        peer_session_bindings: BTreeMap::new(),
+                        peer_assertion_bindings: BTreeMap::new(),
+                    },
                 })
             }
         }

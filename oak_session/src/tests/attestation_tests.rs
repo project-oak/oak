@@ -35,8 +35,9 @@ use crate::{
         AttestationHandler, AttestationPublisher, ClientAttestationHandler, PeerAttestationVerdict,
         ServerAttestationHandler, VerifierResult,
     },
-    config::AttestationHandlerConfig,
+    config::{AttestationHandlerConfig, PeerAttestationVerifier},
     generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
+    session_binding::{SessionBindingVerifier, SessionBindingVerifierProvider},
     ProtocolEngine,
 };
 
@@ -67,6 +68,23 @@ mock! {
             evidence: &Evidence,
             endorsements: &Endorsements,
         ) -> anyhow::Result<AttestationResults>;
+    }
+}
+
+mock! {
+    TestSessionBindingVerifier {}
+    impl SessionBindingVerifier for TestSessionBindingVerifier {
+        fn verify_binding(&self, bound_data: &[u8], binding: &[u8]) -> anyhow::Result<()>;
+    }
+}
+
+mock! {
+    TestSessionBindingVerifierProvider {}
+    impl SessionBindingVerifierProvider for TestSessionBindingVerifierProvider {
+        fn create_session_binding_verifier(
+            &self,
+            attestation_results: &AttestationResults,
+        ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
     }
 }
 
@@ -131,6 +149,14 @@ fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
     Arc::new(verifier)
 }
 
+fn create_mock_session_binding_verifier_provider() -> Arc<dyn SessionBindingVerifierProvider> {
+    let mut session_binding_verifier_provider = MockTestSessionBindingVerifierProvider::new();
+    session_binding_verifier_provider
+        .expect_create_session_binding_verifier()
+        .returning(|_| Ok(Box::new(MockTestSessionBindingVerifier::new())));
+    Arc::new(session_binding_verifier_provider)
+}
+
 fn create_mock_attestation_publisher(
     expected_endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
     expected_assertions: BTreeMap<String, Assertion>,
@@ -178,9 +204,16 @@ fn do_attestation_exchange(
         .expect("An outgoing attest response should be available");
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
+    let client_attestation_state = client_attestation_provider.take_attestation_state()?;
+    let server_attestation_state = server_attestation_provider.take_attestation_state()?;
+    assert_that!(
+        client_attestation_state.attestation_binding_token,
+        eq(&server_attestation_state.attestation_binding_token)
+    );
+
     Ok(AttestationExchangeResults {
-        client: client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
-        server: server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
+        client: client_attestation_state.peer_attestation_verdict,
+        server: server_attestation_state.peer_attestation_verdict,
     })
 }
 
@@ -410,7 +443,10 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -449,7 +485,10 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -494,7 +533,10 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -549,7 +591,10 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -634,7 +679,10 @@ fn client_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_failing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_failing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -675,7 +723,10 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_failing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_failing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -715,8 +766,20 @@ fn server_failed_verifier_attestation_fails() -> anyhow::Result<()> {
 fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+            (
+                MATCHED_ATTESTER_ID1.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                MATCHED_ATTESTER_ID2.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
         ]),
         ..Default::default()
     };
@@ -784,8 +847,20 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
 fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_passing_mock_verifier()),
+            (
+                MATCHED_ATTESTER_ID1.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                MATCHED_ATTESTER_ID2.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
         ]),
         ..Default::default()
     };
@@ -853,9 +928,27 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
 fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            (
+                MATCHED_ATTESTER_ID1.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                MATCHED_ATTESTER_ID2.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_failing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                UNMATCHED_VERIFIER_ID.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_failing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
         ]),
         ..Default::default()
     };
@@ -925,9 +1018,27 @@ fn client_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<(
 fn server_one_failed_verifier_aggregated_attestation_fails() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([
-            (MATCHED_ATTESTER_ID1.to_string(), create_passing_mock_verifier()),
-            (MATCHED_ATTESTER_ID2.to_string(), create_failing_mock_verifier()),
-            (UNMATCHED_VERIFIER_ID.to_string(), create_failing_mock_verifier()),
+            (
+                MATCHED_ATTESTER_ID1.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_passing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                MATCHED_ATTESTER_ID2.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_failing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
+            (
+                UNMATCHED_VERIFIER_ID.to_string(),
+                PeerAttestationVerifier {
+                    verifier: create_failing_mock_verifier(),
+                    binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+                },
+            ),
         ]),
         ..Default::default()
     };
@@ -998,7 +1109,10 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             UNMATCHED_VERIFIER_ID.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1026,7 +1140,10 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             UNMATCHED_VERIFIER_ID.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1054,7 +1171,10 @@ fn client_additional_attestation_passes() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1094,7 +1214,10 @@ fn server_additional_attestation_passes() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1134,7 +1257,10 @@ fn client_receives_additional_attestations() -> anyhow::Result<()> {
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1172,7 +1298,10 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
     let server_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1220,7 +1349,10 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1236,7 +1368,10 @@ fn pairwise_bidirectional_attestation_succeeds() -> anyhow::Result<()> {
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1269,7 +1404,10 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
-            create_failing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_failing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1285,7 +1423,10 @@ fn pairwise_bidirectional_attestation_fails() -> anyhow::Result<()> {
 
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_failing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_failing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1315,10 +1456,12 @@ fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Resu
             MATCHED_ATTESTER_ID1.to_string(),
             create_mock_endorser(),
         )]),
-
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID2.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1353,7 +1496,10 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
     let client_config = AttestationHandlerConfig {
         peer_verifiers: BTreeMap::from([(
             MATCHED_ATTESTER_ID1.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1369,7 +1515,10 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
 
         peer_verifiers: BTreeMap::from([(
             UNMATCHED_VERIFIER_ID.to_string(),
-            create_passing_mock_verifier(),
+            PeerAttestationVerifier {
+                verifier: create_passing_mock_verifier(),
+                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
+            },
         )]),
         ..Default::default()
     };
@@ -1387,6 +1536,34 @@ fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Resul
             ..
         })
     );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn pairwise_assertion_exchange_succeeds() -> anyhow::Result<()> {
+    let client_assertion: Assertion = Assertion { content: "client_test".as_bytes().to_vec() };
+    let server_assertion: Assertion = Assertion { content: "server_test".as_bytes().to_vec() };
+
+    let client_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            MATCHED_ATTESTER_ID1.to_string(),
+            create_mock_assertion_generator(client_assertion.clone()),
+        )]),
+        ..Default::default()
+    };
+
+    let server_config = AttestationHandlerConfig {
+        self_assertion_generators: BTreeMap::from([(
+            MATCHED_ATTESTER_ID2.to_string(),
+            create_mock_assertion_generator(server_assertion.clone()),
+        )]),
+        ..Default::default()
+    };
+
+    // Verifies that the assertions have been successfully exchanged and that the
+    // attestation token matches.
+    do_attestation_exchange(client_config, server_config)?;
 
     Ok(())
 }

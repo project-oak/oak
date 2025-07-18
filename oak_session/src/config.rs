@@ -75,10 +75,6 @@ pub struct SessionConfig {
     pub handshake_handler_config: HandshakeHandlerConfig,
     /// Configuration for creating the session encryptor.
     pub encryptor_config: EncryptorConfig,
-    /// A map of attestation IDs to providers that can create verifiers for
-    /// session bindings received from the peer. These are used to ensure that
-    /// the peer's attestation is bound to the current session.
-    pub binding_verifier_providers: BTreeMap<String, Arc<dyn SessionBindingVerifierProvider>>,
 }
 
 impl SessionConfig {
@@ -143,14 +139,11 @@ impl SessionConfigBuilder {
         let encryptor_config =
             EncryptorConfig { encryptor_provider: Box::new(OrderedChannelEncryptorProvider) };
 
-        let binding_verifier_providers = BTreeMap::new();
-
         let config = SessionConfig {
             attestation_type,
             attestation_handler_config,
             handshake_handler_config,
             encryptor_config,
-            binding_verifier_providers,
         };
         Self { config }
     }
@@ -309,16 +302,13 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.into());
-        self.config.binding_verifier_providers.insert(
-            attester_id,
-            Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.into(),
+            binding_verifier_provider: Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
                 DefaultSigningKeyExtractor {},
             ))),
-        );
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -338,16 +328,13 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.clone());
-        self.config.binding_verifier_providers.insert(
-            attester_id,
-            Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.clone(),
+            binding_verifier_provider: Arc::new(SignatureBindingVerifierProvider::new(Arc::new(
                 DefaultSigningKeyExtractor {},
             ))),
-        );
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -373,14 +360,13 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.into());
-        self.config.binding_verifier_providers.insert(
-            attester_id,
-            Arc::new(SignatureBindingVerifierProvider::new(key_extractor.into())),
-        );
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.into(),
+            binding_verifier_provider: Arc::new(SignatureBindingVerifierProvider::new(
+                key_extractor.into(),
+            )),
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -401,14 +387,13 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.clone());
-        self.config.binding_verifier_providers.insert(
-            attester_id,
-            Arc::new(SignatureBindingVerifierProvider::new(key_extractor.clone())),
-        );
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.clone(),
+            binding_verifier_provider: Arc::new(SignatureBindingVerifierProvider::new(
+                key_extractor.clone(),
+            )),
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -434,13 +419,11 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.into());
-        self.config
-            .binding_verifier_providers
-            .insert(attester_id, binding_verifier_provider.into());
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.into(),
+            binding_verifier_provider: binding_verifier_provider.into(),
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -462,13 +445,11 @@ impl SessionConfigBuilder {
             "Peer verification is not supported for attestation type {:?}",
             self.config.attestation_type
         );
-        self.config
-            .attestation_handler_config
-            .peer_verifiers
-            .insert(attester_id.clone(), verifier.clone());
-        self.config
-            .binding_verifier_providers
-            .insert(attester_id, binding_verifier_provider.clone());
+        let peer_verifier = PeerAttestationVerifier {
+            verifier: verifier.clone(),
+            binding_verifier_provider: binding_verifier_provider.clone(),
+        };
+        self.config.attestation_handler_config.peer_verifiers.insert(attester_id, peer_verifier);
         self
     }
 
@@ -603,6 +584,13 @@ impl SessionConfigBuilder {
     }
 }
 
+/// A container for a peer's attestation verifier and a provider for a verifier
+/// for the session binding.
+pub struct PeerAttestationVerifier {
+    pub verifier: Arc<dyn AttestationVerifier>,
+    pub binding_verifier_provider: Arc<dyn SessionBindingVerifierProvider>,
+}
+
 /// Configuration for the attestation phase of a session.
 ///
 /// Instances are typically created and populated via the
@@ -620,11 +608,11 @@ pub struct AttestationHandlerConfig {
     /// generate [`Endorsements`] for its own [`Evidence`]. The key must match
     /// the `attestation_id` of the evidence being endorsed.
     pub self_endorsers: BTreeMap<String, Arc<dyn Endorser>>,
-    /// A map of [`AttestationVerifier`]s (keyed by `attestation_id`) used to
-    /// verify [`EndorsedEvidence`] received from the peer. The key is used to
-    /// select the correct verifier based on the `attestation_id` provided with
-    /// the peer's evidence.
-    pub peer_verifiers: BTreeMap<String, Arc<dyn AttestationVerifier>>,
+    /// A map of [`PeerAttestationVerifier`]s (keyed by `attestation_id`) used
+    /// to verify [`EndorsedEvidence`] received from the peer. The key is
+    /// used to select the correct verifier based on the `attestation_id`
+    /// provided with the peer's evidence.
+    pub peer_verifiers: BTreeMap<String, PeerAttestationVerifier>,
     /// A map of [`AssertionVerifier`]s (keyed by `assertion_id`) used to
     /// verify an [`Assertion`] received from the peer. Not yet used,
     pub peer_assertion_verifiers: BTreeMap<String, Arc<dyn AssertionVerifier>>,
