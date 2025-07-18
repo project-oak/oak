@@ -252,7 +252,7 @@ where
               .ok_or(tonic::Status::invalid_argument("No request in OakSessionRequest"))?;
             if server_session.is_open() {
               let decrypted_request = server_session.decrypt(session_request).map_err(|e| tonic::Status::internal(format!("{e:?}")))?;
-
+              println!("Request received");
               let invoke_response =
                 instance.handle_user_request(decrypted_request).map_err(map_status);
 
@@ -261,7 +261,7 @@ where
               let oak_session_response = OakSessionResponse {
                 response: Some(session_response),
               };
-
+              println!("Sending response");
               yield oak_session_response;
 
             } else {
