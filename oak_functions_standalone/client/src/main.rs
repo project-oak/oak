@@ -16,7 +16,7 @@
 
 //! Sends a string to the enclave app and prints the return.
 
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
@@ -24,6 +24,7 @@ use oak_functions_standalone_client_lib::OakFunctionsClient;
 use oak_session::attestation::AttestationType;
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
+use prost::Message;
 
 // Supported AttestationTypes for Google Cloud Platform, derived from
 // oak/oak_session/src/attestation.rs.
@@ -48,6 +49,12 @@ pub struct Opt {
 
     #[arg(long, help = "Attestation type", value_enum, default_value_t = AttestationTypeParam::Unattested)]
     attestation_type: AttestationTypeParam,
+
+    #[arg(
+        long,
+        help = "Path to save the attestation evidence to. If not specified, the attestation is not saved."
+    )]
+    attestation_evidence_path: Option<String>,
 }
 
 #[tokio::main]
@@ -66,11 +73,10 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("couldn't connect to server")?;
 
-    if attestation_type == AttestationType::PeerUnidirectional {
-        println!(
-            "Attestation: {:?}",
-            client.fetch_attestation(opt.uri, clock).expect("unable to parse attestation")
-        );
+    if let Some(path) = opt.attestation_evidence_path {
+        let attestation =
+            client.fetch_attestation(opt.uri, clock).expect("unable to parse attestation");
+        fs::write(path, attestation.encode_to_vec())?;
     }
 
     println!("Request: {}", opt.request);
