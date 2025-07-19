@@ -18,7 +18,7 @@
 
 use alloc::string::String;
 
-use oak_sev_snp_attestation_report::{AttestationReport, SigningAlgorithm, TcbVersion};
+use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport, SigningAlgorithm, TcbVersion};
 use p256::pkcs8::ObjectIdentifier;
 use rsa::{pss::Signature, signature::Verifier, RsaPublicKey};
 use sha2::Sha384;
@@ -67,17 +67,8 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
         .map_err(|_err| anyhow::anyhow!("signature verification failed"))
 }
 
-/// The AMD EPYC CPU model.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ProductName {
-    Invalid = 0,
-    Milan = 1,
-    Genoa = 2,
-    Turin = 3,
-}
-
 /// Extracts the product name from the VCEK certificate.
-pub fn get_product_name(cert: &Certificate) -> anyhow::Result<ProductName> {
+pub fn get_product(cert: &Certificate) -> anyhow::Result<AmdProduct> {
     let exts = cert
         .tbs_certificate
         .extensions
@@ -90,13 +81,13 @@ pub fn get_product_name(cert: &Certificate) -> anyhow::Result<ProductName> {
     let raw = String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
         .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))?;
     if raw.contains("Turin") {
-        Ok(ProductName::Turin)
+        Ok(AmdProduct::Turin)
     } else if raw.contains("Genoa") {
-        Ok(ProductName::Genoa)
+        Ok(AmdProduct::Genoa)
     } else if raw.contains("Milan") {
-        Ok(ProductName::Milan)
+        Ok(AmdProduct::Milan)
     } else {
-        Ok(ProductName::Invalid)
+        Ok(AmdProduct::Unsupported)
     }
 }
 

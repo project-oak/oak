@@ -152,7 +152,7 @@ fn verify_milan_oc_legacy_success() {
 }
 
 #[test]
-fn verify_milan_oc_legacy_explicit_reference_values() {
+fn verify_milan_oc_legacy_explicit_reference_values_success() {
     let d = AttestationData::load_milan_oc_legacy();
     let reference_values = make_reference_values(&d.evidence);
 
@@ -288,6 +288,50 @@ fn verify_fails_with_unsupported_tcb_version() {
     };
 
     assert_failure(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
+}
+
+#[test]
+fn verify_unpopulated_per_model_tcb_version_failure() {
+    let mut d = AttestationData::load_milan_oc_legacy();
+
+    #[allow(deprecated)]
+    match d.reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version = None;
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().milan = None;
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    assert_failure(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
+}
+
+#[test]
+fn verify_unpopulated_per_model_tcb_version_success() {
+    let mut d = AttestationData::load_milan_oc_legacy();
+
+    #[allow(deprecated)]
+    match d.reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version = None;
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().genoa = None;
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    assert_success(verify(
         d.make_valid_millis(),
         &d.evidence,
         &d.endorsements,

@@ -122,7 +122,16 @@ message RootLayerData {
   }
 }
 
+/// The AMD EPYC CPU model.
+enum AmdProduct {
+  AMD_PRODUCT_UNSUPPORTED = 0;
+  AMD_PRODUCT_MILAN = 1;
+  AMD_PRODUCT_GENOA = 2;
+  AMD_PRODUCT_TURIN = 3;
+}
+
 // Values extracted from an AMD SEV-SNP attestation report.
+// NEXT_ID: 9
 message AmdAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
@@ -148,6 +157,9 @@ message AmdAttestationReport {
   // startup. This implicitly includes the measurement of the Stage 0 firmware
   // binary.
   bytes initial_measurement = 4;
+
+  // Model of the underlying AMD CPU.
+  AmdProduct product = 8;
 
   // The hardware ID of the AMD SEV-SNP platform that generated the attestation
   // report.

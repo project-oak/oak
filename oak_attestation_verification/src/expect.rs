@@ -23,7 +23,8 @@ use anyhow::{Context, Error};
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
-        expected_values, kernel_binary_reference_value, reference_values, text_expected_value,
+        expected_values, kernel_binary_reference_value, reference_values,
+        tcb_version_expected_value, tcb_version_reference_value, text_expected_value,
         text_reference_value, AmdSevExpectedValues, AmdSevReferenceValues, ApplicationEndorsement,
         ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
@@ -39,8 +40,8 @@ use oak_proto_rust::oak::{
         OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
         RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
         SystemEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
-        SystemLayerReferenceValues, TextExpectedValue, TextReferenceValue,
-        TransparentReleaseEndorsement, VerificationSkipped,
+        SystemLayerReferenceValues, TcbVersionExpectedValue, TcbVersionReferenceValue,
+        TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
 };
@@ -201,6 +202,25 @@ pub(crate) fn get_cb_expected_values(
     Ok(CbExpectedValues { root_layer: root_layer_expected, layers: layer_expected })
 }
 
+// Transcribes TcbVersionReferenceValue to analogous TcbVersionExpectedValue.
+fn tcb_version_rv_to_ev(
+    ref_value: Option<TcbVersionReferenceValue>,
+) -> Option<TcbVersionExpectedValue> {
+    if let Some(rv) = ref_value.as_ref() {
+        match rv.r#type.as_ref() {
+            Some(tcb_version_reference_value::Type::Skip(_)) => Some(TcbVersionExpectedValue {
+                r#type: Some(tcb_version_expected_value::Type::Skipped(VerificationSkipped {})),
+            }),
+            Some(tcb_version_reference_value::Type::Minimum(m)) => Some(TcbVersionExpectedValue {
+                r#type: Some(tcb_version_expected_value::Type::Minimum(*m)),
+            }),
+            None => Some(TcbVersionExpectedValue { ..Default::default() }),
+        }
+    } else {
+        None
+    }
+}
+
 pub(crate) fn get_root_layer_expected_values(
     now_utc_millis: i64,
     endorsements: Option<&RootLayerEndorsements>,
@@ -209,17 +229,21 @@ pub(crate) fn get_root_layer_expected_values(
     // Propagate each of the existing reference value for a TEE platform to the
     // corresponding expected value.
     #[allow(deprecated)]
-    let amd_sev = if let Some(amd_sev_values) = reference_values.amd_sev.as_ref() {
+    let amd_sev = if let Some(rvs) = reference_values.amd_sev.as_ref() {
         let stage0_expected = get_stage0_expected_values(
             now_utc_millis,
             endorsements.and_then(|value| value.stage0.as_ref()),
-            amd_sev_values.stage0.as_ref().context("stage0 binary reference values not found")?,
+            rvs.stage0.as_ref().context("stage0 binary reference values not found")?,
         )
         .context("getting stage0 values")?;
+
         Some(AmdSevExpectedValues {
             stage0_expected: Some(stage0_expected),
-            min_tcb_version: amd_sev_values.min_tcb_version,
-            allow_debug: amd_sev_values.allow_debug,
+            min_tcb_version: rvs.min_tcb_version,
+            milan: tcb_version_rv_to_ev(rvs.milan),
+            genoa: tcb_version_rv_to_ev(rvs.genoa),
+            turin: tcb_version_rv_to_ev(rvs.turin),
+            allow_debug: rvs.allow_debug,
         })
     } else {
         None
@@ -231,6 +255,7 @@ pub(crate) fn get_root_layer_expected_values(
     Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })
 }
 
+// Only used in policy-based verification.
 #[allow(deprecated)]
 pub(crate) fn get_amd_sev_snp_expected_values(
     reference_values: &AmdSevReferenceValues,
@@ -240,6 +265,9 @@ pub(crate) fn get_amd_sev_snp_expected_values(
         // since it will be verified by the firmware policy.
         stage0_expected: None,
         min_tcb_version: reference_values.min_tcb_version,
+        milan: tcb_version_rv_to_ev(reference_values.milan),
+        genoa: tcb_version_rv_to_ev(reference_values.genoa),
+        turin: tcb_version_rv_to_ev(reference_values.turin),
         allow_debug: reference_values.allow_debug,
     })
 }

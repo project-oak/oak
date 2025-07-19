@@ -18,14 +18,16 @@ extern crate std;
 
 use std::eprintln;
 
+use oak_sev_snp_attestation_report::AttestationReport;
 use test_util::attestation_data::AttestationData;
 use x509_cert::{
     certificate::{CertificateInner, Version},
     der::{Decode, DecodePem},
     Certificate,
 };
+use zerocopy::FromBytes;
 
-use crate::amd::verify_cert_signature;
+use crate::amd::{get_product, verify_cert_signature, AmdProduct};
 
 const ARK_MILAN_CERT_PEM: &str = include_str!("../../data/ark_milan.pem");
 const ARK_GENOA_CERT_PEM: &str = include_str!("../../data/ark_genoa.pem");
@@ -195,4 +197,64 @@ fn validate_turin() {
     let ark = load_cert(ARK_TURIN_CERT_PEM);
     let ask = load_cert(ASK_TURIN_CERT_PEM);
     assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
+}
+
+fn get_product_from_report(d: &AttestationData) -> AmdProduct {
+    let report = AttestationReport::ref_from_bytes(
+        &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,
+    )
+    .expect("invalid AMD attestation report");
+    report.data.get_product()
+}
+
+fn get_product_from_vcek(d: &AttestationData) -> AmdProduct {
+    let vcek_cert = Certificate::from_der(
+        &d.get_tee_certificate().expect("couldn't get VCEK cert from test data"),
+    )
+    .expect("couldn't parse VCEK cert");
+    get_product(&vcek_cert).expect("couldn't get product from VCEK cert")
+}
+
+#[test]
+fn test_product_from_report_milan() {
+    assert_eq!(
+        get_product_from_report(&AttestationData::load_milan_oc_legacy()),
+        AmdProduct::Milan
+    );
+    assert_eq!(
+        get_product_from_report(&AttestationData::load_milan_rk_legacy()),
+        AmdProduct::Milan
+    );
+    assert_eq!(get_product_from_report(&AttestationData::load_oc()), AmdProduct::Milan);
+    assert_eq!(get_product_from_report(&AttestationData::load_rk()), AmdProduct::Milan);
+}
+
+// TODO: b/396666645 - Test fails. We are unable to distinguish Milan and Genoa
+// from the attestation report :-(.
+// #[test]
+// fn test_product_from_report_genoa() {
+//     assert_eq!(get_product_from_report(&AttestationData::load_genoa_oc()),
+// AmdProduct::Genoa); }
+
+#[test]
+fn test_product_from_report_turin() {
+    assert_eq!(get_product_from_report(&AttestationData::load_turin_oc()), AmdProduct::Turin);
+}
+
+#[test]
+fn test_product_from_vcek_milan() {
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_oc_legacy()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_legacy()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_oc()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_rk()), AmdProduct::Milan);
+}
+
+#[test]
+fn test_product_from_vcek_genoa() {
+    assert_eq!(get_product_from_vcek(&AttestationData::load_genoa_oc()), AmdProduct::Genoa);
+}
+
+#[test]
+fn test_product_from_vcek_turin() {
+    assert_eq!(get_product_from_vcek(&AttestationData::load_turin_oc()), AmdProduct::Turin);
 }

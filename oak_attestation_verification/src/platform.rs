@@ -21,13 +21,14 @@ use alloc::format;
 use anyhow::Context;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues,
-        IntelTdxAttestationReport, IntelTdxExpectedValues, RootLayerEvidence, TcbVersion,
-        TeePlatform,
+        tcb_version_expected_value, AmdAttestationReport, AmdSevExpectedValues,
+        InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
+        RootLayerEvidence, TcbVersion, TeePlatform,
     },
     RawDigest,
 };
-use oak_sev_snp_attestation_report::AttestationReport;
+use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
+use oak_time::Instant;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -35,9 +36,7 @@ use x509_cert::{
 use zerocopy::FromBytes;
 
 use crate::{
-    amd::{
-        get_product_name, verify_attestation_report_signature, verify_cert_signature, ProductName,
-    },
+    amd::{get_product, verify_attestation_report_signature, verify_cert_signature},
     util::hash_sha2_256,
 };
 
@@ -60,12 +59,15 @@ pub fn verify_root_attestation_signature(
             )
             .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
 
+            let vcek = Certificate::from_der(serialized_certificate)
+                .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
+
             // Ensure the Attestation report is properly signed by the platform and the
             // corresponding certificate is signed by AMD.
             verify_amd_sev_snp_attestation_report_validity(
+                Instant::from_unix_millis(_now_utc_millis),
                 attestation_report,
-                serialized_certificate,
-                _now_utc_millis,
+                &vcek,
             )
             .context("couldn't verify AMD SEV-SNP attestation report validity")?;
 
@@ -88,35 +90,47 @@ pub fn verify_root_attestation_signature(
     }
 }
 
+// TODO(#4747): use current date as part of VCEK verification.
 pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
+    _current_time: Instant,
     attestation_report: &AttestationReport,
-    serialized_certificate: &[u8],
-    _milliseconds_since_epoch: i64,
+    vcek_cert: &Certificate,
 ) -> anyhow::Result<()> {
-    // We demand that product-specific ASK signs the VCEK.
-    let vcek = Certificate::from_der(serialized_certificate)
-        .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
-
-    let product_name = get_product_name(&vcek)?;
-    let ask_cert_pem = match product_name {
-        ProductName::Invalid => anyhow::bail!("unsupported AMD product"),
-        ProductName::Milan => ASK_MILAN_CERT_PEM,
-        ProductName::Genoa => ASK_GENOA_CERT_PEM,
-        ProductName::Turin => ASK_TURIN_CERT_PEM,
+    let product = get_product(vcek_cert)?;
+    let ask_cert_pem = match product {
+        AmdProduct::Unsupported => anyhow::bail!("unsupported AMD product"),
+        AmdProduct::Milan => ASK_MILAN_CERT_PEM,
+        AmdProduct::Genoa => ASK_GENOA_CERT_PEM,
+        AmdProduct::Turin => ASK_TURIN_CERT_PEM,
     };
     let ask = Certificate::from_pem(ask_cert_pem)
-        .map_err(|_err| anyhow::anyhow!("couldn't parse ASK certificate for {:?}", product_name))?;
+        .map_err(|_err| anyhow::anyhow!("couldn't parse ASK certificate for {:?}", product))?;
 
-    // TODO(#4747): user current date as part of VCEK verification.
-    verify_cert_signature(&ask, &vcek).context("couldn't verify VCEK certificate")?;
+    // We demand that the product-specific ASK signs the VCEK.
+    verify_cert_signature(&ask, vcek_cert).context("couldn't verify VCEK certificate")?;
 
     // Validate attestation report signature format.
     attestation_report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
     // Ensure that the attestation report is signed by the VCEK public key.
-    verify_attestation_report_signature(&vcek, attestation_report)
-        .context("couldn't verify attestation report signature")?;
+    verify_attestation_report_signature(vcek_cert, attestation_report)
+        .context("couldn't verify attestation report signature")
+}
 
+// Returns Ok whenever each component in `expected` is less or equal to the
+// corresponding component in `actual`.
+fn is_less_or_equal(expected: &TcbVersion, actual: &TcbVersion) -> anyhow::Result<()> {
+    anyhow::ensure!(
+        expected.boot_loader <= actual.boot_loader,
+        format!("unsupported boot loader version: {}", actual.boot_loader)
+    );
+    anyhow::ensure!(expected.tee <= actual.tee, format!("unsupported tee version: {}", actual.tee));
+    anyhow::ensure!(expected.snp <= actual.snp, format!("unsupported snp version: {}", actual.snp));
+    anyhow::ensure!(
+        expected.microcode <= actual.microcode,
+        format!("unsupported microcode version: {}", actual.microcode)
+    );
+    anyhow::ensure!(expected.fmc <= actual.fmc, format!("unsupported FMC version: {}", actual.fmc));
     Ok(())
 }
 
@@ -137,45 +151,40 @@ pub fn verify_amd_sev_attestation_report_values(
         anyhow::bail!("debug mode not allowed");
     }
 
+    // Legacy TCB version comparison (deprecated).
+    // TODO: b/433225656 - Remove this block.
+    #[allow(deprecated)]
     match (
         expected_values.min_tcb_version.as_ref(),
         attestation_report_values.reported_tcb.as_ref(),
     ) {
         (Some(min_tcb_version), Some(reported_tcb_version)) => {
-            anyhow::ensure!(
-                reported_tcb_version.boot_loader >= min_tcb_version.boot_loader,
-                format!(
-                    "unsupported boot loader version in the reported TCB: {}",
-                    reported_tcb_version.boot_loader
-                )
-            );
-            anyhow::ensure!(
-                reported_tcb_version.tee >= min_tcb_version.tee,
-                format!(
-                    "unsupported tee version in the reported TCB: {}",
-                    reported_tcb_version.tee
-                )
-            );
-            anyhow::ensure!(
-                reported_tcb_version.snp >= min_tcb_version.snp,
-                format!(
-                    "unsupported snp version in the reported TCB: {}",
-                    reported_tcb_version.snp
-                )
-            );
-            anyhow::ensure!(
-                reported_tcb_version.microcode >= min_tcb_version.microcode,
-                format!(
-                    "unsupported microcode version in the reported TCB: {}",
-                    reported_tcb_version.microcode
-                )
-            );
+            return is_less_or_equal(min_tcb_version, reported_tcb_version);
         }
         (Some(_), None) => anyhow::bail!("no reported TCB version in the attestation report"),
-        (None, _) => anyhow::bail!("no min TCB version reference value"),
+        // No legacy reference values - fall through to next block.
+        (None, _) => {}
     }
 
-    Ok(())
+    // Compare required and reported TCB versions.
+    let per_product_rv = match attestation_report_values.product {
+        0 => anyhow::bail!("unsupported AMD product"),
+        1 => expected_values.milan.context("no TCB version reference value for AMD Milan")?,
+        2 => expected_values.genoa.context("no TCB version reference value for AMD Genoa")?,
+        3 => expected_values.turin.context("no TCB version reference value for AMD Turin")?,
+        _ => anyhow::bail!("invalid enum value"),
+    };
+    match (per_product_rv.r#type, attestation_report_values.reported_tcb.as_ref()) {
+        (Some(tcb_version_expected_value::Type::Skipped(_)), _) => Ok(()),
+        (
+            Some(tcb_version_expected_value::Type::Minimum(min_tcb_version)),
+            Some(reported_tcb_version),
+        ) => is_less_or_equal(&min_tcb_version, reported_tcb_version),
+        (Some(tcb_version_expected_value::Type::Minimum(_)), None) => {
+            anyhow::bail!("no reported TCB version")
+        }
+        (None, _) => anyhow::bail!("no per-model TCB version reference value"),
+    }
 }
 
 fn tcb_version_struct_to_proto(
@@ -199,18 +208,25 @@ pub fn convert_amd_sev_snp_attestation_report(
     let reported_tcb = Some(tcb_version_struct_to_proto(&reported_tcb_struct));
 
     let debug = report.has_debug_flag().map_err(|error| anyhow::anyhow!(error))?;
+    let product_proto_enum = match report.data.get_product() {
+        AmdProduct::Unsupported => oak_proto_rust::oak::attestation::v1::AmdProduct::Unsupported,
+        AmdProduct::Milan => oak_proto_rust::oak::attestation::v1::AmdProduct::Milan,
+        AmdProduct::Genoa => oak_proto_rust::oak::attestation::v1::AmdProduct::Genoa,
+        AmdProduct::Turin => oak_proto_rust::oak::attestation::v1::AmdProduct::Turin,
+    };
     let hardware_id = report.data.chip_id.as_ref().to_vec();
     let initial_measurement = report.data.measurement.as_ref().to_vec();
     let report_data = report.data.report_data.as_ref().to_vec();
     let vmpl = report.data.vmpl;
 
     Ok(AmdAttestationReport {
+        report_data,
         current_tcb,
         reported_tcb,
         debug,
+        product: product_proto_enum.into(),
         initial_measurement,
         hardware_id,
-        report_data,
         vmpl,
     })
 }

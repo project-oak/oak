@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
-        reference_values, text_reference_value, AmdSevReferenceValues,
+        reference_values, tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
         Endorsements, EventAttestationResults, ExtractedEvidence, KernelBinaryReferenceValue,
@@ -33,11 +33,14 @@ use oak_proto_rust::oak::{
         OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
         RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TextReferenceValue, TransparentReleaseEndorsement,
+        SystemLayerReferenceValues, TcbVersionReferenceValue, TextReferenceValue,
+        TransparentReleaseEndorsement,
     },
     RawDigest,
 };
+use oak_sev_snp_attestation_report::AttestationReport;
 use test_util::attestation_data::AttestationData;
+use zerocopy::FromBytes;
 
 use crate::{
     extract::extract_evidence,
@@ -116,6 +119,18 @@ fn create_oc_endorsements_reference_values(
 ) -> (Endorsements, ReferenceValues) {
     let d = AttestationData::load_milan_oc_legacy();
     let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
+    let report = AttestationReport::ref_from_bytes(
+        &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,
+    )
+    .expect("failed to get report");
+    let tcb_version_struct = report.data.get_reported_tcb_version();
+    let tcb_version = oak_proto_rust::oak::attestation::v1::TcbVersion {
+        boot_loader: tcb_version_struct.boot_loader.into(),
+        tee: tcb_version_struct.tee.into(),
+        snp: tcb_version_struct.snp.into(),
+        microcode: tcb_version_struct.microcode.into(),
+        fmc: tcb_version_struct.fmc.into(),
+    };
 
     let oc_data = match extracted_evidence.evidence_values.as_ref().expect("no evidence values") {
         EvidenceValues::OakContainers(oc) => oc,
@@ -148,6 +163,7 @@ fn create_oc_endorsements_reference_values(
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
+
     (
         Endorsements {
             r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(
@@ -179,10 +195,10 @@ fn create_oc_endorsements_reference_values(
             r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
                 root_layer: Some(RootLayerReferenceValues {
                     amd_sev: Some(AmdSevReferenceValues {
-                        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209, fmc: 0 }),
-                        milan: None,
-                        genoa: None,
-                        turin: None,
+                        min_tcb_version: Some(tcb_version),
+                        milan: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
+                        genoa: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
+                        turin: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
                         allow_debug: false,
                         stage0: Some(skip.clone()),
                     }),
@@ -223,6 +239,18 @@ fn create_rk_endorsements_reference_values(
 ) -> (Endorsements, ReferenceValues) {
     let d = AttestationData::load_milan_rk_legacy();
     let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
+    let report = AttestationReport::ref_from_bytes(
+        &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,
+    )
+    .expect("failed to get report");
+    let tcb_version_struct = report.data.get_reported_tcb_version();
+    let tcb_version = oak_proto_rust::oak::attestation::v1::TcbVersion {
+        boot_loader: tcb_version_struct.boot_loader.into(),
+        tee: tcb_version_struct.tee.into(),
+        snp: tcb_version_struct.snp.into(),
+        microcode: tcb_version_struct.microcode.into(),
+        fmc: tcb_version_struct.fmc.into(),
+    };
 
     let rk_data = match extracted_evidence.evidence_values.as_ref().expect("no evidence values") {
         EvidenceValues::OakRestrictedKernel(rk) => rk,
@@ -275,16 +303,22 @@ fn create_rk_endorsements_reference_values(
                 OakRestrictedKernelReferenceValues {
                     root_layer: Some(RootLayerReferenceValues {
                         amd_sev: Some(AmdSevReferenceValues {
-                            min_tcb_version: Some(TcbVersion {
-                                boot_loader: 3,
-                                tee: 0,
-                                snp: 20,
-                                microcode: 209,
-                                fmc: 0,
+                            min_tcb_version: Some(tcb_version),
+                            milan: Some(TcbVersionReferenceValue {
+                                r#type: Some(tcb_version_reference_value::Type::Minimum(
+                                    tcb_version,
+                                )),
                             }),
-                            milan: None,
-                            genoa: None,
-                            turin: None,
+                            genoa: Some(TcbVersionReferenceValue {
+                                r#type: Some(tcb_version_reference_value::Type::Minimum(
+                                    tcb_version,
+                                )),
+                            }),
+                            turin: Some(TcbVersionReferenceValue {
+                                r#type: Some(tcb_version_reference_value::Type::Minimum(
+                                    tcb_version,
+                                )),
+                            }),
                             allow_debug: false,
                             stage0: Some(skip.clone()),
                         }),

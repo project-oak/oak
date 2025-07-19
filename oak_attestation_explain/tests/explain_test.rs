@@ -64,6 +64,7 @@ sev_snp:
   debug: false
   hardware_id: 42e1f92660cc2bf7d996a4db5ebeafe83361eac6f96db350a70c7e07115fad60a85f5ae98b8fb87ec76ce2a3f81ad70df8aebbde1c3c21797897a04b616235ef
   initial_measurement: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
+  product: 1
   report_data: 8fc67415b81201f189f2d19cbe57aa66f7282916b5b9e6cca83ab8688f4499d30000000000000000000000000000000000000000000000000000000000000000
   reported_tcb:
     boot_loader: 3
@@ -137,6 +138,20 @@ The reference values describing this layer are printed below.
 
 amd_sev:
   allow_debug: false
+  genoa:
+    minimum:
+      boot_loader: 3
+      fmc: 0
+      microcode: 209
+      snp: 20
+      tee: 0
+  milan:
+    minimum:
+      boot_loader: 3
+      fmc: 0
+      microcode: 209
+      snp: 20
+      tee: 0
   min_tcb_version:
     boot_loader: 3
     fmc: 0
@@ -146,6 +161,13 @@ amd_sev:
   stage0:
     digests:
     - sha2_384: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
+  turin:
+    minimum:
+      boot_loader: 3
+      fmc: 0
+      microcode: 209
+      snp: 20
+      tee: 0
 
 
 _____ Kernel Layer _____

@@ -25,6 +25,7 @@ use oak_proto_rust::oak::{
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use oak_time::Instant;
+use x509_cert::{der::Decode, Certificate};
 
 use crate::{
     expect::get_amd_sev_snp_expected_values,
@@ -65,21 +66,19 @@ impl Policy<AttestationReport> for AmdSevSnpPolicy {
     ) -> anyhow::Result<EventAttestationResults> {
         let endorsement: AmdSevSnpEndorsement =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
+        let vcek_cert = Certificate::from_der(&endorsement.tee_certificate)
+            .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
 
         // Ensure the Attestation report is properly signed by the platform and the
         // corresponding certificate is signed by AMD.
-        verify_amd_sev_snp_attestation_report_validity(
-            evidence,
-            &endorsement.tee_certificate,
-            verification_time.into_unix_millis(),
-        )
-        .context("couldn't verify AMD SEV-SNP attestation validity")?;
+        verify_amd_sev_snp_attestation_report_validity(verification_time, evidence, &vcek_cert)
+            .context("couldn't verify AMD SEV-SNP attestation validity")?;
 
         // Verify attestation report values.
-        let extracted_attestation_report = convert_amd_sev_snp_attestation_report(evidence)?;
+        let report = convert_amd_sev_snp_attestation_report(evidence)?;
         let expected_values = get_amd_sev_snp_expected_values(&self.reference_values)
             .context("couldn't extract AMD SEV-SNP expected values from the endorsement")?;
-        verify_amd_sev_attestation_report_values(&extracted_attestation_report, &expected_values)
+        verify_amd_sev_attestation_report_values(&report, &expected_values)
             .context("couldn't verify attestation report fields")?;
 
         // TODO: b/356631062 - Return detailed attestation results.

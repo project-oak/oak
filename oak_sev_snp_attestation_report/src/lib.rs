@@ -179,6 +179,15 @@ pub struct AttestationReportData {
 
 static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
 
+/// The AMD EPYC CPU model.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum AmdProduct {
+    Unsupported = 0,
+    Milan = 1,
+    Genoa = 2,
+    Turin = 3,
+}
+
 impl AttestationReportData {
     /// Gets the platform info field as a `PlatformInfo` representation.
     pub fn get_platform_info(&self) -> PlatformInfo {
@@ -186,6 +195,35 @@ impl AttestationReportData {
         // reserved. We, however, have encountered the reserved bits being set in the
         // wild; therefore, mask them out here.
         PlatformInfo::from_bits_truncate(self.platform_info)
+    }
+
+    /// Determines the AMD CPU model from the attestation report.
+    pub fn get_product(&self) -> AmdProduct {
+        if self.cpuid_fam_id == 0x1a {
+            // TODO: b/396666645 - Clarify CPU IDs.
+            // The model value 2 for Turin contradicts the AMD spec
+            // and https://en.wikichip.org/wiki/amd/cpuid#Family_26_.281Ah.29.
+            if self.cpuid_mod_id == 0x02 {
+                AmdProduct::Turin
+            } else {
+                AmdProduct::Unsupported
+            }
+        } else if self.cpuid_fam_id == 0x19 {
+            if self.cpuid_mod_id == 0x01 {
+                AmdProduct::Milan
+            } else if self.cpuid_mod_id == 0x02 {
+                AmdProduct::Genoa
+            } else {
+                AmdProduct::Unsupported
+            }
+        } else if self.cpuid_fam_id == 0x00 && self.cpuid_mod_id == 0x00 {
+            // TODO: b/396666645 - Clarify why the legacy Milan testdata
+            // and the Genoa CPU didn't properly report CPUID. We need to
+            // reliably determine the CPU model from the attestation report.
+            AmdProduct::Milan
+        } else {
+            AmdProduct::Unsupported
+        }
     }
 
     /// Switch to decide whether Table 3 or Table 4 applies.

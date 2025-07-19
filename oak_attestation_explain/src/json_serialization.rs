@@ -98,6 +98,7 @@ pub fn serialize_amd_attestation_report(instance: &AmdAttestationReport) -> serd
         reported_tcb,
         debug,
         initial_measurement,
+        product,
         hardware_id,
         vmpl,
     } = instance;
@@ -108,6 +109,7 @@ pub fn serialize_amd_attestation_report(instance: &AmdAttestationReport) -> serd
         "reported_tcb":  reported_tcb.as_ref().map(serialize_tcb_version),
         "debug": debug,
         "initial_measurement": hex::encode(initial_measurement),
+        "product": product,
         "hardware_id": hex::encode(hardware_id),
         "vmpl": vmpl,
     })

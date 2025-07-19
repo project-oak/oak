@@ -51,6 +51,17 @@ message ExpectedDigests {
   }
 }
 
+// The expected values for the mimumum TCB version.
+message TcbVersionExpectedValue {
+  oneof type {
+    // Indicates that verification should be skipped.
+    VerificationSkipped skipped = 1;
+
+    // Provides minimum values for versions of TCB components.
+    TcbVersion minimum = 2;
+  }
+}
+
 // The expected values for kernel image and setup data, computed from previously
 // provided endorsements and reference values.
 message KernelExpectedValues {
@@ -61,11 +72,22 @@ message KernelExpectedValues {
   ExpectedDigests setup_data = 2;
 }
 
+// NEXT_ID: 7
 message AmdSevExpectedValues {
   ExpectedDigests stage0_expected = 1;
 
-  // Minimum accepted versions of all TCB components.
-  TcbVersion min_tcb_version = 2;
+  // Minimum acceptable versions of all TCB components.
+  // Deprecated and up for removal - use per-model fields instead.
+  TcbVersion min_tcb_version = 2 [deprecated = true];
+
+  // Minimum acceptable TCB version for AMD EPYC Milan CPUs.
+  TcbVersionExpectedValue milan = 4;
+
+  // Minimum acceptable TCB version for AMD EPYC Genoa CPUs.
+  TcbVersionExpectedValue genoa = 5;
+
+  // Minimum acceptable TCB version for AMD EPYC Turin CPUs.
+  TcbVersionExpectedValue turin = 6;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;

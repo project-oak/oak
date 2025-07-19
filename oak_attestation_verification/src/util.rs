@@ -22,13 +22,15 @@ use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
-        reference_values, root_layer_data::Report, text_reference_value, AmdSevReferenceValues,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
-        Digests, Event, ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue,
-        KernelDigests, KernelLayerData, KernelLayerReferenceValues, KeyType,
-        OakContainersReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerData, RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
-        SystemLayerReferenceValues, TextReferenceValue, TimestampReferenceValue, VerifyingKeySet,
+        reference_values, root_layer_data::Report, tcb_version_reference_value,
+        text_reference_value, AmdSevReferenceValues, ApplicationLayerReferenceValues,
+        BinaryReferenceValue, ContainerLayerReferenceValues, Digests, Event, ExtractedEvidence,
+        InsecureReferenceValues, KernelBinaryReferenceValue, KernelDigests, KernelLayerData,
+        KernelLayerReferenceValues, KeyType, OakContainersReferenceValues,
+        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData,
+        RootLayerReferenceValues, Signature, SkipVerification, StringLiterals,
+        SystemLayerReferenceValues, TcbVersionReferenceValue, TextReferenceValue,
+        TimestampReferenceValue, VerifyingKeySet,
     },
     HexDigest, RawDigest,
 };
@@ -383,21 +385,28 @@ fn root_layer_reference_values_from_evidence(
 ) -> RootLayerReferenceValues {
     #[allow(deprecated)]
     let amd_sev = root_layer.report.clone().and_then(|report| match report {
-        Report::SevSnp(r) => Some(AmdSevReferenceValues {
-            min_tcb_version: r.current_tcb,
-            milan: None,
-            genoa: None,
-            turin: None,
-            stage0: Some(BinaryReferenceValue {
-                r#type: Some(binary_reference_value::Type::Digests(Digests {
-                    digests: vec![RawDigest {
-                        sha2_384: r.initial_measurement,
-                        ..Default::default()
-                    }],
-                })),
-            }),
-            allow_debug: r.debug,
-        }),
+        Report::SevSnp(r) => {
+            let tcb = r.reported_tcb.unwrap();
+            let rv = TcbVersionReferenceValue {
+                r#type: Some(tcb_version_reference_value::Type::Minimum(tcb)),
+            };
+
+            Some(AmdSevReferenceValues {
+                min_tcb_version: Some(tcb),
+                milan: Some(rv),
+                genoa: Some(rv),
+                turin: Some(rv),
+                stage0: Some(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Digests(Digests {
+                        digests: vec![RawDigest {
+                            sha2_384: r.initial_measurement,
+                            ..Default::default()
+                        }],
+                    })),
+                }),
+                allow_debug: r.debug,
+            })
+        }
         _ => None,
     });
     let intel_tdx = if let Some(Report::Tdx(_)) = root_layer.report.clone() {

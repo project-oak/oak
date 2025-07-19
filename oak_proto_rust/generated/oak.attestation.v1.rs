@@ -1173,6 +1173,24 @@ pub mod expected_digests {
         Digests(super::RawDigests),
     }
 }
+/// The expected values for the mimumum TCB version.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TcbVersionExpectedValue {
+    #[prost(oneof = "tcb_version_expected_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<tcb_version_expected_value::Type>,
+}
+/// Nested message and enum types in `TcbVersionExpectedValue`.
+pub mod tcb_version_expected_value {
+    #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        /// Indicates that verification should be skipped.
+        #[prost(message, tag = "1")]
+        Skipped(super::VerificationSkipped),
+        /// Provides minimum values for versions of TCB components.
+        #[prost(message, tag = "2")]
+        Minimum(super::TcbVersion),
+    }
+}
 /// The expected values for kernel image and setup data, computed from previously
 /// provided endorsements and reference values.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1184,13 +1202,25 @@ pub struct KernelExpectedValues {
     #[prost(message, optional, tag = "2")]
     pub setup_data: ::core::option::Option<ExpectedDigests>,
 }
+/// NEXT_ID: 7
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevExpectedValues {
     #[prost(message, optional, tag = "1")]
     pub stage0_expected: ::core::option::Option<ExpectedDigests>,
-    /// Minimum accepted versions of all TCB components.
+    /// Minimum acceptable versions of all TCB components.
+    /// Deprecated and up for removal - use per-model fields instead.
+    #[deprecated]
     #[prost(message, optional, tag = "2")]
     pub min_tcb_version: ::core::option::Option<TcbVersion>,
+    /// Minimum acceptable TCB version for AMD EPYC Milan CPUs.
+    #[prost(message, optional, tag = "4")]
+    pub milan: ::core::option::Option<TcbVersionExpectedValue>,
+    /// Minimum acceptable TCB version for AMD EPYC Genoa CPUs.
+    #[prost(message, optional, tag = "5")]
+    pub genoa: ::core::option::Option<TcbVersionExpectedValue>,
+    /// Minimum acceptable TCB version for AMD EPYC Turin CPUs.
+    #[prost(message, optional, tag = "6")]
+    pub turin: ::core::option::Option<TcbVersionExpectedValue>,
     /// If true, will skip the check that the TEE is not in debug mode.
     #[prost(bool, tag = "3")]
     pub allow_debug: bool,
@@ -1493,6 +1523,7 @@ pub mod root_layer_data {
     }
 }
 /// Values extracted from an AMD SEV-SNP attestation report.
+/// NEXT_ID: 9
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
@@ -1520,6 +1551,9 @@ pub struct AmdAttestationReport {
     /// binary.
     #[prost(bytes = "vec", tag = "4")]
     pub initial_measurement: ::prost::alloc::vec::Vec<u8>,
+    /// Model of the underlying AMD CPU.
+    #[prost(enumeration = "AmdProduct", tag = "8")]
+    pub product: i32,
     /// The hardware ID of the AMD SEV-SNP platform that generated the attestation
     /// report.
     #[prost(bytes = "vec", tag = "5")]
@@ -1707,5 +1741,38 @@ pub mod collected_attestation {
         pub uri: ::prost::alloc::string::String,
         #[prost(message, optional, tag = "2")]
         pub request_time: ::core::option::Option<::prost_types::Timestamp>,
+    }
+}
+/// / The AMD EPYC CPU model.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AmdProduct {
+    Unsupported = 0,
+    Milan = 1,
+    Genoa = 2,
+    Turin = 3,
+}
+impl AmdProduct {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unsupported => "AMD_PRODUCT_UNSUPPORTED",
+            Self::Milan => "AMD_PRODUCT_MILAN",
+            Self::Genoa => "AMD_PRODUCT_GENOA",
+            Self::Turin => "AMD_PRODUCT_TURIN",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "AMD_PRODUCT_UNSUPPORTED" => Some(Self::Unsupported),
+            "AMD_PRODUCT_MILAN" => Some(Self::Milan),
+            "AMD_PRODUCT_GENOA" => Some(Self::Genoa),
+            "AMD_PRODUCT_TURIN" => Some(Self::Turin),
+            _ => None,
+        }
     }
 }
