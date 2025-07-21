@@ -68,6 +68,7 @@
                 envsubst
                 fd
                 just
+                kmod
                 ps
                 which
               ];
@@ -168,8 +169,8 @@
                 ncurses
                 netcat
                 umoci
-              ] 
-              ++ 
+              ]
+              ++
               # Linux-specific dependencies.
               lib.optionals stdenv.isLinux [
                 elfutils
@@ -196,6 +197,19 @@
             };
             # By default create a shell with all the inputs.
             default = pkgs.mkShell {
+              # Attempt to install a module needed locally for development if it's not already.
+              shellHook = ''
+                modprobe vhost_vsock || cat << EOF
+
+                NOTE:
+
+                Failed to install vhost_vsock module, some integration tests may not work.
+                To resolve this, you can try running:
+
+                sudo modprobe vhost_vsock
+
+                EOF
+              '';
               packages = [ ];
               inputsFrom = [
                 containers
