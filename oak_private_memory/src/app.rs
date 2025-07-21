@@ -41,7 +41,7 @@ trait MemoryInterface {
     async fn add_memory(&mut self, memory: Memory) -> Option<MemoryId>;
     async fn get_memories_by_tag(
         &mut self,
-        tag: String,
+        tag: &str,
         page_size: i32,
     ) -> anyhow::Result<Vec<Memory>>;
     async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>>;
@@ -79,22 +79,18 @@ fn apply_mask_to_memory(memory: &mut Memory, mask: &ResultMask) {
 #[async_trait]
 impl MemoryInterface for DatabaseWithCache {
     async fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
-        let memory_id = if memory.id.is_empty() {
-            let id = rand::rng().random::<u64>().to_string();
-            memory.id = id.clone();
-            id
-        } else {
-            memory.id.clone()
-        };
+        if memory.id.is_empty() {
+            memory.id = rand::rng().random::<u64>().to_string();
+        }
         let blob_id = self.cache.add_memory(&memory).await.ok()?;
         let _ = self.meta_db().add_memory(&memory, blob_id);
         self.changed = true;
-        Some(memory_id)
+        Some(memory.id)
     }
 
     async fn get_memories_by_tag(
         &mut self,
-        tag: String,
+        tag: &str,
         page_size: i32,
     ) -> anyhow::Result<Vec<Memory>> {
         let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag, page_size)?;
@@ -384,7 +380,8 @@ impl SealedMemorySessionHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let mut memories = database.get_memories_by_tag(request.tag, request.page_size).await?;
+            let mut memories =
+                database.get_memories_by_tag(&request.tag, request.page_size).await?;
             if let Some(result_mask) = request.result_mask {
                 for memory in memories.iter_mut() {
                     apply_mask_to_memory(memory, &result_mask);

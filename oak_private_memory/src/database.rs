@@ -199,11 +199,11 @@ impl IcingMetaDatabase {
 
     pub fn get_memories_by_tag(
         &self,
-        tag: String,
+        tag: &str,
         mut page_size: i32,
     ) -> anyhow::Result<Vec<BlobId>> {
         let search_spec = icing::SearchSpecProto {
-            query: Some(tag),
+            query: Some(tag.to_string()),
             // Match exactly as defined in the schema for tags.
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             type_property_filters: vec![Self::create_search_filter(TAG_NAME)],
