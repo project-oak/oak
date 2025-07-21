@@ -176,6 +176,13 @@ macro_rules! make_instant {
     };
 }
 
+impl core::fmt::Display for Instant {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let datetime: chrono::DateTime<chrono::Utc> = (*self).into();
+        write!(f, "{}", datetime.to_rfc3339())
+    }
+}
+
 /// Implements the `Add` trait for `Instant` and `Duration`.
 ///
 /// Allows adding a `Duration` to an `Instant`, resulting in a new
@@ -587,5 +594,11 @@ mod tests {
             .with_timezone(&chrono::Utc);
         let instant: Instant = datetime.into();
         assert_that!(instant, eq(Instant::from_unix_millis(1735689600123)));
+    }
+
+    #[googletest::test]
+    fn test_instant_display() {
+        let instant = Instant::from_unix_millis(1735689600123);
+        assert_that!(std::format!("{}", instant), eq("2025-01-01T00:00:00.123+00:00"));
     }
 }

@@ -22,6 +22,8 @@ completing all edits - to format the code appropriately.
 
 This project uses `googletest` whenever possible for both C++ and Rust tests.
 
+While `just build-and-test` is available to run all tests, it can be slow. For a faster, more targeted approach, you can run tests for a specific package using `bazel test //path/to/package:all`. For example, to run only the tests for the `oak_time` crate, use `bazel test //oak_time:all`.
+
 ## Rust
 
 If possible, Rust code should be compatible with `no_std`. Many of the traits
@@ -50,3 +52,11 @@ To add a new crate dependency to the project, you need to:
       the features that are compatible with a `no_std` environment (e.g.,
       `alloc`).
 2. **Run `just bazel-repin-all`** to update the lockfiles and BUILD files.
+
+## Documentation
+
+If you learn anything new about the codebase, please update this file with those details.
+
+## Style Guide
+
+* Do not use the word "learning". Use "lesson" instead.

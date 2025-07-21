@@ -129,7 +129,7 @@ fn print_timestamp_report(timestamp: &anyhow::Result<Instant>) {
             print_indented_conditional!(
                 indent,
                 *timestamp != Instant::UNIX_EPOCH,
-                ("✅ is valid: {:?}", *timestamp),
+                ("✅ is valid: {}", *timestamp),
                 ("❌ is unset")
             );
         }
