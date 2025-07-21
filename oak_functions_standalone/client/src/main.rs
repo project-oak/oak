@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     if let Some(path) = opt.attestation_evidence_path {
         let attestation =
-            client.fetch_attestation(opt.uri, clock).expect("unable to parse attestation");
+            client.fetch_attestation(opt.uri, clock).context("unable to parse attestation")?;
         fs::write(path, attestation.encode_to_vec())?;
     }
 

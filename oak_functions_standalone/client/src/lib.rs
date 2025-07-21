@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
     policy::ConfidentialSpacePolicy, verification::CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
@@ -75,13 +75,14 @@ impl OakFunctionsClient {
                     SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN)
                         .build(),
                 )
-                .expect("Failed to create client session")
+                .context("failed to create unattested client session")?
             }
 
             AttestationType::PeerUnidirectional => {
                 println!("creating peer unidirectional client session");
                 let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
-                    .expect("Failed to parse root certificate");
+                    .map_err(|err| anyhow!("failed to fetch root certificate: {:?}", err))?;
+
                 let policy = ConfidentialSpacePolicy::new(root);
                 let attestation_verifier =
                     EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
@@ -98,26 +99,27 @@ impl OakFunctionsClient {
                     )
                     .build(),
                 )
-                .expect("Failed to create client session")
+                .context("Failed to create client session")?
             }
             AttestationType::SelfUnidirectional | AttestationType::Bidirectional => {
-                panic!("cannot generate client side attestation")
+                return Err(anyhow!("cannot generate client side attestation"));
             }
         };
 
         while !client_session.is_open() {
-            let request = client_session.next_init_message().expect("expected client init message");
+            let request =
+                client_session.next_init_message().context("expected client init message")?;
             let oak_session_request = OakSessionRequest { request: Some(request) };
-            tx.try_send(oak_session_request).expect("failed to send to server");
+            tx.try_send(oak_session_request).context("failed to send to server")?;
             if !client_session.is_open() {
                 let response = response_stream
                     .message()
                     .await
-                    .expect("expected a response")
-                    .expect("response was failure");
+                    .context("expected a response")?
+                    .context("response was failure")?;
                 client_session
                     .handle_init_message(response.response.context("no session response")?)
-                    .expect("failed to handle init response");
+                    .context("failed to handle init response")?;
             }
         }
 
