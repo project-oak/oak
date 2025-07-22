@@ -482,7 +482,7 @@ impl MemoryCache {
     }
 
     async fn fetch_decrypt_decode_memory(&self, blob_id: &BlobId) -> anyhow::Result<Memory> {
-        let encrypted_blob = self.db_client.clone().get_blob(blob_id).await?;
+        let encrypted_blob = self.db_client.clone().get_blob(blob_id, false).await?;
         let decrypted_data = decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;
         Ok(Memory::decode(&*decrypted_data)?)
     }
@@ -514,9 +514,8 @@ impl MemoryCache {
             }
         }
 
-        // Fetch missing blobs from external DB if any
         if !missing_ids.is_empty() {
-            let encrypted_blobs = self.db_client.get_blobs(&missing_ids).await?;
+            let encrypted_blobs = self.db_client.get_blobs(&missing_ids, false).await?;
             for (blob_id, encrypted_blob) in missing_ids.iter().zip(encrypted_blobs.into_iter()) {
                 let decrypted_data =
                     decrypt(&self.dek, &encrypted_blob.nonce, &encrypted_blob.data)?;

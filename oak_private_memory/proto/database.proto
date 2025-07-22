@@ -50,10 +50,14 @@ message WriteUnencryptedDataBlobResponse {
 
 message ReadDataBlobRequest {
   string id = 1;
+  // Whether to perform a strong read to ensure the latest data is returned.
+  bool strong_read = 2;
 }
 
 message ReadUnencryptedDataBlobRequest {
   string id = 1;
+  // Whether to perform a strong read to ensure the latest data is returned.
+  bool strong_read = 2;
 }
 
 message ReadDataBlobResponse {

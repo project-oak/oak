@@ -195,7 +195,7 @@ async fn get_or_create_db(
     uid: &BlobId,
     dek: &[u8],
 ) -> anyhow::Result<(IcingMetaDatabase, bool)> {
-    if let Ok(data_blob) = db_client.get_blob(uid).await {
+    if let Ok(data_blob) = db_client.get_blob(uid, true).await {
         let encrypted_info = decrypt_database(data_blob, dek)?;
         if let Some(icing_db) = encrypted_info.icing_db {
             info!("Loaded database successfully!!");
@@ -483,7 +483,7 @@ impl SealedMemorySessionHandler {
             .await
             .context("Failed to get DB client for bootstrap operation")?;
 
-        if let Ok(data_blob) = db_client.get_unencrypted_blob(&uid).await {
+        if let Ok(data_blob) = db_client.get_unencrypted_blob(&uid, true).await {
             // User already exists
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)?;
             let key_derivation_info =
@@ -563,7 +563,7 @@ impl SealedMemorySessionHandler {
         let key_derivation_info;
         let dek: Vec<u8>;
 
-        if let Ok(data_blob) = db_client.clone().get_unencrypted_blob(&uid).await {
+        if let Ok(data_blob) = db_client.clone().get_unencrypted_blob(&uid, true).await {
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)?;
             key_derivation_info =
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;

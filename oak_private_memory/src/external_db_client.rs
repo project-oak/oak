@@ -42,14 +42,26 @@ pub trait DataBlobHandler {
         data_blobs: Vec<EncryptedDataBlob>,
         ids: Option<Vec<BlobId>>,
     ) -> anyhow::Result<Vec<BlobId>>;
-    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob>;
-    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>>;
+    async fn get_blob(
+        &mut self,
+        id: &BlobId,
+        strong_read: bool,
+    ) -> anyhow::Result<EncryptedDataBlob>;
+    async fn get_blobs(
+        &mut self,
+        ids: &[BlobId],
+        strong_read: bool,
+    ) -> anyhow::Result<Vec<EncryptedDataBlob>>;
     async fn add_unencrypted_blob(
         &mut self,
         data_blob: DataBlob,
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId>;
-    async fn get_unencrypted_blob(&mut self, id: &BlobId) -> anyhow::Result<DataBlob>;
+    async fn get_unencrypted_blob(
+        &mut self,
+        id: &BlobId,
+        strong_read: bool,
+    ) -> anyhow::Result<DataBlob>;
 
     /// Writes a mix of encrypted and unencrypted blobs to the database in a
     /// batch.
@@ -111,10 +123,16 @@ impl DataBlobHandler for ExternalDbClient {
         Ok(result)
     }
 
-    async fn get_blob(&mut self, id: &BlobId) -> anyhow::Result<EncryptedDataBlob> {
+    async fn get_blob(
+        &mut self,
+        id: &BlobId,
+        strong_read: bool,
+    ) -> anyhow::Result<EncryptedDataBlob> {
         let start_time = tokio::time::Instant::now();
-        let db_response =
-            self.read_data_blob(ReadDataBlobRequest { id: id.clone() }).await?.into_inner();
+        let db_response = self
+            .read_data_blob(ReadDataBlobRequest { id: id.clone(), strong_read })
+            .await?
+            .into_inner();
         if let Some(ref status) = db_response.status {
             if status.success {
                 if let Some(data_blob) = db_response.data_blob {
@@ -134,13 +152,17 @@ impl DataBlobHandler for ExternalDbClient {
         bail!("Failed to read data blob, {:#?}", db_response);
     }
 
-    async fn get_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<Vec<EncryptedDataBlob>> {
+    async fn get_blobs(
+        &mut self,
+        ids: &[BlobId],
+        strong_read: bool,
+    ) -> anyhow::Result<Vec<EncryptedDataBlob>> {
         // TOOD: b/412698203 - Ideally we should have a rpc call that does batch get.
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {
             let mut client = self.clone();
             let id = id.clone();
-            result.push(tokio::spawn(async move { client.get_blob(&id).await }));
+            result.push(tokio::spawn(async move { client.get_blob(&id, strong_read).await }));
         }
         let result = futures::future::join_all(result).await;
         result.into_iter().map(|x| x.map_err(anyhow::Error::msg)?).collect()
@@ -165,9 +187,16 @@ impl DataBlobHandler for ExternalDbClient {
         Ok(id)
     }
 
-    async fn get_unencrypted_blob(&mut self, id: &BlobId) -> anyhow::Result<DataBlob> {
+    async fn get_unencrypted_blob(
+        &mut self,
+        id: &BlobId,
+        strong_read: bool,
+    ) -> anyhow::Result<DataBlob> {
         let db_response = self
-            .read_unencrypted_data_blob(ReadUnencryptedDataBlobRequest { id: id.clone() })
+            .read_unencrypted_data_blob(ReadUnencryptedDataBlobRequest {
+                id: id.clone(),
+                strong_read,
+            })
             .await
             .map_err(anyhow::Error::msg)?
             .into_inner();
