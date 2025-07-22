@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &proto_paths,
         &included_protos,
         "oak",
-        Some(&needed_types),
+        |it: String| needed_types.contains(&it),
     )?;
 
     // setting optional to non-scalar fields make it not distringuishable.

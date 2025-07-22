@@ -42,15 +42,14 @@ impl AnnotationInfo {
     ///   compiler.
     /// * `package_prefix` - A string slice specifying the package prefix to
     ///   filter which messages to process (e.g., "oak").
-    /// * `needed_types` - An optional `HashSet` of fully qualified message
-    ///   names to process. If `Some`, only messages in this set will be
-    ///   processed. If `None`, all messages matching the `package_prefix` will
-    ///   be processed.
+    /// * `filter_fn` - An function that takes a string and returns a boolean
+    ///   value indicating if the message should be processed (returns true) or
+    ///   ignored (returns false).
     pub fn collect_annotations(
         proto_paths: &[&str],
         included_protos: &[PathBuf],
         package_prefix: &str,
-        needed_types: Option<&HashSet<String>>,
+        filter_fn: impl Fn(String) -> bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let descriptor_set = get_file_descriptor_set(proto_paths, included_protos)?;
         let mut annotations = AnnotationInfo::default();
@@ -65,12 +64,10 @@ impl AnnotationInfo {
 
             // Iterate over each message type in the file
             for message_descriptor in &file_descriptor.message_type {
-                if let Some(needed_types) = needed_types {
-                    let full_qualified_message_name =
-                        format!("{}.{}", package, message_descriptor.name());
-                    if !needed_types.contains(&full_qualified_message_name) {
-                        continue;
-                    }
+                let full_qualified_message_name =
+                    format!("{}.{}", package, message_descriptor.name());
+                if !filter_fn(full_qualified_message_name) {
+                    continue;
                 }
                 process_message(message_descriptor, package, &mut annotations);
             }
