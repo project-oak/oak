@@ -31,7 +31,6 @@ rust_library(
         "@oak_crates_index//:chrono",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
-        "@oak_crates_index//:time",
     ],
 )
 

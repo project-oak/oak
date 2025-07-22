@@ -255,15 +255,6 @@ def _common_crates(std):
             default_features = False,
             version = "2.0.12",
         ),
-        "time": crate.spec(
-            default_features = False,
-            features = [
-                "macros",
-                "serde",
-                "parsing",
-            ],
-            version = "0.3.38",
-        ),
         "uart_16550": crate.spec(version = "0.3.0"),
         "wasmi": crate.spec(
             default_features = std,

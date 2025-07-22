@@ -1,5 +1,5 @@
 {
-  "checksum": "2bcf446f35595649067bd69d97526dd32b06def874ca176fc221f07333ce5a96",
+  "checksum": "22cc065b8d68f78b9a0d4cfc317e7722154a8ee2c54896ffe7e935c2760d1356",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -6534,7 +6534,6 @@
           "common": [
             "alloc",
             "powerfmt",
-            "serde",
             "std"
           ],
           "selects": {}
@@ -6544,10 +6543,6 @@
             {
               "id": "powerfmt 0.2.0",
               "target": "powerfmt"
-            },
-            {
-              "id": "serde 1.0.219",
-              "target": "serde"
             }
           ],
           "selects": {}
@@ -7314,10 +7309,6 @@
             {
               "id": "tikv-jemallocator 0.5.4",
               "target": "tikv_jemallocator"
-            },
-            {
-              "id": "time 0.3.41",
-              "target": "time"
             },
             {
               "id": "tokio 1.45.1",
@@ -28682,9 +28673,6 @@
             "default",
             "formatting",
             "local-offset",
-            "macros",
-            "parsing",
-            "serde",
             "std"
           ],
           "selects": {}
@@ -28706,10 +28694,6 @@
             {
               "id": "powerfmt 0.2.0",
               "target": "powerfmt"
-            },
-            {
-              "id": "serde 1.0.219",
-              "target": "serde"
             },
             {
               "id": "time-core 0.1.4",
@@ -28740,15 +28724,6 @@
           }
         },
         "edition": "2021",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "time-macros 0.2.22",
-              "target": "time_macros"
-            }
-          ],
-          "selects": {}
-        },
         "version": "0.3.41"
       },
       "license": "MIT OR Apache-2.0",
@@ -28826,14 +28801,6 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "formatting",
-            "parsing",
-            "serde"
-          ],
-          "selects": {}
-        },
         "deps": {
           "common": [
             {
@@ -39797,7 +39764,6 @@
     "tempfile 3.20.0",
     "thiserror 2.0.12",
     "tikv-jemallocator 0.5.4",
-    "time 0.3.41",
     "tokio 1.45.1",
     "tokio-stream 0.1.17",
     "tokio-util 0.7.15",

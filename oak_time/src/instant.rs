@@ -31,6 +31,8 @@
 use alloc::{format, string::String};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
+use chrono::{DateTime, Utc};
+
 use crate::Duration;
 
 // An anchor in time which can be used to create new Instant instances or learn
@@ -138,17 +140,17 @@ impl Instant {
 }
 
 /// Convert an instant into a DateTime in UTC
-impl From<Instant> for chrono::DateTime<chrono::Utc> {
+impl From<Instant> for DateTime<Utc> {
     fn from(value: Instant) -> Self {
         let (seconds, nanos) = value.into_second_nanos();
         // It's OK to convert nanos to u32 because nanos will always be >= 0.
-        chrono::DateTime::from_timestamp(seconds, nanos as u32).expect("out of range instant")
+        DateTime::from_timestamp(seconds, nanos as u32).expect("out of range instant")
     }
 }
 
 /// Convert a DateTime in UTC into an Instant
-impl From<chrono::DateTime<chrono::Utc>> for Instant {
-    fn from(value: chrono::DateTime<chrono::Utc>) -> Self {
+impl From<DateTime<Utc>> for Instant {
+    fn from(value: DateTime<Utc>) -> Self {
         let seconds = value.timestamp();
         let nanos = value.timestamp_subsec_nanos();
         Self::from_seconds_nanos(seconds, nanos as i32)
@@ -160,7 +162,6 @@ impl TryFrom<&str> for Instant {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        use chrono::{DateTime, Utc};
         let utc: DateTime<Utc> = DateTime::parse_from_rfc3339(value)
             .map_err(|err| format!("failed to parse RFC3339 timestamp: {:?}", err))?
             .into();
@@ -303,18 +304,6 @@ impl From<prost_types::Timestamp> for Instant {
     }
 }
 
-impl From<time::UtcDateTime> for Instant {
-    fn from(value: time::UtcDateTime) -> Self {
-        Instant::from_unix_nanos(value.unix_timestamp_nanos())
-    }
-}
-
-impl From<time::OffsetDateTime> for Instant {
-    fn from(value: time::OffsetDateTime) -> Self {
-        Instant::from_unix_nanos(value.unix_timestamp_nanos())
-    }
-}
-
 /// Support [RFC3339 format] on serializing and deserializing an [`Instant`].
 /// Use this module in combination with serde's [`#[with]`][with] attribute.
 ///
@@ -367,9 +356,8 @@ pub mod rfc3339 {
 #[cfg(test)]
 mod tests {
     extern crate std;
-
+    use chrono::{DateTime, Utc};
     use googletest::prelude::*;
-    use time::macros::{datetime, utc_datetime};
 
     use super::*;
 
@@ -436,20 +424,6 @@ mod tests {
         let mut instant = Instant::from_unix_millis(1000000000);
         instant -= Duration::from_millis(1000);
         assert_that!(instant, eq(Instant::from_unix_millis(999999000)));
-    }
-
-    #[googletest::test]
-    fn test_instant_from_utc_datetime() {
-        let source: time::UtcDateTime = utc_datetime!(2014-08-16 11:16);
-        let instant: Instant = source.into();
-        assert_that!(instant, eq(Instant::from_unix_millis(1408187760000)));
-    }
-
-    #[googletest::test]
-    fn test_instant_from_offset_datetime() {
-        let source: time::OffsetDateTime = datetime!(2014-08-16 11:16+02:00);
-        let instant: Instant = source.into();
-        assert_that!(instant, eq(Instant::from_unix_millis(1408180560000)));
     }
 
     #[cfg(feature = "prost")]
@@ -557,25 +531,25 @@ mod tests {
     fn test_instant_macro_parsing() {
         // A valid RFC3339 string in UTC.
         assert_that!(
-            Instant::from(datetime!(2025-01-01 00:00:00 UTC)),
+            make_instant!("2025-01-01T00:00:00Z"),
             eq(Instant::from_unix_millis(1735689600000))
         );
 
         // A valid RFC3339 string with milliseconds.
         assert_that!(
-            Instant::from(datetime!(2025-01-01 00:00:00.123 UTC)),
+            make_instant!("2025-01-01T00:00:00.123Z"),
             eq(Instant::from_unix_millis(1735689600123))
         );
 
         // A valid RFC3339 string with a positive timezone offset.
         assert_that!(
-            Instant::from(datetime!(2025-01-01 02:00:00 +02:00)),
+            make_instant!("2025-01-01T02:00:00+02:00"),
             eq(Instant::from_unix_millis(1735689600000))
         );
 
         // A valid RFC3339 string with a negative timezone offset.
         assert_that!(
-            Instant::from(datetime!(2024-12-31 22:00:00 -02:00)),
+            make_instant!("2024-12-31T22:00:00-02:00"),
             eq(Instant::from_unix_millis(1735689600000))
         );
     }
@@ -583,15 +557,15 @@ mod tests {
     #[googletest::test]
     fn test_instant_into_chrono_datetime() {
         let instant = Instant::from_unix_millis(1735689600123);
-        let datetime: chrono::DateTime<chrono::Utc> = instant.into();
+        let datetime: DateTime<Utc> = instant.into();
         assert_that!(datetime.to_rfc3339(), eq("2025-01-01T00:00:00.123+00:00"));
     }
 
     #[googletest::test]
     fn test_instant_from_chrono_datetime() {
-        let datetime = chrono::DateTime::parse_from_rfc3339("2025-01-01T00:00:00.123+00:00")
+        let datetime = DateTime::parse_from_rfc3339("2025-01-01T00:00:00.123+00:00")
             .unwrap()
-            .with_timezone(&chrono::Utc);
+            .with_timezone(&Utc);
         let instant: Instant = datetime.into();
         assert_that!(instant, eq(Instant::from_unix_millis(1735689600123)));
     }
