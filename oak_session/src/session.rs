@@ -132,6 +132,10 @@ pub struct AttestationEvidence {
     ///
     /// The key is the ID of the evidence, and the value is the evidence itself.
     pub evidence: BTreeMap<String, EndorsedEvidence>,
+    /// The peer-provided bindings to the evidence.
+    pub evidence_bindings: BTreeMap<String, SessionBinding>,
+    /// The hash of the handshake transcript.
+    pub handshake_hash: Vec<u8>,
 }
 
 /// Trait defining the interface for an end-to-end encrypted, attested,
@@ -230,6 +234,7 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
         handshaker: H,
         encryptor_provider: Box<dyn EncryptorProvider>,
         attestation_state: AttestationState,
+        bindings: BTreeMap<String, SessionBinding>,
     },
     /// The phase where the session is established and ready for encrypted
     /// communication.
@@ -244,6 +249,7 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
         encryptor: Box<dyn Encryptor>,
         attestation_state: AttestationState,
         handshake_hash: Vec<u8>,
+        bindings: BTreeMap<String, SessionBinding>,
     },
     /// A temporary state indicating that the session is currently transitioning
     /// between valid steps. Operations on a session in this state will fail.
@@ -296,13 +302,15 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                     encryptor_provider,
                     handshaker: handshake_handler_provider.build(expect_peer_bindings)?,
                     attestation_state,
+                    bindings: BTreeMap::new(),
                 };
             }
-            Step::Handshake { handshaker, encryptor_provider, attestation_state } => {
+            Step::Handshake { handshaker, encryptor_provider, attestation_state, bindings } => {
                 *self = Step::Open {
                     handshake_hash: handshaker.get_handshake_hash()?.to_vec(),
                     encryptor: encryptor_provider.provide_encryptor(handshaker.take_crypter()?)?,
                     attestation_state,
+                    bindings,
                 };
             }
             Step::Open { .. } => {
@@ -329,7 +337,7 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
     /// This method can only be called successfully when `is_open()` is true.
     fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error> {
         match &self {
-            Step::Open { attestation_state, .. } => {
+            Step::Open { attestation_state, handshake_hash, bindings, .. } => {
                 let evidence = attestation_state
                     .peer_attestation_verdict
                     .get_attestation_results()
@@ -347,7 +355,12 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                         _ => None,
                     })
                     .collect();
-                Ok(AttestationEvidence { evidence })
+
+                Ok(AttestationEvidence {
+                    evidence,
+                    evidence_bindings: bindings.clone(),
+                    handshake_hash: handshake_hash.clone(),
+                })
             }
             _ => Err(anyhow!("the session is not open")),
         }
@@ -538,9 +551,9 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
             }
             (
                 SessionResponse { response: Some(Response::HandshakeResponse(handshake_message)) },
-                Step::Handshake { handshaker, attestation_state, .. },
+                Step::Handshake { handshaker, attestation_state, bindings, .. },
             ) => {
-                let bindings = handshake_message.attestation_bindings.clone();
+                *bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
@@ -548,7 +561,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 verify_session_binding(
                     &self.binding_verifier_providers,
                     attestation_state.peer_attestation_verdict.get_attestation_results(),
-                    &bindings,
+                    bindings,
                     handshaker.get_handshake_hash()?,
                 )?;
                 if handshaker.is_handshake_complete() {
@@ -748,9 +761,9 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
             }
             (
                 SessionRequest { request: Some(Request::HandshakeRequest(handshake_message)) },
-                Step::Handshake { handshaker, attestation_state, .. },
+                Step::Handshake { handshaker, attestation_state, bindings, .. },
             ) => {
-                let bindings = handshake_message.attestation_bindings.clone();
+                *bindings = handshake_message.attestation_bindings.clone();
                 handshaker.put_incoming_message(handshake_message)?.ok_or(anyhow!(
                     "invalid session state: handshake message received but handshaker doesn't
                      expect any"
@@ -759,7 +772,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                     verify_session_binding(
                         &self.binding_verifier_providers,
                         attestation_state.peer_attestation_verdict.get_attestation_results(),
-                        &bindings,
+                        bindings,
                         handshaker.get_handshake_hash()?,
                     )?;
                 }

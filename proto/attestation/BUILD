@@ -146,6 +146,7 @@ proto_library(
         "//proto:digest_proto",
         "//proto:validity_proto",
         "//proto/session:messages_proto",
+        "//proto/session:session_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
 )

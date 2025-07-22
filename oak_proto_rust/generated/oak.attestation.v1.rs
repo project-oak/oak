@@ -1629,6 +1629,16 @@ pub struct CollectedAttestation {
         ::prost::alloc::string::String,
         super::super::session::v1::EndorsedEvidence,
     >,
+    /// Maps unique IDs of attestation providers to the corresponding session
+    /// bindings.
+    #[prost(btree_map = "string, message", tag = "3")]
+    pub session_bindings: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        super::super::session::v1::SessionBinding,
+    >,
+    /// The hash of the completed Noise handshake transcript.
+    #[prost(bytes = "vec", tag = "4")]
+    pub handshake_hash: ::prost::alloc::vec::Vec<u8>,
 }
 /// Nested message and enum types in `CollectedAttestation`.
 pub mod collected_attestation {

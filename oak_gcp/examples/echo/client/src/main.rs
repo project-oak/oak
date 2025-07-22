@@ -62,6 +62,8 @@ async fn main() -> anyhow::Result<()> {
         let output = CollectedAttestation {
             request_metadata: Some(request_metadata),
             endorsed_evidence: evidence.evidence,
+            session_bindings: evidence.evidence_bindings,
+            handshake_hash: evidence.handshake_hash,
         };
         std::fs::write(path, output.encode_to_vec())?;
     }

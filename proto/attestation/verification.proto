@@ -23,6 +23,7 @@ import "proto/digest.proto";
 import "proto/validity.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/session/messages.proto";
+import "proto/session/session.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -300,4 +301,11 @@ message CollectedAttestation {
   // Maps unique IDs of attestation providers to the corresponding evidence.
   // This matches the corresponding map in Oak Session.
   map<string, oak.session.v1.EndorsedEvidence> endorsed_evidence = 2;
+
+  // Maps unique IDs of attestation providers to the corresponding session
+  // bindings.
+  map<string, oak.session.v1.SessionBinding> session_bindings = 3;
+
+  // The hash of the completed Noise handshake transcript.
+  bytes handshake_hash = 4;
 }

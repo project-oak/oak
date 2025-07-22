@@ -265,6 +265,8 @@ fn safe_server_get_peer_attestation_evidence(session: &ServerSession) -> ErrorOr
             // Convert session::AttestationEvidence to proto::AttestationEvidence
             let proto_evidence = CollectedAttestation {
                 endorsed_evidence: session_evidence.evidence,
+                session_bindings: session_evidence.evidence_bindings,
+                handshake_hash: session_evidence.handshake_hash,
                 ..Default::default()
             };
             ErrorOrRustBytes::ok(Message::encode_to_vec(&proto_evidence).into_boxed_slice())

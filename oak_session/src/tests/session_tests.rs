@@ -35,7 +35,7 @@ use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{
         session_request::Request, session_response::Response, Assertion, EndorsedEvidence,
-        PlaintextMessage, SessionRequest, SessionResponse,
+        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
     },
 };
 
@@ -157,7 +157,7 @@ fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
 
 fn create_mock_binder() -> Box<dyn SessionBinder> {
     let mut binder = MockTestSessionBinder::new();
-    binder.expect_bind().returning(|_| vec![]);
+    binder.expect_bind().returning(|bound_data| bound_data.to_vec());
     Box::new(binder)
 }
 
@@ -548,13 +548,22 @@ fn get_peer_attestation_evidence() -> anyhow::Result<()> {
                     evidence: Some(Evidence { ..Default::default() }),
                     endorsements: Some(Endorsements { ..Default::default() })
                 }
-            )]
+            )],
+            evidence_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID1.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            handshake_hash: not(is_empty()),
         }))
     );
-    // The client does not send any attestation evidence to the server.
+    // The client does not send any attestation evidence/bindings to the server.
     assert_that!(
         server_session.get_peer_attestation_evidence(),
-        ok(matches_pattern!(AttestationEvidence { evidence: is_empty() }))
+        ok(matches_pattern!(AttestationEvidence {
+            evidence: is_empty(),
+            evidence_bindings: is_empty(),
+            handshake_hash: not(is_empty())
+        }))
     );
 
     Ok(())
@@ -667,7 +676,7 @@ fn do_handshake(
     );
     assert_that!(
         client_session.get_peer_attestation_evidence()?,
-        matches_pattern!(AttestationEvidence { evidence: anything() })
+        matches_pattern!(AttestationEvidence { evidence: anything(), .. })
     );
     Ok(())
 }

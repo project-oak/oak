@@ -259,6 +259,8 @@ fn safe_client_get_peer_attestation_evidence(session: &ClientSession) -> ErrorOr
         Ok(session_evidence) => {
             let proto_evidence = CollectedAttestation {
                 endorsed_evidence: session_evidence.evidence,
+                session_bindings: session_evidence.evidence_bindings,
+                handshake_hash: session_evidence.handshake_hash,
                 ..Default::default()
             };
             ErrorOrRustBytes::ok(Message::encode_to_vec(&proto_evidence).into_boxed_slice())

@@ -38,11 +38,21 @@ using ::oak::ffi::RustBytes;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
 using ::oak::testing::proto_matchers::EqualsProto;
+using ::oak::testing::proto_matchers::proto::IgnoringFieldPaths;
 using ::oak::testing::proto_matchers::proto::Partially;
+using ::testing::AllOf;
+using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::IsEmpty;
 using ::testing::Ne;
+using ::testing::Not;
 using ::testing::Optional;
+using ::testing::Pair;
+using ::testing::Property;
 using ::testing::Ref;
+using ::testing::ResultOf;
+using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 
 constexpr absl::string_view kFakeAttesterId = "fake_attester";
 constexpr absl::string_view kFakeEvent = "fake event";
@@ -179,9 +189,18 @@ TEST(ClientServerSessionTest, UnattestedNNHandshakeProvidesSessionToken) {
               Eq(absl::string_view(*server_session_binding_token)));
 
   EXPECT_THAT((*server_session)->GetPeerAttestationEvidence(),
-              IsOkAndHolds(EqualsProto(R"pb()pb")));
+              IsOkAndHolds(IgnoringFieldPaths({"handshake_hash"},
+                                              EqualsProto(R"pb()pb"))));
+  EXPECT_THAT(
+      (*server_session)->GetPeerAttestationEvidence()->handshake_hash().size(),
+      Eq(32));
+
   EXPECT_THAT((*client_session)->GetPeerAttestationEvidence(),
-              IsOkAndHolds(EqualsProto(R"pb()pb")));
+              IsOkAndHolds(IgnoringFieldPaths({"handshake_hash"},
+                                              EqualsProto(R"pb()pb"))));
+  EXPECT_THAT(
+      (*server_session)->GetPeerAttestationEvidence()->handshake_hash().size(),
+      Eq(32));
 }
 
 TEST(ClientServerSessionTest,
@@ -209,22 +228,32 @@ TEST(ClientServerSessionTest, AttestedNNHandshakeSucceeds) {
 
   DoHandshake(**client_session, **server_session);
 
-  EXPECT_THAT((*server_session)->GetPeerAttestationEvidence(),
-              IsOkAndHolds(EqualsProto(R"pb()pb")));
+  // The server sees no evidence from the client in this configuration, but the
+  // handshake hash should be present.
+  auto server_evidence = (*server_session)->GetPeerAttestationEvidence();
+  ASSERT_THAT(server_evidence, IsOk());
+  EXPECT_THAT(server_evidence->endorsed_evidence(), IsEmpty());
+  EXPECT_THAT(server_evidence->session_bindings(), IsEmpty());
+  EXPECT_THAT(server_evidence->handshake_hash().size(), Eq(32));
+
+  // The client sees evidence from the server.
+  auto client_evidence = (*client_session)->GetPeerAttestationEvidence();
+  ASSERT_THAT(client_evidence, IsOk());
   EXPECT_THAT(
-      (*client_session)->GetPeerAttestationEvidence(),
-      IsOkAndHolds(Partially(EqualsProto(R"pb(
-        endorsed_evidence {
-          key: "fake_attester"
-          value {
-            evidence {
-              application_keys {}
-              event_log { encoded_events: "fake event" }
-            }
-            endorsements { platform { id: "fake" value: "fake platform" } }
-          }
-        }
-      )pb"))));
+      client_evidence->endorsed_evidence(),
+      UnorderedElementsAre(
+          Pair("fake_attester", Partially(EqualsProto(R"pb(
+                 evidence {
+                   application_keys {}
+                   event_log { encoded_events: "fake event" }
+                 }
+                 endorsements { platform { id: "fake" value: "fake platform" } }
+               )pb")))));
+  EXPECT_THAT(client_evidence->session_bindings(),
+              UnorderedElementsAre(Pair(
+                  "fake_attester",
+                  Property(&v1::SessionBinding::binding, Not(IsEmpty())))));
+  EXPECT_THAT(client_evidence->handshake_hash().size(), Eq(32));
 }
 
 TEST(ClientServerSessionTest, UnattestedNKHandshakeSucceeds) {
