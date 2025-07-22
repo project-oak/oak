@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+# "Legacy" here means that the testdata was added before policy-based
+# verification and has no events.
+
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
@@ -26,40 +29,6 @@ filegroup(
         "cb_evidence.binarypb",
         "cb_evidence_software_rooted.binarypb",
         "cb_reference_values.binarypb",
-    ],
-)
-
-filegroup(
-    name = "certs",
-    srcs = [
-        # The VCEK cert needs to match the hardware ID of the attestation report in the
-        # test evidence proto. The additional parameters in the URL encode the reported
-        # TCB version in the attestation report.
-        #
-        # To convert between `der` and `pem`:
-        #     openssl x509 -inform der -outform pem -in c.der -out c.pem
-        #
-        # The contents of the `der` file sits in the endorsement under
-        # `root_layer.tee_certificate`. So this is redundant.
-        # TODO: b/433172153 - Load from endorsements and remove these copies.
-        #
-        # Downloaded from
-        # https://kdsintf.amd.com/vcek/v1/Milan/cd3c4e6b5b64026ac135d76f888ea6bcc1351ec610d64b0af4028422b84c17ad2571905acfe2eb2181c119df4241e94a926d1b06c02e82845416202151212fdd?ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
-        # ARPT reported TCB version: ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
-        # ARPT current  TCB version: ucodeSPL=209&snpSPL=14&teeSPL=0&blSPL=3
-        "oc_vcek_milan.der",
-        "oc_vcek_milan.pem",
-        "rk_vcek_milan.der",
-
-        # Downloaded from
-        # https://kdsintf.amd.com/vcek/v1/Genoa/d2421d976f95ce0ba849b7cc5c789122f1e59c77a037272c137ae4d188bb102adbc7c53d0302bff82a432c94a305dec7a7a270ceb19a10f04a83316c6486968d?ucodeSPL=62&snpSPL=15&teeSPL=0&blSPL=7
-        "vcek_genoa.der",
-        "vcek_genoa.pem",
-
-        # Downloaded from
-        # https://kdsintf.amd.com/vcek/v1/Turin/3b42092f69c656d3?ucodeSPL=71&snpSPL=2&teeSPL=0&blSPL=1&fmcSPL=0
-        "vcek_turin.der",
-        "vcek_turin.pem",
     ],
 )
 
@@ -98,7 +67,7 @@ filegroup(
 
 # A recent attestation triple for an Oak Containers stack.
 filegroup(
-    name = "oc_attestation",
+    name = "milan_oc_attestation",
     srcs = [
         "oc_endorsements_20241205.binarypb",
         "oc_evidence_20241205.binarypb",
@@ -106,12 +75,25 @@ filegroup(
     ],
 )
 
-# Legacy Oak Containers evidence. Endorsements and reference values are
-# created during the test.
+# Attestation for an Oak Containers stack running on AMD Genoa platform.
+# Suitable reference values matching the evidence are created on the fly.
 filegroup(
-    name = "oc_attestation_legacy",
+    name = "milan_oc_attestation_legacy",
     srcs = [
-        "oc_evidence.binarypb",
+        "milan_oc_endorsements.binarypb",
+        "milan_oc_evidence.binarypb",
+    ],
+)
+
+# Attestation for an Restricted Kernel stack running on AMD Milan platform.
+# Suitable reference values matching the evidence are created on the fly.
+filegroup(
+    name = "milan_rk_attestation_legacy",
+    srcs = [
+        "milan_rk_endorsements.binarypb",
+        "milan_rk_evidence.binarypb",
+        # We should remove this outdated evidence.
+        "rk_evidence_20240312.binarypb",
     ],
 )
 
@@ -123,23 +105,13 @@ filegroup(
     ],
 )
 
-# A recent attestation triple for an Restricted Kernel stack.
+# Attestation for a Restricted Kernel stack running on AMD Milan platform.
 filegroup(
-    name = "rk_attestation",
+    name = "milan_rk_attestation",
     srcs = [
         "rk_endorsements_20241205.binarypb",
         "rk_evidence_20241205.binarypb",
         "rk_reference_values_20241205.binarypb",
-    ],
-)
-
-# Legacy Restricted Kernel evidences. Endorsements and reference values are
-# created during the test.
-filegroup(
-    name = "rk_attestation_legacy",
-    srcs = [
-        "rk_evidence.binarypb",
-        "rk_evidence_20240312.binarypb",
     ],
 )
 

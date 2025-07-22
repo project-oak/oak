@@ -34,7 +34,7 @@ using ::oak::attestation::v1::Evidence;
 using ::testing::ElementsAreArray;
 
 constexpr absl::string_view kTestEvidencePath =
-    "oak_attestation_verification/testdata/oc_evidence.binarypb";
+    "oak_attestation_verification/testdata/milan_oc_evidence.binarypb";
 
 // Public key extracted from the `kTestEvidencePath`
 // `encryption_public_key_certificate`.

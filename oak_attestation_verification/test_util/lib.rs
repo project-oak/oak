@@ -18,3 +18,4 @@
 
 pub mod attestation_data;
 pub mod endorsement_data;
+pub mod factory;

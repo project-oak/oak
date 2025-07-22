@@ -29,53 +29,33 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        text_reference_value, AmdSevReferenceValues, ApplicationLayerEndorsements,
-        ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerEndorsements,
-        ContainerLayerReferenceValues, Digests, Endorsements, Evidence, ExpectedValues,
-        InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        Regex, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
-        SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TextReferenceValue,
+        text_reference_value, BinaryReferenceValue, ContainerLayerEndorsements, Digests,
+        Endorsements, Evidence, ExpectedValues, ExtractedEvidence, InsecureReferenceValues,
+        KernelLayerEndorsements, OakContainersEndorsements, ReferenceValues, Regex,
+        RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
+        TcbVersion, TextReferenceValue,
     },
     RawDigest,
 };
 use prost::Message;
-use test_util::{attestation_data::AttestationData, endorsement_data::EndorsementData};
-
-// Certificates
-const OC_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/oc_vcek_milan.der";
-const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
+use test_util::{
+    attestation_data::AttestationData,
+    endorsement_data::EndorsementData,
+    factory::{create_oc_reference_values, create_rk_reference_values},
+};
 
 // Fake attestation
 const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
 
-// Legacy Oak Containers attestation
-const OC_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
-
 // Legacy Restricted Kernel attestation
-const RK_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/rk_evidence.binarypb";
 const RK_OBSOLETE_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/rk_evidence_20240312.binarypb";
 
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC. This date must
 // be valid with respect to the endorsement behind ENDORSEMENT_PATH.
 const NOW_UTC_MILLIS: i64 = 1709294400000;
-
-// Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
-fn create_oc_evidence() -> Evidence {
-    let serialized = fs::read(data_path(OC_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
-// application.
-fn create_rk_evidence() -> Evidence {
-    let serialized = fs::read(data_path(RK_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
 
 // Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
 // application but with obsolete DICE data that is still used by some clients.
@@ -98,11 +78,10 @@ fn create_fake_expected_values() -> ExpectedValues {
 }
 
 // Creates mock endorsements for an Oak Containers chain.
-fn create_oc_endorsements() -> Endorsements {
+fn create_oc_endorsements(vcek_cert: &[u8]) -> Endorsements {
     let d = EndorsementData::load();
-    let vcek_milan_cert =
-        fs::read(data_path(OC_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
-    let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
+
+    let root_layer = RootLayerEndorsements { tee_certificate: vcek_cert.to_vec(), stage0: None };
     let kernel_layer = KernelLayerEndorsements {
         kernel: None,
         kernel_cmd_line: None,
@@ -127,211 +106,96 @@ fn create_oc_endorsements() -> Endorsements {
     }
 }
 
-// Creates mock endorsements instance for a restricted kernel application.
-fn create_rk_endorsements() -> Endorsements {
-    let vcek_milan_cert =
-        fs::read(data_path(RK_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
-    let root_layer = RootLayerEndorsements { tee_certificate: vcek_milan_cert, stage0: None };
-    let kernel_layer = KernelLayerEndorsements {
-        kernel: None,
-        kernel_cmd_line: None,
-        init_ram_fs: None,
-        memory_map: None,
-        acpi: None,
-    };
-    let application_layer = ApplicationLayerEndorsements { binary: None, configuration: None };
-
-    let ends = OakRestrictedKernelEndorsements {
-        root_layer: Some(root_layer),
-        kernel_layer: Some(kernel_layer),
-        application_layer: Some(application_layer),
-    };
-    Endorsements {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::endorsements::Type::OakRestrictedKernel(ends),
-        ),
-        // TODO: b/375137648 - Populate `events` proto field.
-        ..Default::default()
-    }
-}
-
-// Creates valid reference values for an Oak Containers chain.
-// All endorsements are skipped with the exception of the one which happens
-// to be available under testdata.
-fn create_oc_reference_values() -> ReferenceValues {
-    let d = EndorsementData::load();
-    let skip = BinaryReferenceValue {
-        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
-    };
-
-    let amd_sev = AmdSevReferenceValues {
-        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209 }),
-        allow_debug: false,
-        stage0: Some(skip.clone()),
-    };
-
-    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
-    let kernel_layer = KernelLayerReferenceValues {
-        kernel: Some(KernelBinaryReferenceValue {
-            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
-        }),
-        kernel_cmd_line_text: Some(TextReferenceValue {
-            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
-                value: vec![String::from(
-                    "console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=3072000 brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet",
-                )],
-            })),
-        }),
-        // The testdata endorsement happens to be oak_orchestrator.
-        init_ram_fs: Some(BinaryReferenceValue {r#type: Some(binary_reference_value::Type::Endorsement(d.ref_value))}),
-        memory_map: Some(skip.clone()),
-        acpi: Some(skip.clone()),
-    };
-    let system_layer = SystemLayerReferenceValues { system_image: Some(skip.clone()) };
-    let container_layer = ContainerLayerReferenceValues {
-        binary: Some(skip.clone()),
-        configuration: Some(skip.clone()),
-    };
-    let vs = OakContainersReferenceValues {
-        root_layer: Some(root_layer),
-        kernel_layer: Some(kernel_layer),
-        system_layer: Some(system_layer),
-        container_layer: Some(container_layer),
-    };
-    ReferenceValues { r#type: Some(reference_values::Type::OakContainers(vs)) }
-}
-
-// Creates valid reference values for a restricted kernel application.
-// Skips verification of endorsements whenever they are by public key.
-fn create_rk_reference_values() -> ReferenceValues {
-    let skip = BinaryReferenceValue {
-        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
-    };
-
-    let amd_sev = AmdSevReferenceValues {
-        min_tcb_version: Some(TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209 }),
-        allow_debug: false,
-        stage0: Some(skip.clone()),
-    };
-
-    let root_layer = RootLayerReferenceValues { amd_sev: Some(amd_sev), ..Default::default() };
-    #[allow(deprecated)]
-    let kernel_layer = KernelLayerReferenceValues {
-        kernel: Some(KernelBinaryReferenceValue {
-            r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
-        }),
-        kernel_cmd_line_text: Some(TextReferenceValue {
-            r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {
-                value: vec![String::from("console=ttyS0")],
-            })),
-        }),
-        init_ram_fs: Some(skip.clone()),
-        memory_map: Some(skip.clone()),
-        acpi: Some(skip.clone()),
-    };
-    let application_layer = ApplicationLayerReferenceValues {
-        binary: Some(skip.clone()),
-        configuration: Some(skip.clone()),
-    };
-    let vs = OakRestrictedKernelReferenceValues {
-        root_layer: Some(root_layer),
-        kernel_layer: Some(kernel_layer),
-        application_layer: Some(application_layer),
-    };
-    ReferenceValues { r#type: Some(reference_values::Type::OakRestrictedKernel(vs)) }
-}
-
-#[test]
-fn verify_containers_succeeds() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let reference_values = create_oc_reference_values();
-
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
-}
-
-#[test]
-fn verify_containers_explicit_reference_values() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
+// Shorthand that produces digest-based reference values from evidence.
+fn make_reference_values(evidence: &Evidence) -> ReferenceValues {
     let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let reference_values = reference_values_from_evidence(extracted_evidence);
+        verify_dice_chain_and_extract_evidence(evidence).expect("invalid DICE evidence");
+    reference_values_from_evidence(extracted_evidence)
+}
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
+// Helper which asserts success of the legacy verify() call.
+fn assert_success(result: anyhow::Result<ExtractedEvidence>) {
+    let proto = to_attestation_results(&result);
 
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    if proto.status() != Status::Success {
+        eprintln!("======================================");
+        eprintln!("code={} reason={}", proto.status, proto.reason);
+        eprintln!("======================================");
+    }
+    assert!(result.is_ok());
+    assert!(proto.status() == Status::Success);
+}
+
+// Helper which asserts failure of the legacy verify() call.
+fn assert_failure(result: anyhow::Result<ExtractedEvidence>) {
+    let proto = to_attestation_results(&result);
+
+    if proto.status() == Status::Success {
+        eprintln!("======================================");
+        eprintln!("code={} reason={}", proto.status, proto.reason);
+        eprintln!("======================================");
+    }
+    assert!(result.is_err());
+    assert!(proto.status() == Status::GenericFailure);
+}
+
+#[test]
+fn verify_milan_oc_legacy_success() {
+    let d = AttestationData::load_milan_oc_legacy();
+
+    assert_success(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
+}
+
+#[test]
+fn verify_milan_oc_legacy_explicit_reference_values() {
+    let d = AttestationData::load_milan_oc_legacy();
+    let reference_values = make_reference_values(&d.evidence);
+
+    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn verify_cb_succeeds() {
     let d = AttestationData::load_cb();
 
-    let r = verify(
-        d.make_valid_time().into_unix_millis(),
+    assert_success(verify(
+        d.make_valid_millis(),
         &d.evidence,
         &d.endorsements,
         &d.reference_values,
-    );
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    ));
 }
 
 #[test]
-fn verify_rk_succeeds() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let reference_values = create_rk_reference_values();
+fn verify_milan_rk_legacy_success() {
+    let d = AttestationData::load_milan_rk_legacy();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
 }
 
 #[test]
-fn verify_rk_explicit_reference_values() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let reference_values = reference_values_from_evidence(extracted_evidence);
+fn verify_rk_explicit_reference_values_success() {
+    let d = AttestationData::load_milan_rk_legacy();
+    let reference_values = make_reference_values(&d.evidence);
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
-fn verify_fake_evidence() {
+fn verify_fake_evidence_success() {
     let evidence = create_fake_evidence();
-    let endorsements = create_oc_endorsements();
+    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+
     let mut reference_values = create_oc_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
     {
@@ -343,68 +207,43 @@ fn verify_fake_evidence() {
         panic!("invalid reference value type");
     }
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
 #[test]
 fn verify_fake_evidence_explicit_reference_values() {
     let evidence = create_fake_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let reference_values = reference_values_from_evidence(extracted_evidence);
+    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+    let reference_values = make_reference_values(&evidence);
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
 #[test]
 fn verify_fake_evidence_split_verify_calls() {
     let evidence = create_fake_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let reference_values = reference_values_from_evidence(extracted_evidence);
-
+    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+    let reference_values = make_reference_values(&evidence);
     let computed_expected_values =
         get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
 
-    let r = verify_with_expected_values(
+    assert_success(verify_with_expected_values(
         NOW_UTC_MILLIS,
         &evidence,
         &endorsements,
         &computed_expected_values,
-    );
-
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    ));
 }
 
 #[test]
 fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     let evidence = create_fake_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let reference_values = reference_values_from_evidence(extracted_evidence);
+
+    let d = AttestationData::load_milan_oc_legacy();
+    let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
+    let endorsements = create_oc_endorsements(&vcek_cert);
+
+    let reference_values = make_reference_values(&evidence);
 
     let computed_expected_values =
         get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
@@ -421,29 +260,24 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
 
 #[test]
 fn verify_fails_with_manipulated_root_public_key() {
-    let mut evidence = create_oc_evidence();
-    evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
-    let endorsements = create_oc_endorsements();
-    let reference_values = create_oc_reference_values();
+    let mut d = AttestationData::load_milan_oc_legacy();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
+    d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
 
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
 }
 
 #[test]
 fn verify_fails_with_unsupported_tcb_version() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let mut reference_values = create_oc_reference_values();
+    let mut d = AttestationData::load_milan_oc_legacy();
 
     let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0 };
-    match reference_values.r#type.as_mut() {
+    match d.reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakContainers(rfs)) => {
             rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
                 Some(tcb_version);
@@ -452,21 +286,20 @@ fn verify_fails_with_unsupported_tcb_version() {
         None => {}
     };
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
 }
 
 #[test]
 fn verify_succeeds_with_right_initial_measurement() {
-    let evidence = create_oc_evidence();
+    let mut d = AttestationData::load_milan_oc_legacy();
+
     let actual = if let Some(EvidenceValues::OakContainers(values)) =
-        verify_dice_chain_and_extract_evidence(&evidence)
+        verify_dice_chain_and_extract_evidence(&d.evidence)
             .expect("invalid DICE chain")
             .evidence_values
             .as_ref()
@@ -483,9 +316,8 @@ fn verify_succeeds_with_right_initial_measurement() {
     }
     .expect("invalid DICE evidence");
 
-    let endorsements = create_oc_endorsements();
-    let mut reference_values = create_oc_reference_values();
-    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    if let Some(reference_values::Type::OakContainers(reference)) =
+        d.reference_values.r#type.as_mut()
     {
         let digests =
             Digests { digests: vec![RawDigest { sha2_384: actual, ..Default::default() }] };
@@ -497,31 +329,26 @@ fn verify_succeeds_with_right_initial_measurement() {
             .as_mut()
             .expect("no AMD SEV-SNP reference values")
             .stage0 = Some(BinaryReferenceValue {
-            r#type: Some(
-                oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
-                    digests,
-                ),
-            ),
+            r#type: Some(binary_reference_value::Type::Digests(digests)),
         });
     } else {
         panic!("invalid reference value type");
     }
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
 }
 
 #[test]
 fn verify_fails_with_wrong_initial_measurement() {
-    let evidence = create_oc_evidence();
+    let mut d = AttestationData::load_milan_oc_legacy();
+
     let mut wrong = if let Some(EvidenceValues::OakContainers(values)) =
-        verify_dice_chain_and_extract_evidence(&evidence)
+        verify_dice_chain_and_extract_evidence(&d.evidence)
             .expect("invalid DICE chain")
             .evidence_values
             .as_ref()
@@ -539,9 +366,8 @@ fn verify_fails_with_wrong_initial_measurement() {
     .expect("invalid DICE evidence");
     wrong[0] ^= 1;
 
-    let endorsements = create_oc_endorsements();
-    let mut reference_values = create_oc_reference_values();
-    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    if let Some(reference_values::Type::OakContainers(reference)) =
+        d.reference_values.r#type.as_mut()
     {
         let digests =
             Digests { digests: vec![RawDigest { sha2_384: wrong, ..Default::default() }] };
@@ -553,24 +379,18 @@ fn verify_fails_with_wrong_initial_measurement() {
             .as_mut()
             .expect("no AMD SEV-SNP reference values")
             .stage0 = Some(BinaryReferenceValue {
-            r#type: Some(
-                oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Digests(
-                    digests,
-                ),
-            ),
+            r#type: Some(binary_reference_value::Type::Digests(digests)),
         });
     } else {
         panic!("invalid reference value type");
     }
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
 }
 
 #[test]
@@ -579,17 +399,13 @@ fn verify_fails_with_empty_args() {
     let endorsements = Endorsements::default();
     let reference_values = ReferenceValues::default();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(0, &evidence, &endorsements, &reference_values));
 }
 
 #[test]
-fn verify_fails_with_non_matching_command_line_reference_value_set() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
+fn verify_non_matching_command_line_reference_value_failure() {
+    let d = AttestationData::load_milan_rk_legacy();
+
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
@@ -603,22 +419,15 @@ fn verify_fails_with_non_matching_command_line_reference_value_set() {
         None => {}
     };
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 #[cfg(not(feature = "regex"))]
 fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_disabled() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
+    let d = AttestationData::load_milan_rk_legacy();
     let mut reference_values = create_rk_reference_values();
+
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
             rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
@@ -631,22 +440,15 @@ fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_d
         None => {}
     };
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 #[cfg(feature = "regex")]
 fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_regex_enabled() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
+    let d = AttestationData::load_milan_rk_legacy();
     let mut reference_values = create_rk_reference_values();
+
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
             rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
@@ -659,37 +461,24 @@ fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_rege
         None => {}
     };
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn verify_fails_with_command_line_reference_value_set_and_obsolete_evidence() {
     let evidence = create_rk_obsolete_evidence();
-    let endorsements = create_rk_endorsements();
+    let endorsements = AttestationData::load_milan_rk_legacy().endorsements;
     let reference_values = create_rk_reference_values();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_err());
-    assert!(p.status() == Status::GenericFailure);
+    assert_failure(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
 #[test]
 fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evidence() {
     let evidence = create_rk_obsolete_evidence();
-    let endorsements = create_rk_endorsements();
+    let endorsements = AttestationData::load_milan_rk_legacy().endorsements;
     let mut reference_values = create_rk_reference_values();
+
     match reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
             rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
@@ -700,23 +489,13 @@ fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evide
         None => {}
     };
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_boot_loader_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -734,23 +513,21 @@ fn containers_invalid_boot_loader_fails() {
         .as_mut()
         .expect("no TCB version")
         .boot_loader = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_microcode_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
     };
-    // The microcode version can never reach 256, since it is represented as a u8 in
-    // the attestation report.
+    // The microcode version can never reach 256, since it is represented as a
+    // u8 in the attestation report.
     oc.root_layer
         .as_mut()
         .expect("no root layer")
@@ -761,23 +538,21 @@ fn containers_invalid_microcode_fails() {
         .as_mut()
         .expect("no TCB version")
         .microcode = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_tcb_snp_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
     };
-    // The SNP version can never reach 256, since it is represented as a u8 in the
-    // attestation report.
+    // The SNP version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
     oc.root_layer
         .as_mut()
         .expect("no root layer")
@@ -788,23 +563,21 @@ fn containers_invalid_tcb_snp_fails() {
         .as_mut()
         .expect("no TCB version")
         .snp = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_tcb_tee_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
         _ => panic!("wrong reference value type"),
     };
-    // The TEE version can never reach 256, since it is represented as a u8 in the
-    // attestation report.
+    // The TEE version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
     oc.root_layer
         .as_mut()
         .expect("no root layer")
@@ -815,16 +588,14 @@ fn containers_invalid_tcb_tee_fails() {
         .as_mut()
         .expect("no TCB version")
         .tee = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_stage0_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -855,16 +626,14 @@ fn containers_invalid_stage0_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_acpi_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -892,16 +661,14 @@ fn containers_invalid_acpi_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_init_ram_fs_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -929,16 +696,14 @@ fn containers_invalid_init_ram_fs_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_kernel_cmd_line_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -961,16 +726,14 @@ fn containers_invalid_kernel_cmd_line_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_kernel_image_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -1000,16 +763,14 @@ fn containers_invalid_kernel_image_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_kernel_setup_data_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -1039,16 +800,14 @@ fn containers_invalid_kernel_setup_data_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_system_image_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -1076,16 +835,14 @@ fn containers_invalid_system_image_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_container_bundle_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -1113,16 +870,14 @@ fn containers_invalid_container_bundle_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn containers_invalid_container_config_fails() {
-    let evidence = create_oc_evidence();
-    let endorsements = create_oc_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_oc_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakContainers(oc) => oc,
@@ -1150,16 +905,14 @@ fn containers_invalid_container_config_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
-fn restricted_kernel_invalid_boot_loader_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+fn verify_rk_invalid_boot_loader_fails() {
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1177,23 +930,21 @@ fn restricted_kernel_invalid_boot_loader_fails() {
         .as_mut()
         .expect("no TCB version")
         .boot_loader = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
-fn restricted_kernel_invalid_microcode_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+fn verify_rk_invalid_microcode_fails() {
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
         _ => panic!("wrong reference value type"),
     };
-    // The microcode version can never reach 256, since it is represented as a u8 in
-    // the attestation report.
+    // The microcode version can never reach 256, since it is represented as a
+    // u8 in the attestation report.
     rk.root_layer
         .as_mut()
         .expect("no root layer")
@@ -1204,23 +955,21 @@ fn restricted_kernel_invalid_microcode_fails() {
         .as_mut()
         .expect("no TCB version")
         .microcode = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_tcb_snp_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
         _ => panic!("wrong reference value type"),
     };
-    // The SNP version can never reach 256, since it is represented as a u8 in the
-    // attestation report.
+    // The SNP version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
     rk.root_layer
         .as_mut()
         .expect("no root layer")
@@ -1231,23 +980,20 @@ fn restricted_kernel_invalid_tcb_snp_fails() {
         .as_mut()
         .expect("no TCB version")
         .snp = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_tcb_tee_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
         _ => panic!("wrong reference value type"),
     };
-    // The TEE version can never reach 256, since it is represented as a u8 in the
-    // attestation report.
+    // The TEE version can never reach 256, since it is represented as a u8 in
+    // the attestation report.
     rk.root_layer
         .as_mut()
         .expect("no root layer")
@@ -1258,16 +1004,14 @@ fn restricted_kernel_invalid_tcb_tee_fails() {
         .as_mut()
         .expect("no TCB version")
         .tee = 256;
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_stage0_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1298,16 +1042,14 @@ fn restricted_kernel_invalid_stage0_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_acpi_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1335,16 +1077,14 @@ fn restricted_kernel_invalid_acpi_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_init_ram_fs_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1372,16 +1112,14 @@ fn restricted_kernel_invalid_init_ram_fs_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_kernel_cmd_line_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1404,16 +1142,14 @@ fn restricted_kernel_invalid_kernel_cmd_line_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_kernel_image_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1443,16 +1179,14 @@ fn restricted_kernel_invalid_kernel_image_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_kernel_setup_data_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1482,16 +1216,14 @@ fn restricted_kernel_invalid_kernel_setup_data_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_invalid_application_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1519,16 +1251,14 @@ fn restricted_kernel_invalid_application_fails() {
         }
         _ => panic!("wrong reference value type."),
     };
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn restricted_kernel_application_config_fails() {
-    let evidence = create_rk_evidence();
-    let endorsements = create_rk_endorsements();
-    let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(&evidence).expect("invalid DICE evidence");
-    let mut reference_values = reference_values_from_evidence(extracted_evidence);
+    let d = AttestationData::load_milan_rk_legacy();
+    let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
         reference_values::Type::OakRestrictedKernel(rk) => rk,
@@ -1541,62 +1271,42 @@ fn restricted_kernel_application_config_fails() {
             })),
         },
     );
-    assert!(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values).is_err());
+
+    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn verify_milan_oc_success() {
     let d = AttestationData::load_oc();
 
-    let r = verify(
-        d.make_valid_time().into_unix_millis(),
+    assert_success(verify(
+        d.make_valid_millis(),
         &d.evidence,
         &d.endorsements,
         &d.reference_values,
-    );
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    ));
 }
 
 #[test]
 fn verify_genoa_oc_success() {
     let d = AttestationData::load_genoa_oc();
 
-    let r = verify(
-        d.make_valid_time().into_unix_millis(),
+    assert_success(verify(
+        d.make_valid_millis(),
         &d.evidence,
         &d.endorsements,
         &d.reference_values,
-    );
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    ));
 }
 
 #[test]
 fn verify_turin_oc_success() {
     let d = AttestationData::load_turin_oc();
 
-    let r = verify(
-        d.make_valid_time().into_unix_millis(),
+    assert_success(verify(
+        d.make_valid_millis(),
         &d.evidence,
         &d.endorsements,
         &d.reference_values,
-    );
-    let p = to_attestation_results(&r);
-
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    ));
 }

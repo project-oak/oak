@@ -65,7 +65,7 @@ cc_test(
     name = "cwt_test",
     size = "small",
     srcs = ["cwt_test.cc"],
-    data = ["//oak_attestation_verification/testdata:oc_attestation_legacy"],
+    data = ["//oak_attestation_verification/testdata:milan_oc_attestation_legacy"],
     deps = [
         ":cwt",
         "//proto/attestation:evidence_cc_proto",

@@ -18,10 +18,13 @@
 
 use std::fs;
 
+use anyhow::Context;
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ReferenceValues};
+use oak_proto_rust::oak::attestation::v1::{endorsements, Endorsements, Evidence, ReferenceValues};
 use oak_time::{make_instant, Instant};
 use prost::Message;
+
+use crate::factory::{create_oc_reference_values, create_rk_reference_values};
 
 const OC_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/oc_evidence_20241205.binarypb";
@@ -41,6 +44,18 @@ const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidenc
 const CB_ENDORSEMENTS_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
 const CB_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/cb_reference_values.binarypb";
+
+// AMD Milan attestation with Oak Containers, with legacy endorsements.
+const MILAN_OC_LEGACY_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/milan_oc_evidence.binarypb";
+const MILAN_OC_LEGACY_ENDORSEMENTS_PATH: &str =
+    "oak_attestation_verification/testdata/milan_oc_endorsements.binarypb";
+
+// AMD Milan attestation with Restricted Kernel, with legacy endorsements.
+const MILAN_RK_LEGACY_EVIDENCE_PATH: &str =
+    "oak_attestation_verification/testdata/milan_rk_evidence.binarypb";
+const MILAN_RK_LEGACY_ENDORSEMENTS_PATH: &str =
+    "oak_attestation_verification/testdata/milan_rk_endorsements.binarypb";
 
 // AMD Genoa attestation with Oak Containers, with legacy endorsements.
 const GENOA_OC_EVIDENCE_PATH: &str =
@@ -76,6 +91,33 @@ impl AttestationData {
             evidence: load_evidence(OC_EVIDENCE_PATH),
             endorsements: load_endorsements(OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(OC_REFERENCE_VALUES_PATH),
+        }
+    }
+
+    // Loads an attestation example involving an AMD Milan CPU running Oak
+    // Containers, with mostly trivial reference values.
+    pub fn load_milan_oc_legacy() -> AttestationData {
+        AttestationData {
+            // Validity coincides with the validity of the example endorsement
+            // under `endorsement_data`.
+            valid_not_before: make_instant!("2024-02-28T09:47:12.067000Z"),
+            valid_not_after: make_instant!("2025-02-27T09:47:12.067000Z"),
+            evidence: load_evidence(MILAN_OC_LEGACY_EVIDENCE_PATH),
+            endorsements: load_endorsements(MILAN_OC_LEGACY_ENDORSEMENTS_PATH),
+            reference_values: create_oc_reference_values(),
+        }
+    }
+
+    // Loads an attestation example involving an AMD Milan CPU running Oak
+    // Containers, with only trivial reference values.
+    pub fn load_milan_rk_legacy() -> AttestationData {
+        AttestationData {
+            // Validity is not used since there are no endorsements.
+            valid_not_before: make_instant!("2024-01-01T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2024-12-31 23:00:00.000000Z"),
+            evidence: load_evidence(MILAN_RK_LEGACY_EVIDENCE_PATH),
+            endorsements: load_endorsements(MILAN_RK_LEGACY_ENDORSEMENTS_PATH),
+            reference_values: create_rk_reference_values(),
         }
     }
 
@@ -132,6 +174,36 @@ impl AttestationData {
 
     pub fn make_valid_time(&self) -> Instant {
         self.valid_not_before + (self.valid_not_after - self.valid_not_before) / 2
+    }
+
+    pub fn make_valid_millis(&self) -> i64 {
+        self.make_valid_time().into_unix_millis()
+    }
+
+    pub fn get_tee_certificate(&self) -> anyhow::Result<Vec<u8>> {
+        let tee_certificate: &[u8] = match self.endorsements.r#type.as_ref() {
+            Some(endorsements::Type::OakRestrictedKernel(endorsements)) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+            Some(endorsements::Type::OakContainers(endorsements)) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+            Some(endorsements::Type::Cb(endorsements)) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+            None => anyhow::bail!("empty endorsements"),
+        };
+
+        Ok(tee_certificate.to_vec())
     }
 }
 

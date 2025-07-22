@@ -18,9 +18,10 @@ extern crate std;
 
 use std::eprintln;
 
+use test_util::attestation_data::AttestationData;
 use x509_cert::{
     certificate::{CertificateInner, Version},
-    der::DecodePem,
+    der::{Decode, DecodePem},
     Certificate,
 };
 
@@ -32,9 +33,23 @@ const ARK_TURIN_CERT_PEM: &str = include_str!("../../data/ark_turin.pem");
 const ASK_MILAN_CERT_PEM: &str = include_str!("../../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../../data/ask_genoa.pem");
 const ASK_TURIN_CERT_PEM: &str = include_str!("../../data/ask_turin.pem");
-const VCEK_MILAN_CERT_PEM: &str = include_str!("../../testdata/oc_vcek_milan.pem");
-const VCEK_GENOA_CERT_PEM: &str = include_str!("../../testdata/vcek_genoa.pem");
-const VCEK_TURIN_CERT_PEM: &str = include_str!("../../testdata/vcek_turin.pem");
+
+fn vcek_from_data(data: &AttestationData) -> CertificateInner {
+    let cert = data.get_tee_certificate().expect("failed to load VCEK cert");
+    Certificate::from_der(&cert).expect("could not parse VCEK cert")
+}
+
+fn load_vcek_milan() -> CertificateInner {
+    vcek_from_data(&AttestationData::load_oc())
+}
+
+fn load_vcek_genoa() -> CertificateInner {
+    vcek_from_data(&AttestationData::load_genoa_oc())
+}
+
+fn load_vcek_turin() -> CertificateInner {
+    vcek_from_data(&AttestationData::load_turin_oc())
+}
 
 // Verifies validity of a matching ARK, ASK certificate pair.
 //
@@ -62,7 +77,7 @@ fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn load_cert(path: &str) -> CertificateInner {
+fn load_cert(path: &str) -> Certificate {
     Certificate::from_pem(path).expect("could not parse cert")
 }
 
@@ -70,7 +85,7 @@ fn load_cert(path: &str) -> CertificateInner {
 fn print_all_milan_certs() {
     let ark = load_cert(ARK_MILAN_CERT_PEM);
     let ask = load_cert(ASK_MILAN_CERT_PEM);
-    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
+    let vcek = load_vcek_milan();
     eprint_exts(&ark).expect("error");
     eprint_exts(&ask).expect("error");
     eprint_exts(&vcek).expect("error");
@@ -92,21 +107,21 @@ fn milan_ark_signs_ask() {
 #[test]
 fn milan_ask_signs_vcek() {
     let ask = load_cert(ASK_MILAN_CERT_PEM);
-    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
+    let vcek = load_vcek_milan();
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
 #[test]
 fn genoa_ask_signs_vcek() {
     let ask = load_cert(ASK_GENOA_CERT_PEM);
-    let vcek = load_cert(VCEK_GENOA_CERT_PEM);
+    let vcek = load_vcek_genoa();
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
 #[test]
 fn turin_ask_signs_vcek() {
     let ask = load_cert(ASK_TURIN_CERT_PEM);
-    let vcek = load_cert(VCEK_TURIN_CERT_PEM);
+    let vcek = load_vcek_turin();
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
@@ -139,7 +154,7 @@ fn turin_ark_signs_ask() {
 #[test]
 fn milan_ark_does_not_sign_vcek() {
     let ark = load_cert(ARK_MILAN_CERT_PEM);
-    let vcek = load_cert(VCEK_MILAN_CERT_PEM);
+    let vcek = load_vcek_milan();
     assert!(verify_cert_signature(&ark, &vcek).is_err());
 }
 

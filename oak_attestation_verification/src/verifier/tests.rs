@@ -20,25 +20,24 @@
 // endorsements are created and signed on the fly. For other tests (in
 // particular negative ones) see verifier_tests.rs.
 
-use std::{collections::BTreeMap, fs};
+use std::collections::BTreeMap;
 
-use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        Endorsements, EventAttestationResults, Evidence, ExtractedEvidence,
-        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        Endorsements, EventAttestationResults, ExtractedEvidence, KernelBinaryReferenceValue,
+        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
+        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
         RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
         SystemLayerReferenceValues, TcbVersion, TextReferenceValue, TransparentReleaseEndorsement,
     },
     RawDigest,
 };
-use prost::Message;
+use test_util::attestation_data::AttestationData;
 
 use crate::{
     extract::extract_evidence,
@@ -52,24 +51,19 @@ use crate::{
     },
 };
 
-const OC_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/oc_vcek_milan.der";
-const RK_VCEK_MILAN_CERT_DER: &str = "oak_attestation_verification/testdata/rk_vcek_milan.der";
-const OC_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/oc_evidence.binarypb";
-const RK_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/rk_evidence.binarypb";
-
 // Pretend the tests run at this time: 1 Nov 2024, 12:00 UTC. This date
 // must be valid with respect to the period hardwired in
 // test_util::fake_endorsement().
 const NOW_UTC_MILLIS: i64 = 1730462400000;
 
 #[test]
-fn test_oc_success() {
-    let evidence = create_oc_evidence();
-    let extracted_evidence = extract_evidence(&evidence).expect("failed to extract evidence");
+fn test_milan_oc_legacy_success() {
+    let d = AttestationData::load_milan_oc_legacy();
+    let extracted_evidence = extract_evidence(&d.evidence).expect("failed to extract evidence");
     let (endorsements, reference_values) =
         create_oc_endorsements_reference_values(&extracted_evidence);
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let r = verify(NOW_UTC_MILLIS, &d.evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
@@ -80,13 +74,13 @@ fn test_oc_success() {
 }
 
 #[test]
-fn test_rk_success() {
-    let evidence = create_rk_evidence();
-    let extracted_evidence = extract_evidence(&evidence).expect("failed to extract evidence");
+fn test_milan_rk_legacy_success() {
+    let d = AttestationData::load_milan_rk_legacy();
+    let extracted_evidence = extract_evidence(&d.evidence).expect("failed to extract evidence");
     let (endorsements, reference_values) =
         create_rk_endorsements_reference_values(&extracted_evidence);
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let r = verify(NOW_UTC_MILLIS, &d.evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
@@ -94,19 +88,6 @@ fn test_rk_success() {
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
-}
-
-// Creates a valid AMD SEV-SNP evidence instance for Oak Containers.
-fn create_oc_evidence() -> Evidence {
-    let serialized = fs::read(data_path(OC_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
-
-// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
-// application.
-fn create_rk_evidence() -> Evidence {
-    let serialized = fs::read(data_path(RK_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
 fn create_endorsement(
@@ -132,6 +113,9 @@ fn create_endorsement(
 fn create_oc_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
+    let d = AttestationData::load_milan_oc_legacy();
+    let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
+
     let oc_data = match extracted_evidence.evidence_values.as_ref().expect("no evidence values") {
         EvidenceValues::OakContainers(oc) => oc,
         _ => panic!("bad test setup"),
@@ -160,8 +144,6 @@ fn create_oc_endorsements_reference_values(
     let (container_binary, container_binary_vkey) =
         create_endorsement(container_layer_data.bundle.as_ref().expect("no bundle"), vec![]);
 
-    let vcek_cert =
-        fs::read(data_path(OC_VCEK_MILAN_CERT_DER)).expect("couldn't read VCEK Milan cert");
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
@@ -234,6 +216,9 @@ fn create_oc_endorsements_reference_values(
 fn create_rk_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
+    let d = AttestationData::load_milan_rk_legacy();
+    let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
+
     let rk_data = match extracted_evidence.evidence_values.as_ref().expect("no evidence values") {
         EvidenceValues::OakRestrictedKernel(rk) => rk,
         _ => panic!("bad test setup"),
@@ -251,7 +236,6 @@ fn create_rk_endorsements_reference_values(
     let (app_binary, app_binary_vkey) =
         create_endorsement(app_layer_data.binary.as_ref().expect("no binary"), vec![]);
 
-    let vcek_cert = fs::read(data_path(RK_VCEK_MILAN_CERT_DER)).expect("couldn't read TEE cert");
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };

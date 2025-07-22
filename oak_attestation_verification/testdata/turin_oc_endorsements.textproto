@@ -1,10 +1,18 @@
 # proto-file: proto/attestation/endorsement.proto
 # proto-message: oak.attestation.v1.Endorsements
 #
-# Endorsements for an Oak Containers chain on a Turin machine.
-# The tee_certificate is the contents of vcek_genoa.der. Individual
-# endorsements are not needed since the reference value specify
+# Endorsements for an Oak Containers chain on a AMD EPYC Turin machine.
+# Individual endorsements are not needed since the reference values specify
 # verification by digest.
+#
+# On 18 July 2025 the VCEK cert at oak_containers.root_layer.tee_certificate
+# was downloaded from
+# https://kdsintf.amd.com/vcek/v1/Turin/3b42092f69c656d3?ucodeSPL=71&snpSPL=2&teeSPL=0&blSPL=1&fmcSPL=0
+# and inserted manually. The cert is generated on the fly, including a 7 year
+# validity period starting at the time of download.
+#
+# Reference:
+# https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 #
 oak_containers {
   root_layer {

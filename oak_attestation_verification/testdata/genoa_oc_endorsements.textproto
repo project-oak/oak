@@ -1,10 +1,21 @@
 # proto-file: proto/attestation/endorsement.proto
 # proto-message: oak.attestation.v1.Endorsements
 #
-# Endorsements for an Oak Containers chain on a Genoa machine.
-# The tee_certificate is the contents of vcek_genoa.der. Individual
-# endorsements are not needed since the reference value specify
+# Endorsements for an Oak Containers chain on an AMD EPYC Genoa machine.
+# Individual endorsements are not needed since the reference values specify
 # verification by digest.
+#
+# The VCEK certificate at oak_containers.root_layer.tee_certificate
+# was downloaded on 2024-06-27 from
+# https://kdsintf.amd.com/vcek/v1/Genoa/d2421d976f95ce0ba849b7cc5c789122f1e59c77a037272c137ae4d188bb102adbc7c53d0302bff82a432c94a305dec7a7a270ceb19a10f04a83316c6486968d?ucodeSPL=62&snpSPL=15&teeSPL=0&blSPL=7
+# and inserted manually. The cert is generated on the fly, including a 7 year
+# validity period starting at the time of download.
+# The VCEK cert needs to match the hardware ID of the attestation report in
+# the test evidence proto. The additional parameters in the URL encode the
+# reported TCB version in the attestation report.
+#
+# Reference:
+# https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 #
 oak_containers {
   root_layer {
