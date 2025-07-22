@@ -19,8 +19,9 @@ use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use sigstore::rekor::hashedrekord::{HashedRekord, Unverified};
+use sigstore_client::cosign;
 
-use crate::{flags, image::client::pull_cosign_payload};
+use crate::flags;
 
 const REKOR_PUBLIC_KEY_PEM: &str = include_str!("../../data/rekor_public_key.pem");
 
@@ -51,7 +52,7 @@ impl VerifyCommand {
         };
         let client = Client::new(ClientConfig::default());
 
-        let (signature, rekor) = pull_cosign_payload(&client, &auth, &self.image).await?;
+        let (signature, rekor) = cosign::pull_payload(&client, &auth, &self.image).await?;
 
         let signature = signature.verify(&self.endorser_public_key)?;
         let rekor = rekor.verify(&rekor_public_key)?;

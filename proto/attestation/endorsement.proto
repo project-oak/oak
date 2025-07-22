@@ -240,6 +240,10 @@ message ConfidentialSpaceEndorsement {
   //   endorsed evidence.
   // - Any other claims can be set as needed.
   string jwt_token = 1;
+
+  // An endorsement of the workload image running in the VM.
+  // If present, it must match the image mentioned in the jwt_token.
+  SignedEndorsement workload_endorsement = 2;
 }
 
 // This message contains statements that some entity (e.g. a hardware provider)

@@ -99,6 +99,7 @@ impl AttestationGenerationDetails {
             attester: Some(Arc::new(PublicKeyAttester::new(VerifyingKey::from(&binding_key)))),
             endorser: Some(Arc::new(PublicKeyEndorser::new(ConfidentialSpaceEndorsement {
                 jwt_token: endorsement,
+                ..Default::default()
             }))),
             session_binder: Some(Arc::new(SignatureBinder::new(Box::new(binding_key)))),
         })

@@ -402,6 +402,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "hyper-util": crate.spec(version = "0.1.7", features = ["full"]),
     "ignore": crate.spec(version = "0.4.22"),
+    "indicatif": crate.spec(version = "0.17.8"),
     "jni": crate.spec(
         version = "0.21.1",
     ),
@@ -496,6 +497,12 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "0.1.6",
     ),
+    "reqwest": crate.spec(
+        default_features = False,
+        features = ["rustls-tls"],
+        version = "0.12.22",
+    ),
+    "rpassword": crate.spec(version = "7.3.1"),
     "ring": crate.spec(version = "0.17.14"),
     "rmcp": crate.spec(
         features = ["server", "transport-io"],

@@ -1,5 +1,5 @@
 {
-  "checksum": "cecce2e7831952065893fb20a5d73d6686c95ee572fea280cef1b94f4315ef5b",
+  "checksum": "cf10024f7df0e68d8dadc79331d8f21ec7cdb199b352a03a858d1272b5e0ae67",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -4238,6 +4238,79 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "console 0.15.11": {
+      "name": "console",
+      "version": "0.15.11",
+      "package_url": "https://github.com/console-rs/console",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/console/0.15.11/download",
+          "sha256": "054ccb5b10f9f2cbf51eb355ca1d05c2d279ce1804688d0db74b4733a5aeafd8"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "console",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "console",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "ansi-parsing",
+            "unicode-width"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "libc 0.2.174",
+              "target": "libc"
+            },
+            {
+              "id": "once_cell 1.21.3",
+              "target": "once_cell"
+            },
+            {
+              "id": "unicode-width 0.2.1",
+              "target": "unicode_width"
+            }
+          ],
+          "selects": {
+            "cfg(windows)": [
+              {
+                "id": "encode_unicode 1.0.0",
+                "target": "encode_unicode"
+              },
+              {
+                "id": "windows-sys 0.59.0",
+                "target": "windows_sys"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "0.15.11"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "const-default 1.0.0": {
       "name": "const-default",
       "version": "1.0.0",
@@ -7595,6 +7668,10 @@
               "target": "ignore"
             },
             {
+              "id": "indicatif 0.17.11",
+              "target": "indicatif"
+            },
+            {
               "id": "itertools 0.13.0",
               "target": "itertools"
             },
@@ -7763,6 +7840,10 @@
               "target": "regex_lite"
             },
             {
+              "id": "reqwest 0.12.22",
+              "target": "reqwest"
+            },
+            {
               "id": "ring 0.17.14",
               "target": "ring"
             },
@@ -7773,6 +7854,10 @@
             {
               "id": "rmcp 0.1.5",
               "target": "rmcp"
+            },
+            {
+              "id": "rpassword 7.4.0",
+              "target": "rpassword"
             },
             {
               "id": "rsa 0.9.8",
@@ -8644,6 +8729,45 @@
         "version": "0.6.1"
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "encode_unicode 1.0.0": {
+      "name": "encode_unicode",
+      "version": "1.0.0",
+      "package_url": "https://github.com/tormol/encode_unicode",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/encode_unicode/1.0.0/download",
+          "sha256": "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "encode_unicode",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "encode_unicode",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2021",
+        "version": "1.0.0"
+      },
+      "license": "Apache-2.0 OR MIT",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -13965,6 +14089,79 @@
       ],
       "license_file": "LICENSE"
     },
+    "indicatif 0.17.11": {
+      "name": "indicatif",
+      "version": "0.17.11",
+      "package_url": "https://github.com/console-rs/indicatif",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/indicatif/0.17.11/download",
+          "sha256": "183b3088984b400f4cfac3620d5e076c84da5364016b4f49473de574b2586235"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "indicatif",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "indicatif",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "unicode-width"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "console 0.15.11",
+              "target": "console"
+            },
+            {
+              "id": "number_prefix 0.4.0",
+              "target": "number_prefix"
+            },
+            {
+              "id": "portable-atomic 1.11.1",
+              "target": "portable_atomic"
+            },
+            {
+              "id": "unicode-width 0.2.1",
+              "target": "unicode_width"
+            }
+          ],
+          "selects": {
+            "cfg(target_arch = \"wasm32\")": [
+              {
+                "id": "web-time 1.1.0",
+                "target": "web_time"
+              }
+            ]
+          }
+        },
+        "edition": "2021",
+        "version": "0.17.11"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "inferno 0.11.21": {
       "name": "inferno",
       "version": "0.11.21",
@@ -17731,6 +17928,51 @@
       ],
       "license_file": "LICENSE-Apache"
     },
+    "number_prefix 0.4.0": {
+      "name": "number_prefix",
+      "version": "0.4.0",
+      "package_url": "https://github.com/ogham/rust-number-prefix",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/number_prefix/0.4.0/download",
+          "sha256": "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "number_prefix",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "number_prefix",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.4.0"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": null
+    },
     "object 0.36.7": {
       "name": "object",
       "version": "0.36.7",
@@ -20225,6 +20467,13 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "default",
+            "fallback"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -24645,6 +24894,66 @@
       ],
       "license_file": null
     },
+    "rpassword 7.4.0": {
+      "name": "rpassword",
+      "version": "7.4.0",
+      "package_url": "https://github.com/conradkleinespel/rpassword",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rpassword/7.4.0/download",
+          "sha256": "66d4c8b64f049c6721ec8ccec37ddfc3d641c4a7fca57e8f2a89de509c73df39"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rpassword",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rpassword",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "rtoolbox 0.0.3",
+              "target": "rtoolbox"
+            }
+          ],
+          "selects": {
+            "cfg(unix)": [
+              {
+                "id": "libc 0.2.174",
+                "target": "libc"
+              }
+            ],
+            "cfg(windows)": [
+              {
+                "id": "windows-sys 0.59.0",
+                "target": "windows_sys"
+              }
+            ]
+          }
+        },
+        "edition": "2018",
+        "version": "7.4.0"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "rsa 0.9.8": {
       "name": "rsa",
       "version": "0.9.8",
@@ -24828,6 +25137,61 @@
         "MIT"
       ],
       "license_file": "LICENSE-MIT"
+    },
+    "rtoolbox 0.0.3": {
+      "name": "rtoolbox",
+      "version": "0.0.3",
+      "package_url": "https://github.com/conradkleinespel/duck",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rtoolbox/0.0.3/download",
+          "sha256": "a7cc970b249fbe527d6e02e0a227762c9108b2f49d81094fe357ffc6d14d7f6f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rtoolbox",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rtoolbox",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [],
+          "selects": {
+            "cfg(unix)": [
+              {
+                "id": "libc 0.2.174",
+                "target": "libc"
+              }
+            ],
+            "cfg(windows)": [
+              {
+                "id": "windows-sys 0.52.0",
+                "target": "windows_sys"
+              }
+            ]
+          }
+        },
+        "edition": "2018",
+        "version": "0.0.3"
+      },
+      "license": "Apache-2.0",
+      "license_ids": [
+        "Apache-2.0"
+      ],
+      "license_file": "LICENSE-APACHE"
     },
     "rustc-demangle 0.1.25": {
       "name": "rustc-demangle",
@@ -41095,6 +41459,7 @@
     "hyper 1.6.0",
     "hyper-util 0.1.14",
     "ignore 0.4.23",
+    "indicatif 0.17.11",
     "itertools 0.13.0",
     "jni 0.21.1",
     "jwt 0.16.0",
@@ -41139,9 +41504,11 @@
     "rand_core 0.6.4",
     "regex 1.11.1",
     "regex-lite 0.1.6",
+    "reqwest 0.12.22",
     "ring 0.17.14",
     "rlsf 0.2.1",
     "rmcp 0.1.5",
+    "rpassword 7.4.0",
     "rsa 0.9.8",
     "rtnetlink 0.14.1",
     "rustversion 1.0.21",

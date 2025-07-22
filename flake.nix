@@ -165,6 +165,7 @@
                 docker
                 fakeroot
                 flex
+                gcrane
                 jq
                 libelf
                 perl

@@ -1095,6 +1095,10 @@ pub struct ConfidentialSpaceEndorsement {
     /// - Any other claims can be set as needed.
     #[prost(string, tag = "1")]
     pub jwt_token: ::prost::alloc::string::String,
+    /// An endorsement of the workload image running in the VM.
+    /// If present, it must match the image mentioned in the jwt_token.
+    #[prost(message, optional, tag = "2")]
+    pub workload_endorsement: ::core::option::Option<SignedEndorsement>,
 }
 /// This message contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running

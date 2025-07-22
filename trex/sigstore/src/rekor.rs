@@ -17,7 +17,6 @@
 pub mod hashedrekord;
 
 use alloc::{string::String, vec::Vec};
-use core::str::FromStr;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
@@ -58,30 +57,47 @@ pub struct RekorPayload {
 /// Represents a Rekor bundle that has not yet been verified.
 #[derive(Debug, PartialEq)]
 pub struct Unverified {
-    signature: Vec<u8>,
+    data: Vec<u8>,
 }
 
 /// Represents a Rekor bundle that has been successfully verified.
 #[derive(Debug, PartialEq)]
-pub struct Verified;
+pub struct Verified {
+    payload: RekorPayload,
+}
 
 /// Represents a Rekor bundle, which contains a payload and a signature.
 ///
 /// The `S` type parameter represents the verification state of the bundle.
 #[derive(Debug, PartialEq)]
 pub struct RekorBundle<S> {
-    payload: RekorPayload,
     signature: S,
 }
 
 impl RekorBundle<Unverified> {
+    /// Creates a new unverified bundle from its raw data.
+    pub fn new(data: Vec<u8>) -> Self {
+        Self { signature: Unverified { data } }
+    }
+
+    /// Returns a slice to the underlying unverified data.
+    pub fn as_unverified_slice(&self) -> &[u8] {
+        &self.signature.data
+    }
+
     /// Verifies the Rekor inclusion promise bundle.
     ///
     /// This implementation follows the specification in
     /// https://docs.sigstore.dev/cosign/verifying/verify/#verify-a-signature-was-added-to-the-transparency-log
     pub fn verify(self, rekor_public_key: &VerifyingKey) -> Result<RekorBundle<Verified>, Error> {
-        let signature =
-            Signature::from_der(&self.signature.signature).map_err(Error::SignatureDer)?;
+        let bundle: Value = serde_json::from_slice(&self.signature.data)?;
+        let payload = bundle.get("Payload").ok_or(RekorError::MalformedBundle)?;
+        let payload: RekorPayload = RekorPayload::deserialize(payload)?;
+        let signature = bundle.get("SignedEntryTimestamp").ok_or(RekorError::MalformedBundle)?;
+        let signature: String = String::deserialize(signature)?;
+        let signature: Vec<u8> = BASE64_STANDARD.decode(signature)?;
+
+        let signature = Signature::from_der(&signature).map_err(Error::SignatureDer)?;
         // As per the spec above, the signature of the payload is done over the
         // Canonicalized representation of these fields:
         // * No whitespace
@@ -89,15 +105,15 @@ impl RekorBundle<Unverified> {
         // Because serde_json's Value uses a BTreeMap, the sorting property holds for
         // object values.
         let message = serde_json::json!({
-            "body": self.payload.body.clone(),
-            "integratedTime": self.payload.integrated_time,
-            "logID": self.payload.log_id.clone(),
-            "logIndex": self.payload.log_index.clone(),
+            "body": payload.body.clone(),
+            "integratedTime": payload.integrated_time,
+            "logID": payload.log_id.clone(),
+            "logIndex": payload.log_index.clone(),
         });
         let message = serde_json::to_string(&message)?;
         rekor_public_key.verify(message.as_bytes(), &signature).map_err(Error::Verification)?;
 
-        Ok(RekorBundle { payload: self.payload, signature: Verified })
+        Ok(RekorBundle { signature: Verified { payload } })
     }
 }
 
@@ -105,23 +121,8 @@ impl RekorBundle<Verified> {
     /// Deserializes the base64-encoded body of the Rekor payload into a
     /// specific type.
     pub fn payload_body<T: DeserializeOwned>(&self) -> Result<T, Error> {
-        let body = BASE64_STANDARD.decode(&self.payload.body)?;
+        let body = BASE64_STANDARD.decode(&self.signature.payload.body)?;
         serde_json::from_slice(&body).map_err(Error::Json)
-    }
-}
-
-impl FromStr for RekorBundle<Unverified> {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let bundle: Value = serde_json::from_str(s)?;
-        let payload = bundle.get("Payload").ok_or(RekorError::MalformedBundle)?;
-        let payload: RekorPayload = RekorPayload::deserialize(payload)?;
-        let signature = bundle.get("SignedEntryTimestamp").ok_or(RekorError::MalformedBundle)?;
-        let signature: String = String::deserialize(signature)?;
-        let signature: Vec<u8> = BASE64_STANDARD.decode(signature)?;
-
-        Ok(Self { payload, signature: Unverified { signature } })
     }
 }
 
@@ -163,12 +164,17 @@ mod tests {
         });
         let signature: Signature = serde_json::to_vec(&payload).map(|s| signing_key.sign(&s))?;
 
-        let bundle = RekorBundle {
-            signature: Unverified { signature: signature.to_der().to_vec() },
-            payload: serde_json::from_value(payload)?,
-        };
+        let data = json!({
+            "Payload": payload,
+            "SignedEntryTimestamp": BASE64_STANDARD.encode(signature.to_der().to_vec()),
+        });
+        let data = serde_json::to_vec(&data)?;
 
-        bundle.verify(verifying_key)?;
+        let bundle = RekorBundle::new(data);
+        let bundle = bundle.verify(verifying_key)?;
+
+        let expected_payload: RekorPayload = serde_json::from_value(payload)?;
+        assert_matches!(bundle, RekorBundle::<Verified> { signature: Verified { payload: p } } if p == expected_payload);
 
         Ok(())
     }
@@ -186,16 +192,18 @@ mod tests {
         });
         let signature: Signature = serde_json::to_vec(&payload).map(|s| signing_key.sign(&s))?;
 
-        let bundle = RekorBundle {
-            signature: Unverified { signature: signature.to_der().to_vec() },
-            payload: serde_json::from_value(payload)?,
-        };
+        let data = json!({
+            "Payload": payload,
+            "SignedEntryTimestamp": BASE64_STANDARD.encode(signature.to_der().to_vec()),
+        });
+        let data = serde_json::to_vec(&data)?;
 
         // Use the verifying key of a different signing key
         let verifying_key =
             SigningKey::from_slice(&ANOTHER_KEY_BYTES).map_err(|e| anyhow::anyhow!(e))?;
         let verifying_key = verifying_key.verifying_key();
 
+        let bundle = RekorBundle::new(data);
         assert_matches!(bundle.verify(verifying_key), Err(Error::Verification(_)));
 
         Ok(())

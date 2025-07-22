@@ -82,8 +82,10 @@ fn main() {
     // The binding key is used to sign (bind) the open session channel.
     let binding_key = SigningKey::from_str(SIGNING_KEY).expect("Failed to parse binding key");
     let public_key_attester = PublicKeyAttester::new(VerifyingKey::from(&binding_key));
-    let public_key_endorser =
-        PublicKeyEndorser::new(ConfidentialSpaceEndorsement { jwt_token: ENDORSEMENT.to_owned() });
+    let public_key_endorser = PublicKeyEndorser::new(ConfidentialSpaceEndorsement {
+        jwt_token: ENDORSEMENT.to_owned(),
+        ..Default::default()
+    });
     let public_key_binder = SignatureBinder::new(Box::new(binding_key));
 
     let server_config: SessionConfig =

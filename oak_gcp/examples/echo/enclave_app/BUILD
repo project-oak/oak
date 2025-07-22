@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
@@ -28,6 +28,7 @@ rust_library(
     srcs = [
         "src/app.rs",
         "src/app_service.rs",
+        "src/gcp.rs",
         "src/lib.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
@@ -43,6 +44,9 @@ rust_library(
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:reqwest",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
@@ -55,8 +59,12 @@ rust_binary(
     deps = [
         ":oak_gcp_examples_echo_enclave_app",
         "//oak_attestation_gcp",
+        "//oak_proto_rust",
+        "//trex/sigstore",
+        "//trex/sigstore_client",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
+        "@oak_crates_index//:oci-client",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
@@ -75,11 +83,25 @@ oci_image(
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_gcp_examples_echo_enclave_app"],
     exposed_ports = ["8080/tcp"],
+    labels = {"tee.launch_policy.allow_env_override": "CONTAINER_IMAGE"},
     tars = [":tar"],
 )
 
-oci_load(
-    name = "load_image",
-    image = ":image",
-    repo_tags = ["echo_enclave_app:latest"],
+rust_binary(
+    name = "deploy",
+    srcs = ["src/deploy.rs"],
+    data = [
+        ":claims.toml",
+        ":image",
+        "//trex/doremint",
+    ],
+    deps = [
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:colored",
+        "@oak_crates_index//:indicatif",
+        "@oak_crates_index//:rpassword",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tempfile",
+    ],
 )

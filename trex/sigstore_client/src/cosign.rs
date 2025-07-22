@@ -19,11 +19,11 @@ use sigstore::{cosign, cosign::SignatureBundle, rekor, rekor::RekorBundle};
 
 const SIMPLE_SIGNING_MIME_TYPE: &str = "application/vnd.dev.cosign.simplesigning.v1+json";
 
-/// Pulls an intoto endorsement statement from the OCI registry.
+/// Pulls an arbitrary signed payload from an OCI registry.
 /// For details about the storage format see cosign's documentation[^1].
 ///
 /// [^1]: https://github.com/sigstore/cosign/blob/main/specs/SIGNATURE_SPEC.md#storage
-pub async fn pull_cosign_payload(
+pub async fn pull_payload(
     client: &Client,
     auth: &RegistryAuth,
     image: &Reference,
@@ -60,7 +60,7 @@ pub async fn pull_cosign_payload(
         let bundle = annotations
             .remove("dev.sigstore.cosign/bundle")
             .context("Cosign image does not have bundle annotation")?;
-        let bundle: RekorBundle<rekor::Unverified> = bundle.parse()?;
+        let bundle = RekorBundle::new(bundle.into());
 
         Ok((SignatureBundle::new(layer.data, signature), bundle))
     } else {

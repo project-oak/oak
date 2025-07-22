@@ -191,7 +191,8 @@ mod tests {
         let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
         let event = create_public_key_event(&public_key);
 
-        let endorsement = ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned() };
+        let endorsement =
+            ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned(), ..Default::default() };
 
         let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
 
@@ -214,7 +215,8 @@ mod tests {
         let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
         let event = create_public_key_event(&public_key);
 
-        let endorsement = ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned() };
+        let endorsement =
+            ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned(), ..Default::default() };
 
         let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
 

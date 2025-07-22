@@ -27,9 +27,9 @@ use crate::error::Error;
 /// Represents a cosign payload that has not yet been verified.
 #[derive(Debug)]
 pub struct Unverified {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
     // Signature in binary DER encoding.
-    signature: Vec<u8>,
+    pub signature: Vec<u8>,
 }
 
 /// Represents a cosign payload that has been successfully verified.

@@ -12,43 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "doremint",
+rust_library(
+    name = "sigstore_client",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["//trex/doremint/data:rekor_public_key.pem"],
     deps = [
-        "//trex/endorsement",
         "//trex/sigstore",
-        "//trex/sigstore_client",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
-        "@oak_crates_index//:chrono",
-        "@oak_crates_index//:clap",
         "@oak_crates_index//:oci-client",
-        "@oak_crates_index//:oci-spec",
-        "@oak_crates_index//:p256",
-        "@oak_crates_index//:serde",
-        "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:toml",
     ],
-)
-
-sh_test(
-    name = "cli_tests",
-    srcs = ["cli_tests.sh"],
-    data = [
-        ":doremint",
-        "//trex/doremint/testdata:claims.toml",
-        "//trex/doremint/testdata:golden.json",
-    ],
-    env = {"CLI": "$(location :doremint)"},
 )

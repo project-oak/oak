@@ -58,14 +58,12 @@ impl EnclaveApplicationImplementation {
     pub fn new(
         application_handler: EchoHandler,
         binding_key: SigningKey,
-        endorsement: String,
+        endorsement: ConfidentialSpaceEndorsement,
     ) -> Self {
         Self {
             application_handler: Arc::new(application_handler),
             attester: Arc::new(PublicKeyAttester::new(VerifyingKey::from(&binding_key))),
-            endorser: Arc::new(PublicKeyEndorser::new(ConfidentialSpaceEndorsement {
-                jwt_token: endorsement,
-            })),
+            endorser: Arc::new(PublicKeyEndorser::new(endorsement)),
             session_binder: Arc::new(SignatureBinder::new(Box::new(binding_key))),
         }
     }
@@ -131,7 +129,7 @@ pub async fn create(
     listener: TcpListener,
     application_handler: EchoHandler,
     binding_key: SigningKey,
-    endorsement: String,
+    endorsement: ConfidentialSpaceEndorsement,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(EnclaveApplicationServer::new(EnclaveApplicationImplementation::new(
