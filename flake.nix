@@ -68,9 +68,13 @@
                 envsubst
                 fd
                 just
-                kmod
                 ps
                 which
+              ]
+              ++
+              # Linux-specific dependencies.
+              lib.optionals stdenv.isLinux [
+                kmod
               ];
             };
             # Minimal shell with only the dependencies needed to run the Rust tests.

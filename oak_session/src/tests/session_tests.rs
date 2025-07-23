@@ -199,7 +199,7 @@ fn create_mock_attestation_publisher(
 }
 
 #[derive(Debug, PartialEq)]
-enum HandshakeFollowup {
+pub(super) enum HandshakeFollowup {
     Expected,
     NotExpected,
 }
@@ -586,7 +586,7 @@ fn test_session_sendable() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn do_attest(
+pub(super) fn do_attest(
     client_session: &mut ClientSession,
     server_session: &mut ServerSession,
 ) -> anyhow::Result<()> {
@@ -618,7 +618,7 @@ fn do_attest(
     Ok(())
 }
 
-fn do_handshake(
+pub(super) fn do_handshake(
     client_session: &mut ClientSession,
     server_session: &mut ServerSession,
     handshake_followup: HandshakeFollowup,

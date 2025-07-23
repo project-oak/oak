@@ -477,6 +477,8 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "pretty_assertions": crate.spec(version = "1.4.0"),
     "procfs": crate.spec(version = "0.16.0"),
+    "proptest": crate.spec(version = "1.4.0"),
+    "proptest-derive": crate.spec(version = "0.4.0"),
     "prost-build": crate.spec(version = "0.13.5"),
     "prost-derive": crate.spec(version = "0.13.5"),
     "prost-types": crate.spec(version = "0.13.5"),

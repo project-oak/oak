@@ -1,5 +1,5 @@
 {
-  "checksum": "22cc065b8d68f78b9a0d4cfc317e7722154a8ee2c54896ffe7e935c2760d1356",
+  "checksum": "43706fc1112af1bc2fe0943906b96ca524b2a8e0907e894e6f8a6dfd414b4d8b",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2220,6 +2220,107 @@
         },
         "edition": "2024",
         "version": "1.8.0"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "bit-set 0.8.0": {
+      "name": "bit-set",
+      "version": "0.8.0",
+      "package_url": "https://github.com/contain-rs/bit-set",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bit-set/0.8.0/download",
+          "sha256": "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bit_set",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bit_set",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bit-vec 0.8.0",
+              "target": "bit_vec"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.8.0"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "bit-vec 0.8.0": {
+      "name": "bit-vec",
+      "version": "0.8.0",
+      "package_url": "https://github.com/contain-rs/bit-vec",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/bit-vec/0.8.0/download",
+          "sha256": "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "bit_vec",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "bit_vec",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "edition": "2015",
+        "version": "0.8.0"
       },
       "license": "Apache-2.0 OR MIT",
       "license_ids": [
@@ -7183,6 +7284,10 @@
               "target": "procfs"
             },
             {
+              "id": "proptest 1.7.0",
+              "target": "proptest"
+            },
+            {
               "id": "prost 0.13.5",
               "target": "prost"
             },
@@ -7423,6 +7528,10 @@
             {
               "id": "criterion-macro 0.4.0",
               "target": "criterion_macro"
+            },
+            {
+              "id": "proptest-derive 0.4.0",
+              "target": "proptest_derive"
             },
             {
               "id": "prost-derive 0.13.5",
@@ -10021,6 +10130,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "std"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -20866,6 +20981,168 @@
       ],
       "license_file": null
     },
+    "proptest 1.7.0": {
+      "name": "proptest",
+      "version": "1.7.0",
+      "package_url": "https://github.com/proptest-rs/proptest",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/proptest/1.7.0/download",
+          "sha256": "6fcdab19deb5195a31cf7726a210015ff1496ba1464fd42cb4f537b8b01b471f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "proptest",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "proptest",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "bit-set",
+            "default",
+            "fork",
+            "lazy_static",
+            "regex-syntax",
+            "rusty-fork",
+            "std",
+            "tempfile",
+            "timeout"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "bit-set 0.8.0",
+              "target": "bit_set"
+            },
+            {
+              "id": "bit-vec 0.8.0",
+              "target": "bit_vec"
+            },
+            {
+              "id": "bitflags 2.9.1",
+              "target": "bitflags"
+            },
+            {
+              "id": "lazy_static 1.5.0",
+              "target": "lazy_static"
+            },
+            {
+              "id": "num-traits 0.2.19",
+              "target": "num_traits"
+            },
+            {
+              "id": "rand 0.9.2",
+              "target": "rand"
+            },
+            {
+              "id": "rand_chacha 0.9.0",
+              "target": "rand_chacha"
+            },
+            {
+              "id": "rand_xorshift 0.4.0",
+              "target": "rand_xorshift"
+            },
+            {
+              "id": "regex-syntax 0.8.5",
+              "target": "regex_syntax"
+            },
+            {
+              "id": "rusty-fork 0.3.0",
+              "target": "rusty_fork"
+            },
+            {
+              "id": "tempfile 3.20.0",
+              "target": "tempfile"
+            },
+            {
+              "id": "unarray 0.1.4",
+              "target": "unarray"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "1.7.0"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "proptest-derive 0.4.0": {
+      "name": "proptest-derive",
+      "version": "0.4.0",
+      "package_url": "https://github.com/proptest-rs/proptest",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/proptest-derive/0.4.0/download",
+          "sha256": "9cf16337405ca084e9c78985114633b6827711d22b9e6ef6c6c0d665eb3f0b6e"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "proptest_derive",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "proptest_derive",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "proc-macro2 1.0.95",
+              "target": "proc_macro2"
+            },
+            {
+              "id": "quote 1.0.40",
+              "target": "quote"
+            },
+            {
+              "id": "syn 1.0.109",
+              "target": "syn"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.4.0"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "prost 0.12.6": {
       "name": "prost",
       "version": "0.12.6",
@@ -21509,6 +21786,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "quick-error 1.2.3": {
+      "name": "quick-error",
+      "version": "1.2.3",
+      "package_url": "http://github.com/tailhook/quick-error",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/quick-error/1.2.3/download",
+          "sha256": "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "quick_error",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "quick_error",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2015",
+        "version": "1.2.3"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "quick-xml 0.26.0": {
       "name": "quick-xml",
       "version": "0.26.0",
@@ -21843,7 +22159,7 @@
                 "target": "once_cell"
               },
               {
-                "id": "windows-sys 0.52.0",
+                "id": "windows-sys 0.59.0",
                 "target": "windows_sys"
               }
             ]
@@ -22151,6 +22467,14 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "alloc",
+            "os_rng",
+            "std"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -22366,8 +22690,72 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "os_rng",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "getrandom 0.3.3",
+              "target": "getrandom"
+            }
+          ],
+          "selects": {}
+        },
         "edition": "2021",
         "version": "0.9.3"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "rand_xorshift 0.4.0": {
+      "name": "rand_xorshift",
+      "version": "0.4.0",
+      "package_url": "https://github.com/rust-random/rngs",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rand_xorshift/0.4.0/download",
+          "sha256": "513962919efc330f829edb2535844d1b912b0fbe2ca165d613e4e8788bb05a5a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rand_xorshift",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rand_xorshift",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "rand_core 0.9.3",
+              "target": "rand_core"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.4.0"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -24610,6 +24998,73 @@
         ]
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "rusty-fork 0.3.0": {
+      "name": "rusty-fork",
+      "version": "0.3.0",
+      "package_url": "https://github.com/altsysrq/rusty-fork",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rusty-fork/0.3.0/download",
+          "sha256": "cb3dcc6e454c328bb824492db107ab7c0ae8fcffe4ad210136ef014458c1bc4f"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rusty_fork",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rusty_fork",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "timeout",
+            "wait-timeout"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "fnv 1.0.7",
+              "target": "fnv"
+            },
+            {
+              "id": "quick-error 1.2.3",
+              "target": "quick_error"
+            },
+            {
+              "id": "tempfile 3.20.0",
+              "target": "tempfile"
+            },
+            {
+              "id": "wait-timeout 0.2.1",
+              "target": "wait_timeout"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.3.0"
+      },
+      "license": "MIT/Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -27462,10 +27917,13 @@
             "clone-impls",
             "default",
             "derive",
+            "extra-traits",
+            "full",
             "parsing",
             "printing",
             "proc-macro",
-            "quote"
+            "quote",
+            "visit"
           ],
           "selects": {}
         },
@@ -30986,6 +31444,45 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "unarray 0.1.4": {
+      "name": "unarray",
+      "version": "0.1.4",
+      "package_url": "https://github.com/cameron1024/unarray",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/unarray/0.1.4/download",
+          "sha256": "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "unarray",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "unarray",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2018",
+        "version": "0.1.4"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "unicase 2.8.1": {
       "name": "unicase",
       "version": "2.8.1",
@@ -31744,6 +32241,56 @@
         "Apache-2.0"
       ],
       "license_file": "LICENSE"
+    },
+    "wait-timeout 0.2.1": {
+      "name": "wait-timeout",
+      "version": "0.2.1",
+      "package_url": "https://github.com/alexcrichton/wait-timeout",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/wait-timeout/0.2.1/download",
+          "sha256": "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "wait_timeout",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "wait_timeout",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [],
+          "selects": {
+            "cfg(unix)": [
+              {
+                "id": "libc 0.2.174",
+                "target": "libc"
+              }
+            ]
+          }
+        },
+        "edition": "2015",
+        "version": "0.2.1"
+      },
+      "license": "MIT/Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
     },
     "walkdir 2.5.0": {
       "name": "walkdir",
@@ -39730,6 +40277,8 @@
     "pretty_assertions 1.4.1",
     "primeorder 0.13.6",
     "procfs 0.16.0",
+    "proptest 1.7.0",
+    "proptest-derive 0.4.0",
     "prost 0.13.5",
     "prost-build 0.13.5",
     "prost-derive 0.13.5",

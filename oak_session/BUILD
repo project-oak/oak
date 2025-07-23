@@ -50,6 +50,7 @@ rust_test(
     deps = [
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:mockall",
+        "@oak_crates_index//:proptest",
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:tokio",
     ],
