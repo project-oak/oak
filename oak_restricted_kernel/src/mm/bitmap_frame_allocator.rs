@@ -156,7 +156,7 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     }
 
     fn frame(&self, frame_idx: usize) -> Option<PhysFrame<S>> {
-        if self.range.end < self.range.start + frame_idx as u64 {
+        if self.valid.len() <= frame_idx {
             None
         } else {
             Some(self.range.start + frame_idx as u64)
