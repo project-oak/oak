@@ -49,10 +49,23 @@ rust_test(
     name = "oak_session_tests",
     crate = ":oak_session",
     deps = [
+        ":oak_session_testing",
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:mockall",
         "@oak_crates_index//:proptest",
         "@oak_crates_index//:rand_core",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+rust_library(
+    name = "oak_session_testing",
+    testonly = True,
+    srcs = glob(["testing/*.rs"]),
+    deps = [
+        ":oak_session",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
     ],
 )

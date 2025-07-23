@@ -553,7 +553,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "*",
         features = ["tonic012"],
     ),
-    "toml": crate.spec(version = "0.5.11"),
+    "toml": crate.spec(version = "0.8.12"),
     "tonic": crate.spec(
         features = [
             "gzip",

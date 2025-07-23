@@ -162,7 +162,6 @@
                 cpio
                 cosign
                 curl
-                datefudge
                 docker
                 fakeroot
                 flex
@@ -179,6 +178,7 @@
               ++
               # Linux-specific dependencies.
               lib.optionals stdenv.isLinux [
+                datefudge
                 elfutils
                 glibc
                 glibc.static

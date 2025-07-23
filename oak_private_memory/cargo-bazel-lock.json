@@ -1,5 +1,5 @@
 {
-  "checksum": "59a6a951964045afcebb08a781fb18dca094f51a56ba04e3d060b541c363eb3a",
+  "checksum": "acceb91c45459c99026f916a877e04d171137b215774158932e1c480e3ed18e1",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7964,7 +7964,7 @@
               "target": "tokio_vsock"
             },
             {
-              "id": "toml 0.5.11",
+              "id": "toml 0.8.23",
               "target": "toml"
             },
             {
@@ -31176,60 +31176,6 @@
       ],
       "license_file": "LICENSE"
     },
-    "toml 0.5.11": {
-      "name": "toml",
-      "version": "0.5.11",
-      "package_url": "https://github.com/toml-rs/toml",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/toml/0.5.11/download",
-          "sha256": "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "toml",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "toml",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "serde 1.0.219",
-              "target": "serde"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.5.11"
-      },
-      "license": "MIT/Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "toml 0.8.23": {
       "name": "toml",
       "version": "0.8.23",
@@ -41614,7 +41560,7 @@
     "tokio-stream 0.1.17",
     "tokio-util 0.7.15",
     "tokio-vsock 0.7.1",
-    "toml 0.5.11",
+    "toml 0.8.23",
     "tonic 0.12.3",
     "tonic-build 0.12.3",
     "tonic-web 0.12.3",
