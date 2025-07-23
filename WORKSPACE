@@ -16,17 +16,6 @@
 
 workspace(name = "oak")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# Kotlin gRPC
-http_archive(
-    name = "com_github_grpc_grpc_kotlin",
-    repo_mapping = {"@io_bazel_rules_kotlin": "@rules_kotlin"},
-    sha256 = "cf7975a6edd62a3605f84636804d44e6755db6f7fde3d0e0ab8e1a2837c6e2b5",
-    strip_prefix = "grpc-kotlin-1.4.2",
-    url = "https://github.com/grpc/grpc-kotlin/archive/refs/tags/v1.4.2.tar.gz",
-)
-
 load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()

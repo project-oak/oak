@@ -16,7 +16,6 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
-load("@com_github_grpc_grpc_kotlin//:kt_jvm_grpc.bzl", "kt_jvm_grpc_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
@@ -52,12 +51,6 @@ java_proto_library(
 
 java_grpc_library(
     name = "session_v1_service_java_grpc",
-    srcs = [":session_v1_service_proto"],
-    deps = [":session_v1_service_java_proto"],
-)
-
-kt_jvm_grpc_library(
-    name = "session_v1_service_kt_grpc",
     srcs = [":session_v1_service_proto"],
     deps = [":session_v1_service_java_proto"],
 )

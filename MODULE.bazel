@@ -125,15 +125,6 @@ git_repository(
 
 ##### Java Dependencies #####
 
-# grpc-kotlin doesn't support bzlmod yet,
-# so we have to do this ourslves to get the
-# import in the WORKSAPCE to build.
-# This just covers artifacts not already
-# pulled in by our main artifacts.
-IO_GRPC_GRPC_KOTLIN_ARTIFACTS = [
-    "com.squareup:kotlinpoet:1.14.2",
-]
-
 bazel_dep(name = "rules_jvm_external", version = "6.7")
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.artifact(group = "org.jetbrains.kotlinx", artifact = "kotlinx-coroutines-test", version = "1.10.2", testonly = True)
@@ -152,7 +143,7 @@ maven.install(
         "javax.inject:javax.inject:1",
         "org.bouncycastle:bcprov-jdk18on:1.77",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
-    ] + IO_GRPC_GRPC_KOTLIN_ARTIFACTS,
+    ],
     generate_compat_repositories = True,
     repositories = [
         "https://maven.google.com",
