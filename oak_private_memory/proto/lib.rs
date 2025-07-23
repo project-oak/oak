@@ -39,405 +39,277 @@ pub mod base64data {
     }
 }
 
-pub mod key_sync_response_status_converter {
-    use serde::{
-        de::{self, Visitor},
-        Deserializer, Serializer,
-    };
+/// Defines a deserializer for a Protobuf enum that can handle both integer and
+/// string representations.
+///
+/// # Input
+/// - `enum_type`: The type of the Protobuf-generated enum.
+/// - `doc_string`: A docstring used in error messages to describe the expected
+///   value.
+/// - `valid_variants`: A slice of strings containing the names of the valid
+///   enum variants, used for error reporting.
+///
+/// # Output
+/// This macro generates a struct `EnumElement(pub i32)` and implements the
+/// `serde::Deserialize` trait for it. The implementation can deserialize from
+/// either a string (e.g., "SUCCESS") or an integer representing the enum
+/// variant.
+macro_rules! define_enum_element_deserializer {
+    (
+        enum_type = $enum_type:ty,
+        doc_string = $doc_string:expr,
+        valid_variants = $valid_variants:expr
+    ) => {
+        use serde::{
+            de::{self, Visitor},
+            Deserialize, Deserializer,
+        };
 
-    pub fn serialize<S: Serializer>(v: &i32, s: S) -> Result<S::Ok, S::Error> {
-        use crate::oak::private_memory::key_sync_response::Status;
-        let v = Status::try_from(*v);
-        if let Ok(v) = v {
-            s.serialize_str(v.as_str_name())
-        } else {
-            s.serialize_str(Status::Unspecified.as_str_name())
-        }
-    }
+        struct EnumElement(pub i32);
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<i32, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use crate::oak::private_memory::key_sync_response::Status;
-
-        struct StatusVisitor;
-
-        impl Visitor<'_> for StatusVisitor {
-            type Value = i32;
-
-            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-                formatter.write_str(
-                    "a string or an integer representing a key_sync_response::Status variant",
-                )
-            }
-
-            fn visit_str<'s, E>(self, value: &str) -> Result<i32, E>
+        impl<'de> Deserialize<'de> for EnumElement {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
-                E: de::Error,
+                D: Deserializer<'de>,
             {
-                let v = Status::from_str_name(value);
-                if let Some(v) = v {
-                    Ok(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Str(value),
-                        &"a valid string for key_sync_response::Status variant",
-                    ))
-                }
-            }
-            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if crate::oak::private_memory::key_sync_response::Status::try_from(value).is_ok() {
-                    Ok(value)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(value as i64),
-                        &"a valid integer for key_sync_response::Status variant",
-                    ))
-                }
-            }
+                struct ElementVisitor;
 
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v <= i32::MAX as u64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Unsigned(v),
-                        &"an integer value fitting in i32 for key_sync_response::Status",
-                    ))
-                }
-            }
+                impl<'de> Visitor<'de> for ElementVisitor {
+                    type Value = i32;
 
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v >= i32::MIN as i64 && v <= i32::MAX as i64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(v),
-                        &"an integer value fitting in i32 for key_sync_response::Status",
-                    ))
-                }
-            }
-        }
-        deserializer.deserialize_any(StatusVisitor)
-    }
-}
+                    fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                        formatter.write_str($doc_string)
+                    }
 
-pub mod user_registration_response_status_converter {
-    use serde::{
-        de::{self, Visitor},
-        Deserializer, Serializer,
-    };
+                    fn visit_str<E>(self, value: &str) -> Result<i32, E>
+                    where
+                        E: de::Error,
+                    {
+                        match <$enum_type>::from_str_name(value) {
+                            Some(field) => Ok(field as i32),
+                            None => Err(de::Error::unknown_variant(value, $valid_variants)),
+                        }
+                    }
 
-    pub fn serialize<S: Serializer>(v: &i32, s: S) -> Result<S::Ok, S::Error> {
-        use crate::oak::private_memory::user_registration_response::Status;
-        let status_enum = Status::try_from(*v);
-        if let Ok(status) = status_enum {
-            s.serialize_str(status.as_str_name())
-        } else {
-            s.serialize_str(Status::Unspecified.as_str_name())
-        }
-    }
+                    fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
+                    where
+                        E: de::Error,
+                    {
+                        if <$enum_type>::try_from(value).is_ok() {
+                            Ok(value)
+                        } else {
+                            Err(de::Error::invalid_value(
+                                de::Unexpected::Signed(value as i64),
+                                &$doc_string,
+                            ))
+                        }
+                    }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<i32, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use crate::oak::private_memory::user_registration_response::Status;
+                    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+                    where
+                        E: de::Error,
+                    {
+                        if v <= i32::MAX as u64 {
+                            self.visit_i32(v as i32)
+                        } else {
+                            Err(de::Error::invalid_value(de::Unexpected::Unsigned(v), &$doc_string))
+                        }
+                    }
 
-        struct StatusVisitor;
-
-        impl Visitor<'_> for StatusVisitor {
-            type Value = i32;
-
-            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-                formatter.write_str("a string or an integer representing a UserRegistrationResponse::Status variant")
-            }
-
-            fn visit_str<'s, E>(self, value: &str) -> Result<i32, E>
-            where
-                E: de::Error,
-            {
-                match Status::from_str_name(value) {
-                    Some(status) => Ok(status as i32),
-                    None => Err(de::Error::unknown_variant(
-                        value,
-                        &["UNSPECIFIED", "SUCCESS", "USER_ALREADY_EXISTS"],
-                    )),
-                }
-            }
-
-            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if Status::try_from(value).is_ok() {
-                    Ok(value)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(value as i64),
-                        &"a valid integer for UserRegistrationResponse::Status variant",
-                    ))
-                }
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v <= i32::MAX as u64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Unsigned(v),
-                        &"an integer value fitting in i32 for UserRegistrationResponse::Status",
-                    ))
-                }
-            }
-
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v >= i32::MIN as i64 && v <= i32::MAX as i64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(v),
-                        &"an integer value fitting in i32 for UserRegistrationResponse::Status",
-                    ))
-                }
-            }
-        }
-        deserializer.deserialize_any(StatusVisitor)
-    }
-}
-
-pub mod memory_field_converter {
-    use serde::{
-        de::{self, SeqAccess, Visitor},
-        Deserialize, Deserializer, Serializer,
-    };
-
-    use crate::oak::private_memory::MemoryField;
-    extern crate alloc;
-    use alloc::vec::Vec;
-    pub fn serialize<S: Serializer>(v_list: &Vec<i32>, s: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::SerializeSeq;
-
-        let mut seq = s.serialize_seq(Some(v_list.len()))?;
-        for val in v_list {
-            let field_enum = MemoryField::try_from(*val).ok();
-            let str_val = if let Some(field) = field_enum {
-                field.as_str_name()
-            } else {
-                MemoryField::Unknown.as_str_name()
-            };
-            seq.serialize_element(str_val)?;
-        }
-        seq.end()
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<i32>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct VecMemoryFieldVisitor;
-
-        impl<'de> Visitor<'de> for VecMemoryFieldVisitor {
-            type Value = Vec<i32>;
-
-            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-                formatter.write_str(
-                    "a sequence of strings or integers representing MemoryField variants",
-                )
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let mut vec = Vec::new();
-                while let Some(element) = seq.next_element::<MemoryFieldElement>()? {
-                    vec.push(element.0);
-                }
-                Ok(vec)
-            }
-        }
-        deserializer.deserialize_seq(VecMemoryFieldVisitor)
-    }
-
-    struct MemoryFieldElement(i32);
-
-    impl<'de> Deserialize<'de> for MemoryFieldElement {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            struct ElementVisitor;
-
-            impl Visitor<'_> for ElementVisitor {
-                type Value = i32;
-
-                fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-                    formatter.write_str("a string or an integer representing a MemoryField variant")
-                }
-
-                fn visit_str<E>(self, value: &str) -> Result<i32, E>
-                where
-                    E: de::Error,
-                {
-                    match MemoryField::from_str_name(value) {
-                        Some(field) => Ok(field as i32),
-                        None => Err(de::Error::unknown_variant(
-                            value,
-                            &["UNKNOWN", "ID", "TAGS", "EMBEDDINGS", "CONTENT"],
-                        )),
+                    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+                    where
+                        E: de::Error,
+                    {
+                        if v >= i32::MIN as i64 && v <= i32::MAX as i64 {
+                            self.visit_i32(v as i32)
+                        } else {
+                            Err(de::Error::invalid_value(de::Unexpected::Signed(v), &$doc_string))
+                        }
                     }
                 }
+                Ok(EnumElement(deserializer.deserialize_any(ElementVisitor)?))
+            }
+        }
+    };
+}
 
-                fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
-                {
-                    if MemoryField::try_from(value).is_ok() {
-                        Ok(value)
+/// Creates a module with `serialize` and `deserialize` functions for a
+/// Protobuf enum field.
+///
+/// This is intended to be used with `serde(with = "...")` to handle the
+/// serialization of an enum to its string name and deserialization from either
+/// its string name or integer value.
+///
+/// # Input
+/// - `module_name`: The name for the generated module.
+/// - `enum_type`: The type of the Protobuf-generated enum.
+/// - `unspecified_variant`: The enum variant to use as a fallback for unknown
+///   values during serialization.
+/// - `doc_string`: A docstring used in error messages.
+/// - `valid_variants`: A slice of strings containing the names of the valid
+///   enum variants.
+///
+/// # Output
+/// This macro generates a module containing `serialize` and `deserialize`
+/// functions.
+/// - `serialize`: Converts an `&i32` representing an enum variant to its string
+///   name.
+/// - `deserialize`: Converts a string or integer into an `i32` representing an
+///   enum variant.
+macro_rules! enum_converter {
+    (
+        module_name = $module_name:ident,
+        enum_type = $enum_type:ty,
+        unspecified_variant = $unspecified_variant:expr,
+        doc_string = $doc_string:expr,
+        valid_variants = $valid_variants:expr
+    ) => {
+        pub mod $module_name {
+            use serde::Serializer;
+
+            define_enum_element_deserializer!(
+                enum_type = $enum_type,
+                doc_string = $doc_string,
+                valid_variants = $valid_variants
+            );
+
+            pub fn serialize<S: Serializer>(v: &i32, s: S) -> Result<S::Ok, S::Error> {
+                let v = <$enum_type>::try_from(*v);
+                if let Ok(v) = v {
+                    s.serialize_str(v.as_str_name())
+                } else {
+                    s.serialize_str($unspecified_variant.as_str_name())
+                }
+            }
+
+            pub fn deserialize<'de, D>(deserializer: D) -> Result<i32, D::Error>
+            where
+                D: serde::de::Deserializer<'de>,
+            {
+                EnumElement::deserialize(deserializer).map(|e| e.0)
+            }
+        }
+    };
+}
+
+/// Creates a module with `serialize` and `deserialize` functions for a `Vec` of
+/// Protobuf enum fields.
+///
+/// This is intended to be used with `serde(with = "...")` to handle the
+/// serialization of a vector of enums to a sequence of their string names, and
+/// deserialization from a sequence of either string names or integer values.
+///
+/// # Input
+/// - `module_name`: The name for the generated module.
+/// - `enum_type`: The type of the Protobuf-generated enum.
+/// - `unspecified_variant`: The enum variant to use as a fallback for unknown
+///   values during serialization.
+/// - `doc_string`: A docstring for error messages when expecting the sequence.
+/// - `element_doc_string`: A docstring for error messages when expecting a
+///   single element.
+/// - `valid_variants`: A slice of strings containing the names of the valid
+///   enum variants.
+///
+/// # Output
+/// This macro generates a module containing `serialize` and `deserialize`
+/// functions for a `Vec<i32>`.
+/// - `serialize`: Converts a `&Vec<i32>` to a sequence of string names.
+/// - `deserialize`: Converts a sequence of strings or integers into a
+///   `Vec<i32>`.
+macro_rules! vec_enum_converter {
+    (
+        module_name = $module_name:ident,
+        enum_type = $enum_type:ty,
+        unspecified_variant = $unspecified_variant:expr,
+        doc_string = $doc_string:expr,
+        element_doc_string = $element_doc_string:expr,
+        valid_variants = $valid_variants:expr
+    ) => {
+        pub mod $module_name {
+            use serde::{ser::SerializeSeq, Serializer};
+            extern crate alloc;
+            use alloc::vec::Vec;
+
+            define_enum_element_deserializer!(
+                enum_type = $enum_type,
+                doc_string = $element_doc_string,
+                valid_variants = $valid_variants
+            );
+
+            pub fn serialize<S: Serializer>(v_list: &Vec<i32>, s: S) -> Result<S::Ok, S::Error> {
+                let mut seq = s.serialize_seq(Some(v_list.len()))?;
+                for val in v_list {
+                    let field_enum = <$enum_type>::try_from(*val).ok();
+                    let str_val = if let Some(field) = field_enum {
+                        field.as_str_name()
                     } else {
-                        Err(de::Error::invalid_value(
-                            de::Unexpected::Signed(value as i64),
-                            &"a valid integer for MemoryField variant",
-                        ))
-                    }
+                        $unspecified_variant.as_str_name()
+                    };
+                    seq.serialize_element(str_val)?;
                 }
-
-                fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
-                {
-                    if v <= i32::MAX as u64 {
-                        self.visit_i32(v as i32)
-                    } else {
-                        Err(de::Error::invalid_value(
-                            de::Unexpected::Unsigned(v),
-                            &"an integer value fitting in i32 for MemoryField",
-                        ))
-                    }
-                }
-
-                fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-                where
-                    E: de::Error,
-                {
-                    if v >= i32::MIN as i64 && v <= i32::MAX as i64 {
-                        self.visit_i32(v as i32)
-                    } else {
-                        Err(de::Error::invalid_value(
-                            de::Unexpected::Signed(v),
-                            &"an integer value fitting in i32 for MemoryField",
-                        ))
-                    }
-                }
+                seq.end()
             }
-            Ok(MemoryFieldElement(deserializer.deserialize_any(ElementVisitor)?))
-        }
-    }
-}
 
-pub mod embedding_query_metric_type_converter {
-    use serde::{
-        de::{self, Visitor},
-        Deserializer, Serializer,
+            pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<i32>, D::Error>
+            where
+                D: serde::de::Deserializer<'de>,
+            {
+                struct VecEnumVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for VecEnumVisitor {
+                    type Value = Vec<i32>;
+
+                    fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                        formatter.write_str($doc_string)
+                    }
+
+                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: serde::de::SeqAccess<'de>,
+                    {
+                        let mut vec = Vec::new();
+                        while let Some(element) = seq.next_element::<EnumElement>()? {
+                            vec.push(element.0);
+                        }
+                        Ok(vec)
+                    }
+                }
+                deserializer.deserialize_seq(VecEnumVisitor)
+            }
+        }
     };
-    extern crate alloc;
-
-    pub fn serialize<S: Serializer>(v: &i32, s: S) -> Result<S::Ok, S::Error> {
-        use crate::oak::private_memory::EmbeddingQueryMetricType;
-        let metric_enum = EmbeddingQueryMetricType::try_from(*v);
-        if let Ok(metric) = metric_enum {
-            s.serialize_str(metric.as_str_name())
-        } else {
-            s.serialize_str(EmbeddingQueryMetricType::DotProduct.as_str_name())
-        }
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<i32, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use crate::oak::private_memory::EmbeddingQueryMetricType;
-
-        struct MetricTypeVisitor;
-
-        impl Visitor<'_> for MetricTypeVisitor {
-            type Value = i32;
-
-            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-                formatter.write_str(
-                    "a string or an integer representing an EmbeddingQueryMetricType variant",
-                )
-            }
-
-            fn visit_str<'s, E>(self, value: &str) -> Result<i32, E>
-            where
-                E: de::Error,
-            {
-                match EmbeddingQueryMetricType::from_str_name(value) {
-                    Some(metric) => Ok(metric as i32),
-                    None => Err(de::Error::unknown_variant(value, &["DOT_PRODUCT"])),
-                }
-            }
-
-            fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if EmbeddingQueryMetricType::try_from(value).is_ok() {
-                    Ok(value)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(value as i64),
-                        &"a valid integer for EmbeddingQueryMetricType variant",
-                    ))
-                }
-            }
-
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v <= i32::MAX as u64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Unsigned(v),
-                        &"an integer value fitting in i32 for EmbeddingQueryMetricType",
-                    ))
-                }
-            }
-
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v >= i32::MIN as i64 && v <= i32::MAX as i64 {
-                    self.visit_i32(v as i32)
-                } else {
-                    Err(de::Error::invalid_value(
-                        de::Unexpected::Signed(v),
-                        &"an integer value fitting in i32 for EmbeddingQueryMetricType",
-                    ))
-                }
-            }
-        }
-        deserializer.deserialize_any(MetricTypeVisitor)
-    }
 }
+
+enum_converter!(
+    module_name = key_sync_response_status_converter,
+    enum_type = crate::oak::private_memory::key_sync_response::Status,
+    unspecified_variant = crate::oak::private_memory::key_sync_response::Status::Unspecified,
+    doc_string = "a string or an integer representing a key_sync_response::Status variant",
+    valid_variants = &["UNSPECIFIED", "SUCCESS", "INVALID_KEY", "INVALID_PM_UID"]
+);
+
+enum_converter!(
+    module_name = user_registration_response_status_converter,
+    enum_type = crate::oak::private_memory::user_registration_response::Status,
+    unspecified_variant =
+        crate::oak::private_memory::user_registration_response::Status::Unspecified,
+    doc_string = "a string or an integer representing a UserRegistrationResponse::Status variant",
+    valid_variants = &["UNSPECIFIED", "SUCCESS", "USER_ALREADY_EXISTS"]
+);
+
+vec_enum_converter!(
+    module_name = memory_field_converter,
+    enum_type = crate::oak::private_memory::MemoryField,
+    unspecified_variant = crate::oak::private_memory::MemoryField::Unknown,
+    doc_string = "a sequence of strings or integers representing MemoryField variants",
+    element_doc_string = "a string or an integer representing a MemoryField variant",
+    valid_variants = &["UNKNOWN", "ID", "TAGS", "EMBEDDINGS", "CONTENT"]
+);
+
+enum_converter!(
+    module_name = embedding_query_metric_type_converter,
+    enum_type = crate::oak::private_memory::EmbeddingQueryMetricType,
+    unspecified_variant = crate::oak::private_memory::EmbeddingQueryMetricType::DotProduct,
+    doc_string = "a string or an integer representing an EmbeddingQueryMetricType variant",
+    valid_variants = &["DOT_PRODUCT"]
+);
