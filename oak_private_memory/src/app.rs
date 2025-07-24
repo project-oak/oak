@@ -31,10 +31,71 @@ use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{mpsc, Mutex, MutexGuard},
+    sync::{mpsc, Mutex, MutexGuard, RwLock},
     time::Instant,
 };
-use tonic::transport::Channel;
+use tonic::transport::{Channel, Endpoint};
+
+const MAX_CONNECT_RETRIES: usize = 5;
+const INITIAL_BACKOFF_MS: u64 = 100;
+
+pub struct SharedDbClient {
+    database_service_host: SocketAddr,
+    client: RwLock<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
+}
+
+impl SharedDbClient {
+    pub fn new(database_service_host: SocketAddr) -> Self {
+        Self { database_service_host, client: RwLock::new(None) }
+    }
+
+    pub async fn get_or_connect(
+        &self,
+    ) -> anyhow::Result<SealedMemoryDatabaseServiceClient<Channel>> {
+        // First, try to get a read lock and check if the client is already initialized.
+        {
+            let read_guard = self.client.read().await;
+            if let Some(client) = read_guard.as_ref() {
+                info!("Reusing cached DB client");
+                return Ok(client.clone());
+            }
+        }
+
+        // If the client is not initialized, get a write lock to initialize it.
+        let mut write_guard = self.client.write().await;
+        // Check again in case another thread initialized it while we were waiting for
+        // the write lock.
+        if let Some(client) = write_guard.as_ref() {
+            info!("Reusing cached DB client initialized by another thread");
+            return Ok(client.clone());
+        }
+
+        let mut backoff = INITIAL_BACKOFF_MS;
+        let db_addr = self.database_service_host;
+        let db_url = format!("http://{db_addr}");
+        info!("Database service URL: {}", db_url);
+        let endpoint = Endpoint::from_shared(db_url.clone())?;
+        for attempt in 0..MAX_CONNECT_RETRIES {
+            info!("Creating new DB client, attempt {}", attempt + 1);
+
+            match endpoint.connect().await {
+                Ok(channel) => {
+                    let new_client = SealedMemoryDatabaseServiceClient::new(channel);
+                    *write_guard = Some(new_client.clone());
+                    info!("Successfully created and cached new DB client");
+                    return Ok(new_client);
+                }
+                Err(err) => {
+                    info!("Failed to connect to database service: {}", err);
+                }
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
+            backoff *= 2;
+        }
+        bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
+    }
+}
 
 #[async_trait]
 trait MemoryInterface {
@@ -216,9 +277,8 @@ async fn get_or_create_db(
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
 pub struct SealedMemorySessionHandler {
-    database_service_host: SocketAddr,
     session_context: Mutex<Option<UserSessionContext>>,
-    db_client_cache: Mutex<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
+    db_client: Arc<SharedDbClient>,
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
 }
@@ -236,17 +296,11 @@ impl Drop for SealedMemorySessionHandler {
 
 impl SealedMemorySessionHandler {
     pub fn new(
-        database_service_host: SocketAddr,
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+        db_client: Arc<SharedDbClient>,
     ) -> Self {
-        Self {
-            database_service_host,
-            session_context: Default::default(),
-            db_client_cache: Default::default(),
-            metrics,
-            persistence_tx,
-        }
+        Self { session_context: Default::default(), db_client, metrics, persistence_tx }
     }
 
     pub async fn session_context_established(&self) -> bool {
@@ -255,40 +309,6 @@ impl SealedMemorySessionHandler {
 
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
         self.session_context.lock().await
-    }
-
-    /// Returns a database service client.
-    ///
-    /// If a client has been established for this handler instance, a clone of
-    /// it is returned. Otherwise, a new client is established, cached for
-    /// future use by this handler instance, and then returned.
-    pub async fn get_db_client(
-        &self,
-    ) -> anyhow::Result<SealedMemoryDatabaseServiceClient<Channel>> {
-        let mut guard = self.db_client_cache.lock().await;
-        if let Some(client) = guard.as_ref() {
-            info!("Reusing cached DB client");
-            return Ok(client.clone());
-        }
-
-        info!("Creating new DB client");
-        let db_addr = self.database_service_host;
-        // The format "http://<host>:<port>" is expected by tonic.
-        let db_url = format!("http://{db_addr}");
-        info!("Database service URL: {}", db_url);
-
-        let endpoint = Channel::from_shared(db_url.clone())
-            .with_context(|| format!("Failed to create endpoint from URL: {}", db_url))?;
-
-        let channel = endpoint
-            .connect()
-            .await
-            .with_context(|| format!("Failed to connect to database service at {}", db_url))?;
-
-        let new_client = SealedMemoryDatabaseServiceClient::new(channel);
-        *guard = Some(new_client.clone());
-        info!("Successfully created and cached new DB client");
-        Ok(new_client)
     }
 
     pub async fn get_message_type(&self) -> MessageType {
@@ -479,7 +499,8 @@ impl SealedMemorySessionHandler {
         }
 
         let mut db_client = self
-            .get_db_client()
+            .db_client
+            .get_or_connect()
             .await
             .context("Failed to get DB client for bootstrap operation")?;
 
@@ -558,8 +579,11 @@ impl SealedMemorySessionHandler {
             bail!("Not a valid key!");
         }
 
-        let db_client =
-            self.get_db_client().await.context("Failed to get DB client for key sync")?;
+        let db_client = self
+            .db_client
+            .get_or_connect()
+            .await
+            .context("Failed to get DB client for key sync")?;
         let key_derivation_info;
         let dek: Vec<u8>;
 

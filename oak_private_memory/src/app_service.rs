@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{net::SocketAddr, pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
 use app_config::ApplicationConfig;
@@ -34,14 +34,14 @@ use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
-use super::{SealedMemorySessionHandler, UserSessionContext};
+use super::{SealedMemorySessionHandler, SharedDbClient, UserSessionContext};
 
 // The struct that holds the service implementation.
 // One instance of this is created on startup.
 struct SealedMemoryServiceImplementation {
-    application_config: ApplicationConfig,
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    db_client: Arc<SharedDbClient>,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -50,15 +50,15 @@ impl SealedMemoryServiceImplementation {
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     ) -> Self {
-        Self { application_config, metrics, persistence_tx }
+        Self {
+            metrics,
+            persistence_tx,
+            db_client: Arc::new(SharedDbClient::new(application_config.database_service_host)),
+        }
     }
 
     fn new_oak_session_handler(&self) -> anyhow::Result<OakSessionHandler> {
-        OakSessionHandler::new(
-            &self.metrics,
-            self.application_config.database_service_host,
-            &self.persistence_tx,
-        )
+        OakSessionHandler::new(&self.metrics, &self.persistence_tx, self.db_client.clone())
     }
 }
 
@@ -75,8 +75,8 @@ struct OakSessionHandler {
 impl OakSessionHandler {
     pub fn new(
         metrics: &Arc<metrics::Metrics>,
-        database_service_host: SocketAddr,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
+        db_client: Arc<SharedDbClient>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             metrics: metrics.clone(),
@@ -84,9 +84,9 @@ impl OakSessionHandler {
                 SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
             )?,
             application_handler: SealedMemorySessionHandler::new(
-                database_service_host,
                 metrics.clone(),
                 persistence_tx.clone(),
+                db_client,
             ),
         })
     }
