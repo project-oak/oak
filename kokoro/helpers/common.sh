@@ -26,13 +26,21 @@ function _install_tmp_bazelrc() {
 }
 
 function configure_bazelrc() {
+  # Kokoro will populate this for us.
   JOB_TYPE=${KOKORO_JOB_TYPE:-local}
+
+  # If we are using job grouping, this may be a child job.
+  # So we can get the actual type from a different env variable.
   if [ "$JOB_TYPE" == "SUB_JOB" ]; then
     JOB_TYPE=${KOKORO_ROOT_JOB_TYPE:-local}
   fi
 
   echo "Using JOB_TYPE: ${JOB_TYPE}"
 
+  # Create the .tmp.ci.bazelrc that selects the desired configuration for the
+  # given job type. This configuration controls things like logging style and
+  # remote cache usage.
+  # See .ci.bazelrc for more details.
   if [ "$JOB_TYPE" == "PRESUBMIT_GERRIT_ON_BORG" ]; then
     _install_tmp_bazelrc "build --config=unsafe-fast-presubmit"
   elif [ "$JOB_TYPE" == "CONTINUOUS_INTEGRATION" ]; then
