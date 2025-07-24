@@ -25,7 +25,7 @@ use database::{
 };
 use encryption::{decrypt, encrypt, generate_nonce};
 use log::{debug, info};
-use metrics::RequestMetricName;
+use metrics::{get_global_metrics, RequestMetricName};
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
@@ -92,6 +92,7 @@ impl SharedDbClient {
 
             tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
             backoff *= 2;
+            get_global_metrics().inc_db_connect_retries();
         }
         bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
     }
@@ -233,9 +234,14 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
     let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
-    info!("Saving db size: {}", database.data.len());
+    let db_size = database.data.len() as u64;
+    info!("Saving db size: {}", db_size);
+    get_global_metrics().record_db_size(db_size);
 
+    let now = Instant::now();
     user_context.database_service_client.add_blob(database, Some(user_context.uid.clone())).await?;
+    let elapsed = now.elapsed();
+    get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
 
     Ok(())
 }
@@ -259,8 +265,11 @@ async fn get_or_create_db(
     if let Ok(data_blob) = db_client.get_blob(uid, true).await {
         let encrypted_info = decrypt_database(data_blob, dek)?;
         if let Some(icing_db) = encrypted_info.icing_db {
+            let now = Instant::now();
             info!("Loaded database successfully!!");
             let db = IcingMetaDatabase::import(&icing_db.encode_to_vec(), None)?;
+            let elapsed = now.elapsed();
+            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
             return Ok((db, false));
         }
     } else {

@@ -38,6 +38,14 @@ pub struct Metrics {
     rpc_failure_count: Counter<u64>,
     // Latency of each RPC.
     rpc_latency: Histogram<u64>,
+    // Size of the database in bytes.
+    db_size: Histogram<u64>,
+    // Latency of Icing database initialization.
+    db_init_latency: Histogram<u64>,
+    // Latency of persisting the database.
+    db_persist_latency: Histogram<u64>,
+    // Number of retries when connecting to the database.
+    db_connect_retries: Counter<u64>,
 }
 
 /// The possible metrics request types.
@@ -73,6 +81,30 @@ impl Metrics {
             // Update the version of opentelemetry to support custom buckets.
             //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
             .init();
+        let db_size = observer
+            .meter
+            .u64_histogram("db_size")
+            .with_description("Size of the database in bytes.")
+            .with_unit("By")
+            .init();
+        let db_init_latency = observer
+            .meter
+            .u64_histogram("db_init_latency")
+            .with_description("Latency of Icing database initialization.")
+            .with_unit("ms")
+            .init();
+        let db_persist_latency = observer
+            .meter
+            .u64_histogram("db_persist_latency")
+            .with_description("Latency of persisting the database.")
+            .with_unit("ms")
+            .init();
+        let db_connect_retries = observer
+            .meter
+            .u64_counter("db_connect_retries")
+            .with_description("Number of retries when connecting to the database.")
+            .init();
+
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
@@ -81,7 +113,19 @@ impl Metrics {
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
-        Self { rpc_count, rpc_failure_count, rpc_latency }
+        observer.register_metric(db_size.clone());
+        observer.register_metric(db_init_latency.clone());
+        observer.register_metric(db_persist_latency.clone());
+        observer.register_metric(db_connect_retries.clone());
+        Self {
+            rpc_count,
+            rpc_failure_count,
+            rpc_latency,
+            db_size,
+            db_init_latency,
+            db_persist_latency,
+            db_connect_retries,
+        }
     }
 
     /// Increment the number of requests received of the given type.
@@ -126,6 +170,22 @@ impl Metrics {
 
         self.rpc_latency
             .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+    }
+
+    pub fn record_db_size(&self, size: u64) {
+        self.db_size.record(size, &[]);
+    }
+
+    pub fn record_db_init_latency(&self, latency: u64) {
+        self.db_init_latency.record(latency, &[]);
+    }
+
+    pub fn record_db_persist_latency(&self, latency: u64) {
+        self.db_persist_latency.record(latency, &[]);
+    }
+
+    pub fn inc_db_connect_retries(&self) {
+        self.db_connect_retries.add(1, &[]);
     }
 }
 
