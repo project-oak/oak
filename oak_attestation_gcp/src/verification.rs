@@ -42,13 +42,13 @@ pub enum AttestationVerificationError {
     X509Base64DecodeError(#[from] base64::DecodeError),
     #[error("Failed to decode der: {0}")]
     X509DerDecodeError(x509_cert::der::Error),
-    #[error("Certificate validity not_before: {not_before:?} > {current_time:?}")]
+    #[error("Certificate validity not_before: {not_before} > {current_time}")]
     X509ValidityNotBefore { not_before: Instant, current_time: Instant },
-    #[error("Certificate validity not_after: {not_after:?} > {current_time:?}")]
+    #[error("Certificate validity not_after: {not_after} > {current_time}")]
     X509ValidityNotAfter { not_after: Instant, current_time: Instant },
-    #[error("Token validity nbf: {nbf:?} > {current_time:?}")]
+    #[error("Token validity nbf: {nbf} > {current_time}")]
     JWTValidityNotBefore { nbf: Instant, current_time: Instant },
-    #[error("Token validity exp: {exp:?} < {current_time:?}")]
+    #[error("Token validity exp: {exp} < {current_time}")]
     JWTValidityExpiration { exp: Instant, current_time: Instant },
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),

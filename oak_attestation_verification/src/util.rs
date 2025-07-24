@@ -128,7 +128,7 @@ pub fn verify_timestamp(
         let not_before_absolute_time = Instant::from(not_before_absolute);
         if timestamp < not_before_absolute_time {
             anyhow::bail!(
-                "Timestamp is too early: timestamp = {:?}, must not be before = {:?}",
+                "Timestamp is too early: timestamp = {}, must not be before = {}",
                 timestamp,
                 not_before_absolute_time
             );
@@ -141,7 +141,7 @@ pub fn verify_timestamp(
         let offset = Duration::from(not_before_relative);
         if timestamp < current_time + offset {
             anyhow::bail!(
-                "Timestamp is out of range: timestamp = {:?}, range [{:?}, {:?}]",
+                "Timestamp is out of range: timestamp = {}, range [{}, {}]",
                 timestamp,
                 current_time + offset,
                 current_time

@@ -117,9 +117,9 @@ fn test_verify_certificate_zero_validity_failure() {
         CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let certificate = create_test_certificate(
-        // `not_after` is equal to `not_before`.
+        // `not_after` is before `not_before`.
         TEST_CURRENT_TIME,
-        TEST_CURRENT_TIME,
+        TEST_CURRENT_TIME - Duration::from_millis(1),
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
@@ -336,9 +336,9 @@ fn test_report_certificate_zero_validity_failure() {
         CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
 
     let certificate = create_test_certificate(
-        // `not_after` is equal to `not_before`.
+        // `not_after` is before `not_before`.
         TEST_CURRENT_TIME,
-        TEST_CURRENT_TIME,
+        TEST_CURRENT_TIME - Duration::from_millis(1),
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,

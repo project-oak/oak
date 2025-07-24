@@ -65,3 +65,10 @@ If you learn anything new about the codebase, please update this file with those
 ## Style Guide
 
 * Do not use the word "learning". Use "lesson" instead.
+
+## Git
+
+### Commits
+
+* When writing commit messages, any backticks (`) must be escaped with a
+  backslash (\`) to ensure they are correctly written.

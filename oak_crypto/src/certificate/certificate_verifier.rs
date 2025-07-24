@@ -36,13 +36,17 @@ pub enum CertificateVerificationError {
     SubjectPublicKeyMismatch { expected: String, actual: String },
     #[error("Purpose ID mismatch; expected {expected} but got {actual}")]
     PurposeIdMismatch { expected: String, actual: String },
-    #[error("Invalid certificate validity period; {not_before:?} is not strictly earlier than {not_after:?}")]
+    #[error("Invalid certificate validity period; not_before {not_before} is after not_after {not_after}")]
     ValidityPeriodInvalid { not_before: Instant, not_after: Instant },
     #[error("Certificate validity period {period:?} exceeds the limit {limit:?}")]
     ValidityPeriodTooLong { period: Duration, limit: Duration },
-    #[error("Certificate validity period begins at (skewed) {skewed_not_before:?}, after {current_time:?}")]
+    #[error(
+        "Certificate validity period begins at (skewed) {skewed_not_before}, after {current_time}"
+    )]
     ValidityPeriodNotYetStarted { skewed_not_before: Instant, current_time: Instant },
-    #[error("Certificate validity period ends at (skewed) {skewed_not_after:?}, before {current_time:?}")]
+    #[error(
+        "Certificate validity period ends at (skewed) {skewed_not_after}, before {current_time}"
+    )]
     ValidityPeriodExpired { skewed_not_after: Instant, current_time: Instant },
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),
@@ -225,7 +229,7 @@ impl<V: Verifier> CertificateVerifier<V> {
             .ok_or(CertificateVerificationError::MissingField("Validity.not_after"))?
             .into();
 
-        if not_before >= not_after {
+        if not_before > not_after {
             return Err(CertificateVerificationError::ValidityPeriodInvalid {
                 not_before,
                 not_after,
