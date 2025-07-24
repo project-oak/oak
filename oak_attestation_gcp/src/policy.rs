@@ -40,7 +40,7 @@ use crate::verification::{
 
 #[derive(Debug)]
 pub struct ConfidentialSpaceVerificationReport {
-    session_binding_public_key: Vec<u8>,
+    pub session_binding_public_key: Vec<u8>,
     pub public_key_verification: Result<(), ConfidentialSpaceVerificationError>,
     pub token_report: AttestationTokenVerificationReport,
 }

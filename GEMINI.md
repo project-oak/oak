@@ -24,6 +24,11 @@ This project uses `googletest` whenever possible for both C++ and Rust tests.
 
 While `just build-and-test` is available to run all tests, it can be slow. For a faster, more targeted approach, you can run tests for a specific package using `bazel test //path/to/package:all`. For example, to run only the tests for the `oak_time` crate, use `bazel test //oak_time:all`.
 
+Note: The following two test targets are expected to fail when running `just build-and-test` in the local development environment. This is known behavior and can be disregarded:
+
+* `//oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests_tests/integration_test_test`
+* `//oak_functions_containers_launcher:oak_functions_containers_launcher_test_tests/integration_test_test`
+
 ## Rust
 
 If possible, Rust code should be compatible with `no_std`. Many of the traits

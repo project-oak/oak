@@ -39,7 +39,7 @@ use crate::{policy::SESSION_BINDING_PUBLIC_KEY_ID, util::decode_event_proto};
 
 #[derive(Debug)]
 pub struct SessionBindingPublicKeyVerificationReport {
-    session_binding_public_key: Vec<u8>,
+    pub session_binding_public_key: Vec<u8>,
     pub endorsement: Result<CertificateVerificationReport, CertificateVerificationError>,
 }
 
