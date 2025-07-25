@@ -21,6 +21,8 @@ use crate::acpi::{files::Files, Firmware};
 
 mod add_checksum;
 mod add_pci_holes;
+mod add_pci_root_stage1;
+mod add_pci_root_stage2;
 mod add_pointer;
 mod allocate;
 mod write_pointer;
@@ -30,6 +32,8 @@ pub type RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 
 pub use add_checksum::AddChecksum;
 pub use add_pci_holes::AddPciHoles;
+pub use add_pci_root_stage1::AddPciRootStage1;
+pub use add_pci_root_stage2::AddPciRootStage2;
 pub use add_pointer::AddPointer;
 pub use allocate::Allocate;
 pub use write_pointer::WritePointer;
@@ -44,6 +48,8 @@ pub enum CommandTag {
 
     // Extended VMM-specific commands
     AddPciHoles = 0x80000001,
+    AddPciRootStage1 = 0x80000003,
+    AddPciRootStage2 = 0x80000004,
 }
 
 impl CommandTag {
@@ -70,6 +76,8 @@ union Body {
     checksum: AddChecksum,
     wr_pointer: WritePointer,
     pci_holes: AddPciHoles,
+    pci_root_stage1: AddPciRootStage1,
+    pci_root_stage2: AddPciRootStage2,
     padding: Pad,
 }
 
@@ -126,6 +134,8 @@ impl core::fmt::Debug for RomfileCommand {
                     Some(CommandTag::AddChecksum) => unsafe { &self.body.checksum },
                     Some(CommandTag::WritePointer) => unsafe { &self.body.wr_pointer },
                     Some(CommandTag::AddPciHoles) => unsafe { &self.body.pci_holes },
+                    Some(CommandTag::AddPciRootStage1) => unsafe { &self.body.pci_root_stage1 },
+                    Some(CommandTag::AddPciRootStage2) => unsafe { &self.body.pci_root_stage2 },
                     _ => unsafe { &self.body.padding },
                 },
             )
@@ -167,6 +177,8 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
             Some(CommandTag::AddChecksum) => unsafe { &self.body.checksum },
             Some(CommandTag::WritePointer) => unsafe { &self.body.wr_pointer },
             Some(CommandTag::AddPciHoles) => unsafe { &self.body.pci_holes },
+            Some(CommandTag::AddPciRootStage1) => unsafe { &self.body.pci_root_stage1 },
+            Some(CommandTag::AddPciRootStage2) => unsafe { &self.body.pci_root_stage2 },
             _ => return Err("Invalid command tag in table-loader"),
         };
         command.invoke(files, fwcfg, acpi_digest)
