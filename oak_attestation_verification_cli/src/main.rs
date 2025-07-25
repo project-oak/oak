@@ -348,7 +348,8 @@ fn print_signature_based_attestation_report(
 fn print_certificate_verification_report(indent: usize, report: &CertificateVerificationReport) {
     print_indented!(indent, "📜 Certificate:");
     let indent = indent + 1;
-    let CertificateVerificationReport { validity, verification } = report;
+    let CertificateVerificationReport { validity, verification, freshness: freshness_option } =
+        report;
     match validity {
         Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
         Ok(()) => print_indented!(indent, "✅ is valid"),
@@ -356,6 +357,12 @@ fn print_certificate_verification_report(indent: usize, report: &CertificateVeri
     match verification {
         Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
         Ok(()) => print_indented!(indent, "✅ verified successfully"),
+    }
+    if let Some(freshness) = freshness_option {
+        match freshness {
+            Err(err) => print_indented!(indent, "❌ proof of freshness failed to verify: {}", err),
+            Ok(()) => print_indented!(indent, "✅ is fresh"),
+        }
     }
 }
 

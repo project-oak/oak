@@ -409,6 +409,7 @@ fn session_binding_key_policy_report_succeeds() {
             endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
                 verification: Ok(()),
+                freshness: None,
             }),
             ..
         })
@@ -496,7 +497,8 @@ fn session_binding_key_policy_report_fails_with_incorrect_public_key() {
         Ok(SessionBindingPublicKeyVerificationReport {
             endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
-                verification: Err(_)
+                verification: Err(_),
+                freshness: None,
             }),
             ..
         })
@@ -541,7 +543,8 @@ fn session_binding_key_policy_report_fails_with_invalid_signature() {
         Ok(SessionBindingPublicKeyVerificationReport {
             endorsement: Ok(CertificateVerificationReport {
                 validity: Ok(()),
-                verification: Err(_)
+                verification: Err(_),
+                freshness: None,
             }),
             ..
         })

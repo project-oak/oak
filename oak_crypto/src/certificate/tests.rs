@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use core::assert_matches::assert_matches;
 
 use oak_proto_rust::oak::crypto::v1::{
-    Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
+    Certificate, CertificatePayload, ProofOfFreshness, SignatureInfo, SubjectPublicKeyInfo,
+    Validity,
 };
 use oak_time::{Duration, Instant};
 use prost::Message;
@@ -26,6 +27,7 @@ use prost::Message;
 use crate::{
     certificate::certificate_verifier::{
         CertificateVerificationError, CertificateVerificationReport, CertificateVerifier,
+        ProofOfFreshnessVerification,
     },
     verifier::Verifier,
 };
@@ -57,6 +59,7 @@ fn create_test_certificate(
     public_key: &[u8],
     purpose_id: &[u8],
     signature: &[u8],
+    proof_of_freshness: Option<ProofOfFreshness>,
 ) -> Certificate {
     let validity = Validity {
         not_before: Some(not_before.into_timestamp()),
@@ -67,7 +70,7 @@ fn create_test_certificate(
     let payload = CertificatePayload {
         validity: Some(validity),
         subject_public_key_info: Some(subject_public_key_info),
-        ..Default::default()
+        proof_of_freshness,
     };
     let serialized_payload = payload.encode_to_vec();
 
@@ -85,6 +88,7 @@ fn test_verify_certificate_success() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -102,6 +106,7 @@ fn test_verify_certificate_signature_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_BAD_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -123,6 +128,7 @@ fn test_verify_certificate_zero_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
     let result = verifier.verify(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
     assert!(result.is_err(), "Expected verification to fail, but got success");
@@ -141,6 +147,7 @@ fn test_verify_certificate_negative_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
     let result = verifier.verify(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
     assert!(result.is_err(), "Expected verification to fail, but got success");
@@ -154,6 +161,7 @@ fn test_verify_certificate_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -171,6 +179,7 @@ fn test_verify_certificate_public_key_failure() {
         TEST_BAD_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -188,6 +197,7 @@ fn test_verify_certificate_purpose_failure() {
         TEST_PUBLIC_KEY,
         TEST_BAD_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -205,6 +215,7 @@ fn test_verify_certificate_clock_skew() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let allowed_clock_skew = Duration::from_millis(5);
@@ -254,6 +265,7 @@ fn test_verify_certificate_validity_limit() {
             TEST_PUBLIC_KEY,
             TEST_PURPOSE_ID,
             TEST_SIGNATURE,
+            None,
         )
     }
 
@@ -295,6 +307,7 @@ fn test_report_certificate_success() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -303,7 +316,11 @@ fn test_report_certificate_success() {
     let result = verifier.report(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
     assert_matches!(
         result,
-        Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) })
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: None
+        })
     );
 }
 
@@ -315,6 +332,7 @@ fn test_report_certificate_signature_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_BAD_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -326,6 +344,7 @@ fn test_report_certificate_signature_failure() {
         Ok(CertificateVerificationReport {
             validity: Ok(()),
             verification: Err(CertificateVerificationError::SignatureVerificationError(_)),
+            freshness: None,
         })
     );
 }
@@ -342,6 +361,7 @@ fn test_report_certificate_zero_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
     let result = verifier.report(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
     assert_matches!(
@@ -349,6 +369,7 @@ fn test_report_certificate_zero_validity_failure() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodInvalid { .. }),
             verification: Ok(()),
+            freshness: None,
         })
     );
 }
@@ -365,6 +386,7 @@ fn test_report_certificate_negative_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
     let result = verifier.report(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
     assert_matches!(
@@ -372,6 +394,7 @@ fn test_report_certificate_negative_validity_failure() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodInvalid { .. }),
             verification: Ok(()),
+            freshness: None,
         })
     );
 }
@@ -384,6 +407,7 @@ fn test_report_certificate_validity_failure() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -395,6 +419,7 @@ fn test_report_certificate_validity_failure() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodExpired { .. }),
             verification: Ok(()),
+            freshness: None,
         })
     );
 }
@@ -407,6 +432,7 @@ fn test_report_certificate_public_key_failure() {
         TEST_BAD_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -418,6 +444,7 @@ fn test_report_certificate_public_key_failure() {
         Ok(CertificateVerificationReport {
             validity: Ok(()),
             verification: Err(CertificateVerificationError::SubjectPublicKeyMismatch { .. }),
+            freshness: None,
         })
     );
 }
@@ -430,6 +457,7 @@ fn test_report_certificate_purpose_failure() {
         TEST_PUBLIC_KEY,
         TEST_BAD_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let verifier =
@@ -441,6 +469,7 @@ fn test_report_certificate_purpose_failure() {
         Ok(CertificateVerificationReport {
             validity: Ok(()),
             verification: Err(CertificateVerificationError::PurposeIdMismatch { .. }),
+            freshness: None,
         })
     );
 }
@@ -453,6 +482,7 @@ fn test_report_certificate_clock_skew() {
         TEST_PUBLIC_KEY,
         TEST_PURPOSE_ID,
         TEST_SIGNATURE,
+        None,
     );
 
     let allowed_clock_skew = Duration::from_millis(5);
@@ -468,7 +498,11 @@ fn test_report_certificate_clock_skew() {
     );
     assert_matches!(
         result,
-        Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) })
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: None,
+        })
     );
 
     let result = verifier.report(
@@ -479,7 +513,11 @@ fn test_report_certificate_clock_skew() {
     );
     assert_matches!(
         result,
-        Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) })
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: None,
+        })
     );
 
     let result = verifier.report(
@@ -493,6 +531,7 @@ fn test_report_certificate_clock_skew() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodNotYetStarted { .. }),
             verification: Ok(()),
+            freshness: None,
         })
     );
 
@@ -507,6 +546,7 @@ fn test_report_certificate_clock_skew() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodExpired { .. }),
             verification: Ok(()),
+            freshness: None,
         })
     );
 }
@@ -520,6 +560,7 @@ fn test_report_certificate_validity_limit() {
             TEST_PUBLIC_KEY,
             TEST_PURPOSE_ID,
             TEST_SIGNATURE,
+            None,
         )
     }
 
@@ -536,7 +577,11 @@ fn test_report_certificate_validity_limit() {
     );
     assert_matches!(
         result,
-        Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) })
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: None,
+        })
     );
 
     let result = verifier.report(
@@ -547,7 +592,11 @@ fn test_report_certificate_validity_limit() {
     );
     assert_matches!(
         result,
-        Ok(CertificateVerificationReport { validity: Ok(()), verification: Ok(()) })
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: None,
+        })
     );
 
     let result = verifier.report(
@@ -561,6 +610,38 @@ fn test_report_certificate_validity_limit() {
         Ok(CertificateVerificationReport {
             validity: Err(CertificateVerificationError::ValidityPeriodTooLong { .. }),
             verification: Ok(()),
+            freshness: None,
+        })
+    );
+}
+
+#[test]
+fn test_report_certificate_freshness_unimplemented() {
+    let proof_of_freshness = ProofOfFreshness {
+        nist_chain_index: 2,
+        nist_pulse_index: 100,
+        nist_pulse_output_value: vec![1, 2, 3],
+    };
+    let certificate = create_test_certificate(
+        TEST_CURRENT_TIME - Duration::from_millis(1),
+        TEST_CURRENT_TIME + Duration::from_millis(1),
+        TEST_PUBLIC_KEY,
+        TEST_PURPOSE_ID,
+        TEST_SIGNATURE,
+        Some(proof_of_freshness),
+    );
+
+    let mut verifier =
+        CertificateVerifier::new(MockVerifier { expected_signature: TEST_SIGNATURE.to_vec() });
+    verifier.set_proof_of_freshness_verification(ProofOfFreshnessVerification::Verify);
+
+    let result = verifier.report(TEST_CURRENT_TIME, TEST_PUBLIC_KEY, TEST_PURPOSE_ID, &certificate);
+    assert_matches!(
+        result,
+        Ok(CertificateVerificationReport {
+            validity: Ok(()),
+            verification: Ok(()),
+            freshness: Some(Err(CertificateVerificationError::ProofOfFreshnessUnimplemented)),
         })
     );
 }

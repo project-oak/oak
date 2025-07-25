@@ -17,7 +17,7 @@
 use alloc::{format, string::String};
 
 use oak_proto_rust::oak::crypto::v1::{
-    Certificate, CertificatePayload, SubjectPublicKeyInfo, Validity,
+    Certificate, CertificatePayload, ProofOfFreshness, SubjectPublicKeyInfo, Validity,
 };
 use oak_time::{Duration, Instant};
 use prost::{DecodeError, Message};
@@ -48,6 +48,9 @@ pub enum CertificateVerificationError {
         "Certificate validity period ends at (skewed) {skewed_not_after}, before {current_time}"
     )]
     ValidityPeriodExpired { skewed_not_after: Instant, current_time: Instant },
+    // TODO: b/424736845 - Remove this once proof of freshness is implemented.
+    #[error("Proof of freshness verification is not implemented")]
+    ProofOfFreshnessUnimplemented,
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),
 }
@@ -64,21 +67,40 @@ impl From<DecodeError> for CertificateVerificationError {
 pub struct CertificateVerificationReport {
     pub validity: Result<(), CertificateVerificationError>,
     pub verification: Result<(), CertificateVerificationError>,
+    pub freshness: Option<Result<(), CertificateVerificationError>>,
 }
 
 impl CertificateVerificationReport {
     pub fn into_checked(self) -> Result<(), CertificateVerificationError> {
         match self {
-            CertificateVerificationReport { validity: Ok(()), verification: Ok(()) } => Ok(()),
-            CertificateVerificationReport { validity, verification } => {
+            CertificateVerificationReport {
+                validity: Ok(()),
+                verification: Ok(()),
+                freshness: None,
+            }
+            | CertificateVerificationReport {
+                validity: Ok(()),
+                verification: Ok(()),
+                freshness: Some(Ok(())),
+            } => Ok(()),
+            CertificateVerificationReport { validity, verification, freshness } => {
                 validity?;
                 verification?;
+                if let Some(freshness_val) = freshness {
+                    freshness_val?;
+                }
                 Err(CertificateVerificationError::UnknownError(
                     "CertificateVerificationReport verification failed",
                 ))
             }
         }
     }
+}
+
+#[derive(Clone)]
+pub enum ProofOfFreshnessVerification {
+    Ignore,
+    Verify,
 }
 
 /// Struct that verifies the validity of the [`Certificate`] proto, which
@@ -99,6 +121,8 @@ pub struct CertificateVerifier<V: Verifier> {
     /// `max_validity_duration`. This only checks the validity provided by the
     /// certificate itself, i.e. doesn't consider the `allowed_clock_skew`.
     max_validity_duration: Option<Duration>,
+    // Whether to verify the proof of freshness in the certificate.
+    proof_of_freshness_verification: ProofOfFreshnessVerification,
 }
 
 impl<V: Verifier> CertificateVerifier<V> {
@@ -108,6 +132,7 @@ impl<V: Verifier> CertificateVerifier<V> {
             signature_verifier,
             allowed_clock_skew: Duration::default(),
             max_validity_duration: None,
+            proof_of_freshness_verification: ProofOfFreshnessVerification::Ignore,
         }
     }
 
@@ -127,6 +152,15 @@ impl<V: Verifier> CertificateVerifier<V> {
     // set_max_validity_duration().
     pub fn set_validity_limit(&mut self, max_validity_duration: Duration) {
         self.max_validity_duration = Some(max_validity_duration);
+    }
+
+    // Sets extra checks that the verifier can perform as part of the `verify`
+    // function.
+    pub fn set_proof_of_freshness_verification(
+        &mut self,
+        proof_of_freshness_verification: ProofOfFreshnessVerification,
+    ) {
+        self.proof_of_freshness_verification = proof_of_freshness_verification;
     }
 }
 
@@ -162,6 +196,7 @@ impl<V: Verifier> CertificateVerifier<V> {
         let validity = payload
             .validity
             .ok_or(CertificateVerificationError::MissingField("CertificatePayload.validity"))?;
+        let proof_of_freshness_option = payload.proof_of_freshness;
 
         Ok(CertificateVerificationReport {
             validity: self.verify_validity(current_time, &validity),
@@ -180,6 +215,17 @@ impl<V: Verifier> CertificateVerifier<V> {
                     purpose_id,
                     subject_public_key_info,
                 )?;
+            },
+            freshness: match self.proof_of_freshness_verification {
+                ProofOfFreshnessVerification::Ignore => None,
+                ProofOfFreshnessVerification::Verify => {
+                    let proof_of_freshness = proof_of_freshness_option.ok_or(
+                        CertificateVerificationError::MissingField(
+                            "Certificate.proof_of_freshness",
+                        ),
+                    )?;
+                    Some(self.verify_proof_of_freshness(proof_of_freshness))
+                }
             },
         })
     }
@@ -266,5 +312,13 @@ impl<V: Verifier> CertificateVerifier<V> {
         }
 
         Ok(())
+    }
+
+    fn verify_proof_of_freshness(
+        &self,
+        _proof_of_freshness: ProofOfFreshness,
+    ) -> Result<(), CertificateVerificationError> {
+        // TODO: b/424736845 - Verify proof of freshness evidence.
+        Err(CertificateVerificationError::ProofOfFreshnessUnimplemented)
     }
 }
