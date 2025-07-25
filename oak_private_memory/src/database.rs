@@ -37,6 +37,43 @@ use tempfile::tempdir;
 // memory.
 pub type MemoryId = String;
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum PageToken {
+    Start,
+    Token(u64),
+    Invalid,
+}
+
+impl TryFrom<String> for PageToken {
+    type Error = anyhow::Error;
+    fn try_from(s: String) -> anyhow::Result<Self> {
+        if s.is_empty() {
+            Ok(PageToken::Start)
+        } else {
+            match s.parse::<u64>() {
+                Ok(token) => Ok(PageToken::Token(token)),
+                Err(_) => Ok(PageToken::Invalid),
+            }
+        }
+    }
+}
+
+impl From<PageToken> for String {
+    fn from(token: PageToken) -> Self {
+        match token {
+            PageToken::Start => "".to_string(),
+            PageToken::Token(t) => t.to_string(),
+            PageToken::Invalid => "".to_string(),
+        }
+    }
+}
+
+impl From<u64> for PageToken {
+    fn from(token: u64) -> Self {
+        PageToken::Token(token)
+    }
+}
+
 /// The essential database that stores all the meta information
 /// except the raw document content of a user.
 ///
@@ -201,7 +238,12 @@ impl IcingMetaDatabase {
         &self,
         tag: &str,
         mut page_size: i32,
-    ) -> anyhow::Result<Vec<BlobId>> {
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<BlobId>, PageToken)> {
+        if page_token == PageToken::Invalid {
+            bail!("Invalid page token provided");
+        }
+
         let search_spec = icing::SearchSpecProto {
             query: Some(tag.to_string()),
             // Match exactly as defined in the schema for tags.
@@ -223,11 +265,15 @@ impl IcingMetaDatabase {
             ..Default::default()
         };
 
-        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
-            &search_spec,
-            &icing::get_default_scoring_spec(), // Use default scoring for now
-            &result_spec,
-        );
+        let search_result: icing::SearchResultProto = match page_token {
+            PageToken::Start => self.icing_search_engine.search(
+                &search_spec,
+                &icing::get_default_scoring_spec(), // Use default scoring for now
+                &result_spec,
+            ),
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Invalid => unreachable!(), // Already handled
+        };
 
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
@@ -235,7 +281,13 @@ impl IcingMetaDatabase {
             bail!("Icing search failed: {:?}", search_result.status);
         }
 
-        Ok(Self::extract_blob_ids_from_search_result(search_result))
+        let next_page_token =
+            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+        if blob_ids.is_empty() {
+            return Ok((blob_ids, PageToken::Start));
+        }
+        Ok((blob_ids, next_page_token))
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
@@ -304,7 +356,7 @@ impl IcingMetaDatabase {
     pub fn embedding_search(
         &self,
         request: &SearchMemoryRequest,
-    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>)> {
+    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
         let search_query_container =
             request.query.as_ref().context("SearchMemoryRequest must contain a 'query' field")?;
 
@@ -362,8 +414,14 @@ impl IcingMetaDatabase {
 
         // We only need the `BlobId`.
         result_spec.type_property_masks.push(Self::create_blob_id_projection());
-        let search_result: icing::SearchResultProto =
-            self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
+        let page_token = request.page_token.clone().try_into()?;
+        let search_result = match page_token {
+            PageToken::Start => {
+                self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec)
+            }
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Invalid => unreachable!(), // Already handled
+        };
 
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
@@ -376,9 +434,14 @@ impl IcingMetaDatabase {
             .iter()
             .map(|x| x.score.map(|s| s as f32).context("no score"))
             .collect::<anyhow::Result<Vec<_>>>()?;
+        let next_page_token =
+            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         ensure!(blob_ids.len() == scores.len());
-        Ok((blob_ids, scores))
+        if blob_ids.is_empty() {
+            return Ok((blob_ids, scores, PageToken::Start));
+        }
+        Ok((blob_ids, scores, next_page_token))
     }
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
@@ -678,8 +741,8 @@ mod tests {
         let blob_id2 = 12346.to_string();
         icing_database.add_memory(&memory2, blob_id2.clone())?;
 
-        let result = icing_database.get_memories_by_tag("the_tag".to_string(), 10)?;
-        expect_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
+        let (result, _) = icing_database.get_memories_by_tag("the_tag", 10, PageToken::Start)?;
+        assert_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
         Ok(())
     }
 
@@ -715,10 +778,9 @@ mod tests {
             imported_database.get_blob_id_by_memory_id(memory_id1)?,
             eq(&Some(blob_id1.clone()))
         );
-        expect_that!(
-            imported_database.get_memories_by_tag("export_tag".to_string(), 10)?,
-            unordered_elements_are![eq(&blob_id1)]
-        );
+        let (result, _) =
+            imported_database.get_memories_by_tag("export_tag", 10, PageToken::Start)?;
+        assert_that!(result, unordered_elements_are![eq(&blob_id1)]);
         Ok(())
     }
 
@@ -799,18 +861,18 @@ mod tests {
             ..Default::default()
         };
         // Query embedding close to embedding1
-        let (blob_ids, scores) = icing_database.embedding_search(&request)?;
+        let (blob_ids, scores, _) = icing_database.embedding_search(&request)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
-        expect_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
+        assert_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
-        expect_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
+        assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
         request.page_size = 1;
-        let (blob_ids, scores) = icing_database.embedding_search(&request)?;
+        let (blob_ids, scores, _) = icing_database.embedding_search(&request)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
-        expect_that!(blob_ids, elements_are![eq(&blob_id1)]);
+        assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient
-        expect_that!(scores, elements_are![eq(&0.9)]);
+        assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
     }
 }

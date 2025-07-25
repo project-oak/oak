@@ -206,6 +206,13 @@ class IcingSearchEngine {
     return ProtoToVec(inner_->Delete(namespace_str, uri_str));
   }
 
+  // NOTE: There will be a new API that accepts a proto instead of a uint64_t,
+  // but they are not available in the OSS yet.
+  std::unique_ptr<std::vector<uint8_t>> get_next_page_impl(
+      std::uint64_t next_page_token) const {
+    return ProtoToVec(inner_->GetNextPage(next_page_token));
+  }
+
   std::unique_ptr<std::vector<uint8_t>> search_impl(
       rust::Slice<const uint8_t> search_spec,
       rust::Slice<const uint8_t> scoring_spec,

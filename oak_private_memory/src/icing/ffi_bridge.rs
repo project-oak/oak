@@ -45,6 +45,7 @@ mod ffi {
         fn set_schema_impl(&self, schema: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn put_impl(&self, document: &[u8]) -> UniquePtr<CxxVector<u8>>;
         fn delete_impl(&self, ns: &[u8], uri: &[u8]) -> UniquePtr<CxxVector<u8>>;
+        fn get_next_page_impl(&self, next_page_token: u64) -> UniquePtr<CxxVector<u8>>;
         fn reset(&self) -> UniquePtr<CxxVector<u8>>;
         fn search_impl(
             &self,
@@ -193,6 +194,11 @@ impl ffi::IcingSearchEngine {
     pub fn delete(&self, namespace: &[u8], uri: &[u8]) -> DeleteResultProto {
         let result = self.delete_impl(namespace, uri);
         DeleteResultProto::decode(result.as_slice()).unwrap()
+    }
+
+    pub fn get_next_page(&self, next_page_token: u64) -> SearchResultProto {
+        let result = self.get_next_page_impl(next_page_token);
+        SearchResultProto::decode(result.as_slice()).unwrap()
     }
 }
 

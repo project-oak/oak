@@ -237,8 +237,14 @@ impl PrivateMemoryClient {
         tag: &str,
         page_size: i32,
         result_mask: Option<ResultMask>,
+        page_token: &str,
     ) -> Result<GetMemoriesResponse> {
-        let request = GetMemoriesRequest { tag: tag.to_string(), page_size, result_mask };
+        let request = GetMemoriesRequest {
+            tag: tag.to_string(),
+            page_size,
+            result_mask,
+            page_token: page_token.to_string(),
+        };
         let response =
             self.invoke(sealed_memory_request::Request::GetMemoriesRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::GetMemoriesResponse)
@@ -260,8 +266,14 @@ impl PrivateMemoryClient {
         query: SearchMemoryQuery,
         page_size: i32,
         result_mask: Option<ResultMask>,
+        page_token: &str,
     ) -> Result<SearchMemoryResponse> {
-        let request = SearchMemoryRequest { query: Some(query), page_size, result_mask };
+        let request = SearchMemoryRequest {
+            query: Some(query),
+            page_size,
+            result_mask,
+            page_token: page_token.to_string(),
+        };
         let response =
             self.invoke(sealed_memory_request::Request::SearchMemoryRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::SearchMemoryResponse)

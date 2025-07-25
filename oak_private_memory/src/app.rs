@@ -21,7 +21,7 @@ use anyhow::{bail, Context};
 use async_trait::async_trait;
 use database::{
     decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache, DbMigration,
-    IcingMetaDatabase, MemoryId,
+    IcingMetaDatabase, MemoryId, PageToken,
 };
 use encryption::{decrypt, encrypt, generate_nonce};
 use log::{debug, info};
@@ -105,13 +105,14 @@ trait MemoryInterface {
         &mut self,
         tag: &str,
         page_size: i32,
-    ) -> anyhow::Result<Vec<Memory>>;
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<Memory>, PageToken)>;
     async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>>;
     async fn reset_memory(&mut self) -> bool;
     async fn search_memory(
         &mut self,
         request: SearchMemoryRequest,
-    ) -> anyhow::Result<Vec<SearchMemoryResultItem>>;
+    ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)>;
     async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()>;
 }
 
@@ -154,14 +155,17 @@ impl MemoryInterface for DatabaseWithCache {
         &mut self,
         tag: &str,
         page_size: i32,
-    ) -> anyhow::Result<Vec<Memory>> {
-        let all_blob_ids: Vec<BlobId> = self.meta_db().get_memories_by_tag(tag, page_size)?;
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<Memory>, PageToken)> {
+        let (all_blob_ids, next_page_token) =
+            self.meta_db().get_memories_by_tag(tag, page_size, page_token)?;
 
         if all_blob_ids.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), PageToken::Start));
         }
 
-        self.cache.get_memories_by_blob_ids(&all_blob_ids).await
+        let memories = self.cache.get_memories_by_blob_ids(&all_blob_ids).await?;
+        Ok((memories, next_page_token))
     }
 
     async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>> {
@@ -181,8 +185,8 @@ impl MemoryInterface for DatabaseWithCache {
     async fn search_memory(
         &mut self,
         request: SearchMemoryRequest,
-    ) -> anyhow::Result<Vec<SearchMemoryResultItem>> {
-        let (blob_ids, scores) = self.meta_db().embedding_search(&request)?;
+    ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
+        let (blob_ids, scores, next_page_token) = self.meta_db().embedding_search(&request)?;
         let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
 
         if let Some(result_mask) = request.result_mask {
@@ -191,11 +195,12 @@ impl MemoryInterface for DatabaseWithCache {
             }
         }
 
-        Ok(memories
+        let results = memories
             .into_iter()
             .zip(scores.into_iter())
             .map(|(memory, _score)| SearchMemoryResultItem { memory: Some(memory) })
-            .collect())
+            .collect();
+        Ok((results, next_page_token))
     }
 
     async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
@@ -409,14 +414,16 @@ impl SealedMemorySessionHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let mut memories =
-                database.get_memories_by_tag(&request.tag, request.page_size).await?;
+            let page_token = PageToken::try_from(request.page_token)
+                .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
+            let (mut memories, next_page_token) =
+                database.get_memories_by_tag(&request.tag, request.page_size, page_token).await?;
             if let Some(result_mask) = request.result_mask {
                 for memory in memories.iter_mut() {
                     apply_mask_to_memory(memory, &result_mask);
                 }
             }
-            Ok(GetMemoriesResponse { memories })
+            Ok(GetMemoriesResponse { memories, next_page_token: next_page_token.into() })
         } else {
             bail!("You need to call key sync first")
         }
@@ -627,8 +634,8 @@ impl SealedMemorySessionHandler {
             // The extraction of embedding details is now done in
             // IcingMetaDatabase::embedding_search
             let database = &mut context.database;
-            let results = database.search_memory(request).await?;
-            Ok(SearchMemoryResponse { results })
+            let (results, next_page_token) = database.search_memory(request).await?;
+            Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
         } else {
             bail!("You need to call key sync first")
         }

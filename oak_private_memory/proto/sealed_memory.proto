@@ -62,12 +62,25 @@ message AddMemoryResponse {
 
 message GetMemoriesRequest {
   string tag = 1;
+  // The maximum number of memories to return. The service may return fewer than
+  // this value.
+  // The `page_size` should keep the same as the previous request if
+  // `page_token` is set.
   int32 page_size = 2;
   ResultMask result_mask = 3;
+  // A page token, received from a previous `GetMemories` call.
+  // Provide this to retrieve the subsequent page.
+  //
+  // When paginating, all other parameters provided to `GetMemories` must match
+  // the call that provided the page token.
+  string page_token = 4;
 }
 
 message GetMemoriesResponse {
   repeated Memory memories = 1;
+  // A token to retrieve the next page of results.
+  // If this field is omitted, there are no more results.
+  string next_page_token = 2;
 }
 
 message ResetMemoryRequest {}
@@ -176,10 +189,17 @@ message ResultMask {
 
 message SearchMemoryRequest {
   SearchMemoryQuery query = 1;
-  // Pagination: Maximum number of results to return per page, or max results to
-  // return total for single page of query.
+  // The maximum number of memories to return. The service may return fewer than
+  // this value.
+  // The `page_size` should keep the same as the previous request if
+  // `page_token` is set.
   int32 page_size = 2;
-  reserved 3;  // reserved 3 for page_token.
+  // A page token, received from a previous `SearchMemory` call.
+  // Provide this to retrieve the subsequent page.
+  //
+  // When paginating, all other parameters provided to `SearchMemory` must match
+  // the call that provided the page token.
+  string page_token = 3;
   // Specifies which fields of the matching Memory objects to return or not to
   // return.
   ResultMask result_mask = 4;
@@ -191,6 +211,9 @@ message SearchMemoryResultItem {
 
 message SearchMemoryResponse {
   repeated SearchMemoryResultItem results = 1;
+  // A token to retrieve the next page of results.
+  // If this field is omitted, there are no more results.
+  string next_page_token = 2;
 }
 
 message KeyDerivationInfo {

@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    collections::HashSet,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 
 use anyhow::Result;
 use client::{PrivateMemoryClient, SerializationFormat};
@@ -80,5 +83,85 @@ async fn test_client() {
         let response = client.get_memory_by_id(memory_id, None).await.unwrap();
         assert!(response.success);
         assert_eq!(response.memory.unwrap().id, memory_id);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_client_pagination() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_pagination_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let tag = "pagination_tag";
+        let mut expected_ids = HashSet::new();
+        for i in 0..50 {
+            let memory_id = format!("memory_{}", i);
+            expected_ids.insert(memory_id.clone());
+            let memory_to_add = Memory {
+                id: memory_id,
+                tags: vec![tag.to_string()],
+                embeddings: vec![Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }],
+                ..Default::default()
+            };
+            client.add_memory(memory_to_add).await.unwrap();
+        }
+
+        // Test GetMemories pagination
+        let mut actual_ids = HashSet::new();
+        let mut next_page_token = "".to_string();
+        for i in 0..10 {
+            let response = client.get_memories(tag, 5, None, &next_page_token).await.unwrap();
+            assert_eq!(response.memories.len(), 5);
+            for memory in response.memories {
+                actual_ids.insert(memory.id);
+            }
+            next_page_token = response.next_page_token;
+            if i < 9 {
+                assert!(!next_page_token.is_empty());
+            }
+        }
+        assert!(next_page_token.is_empty());
+        assert_eq!(expected_ids, actual_ids);
+
+        // Test SearchMemory pagination
+        let query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                    EmbeddingQuery {
+                        embedding: vec![Embedding {
+                            identifier: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }],
+                        ..Default::default()
+                    },
+                ),
+            ),
+        };
+        let mut actual_ids_search = HashSet::new();
+        let mut next_page_token = "".to_string();
+        for i in 0..10 {
+            let response =
+                client.search_memory(query.clone(), 5, None, &next_page_token).await.unwrap();
+            assert_eq!(response.results.len(), 5);
+            for result in response.results {
+                actual_ids_search.insert(result.memory.unwrap().id);
+            }
+            next_page_token = response.next_page_token;
+            if i < 9 {
+                assert!(!next_page_token.is_empty());
+            }
+        }
+        assert!(next_page_token.is_empty());
+        assert_eq!(expected_ids, actual_ids_search);
     }
 }

@@ -104,7 +104,7 @@ async fn test_add_get_reset_memory_all_modes() {
         client.add_memory(memory_to_add).await.unwrap();
 
         // GetMemoriesRequest
-        let get_memories_response_1 = client.get_memories("tag", 1, None).await.unwrap();
+        let get_memories_response_1 = client.get_memories("tag", 1, None, "").await.unwrap();
         assert_eq!(get_memories_response_1.memories.len(), 1);
 
         let memory_content = get_memories_response_1.memories[0].content.clone().unwrap();
@@ -133,7 +133,7 @@ async fn test_add_get_reset_memory_all_modes() {
         assert!(reset_memory_response.success);
 
         // GetMemoriesRequest again
-        let get_memories_response_2 = client.get_memories("tag", 10, None).await.unwrap();
+        let get_memories_response_2 = client.get_memories("tag", 10, None, "").await.unwrap();
         assert_eq!(get_memories_response_2.memories.len(), 0);
     }
 }
