@@ -92,16 +92,18 @@ impl DataBlobHandler for ExternalDbClient {
             .into_inner();
         if let Some(status) = db_response.status {
             if status.success {
+                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+                if elapsed_time == 0 {
+                    elapsed_time = 1;
+                }
+                let speed = blob_size / 1024 / elapsed_time;
+                metrics::get_global_metrics().record_db_save_speed(speed);
                 return Ok(id);
+            } else {
+                bail!("Failed to write data blob: {}", status.error_message);
             }
         }
-        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-        if elapsed_time == 0 {
-            elapsed_time = 1;
-        }
-        let speed = blob_size / 1024 / elapsed_time;
-        metrics::get_global_metrics().record_db_save_speed(speed);
-        bail!("Failed to write data blob");
+        bail!("Failed to write data blob, server status was empty");
     }
 
     async fn add_blobs(
@@ -147,9 +149,11 @@ impl DataBlobHandler for ExternalDbClient {
                     metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(data_blob);
                 }
+            } else {
+                bail!("Failed to read data blob: {}", status.error_message);
             }
         }
-        bail!("Failed to read data blob, {:#?}", db_response);
+        bail!("Failed to read data blob, server status was empty");
     }
 
     async fn get_blobs(
@@ -183,8 +187,15 @@ impl DataBlobHandler for ExternalDbClient {
             .await
             .map_err(anyhow::Error::msg)?
             .into_inner();
-        info!("db response {:#?}", db_response);
-        Ok(id)
+        if let Some(ref status) = db_response.status {
+            if status.success {
+                info!("db response {:#?}", db_response);
+                return Ok(id);
+            } else {
+                bail!("Failed to write unencrypted data blob: {}", status.error_message);
+            }
+        }
+        bail!("Failed to write unencrypted data blob, server status was empty");
     }
 
     async fn get_unencrypted_blob(
@@ -205,9 +216,15 @@ impl DataBlobHandler for ExternalDbClient {
                 if let Some(data_blob) = db_response.data_blob {
                     return Ok(data_blob);
                 }
+            } else {
+                bail!(
+                    "Failed to read unencrypted data blob with id {}: {}",
+                    id,
+                    status.error_message
+                );
             }
         }
-        bail!("Failed to read unencrypted data blob with id: {}", id);
+        bail!("Failed to read unencrypted data blob with id: {}, server status was empty", id);
     }
 
     async fn add_mixed_blobs(

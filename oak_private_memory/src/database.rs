@@ -19,7 +19,7 @@ use anyhow::{bail, ensure, Context};
 use encryption::{decrypt, encrypt, generate_nonce};
 pub use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use icing::IcingGroundTruthFilesHelper;
-use log::debug;
+use log::{debug, error};
 use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::oak::private_memory::{
@@ -708,8 +708,21 @@ pub fn decrypt_database(
 ) -> anyhow::Result<EncryptedUserInfo> {
     let nonce = datablob.nonce;
     let data = datablob.data;
-    let decrypted_data = decrypt(key, &nonce, &data)?;
-    let user_db = EncryptedUserInfo::decode(decrypted_data.as_slice())?;
+    let decrypted_data = match decrypt(key, &nonce, &data) {
+        Ok(data) => data,
+        Err(err) => {
+            error!(
+                "Failed to decrypt database: key_len={}, nonce_len={}, data_len={}, error={:?}",
+                key.len(),
+                nonce.len(),
+                data.len(),
+                err
+            );
+            return Err(err);
+        }
+    };
+    let user_db = EncryptedUserInfo::decode(decrypted_data.as_slice())
+        .context("Failed to decode EncryptedUserInfo")?;
     Ok(user_db)
 }
 
