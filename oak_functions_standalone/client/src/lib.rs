@@ -18,9 +18,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use futures::channel::mpsc::{self, Sender};
-use oak_attestation_gcp::{
-    policy::ConfidentialSpacePolicy, verification::CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
-};
+use oak_attestation_gcp::{policy::ConfidentialSpacePolicy, CONFIDENTIAL_SPACE_ROOT_CERT_PEM};
 use oak_attestation_verification::verifier::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::{
@@ -83,7 +81,7 @@ impl OakFunctionsClient {
                 let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
                     .map_err(|err| anyhow!("failed to fetch root certificate: {:?}", err))?;
 
-                let policy = ConfidentialSpacePolicy::new(root);
+                let policy = ConfidentialSpacePolicy::new_unendorsed(root);
                 let attestation_verifier =
                     EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 

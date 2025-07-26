@@ -17,6 +17,7 @@
 use alloc::{
     collections::BTreeMap,
     string::{String, ToString},
+    vec::Vec,
 };
 
 use jwt::Token;
@@ -29,19 +30,26 @@ use oak_proto_rust::oak::{
     Variant,
 };
 use oak_time::Instant;
-use serde::Deserialize;
-use serde_json::Value;
-use sha2::Digest;
+use sha2::{Digest, Sha256};
 use x509_cert::Certificate;
 
-use crate::verification::{
-    report_attestation_token, AttestationTokenVerificationReport, AttestationVerificationError,
+use crate::{
+    cosign::{self, CosignEndorsement, CosignReferenceValues, CosignVerificationError},
+    jwt::{
+        verification::{
+            report_attestation_token, AttestationTokenVerificationReport,
+            AttestationVerificationError,
+        },
+        Claims, Header,
+    },
 };
 
 #[derive(Debug)]
 pub struct ConfidentialSpaceVerificationReport {
     pub session_binding_public_key: Vec<u8>,
     pub public_key_verification: Result<(), ConfidentialSpaceVerificationError>,
+    // TODO: b/434898491 - Provide a more detailed report.
+    pub workload_endorsement_verification: Option<Result<(), CosignVerificationError>>,
     pub token_report: AttestationTokenVerificationReport,
 }
 
@@ -53,13 +61,21 @@ impl ConfidentialSpaceVerificationReport {
             ConfidentialSpaceVerificationReport {
                 session_binding_public_key,
                 public_key_verification: Ok(()),
+                workload_endorsement_verification: None | Some(Ok(())),
                 token_report,
             } => Ok(token_report.into_checked_token().map(|_| session_binding_public_key)?),
             ConfidentialSpaceVerificationReport {
                 session_binding_public_key: _,
                 public_key_verification: Err(err),
+                workload_endorsement_verification: _,
                 token_report: _,
             } => Err(err),
+            ConfidentialSpaceVerificationReport {
+                session_binding_public_key: _,
+                public_key_verification: Ok(()),
+                token_report: _,
+                workload_endorsement_verification: Some(Err(err)),
+            } => Err(ConfidentialSpaceVerificationError::CosignVerificationError(err)),
         }
     }
 }
@@ -80,22 +96,40 @@ pub enum ConfidentialSpaceVerificationError {
     NonceDeserializeError(#[from] serde_json::error::Error),
     #[error("Failed to verify Token: {0}")]
     TokenVerificationError(#[from] AttestationVerificationError),
+    #[error("missing workload endorsement")]
+    MissingWorkloadEndorsementError,
+    #[error("Sigstore Error: {0}")]
+    SigstoreError(#[from] sigstore::error::Error),
+    #[error("Failed to parse OCI reference: {0}")]
+    ParseError(#[from] oci_spec::distribution::ParseError),
+    #[error("Failed to verify Cosign endorsement: {0}")]
+    CosignVerificationError(#[from] CosignVerificationError),
 }
 
-// Private claim field in Confidential Space attestation tokens with
-// the attestation nonce.
-// https://cloud.google.com/confidential-computing/confidential-space/docs/connect-external-resources#attestation_token_structure
-const EAT_NONCE: &str = "eat_nonce";
-
+/// Attstation policy that verifies evidence for a container workload running in
+/// Google Cloud Confidential Space.
 pub struct ConfidentialSpacePolicy {
     root_certificate: Certificate,
+    workload_reference_values: Option<CosignReferenceValues>,
 }
 
 impl ConfidentialSpacePolicy {
-    pub fn new(root_certificate: Certificate) -> Self {
-        Self { root_certificate }
+    /// Creates a new policy with reference values for the platform and the
+    /// workload.
+    pub fn new(
+        root_certificate: Certificate,
+        workload_reference_values: CosignReferenceValues,
+    ) -> Self {
+        Self { root_certificate, workload_reference_values: Some(workload_reference_values) }
     }
 
+    /// Creates a new policy with reference values only for the platform
+    /// certificate.
+    pub fn new_unendorsed(root_certificate: Certificate) -> Self {
+        Self { root_certificate, workload_reference_values: None }
+    }
+
+    /// Produce a full report of the provided evidence and endorsement.
     pub fn report(
         &self,
         verification_time: Instant,
@@ -111,17 +145,31 @@ impl ConfidentialSpacePolicy {
             .try_into()
             .map_err(ConfidentialSpaceVerificationError::VariantDecodeError)?;
 
-        let token = Token::parse_unverified(&endorsement.jwt_token)?;
+        let token: Token<Header, Claims, _> = Token::parse_unverified(&endorsement.jwt_token)?;
         let public_key_verification =
             verify_claims_public_key(token.claims(), &public_key_data.session_binding_public_key);
+
+        let image_reference = token.claims().effective_reference()?;
+        let workload_endorsement_verification =
+            self.workload_reference_values.as_ref().map(|ref_values| {
+                match &endorsement.workload_endorsement {
+                    Some(workload_endorsement) => cosign::report_endorsement(
+                        CosignEndorsement::from_proto(workload_endorsement)?,
+                        &image_reference,
+                        ref_values,
+                        verification_time,
+                    ),
+                    None => Err(CosignVerificationError::MissingEndorsement),
+                }
+            });
+
         let token_report =
             report_attestation_token(token, &self.root_certificate, &verification_time);
-
-        // TODO: b/426463266 - Verify claims about the platform/container
 
         Ok(ConfidentialSpaceVerificationReport {
             session_binding_public_key: public_key_data.session_binding_public_key.clone(),
             public_key_verification,
+            workload_endorsement_verification,
             token_report,
         })
     }
@@ -148,16 +196,14 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
 }
 
 fn verify_claims_public_key(
-    claims: &Value,
+    claims: &Claims,
     expected_public_key: &Vec<u8>,
 ) -> Result<(), ConfidentialSpaceVerificationError> {
-    let public_key_hash = hex::encode(sha2::Sha256::digest(expected_public_key));
-    // We expect only one nonce, therefore a scalar string rather than an array.
-    let eat_nonce = String::deserialize(&claims[EAT_NONCE])?;
-    if eat_nonce != public_key_hash {
+    let public_key_hash = hex::encode(Sha256::digest(expected_public_key));
+    if claims.eat_nonce != public_key_hash {
         return Err(ConfidentialSpaceVerificationError::TokenClaimPublicKeyMismatch {
             expected: public_key_hash,
-            actual: eat_nonce,
+            actual: claims.eat_nonce.clone(),
         });
     }
     Ok(())
@@ -167,14 +213,20 @@ fn verify_claims_public_key(
 mod tests {
     use core::assert_matches::assert_matches;
 
-    use oak_file_utils::read_testdata_string;
-    use oak_proto_rust::oak::attestation::v1::Event;
+    use oak_file_utils::{read_testdata, read_testdata_string};
+    use oak_proto_rust::oak::attestation::v1::{
+        endorsement::Format, Endorsement, Event, Signature, SignedEndorsement,
+    };
     use oak_time::make_instant;
+    use p256::ecdsa::VerifyingKey;
     use prost::Message;
-    use x509_cert::der::DecodePem;
+    use x509_cert::{der::DecodePem, spki::DecodePublicKey};
 
     use super::*;
-    use crate::verification::{CertificateReport, IssuerReport};
+    use crate::{
+        cosign::CosignReferenceValues,
+        jwt::verification::{CertificateReport, IssuerReport},
+    };
 
     const BINDING_KEY_BYTES: [u8; 32] = [
         0xad, 0x57, 0x5f, 0x38, 0x17, 0x7e, 0x11, 0x4a, 0x48, 0x2d, 0x5a, 0x24, 0x71, 0x28, 0x73,
@@ -188,15 +240,35 @@ mod tests {
         // root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
+        let developer_public_key =
+            VerifyingKey::from_public_key_pem(&read_testdata_string!("developer_key.pub.pem"))
+                .unwrap();
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
-        let jwt_token = read_testdata_string!("valid_token.jwt");
-        let endorsement = ConfidentialSpaceEndorsement { jwt_token, ..Default::default() };
+        let workload_endorsement = Some(SignedEndorsement {
+            endorsement: Some(Endorsement {
+                format: Format::EndorsementFormatJsonIntoto.into(),
+                serialized: read_testdata!("endorsement.json"),
+                ..Default::default()
+            }),
+            // The signature proto has a key ID which we do not use at the moment.
+            signature: Some(Signature {
+                raw: read_testdata!("endorsement_signature.sig"),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement,
+        };
 
-        let root_cert = read_testdata_string!("root_ca_cert.pem");
-        let root_cert = Certificate::from_pem(root_cert).unwrap();
+        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
 
-        let policy = ConfidentialSpacePolicy::new(root_cert);
+        let policy = ConfidentialSpacePolicy::new(
+            root_cert,
+            CosignReferenceValues::partial(developer_public_key),
+        );
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -208,15 +280,36 @@ mod tests {
         // root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
+        let developer_public_key =
+            VerifyingKey::from_public_key_pem(&read_testdata_string!("developer_key.pub.pem"))
+                .unwrap();
+
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
-        let jwt_token = read_testdata_string!("valid_token.jwt");
-        let endorsement = ConfidentialSpaceEndorsement { jwt_token, ..Default::default() };
+        let workload_endorsement = Some(SignedEndorsement {
+            endorsement: Some(Endorsement {
+                format: Format::EndorsementFormatJsonIntoto.into(),
+                serialized: read_testdata!("endorsement.json"),
+                ..Default::default()
+            }),
+            // The signature proto has a key ID which we do not use at the moment.
+            signature: Some(Signature {
+                raw: read_testdata!("endorsement_signature.sig"),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement,
+        };
 
-        let root_cert = read_testdata_string!("root_ca_cert.pem");
-        let root_cert = Certificate::from_pem(root_cert).unwrap();
+        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
 
-        let policy = ConfidentialSpacePolicy::new(root_cert);
+        let policy = ConfidentialSpacePolicy::new(
+            root_cert,
+            CosignReferenceValues::partial(developer_public_key),
+        );
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert_matches!(
@@ -224,27 +317,72 @@ mod tests {
             Ok(ConfidentialSpaceVerificationReport {
                 ref session_binding_public_key,
                 public_key_verification: Ok(()),
-                token_report: AttestationTokenVerificationReport{
+                token_report: AttestationTokenVerificationReport {
                     validity: Ok(()),
                     verification: Ok(_),
                     issuer_report: Ok(CertificateReport {
                         validity: Ok(()),
                         verification: Ok(()),
-                        issuer_report: box IssuerReport::OtherCertificate(
-                            Ok(CertificateReport {
-                                validity: Ok(()),
-                                verification: Ok(()),
-                                issuer_report: box IssuerReport::OtherCertificate(
-                                    Ok(CertificateReport {
-                                        validity: Ok(()),
-                                        verification: Ok(()),
-                                        issuer_report: box IssuerReport::SelfSigned,
-                                    })
-                                ),
-                            })),
-                    })
-                }
-            }) if *session_binding_public_key == BINDING_KEY_BYTES,
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report:
+                                box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                                    validity: Ok(()),
+                                    verification: Ok(()),
+                                    issuer_report: box IssuerReport::SelfSigned,
+                                })),
+                        })),
+                    }),
+                },
+                workload_endorsement_verification: Some(Ok(())),
+            }) if *session_binding_public_key == BINDING_KEY_BYTES
+        );
+    }
+
+    #[test]
+    fn confidential_space_policy_report_succeeds_unendorsed() {
+        // The time has been set inside the validity interval of the test token and the
+        // root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
+
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            ..Default::default()
+        };
+
+        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
+
+        let policy = ConfidentialSpacePolicy::new_unendorsed(root_cert);
+        let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert_matches!(
+            result,
+            Ok(ConfidentialSpaceVerificationReport {
+                ref session_binding_public_key,
+                public_key_verification: Ok(()),
+                token_report: AttestationTokenVerificationReport {
+                    validity: Ok(()),
+                    verification: Ok(_),
+                    issuer_report: Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report:
+                                box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                                    validity: Ok(()),
+                                    verification: Ok(()),
+                                    issuer_report: box IssuerReport::SelfSigned,
+                                })),
+                        })),
+                    }),
+                },
+                workload_endorsement_verification: None,
+            }) if *session_binding_public_key == BINDING_KEY_BYTES
         );
     }
 

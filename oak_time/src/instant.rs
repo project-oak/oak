@@ -353,6 +353,25 @@ pub mod rfc3339 {
     }
 }
 
+/// Support deserializing an [`Instant`] from a unix timestamp.
+/// Use this module in combination with serde's [`#[with]`][with] attribute.
+///
+/// [with]: https://serde.rs/field-attrs.html#with
+pub mod unix_timestamp {
+    use serde::{Deserialize, Deserializer};
+
+    use super::Instant;
+
+    /// Deserializes an [`Instant`] from a unix timestamp.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Instant, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let seconds = i64::deserialize(deserializer)?;
+        Ok(Instant::from_unix_seconds(seconds))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate std;

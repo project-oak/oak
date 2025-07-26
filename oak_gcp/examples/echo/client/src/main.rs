@@ -25,6 +25,7 @@ use oak_proto_rust::oak::attestation::v1::{
 };
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
+use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use prost::Message;
 
 #[derive(Parser, Clone)]
@@ -42,6 +43,9 @@ pub struct Opt {
 
     #[arg(long, help = "A path where the server's evidence will be written to")]
     server_evidence_output_path: Option<String>,
+
+    #[arg(long, help = "A path to the developer's public key")]
+    developer_public_key: String,
 }
 
 #[tokio::main]
@@ -51,9 +55,17 @@ async fn main() -> anyhow::Result<()> {
 
     let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
-    let mut client = oak_gcp_examples_echo_client::EchoClient::create(&opt.uri, clock.clone())
-        .await
-        .context("couldn't connect to server")?;
+    let developer_public_key = std::fs::read_to_string(&opt.developer_public_key)?;
+    let developer_public_key = VerifyingKey::from_public_key_pem(&developer_public_key)
+        .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))?;
+
+    let mut client = oak_gcp_examples_echo_client::EchoClient::create(
+        &opt.uri,
+        clock.clone(),
+        developer_public_key,
+    )
+    .await
+    .context("couldn't connect to server")?;
 
     if let Some(path) = opt.server_evidence_output_path {
         let evidence = client.get_peer_attestation_evidence()?;

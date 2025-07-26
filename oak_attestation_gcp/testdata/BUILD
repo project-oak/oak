@@ -14,7 +14,14 @@
 # limitations under the License.
 #
 
-load("//oak_attestation_gcp/jwtgen:defs.bzl", "jwt_token", "rsa_key_pair", "x509_cert")
+load(
+    "//oak_attestation_gcp/jwtgen:defs.bzl",
+    "ecdsa_p256_key_pair",
+    "jwt_token",
+    "rsa_key_pair",
+    "sign_file",
+    "x509_cert",
+)
 
 package(
     default_visibility = ["//:internal"],
@@ -83,4 +90,22 @@ jwt_token(
     root_ca_cert = ":root_ca_cert",
     signing_cert = ":signing_cert",
     signing_key = ":signing_private_key",
+)
+
+# A key pair for signing endorsements.
+ecdsa_p256_key_pair(name = "developer_key")
+
+sign_file(
+    name = "endorsement_signature",
+    file_to_sign = ":endorsement.json",
+    signing_key = ":developer_key_private_key",
+)
+
+# A different key pair for signing endorsements.
+ecdsa_p256_key_pair(name = "other_developer_key")
+
+sign_file(
+    name = "other_endorsement_signature",
+    file_to_sign = ":endorsement.json",
+    signing_key = ":other_developer_key_private_key",
 )

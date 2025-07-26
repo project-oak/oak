@@ -24,11 +24,9 @@ use std::{
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use oak_attestation_gcp::{
+    jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
-    verification::{
-        AttestationTokenVerificationReport, CertificateReport, IssuerReport,
-        CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
-    },
+    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::policy::session_binding_public_key::{
     SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
@@ -226,7 +224,8 @@ fn create_confidential_space_attestation_report(
 ) -> Result<ConfidentialSpaceVerificationReport> {
     let root_certificate =
         Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).map_err(anyhow::Error::msg)?;
-    let policy = ConfidentialSpacePolicy::new(root_certificate);
+    // TODO: b/434899976 - provide reference values for the workload endorsement.
+    let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
     policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
 }
 
@@ -248,6 +247,7 @@ fn print_confidential_space_attestation_report(
                 }
             }
             print_token_report(indent, &report.token_report);
+            // TODO: b/434898491 - Print workload endorsement verification
         }
     }
 }
@@ -272,7 +272,7 @@ fn print_certificate_chain(
     indent: usize,
     report: &Result<
         CertificateReport,
-        oak_attestation_gcp::verification::AttestationVerificationError,
+        oak_attestation_gcp::jwt::verification::AttestationVerificationError,
     >,
 ) {
     match report {

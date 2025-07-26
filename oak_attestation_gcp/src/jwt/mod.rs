@@ -14,10 +14,15 @@
 // limitations under the License.
 //
 
+use alloc::{collections::BTreeMap, str::FromStr};
+
 use jwt::{algorithm::AlgorithmType, header::JoseHeader};
+use oak_time::Instant;
+use oci_spec::distribution::{ParseError, Reference as OciReference};
 use serde::Deserialize;
 
 pub(crate) mod algorithm;
+pub mod verification;
 
 /// Partial view of a JWT header with the fields interesting for the validation
 /// of the PKI flavour of Confidential Space JWT tokens.
@@ -42,4 +47,69 @@ impl JoseHeader for Header {
     fn algorithm_type(&self) -> AlgorithmType {
         self.algorithm
     }
+}
+
+/// The schema for the JWT token claims for Confidential Space.
+///
+/// https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims
+///
+/// A number of fields have been omitted: eat_profile, secboot, oemid, hwmodel,
+/// swname, swversion, dbgstat
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct Claims {
+    /// Audience this token is intendedd for.
+    #[serde(rename = "aud")]
+    pub audience: String,
+    /// Issuer of the token.
+    #[serde(rename = "iss")]
+    pub issuer: String,
+    /// Subject of the token.
+    #[serde(rename = "sub")]
+    pub subject: String,
+    /// Time at which the token was issued, in seconds since the Unix epoch.
+    #[serde(rename = "iat", with = "oak_time::instant::unix_timestamp")]
+    pub issued_at: Instant,
+    /// Time after which the token is not valid, in seconds since the
+    /// Unix epoch.
+    #[serde(rename = "exp", with = "oak_time::instant::unix_timestamp")]
+    pub not_after: Instant,
+    /// Time from which the token is valid, in seconds since the Unix epoch.
+    #[serde(rename = "nbf", with = "oak_time::instant::unix_timestamp")]
+    pub not_before: Instant,
+    /// Attestation nonce. We only expect one nonce currently.
+    pub eat_nonce: String,
+    /// Nested claims about sub-modules.
+    pub submods: Submods,
+}
+
+impl Claims {
+    /// Obtains the effective OCI container [`Reference`] from the
+    /// container data by combining the claimed reference (which may be a tag)
+    /// with the image digest.
+    pub fn effective_reference(&self) -> Result<OciReference, ParseError> {
+        let reference = OciReference::from_str(&self.submods.container.image_reference)?;
+        Ok(reference.clone_with_digest(self.submods.container.image_digest.clone()))
+    }
+}
+
+/// Nested claims about sub-modules.
+///
+/// Some fields have been omitted: confidential_space, gce
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct Submods {
+    /// Claims about the container.
+    pub container: ContainerClaims,
+}
+
+/// Claims about the container.
+#[derive(Deserialize, PartialEq, Debug)]
+pub struct ContainerClaims {
+    /// The container image reference.
+    pub image_reference: String,
+    /// The container image digest.
+    pub image_digest: String,
+    /// Environment variables set for the container.
+    pub env: BTreeMap<String, String>,
+    /// Command line of the container entry point.
+    pub args: Vec<String>,
 }

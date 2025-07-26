@@ -26,6 +26,7 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = [
         "//oak_attestation_gcp:data/confidential_space_root.pem",
+        "//oak_attestation_gcp:data/rekor_public_key.pem",
     ],
     deps = [
         "//oak_attestation_verification",
@@ -55,9 +56,15 @@ rust_test(
     name = "oak_attestation_gcp_tests",
     crate = ":oak_attestation_gcp",
     data = [
+        "//oak_attestation_gcp/testdata:developer_key_public_key",
+        "//oak_attestation_gcp/testdata:endorsement.json",
+        "//oak_attestation_gcp/testdata:endorsement_signature",
         "//oak_attestation_gcp/testdata:expired_token",
         "//oak_attestation_gcp/testdata:invalid_signature_token",
         "//oak_attestation_gcp/testdata:long_lived_token",
+        "//oak_attestation_gcp/testdata:other_developer_key_public_key",
+        "//oak_attestation_gcp/testdata:other_endorsement_signature",
+        "//oak_attestation_gcp/testdata:policy_claims.json",
         "//oak_attestation_gcp/testdata:root_ca_cert",
         "//oak_attestation_gcp/testdata:valid_token",
     ],

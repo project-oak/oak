@@ -101,7 +101,10 @@ fn main() {
     // The setup implicitly adds a binding verifier that relies on the key,
     // which is extracted from the evidence.
     let root = Certificate::from_pem(CSPACE_ROOT).expect("Failed to parse root certificate");
-    let policy = ConfidentialSpacePolicy::new(root);
+
+    // Normally you would use an endorsed policy where the workload (a container) is
+    // signed by the developer and the signature committed to Rekor, using Cosign.
+    let policy = ConfidentialSpacePolicy::new_unendorsed(root);
     let attestation_verifier = EventLogVerifier::new(
         vec![Box::new(policy)],
         // Tuesday, 1 July 2025 01:30:00 GMT+01:00

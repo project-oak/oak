@@ -19,14 +19,10 @@ use alloc::fmt;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use jwt::{Token, Unverified, Verified, VerifyWithKey};
 use oak_time::Instant;
-use serde_json::Value;
 use x509_cert::{der::Decode, Certificate};
 use x509_verify::VerifyingKey;
 
-use crate::jwt::{algorithm::CertificateAlgorithm, Header};
-
-pub const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
-    include_str!("../data/confidential_space_root.pem");
+use crate::jwt::{algorithm::CertificateAlgorithm, Claims, Header};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AttestationVerificationError {
@@ -75,10 +71,10 @@ impl From<x509_cert::der::Error> for AttestationVerificationError {
 /// The token is verified by checking the signature and the x5c chain in the
 /// token against the provided root certificate.
 pub fn verify_attestation_token(
-    token: Token<Header, Value, Unverified>,
+    token: Token<Header, Claims, Unverified>,
     root: &Certificate,
     current_time: &oak_time::Instant,
-) -> Result<Token<Header, Value, Verified>, AttestationVerificationError> {
+) -> Result<Token<Header, Claims, Verified>, AttestationVerificationError> {
     report_attestation_token(token, root, current_time).into_checked_token()
 }
 
@@ -88,7 +84,7 @@ pub struct AttestationTokenVerificationReport {
     pub validity: Result<(), AttestationVerificationError>,
     /// The result of verifying the token (with respect to its signature
     /// issuer).
-    pub verification: Result<Token<Header, Value, Verified>, AttestationVerificationError>,
+    pub verification: Result<Token<Header, Claims, Verified>, AttestationVerificationError>,
     /// The result of verifying the token's signature issuer.
     pub issuer_report: Result<CertificateReport, AttestationVerificationError>,
 }
@@ -105,7 +101,7 @@ impl fmt::Debug for AttestationTokenVerificationReport {
 impl AttestationTokenVerificationReport {
     pub fn into_checked_token(
         self,
-    ) -> Result<Token<Header, Value, Verified>, AttestationVerificationError> {
+    ) -> Result<Token<Header, Claims, Verified>, AttestationVerificationError> {
         match self {
             AttestationTokenVerificationReport {
                 validity: Ok(()),
@@ -174,7 +170,7 @@ pub struct CertificateReport {
 /// attestation token from Confidential Space using the provided root
 /// certificate.
 pub fn report_attestation_token(
-    token: Token<Header, Value, Unverified>,
+    token: Token<Header, Claims, Unverified>,
     root: &Certificate,
     current_time: &oak_time::Instant,
 ) -> AttestationTokenVerificationReport {
@@ -257,41 +253,261 @@ fn verify_certificate(
 }
 
 fn verify_token_validity(
-    token: &Token<Header, Value, Unverified>,
+    token: &Token<Header, Claims, Unverified>,
     current_time: &oak_time::Instant,
 ) -> Result<(), AttestationVerificationError> {
     let claims = token.claims();
 
-    let token_not_after = match &claims["exp"] {
-        Value::Number(exp) => {
-            let unix_seconds = exp
-                .as_i64()
-                .ok_or(AttestationVerificationError::InvalidFormat("exp", "expected a number"))?;
-            oak_time::Instant::from_unix_seconds(unix_seconds)
-        }
-        _ => return Err(AttestationVerificationError::InvalidFormat("exp", "expected a number")),
-    };
-    let token_not_before = match &claims["nbf"] {
-        Value::Number(exp) => {
-            let unix_seconds = exp
-                .as_i64()
-                .ok_or(AttestationVerificationError::InvalidFormat("nbf", "expected a number"))?;
-            oak_time::Instant::from_unix_seconds(unix_seconds)
-        }
-        _ => return Err(AttestationVerificationError::InvalidFormat("exp", "expected a number")),
-    };
-
-    if &token_not_before > current_time {
+    if &claims.not_before > current_time {
         Err(AttestationVerificationError::JWTValidityNotBefore {
-            nbf: token_not_before,
+            nbf: claims.not_before,
             current_time: *current_time,
         })
-    } else if current_time > &token_not_after {
+    } else if current_time > &claims.not_after {
         Err(AttestationVerificationError::JWTValidityExpiration {
-            exp: token_not_after,
+            exp: claims.not_after,
             current_time: *current_time,
         })
     } else {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::assert_matches::assert_matches;
+    use std::fs;
+
+    use googletest::prelude::*;
+    use jwt::{Token, Unverified};
+    use oak_file_utils::data_path;
+    use oak_time::{make_instant, Duration, Instant};
+    use x509_cert::{der::DecodePem, Certificate};
+
+    use crate::jwt::{
+        verification::{
+            report_attestation_token, verify_attestation_token, AttestationTokenVerificationReport,
+            AttestationVerificationError, CertificateReport, IssuerReport,
+        },
+        Claims, Header,
+    };
+
+    // The time has been set inside the validity interval of the test token.
+    fn current_time() -> Instant {
+        make_instant!("2025-07-01T17:31:32Z")
+    }
+
+    #[test]
+    fn validate_token_ok() -> Result<()> {
+        let token_str = read_testdata("valid_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        verify_attestation_token(unverified_token, &root, &current_time())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_ok() -> Result<()> {
+        let token_str = read_testdata("valid_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &current_time()),
+            AttestationTokenVerificationReport {
+                validity: Ok(()),
+                verification: Ok(_),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report: box IssuerReport::SelfSigned
+                        }))
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_invalid_signature() -> Result<()> {
+        let token_str = read_testdata("invalid_signature_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            unsafe {
+                verify_attestation_token(unverified_token, &root, &current_time())
+                    .unwrap_err_unchecked()
+            },
+            AttestationVerificationError::JWTError(jwt::Error::InvalidSignature)
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_invalid_signature() -> Result<()> {
+        let token_str = read_testdata("invalid_signature_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &current_time()),
+            AttestationTokenVerificationReport {
+                validity: Ok(()),
+                verification: Err(AttestationVerificationError::JWTError(
+                    jwt::Error::InvalidSignature
+                )),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report: box IssuerReport::SelfSigned
+                        }))
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_expired_token() -> Result<()> {
+        let token_str = read_testdata("expired_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        let result = verify_attestation_token(unverified_token, &root, &current_time());
+        let err = unsafe { result.unwrap_err_unchecked() };
+        assert_matches!(err, AttestationVerificationError::JWTValidityExpiration { .. });
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_expired_token() -> Result<()> {
+        let token_str = read_testdata("expired_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &current_time()),
+            AttestationTokenVerificationReport {
+                validity: Err(AttestationVerificationError::JWTValidityExpiration { .. }),
+                verification: Ok(_),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report: box IssuerReport::SelfSigned
+                        }))
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_expired_cert() -> Result<()> {
+        let token_str = read_testdata("long_lived_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        // Advance the clock by about 2 years
+        let expired_current_time = current_time() + Duration::from_seconds(2 * 365 * 24 * 3600);
+
+        assert_matches!(
+            unsafe {
+                verify_attestation_token(unverified_token, &root, &expired_current_time)
+                    .unwrap_err_unchecked()
+            },
+            AttestationVerificationError::X509ValidityNotAfter { .. }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_expired_cert() -> Result<()> {
+        let token_str = read_testdata("long_lived_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        // Advance the clock by about 2 years
+        let expired_current_time = current_time() + Duration::from_seconds(2 * 365 * 24 * 3600);
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &expired_current_time),
+            AttestationTokenVerificationReport {
+                validity: Ok(()),
+                verification: Ok(_),
+                issuer_report: Ok(CertificateReport {
+                    validity: Err(AttestationVerificationError::X509ValidityNotAfter { .. }),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                            validity: Ok(()),
+                            verification: Ok(()),
+                            issuer_report: box IssuerReport::SelfSigned
+                        }))
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    fn read_testdata(file: &str) -> String {
+        fs::read_to_string(data_path(format!("oak_attestation_gcp/testdata/{file}"))).unwrap()
     }
 }

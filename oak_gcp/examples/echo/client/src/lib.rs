@@ -18,7 +18,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
-    policy::ConfidentialSpacePolicy, verification::CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+    cosign::CosignReferenceValues, policy::ConfidentialSpacePolicy,
+    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::verifier::EventLogVerifier;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
@@ -33,6 +34,8 @@ use oak_session::{
     ClientSession, Session,
 };
 use oak_time::Clock;
+use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
+use sigstore::rekor::REKOR_PUBLIC_KEY_PEM;
 use tonic::transport::{Channel, Uri};
 use x509_cert::{der::DecodePem, Certificate};
 
@@ -47,7 +50,11 @@ pub struct EchoClient {
 }
 
 impl EchoClient {
-    pub async fn create<T: AsRef<str>>(url: T, clock: Arc<dyn Clock>) -> Result<EchoClient> {
+    pub async fn create<T: AsRef<str>>(
+        url: T,
+        clock: Arc<dyn Clock>,
+        developer_public_key: VerifyingKey,
+    ) -> Result<EchoClient> {
         let url = url.as_ref().to_owned();
         let uri = Uri::from_maybe_shared(url).context("invalid URI")?;
         let channel =
@@ -64,7 +71,11 @@ impl EchoClient {
         // manually.
         let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
             .expect("Failed to parse root certificate");
-        let policy = ConfidentialSpacePolicy::new(root);
+        let rekor_public_key = VerifyingKey::from_public_key_pem(REKOR_PUBLIC_KEY_PEM)
+            .map_err(|e| anyhow::anyhow!("failed to parse rekor public key: {}", e))?;
+
+        let reference_values = CosignReferenceValues::full(developer_public_key, rekor_public_key);
+        let policy = ConfidentialSpacePolicy::new(root, reference_values);
         let attestation_verifier = EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 
         let client_config: SessionConfig =
