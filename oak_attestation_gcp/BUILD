@@ -24,18 +24,24 @@ package(
 rust_library(
     name = "oak_attestation_gcp",
     srcs = glob(["src/**"]),
-    compile_data = ["//oak_attestation_gcp:data/confidential_space_root.pem"],
+    compile_data = [
+        "//oak_attestation_gcp:data/confidential_space_root.pem",
+    ],
     deps = [
         "//oak_attestation_verification",
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
         "//oak_time",
+        "//trex/endorsement",
+        "//trex/sigstore",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:const-oid",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:http",
         "@oak_crates_index//:jwt",
+        "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
@@ -47,10 +53,13 @@ rust_library(
 
 rust_test(
     name = "oak_attestation_gcp_tests",
-    compile_data = ["//oak_attestation_gcp/testdata"],
     crate = ":oak_attestation_gcp",
     data = [
-        "//oak_attestation_gcp/testdata",
+        "//oak_attestation_gcp/testdata:expired_token",
+        "//oak_attestation_gcp/testdata:invalid_signature_token",
+        "//oak_attestation_gcp/testdata:long_lived_token",
+        "//oak_attestation_gcp/testdata:root_ca_cert",
+        "//oak_attestation_gcp/testdata:valid_token",
     ],
     deps = [
         "//oak_file_utils",

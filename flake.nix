@@ -162,6 +162,7 @@
                 cpio
                 cosign
                 curl
+                datefudge
                 docker
                 fakeroot
                 flex

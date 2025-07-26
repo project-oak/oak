@@ -14,15 +14,73 @@
 # limitations under the License.
 #
 
+load("//oak_attestation_gcp/jwtgen:defs.bzl", "jwt_token", "rsa_key_pair", "x509_cert")
+
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-# This filegroup contains pre-generated test JWT tokens used in tests.
-#
-# See README.md for instructions on how to generate new test JWTs.
-filegroup(
-    name = "testdata",
-    srcs = glob(["**"]),
+exports_files(glob(["*"]))
+
+# Create a root CA
+rsa_key_pair(name = "root_ca")
+
+x509_cert(
+    name = "root_ca_cert",
+    days = 3650,
+    faketime = "2025-01-01 00:00:00 UTC",
+    signing_key = ":root_ca_private_key",
+    subject = "/CN=Test Root CA",
+)
+
+# Create a signing key and cert, signed by the root CA
+rsa_key_pair(name = "signing")
+
+x509_cert(
+    name = "signing_cert",
+    ca_cert = ":root_ca_cert",
+    ca_key = ":root_ca_private_key",
+    days = 365,
+    faketime = "2025-01-01 00:00:00 UTC",
+    signing_key = ":signing_private_key",
+    subject = "/CN=Test Signer",
+)
+
+# A valid token
+jwt_token(
+    name = "valid_token",
+    claims = ":claims.json",
+    root_ca_cert = ":root_ca_cert",
+    signing_cert = ":signing_cert",
+    signing_key = ":signing_private_key",
+)
+
+# A token with an invalid signature. We use a different signing key.
+rsa_key_pair(name = "other_signing")
+
+jwt_token(
+    name = "invalid_signature_token",
+    claims = ":claims.json",
+    root_ca_cert = ":root_ca_cert",
+    signing_cert = ":signing_cert",
+    signing_key = ":other_signing_private_key",
+)
+
+# A token that is valid for a long time, signed by a short-lived cert.
+jwt_token(
+    name = "long_lived_token",
+    claims = ":long_lived_claims.json",
+    root_ca_cert = ":root_ca_cert",
+    signing_cert = ":signing_cert",
+    signing_key = ":signing_private_key",
+)
+
+# An expired token.
+jwt_token(
+    name = "expired_token",
+    claims = ":expired_claims.json",
+    root_ca_cert = ":root_ca_cert",
+    signing_cert = ":signing_cert",
+    signing_key = ":signing_private_key",
 )

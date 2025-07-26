@@ -167,34 +167,34 @@ fn verify_claims_public_key(
 mod tests {
     use core::assert_matches::assert_matches;
 
+    use oak_file_utils::read_testdata_string;
     use oak_proto_rust::oak::attestation::v1::Event;
     use oak_time::make_instant;
     use prost::Message;
-    use x509_cert::{
-        der::{self, DecodePem},
-        spki::DecodePublicKey,
-    };
+    use x509_cert::der::DecodePem;
 
     use super::*;
     use crate::verification::{CertificateReport, IssuerReport};
+
+    const BINDING_KEY_BYTES: [u8; 32] = [
+        0xad, 0x57, 0x5f, 0x38, 0x17, 0x7e, 0x11, 0x4a, 0x48, 0x2d, 0x5a, 0x24, 0x71, 0x28, 0x73,
+        0x64, 0x27, 0x41, 0x53, 0x48, 0x51, 0x5b, 0x76, 0x78, 0x47, 0x11, 0x12, 0x43, 0x01, 0x61,
+        0x64, 0x66,
+    ];
 
     #[test]
     fn confidential_space_policy_verify_succeeds() {
         // The time has been set inside the validity interval of the test token and the
         // root certificate.
-        const TOKEN: &str = include_str!("../testdata/confidential_space_valid.jwt");
-        const PUBLIC_KEY: &str = include_str!("../testdata/confidential_space_public_key.pem");
-        const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
-            include_str!("../testdata/confidential_space_root.pem");
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
-        let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
-        let event = create_public_key_event(&public_key);
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
 
-        let endorsement =
-            ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned(), ..Default::default() };
+        let jwt_token = read_testdata_string!("valid_token.jwt");
+        let endorsement = ConfidentialSpaceEndorsement { jwt_token, ..Default::default() };
 
-        let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
+        let root_cert = read_testdata_string!("root_ca_cert.pem");
+        let root_cert = Certificate::from_pem(root_cert).unwrap();
 
         let policy = ConfidentialSpacePolicy::new(root_cert);
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
@@ -206,19 +206,15 @@ mod tests {
     fn confidential_space_policy_report_succeeds() {
         // The time has been set inside the validity interval of the test token and the
         // root certificate.
-        const TOKEN: &str = include_str!("../testdata/confidential_space_valid.jwt");
-        const PUBLIC_KEY: &str = include_str!("../testdata/confidential_space_public_key.pem");
-        const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
-            include_str!("../testdata/confidential_space_root.pem");
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
-        let public_key = der::Document::from_public_key_pem(PUBLIC_KEY).unwrap().to_vec();
-        let event = create_public_key_event(&public_key);
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
 
-        let endorsement =
-            ConfidentialSpaceEndorsement { jwt_token: TOKEN.to_owned(), ..Default::default() };
+        let jwt_token = read_testdata_string!("valid_token.jwt");
+        let endorsement = ConfidentialSpaceEndorsement { jwt_token, ..Default::default() };
 
-        let root_cert = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).unwrap();
+        let root_cert = read_testdata_string!("root_ca_cert.pem");
+        let root_cert = Certificate::from_pem(root_cert).unwrap();
 
         let policy = ConfidentialSpacePolicy::new(root_cert);
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
@@ -238,12 +234,17 @@ mod tests {
                             Ok(CertificateReport {
                                 validity: Ok(()),
                                 verification: Ok(()),
-                                issuer_report: box IssuerReport::SelfSigned,
-                            })
-                        ),
+                                issuer_report: box IssuerReport::OtherCertificate(
+                                    Ok(CertificateReport {
+                                        validity: Ok(()),
+                                        verification: Ok(()),
+                                        issuer_report: box IssuerReport::SelfSigned,
+                                    })
+                                ),
+                            })),
                     })
                 }
-            }) if *session_binding_public_key == public_key,
+            }) if *session_binding_public_key == BINDING_KEY_BYTES,
         );
     }
 

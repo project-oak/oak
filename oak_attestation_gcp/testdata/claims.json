@@ -1,0 +1,49 @@
+{
+    "aud": "https://echo.oak.dev",
+    "exp": 1751394692,
+    "iat": 1751391092,
+    "iss": "https://confidentialcomputing.googleapis.com",
+    "nbf": 1751391092,
+    "sub": "https://www.googleapis.com/compute/v1/projects/oak-ci/zones/us-west1-b/instances/oak-session-echo-debug",
+    "eat_nonce": "24d7de62139d1f034903e97922d4de79bb9d8897cf0bb921098432eadd40f489",
+    "eat_profile": "https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims",
+    "secboot": true,
+    "oemid": 11129,
+    "hwmodel": "GCP_AMD_SEV",
+    "swname": "CONFIDENTIAL_SPACE",
+    "swversion": [
+        "250301"
+    ],
+    "dbgstat": "enabled",
+    "submods": {
+        "confidential_space": {
+            "monitoring_enabled": {
+                "memory": false
+            }
+        },
+        "container": {
+            "image_reference": "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app:latest",
+            "image_digest": "sha256:313b8a83d3c8bfc9abcffee4f538424473e2705383a7e46f16d159faf0e5ef34",
+            "restart_policy": "Never",
+            "image_id": "sha256:7b5cbc3256c1c8b8b2d9add4b6540b26fa7f71ec61b07b86629fa20f5475d647",
+            "env": {
+                "HOSTNAME": "oak-session-echo-debug",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "SSL_CERT_FILE": "/etc/ssl/certs/ca-certificates.crt"
+            },
+            "args": [
+                "/usr/local/bin/oak_gcp_examples_echo_enclave_app"
+            ]
+        },
+        "gce": {
+            "zone": "us-west1-b",
+            "project_id": "oak-ci",
+            "project_number": "691249393555",
+            "instance_name": "oak-session-echo-debug",
+            "instance_id": "6256007950053693934"
+        }
+    },
+    "google_service_accounts": [
+        "691249393555-compute@developer.gserviceaccount.com"
+    ]
+}
