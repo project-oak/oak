@@ -1195,6 +1195,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core",
+ "sha2",
  "signature",
  "spki",
  "subtle",
@@ -1711,6 +1712,8 @@ checksum = "c43a49bf845cd2f3aff9603a4276409dbf2b8fa4454d3e9501bf5b0028342964"
 dependencies = [
  "const-oid",
  "der",
+ "ecdsa",
+ "p256",
  "rsa",
  "sha2",
  "signature",

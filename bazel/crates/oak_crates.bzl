@@ -193,6 +193,7 @@ def _common_crates(std):
         "rsa": crate.spec(
             default_features = False,
             version = "0.9.6",
+            features = ["sha2"],
         ),
         "pkcs8": crate.spec(
             default_features = False,
@@ -269,7 +270,7 @@ def _common_crates(std):
         "x509-verify": crate.spec(
             version = "0.4.8",
             default_features = False,
-            features = ["rsa", "sha2", "x509", "pem"],
+            features = ["rsa", "sha2", "x509", "pem", "p256"],
         ),
         "x86_64": crate.spec(version = "=0.15.2"),
         "zerocopy": crate.spec(
@@ -465,6 +466,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "os_pipe": crate.spec(version = "1.1.5"),
     "ouroboros": crate.spec(version = "0.18.4"),
     "parking_lot": crate.spec(version = "0.12.1"),
+    "pem": crate.spec(version = "3.0.4"),
     "port_check": crate.spec(version = "0.1.5"),
     "portpicker": crate.spec(version = "0.1.1"),
     "pprof": crate.spec(

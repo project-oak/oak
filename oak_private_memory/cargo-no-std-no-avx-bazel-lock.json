@@ -1,5 +1,5 @@
 {
-  "checksum": "b6c1d896bc569df5d0eb76afe260818a5d2d051ecbce00d3de112e18c24b44ee",
+  "checksum": "2eede70ea36b3c07710a78416461cb4f9ba8ac0397a94ae5fc0c9532702ee5fd",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7303,6 +7303,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "sha2"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -7337,6 +7343,10 @@
             {
               "id": "rand_core 0.6.4",
               "target": "rand_core"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
             },
             {
               "id": "signature 2.2.0",
@@ -10503,6 +10513,7 @@
         ],
         "crate_features": {
           "common": [
+            "p256",
             "pem",
             "rsa",
             "sha2",
@@ -10519,6 +10530,14 @@
             {
               "id": "der 0.7.10",
               "target": "der"
+            },
+            {
+              "id": "ecdsa 0.16.9",
+              "target": "ecdsa"
+            },
+            {
+              "id": "p256 0.13.2",
+              "target": "p256"
             },
             {
               "id": "rsa 0.9.8",

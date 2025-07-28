@@ -1,5 +1,5 @@
 {
-  "checksum": "d7b9c247195c6a5cc1f18ad4eefbc69479ce96c2d65797f54345c3c0d4ceae4a",
+  "checksum": "6d12e5c5562eb6a586e7f1ae55c4af1bf2cf68b386b2afdc37ac09dc1ac13a76",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7331,6 +7331,10 @@
             {
               "id": "parking_lot 0.12.4",
               "target": "parking_lot"
+            },
+            {
+              "id": "pem 3.0.5",
+              "target": "pem"
             },
             {
               "id": "pkcs8 0.10.2",
@@ -18923,6 +18927,60 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "pem 3.0.5": {
+      "name": "pem",
+      "version": "3.0.5",
+      "package_url": "https://github.com/jcreekmore/pem-rs.git",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/pem/3.0.5/download",
+          "sha256": "38af38e8470ac9dee3ce1bae1af9c1671fffc44ddfd8bd1d0a3445bf349a8ef3"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "pem",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "pem",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "base64 0.22.1",
+              "target": "base64"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "3.0.5"
+      },
+      "license": "MIT",
+      "license_ids": [
+        "MIT"
+      ],
+      "license_file": "LICENSE.md"
+    },
     "pem-rfc7468 0.7.0": {
       "name": "pem-rfc7468",
       "version": "0.7.0",
@@ -24373,6 +24431,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "sha2"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -24407,6 +24471,10 @@
             {
               "id": "rand_core 0.6.4",
               "target": "rand_core"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
             },
             {
               "id": "signature 2.2.0",
@@ -39131,6 +39199,7 @@
         ],
         "crate_features": {
           "common": [
+            "p256",
             "pem",
             "rsa",
             "sha2",
@@ -39147,6 +39216,14 @@
             {
               "id": "der 0.7.10",
               "target": "der"
+            },
+            {
+              "id": "ecdsa 0.16.9",
+              "target": "ecdsa"
+            },
+            {
+              "id": "p256 0.13.2",
+              "target": "p256"
             },
             {
               "id": "rsa 0.9.8",
@@ -40681,6 +40758,7 @@
     "p256 0.13.2",
     "p384 0.13.1",
     "parking_lot 0.12.4",
+    "pem 3.0.5",
     "pkcs8 0.10.2",
     "port_check 0.1.5",
     "portpicker 0.1.1",
