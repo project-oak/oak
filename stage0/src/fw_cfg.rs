@@ -530,3 +530,25 @@ impl FwCfgDmaAccess {
         }
     }
 }
+
+/// Interface for firmware functions that we need: namely, how to load the
+/// configuration files.
+///
+/// This is effectively a subset of the `FwCfg` API that we need for building
+/// tables.
+pub trait Firmware {
+    fn find(&mut self, name: &CStr) -> Option<DirEntry>;
+    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str>;
+}
+
+/// `FwCfg` is pretty much the canonical implementation of `Firmware` for our
+/// use cases.
+impl<P: crate::Platform> Firmware for FwCfg<P> {
+    fn find(&mut self, name: &CStr) -> Option<DirEntry> {
+        self.find(name)
+    }
+
+    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
+        self.read_file(file, buf)
+    }
+}

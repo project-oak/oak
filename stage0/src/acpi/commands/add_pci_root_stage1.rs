@@ -18,10 +18,12 @@ use core::{ffi::CStr, fmt::Debug};
 
 use sha2::Sha256;
 
-use crate::acpi::{
-    commands::{Invoke, Pad, RomfileName},
-    files::Files,
-    Firmware,
+use crate::{
+    acpi::{
+        commands::{Invoke, Pad, RomfileName},
+        files::Files,
+    },
+    fw_cfg::Firmware,
 };
 
 pub const PCI_ROOT_STAGE1_ALLOWLIST_COUNT: usize = 8;

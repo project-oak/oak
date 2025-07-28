@@ -17,7 +17,7 @@
 use sha2::Sha256;
 use strum::FromRepr;
 
-use crate::acpi::{files::Files, Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 mod add_checksum;
 mod add_pci_holes;

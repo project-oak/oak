@@ -22,7 +22,7 @@ use core::{
 use sha2::Sha256;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::acpi::{files::Files, Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 /// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`)
 /// at `offset`, by adding a pointer to `src_offset` within the table

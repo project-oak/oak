@@ -24,7 +24,7 @@ use sha2::Sha256;
 use zerocopy::{Immutable, IntoBytes};
 
 use super::{Invoke, Pad, RomfileName};
-use crate::acpi::{files::Files, Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 /// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start`
 /// and `length` fields, and then add the value at `offset`.

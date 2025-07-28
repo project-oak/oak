@@ -30,7 +30,7 @@ use crate::{
     acpi_tables::{
         DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
-    fw_cfg::{DirEntry, FwCfg},
+    fw_cfg::FwCfg,
     Madt, ZeroPage,
 };
 
@@ -58,28 +58,6 @@ type HighMemoryAllocator = linked_list_allocator::LockedHeap;
 pub static HIGH_MEMORY_ALLOCATOR: HighMemoryAllocator = HighMemoryAllocator::empty();
 
 const TABLE_LOADER_FILE_NAME: &CStr = c"etc/table-loader";
-
-/// Interface for firmware functions that we need: namely, how to load the
-/// configuration files.
-///
-/// This is effectively a subset of the `FwCfg` API that we need for building
-/// tables.
-trait Firmware {
-    fn find(&mut self, name: &CStr) -> Option<DirEntry>;
-    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str>;
-}
-
-/// `FwCfg` is pretty much the canonical implementation of `Firmware` for our
-/// use cases.
-impl<P: crate::Platform> Firmware for FwCfg<P> {
-    fn find(&mut self, name: &CStr) -> Option<DirEntry> {
-        self.find(name)
-    }
-
-    fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
-        self.read_file(file, buf)
-    }
-}
 
 #[repr(u8)]
 #[derive(Debug, FromRepr)]
@@ -271,6 +249,7 @@ mod tests {
     use zeroize::Zeroize;
 
     use super::{commands::*, *};
+    use crate::fw_cfg::{DirEntry, Firmware};
 
     struct TestFirmware;
 

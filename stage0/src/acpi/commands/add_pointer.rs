@@ -25,7 +25,7 @@ use zerocopy::Immutable;
 use zerocopy::IntoBytes;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::acpi::{files::Files, Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 /// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at
 /// `offset`, by adding a pointer to the table originating from `src_file`.

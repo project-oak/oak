@@ -24,7 +24,10 @@ use sha2::{Digest, Sha256};
 use zerocopy::{Immutable, IntoBytes};
 
 use super::{Invoke, Pad, RomfileName};
-use crate::acpi::{files::Files, Firmware, Zone};
+use crate::{
+    acpi::{files::Files, Zone},
+    fw_cfg::Firmware,
+};
 
 /// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
 /// (must be power of

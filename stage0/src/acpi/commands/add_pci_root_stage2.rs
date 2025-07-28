@@ -18,10 +18,14 @@ use core::{ffi::CStr, fmt::Debug};
 
 use sha2::Sha256;
 
-use crate::acpi::{
-    commands::{add_pci_root_stage1::PCI_ROOT_STAGE1_ALLOWLIST_COUNT, Invoke, Pad, RomfileName},
-    files::Files,
-    Firmware,
+use crate::{
+    acpi::{
+        commands::{
+            add_pci_root_stage1::PCI_ROOT_STAGE1_ALLOWLIST_COUNT, Invoke, Pad, RomfileName,
+        },
+        files::Files,
+    },
+    fw_cfg::Firmware,
 };
 
 const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;

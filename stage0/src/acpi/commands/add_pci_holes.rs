@@ -23,7 +23,7 @@ use core::{
 use sha2::Sha256;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::acpi::{files::Files, Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware};
 
 #[repr(C)]
 #[derive(Copy, Clone)]
