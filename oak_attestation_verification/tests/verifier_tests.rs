@@ -32,8 +32,8 @@ use oak_proto_rust::oak::{
         text_reference_value, BinaryReferenceValue, ContainerLayerEndorsements, Digests,
         Endorsements, Evidence, ExpectedValues, ExtractedEvidence, InsecureReferenceValues,
         KernelLayerEndorsements, OakContainersEndorsements, ReferenceValues, Regex,
-        RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, SystemLayerEndorsements,
-        TcbVersion, TextReferenceValue,
+        RootLayerEndorsements, RootLayerReferenceValues, SystemLayerEndorsements, TcbVersion,
+        TextReferenceValue,
     },
     RawDigest,
 };
@@ -49,21 +49,9 @@ const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evi
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
 
-// Legacy Restricted Kernel attestation
-const RK_OBSOLETE_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/rk_evidence_20240312.binarypb";
-
 // Pretend the tests run at this time: 1 March 2024, 12:00 UTC. This date must
 // be valid with respect to the endorsement behind ENDORSEMENT_PATH.
 const NOW_UTC_MILLIS: i64 = 1709294400000;
-
-// Creates a valid AMD SEV-SNP evidence instance for a restricted kernel
-// application but with obsolete DICE data that is still used by some clients.
-fn create_rk_obsolete_evidence() -> Evidence {
-    let serialized =
-        fs::read(data_path(RK_OBSOLETE_EVIDENCE_PATH)).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-}
 
 // Creates a valid fake evidence instance.
 fn create_fake_evidence() -> Evidence {
@@ -507,34 +495,6 @@ fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_rege
     };
 
     assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn verify_fails_with_command_line_reference_value_set_and_obsolete_evidence() {
-    let evidence = create_rk_obsolete_evidence();
-    let endorsements = AttestationData::load_milan_rk_legacy().endorsements;
-    let reference_values = create_rk_reference_values();
-
-    assert_failure(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
-}
-
-#[test]
-fn verify_succeeds_with_skip_command_line_reference_value_set_and_obsolete_evidence() {
-    let evidence = create_rk_obsolete_evidence();
-    let endorsements = AttestationData::load_milan_rk_legacy().endorsements;
-    let mut reference_values = create_rk_reference_values();
-
-    match reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
-                r#type: Some(text_reference_value::Type::Skip(SkipVerification {})),
-            });
-        }
-        Some(_) => {}
-        None => {}
-    };
-
-    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
 }
 
 #[allow(deprecated)]

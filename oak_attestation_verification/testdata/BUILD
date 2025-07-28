@@ -92,8 +92,6 @@ filegroup(
     srcs = [
         "milan_rk_endorsements.binarypb",
         "milan_rk_evidence.binarypb",
-        # We should remove this outdated evidence.
-        "rk_evidence_20240312.binarypb",
     ],
 )
 
