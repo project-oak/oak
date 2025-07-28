@@ -140,7 +140,7 @@ impl HashedRekord<Unverified> {
         let signature = BASE64_STANDARD.decode(&self.state.signature)?;
         let signature = Signature::from_der(&signature).map_err(Error::SignatureDer)?;
 
-        public_key.verify(rekord, &signature).map_err(Error::Verification)?;
+        public_key.verify(rekord, &signature).map_err(Error::SignatureVerification)?;
 
         let rekord_hash = match self.hash_algorithm.as_str() {
             "sha256" => hex::encode(sha2::Sha256::digest(rekord)),
@@ -278,6 +278,6 @@ mod tests {
         let rekord: HashedRekord<Unverified> = serde_json::from_str(&rekord_json).unwrap();
 
         let result = rekord.verify(verifying_key_in_rekord, payload);
-        assert_matches!(result, Err(Error::Verification(_)));
+        assert_matches!(result, Err(Error::SignatureVerification(_)));
     }
 }

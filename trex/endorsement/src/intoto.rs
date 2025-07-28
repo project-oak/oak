@@ -45,7 +45,8 @@ pub type DigestSet = BTreeMap<String, String>;
 /// An artifact identified by its name and digest.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Subject {
-    /// The name of the artifact.
+    /// The name of the artifact. Default to empty string.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
     /// A map from algorithm name to lowercase hex-encoded value of the digest.
     pub digest: DigestSet,
@@ -181,7 +182,14 @@ impl EndorsementStatement {
         // Convert to DateTime<Utc> since that's what the Statement representation uses.
         let validation_time: DateTime<chrono::Utc> = validation_time.into();
 
-        ensure!(self.subject() == subject, "subject mismatch");
+        let mut matching_digests = false;
+        for (alg, digest) in &self.subject().digest {
+            if let Some(self_digest) = subject.digest.get(alg) {
+                ensure!(self_digest == digest, "subject digest mismatch for algorithm {}", alg);
+                matching_digests = true;
+            }
+        }
+        ensure!(matching_digests, "no matching digest algorithms in subject");
 
         ensure!(self._type == STATEMENT_TYPE, "unsupported statement type");
         ensure!(self.predicate_type == PREDICATE_TYPE_V3, "unsupported predicate type");
@@ -379,7 +387,7 @@ mod tests {
     }
 
     #[gtest]
-    fn validate_subject_mismatch() -> anyhow::Result<()> {
+    fn validate_subject_name_mismatch_is_ok() -> anyhow::Result<()> {
         let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
         let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
 
@@ -391,7 +399,42 @@ mod tests {
 
         let validation_time = now + Duration::hours(1);
         let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &ref_claims);
-        assert_that!(result, err(displays_as(eq("subject mismatch"))));
+        assert_that!(result, ok(()));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn validate_subject_digest_mismatch() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
+        let statement = create_test_statement(now, Duration::days(1), vec!["claim1".to_string()]);
+
+        let ref_claims = ["claim1"];
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha256".to_string(), "01".to_string())]),
+        };
+
+        let validation_time = now + Duration::hours(1);
+        let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &ref_claims);
+        assert_that!(result, err(displays_as(eq("subject digest mismatch for algorithm sha256"))));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn validate_no_matching_digest_algorithm() -> anyhow::Result<()> {
+        let now = DateTime::parse_from_rfc3339("2024-03-01T10:00:00.00Z")?;
+        let statement = create_test_statement(now, Duration::days(1), vec![]);
+
+        let ref_subject = Subject {
+            name: "test_subject".to_string(),
+            digest: BTreeMap::from([("sha512".to_string(), "00".to_string())]),
+        };
+
+        let validation_time = now + Duration::hours(1);
+        let result = statement.validate(validation_time.to_utc().into(), &ref_subject, &[]);
+        assert_that!(result, err(displays_as(eq("no matching digest algorithms in subject"))));
 
         Ok(())
     }

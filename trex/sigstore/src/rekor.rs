@@ -19,11 +19,15 @@ pub mod hashedrekord;
 use alloc::{string::String, vec::Vec};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    message::{SignedMessage, Unverified},
+};
+
+pub const REKOR_PUBLIC_KEY_PEM: &str = include_str!("../data/rekor_public_key.pem");
 
 #[derive(thiserror::Error, Debug)]
 pub enum RekorError {
@@ -54,80 +58,38 @@ pub struct RekorPayload {
     pub log_index: i64,
 }
 
-/// Represents a Rekor bundle that has not yet been verified.
-#[derive(Debug, PartialEq)]
-pub struct Unverified {
-    data: Vec<u8>,
-}
-
-/// Represents a Rekor bundle that has been successfully verified.
-#[derive(Debug, PartialEq)]
-pub struct Verified {
-    payload: RekorPayload,
-}
-
-/// Represents a Rekor bundle, which contains a payload and a signature.
-///
-/// The `S` type parameter represents the verification state of the bundle.
-#[derive(Debug, PartialEq)]
-pub struct RekorBundle<S> {
-    signature: S,
-}
-
-impl RekorBundle<Unverified> {
-    /// Creates a new unverified bundle from its raw data.
-    pub fn new(data: Vec<u8>) -> Self {
-        Self { signature: Unverified { data } }
-    }
-
-    /// Returns a slice to the underlying unverified data.
-    pub fn as_unverified_slice(&self) -> &[u8] {
-        &self.signature.data
-    }
-
-    /// Verifies the Rekor inclusion promise bundle.
-    ///
-    /// This implementation follows the specification in
-    /// https://docs.sigstore.dev/cosign/verifying/verify/#verify-a-signature-was-added-to-the-transparency-log
-    pub fn verify(self, rekor_public_key: &VerifyingKey) -> Result<RekorBundle<Verified>, Error> {
-        let bundle: Value = serde_json::from_slice(&self.signature.data)?;
-        let payload = bundle.get("Payload").ok_or(RekorError::MalformedBundle)?;
-        let payload: RekorPayload = RekorPayload::deserialize(payload)?;
-        let signature = bundle.get("SignedEntryTimestamp").ok_or(RekorError::MalformedBundle)?;
-        let signature: String = String::deserialize(signature)?;
-        let signature: Vec<u8> = BASE64_STANDARD.decode(signature)?;
-
-        let signature = Signature::from_der(&signature).map_err(Error::SignatureDer)?;
-        // As per the spec above, the signature of the payload is done over the
-        // Canonicalized representation of these fields:
-        // * No whitespace
-        // * JSON keys are sorted lexicographically
-        // Because serde_json's Value uses a BTreeMap, the sorting property holds for
-        // object values.
-        let message = serde_json::json!({
-            "body": payload.body.clone(),
-            "integratedTime": payload.integrated_time,
-            "logID": payload.log_id.clone(),
-            "logIndex": payload.log_index.clone(),
-        });
-        let message = serde_json::to_string(&message)?;
-        rekor_public_key.verify(message.as_bytes(), &signature).map_err(Error::Verification)?;
-
-        Ok(RekorBundle { signature: Verified { payload } })
-    }
-}
-
-impl RekorBundle<Verified> {
+impl RekorPayload {
     /// Deserializes the base64-encoded body of the Rekor payload into a
     /// specific type.
     pub fn payload_body<T: DeserializeOwned>(&self) -> Result<T, Error> {
-        let body = BASE64_STANDARD.decode(&self.signature.payload.body)?;
+        let body = BASE64_STANDARD.decode(&self.body)?;
         serde_json::from_slice(&body).map_err(Error::Json)
     }
 }
 
+pub fn from_cosign_bundle<T: AsRef<[u8]>>(bundle: T) -> Result<SignedMessage<Unverified>, Error> {
+    let bundle: Value = serde_json::from_slice(bundle.as_ref())?;
+
+    let payload = bundle.get("Payload").ok_or(RekorError::MalformedBundle)?;
+
+    // As per the spec above, the signature of the payload is done over the
+    // Canonicalized representation of its fields, which means:
+    // * No whitespace
+    // * JSON keys are sorted lexicographically
+    // Because serde_json's Value uses a BTreeMap, the sorting property holds for
+    // object values.
+    let message = serde_json::to_string(&payload)?;
+
+    let signature = bundle.get("SignedEntryTimestamp").ok_or(RekorError::MalformedBundle)?;
+    let signature: String = String::deserialize(signature)?;
+    let signature: Vec<u8> = BASE64_STANDARD.decode(signature)?;
+
+    Ok(SignedMessage::unverified(message.into(), signature))
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
     use core::assert_matches::assert_matches;
 
     use p256::ecdsa::{
@@ -144,68 +106,124 @@ mod tests {
         0x64, 0x66,
     ];
 
-    const ANOTHER_KEY_BYTES: [u8; 32] = [
-        0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0xed, 0xce, 0xbd, 0x07, 0x60,
-        0x1c, 0xc5, 0x79, 0x5c, 0x08, 0x25, 0x87, 0x24, 0x56, 0x20, 0x84, 0x0c, 0x82, 0x94, 0x04,
-        0x48, 0x88,
-    ];
-
     #[test]
-    fn test_verify_payload_ok() -> anyhow::Result<()> {
-        let signing_key =
-            SigningKey::from_slice(&SIGNING_KEY_BYTES).map_err(|e| anyhow::anyhow!(e))?;
-        let verifying_key = signing_key.verifying_key();
+    fn test_rekor_payload_body_deserialization() {
+        let payload_body = json!({ "key": "value" });
+        let payload_body_str = serde_json::to_string(&payload_body).unwrap();
+        let encoded_body = BASE64_STANDARD.encode(payload_body_str);
 
-        let payload = json!({
-            "body": "bar",
-            "integratedTime": 1234,
-            "logID": "log_id",
-            "logIndex": 5678,
-        });
-        let signature: Signature = serde_json::to_vec(&payload).map(|s| signing_key.sign(&s))?;
+        let rekor_payload = RekorPayload {
+            body: encoded_body,
+            integrated_time: 12345,
+            log_id: "log_id".to_string(),
+            log_index: 1,
+        };
 
-        let data = json!({
-            "Payload": payload,
-            "SignedEntryTimestamp": BASE64_STANDARD.encode(signature.to_der().to_vec()),
-        });
-        let data = serde_json::to_vec(&data)?;
+        #[derive(Deserialize, PartialEq, Debug)]
+        struct TestPayload {
+            key: String,
+        }
 
-        let bundle = RekorBundle::new(data);
-        let bundle = bundle.verify(verifying_key)?;
-
-        let expected_payload: RekorPayload = serde_json::from_value(payload)?;
-        assert_matches!(bundle, RekorBundle::<Verified> { signature: Verified { payload: p } } if p == expected_payload);
-
-        Ok(())
+        let deserialized: TestPayload = rekor_payload.payload_body().unwrap();
+        assert_eq!(deserialized, TestPayload { key: "value".to_string() });
     }
 
     #[test]
-    fn test_verify_payload_failed() -> anyhow::Result<()> {
-        let signing_key =
-            SigningKey::from_slice(&SIGNING_KEY_BYTES).map_err(|e| anyhow::anyhow!(e))?;
+    fn test_rekor_payload_body_invalid_base64() {
+        let rekor_payload = RekorPayload {
+            body: "invalid-base64".to_string(),
+            integrated_time: 12345,
+            log_id: "log_id".to_string(),
+            log_index: 1,
+        };
 
+        #[derive(Deserialize, PartialEq, Debug)]
+        struct TestPayload {
+            key: String,
+        }
+
+        let result: Result<TestPayload, _> = rekor_payload.payload_body();
+        assert_matches!(result, Err(Error::Base64(_)));
+    }
+
+    #[test]
+    fn test_rekor_payload_body_invalid_json() {
+        let encoded_body = BASE64_STANDARD.encode("not a json");
+        let rekor_payload = RekorPayload {
+            body: encoded_body,
+            integrated_time: 12345,
+            log_id: "log_id".to_string(),
+            log_index: 1,
+        };
+
+        #[derive(Deserialize, PartialEq, Debug)]
+        struct TestPayload {
+            key: String,
+        }
+
+        let result: Result<TestPayload, _> = rekor_payload.payload_body();
+        assert_matches!(result, Err(Error::Json(_)));
+    }
+
+    #[test]
+    fn test_from_cosign_bundle_success() {
         let payload = json!({
-            "body": "bar",
-            "integratedTime": 1234,
+            "body": "c29tZSBib2R5",
+            "integratedTime": 123,
             "logID": "log_id",
-            "logIndex": 5678,
+            "logIndex": 456,
         });
-        let signature: Signature = serde_json::to_vec(&payload).map(|s| signing_key.sign(&s))?;
+        let message = serde_json::to_vec(&payload).unwrap();
 
-        let data = json!({
+        let signing_key = SigningKey::from_bytes(&SIGNING_KEY_BYTES.into()).unwrap();
+        let signature: p256::ecdsa::Signature = signing_key.sign(&message);
+        let signature_b64 = BASE64_STANDARD.encode(signature.to_der());
+
+        let bundle = json!({
             "Payload": payload,
-            "SignedEntryTimestamp": BASE64_STANDARD.encode(signature.to_der().to_vec()),
+            "SignedEntryTimestamp": signature_b64,
         });
-        let data = serde_json::to_vec(&data)?;
+        let bundle_str = serde_json::to_string(&bundle).unwrap();
 
-        // Use the verifying key of a different signing key
-        let verifying_key =
-            SigningKey::from_slice(&ANOTHER_KEY_BYTES).map_err(|e| anyhow::anyhow!(e))?;
-        let verifying_key = verifying_key.verifying_key();
+        let signed_message = from_cosign_bundle(&bundle_str).unwrap();
 
-        let bundle = RekorBundle::new(data);
-        assert_matches!(bundle.verify(verifying_key), Err(Error::Verification(_)));
+        assert_eq!(signed_message, SignedMessage::unverified(message, signature.to_der().to_vec()));
+    }
 
-        Ok(())
+    #[test]
+    fn test_from_cosign_bundle_missing_payload() {
+        let bundle = json!({
+            "SignedEntryTimestamp": "signature",
+        });
+        let bundle_str = serde_json::to_string(&bundle).unwrap();
+        let result = from_cosign_bundle(&bundle_str);
+        assert_matches!(result, Err(Error::Rekor(RekorError::MalformedBundle)));
+    }
+
+    #[test]
+    fn test_from_cosign_bundle_missing_signature() {
+        let payload = json!({
+            "body": "c29tZSBib2R5",
+        });
+        let bundle = json!({
+            "Payload": payload,
+        });
+        let bundle_str = serde_json::to_string(&bundle).unwrap();
+        let result = from_cosign_bundle(&bundle_str);
+        assert_matches!(result, Err(Error::Rekor(RekorError::MalformedBundle)));
+    }
+
+    #[test]
+    fn test_from_cosign_bundle_invalid_signature_base64() {
+        let payload = json!({
+            "body": "c29tZSBib2R5",
+        });
+        let bundle = json!({
+            "Payload": payload,
+            "SignedEntryTimestamp": "invalid-base64",
+        });
+        let bundle_str = serde_json::to_string(&bundle).unwrap();
+        let result = from_cosign_bundle(&bundle_str);
+        assert_matches!(result, Err(Error::Base64(_)));
     }
 }

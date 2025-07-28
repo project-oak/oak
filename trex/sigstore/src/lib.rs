@@ -19,6 +19,6 @@
 
 extern crate alloc;
 
-pub mod cosign;
 pub mod error;
+pub mod message;
 pub mod rekor;

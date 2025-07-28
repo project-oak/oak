@@ -18,7 +18,11 @@ use endorsement::intoto::{EndorsementStatement, Subject};
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
-use sigstore::rekor::hashedrekord::{HashedRekord, Unverified};
+use sigstore::rekor::{
+    from_cosign_bundle,
+    hashedrekord::{HashedRekord, Unverified},
+    RekorPayload,
+};
 use sigstore_client::cosign;
 
 use crate::flags;
@@ -52,15 +56,21 @@ impl VerifyCommand {
         };
         let client = Client::new(ClientConfig::default());
 
-        let (signature, rekor) = cosign::pull_payload(&client, &auth, &self.image).await?;
+        let (endorsement, bundle) = cosign::pull_payload(&client, &auth, &self.image).await?;
 
-        let signature = signature.verify(&self.endorser_public_key)?;
-        let rekor = rekor.verify(&rekor_public_key)?;
+        let endorsement = endorsement
+            .verify(&self.endorser_public_key)
+            .context("Failed to verify endorsement signature")?;
 
+        let rekor = from_cosign_bundle(bundle)?;
+        let rekor = rekor.verify(&rekor_public_key).context("failed to verify rekor signature")?;
+        let rekor: RekorPayload = serde_json::from_slice(rekor.message())?;
         let hashed_rekord: HashedRekord<Unverified> = rekor.payload_body()?;
-        hashed_rekord.verify(&self.endorser_public_key, signature.data())?;
+        hashed_rekord
+            .verify(&self.endorser_public_key, endorsement.message())
+            .context("Failed to verify Rekor log entry")?;
 
-        let statement = signature.data_payload::<EndorsementStatement>()?;
+        let statement: EndorsementStatement = serde_json::from_slice(endorsement.message())?;
 
         let now = chrono::Utc::now();
         let subject: Subject = (&self.image).try_into()?;

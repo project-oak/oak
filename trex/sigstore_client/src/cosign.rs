@@ -15,7 +15,7 @@
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use oci_client::{secrets::RegistryAuth, Client, Reference};
-use sigstore::{cosign, cosign::SignatureBundle, rekor, rekor::RekorBundle};
+use sigstore::message::{Raw, SignedMessage, Unverified};
 
 const SIMPLE_SIGNING_MIME_TYPE: &str = "application/vnd.dev.cosign.simplesigning.v1+json";
 
@@ -27,7 +27,7 @@ pub async fn pull_payload(
     client: &Client,
     auth: &RegistryAuth,
     image: &Reference,
-) -> anyhow::Result<(SignatureBundle<cosign::Unverified>, RekorBundle<rekor::Unverified>)> {
+) -> anyhow::Result<(SignedMessage<Unverified>, SignedMessage<Raw>)> {
     // The signature container is in a container in the same registry and repository
     // and can be identified by tag. The tag format is the image's digest with :
     // replaced by -, and with the suffix ".sig".
@@ -60,9 +60,8 @@ pub async fn pull_payload(
         let bundle = annotations
             .remove("dev.sigstore.cosign/bundle")
             .context("Cosign image does not have bundle annotation")?;
-        let bundle = RekorBundle::new(bundle.into());
 
-        Ok((SignatureBundle::new(layer.data, signature), bundle))
+        Ok((SignedMessage::unverified(layer.data, signature), SignedMessage::raw(bundle.into())))
     } else {
         anyhow::bail!("No layers found in image");
     }

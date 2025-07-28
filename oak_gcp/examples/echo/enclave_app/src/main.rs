@@ -79,12 +79,12 @@ async fn main() -> anyhow::Result<()> {
     let workload_endorsement = Some(SignedEndorsement {
         endorsement: Some(Endorsement {
             format: Format::EndorsementFormatJsonIntoto.into(),
-            serialized: statement.payload.data,
+            serialized: statement.unverified_message().to_vec(),
             ..Default::default()
         }),
         // The signature proto has a key ID which we do not use at the moment.
-        signature: Some(Signature { key_id: 0, raw: statement.payload.signature }),
-        rekor_log_entry: rekor.as_unverified_slice().to_vec(),
+        signature: Some(Signature { raw: statement.signature().to_vec(), ..Default::default() }),
+        rekor_log_entry: rekor.raw_data().to_vec(),
     });
 
     let endorsement = ConfidentialSpaceEndorsement { jwt_token, workload_endorsement };

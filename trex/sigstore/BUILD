@@ -22,9 +22,11 @@ package(
 rust_library(
     name = "sigstore",
     srcs = glob(["src/**/*.rs"]),
+    compile_data = ["//trex/sigstore/data:rekor_public_key.pem"],
     deps = [
         "@oak_crates_index//:base64",
         "@oak_crates_index//:hex",
+        "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",

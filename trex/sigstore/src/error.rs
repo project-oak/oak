@@ -29,7 +29,7 @@ pub enum Error {
     #[error("Signature DER decode error: {0:?}")]
     SignatureDer(p256::ecdsa::Error),
     #[error("Signature verification failed: {0:?}")]
-    Verification(p256::ecdsa::Error),
+    SignatureVerification(p256::ecdsa::Error),
     #[error("Could not decode public key: {0:?}")]
     PublicKeyDecode(p256::pkcs8::spki::Error),
     #[error("Could not convert public key from bytes: {0}")]
