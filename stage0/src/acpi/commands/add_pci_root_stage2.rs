@@ -14,32 +14,33 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Debug};
+use core::{ffi::CStr, fmt::Debug, iter::zip};
 
 use sha2::Sha256;
 
 use crate::{
     acpi::{
         commands::{
-            add_pci_root_stage1::PCI_ROOT_STAGE1_ALLOWLIST_COUNT, Invoke, Pad, RomfileName,
+            add_pci_root_stage1::{AllowlistOffset, PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT},
+            Invoke, Pad, RomfileName,
         },
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT,
+    pci::{read_pci_crs_allowlist, PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT},
 };
 
-const PCI_ROOT_ALLOWLIST_COUNT: usize = PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT * 2;
-const PCI_ROOT_STAGE2_ALLOWLIST_COUNT: usize =
-    PCI_ROOT_ALLOWLIST_COUNT - PCI_ROOT_STAGE1_ALLOWLIST_COUNT;
+const PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT: usize =
+    PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT - PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct AddPciRootStage2 {
     file: RomfileName,
-    allowlist_offsets: [u32; PCI_ROOT_STAGE2_ALLOWLIST_COUNT],
+    // 4 of them in Stage1; rest (11-4) here.
+    allowlist_offsets: [AllowlistOffset; PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT],
     bus_index: u8,
-    _padding: [u8; 8],
+    _padding: [u8; 11],
 }
 static_assertions::assert_eq_size!(AddPciRootStage2, Pad);
 
@@ -52,14 +53,32 @@ impl AddPciRootStage2 {
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage2 {
     fn invoke(
         &self,
-        _files: &mut F,
-        _fwcfg: &mut FW,
+        files: &mut F,
+        fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        log::error!(
-            "AddPciRootStage2 not implemented; ACPI tables may be broken! Command: {:?}",
-            self
-        );
+        log::warn!("AddPciRootStage2 not tested; ACPI tables may be broken! Command: {:?}", self);
+        let file = files.get_file_mut(self.file())?;
+
+        if self.bus_index != 0 {
+            return Err("AddPciRootStage2: only bus 0 supported for now");
+        }
+        let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
+        log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+
+        // The first 4 entries (8 offsets) are consumed in ADD_PCI_ROOT_STAGE1.
+        for (allowlist_offset, crs_allowlist) in
+            zip(self.allowlist_offsets, crs_allowlist[4..].iter())
+        {
+            let offset_start = allowlist_offset.start as usize;
+            let offset_end = allowlist_offset.end as usize;
+
+            file[offset_start..offset_start + size_of::<u32>()]
+                .copy_from_slice(&crs_allowlist.address.to_le_bytes());
+            let end = crs_allowlist.address + crs_allowlist.length - 1;
+            file[offset_end..offset_end + size_of::<u32>()].copy_from_slice(&end.to_le_bytes());
+        }
+
         Ok(())
     }
 }

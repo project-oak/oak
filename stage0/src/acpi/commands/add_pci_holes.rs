@@ -39,23 +39,23 @@ pub struct AddPciHoles {
 }
 static_assertions::assert_eq_size!(AddPciHoles, Pad);
 
-struct Window<T> {
-    base: T,
-    end: T,
+pub(crate) struct Window<T> {
+    pub base: T,
+    pub end: T,
 }
 
 impl<T: core::ops::Sub<Output = T> + Copy> Window<T> {
-    fn len(&self) -> T {
+    pub(crate) fn len(&self) -> T {
         self.end - self.base
     }
 }
 
-struct FirmwareData {
-    pci_window_32: Window<u32>,
-    pci_window_64: Window<u64>,
+pub(crate) struct FirmwareData {
+    pub pci_window_32: Window<u32>,
+    pub pci_window_64: Window<u64>,
 }
 
-fn populate_firmware_data() -> Result<FirmwareData, &'static str> {
+pub(crate) fn populate_firmware_data() -> Result<FirmwareData, &'static str> {
     // There may be a way how to dynamically determine these values, but for now,
     // hard-code the expected values as it's unlikely they will ever change.
 

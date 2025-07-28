@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Debug};
+use core::{ffi::CStr, fmt::Debug, iter::zip};
 
 use sha2::Sha256;
 
@@ -24,9 +24,18 @@ use crate::{
         files::Files,
     },
     fw_cfg::Firmware,
+    pci::read_pci_crs_allowlist,
 };
 
-pub const PCI_ROOT_STAGE1_ALLOWLIST_COUNT: usize = 8;
+pub const PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT: usize = 4;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct AllowlistOffset {
+    pub start: u32,
+    pub end: u32,
+}
+static_assertions::assert_eq_size!(AllowlistOffset, u64);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -41,7 +50,8 @@ pub struct AddPciRootStage1 {
     pci64_length_offset: u32,
     pci16_io_start_offset: u32,
     pci16_io_end_offset: u32,
-    allowlist_offsets: [u32; PCI_ROOT_STAGE1_ALLOWLIST_COUNT],
+    // 8 offsets in 4 pairs.
+    allowlist_offsets: [AllowlistOffset; PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT],
     bus_index: u8,
 }
 static_assertions::assert_eq_size!(AddPciRootStage1, Pad);
@@ -55,16 +65,63 @@ impl AddPciRootStage1 {
 impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
     fn invoke(
         &self,
-        _files: &mut F,
+        files: &mut F,
         fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
-        log::error!(
-            "AddPciRootStage1 not implemented; ACPI tables may be broken! Command: {:?}",
-            self
-        );
+        log::warn!("AddPciRootStage1 untested; command: {:?}", self);
+        let file = files.get_file_mut(self.file())?;
 
-        log::debug!("PCI CRS allowlist: {:?}", crate::pci::read_pci_crs_allowlist(fwcfg));
+        if self.bus_index != 0 {
+            return Err("AddPciRootStage1: only bus 0 supported for now");
+        }
+
+        // Use the same hardcoded values as ADD_PCI_HOLES, for now.
+        let data = crate::acpi::commands::add_pci_holes::populate_firmware_data()?;
+
+        file[self.pci32_start_offset as usize
+            ..(self.pci32_start_offset as usize + size_of_val(&data.pci_window_32.base))]
+            .copy_from_slice(&data.pci_window_32.base.to_le_bytes());
+        file[self.pci32_end_offset as usize
+            ..(self.pci32_end_offset as usize + size_of_val(&data.pci_window_32.end))]
+            .copy_from_slice(&data.pci_window_32.end.to_le_bytes());
+
+        if data.pci_window_64.base != 0 {
+            file[self.pci64_valid_offset as usize] = 1;
+            file[self.pci64_start_offset as usize
+                ..(self.pci64_start_offset as usize + size_of_val(&data.pci_window_64.base))]
+                .copy_from_slice(&data.pci_window_64.base.to_le_bytes());
+            file[self.pci64_end_offset as usize
+                ..(self.pci64_end_offset as usize + size_of_val(&data.pci_window_64.end))]
+                .copy_from_slice(&data.pci_window_64.end.to_le_bytes());
+            file[self.pci64_length_offset as usize
+                ..(self.pci64_length_offset as usize + size_of_val(&data.pci_window_64.len()))]
+                .copy_from_slice(&data.pci_window_64.len().to_le_bytes());
+        } else {
+            file[self.pci64_valid_offset as usize] = 0;
+        }
+
+        // Ignore PCI16 for now, as we don't know what to write there. For now.
+        //file[self.pci16_io_start_offset as usize
+        //    ..(self.pci16_io_start_offset as usize + size_of::<u16>())]
+        //    .copy_from_slice(????to_le_bytes());
+        //file[self.pci16_io_end_offset as usize
+        //    ..(self.pci16_io_end_offset as usize + size_of::<u16>())]
+        //    .copy_from_slice(????.to_le_bytes());
+
+        let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
+        log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
+
+        // This command contains the first 4 offsets (8 entries in total)
+        for (allowlist_offset, crs_allowlist) in zip(self.allowlist_offsets, crs_allowlist) {
+            let offset_start = allowlist_offset.start as usize;
+            let offset_end = allowlist_offset.end as usize;
+
+            file[offset_start..offset_start + size_of::<u32>()]
+                .copy_from_slice(&crs_allowlist.address.to_le_bytes());
+            let end = crs_allowlist.address + crs_allowlist.length - 1;
+            file[offset_end..offset_end + size_of::<u32>()].copy_from_slice(&end.to_le_bytes());
+        }
 
         Ok(())
     }
