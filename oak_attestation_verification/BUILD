@@ -216,9 +216,11 @@ rust_library(
         "//oak_attestation_verification/testdata:endorsement",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:milan_oc_attestation",
-        "//oak_attestation_verification/testdata:milan_oc_attestation_legacy",
+        "//oak_attestation_verification/testdata:milan_oc_release_attestation",
+        "//oak_attestation_verification/testdata:milan_oc_staging_attestation",
         "//oak_attestation_verification/testdata:milan_rk_attestation",
-        "//oak_attestation_verification/testdata:milan_rk_attestation_legacy",
+        "//oak_attestation_verification/testdata:milan_rk_release_attestation",
+        "//oak_attestation_verification/testdata:milan_rk_staging_attestation",
         "//oak_attestation_verification/testdata:turin_oc_attestation",
     ],
     deps = [

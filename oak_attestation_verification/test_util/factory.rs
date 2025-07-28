@@ -25,8 +25,6 @@ use oak_proto_rust::oak::attestation::v1::{
     SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
 };
 
-use crate::endorsement_data::EndorsementData;
-
 // Creates mock endorsements instance for a restricted kernel application.
 pub fn create_rk_endorsements(vcek_cert: &[u8]) -> Endorsements {
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_cert.to_vec(), stage0: None };
@@ -55,7 +53,6 @@ pub fn create_rk_endorsements(vcek_cert: &[u8]) -> Endorsements {
 // All endorsements are skipped with the exception of the one which happens
 // to be available via `endorsement_data`.
 pub fn create_oc_reference_values() -> ReferenceValues {
-    let d = EndorsementData::load();
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
@@ -91,8 +88,7 @@ pub fn create_oc_reference_values() -> ReferenceValues {
                 )],
             })),
         }),
-        // The testdata endorsement happens to be oak_orchestrator.
-        init_ram_fs: Some(BinaryReferenceValue {r#type: Some(binary_reference_value::Type::Endorsement(d.ref_value))}),
+        init_ram_fs: Some(skip.clone()),
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),
     };

@@ -128,8 +128,8 @@ fn assert_failure(result: anyhow::Result<ExtractedEvidence>) {
 }
 
 #[test]
-fn verify_milan_oc_legacy_success() {
-    let d = AttestationData::load_milan_oc_legacy();
+fn verify_milan_oc_staging_success() {
+    let d = AttestationData::load_milan_oc_staging();
 
     assert_success(verify(
         d.make_valid_millis(),
@@ -140,8 +140,28 @@ fn verify_milan_oc_legacy_success() {
 }
 
 #[test]
-fn verify_milan_oc_legacy_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_oc_legacy();
+fn verify_milan_oc_release_success() {
+    let d = AttestationData::load_milan_oc_release();
+
+    assert_success(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
+}
+
+#[test]
+fn verify_milan_oc_staging_explicit_reference_values_success() {
+    let d = AttestationData::load_milan_oc_staging();
+    let reference_values = make_reference_values(&d.evidence);
+
+    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+}
+
+#[test]
+fn verify_milan_oc_release_explicit_reference_values_success() {
+    let d = AttestationData::load_milan_oc_release();
     let reference_values = make_reference_values(&d.evidence);
 
     assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
@@ -160,8 +180,8 @@ fn verify_cb_succeeds() {
 }
 
 #[test]
-fn verify_milan_rk_legacy_success() {
-    let d = AttestationData::load_milan_rk_legacy();
+fn verify_milan_rk_staging_success() {
+    let d = AttestationData::load_milan_rk_staging();
 
     assert_success(verify(
         d.make_valid_millis(),
@@ -172,8 +192,28 @@ fn verify_milan_rk_legacy_success() {
 }
 
 #[test]
-fn verify_rk_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_rk_legacy();
+fn verify_milan_rk_release_success() {
+    let d = AttestationData::load_milan_rk_release();
+
+    assert_success(verify(
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
+        &d.reference_values,
+    ));
+}
+
+#[test]
+fn verify_rk_staging_explicit_reference_values_success() {
+    let d = AttestationData::load_milan_rk_staging();
+    let reference_values = make_reference_values(&d.evidence);
+
+    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+}
+
+#[test]
+fn verify_rk_release_explicit_reference_values_success() {
+    let d = AttestationData::load_milan_rk_release();
     let reference_values = make_reference_values(&d.evidence);
 
     assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
@@ -182,7 +222,7 @@ fn verify_rk_explicit_reference_values_success() {
 #[test]
 fn verify_fake_evidence_success() {
     let evidence = create_fake_evidence();
-    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+    let d = AttestationData::load_milan_oc_staging();
 
     let mut reference_values = create_oc_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
@@ -195,13 +235,13 @@ fn verify_fake_evidence_success() {
         panic!("invalid reference value type");
     }
 
-    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
+    assert_success(verify(d.make_valid_millis(), &evidence, &d.endorsements, &reference_values));
 }
 
 #[test]
 fn verify_fake_evidence_explicit_reference_values() {
     let evidence = create_fake_evidence();
-    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+    let endorsements = AttestationData::load_milan_oc_staging().endorsements;
     let reference_values = make_reference_values(&evidence);
 
     assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
@@ -210,7 +250,7 @@ fn verify_fake_evidence_explicit_reference_values() {
 #[test]
 fn verify_fake_evidence_split_verify_calls() {
     let evidence = create_fake_evidence();
-    let endorsements = AttestationData::load_milan_oc_legacy().endorsements;
+    let endorsements = AttestationData::load_milan_oc_staging().endorsements;
     let reference_values = make_reference_values(&evidence);
     let computed_expected_values =
         get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
@@ -227,7 +267,7 @@ fn verify_fake_evidence_split_verify_calls() {
 fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     let evidence = create_fake_evidence();
 
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
     let endorsements = create_oc_endorsements(&vcek_cert);
 
@@ -248,7 +288,7 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
 
 #[test]
 fn verify_fails_with_manipulated_root_public_key() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
 
@@ -263,7 +303,7 @@ fn verify_fails_with_manipulated_root_public_key() {
 #[allow(deprecated)]
 #[test]
 fn verify_fails_with_unsupported_tcb_version() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0, fmc: 0 };
     match d.reference_values.r#type.as_mut() {
@@ -285,7 +325,7 @@ fn verify_fails_with_unsupported_tcb_version() {
 
 #[test]
 fn verify_unpopulated_per_model_tcb_version_failure() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     #[allow(deprecated)]
     match d.reference_values.r#type.as_mut() {
@@ -307,13 +347,14 @@ fn verify_unpopulated_per_model_tcb_version_failure() {
 
 #[test]
 fn verify_unpopulated_per_model_tcb_version_success() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     #[allow(deprecated)]
     match d.reference_values.r#type.as_mut() {
         Some(reference_values::Type::OakContainers(rfs)) => {
             rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version = None;
             rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().genoa = None;
+            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().turin = None;
         }
         Some(_) => {}
         None => {}
@@ -329,7 +370,7 @@ fn verify_unpopulated_per_model_tcb_version_success() {
 
 #[test]
 fn verify_succeeds_with_right_initial_measurement() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     let actual = if let Some(EvidenceValues::OakContainers(values)) =
         verify_dice_chain_and_extract_evidence(&d.evidence)
@@ -378,7 +419,7 @@ fn verify_succeeds_with_right_initial_measurement() {
 
 #[test]
 fn verify_fails_with_wrong_initial_measurement() {
-    let mut d = AttestationData::load_milan_oc_legacy();
+    let mut d = AttestationData::load_milan_oc_staging();
 
     let mut wrong = if let Some(EvidenceValues::OakContainers(values)) =
         verify_dice_chain_and_extract_evidence(&d.evidence)
@@ -437,7 +478,7 @@ fn verify_fails_with_empty_args() {
 
 #[test]
 fn verify_non_matching_command_line_reference_value_failure() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
 
     let mut reference_values = create_rk_reference_values();
     match reference_values.r#type.as_mut() {
@@ -458,7 +499,7 @@ fn verify_non_matching_command_line_reference_value_failure() {
 #[test]
 #[cfg(not(feature = "regex"))]
 fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_disabled() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = create_rk_reference_values();
 
     match reference_values.r#type.as_mut() {
@@ -479,7 +520,7 @@ fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_d
 #[test]
 #[cfg(feature = "regex")]
 fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_regex_enabled() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = create_rk_reference_values();
 
     match reference_values.r#type.as_mut() {
@@ -500,7 +541,7 @@ fn verify_succeeds_with_matching_command_line_reference_value_regex_set_and_rege
 #[allow(deprecated)]
 #[test]
 fn containers_invalid_boot_loader_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -526,7 +567,7 @@ fn containers_invalid_boot_loader_fails() {
 #[allow(deprecated)]
 #[test]
 fn containers_invalid_microcode_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -552,7 +593,7 @@ fn containers_invalid_microcode_fails() {
 #[allow(deprecated)]
 #[test]
 fn containers_invalid_tcb_snp_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -578,7 +619,7 @@ fn containers_invalid_tcb_snp_fails() {
 #[allow(deprecated)]
 #[test]
 fn containers_invalid_tcb_tee_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -603,7 +644,7 @@ fn containers_invalid_tcb_tee_fails() {
 
 #[test]
 fn containers_invalid_stage0_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -641,7 +682,7 @@ fn containers_invalid_stage0_fails() {
 
 #[test]
 fn containers_invalid_acpi_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -676,7 +717,7 @@ fn containers_invalid_acpi_fails() {
 
 #[test]
 fn containers_invalid_init_ram_fs_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -711,7 +752,7 @@ fn containers_invalid_init_ram_fs_fails() {
 
 #[test]
 fn containers_invalid_kernel_cmd_line_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -741,7 +782,7 @@ fn containers_invalid_kernel_cmd_line_fails() {
 
 #[test]
 fn containers_invalid_kernel_image_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -778,7 +819,7 @@ fn containers_invalid_kernel_image_fails() {
 
 #[test]
 fn containers_invalid_kernel_setup_data_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -815,7 +856,7 @@ fn containers_invalid_kernel_setup_data_fails() {
 
 #[test]
 fn containers_invalid_system_image_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -850,7 +891,7 @@ fn containers_invalid_system_image_fails() {
 
 #[test]
 fn containers_invalid_container_bundle_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -885,7 +926,7 @@ fn containers_invalid_container_bundle_fails() {
 
 #[test]
 fn containers_invalid_container_config_fails() {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let oc = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -921,7 +962,7 @@ fn containers_invalid_container_config_fails() {
 #[allow(deprecated)]
 #[test]
 fn verify_rk_invalid_boot_loader_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -947,7 +988,7 @@ fn verify_rk_invalid_boot_loader_fails() {
 #[allow(deprecated)]
 #[test]
 fn verify_rk_invalid_microcode_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -973,7 +1014,7 @@ fn verify_rk_invalid_microcode_fails() {
 #[allow(deprecated)]
 #[test]
 fn restricted_kernel_invalid_tcb_snp_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -998,7 +1039,7 @@ fn restricted_kernel_invalid_tcb_snp_fails() {
 #[allow(deprecated)]
 #[test]
 fn restricted_kernel_invalid_tcb_tee_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1023,7 +1064,7 @@ fn restricted_kernel_invalid_tcb_tee_fails() {
 
 #[test]
 fn restricted_kernel_invalid_stage0_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1061,7 +1102,7 @@ fn restricted_kernel_invalid_stage0_fails() {
 
 #[test]
 fn restricted_kernel_invalid_acpi_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1096,7 +1137,7 @@ fn restricted_kernel_invalid_acpi_fails() {
 
 #[test]
 fn restricted_kernel_invalid_init_ram_fs_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1131,7 +1172,7 @@ fn restricted_kernel_invalid_init_ram_fs_fails() {
 
 #[test]
 fn restricted_kernel_invalid_kernel_cmd_line_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1161,7 +1202,7 @@ fn restricted_kernel_invalid_kernel_cmd_line_fails() {
 
 #[test]
 fn restricted_kernel_invalid_kernel_image_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1198,7 +1239,7 @@ fn restricted_kernel_invalid_kernel_image_fails() {
 
 #[test]
 fn restricted_kernel_invalid_kernel_setup_data_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1235,7 +1276,7 @@ fn restricted_kernel_invalid_kernel_setup_data_fails() {
 
 #[test]
 fn restricted_kernel_invalid_application_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {
@@ -1270,7 +1311,7 @@ fn restricted_kernel_invalid_application_fails() {
 
 #[test]
 fn restricted_kernel_application_config_fails() {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let mut reference_values = make_reference_values(&d.evidence);
 
     let rk = match reference_values.r#type.as_mut().expect("no reference values") {

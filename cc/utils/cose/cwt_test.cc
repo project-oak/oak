@@ -34,14 +34,14 @@ using ::oak::attestation::v1::Evidence;
 using ::testing::ElementsAreArray;
 
 constexpr absl::string_view kTestEvidencePath =
-    "oak_attestation_verification/testdata/milan_oc_evidence.binarypb";
+    "oak_attestation_verification/testdata/milan_oc_staging_evidence.binarypb";
 
 // Public key extracted from the `kTestEvidencePath`
 // `encryption_public_key_certificate`.
-constexpr uint8_t kTestPublicKey[] = {169, 153, 134, 149, 237, 126, 255, 33,
-                                      224, 237, 186, 74,  214, 193, 103, 57,
-                                      197, 109, 186, 1,   225, 116, 71,  4,
-                                      227, 236, 105, 90,  14,  138, 10,  91};
+constexpr uint8_t kTestPublicKey[] = {146, 168, 171, 112, 97,  113, 10,  95,
+                                      36,  223, 0,   29,  154, 253, 246, 188,
+                                      154, 43,  252, 192, 229, 178, 185, 231,
+                                      234, 233, 158, 86,  139, 40,  252, 106};
 
 class CertificateTest : public testing::Test {
  protected:

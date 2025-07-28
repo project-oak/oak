@@ -207,6 +207,32 @@ fn get_product_from_report(d: &AttestationData) -> AmdProduct {
     report.data.get_product()
 }
 
+fn print_report(label: &str, d: &AttestationData) {
+    let report = AttestationReport::ref_from_bytes(
+        &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,
+    )
+    .expect("invalid AMD attestation report");
+    eprintln!("Attestation report: {} -----------------------------", label);
+    eprintln!("Version      {:?}", report.data.version);
+    eprintln!(
+        "CPU ID       0x{:02x} 0x{:02x} 0x{:02x}",
+        report.data.cpuid_fam_id, report.data.cpuid_mod_id, report.data.cpuid_step
+    );
+    eprintln!("Hardware ID  {}", hex::encode(report.data.chip_id));
+    eprintln!(
+        "Current  TCB {:?} - parsed: {:?}",
+        report.data.current_tcb,
+        report.data.get_current_tcb_version()
+    );
+    eprintln!(
+        "Reported TCB {:?} - parsed: {:?}",
+        report.data.reported_tcb,
+        report.data.get_reported_tcb_version()
+    );
+    eprintln!("Measurement  {}", hex::encode(report.data.measurement));
+    eprintln!("End {} ---------------------------------------------", label);
+}
+
 fn get_product_from_vcek(d: &AttestationData) -> AmdProduct {
     let vcek_cert = Certificate::from_der(
         &d.get_tee_certificate().expect("couldn't get VCEK cert from test data"),
@@ -216,13 +242,34 @@ fn get_product_from_vcek(d: &AttestationData) -> AmdProduct {
 }
 
 #[test]
+fn print_all_reports() {
+    print_report("load_cb", &AttestationData::load_cb());
+    print_report("load_milan_oc_staging", &AttestationData::load_milan_oc_staging());
+    print_report("load_milan_oc_release", &AttestationData::load_milan_oc_release());
+    print_report("load_milan_rk_staging", &AttestationData::load_milan_rk_staging());
+    print_report("load_milan_rk_release", &AttestationData::load_milan_rk_release());
+    print_report("load_oc", &AttestationData::load_oc());
+    print_report("load_rk", &AttestationData::load_rk());
+    print_report("load_genoa_oc", &AttestationData::load_genoa_oc());
+    print_report("load_turin_oc", &AttestationData::load_turin_oc());
+}
+
+#[test]
 fn test_product_from_report_milan() {
     assert_eq!(
-        get_product_from_report(&AttestationData::load_milan_oc_legacy()),
+        get_product_from_report(&AttestationData::load_milan_oc_release()),
         AmdProduct::Milan
     );
     assert_eq!(
-        get_product_from_report(&AttestationData::load_milan_rk_legacy()),
+        get_product_from_report(&AttestationData::load_milan_oc_staging()),
+        AmdProduct::Milan
+    );
+    assert_eq!(
+        get_product_from_report(&AttestationData::load_milan_rk_release()),
+        AmdProduct::Milan
+    );
+    assert_eq!(
+        get_product_from_report(&AttestationData::load_milan_rk_staging()),
         AmdProduct::Milan
     );
     assert_eq!(get_product_from_report(&AttestationData::load_oc()), AmdProduct::Milan);
@@ -243,8 +290,10 @@ fn test_product_from_report_turin() {
 
 #[test]
 fn test_product_from_vcek_milan() {
-    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_oc_legacy()), AmdProduct::Milan);
-    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_legacy()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_oc_release()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_oc_staging()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_release()), AmdProduct::Milan);
+    assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_staging()), AmdProduct::Milan);
     assert_eq!(get_product_from_vcek(&AttestationData::load_oc()), AmdProduct::Milan);
     assert_eq!(get_product_from_vcek(&AttestationData::load_rk()), AmdProduct::Milan);
 }

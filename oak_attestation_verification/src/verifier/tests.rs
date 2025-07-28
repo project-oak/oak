@@ -60,8 +60,8 @@ use crate::{
 const NOW_UTC_MILLIS: i64 = 1730462400000;
 
 #[test]
-fn test_milan_oc_legacy_success() {
-    let d = AttestationData::load_milan_oc_legacy();
+fn test_milan_oc_staging_success() {
+    let d = AttestationData::load_milan_oc_staging();
     let extracted_evidence = extract_evidence(&d.evidence).expect("failed to extract evidence");
     let (endorsements, reference_values) =
         create_oc_endorsements_reference_values(&extracted_evidence);
@@ -77,8 +77,8 @@ fn test_milan_oc_legacy_success() {
 }
 
 #[test]
-fn test_milan_rk_legacy_success() {
-    let d = AttestationData::load_milan_rk_legacy();
+fn test_milan_rk_staging_success() {
+    let d = AttestationData::load_milan_rk_staging();
     let extracted_evidence = extract_evidence(&d.evidence).expect("failed to extract evidence");
     let (endorsements, reference_values) =
         create_rk_endorsements_reference_values(&extracted_evidence);
@@ -117,7 +117,7 @@ fn create_endorsement(
 fn create_oc_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
-    let d = AttestationData::load_milan_oc_legacy();
+    let d = AttestationData::load_milan_oc_staging();
     let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
     let report = AttestationReport::ref_from_bytes(
         &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,
@@ -237,7 +237,7 @@ fn create_oc_endorsements_reference_values(
 fn create_rk_endorsements_reference_values(
     extracted_evidence: &ExtractedEvidence,
 ) -> (Endorsements, ReferenceValues) {
-    let d = AttestationData::load_milan_rk_legacy();
+    let d = AttestationData::load_milan_rk_staging();
     let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
     let report = AttestationReport::ref_from_bytes(
         &d.evidence.root_layer.as_ref().unwrap().remote_attestation_report,

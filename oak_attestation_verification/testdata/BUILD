@@ -75,23 +75,41 @@ filegroup(
     ],
 )
 
-# Attestation for an Oak Containers stack running on AMD Genoa platform.
+# Attestation for an Oak Containers stack running on AMD Milan platform.
 # Suitable reference values matching the evidence are created on the fly.
 filegroup(
-    name = "milan_oc_attestation_legacy",
+    name = "milan_oc_staging_attestation",
     srcs = [
-        "milan_oc_endorsements.binarypb",
-        "milan_oc_evidence.binarypb",
+        "milan_oc_staging_endorsements.binarypb",
+        "milan_oc_staging_evidence.binarypb",
     ],
 )
 
-# Attestation for an Restricted Kernel stack running on AMD Milan platform.
+# Attestation for an Oak Containers stack running on AMD Milan platform.
 # Suitable reference values matching the evidence are created on the fly.
 filegroup(
-    name = "milan_rk_attestation_legacy",
+    name = "milan_oc_release_attestation",
     srcs = [
-        "milan_rk_endorsements.binarypb",
-        "milan_rk_evidence.binarypb",
+        "milan_oc_release_endorsements.binarypb",
+        "milan_oc_release_evidence.binarypb",
+    ],
+)
+
+# Attestation for a Restricted Kernel stack running on AMD Milan platform.
+filegroup(
+    name = "milan_rk_staging_attestation",
+    srcs = [
+        "milan_rk_staging_endorsements.binarypb",
+        "milan_rk_staging_evidence.binarypb",
+    ],
+)
+
+# Attestation for a Restricted Kernel stack running on AMD Milan platform.
+filegroup(
+    name = "milan_rk_release_attestation",
+    srcs = [
+        "milan_rk_release_endorsements.binarypb",
+        "milan_rk_release_evidence.binarypb",
     ],
 )
 
