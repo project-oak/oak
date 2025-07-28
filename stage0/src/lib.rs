@@ -64,6 +64,7 @@ mod logging;
 pub mod mailbox;
 pub mod msr;
 pub mod paging;
+mod pci;
 mod pic;
 mod zero_page;
 

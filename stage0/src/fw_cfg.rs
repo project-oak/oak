@@ -110,6 +110,13 @@ impl Default for DirEntry {
 }
 
 impl DirEntry {
+    #[cfg(test)]
+    pub fn new(name: &CStr, size: u32, selector: u16) -> Self {
+        let mut entry_name = [0u8; 56];
+        entry_name[..name.to_bytes_with_nul().len()].copy_from_slice(name.to_bytes_with_nul());
+        DirEntry { size: size.to_be(), select: selector, _reserved: 0, name: entry_name }
+    }
+
     fn new_for_selector(size: u32, selector: FwCfgItems) -> Self {
         Self { size: size.to_be(), select: (selector as u16).to_be(), ..Default::default() }
     }

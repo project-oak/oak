@@ -26,9 +26,9 @@ use crate::{
         files::Files,
     },
     fw_cfg::Firmware,
+    pci::PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT,
 };
 
-const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 const PCI_ROOT_ALLOWLIST_COUNT: usize = PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT * 2;
 const PCI_ROOT_STAGE2_ALLOWLIST_COUNT: usize =
     PCI_ROOT_ALLOWLIST_COUNT - PCI_ROOT_STAGE1_ALLOWLIST_COUNT;

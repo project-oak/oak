@@ -56,13 +56,16 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
     fn invoke(
         &self,
         _files: &mut F,
-        _fwcfg: &mut FW,
+        fwcfg: &mut FW,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::error!(
             "AddPciRootStage1 not implemented; ACPI tables may be broken! Command: {:?}",
             self
         );
+
+        log::debug!("PCI CRS allowlist: {:?}", crate::pci::read_pci_crs_allowlist(fwcfg));
+
         Ok(())
     }
 }
