@@ -16,7 +16,7 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -75,6 +75,11 @@ java_proto_library(
     deps = [":endorsement_proto"],
 )
 
+java_lite_proto_library(
+    name = "endorsement_java_proto_lite",
+    deps = [":endorsement_proto"],
+)
+
 proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
@@ -88,6 +93,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "evidence_java_proto",
+    deps = [":evidence_proto"],
+)
+
+java_lite_proto_library(
+    name = "evidence_java_proto_lite",
     deps = [":evidence_proto"],
 )
 
@@ -120,6 +130,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "reference_value_java_proto",
+    deps = [":reference_value_proto"],
+)
+
+java_lite_proto_library(
+    name = "reference_value_java_proto_lite",
     deps = [":reference_value_proto"],
 )
 
@@ -158,6 +173,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "verification_java_proto",
+    deps = [":verification_proto"],
+)
+
+java_lite_proto_library(
+    name = "verification_java_proto_lite",
     deps = [":verification_proto"],
 )
 
