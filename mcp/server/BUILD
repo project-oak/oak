@@ -38,6 +38,7 @@ rust_binary(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:rmcp",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:tokio",

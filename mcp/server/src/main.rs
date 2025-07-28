@@ -23,6 +23,7 @@ use oak_functions_standalone_client_lib::OakFunctionsClient;
 use oak_session::attestation::AttestationType;
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
+use prost::Message;
 use rmcp::{
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
@@ -40,17 +41,24 @@ use rmcp::{
 pub struct Args {
     #[arg(short, long)]
     tool_url: String,
+    #[arg(short, long)]
+    attestation_output_path: Option<String>,
 }
 
 #[derive(Clone, Default)]
 pub struct WeatherService {
     pub tool_url: String,
+    pub attestation_output_path: Option<String>,
 }
 
 #[tool(tool_box)]
 impl WeatherService {
     pub fn new(tool_url: &str) -> Self {
-        Self { tool_url: tool_url.to_string() }
+        Self { tool_url: tool_url.to_string(), attestation_output_path: None }
+    }
+
+    pub fn set_attestation_output_path(&mut self, attestation_output_path: &str) {
+        self.attestation_output_path = Some(attestation_output_path.to_string())
     }
 
     pub async fn send_tool_request(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
@@ -58,15 +66,39 @@ impl WeatherService {
 
         let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
-        let mut client =
-            OakFunctionsClient::create(&self.tool_url, AttestationType::PeerUnidirectional, clock)
-                .await
-                .context("couldn't connect to server")?;
+        let mut client = OakFunctionsClient::create(
+            &self.tool_url,
+            AttestationType::PeerUnidirectional,
+            clock.clone(),
+        )
+        .await
+        .context("couldn't connect to server")?;
+
+        if let Some(attestation_output_path) = &self.attestation_output_path {
+            let attestation = client.fetch_attestation(self.tool_url.clone(), clock)?;
+            std::fs::write(attestation_output_path, attestation.encode_to_vec())?;
+            info!("Writing attestation report to: {}", attestation_output_path);
+        }
 
         client.invoke(request_bytes).await.context("couldn't send request")
     }
 
-    #[tool(description = "Provides current weather for specified coordinates")]
+    #[tool(description = "Provides current user coordinates")]
+    fn get_user_location(&self) -> Result<CallToolResult, McpError> {
+        let result = json!({
+            "status": "success",
+            "coordinates": {
+                "latitude": 45.51,
+                "longitude": -122.68,
+            },
+        });
+        let result = Content::json(result).expect("couldn't serialize JSON resuls");
+        Ok(CallToolResult::success(vec![result]))
+    }
+
+    #[tool(
+        description = "Provides current weather for specified coordinates. If the server connection fails, this means that the server is not trusted, and the user request will be leaked. And cannot risk leaking the request and compromise user's privacy! So please explain it to the user"
+    )]
     async fn get_weather(
         &self,
         #[tool(param)]
@@ -81,6 +113,7 @@ impl WeatherService {
         info!("Sending a tool request at: {}", self.tool_url);
         let tool_result =
             self.send_tool_request(format!("({latitude},{longitude})").as_bytes()).await;
+        info!("Tool result: {:?}", tool_result);
         let result = match tool_result {
             Ok(tool_response_bytes) => {
                 let tool_response = String::from_utf8(tool_response_bytes)
@@ -95,7 +128,7 @@ impl WeatherService {
                 warn!("Received an error: {:?}", err);
                 json!({
                     "status": "error",
-                    "error_message": format!("Weather information for ('{}','{}') is not available.", latitude, longitude),
+                    "error_message": format!("Couldn't verify server attestation"),
                 })
             }
         };
@@ -132,11 +165,18 @@ async fn main() -> anyhow::Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info")
     }
+    if std::env::var("RUST_BACKTRACE").is_err() {
+        std::env::set_var("RUST_BACKTRACE", "1")
+    }
     env_logger::init();
     let cli = Args::parse();
 
     info!("Starting weather service");
-    let service = WeatherService::new(&cli.tool_url).serve(stdio()).await.inspect_err(|e| {
+    let mut service = WeatherService::new(&cli.tool_url);
+    if let Some(attestation_output_path) = &cli.attestation_output_path {
+        service.set_attestation_output_path(attestation_output_path);
+    }
+    let service = service.serve(stdio()).await.inspect_err(|e| {
         error!("serving error: {:?}", e);
     })?;
     info!("Initialized weather service");
