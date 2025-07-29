@@ -127,96 +127,68 @@ fn assert_failure(result: anyhow::Result<ExtractedEvidence>) {
     assert!(proto.status() == Status::GenericFailure);
 }
 
-#[test]
-fn verify_milan_oc_staging_success() {
-    let d = AttestationData::load_milan_oc_staging();
+macro_rules! test_verify_success {
+    ($($name:tt)*) => {
+        mod test_verify_success {
+            use super::*;
 
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+            $(
+                #[test]
+                fn $name() {
+                    let d = AttestationData::$name();
+
+                    assert_success(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
+        }
+    }
 }
 
-#[test]
-fn verify_milan_oc_release_success() {
-    let d = AttestationData::load_milan_oc_release();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+test_verify_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
+    load_cb
 }
 
-#[test]
-fn verify_milan_oc_staging_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_oc_staging();
-    let reference_values = make_reference_values(&d.evidence);
+macro_rules! test_verify_explicit_reference_values_success {
+    ($($name:tt)*) => {
+        mod test_verify_explicit_reference_values_success {
+            use super::*;
 
-    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+            $(
+                #[test]
+                fn $name() {
+                    let d = AttestationData::$name();
+                    let reference_values = make_reference_values(&d.evidence);
+
+                    assert_success(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &reference_values,
+                    ));
+                }
+            )*
+        }
+    }
 }
 
-#[test]
-fn verify_milan_oc_release_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_oc_release();
-    let reference_values = make_reference_values(&d.evidence);
-
-    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn verify_cb_succeeds() {
-    let d = AttestationData::load_cb();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
-}
-
-#[test]
-fn verify_milan_rk_staging_success() {
-    let d = AttestationData::load_milan_rk_staging();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
-}
-
-#[test]
-fn verify_milan_rk_release_success() {
-    let d = AttestationData::load_milan_rk_release();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
-}
-
-#[test]
-fn verify_rk_staging_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_rk_staging();
-    let reference_values = make_reference_values(&d.evidence);
-
-    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn verify_rk_release_explicit_reference_values_success() {
-    let d = AttestationData::load_milan_rk_release();
-    let reference_values = make_reference_values(&d.evidence);
-
-    assert_success(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+test_verify_explicit_reference_values_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
 }
 
 #[test]
@@ -286,41 +258,83 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
     assert!(computed_expected_values == expected_expected_values)
 }
 
-#[test]
-fn verify_fails_with_manipulated_root_public_key() {
-    let mut d = AttestationData::load_milan_oc_staging();
+macro_rules! verify_manipulated_root_public_key_failure {
+    ($($name:tt)*) => {
+        mod verify_manipulated_root_public_key_failure {
+            use super::*;
 
-    d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+            $(
+                #[test]
+                fn $name() {
+                    let mut d = AttestationData::$name();
 
-    assert_failure(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+                    d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+
+                    assert_failure(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
+        }
+    }
 }
 
-#[allow(deprecated)]
-#[test]
-fn verify_fails_with_unsupported_tcb_version() {
-    let mut d = AttestationData::load_milan_oc_staging();
+verify_manipulated_root_public_key_failure! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
+}
 
-    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0, fmc: 0 };
-    match d.reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
-                Some(tcb_version);
+macro_rules! verify_unsupported_tcb_version_failure {
+    ($($name:tt)*) => {
+        #[allow(deprecated)]
+        mod verify_unsupported_tcb_version_failure {
+            use super::*;
+
+            $(
+                #[test]
+                fn $name() {
+                    let mut d = AttestationData::$name();
+
+                    let tcb_version = TcbVersion { boot_loader: 0, tee: 0, snp: u32::MAX, microcode: 0, fmc: 0 };
+                    match d.reference_values.r#type.as_mut() {
+                        Some(reference_values::Type::OakContainers(rfs)) => {
+                            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
+                                Some(tcb_version);
+                        }
+                        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
+                            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version =
+                                Some(tcb_version);
+                        }
+                        Some(_) => {}
+                        None => {}
+                    };
+
+                    assert_failure(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
         }
-        Some(_) => {}
-        None => {}
-    };
+    }
+}
 
-    assert_failure(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+verify_unsupported_tcb_version_failure! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
 }
 
 #[test]
@@ -1327,28 +1341,4 @@ fn restricted_kernel_application_config_fails() {
     );
 
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn verify_genoa_oc_success() {
-    let d = AttestationData::load_genoa_oc();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
-}
-
-#[test]
-fn verify_turin_oc_success() {
-    let d = AttestationData::load_turin_oc();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
 }

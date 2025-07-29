@@ -64,7 +64,7 @@ use oak_proto_rust::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
-use oak_time::{clock::FixedClock, Instant};
+use oak_time::{clock::FixedClock, Clock, Instant};
 use prost::Message;
 use prost_types::Timestamp;
 use test_util::attestation_data::AttestationData;
@@ -682,52 +682,8 @@ fn oc_container_policy_verify_succeeds() {
 }
 
 #[test]
-fn oc_amd_sev_snp_verifier_succeeds() {
-    let d = AttestationData::load_milan_oc_release();
-    let clock = FixedClock::at_instant(d.make_valid_time());
-    let ref_values = get_oc_reference_values(&d.reference_values);
-    // Create platform and firmware policies.
-    // TODO: b/398859203 - Remove root layer reference values once old reference
-    // values have been updated.
-    let root_layer_ref_values = ref_values.root_layer.as_ref().unwrap();
-    let platform_policy =
-        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
-    let firmware_policy =
-        FirmwarePolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
-
-    // Create kernel policy.
-    let reference_values = ref_values.kernel_layer.as_ref().unwrap();
-    let kernel_policy = KernelPolicy::new(reference_values);
-
-    // Create system policy.
-    let event_reference_values = ref_values.system_layer.as_ref().unwrap();
-    let system_policy = SystemPolicy::new(event_reference_values);
-
-    // Create container policy.
-    // TODO: b/382550581 - Container reference values currently skip verification.
-    let event_reference_values = ref_values.container_layer.as_ref().unwrap();
-    let container_policy = ContainerPolicy::new(event_reference_values);
-
-    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-        vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
-
-    // Create verifier.
-    let verifier = AmdSevSnpDiceAttestationVerifier::new(
-        platform_policy,
-        Box::new(firmware_policy),
-        event_policies,
-        Arc::new(clock),
-    );
-
-    let result = verifier.verify(&d.evidence, &d.endorsements);
-
-    // TODO: b/356631062 - Verify detailed attestation results.
-    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-}
-
-#[test]
 fn rk_kernel_policy_verify_succeeds() {
-    let d = AttestationData::load_milan_rk_release();
+    let d: AttestationData = AttestationData::load_milan_rk_release();
     let ref_values = get_rk_reference_values(&d.reference_values);
     let kernel_ref_values = ref_values.kernel_layer.as_ref().unwrap();
     let policy = KernelPolicy::new(kernel_ref_values);
@@ -756,42 +712,97 @@ fn rk_application_policy_verify_succeeds() {
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 
-#[test]
-fn rk_amd_sev_snp_verifier_succeeds() {
-    let d = AttestationData::load_milan_rk_release();
-    let clock = FixedClock::at_instant(d.make_valid_time());
-    let ref_values = get_rk_reference_values(&d.reference_values);
-    // Create platform and firmware policies.
-    // TODO: b/398859203 - Remove root layer reference values once old reference
-    // values have been updated.
-    let root_layer_ref_values = ref_values.root_layer.as_ref().unwrap();
-    let platform_policy =
-        AmdSevSnpPolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
-    let firmware_policy =
-        FirmwarePolicy::from_root_layer_reference_values(root_layer_ref_values).unwrap();
+// Creates an AmdSevSnpDiceAttestationVerifier from reference values.
+// This function could become part of the public API.
+fn create_verifier<T: Clock + 'static>(
+    clock: T,
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<AmdSevSnpDiceAttestationVerifier> {
+    match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::OakContainers(rvs)) => {
+            let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
+            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)
+                .context("failed to create platform policy")?;
+            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)
+                .context("failed to create firmware policy")?;
+            let kernel_policy = KernelPolicy::new(
+                rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
+            );
+            let system_policy = SystemPolicy::new(
+                rvs.system_layer.as_ref().context("no system layer reference values")?,
+            );
+            // TODO: b/382550581 - Container reference values currently skip verification.
+            let container_policy = ContainerPolicy::new(
+                rvs.container_layer.as_ref().context("no container layer reference values")?,
+            );
+            let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+                vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
 
-    // Create kernel policy.
-    let kernel_ref_values = ref_values.kernel_layer.as_ref().unwrap();
-    let kernel_policy = KernelPolicy::new(kernel_ref_values);
+            Ok(AmdSevSnpDiceAttestationVerifier::new(
+                platform_policy,
+                Box::new(firmware_policy),
+                event_policies,
+                Arc::new(clock),
+            ))
+        }
+        Some(reference_values::Type::OakRestrictedKernel(rvs)) => {
+            // Create platform and firmware policies.
+            // TODO: b/398859203 - Remove root layer reference values once old reference
+            // values have been updated.
+            let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
+            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)
+                .context("failed to create platform policy")?;
+            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)
+                .context("failed to create firmware policy")?;
+            let kernel_policy = KernelPolicy::new(
+                rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
+            );
+            // TODO: b/382550581 - Application reference values currently skip verification.
+            let application_policy = ApplicationPolicy::new(
+                rvs.application_layer.as_ref().context("no application layer reference values")?,
+            );
+            let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+                vec![Box::new(kernel_policy), Box::new(application_policy)];
 
-    // Create application policy.
-    // TODO: b/382550581 - Application reference values currently skip verification.
-    let app_ref_values = ref_values.application_layer.as_ref().unwrap();
-    let application_policy = ApplicationPolicy::new(app_ref_values);
+            Ok(AmdSevSnpDiceAttestationVerifier::new(
+                platform_policy,
+                Box::new(firmware_policy),
+                event_policies,
+                Arc::new(clock),
+            ))
+        }
+        _ => anyhow::bail!("malformed reference values"),
+    }
+}
 
-    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-        vec![Box::new(kernel_policy), Box::new(application_policy)];
+macro_rules! test_amd_sev_snp_verifier_success {
+    ($($name:tt)*) => {
+        mod test_amd_sev_snp_verifier_success {
+            use super::*;
 
-    // Create verifier.
-    let verifier = AmdSevSnpDiceAttestationVerifier::new(
-        platform_policy,
-        Box::new(firmware_policy),
-        event_policies,
-        Arc::new(clock),
-    );
+            $(
+                #[test]
+                fn $name() {
+                    let d = AttestationData::$name();
+                    let clock = FixedClock::at_instant(d.make_valid_time());
+                    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
 
-    let result = verifier.verify(&d.evidence, &d.endorsements);
+                    let result = verifier.verify(&d.evidence, &d.endorsements);
 
-    // TODO: b/356631062 - Verify detailed attestation results.
-    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+                    // TODO: b/356631062 - Verify detailed attestation results.
+                    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+                }
+            )*
+        }
+    }
+}
+
+test_amd_sev_snp_verifier_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    // Requires event-based endorsements for both. Enable once we have them.
+    // load_genoa_oc
+    // load_turin_oc
+    load_milan_rk_release
+    load_milan_rk_staging
 }
