@@ -567,6 +567,15 @@ pub fn serialize_kernel_binary_reference_value(
     }
 }
 
+pub fn serialize_certificate_authority_reference_value(
+    instance: &CertificateAuthorityReferenceValue,
+) -> serde_json::Value {
+    let CertificateAuthorityReferenceValue { tink_proto_keyset } = instance;
+    json!({
+        "tink_proto_keyset":  hex::encode(tink_proto_keyset),
+    })
+}
+
 pub fn serialize_regex(instance: &Regex) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -802,6 +811,15 @@ pub fn serialize_cb_reference_values(instance: &CbReferenceValues) -> serde_json
     })
 }
 
+pub fn serialize_certificate_based_reference_values(
+    instance: &CertificateBasedReferenceValues,
+) -> serde_json::Value {
+    let CertificateBasedReferenceValues { ca } = instance;
+    json!({
+        "ca": ca.as_ref().map(serialize_certificate_authority_reference_value)
+    })
+}
+
 pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -822,6 +840,11 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         Some(reference_values::Type::Cb(instance)) => {
             json!({
                 "cb": serialize_cb_reference_values(instance)
+            })
+        }
+        Some(reference_values::Type::CertificateBased(instance)) => {
+            json!({
+                "certificate_based": serialize_certificate_based_reference_values(instance)
             })
         }
         None => json!(null),

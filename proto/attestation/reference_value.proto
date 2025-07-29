@@ -181,8 +181,10 @@ message FileReferenceValue {
 
 // Reference value that provides a CA public key which can be used to verify CA
 // certificates.
-// TODO: b/399885537 - Implement Certificate Authority reference value.
-message CertificateAuthorityReferenceValue {}
+message CertificateAuthorityReferenceValue {
+  // https://developers.google.com/tink/wire-format
+  bytes tink_proto_keyset = 1;
+}
 
 // Reference value for a public key.
 // - [`SkipVerification`] means that client doesn't have any predefined
@@ -366,10 +368,15 @@ message CBReferenceValues {
   repeated EventReferenceValues layers = 5;
 }
 
+message CertificateBasedReferenceValues {
+  CertificateAuthorityReferenceValue ca = 1;
+}
+
 message ReferenceValues {
   oneof type {
     OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
     OakContainersReferenceValues oak_containers = 2;
     CBReferenceValues cb = 3;
+    CertificateBasedReferenceValues certificate_based = 4;
   }
 }
