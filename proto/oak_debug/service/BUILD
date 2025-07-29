@@ -15,7 +15,7 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(

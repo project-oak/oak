@@ -15,10 +15,10 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
+load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_python//python:proto.bzl", "py_proto_library")
 
 package(
     default_visibility = ["//:default_visibility"],
