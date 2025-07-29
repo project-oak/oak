@@ -26,20 +26,6 @@ use prost::Message;
 
 use crate::factory::{create_oc_reference_values, create_rk_reference_values};
 
-const OC_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/oc_evidence_20241205.binarypb";
-const OC_ENDORSEMENTS_PATH: &str =
-    "oak_attestation_verification/testdata/oc_endorsements_20241205.binarypb";
-const OC_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/oc_reference_values_20241205.binarypb";
-
-const RK_EVIDENCE_PATH: &str =
-    "oak_attestation_verification/testdata/rk_evidence_20241205.binarypb";
-const RK_ENDORSEMENTS_PATH: &str =
-    "oak_attestation_verification/testdata/rk_endorsements_20241205.binarypb";
-const RK_REFERENCE_VALUES_PATH: &str =
-    "oak_attestation_verification/testdata/rk_reference_values_20241205.binarypb";
-
 const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
 const CB_ENDORSEMENTS_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
 const CB_REFERENCE_VALUES_PATH: &str =
@@ -56,6 +42,8 @@ const MILAN_OC_STAGING_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/milan_oc_staging_evidence.binarypb";
 const MILAN_OC_STAGING_ENDORSEMENTS_PATH: &str =
     "oak_attestation_verification/testdata/milan_oc_staging_endorsements.binarypb";
+const MILAN_OC_STAGING_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/milan_oc_staging_reference_values.binarypb";
 
 // AMD Milan attestation with Restricted Kernel, release mode.
 const MILAN_RK_RELEASE_EVIDENCE_PATH: &str =
@@ -68,6 +56,8 @@ const MILAN_RK_STAGING_EVIDENCE_PATH: &str =
     "oak_attestation_verification/testdata/milan_rk_staging_evidence.binarypb";
 const MILAN_RK_STAGING_ENDORSEMENTS_PATH: &str =
     "oak_attestation_verification/testdata/milan_rk_staging_endorsements.binarypb";
+const MILAN_RK_STAGING_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/milan_rk_staging_reference_values.binarypb";
 
 // AMD Genoa attestation with Oak Containers, with legacy endorsements.
 const GENOA_OC_EVIDENCE_PATH: &str =
@@ -95,18 +85,6 @@ pub struct AttestationData {
 
 impl AttestationData {
     // Loads an attestation example involving an AMD Milan CPU running Oak
-    // Containers.
-    pub fn load_oc() -> AttestationData {
-        AttestationData {
-            valid_not_before: make_instant!("2025-05-27T06:06:03.987000Z"),
-            valid_not_after: make_instant!("2025-08-25T06:06:03.471000Z"),
-            evidence: load_evidence(OC_EVIDENCE_PATH),
-            endorsements: load_endorsements(OC_ENDORSEMENTS_PATH),
-            reference_values: load_reference_values(OC_REFERENCE_VALUES_PATH),
-        }
-    }
-
-    // Loads an attestation example involving an AMD Milan CPU running Oak
     // Containers in release mode.
     pub fn load_milan_oc_release() -> AttestationData {
         AttestationData {
@@ -126,7 +104,7 @@ impl AttestationData {
             valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
             evidence: load_evidence(MILAN_OC_STAGING_EVIDENCE_PATH),
             endorsements: load_endorsements(MILAN_OC_STAGING_ENDORSEMENTS_PATH),
-            reference_values: create_oc_reference_values(),
+            reference_values: load_reference_values(MILAN_OC_STAGING_REFERENCE_VALUES_PATH),
         }
     }
 
@@ -150,7 +128,7 @@ impl AttestationData {
             valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
             evidence: load_evidence(MILAN_RK_STAGING_EVIDENCE_PATH),
             endorsements: load_endorsements(MILAN_RK_STAGING_ENDORSEMENTS_PATH),
-            reference_values: create_rk_reference_values(),
+            reference_values: load_reference_values(MILAN_RK_STAGING_REFERENCE_VALUES_PATH),
         }
     }
 
@@ -177,18 +155,6 @@ impl AttestationData {
             evidence: load_evidence(TURIN_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(TURIN_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(TURIN_OC_REFERENCE_VALUES_PATH),
-        }
-    }
-
-    /// Loads an attestation example involving an AMD Milan CPU running Oak
-    /// Restricted Kernel.
-    pub fn load_rk() -> AttestationData {
-        AttestationData {
-            valid_not_before: make_instant!("2025-06-17T06:05:52.482000Z"),
-            valid_not_after: make_instant!("2025-09-15T06:05:52.151000Z"),
-            evidence: load_evidence(RK_EVIDENCE_PATH),
-            endorsements: load_endorsements(RK_ENDORSEMENTS_PATH),
-            reference_values: load_reference_values(RK_REFERENCE_VALUES_PATH),
         }
     }
 

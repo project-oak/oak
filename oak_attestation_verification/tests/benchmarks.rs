@@ -48,7 +48,7 @@ fn bench_verify_endorsement(b: &mut Bencher) {
 
 #[bench]
 fn bench_verify_attestation_oc_legacy(b: &mut Bencher) {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
 
     b.iter(|| {
         let result = verify(
@@ -66,7 +66,7 @@ fn bench_verify_attestation_oc_legacy(b: &mut Bencher) {
 
 #[bench]
 fn bench_verify_attestation_rk_legacy(b: &mut Bencher) {
-    let d = AttestationData::load_rk();
+    let d = AttestationData::load_milan_rk_release();
 
     b.iter(|| {
         let result = verify(
@@ -84,7 +84,7 @@ fn bench_verify_attestation_rk_legacy(b: &mut Bencher) {
 
 #[bench]
 fn bench_verify_attestation_oc(b: &mut Bencher) {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
     let rvs = match d.reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakContainers(r)) => r,
@@ -114,7 +114,7 @@ fn bench_verify_attestation_oc(b: &mut Bencher) {
 
 #[bench]
 fn bench_verify_attestation_rk(b: &mut Bencher) {
-    let d = AttestationData::load_rk();
+    let d = AttestationData::load_milan_rk_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
     let rvs = match d.reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakRestrictedKernel(r)) => r,

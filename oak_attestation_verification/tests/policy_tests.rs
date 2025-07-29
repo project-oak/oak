@@ -600,7 +600,7 @@ fn event_log_verifier_fails() {
 
 #[test]
 fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let ref_values = get_oc_reference_values(&d.reference_values);
     let platform_reference_values =
         ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
@@ -623,7 +623,7 @@ fn oc_amd_sev_snp_platform_policy_verify_succeeds() {
 
 #[test]
 fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let ref_values = get_oc_reference_values(&d.reference_values);
     let firmware_reference_values =
         ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap().stage0.as_ref().unwrap();
@@ -640,7 +640,7 @@ fn oc_amd_sev_snp_firmware_policy_verify_succeeds() {
 
 #[test]
 fn oc_kernel_policy_verify_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let ref_values = get_oc_reference_values(&d.reference_values);
     let policy = KernelPolicy::new(ref_values.kernel_layer.as_ref().unwrap());
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
@@ -654,7 +654,7 @@ fn oc_kernel_policy_verify_succeeds() {
 
 #[test]
 fn oc_system_policy_verify_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let ref_values = get_oc_reference_values(&d.reference_values);
     let policy = SystemPolicy::new(ref_values.system_layer.as_ref().unwrap());
     let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
@@ -668,7 +668,7 @@ fn oc_system_policy_verify_succeeds() {
 
 #[test]
 fn oc_container_policy_verify_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let ref_values = get_oc_reference_values(&d.reference_values);
     // TODO: b/382550581 - Container reference values currently skip verification.
     let policy = ContainerPolicy::new(ref_values.container_layer.as_ref().unwrap());
@@ -683,7 +683,7 @@ fn oc_container_policy_verify_succeeds() {
 
 #[test]
 fn oc_amd_sev_snp_verifier_succeeds() {
-    let d = AttestationData::load_oc();
+    let d = AttestationData::load_milan_oc_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
     let ref_values = get_oc_reference_values(&d.reference_values);
     // Create platform and firmware policies.
@@ -727,7 +727,7 @@ fn oc_amd_sev_snp_verifier_succeeds() {
 
 #[test]
 fn rk_kernel_policy_verify_succeeds() {
-    let d = AttestationData::load_rk();
+    let d = AttestationData::load_milan_rk_release();
     let ref_values = get_rk_reference_values(&d.reference_values);
     let kernel_ref_values = ref_values.kernel_layer.as_ref().unwrap();
     let policy = KernelPolicy::new(kernel_ref_values);
@@ -742,7 +742,7 @@ fn rk_kernel_policy_verify_succeeds() {
 
 #[test]
 fn rk_application_policy_verify_succeeds() {
-    let d = AttestationData::load_rk();
+    let d = AttestationData::load_milan_rk_release();
     let ref_values = get_rk_reference_values(&d.reference_values);
     // TODO: b/382550581 - Application reference values currently skip verification.
     let app_ref_values = ref_values.application_layer.as_ref().unwrap();
@@ -758,7 +758,7 @@ fn rk_application_policy_verify_succeeds() {
 
 #[test]
 fn rk_amd_sev_snp_verifier_succeeds() {
-    let d = AttestationData::load_rk();
+    let d = AttestationData::load_milan_rk_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
     let ref_values = get_rk_reference_values(&d.reference_values);
     // Create platform and firmware policies.

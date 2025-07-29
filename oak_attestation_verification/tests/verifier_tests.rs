@@ -1330,18 +1330,6 @@ fn restricted_kernel_application_config_fails() {
 }
 
 #[test]
-fn verify_milan_oc_success() {
-    let d = AttestationData::load_oc();
-
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
-}
-
-#[test]
 fn verify_genoa_oc_success() {
     let d = AttestationData::load_genoa_oc();
 

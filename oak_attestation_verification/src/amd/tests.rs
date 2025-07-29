@@ -42,7 +42,7 @@ fn vcek_from_data(data: &AttestationData) -> CertificateInner {
 }
 
 fn load_vcek_milan() -> CertificateInner {
-    vcek_from_data(&AttestationData::load_oc())
+    vcek_from_data(&AttestationData::load_milan_oc_release())
 }
 
 fn load_vcek_genoa() -> CertificateInner {
@@ -248,8 +248,6 @@ fn print_all_reports() {
     print_report("load_milan_oc_release", &AttestationData::load_milan_oc_release());
     print_report("load_milan_rk_staging", &AttestationData::load_milan_rk_staging());
     print_report("load_milan_rk_release", &AttestationData::load_milan_rk_release());
-    print_report("load_oc", &AttestationData::load_oc());
-    print_report("load_rk", &AttestationData::load_rk());
     print_report("load_genoa_oc", &AttestationData::load_genoa_oc());
     print_report("load_turin_oc", &AttestationData::load_turin_oc());
 }
@@ -272,8 +270,6 @@ fn test_product_from_report_milan() {
         get_product_from_report(&AttestationData::load_milan_rk_staging()),
         AmdProduct::Milan
     );
-    assert_eq!(get_product_from_report(&AttestationData::load_oc()), AmdProduct::Milan);
-    assert_eq!(get_product_from_report(&AttestationData::load_rk()), AmdProduct::Milan);
 }
 
 // TODO: b/396666645 - Test fails. We are unable to distinguish Milan and Genoa
@@ -294,8 +290,6 @@ fn test_product_from_vcek_milan() {
     assert_eq!(get_product_from_vcek(&AttestationData::load_milan_oc_staging()), AmdProduct::Milan);
     assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_release()), AmdProduct::Milan);
     assert_eq!(get_product_from_vcek(&AttestationData::load_milan_rk_staging()), AmdProduct::Milan);
-    assert_eq!(get_product_from_vcek(&AttestationData::load_oc()), AmdProduct::Milan);
-    assert_eq!(get_product_from_vcek(&AttestationData::load_rk()), AmdProduct::Milan);
 }
 
 #[test]

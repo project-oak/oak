@@ -65,23 +65,13 @@ filegroup(
     ],
 )
 
-# A recent attestation triple for an Oak Containers stack.
-filegroup(
-    name = "milan_oc_attestation",
-    srcs = [
-        "oc_endorsements_20241205.binarypb",
-        "oc_evidence_20241205.binarypb",
-        "oc_reference_values_20241205.binarypb",
-    ],
-)
-
 # Attestation for an Oak Containers stack running on AMD Milan platform.
-# Suitable reference values matching the evidence are created on the fly.
 filegroup(
     name = "milan_oc_staging_attestation",
     srcs = [
         "milan_oc_staging_endorsements.binarypb",
         "milan_oc_staging_evidence.binarypb",
+        "milan_oc_staging_reference_values.binarypb",
     ],
 )
 
@@ -101,10 +91,12 @@ filegroup(
     srcs = [
         "milan_rk_staging_endorsements.binarypb",
         "milan_rk_staging_evidence.binarypb",
+        "milan_rk_staging_reference_values.binarypb",
     ],
 )
 
 # Attestation for a Restricted Kernel stack running on AMD Milan platform.
+# Suitable reference values matching the evidence are created on the fly.
 filegroup(
     name = "milan_rk_release_attestation",
     srcs = [
@@ -118,16 +110,6 @@ filegroup(
     name = "oc_attestation_tdx",
     srcs = [
         "oc_evidence_tdx.binarypb",
-    ],
-)
-
-# Attestation for a Restricted Kernel stack running on AMD Milan platform.
-filegroup(
-    name = "milan_rk_attestation",
-    srcs = [
-        "rk_endorsements_20241205.binarypb",
-        "rk_evidence_20241205.binarypb",
-        "rk_reference_values_20241205.binarypb",
     ],
 )
 
