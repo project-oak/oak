@@ -380,3 +380,9 @@ message ReferenceValues {
     CertificateBasedReferenceValues certificate_based = 4;
   }
 }
+
+message ReferenceValuesCollection {
+  // Maps unique IDs of attestation providers to the corresponding reference
+  // values used to verify those attestations.
+  map<string, ReferenceValues> reference_values = 3;
+}

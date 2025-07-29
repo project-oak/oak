@@ -40,7 +40,10 @@ use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::{
     attestation::{CONFIDENTIAL_SPACE_ATTESTATION_ID, SIGNATURE_BASED_ATTESTATION_ID},
     oak::{
-        attestation::v1::CollectedAttestation,
+        attestation::v1::{
+            reference_values, CertificateBasedReferenceValues, CollectedAttestation,
+            ReferenceValues, ReferenceValuesCollection,
+        },
         session::v1::{EndorsedEvidence, SessionBinding},
         Variant,
     },
@@ -51,19 +54,19 @@ use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use x509_cert::{der::DecodePem, Certificate};
 
-static GOOGLE_IDENTITY_PUBLIC_KEYSET: &[u8; 459] =
-    include_bytes!("../data/google_identity_public_key.pb");
-
 #[derive(Parser, Debug)]
 #[group(required = true)]
 struct Flags {
     /// Path of the collected attestation, encoded as a binary protobuf.
-    #[arg(long, value_parser = collected_attestation_parser)]
+    #[arg(long, value_parser = proto_parser::<CollectedAttestation>)]
     attestation: CollectedAttestation,
+
+    #[arg(long, value_parser = proto_parser::<ReferenceValuesCollection>)]
+    reference_values: ReferenceValuesCollection,
 }
 
-fn collected_attestation_parser(s: &str) -> Result<CollectedAttestation> {
-    Ok(CollectedAttestation::decode(fs::read(s)?.as_slice())?)
+fn proto_parser<T: Message + std::default::Default>(s: &str) -> Result<T> {
+    Ok(T::decode(fs::read(s)?.as_slice())?)
 }
 
 // Prints a format string with the given arguments, with the provided indent
@@ -92,7 +95,8 @@ macro_rules! print_indented_conditional {
 }
 
 fn main() {
-    let Flags { attestation } = Flags::parse();
+    let Flags { attestation, reference_values: ReferenceValuesCollection { reference_values } } =
+        Flags::parse();
 
     let attestation_timestamp = get_timestamp(&attestation);
     print_timestamp_report(&attestation_timestamp);
@@ -116,12 +120,27 @@ fn main() {
                 );
             }
             SIGNATURE_BASED_ATTESTATION_ID => {
-                process_signature_based_attestation(
-                    attestation_timestamp,
-                    &handshake_hash,
-                    endorsed_evidence,
-                    session_binding,
-                );
+                match reference_values.get(SIGNATURE_BASED_ATTESTATION_ID) {
+                    Some(ReferenceValues {
+                        r#type:
+                            Some(reference_values::Type::CertificateBased(
+                                ref certificate_based_reference_values,
+                            )),
+                    }) => {
+                        process_signature_based_attestation(
+                            certificate_based_reference_values,
+                            attestation_timestamp,
+                            &handshake_hash,
+                            endorsed_evidence,
+                            session_binding,
+                        );
+                    }
+                    _ => {
+                        println!(
+                            "❓ Could not find reference values for signature-based attestation"
+                        );
+                    }
+                }
             }
             _ => {
                 println!("❓ Unrecognized attestation type ID: {}", attestation_type_id);
@@ -284,6 +303,7 @@ fn print_certificate_chain(
 }
 
 fn process_signature_based_attestation(
+    reference_values: &CertificateBasedReferenceValues,
     attestation_timestamp: Instant,
     handshake_hash: &[u8],
     endorsed_evidence: &EndorsedEvidence,
@@ -299,8 +319,12 @@ fn process_signature_based_attestation(
     print_endorsement_report(indent, &endorsement);
 
     if let (Ok(event), Ok(endorsement)) = (event, endorsement) {
-        let report =
-            create_signature_based_attestation_report(attestation_timestamp, &event, &endorsement);
+        let report = create_signature_based_attestation_report(
+            reference_values,
+            attestation_timestamp,
+            &event,
+            &endorsement,
+        );
         print_signature_based_attestation_report(indent, &report);
         print_session_binding_verification_report(
             handshake_hash,
@@ -311,15 +335,14 @@ fn process_signature_based_attestation(
 }
 
 fn create_signature_based_attestation_report(
+    reference_values: &CertificateBasedReferenceValues,
     attestation_timestamp: Instant,
     event: &[u8],
     endorsement: &Variant,
 ) -> Result<SessionBindingPublicKeyVerificationReport> {
     let policy = {
-        // TODO: b/419209669 - update this to choose keys based on meaningful URI
-        // values, once they are defined.
-        let tink_public_keyset = GOOGLE_IDENTITY_PUBLIC_KEYSET;
-        let signature_verifier = SignatureVerifier::new(tink_public_keyset);
+        let tink_public_keyset = reference_values.clone().ca.unwrap_or_default().tink_proto_keyset;
+        let signature_verifier = SignatureVerifier::new(tink_public_keyset.as_slice());
         let certificate_verifier = CertificateVerifier::new(signature_verifier);
         SessionBindingPublicKeyPolicy::new(certificate_verifier)
     };

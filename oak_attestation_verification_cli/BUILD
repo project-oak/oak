@@ -24,7 +24,6 @@ package(
 rust_binary(
     name = "oak_attestation_verification_cli",
     srcs = glob(["src/**"]),
-    compile_data = glob(["data/**"]),
     deps = [
         "//oak_attestation_gcp",
         "//oak_attestation_verification",

@@ -733,6 +733,16 @@ pub mod reference_values {
         CertificateBased(super::CertificateBasedReferenceValues),
     }
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReferenceValuesCollection {
+    /// Maps unique IDs of attestation providers to the corresponding reference
+    /// values used to verify those attestations.
+    #[prost(btree_map = "string, message", tag = "3")]
+    pub reference_values: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        ReferenceValues,
+    >,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum KeyType {
