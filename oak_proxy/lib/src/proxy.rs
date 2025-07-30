@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use oak_session::{ProtocolEngine, Session};
 use prost::Message;
@@ -24,6 +24,20 @@ use tokio::{
 };
 
 use crate::framing::{read_message, write_message};
+
+pub enum PeerRole {
+    Client,
+    Server,
+}
+
+impl fmt::Display for PeerRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PeerRole::Client => write!(f, "Client"),
+            PeerRole::Server => write!(f, "Server"),
+        }
+    }
+}
 
 /// Pumps data from a reader to a writer, using the session to transform the
 /// data.
@@ -96,11 +110,12 @@ where
 
 /// Manages a bidirectional proxy between a local stream and a remote stream.
 ///
-/// - `locaplaintext_streaml_stream`: The stream connected to the local
-///   application or backend.
+/// - `plaintext_stream`: The stream connected to the local application or
+///   backend.
 /// - `encrypted_stream`: The stream connected to the remote proxy.
 /// - `session`: The `oak_session` instance.
 pub async fn proxy<S, I, O>(
+    role: PeerRole,
     plaintext_stream: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
     encrypted_stream: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
     session: Arc<Mutex<S>>,
@@ -122,16 +137,16 @@ where
     tokio::select! {
         res = plaintext_to_encrypted_task => {
             if let Err(e) = res? {
-                println!("[Proxy] Error in plaintext-to-encrypted task: {:?}", e);
+                println!("[{role}] Error in plaintext-to-encrypted task: {:?}", e);
             }
         },
         res = encrypted_to_plaintext_task => {
             if let Err(e) = res? {
-                println!("[Proxy] Error in encrypted-to-plaintext task: {:?}", e);
+                println!("[{role}] Error in encrypted-to-plaintext task: {:?}", e);
             }
         },
     }
 
-    println!("[Proxy] Connection closed.");
+    println!("[{role}] Connection closed.");
     Ok(())
 }

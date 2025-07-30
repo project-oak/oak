@@ -14,17 +14,16 @@
 // limitations under the License.
 //
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{fs, sync::Arc};
 
 use clap::Parser;
 use oak_proxy_lib::{
+    config,
+    config::ServerConfig,
     framing::{read_message, write_message},
-    proxy::proxy,
+    proxy::{proxy, PeerRole},
 };
-use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ProtocolEngine,
-    ServerSession, Session,
-};
+use oak_session::{ProtocolEngine, ServerSession, Session};
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::Mutex,
@@ -33,28 +32,27 @@ use tokio::{
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// The address on which to listen for incoming connections from the client
-    /// proxy.
-    #[arg(long, default_value = "127.0.0.1:8081")]
-    listen_address: SocketAddr,
-
-    /// The address of the backend server to which to forward decrypted traffic.
-    #[arg(long, default_value = "127.0.0.1:8080")]
-    backend_address: SocketAddr,
+    /// Path to the TOML configuration file.
+    #[arg(long)]
+    config: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let listener = TcpListener::bind(args.listen_address).await?;
-    println!("[Server] Listening on {}", args.listen_address);
+    let config_str = fs::read_to_string(args.config)?;
+    let config: ServerConfig = toml::from_str(&config_str)?;
 
+    let listener = TcpListener::bind(config.listen_address).await?;
+    println!("[Server] Listening on {}", config.listen_address);
+
+    let config = Arc::new(config);
     loop {
         let (stream, peer_address) = listener.accept().await?;
         println!("[Server] Accepted connection from {}", peer_address);
-        let backend_address = args.backend_address;
+        let config = config.clone();
         tokio::spawn(async move {
-            if let Err(err) = handle_connection(stream, backend_address).await {
+            if let Err(err) = handle_connection(stream, &config).await {
                 eprintln!("[Server] Error handling connection: {:?}", err);
             }
         });
@@ -63,10 +61,12 @@ async fn main() -> anyhow::Result<()> {
 
 async fn handle_connection(
     mut client_stream: TcpStream,
-    backend_address: SocketAddr,
+    config: &ServerConfig,
 ) -> anyhow::Result<()> {
-    let server_config =
-        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config = config::build_session_config(
+        &config.attestation_generators,
+        &config.attestation_verifiers,
+    )?;
     let server_session = Arc::new(Mutex::new(ServerSession::create(server_config)?));
 
     // Handshake
@@ -84,13 +84,13 @@ async fn handle_connection(
 
     println!("[Server] Oak Session established with client proxy.");
 
-    let backend_stream = TcpStream::connect(backend_address).await?;
-    println!("[Server] Connected to backend server at {}", backend_address);
+    let backend_stream = TcpStream::connect(config.backend_address).await?;
+    println!("[Server] Connected to backend server at {}", config.backend_address);
 
     proxy::<
         ServerSession,
         oak_proto_rust::oak::session::v1::SessionRequest,
         oak_proto_rust::oak::session::v1::SessionResponse,
-    >(backend_stream, client_stream, server_session)
+    >(PeerRole::Server, backend_stream, client_stream, server_session)
     .await
 }

@@ -121,7 +121,27 @@ Ensure you have Bazel installed and the project dependencies are set up
 correctly by running `just bazel-repin-all` from the root of the `oak`
 repository.
 
-### 1. Build the Proxies
+### 1. Create Configuration Files
+
+The proxies are configured using TOML files. Create two files: `client.toml` and
+`server.toml`. See the [Configuration](#configuration) section for details on
+the available options.
+
+**Example `server.toml` (Unattested):**
+
+```toml
+listen_address = "127.0.0.1:8081"
+backend_address = "127.0.0.1:8080"
+```
+
+**Example `client.toml` (Unattested):**
+
+```toml
+listen_address = "127.0.0.1:9090"
+server_proxy_address = "127.0.0.1:8081"
+```
+
+### 2. Build the Proxies
 
 Build both the client and server binaries using Bazel:
 
@@ -129,7 +149,7 @@ Build both the client and server binaries using Bazel:
 bazel build //oak_proxy/client //oak_proxy/server
 ```
 
-### 2. Run the Server Proxy
+### 3. Run the Server Proxy
 
 The server proxy listens for encrypted traffic from the client proxy and
 forwards decrypted traffic to your backend application.
@@ -141,16 +161,16 @@ on port 8080 and print any received data to the console:
 nc -l -p 8080
 ```
 
-Now, run the server proxy in a separate terminal. It will listen on port 8081
-and forward to the `netcat` server on port 8080.
+Now, run the server proxy in a separate terminal, pointing it to your
+configuration file:
 
 ```bash
-bazel run //oak_proxy/server -- --listen-address 127.0.0.1:8081 --backend-address 127.0.0.1:8080
+bazel run //oak_proxy/server -- --config server.toml
 ```
 
 You should see the output: `[Server] Listening on 127.0.0.1:8081`.
 
-### 3. Run the Client Proxy
+### 4. Run the Client Proxy
 
 The client proxy listens for plaintext traffic from your application and
 forwards it over the secure tunnel to the server proxy.
@@ -158,12 +178,12 @@ forwards it over the secure tunnel to the server proxy.
 Run the client proxy in a third terminal:
 
 ```bash
-bazel run //oak_proxy/client -- --listen-address 127.0.0.1:9090 --server-proxy-address 127.0.0.1:8081
+bazel run //oak_proxy/client -- --config client.toml
 ```
 
 You should see the output: `[Client] Listening on 127.0.0.1:9090`.
 
-### 4. Send Traffic
+### 5. Send Traffic
 
 Now, use any TCP-based application to send traffic to the client proxy's listen
 port (`127.0.0.1:9090`). The traffic will be transparently encrypted, sent to
@@ -179,6 +199,175 @@ You will see the raw HTTP request printed in the terminal where `netcat` is
 running. This demonstrates that the data has been successfully proxied and
 decrypted.
 
+## Configuration
+
+The behavior of the client and server proxies is controlled by a TOML
+configuration file passed via the `--config` command-line argument.
+
+### Common Options
+
+- `listen_address`: The `SocketAddr` (e.g., `"127.0.0.1:9090"`) where the proxy
+  should listen for incoming connections.
+- `attestation_generators`: (Optional) A list of generators to use for generating
+  attestation evidence to send to the peer.
+- `attestation_verifiers`: (Optional) A list of verifiers to use for validating
+  the peer's attestation evidence.
+
+### Client-Specific Options
+
+- `server_proxy_address`: The `SocketAddr` of the server proxy.
+
+### Server-Specific Options
+
+- `backend_address`: The `SocketAddr` of the final backend application where
+  plaintext traffic should be forwarded.
+
+### Attestation Modes
+
+The presence of the `attestation_generators` and `attestation_verifiers` sections
+determines the attestation mode:
+
+1. **Unattested (Default)**: If both are omitted, the session is unattested.
+2. **Unidirectional Attestation**: If one proxy has a `generator` and the other
+   has a `verifier`, the session is unidirectionally attested.
+3. **Bidirectional Attestation**: If both proxies have `generator` and
+   `verifier` sections, the session is mutually attested.
+
+### Example: Bidirectional Confidential Space Attestation
+
+This example shows how to configure both proxies to generate and verify
+Confidential Space attestations.
+
+**`server.toml`**
+
+```toml
+listen_address = "127.0.0.1:8081"
+backend_address = "127.0.0.1:8080"
+
+# Generate our own Confidential Space attestation.
+[[attestation_generators]]
+type = "confidential_space"
+
+# Verify the client's Confidential Space attestation.
+[[attestation_verifiers]]
+type = "confidential_space"
+root_certificate_pem_path = "/path/to/gcp_root.pem"
+```
+
+**`client.toml`**
+
+```toml
+listen_address = "127.0.0.1:9090"
+server_proxy_address = "127.0.0.1:8081"
+
+# Generate our own Confidential Space attestation.
+[[attestation_generators]]
+type = "confidential_space"
+
+# Verify the server's Confidential Space attestation.
+[[attestation_verifiers]]
+type = "confidential_space"
+root_certificate_pem_path = "/path/to/gcp_root.pem"
+```
+
+## Extending Attestation
+
+The proxy is designed to be extensible with new attestation flows. This is
+achieved by adding new variants to the `GeneratorConfig` and `VerifierConfig`
+enums in `//oak_proxy/lib/src/config/mod.rs`.
+
+### How to Add a New Attestation Type
+
+Let's say you want to add a new attestation mechanism called
+"MyCustomAttestation".
+
+1. **Create a New Module**:
+
+   - Create a new file for your attestation logic, for example
+     `//oak_proxy/lib/src/config/my_custom_attestation.rs`.
+   - In this new file, define `MyCustomAttestationGeneratorParams` and
+     `MyCustomAttestationVerifierParams` structs to hold any parameters needed
+     for your attestation (e.g., file paths, endpoint URLs). Make sure they
+     derive `serde::Deserialize`.
+
+2. **Integrate with the Config Module**:
+
+   - In `//oak_proxy/lib/src/config/mod.rs`, declare your new module with
+     `pub mod my_custom_attestation;`.
+   - Import your new param structs.
+   - Add new variants to the `GeneratorConfig` and `VerifierConfig` enums,
+     referencing your new structs:
+
+     ```rust
+     // in //oak_proxy/lib/src/config/mod.rs
+
+     // Import your params
+     use self::my_custom_attestation::{MyCustomAttestationGeneratorParams, MyCustomAttestationVerifierParams};
+
+     #[derive(Deserialize)]
+     #[serde(tag = "type", rename_all = "snake_case")]
+     pub enum GeneratorConfig {
+         ConfidentialSpace(ConfidentialSpaceGeneratorParams),
+         MyCustomAttestation(MyCustomAttestationGeneratorParams), // Your new variant
+     }
+
+     #[derive(Deserialize)]
+     #[serde(tag = "type", rename_all = "snake_case")]
+     pub enum VerifierConfig {
+         ConfidentialSpace(ConfidentialSpaceVerifierParams),
+         MyCustomAttestation(MyCustomAttestationVerifierParams), // Your new variant
+     }
+     ```
+
+3. **Implement the `apply` Method**:
+
+   - In your new module (`my_custom_attestation.rs`), implement the `apply`
+     method for your param structs. This method takes a `SessionConfigBuilder`
+     and should add the appropriate `Attester`, `Endorser`, `Binder`, or
+     `Verifier` to it.
+
+   - For the generator:
+
+     ```rust
+     // in //oak_proxy/lib/src/config/my_custom_attestation.rs
+     impl MyCustomAttestationGeneratorParams {
+         pub fn apply(&self, builder: SessionConfigBuilder) -> anyhow::Result<SessionConfigBuilder> {
+             // 1. Create instances of your custom attester, endorser, and binder.
+             // 2. Add them to the builder.
+             // Ok(builder.add_self_attester(...).add_self_endorser(...).add_session_binder(...))
+         }
+     }
+     ```
+
+   - For the verifier:
+
+     ```rust
+     // in //oak_proxy/lib/src/config/my_custom_attestation.rs
+     impl MyCustomAttestationVerifierParams {
+         pub fn apply(&self, builder: SessionConfigBuilder) -> anyhow::Result<SessionConfigBuilder> {
+             // 1. Create an instance of your custom verifier.
+             // 2. Add it to the builder.
+             // Ok(builder.add_peer_verifier_with_key_extractor(...))
+         }
+     }
+     ```
+
+4. **Update the `match` Statements**:
+
+   - In `//oak_proxy/lib/src/config/mod.rs`, add a branch to the `match`
+     statement in the `apply` methods for `GeneratorConfig` and `VerifierConfig`
+     to call your new implementation.
+
+5. **Use in Configuration**:
+
+   - You can now use your new type in the TOML configuration files:
+
+     ```toml
+     [[attestation_generators]]
+     type = "my_custom_attestation"
+     # ... any other params for your struct
+     ```
+
 ## Testing
 
 The proxy has an automated test that simulates the manual steps described above.
@@ -193,8 +382,9 @@ bazel test //oak_proxy:proxy_test
 This implementation is a functional proof-of-concept. Future enhancements could
 include:
 
-- [ ] **Attestation**: Configure the `oak_session` to perform attestation,
-      ensuring the proxies are running in a trusted environment.
+- [ ] **Configuration Caching**: Avoid re-creating the `SessionConfig` and its
+      associated generators and verifiers for each new connection to improve
+      performance.
 - [ ] **Robustness**: Improve error handling and connection management for
       production use cases.
 - [ ] **Packaging**: Create distributable packages for easier deployment of the

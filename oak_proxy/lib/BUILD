@@ -23,16 +23,23 @@ package(
 
 rust_library(
     name = "oak_proxy_lib",
-    srcs = [
-        "src/framing.rs",
-        "src/lib.rs",
-        "src/proxy.rs",
-    ],
+    srcs = glob(["src/**/*.rs"]),
     deps = [
+        "//oak_attestation",
+        "//oak_attestation_gcp",
+        "//oak_attestation_verification",
         "//oak_proto_rust",
         "//oak_session",
+        "//oak_time",
+        "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:toml",
+        "@oak_crates_index//:x509-cert",
     ],
 )

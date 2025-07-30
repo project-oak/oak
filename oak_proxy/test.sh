@@ -3,8 +3,19 @@
 set -e
 set -x
 
+# Create TOML config files
+cat > client.toml <<EOF
+listen_address = "127.0.0.1:9090"
+server_proxy_address = "127.0.0.1:8081"
+EOF
+
+cat > server.toml <<EOF
+listen_address = "127.0.0.1:8081"
+backend_address = "127.0.0.1:8080"
+EOF
+
 # Start the backend server
-nc -l 127.0.0.1 8080 > backend_output.txt &
+nc -l 127.0.0.1 8080 > >(tee backend_output.txt) &
 BACKEND_PID=$!
 # Give it a moment to start up
 sleep 1
@@ -16,14 +27,14 @@ CLIENT_PROXY_BIN="./oak_proxy/client/client"
 
 # Start the server proxy
 echo "Starting server proxy..."
-$SERVER_PROXY_BIN > server_output.txt 2>&1 &
+$SERVER_PROXY_BIN --config server.toml > >(tee server_output.txt) 2>&1 &
 SERVER_PID=$!
 # Wait for the server to start
 sleep 2
 
 # Start the client proxy
 echo "Starting client proxy..."
-$CLIENT_PROXY_BIN > client_output.txt 2>&1 &
+$CLIENT_PROXY_BIN --config client.toml > >(tee client_output.txt) 2>&1 &
 CLIENT_PID=$!
 # Wait for the client to start
 sleep 2
