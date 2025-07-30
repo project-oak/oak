@@ -26,6 +26,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         "//oak_proto_rust",
+        "//oak_proxy/lib:oak_proxy_lib",
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

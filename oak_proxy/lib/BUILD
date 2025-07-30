@@ -14,22 +14,24 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "server",
-    srcs = ["src/main.rs"],
+rust_library(
+    name = "oak_proxy_lib",
+    srcs = [
+        "src/framing.rs",
+        "src/lib.rs",
+        "src/proxy.rs",
+    ],
     deps = [
         "//oak_proto_rust",
-        "//oak_proxy/lib:oak_proxy_lib",
         "//oak_session",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
     ],

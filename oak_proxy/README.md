@@ -50,6 +50,9 @@ these two proxies.
   server's machine. It listens for incoming encrypted connections from the
   Client Proxy. It decrypts the traffic and forwards the plaintext to the final
   backend application server.
+- **Shared Library (`//oak_proxy/lib`)**: A shared Rust library containing the
+  common logic for data framing and proxying, used by both the client and server
+  binaries.
 
 ### How It Works
 
@@ -57,16 +60,45 @@ these two proxies.
    Client Proxy's listening address (e.g., `localhost:9090`).
 2. **Session Establishment**: When the Client Proxy receives a connection, it
    initiates an `oak_session` handshake with the Server Proxy. The current
-   implementation uses an unattested session for simplicity.
+   implementation uses an unattested session for simplicity. The handshake
+   messages are exchanged using the wire protocol described below.
 3. **Data Forwarding (Client to Server)**:
-   - The Client Proxy reads plaintext data from the application.
-   - It encrypts the data using its `ClientSession`.
-   - The encrypted data is sent to the Server Proxy.
-   - The Server Proxy receives and decrypts the data using its `ServerSession`.
-   - The resulting plaintext is forwarded to the backend server.
+   - The Client Proxy reads raw plaintext bytes from the application's TCP
+     stream.
+   - It passes these bytes to its `ClientSession` instance, which encrypts them.
+   - The `ClientSession` produces an encrypted Protobuf message.
+   - The Client Proxy sends this message to the Server Proxy using the wire
+     protocol.
+   - The Server Proxy receives and decodes the message from the wire.
+   - It passes the encrypted message to its `ServerSession`, which decrypts it.
+   - The resulting plaintext is written to the TCP stream connected to the
+     backend server.
 4. **Data Forwarding (Server to Client)**: The process is reversed for the
-   response. The Server Proxy encrypts the backend server's response, and the
-   Client Proxy decrypts it before sending it to the client application.
+   response.
+
+### Wire Protocol
+
+Since TCP is a stream-based protocol, a framing mechanism is required to
+delineate individual messages. This project uses a simple length-prefix framing
+protocol:
+
+- Each message (both for the handshake and for data transfer) is a Protobuf
+  message serialized into bytes.
+- Before sending the serialized message, its length is calculated as a 32-bit
+  unsigned integer (`u32`).
+- The 4-byte length is sent over the wire in big-endian order, immediately
+  followed by the serialized message bytes.
+
+```text
+  +--------------------------------+-----------------------------------------+
+  |         4-byte Length          |            Protobuf Message             |
+  | (u32, Big-Endian)              |              (variable length)          |
+  +--------------------------------+-----------------------------------------+
+```
+
+This ensures that the receiving end knows exactly how many bytes to read for the
+next message. This logic is encapsulated in the `//oak_proxy/lib/framing`
+module.
 
 ## Security Model
 

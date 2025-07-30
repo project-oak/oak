@@ -30,7 +30,7 @@ sleep 2
 
 # Send a message
 echo "Sending message..."
-echo "Hello, proxy!" | nc -N 127.0.0.1 9090
+echo "Hello, proxy!" | nc -w 1 127.0.0.1 9090
 
 # Wait for the message to be processed
 sleep 2
