@@ -715,8 +715,15 @@ pub struct CertificateBasedReferenceValues {
     pub ca: ::core::option::Option<CertificateAuthorityReferenceValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConfidentialSpaceReferenceValues {
+    /// The PEM-encoded root certificate for verifying Confidential Space
+    /// attestations.
+    #[prost(string, tag = "1")]
+    pub root_certificate_pem: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReferenceValues {
-    #[prost(oneof = "reference_values::Type", tags = "1, 2, 3, 4")]
+    #[prost(oneof = "reference_values::Type", tags = "1, 2, 3, 4, 5")]
     pub r#type: ::core::option::Option<reference_values::Type>,
 }
 /// Nested message and enum types in `ReferenceValues`.
@@ -731,6 +738,8 @@ pub mod reference_values {
         Cb(super::CbReferenceValues),
         #[prost(message, tag = "4")]
         CertificateBased(super::CertificateBasedReferenceValues),
+        #[prost(message, tag = "5")]
+        ConfidentialSpace(super::ConfidentialSpaceReferenceValues),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

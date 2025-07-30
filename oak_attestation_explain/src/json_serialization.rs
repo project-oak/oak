@@ -820,6 +820,15 @@ pub fn serialize_certificate_based_reference_values(
     })
 }
 
+pub fn serialize_confidential_space_reference_values(
+    instance: &ConfidentialSpaceReferenceValues,
+) -> serde_json::Value {
+    let ConfidentialSpaceReferenceValues { root_certificate_pem } = instance;
+    json!({
+        "root_certificate_pem": root_certificate_pem
+    })
+}
+
 pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -845,6 +854,11 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         Some(reference_values::Type::CertificateBased(instance)) => {
             json!({
                 "certificate_based": serialize_certificate_based_reference_values(instance)
+            })
+        }
+        Some(reference_values::Type::ConfidentialSpace(instance)) => {
+            json!({
+                "confidential_space": serialize_confidential_space_reference_values(instance)
             })
         }
         None => json!(null),

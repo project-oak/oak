@@ -372,12 +372,19 @@ message CertificateBasedReferenceValues {
   CertificateAuthorityReferenceValue ca = 1;
 }
 
+message ConfidentialSpaceReferenceValues {
+  // The PEM-encoded root certificate for verifying Confidential Space
+  // attestations.
+  string root_certificate_pem = 1;
+}
+
 message ReferenceValues {
   oneof type {
     OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
     OakContainersReferenceValues oak_containers = 2;
     CBReferenceValues cb = 3;
     CertificateBasedReferenceValues certificate_based = 4;
+    ConfidentialSpaceReferenceValues confidential_space = 5;
   }
 }
 

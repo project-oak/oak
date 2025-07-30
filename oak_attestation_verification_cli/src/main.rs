@@ -26,7 +26,6 @@ use clap::Parser;
 use oak_attestation_gcp::{
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
-    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::policy::session_binding_public_key::{
     SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
@@ -40,7 +39,7 @@ use oak_proto_rust::{
     oak::{
         attestation::v1::{
             reference_values, CertificateBasedReferenceValues, CollectedAttestation,
-            ReferenceValues, ReferenceValuesCollection,
+            ConfidentialSpaceReferenceValues, ReferenceValues, ReferenceValuesCollection,
         },
         session::v1::{EndorsedEvidence, SessionBinding},
         Variant,
@@ -110,12 +109,27 @@ fn main() {
         let session_binding = attestation.session_bindings.get(attestation_type_id);
         match attestation_type_id.as_str() {
             CONFIDENTIAL_SPACE_ATTESTATION_ID => {
-                process_confidential_space_attestation(
-                    attestation_timestamp,
-                    &handshake_hash,
-                    endorsed_evidence,
-                    session_binding,
-                );
+                match reference_values.get(CONFIDENTIAL_SPACE_ATTESTATION_ID) {
+                    Some(ReferenceValues {
+                        r#type:
+                            Some(reference_values::Type::ConfidentialSpace(
+                                ref confidential_space_reference_values,
+                            )),
+                    }) => {
+                        process_confidential_space_attestation(
+                            confidential_space_reference_values,
+                            attestation_timestamp,
+                            &handshake_hash,
+                            endorsed_evidence,
+                            session_binding,
+                        );
+                    }
+                    _ => {
+                        println!(
+                            "❓ Could not find reference values for confidential space attestation"
+                        );
+                    }
+                }
             }
             CERTIFICATE_BASED_ATTESTATION_ID => {
                 match reference_values.get(CERTIFICATE_BASED_ATTESTATION_ID) {
@@ -188,6 +202,7 @@ fn print_handshake_hash_report(handshake_hash: &[u8]) {
 }
 
 fn process_confidential_space_attestation(
+    reference_values: &ConfidentialSpaceReferenceValues,
     attestation_timestamp: Instant,
     handshake_hash: &[u8],
     endorsed_evidence: &EndorsedEvidence,
@@ -204,6 +219,7 @@ fn process_confidential_space_attestation(
 
     if let (Ok(event), Ok(endorsement)) = (event, endorsement) {
         let report = create_confidential_space_attestation_report(
+            reference_values,
             attestation_timestamp,
             &event,
             &endorsement,
@@ -218,12 +234,13 @@ fn process_confidential_space_attestation(
 }
 
 fn create_confidential_space_attestation_report(
+    reference_values: &ConfidentialSpaceReferenceValues,
     attestation_timestamp: Instant,
     event: &[u8],
     endorsement: &Variant,
 ) -> Result<ConfidentialSpaceVerificationReport> {
-    let root_certificate =
-        Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).map_err(anyhow::Error::msg)?;
+    let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
+        .map_err(anyhow::Error::msg)?;
     // TODO: b/434899976 - provide reference values for the workload endorsement.
     let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
     policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
@@ -289,13 +306,14 @@ fn print_certificate_chain(
                     Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
                     Ok(()) => print_indented!(indent, "✅ verified successfully"),
                 }
+                print_indented!(indent, "✍️  issued by:");
             }
             match report.issuer_report.as_ref() {
                 IssuerReport::OtherCertificate(report) => {
                     print_certificate_chain(indent, report);
                 }
-                IssuerReport::SelfSigned => {
-                    print_indented!(indent + 1, "✍️ Self-signed");
+                IssuerReport::Root => {
+                    print_indented!(indent, "🛡️ Confidential Space root certificate");
                 }
             }
         }

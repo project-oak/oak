@@ -326,12 +326,7 @@ mod tests {
                         issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                             validity: Ok(()),
                             verification: Ok(()),
-                            issuer_report:
-                                box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                                    validity: Ok(()),
-                                    verification: Ok(()),
-                                    issuer_report: box IssuerReport::SelfSigned,
-                                })),
+                            issuer_report: box IssuerReport::Root,
                         })),
                     }),
                 },
@@ -372,12 +367,7 @@ mod tests {
                         issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                             validity: Ok(()),
                             verification: Ok(()),
-                            issuer_report:
-                                box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                                    validity: Ok(()),
-                                    verification: Ok(()),
-                                    issuer_report: box IssuerReport::SelfSigned,
-                                })),
+                            issuer_report: box IssuerReport::Root,
                         })),
                     }),
                 },

@@ -24,6 +24,8 @@ This project uses `googletest` whenever possible for both C++ and Rust tests.
 
 While `just build-and-test` is available to run all tests, it can be slow. For a faster, more targeted approach, you can run tests for a specific package using `bazel test //path/to/package:all`. For example, to run only the tests for the `oak_time` crate, use `bazel test //oak_time:all`.
 
+If a `rust_binary` target does not have any tests, running `bazel test` on it will fail. In this case, use `bazel build` to verify the target instead.
+
 Note: The following two test targets are expected to fail when running `just build-and-test` in the local development environment. This is known behavior and can be disregarded:
 
 * `//oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests_tests/integration_test_test`
@@ -39,6 +41,14 @@ Tests usually need `std` to run, so if you create a module with testing helpers,
 make sure you gate that behind `#[cfg(test)]`, so it only gets built when
 testing, otherwise it will probably drag `std` into the main (non-test) build
 and break that.
+
+## Working with Protobufs
+
+The project's protobuf files are located in the `proto` directory. After modifying any of these files, you must run the following command to regenerate the corresponding Rust code:
+
+```bash
+bazel run oak_proto_rust:copy_generated_files
+```
 
 ## Adding Crate Dependencies
 

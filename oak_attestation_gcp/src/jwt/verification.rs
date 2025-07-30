@@ -46,6 +46,8 @@ pub enum AttestationVerificationError {
     JWTValidityNotBefore { nbf: Instant, current_time: Instant },
     #[error("Token validity exp: {exp} < {current_time}")]
     JWTValidityExpiration { exp: Instant, current_time: Instant },
+    #[error("Empty X509 certificate chain")]
+    EmptyX509Chain,
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),
 }
@@ -116,7 +118,7 @@ impl AttestationTokenVerificationReport {
                             verification: Ok(()),
                             issuer_report,
                         } => match *issuer_report {
-                            IssuerReport::SelfSigned => return Ok(verified_token),
+                            IssuerReport::Root => return Ok(verified_token),
                             IssuerReport::OtherCertificate(certificate_report) => {
                                 current_report = certificate_report;
                             }
@@ -149,8 +151,9 @@ pub enum IssuerReport {
     /// The result of verifying an issuer which is itself another certificate
     /// in the certificate chain.
     OtherCertificate(Result<CertificateReport, AttestationVerificationError>),
-    /// Indicates that the certificate is self-signed.
-    SelfSigned,
+    /// Indicates that the issuer is the root certificate (on which no
+    /// verification is performed; because it is necessarily trusted).
+    Root,
 }
 
 /// Contains the results of verifying a certificate in a certificate chain.
@@ -182,24 +185,26 @@ pub fn report_attestation_token(
     // that certificate, and so on until the last certificate, which is signed
     // by the root.)
     let mut issuer = Box::new(root.clone());
-    let mut issuer_report = Ok(CertificateReport {
-        validity: verify_certificate_validity(root, current_time),
-        verification: verify_certificate(root, root),
-        issuer_report: Box::new(IssuerReport::SelfSigned),
-    });
+    let mut issuer_report = None;
     for base64_der in token.header().x509_chain.iter().rev() {
-        issuer_report = try {
-            let certificate = Box::new(Certificate::from_der(&STANDARD.decode(base64_der)?)?);
-            let validity = verify_certificate_validity(certificate.as_ref(), current_time);
-            let verification = verify_certificate(issuer.as_ref(), certificate.as_ref());
-            issuer = certificate;
-            CertificateReport {
-                validity,
-                verification,
-                issuer_report: Box::new(IssuerReport::OtherCertificate(issuer_report)),
-            }
-        };
+        issuer_report = Some(
+            try {
+                let certificate = Box::new(Certificate::from_der(&STANDARD.decode(base64_der)?)?);
+                let validity = verify_certificate_validity(certificate.as_ref(), current_time);
+                let verification = verify_certificate(issuer.as_ref(), certificate.as_ref());
+                issuer = certificate;
+                CertificateReport {
+                    validity,
+                    verification,
+                    issuer_report: Box::new(match issuer_report {
+                        Some(issuer_report) => IssuerReport::OtherCertificate(issuer_report),
+                        None => IssuerReport::Root,
+                    }),
+                }
+            },
+        );
     }
+    let issuer_report = issuer_report.unwrap_or(Err(AttestationVerificationError::EmptyX509Chain));
 
     AttestationTokenVerificationReport {
         validity: verify_token_validity(&token, current_time),
@@ -331,11 +336,7 @@ mod tests {
                     issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                         validity: Ok(()),
                         verification: Ok(()),
-                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                            validity: Ok(()),
-                            verification: Ok(()),
-                            issuer_report: box IssuerReport::SelfSigned
-                        }))
+                        issuer_report: box IssuerReport::Root
                     }))
                 })
             }
@@ -386,11 +387,7 @@ mod tests {
                     issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                         validity: Ok(()),
                         verification: Ok(()),
-                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                            validity: Ok(()),
-                            verification: Ok(()),
-                            issuer_report: box IssuerReport::SelfSigned
-                        }))
+                        issuer_report: box IssuerReport::Root
                     }))
                 })
             }
@@ -435,11 +432,7 @@ mod tests {
                     issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                         validity: Ok(()),
                         verification: Ok(()),
-                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                            validity: Ok(()),
-                            verification: Ok(()),
-                            issuer_report: box IssuerReport::SelfSigned
-                        }))
+                        issuer_report: box IssuerReport::Root
                     }))
                 })
             }
@@ -494,11 +487,7 @@ mod tests {
                     issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                         validity: Ok(()),
                         verification: Ok(()),
-                        issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
-                            validity: Ok(()),
-                            verification: Ok(()),
-                            issuer_report: box IssuerReport::SelfSigned
-                        }))
+                        issuer_report: box IssuerReport::Root
                     }))
                 })
             }
