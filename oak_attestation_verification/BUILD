@@ -214,6 +214,7 @@ rust_library(
     data = [
         "//oak_attestation_verification/testdata:cb_attestation",
         "//oak_attestation_verification/testdata:endorsement",
+        "//oak_attestation_verification/testdata:fake_attestation",
         "//oak_attestation_verification/testdata:genoa_oc_attestation",
         "//oak_attestation_verification/testdata:milan_oc_release_attestation",
         "//oak_attestation_verification/testdata:milan_oc_staging_attestation",

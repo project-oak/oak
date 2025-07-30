@@ -1,0 +1,14 @@
+# proto-file: proto/attestation/endorsement.proto
+# proto-message: oak.attestation.v1.Endorsements
+#
+# Empty endorsements for Oak Containers running on insecure hardware.
+#
+oak_containers {
+  root_layer {
+    stage0 {}
+  }
+  kernel_layer {
+  }
+  system_layer {
+  }
+}

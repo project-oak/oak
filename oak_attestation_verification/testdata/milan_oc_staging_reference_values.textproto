@@ -35,8 +35,6 @@ oak_containers {
     }
     intel_tdx {
     }
-    insecure {
-    }
   }
   kernel_layer {
     kernel {

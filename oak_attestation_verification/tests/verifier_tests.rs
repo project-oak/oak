@@ -29,69 +29,21 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        text_reference_value, BinaryReferenceValue, ContainerLayerEndorsements, Digests,
-        Endorsements, Evidence, ExpectedValues, ExtractedEvidence, InsecureReferenceValues,
-        KernelLayerEndorsements, OakContainersEndorsements, ReferenceValues, Regex,
-        RootLayerEndorsements, RootLayerReferenceValues, SystemLayerEndorsements, TcbVersion,
-        TextReferenceValue,
+        text_reference_value, BinaryReferenceValue, Digests, Endorsements, Evidence,
+        ExpectedValues, ExtractedEvidence, ReferenceValues, Regex, TcbVersion, TextReferenceValue,
     },
     RawDigest,
 };
 use prost::Message;
-use test_util::{
-    attestation_data::AttestationData,
-    endorsement_data::EndorsementData,
-    factory::{create_oc_reference_values, create_rk_reference_values},
-};
+use test_util::{attestation_data::AttestationData, factory::create_rk_reference_values};
 
-// Fake attestation
-const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
-
-// Pretend the tests run at this time: 1 March 2024, 12:00 UTC. This date must
-// be valid with respect to the endorsement behind ENDORSEMENT_PATH.
-const NOW_UTC_MILLIS: i64 = 1709294400000;
-
-// Creates a valid fake evidence instance.
-fn create_fake_evidence() -> Evidence {
-    let serialized = fs::read(data_path(FAKE_EVIDENCE_PATH)).expect("could not read fake evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
-}
 
 fn create_fake_expected_values() -> ExpectedValues {
     let serialized = fs::read(data_path(FAKE_EXPECTED_VALUES_PATH))
         .expect("could not read fake expected values");
     ExpectedValues::decode(serialized.as_slice()).expect("could not decode fake expected values")
-}
-
-// Creates mock endorsements for an Oak Containers chain.
-fn create_oc_endorsements(vcek_cert: &[u8]) -> Endorsements {
-    let d = EndorsementData::load();
-
-    let root_layer = RootLayerEndorsements { tee_certificate: vcek_cert.to_vec(), stage0: None };
-    let kernel_layer = KernelLayerEndorsements {
-        kernel: None,
-        kernel_cmd_line: None,
-        // The testdata endorsement happens to be oak_orchestrator.
-        init_ram_fs: Some(d.tr_endorsement),
-        memory_map: None,
-        acpi: None,
-    };
-    let system_layer = SystemLayerEndorsements { system_image: None };
-    let container_layer = ContainerLayerEndorsements { binary: None, configuration: None };
-
-    let ends = OakContainersEndorsements {
-        root_layer: Some(root_layer),
-        kernel_layer: Some(kernel_layer),
-        system_layer: Some(system_layer),
-        container_layer: Some(container_layer),
-    };
-    Endorsements {
-        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
-        // TODO: b/375137648 - Populate `events` proto field.
-        ..Default::default()
-    }
 }
 
 // Shorthand that produces digest-based reference values from evidence.
@@ -157,6 +109,7 @@ test_verify_success! {
     load_genoa_oc
     load_turin_oc
     load_cb
+    load_fake
 }
 
 macro_rules! test_verify_explicit_reference_values_success {
@@ -189,64 +142,30 @@ test_verify_explicit_reference_values_success! {
     load_milan_rk_staging
     load_genoa_oc
     load_turin_oc
-}
-
-#[test]
-fn verify_fake_evidence_success() {
-    let evidence = create_fake_evidence();
-    let d = AttestationData::load_milan_oc_staging();
-
-    let mut reference_values = create_oc_reference_values();
-    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
-    {
-        reference.root_layer = Some(RootLayerReferenceValues {
-            insecure: Some(InsecureReferenceValues {}),
-            ..Default::default()
-        });
-    } else {
-        panic!("invalid reference value type");
-    }
-
-    assert_success(verify(d.make_valid_millis(), &evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn verify_fake_evidence_explicit_reference_values() {
-    let evidence = create_fake_evidence();
-    let endorsements = AttestationData::load_milan_oc_staging().endorsements;
-    let reference_values = make_reference_values(&evidence);
-
-    assert_success(verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values));
+    load_fake
 }
 
 #[test]
 fn verify_fake_evidence_split_verify_calls() {
-    let evidence = create_fake_evidence();
-    let endorsements = AttestationData::load_milan_oc_staging().endorsements;
-    let reference_values = make_reference_values(&evidence);
+    let d = AttestationData::load_fake();
+    let reference_values = make_reference_values(&d.evidence);
     let computed_expected_values =
-        get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
+        get_expected_values(d.make_valid_millis(), &d.endorsements, &reference_values).unwrap();
 
     assert_success(verify_with_expected_values(
-        NOW_UTC_MILLIS,
-        &evidence,
-        &endorsements,
+        d.make_valid_millis(),
+        &d.evidence,
+        &d.endorsements,
         &computed_expected_values,
     ));
 }
 
 #[test]
 fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
-    let evidence = create_fake_evidence();
-
-    let d = AttestationData::load_milan_oc_staging();
-    let vcek_cert = d.get_tee_certificate().expect("failed to get VCEK cert");
-    let endorsements = create_oc_endorsements(&vcek_cert);
-
-    let reference_values = make_reference_values(&evidence);
-
+    let d = AttestationData::load_fake();
+    let reference_values = make_reference_values(&d.evidence);
     let computed_expected_values =
-        get_expected_values(NOW_UTC_MILLIS, &endorsements, &reference_values).unwrap();
+        get_expected_values(d.make_valid_millis(), &d.endorsements, &reference_values).unwrap();
 
     let mut buf = vec![];
     computed_expected_values

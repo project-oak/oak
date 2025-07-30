@@ -35,8 +35,6 @@ oak_restricted_kernel {
     }
     intel_tdx {
     }
-    insecure {
-    }
   }
   kernel_layer {
     kernel {

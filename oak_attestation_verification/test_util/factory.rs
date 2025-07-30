@@ -18,14 +18,42 @@ use oak_proto_rust::oak::attestation::v1::{
     binary_reference_value, endorsements, kernel_binary_reference_value, reference_values,
     tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
     ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
-    ContainerLayerReferenceValues, Endorsements, KernelBinaryReferenceValue,
-    KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersReferenceValues,
+    ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements,
+    InsecureReferenceValues, KernelBinaryReferenceValue, KernelLayerEndorsements,
+    KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
     OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
     RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
-    SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
+    SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue,
+    TextReferenceValue,
 };
 
-// Creates mock endorsements instance for a restricted kernel application.
+// Creates mock endorsements for an Oak Containers chain.
+pub fn create_oc_endorsements(vcek_cert: &[u8]) -> Endorsements {
+    let root_layer = RootLayerEndorsements { tee_certificate: vcek_cert.to_vec(), stage0: None };
+    let kernel_layer = KernelLayerEndorsements {
+        kernel: None,
+        kernel_cmd_line: None,
+        init_ram_fs: None,
+        memory_map: None,
+        acpi: None,
+    };
+    let system_layer = SystemLayerEndorsements { system_image: None };
+    let container_layer = ContainerLayerEndorsements { binary: None, configuration: None };
+
+    let ends = OakContainersEndorsements {
+        root_layer: Some(root_layer),
+        kernel_layer: Some(kernel_layer),
+        system_layer: Some(system_layer),
+        container_layer: Some(container_layer),
+    };
+    Endorsements {
+        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+        // TODO: b/375137648 - Populate `events` proto field.
+        ..Default::default()
+    }
+}
+
+// Creates mock endorsements for a restricted kernel application.
 pub fn create_rk_endorsements(vcek_cert: &[u8]) -> Endorsements {
     let root_layer = RootLayerEndorsements { tee_certificate: vcek_cert.to_vec(), stage0: None };
     let kernel_layer = KernelLayerEndorsements {
@@ -151,4 +179,19 @@ pub fn create_rk_reference_values() -> ReferenceValues {
         application_layer: Some(application_layer),
     };
     ReferenceValues { r#type: Some(reference_values::Type::OakRestrictedKernel(vs)) }
+}
+
+// Adds `InsecureReferenceValues` to the given reference values.
+pub fn allow_insecure(reference_values: &mut ReferenceValues) {
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(r)) => {
+            let root = r.root_layer.as_mut().unwrap();
+            root.insecure = Some(InsecureReferenceValues {});
+        }
+        Some(reference_values::Type::OakRestrictedKernel(r)) => {
+            let root = r.root_layer.as_mut().unwrap();
+            root.insecure = Some(InsecureReferenceValues {});
+        }
+        _ => panic!("malformed reference values"),
+    }
 }
