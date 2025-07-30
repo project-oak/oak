@@ -38,7 +38,7 @@ use oak_crypto::certificate::certificate_verifier::{
 };
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::{
-    attestation::{CONFIDENTIAL_SPACE_ATTESTATION_ID, SIGNATURE_BASED_ATTESTATION_ID},
+    attestation::{CERTIFICATE_BASED_ATTESTATION_ID, CONFIDENTIAL_SPACE_ATTESTATION_ID},
     oak::{
         attestation::v1::{
             reference_values, CertificateBasedReferenceValues, CollectedAttestation,
@@ -119,15 +119,15 @@ fn main() {
                     session_binding,
                 );
             }
-            SIGNATURE_BASED_ATTESTATION_ID => {
-                match reference_values.get(SIGNATURE_BASED_ATTESTATION_ID) {
+            CERTIFICATE_BASED_ATTESTATION_ID => {
+                match reference_values.get(CERTIFICATE_BASED_ATTESTATION_ID) {
                     Some(ReferenceValues {
                         r#type:
                             Some(reference_values::Type::CertificateBased(
                                 ref certificate_based_reference_values,
                             )),
                     }) => {
-                        process_signature_based_attestation(
+                        process_certificate_based_attestation(
                             certificate_based_reference_values,
                             attestation_timestamp,
                             &handshake_hash,
@@ -137,7 +137,7 @@ fn main() {
                     }
                     _ => {
                         println!(
-                            "❓ Could not find reference values for signature-based attestation"
+                            "❓ Could not find reference values for certificate-based attestation"
                         );
                     }
                 }
@@ -302,7 +302,7 @@ fn print_certificate_chain(
     }
 }
 
-fn process_signature_based_attestation(
+fn process_certificate_based_attestation(
     reference_values: &CertificateBasedReferenceValues,
     attestation_timestamp: Instant,
     handshake_hash: &[u8],
@@ -310,7 +310,7 @@ fn process_signature_based_attestation(
     session_binding: Option<&SessionBinding>,
 ) {
     let indent = 0;
-    print_indented!(indent, "🧾 Signature-based attestation:");
+    print_indented!(indent, "🧾 Certificate-based attestation:");
     let indent = indent + 1;
 
     let event = find_single_event(endorsed_evidence);
@@ -319,13 +319,13 @@ fn process_signature_based_attestation(
     print_endorsement_report(indent, &endorsement);
 
     if let (Ok(event), Ok(endorsement)) = (event, endorsement) {
-        let report = create_signature_based_attestation_report(
+        let report = create_certificate_based_attestation_report(
             reference_values,
             attestation_timestamp,
             &event,
             &endorsement,
         );
-        print_signature_based_attestation_report(indent, &report);
+        print_certificate_based_attestation_report(indent, &report);
         print_session_binding_verification_report(
             handshake_hash,
             try { report?.session_binding_public_key },
@@ -334,7 +334,7 @@ fn process_signature_based_attestation(
     }
 }
 
-fn create_signature_based_attestation_report(
+fn create_certificate_based_attestation_report(
     reference_values: &CertificateBasedReferenceValues,
     attestation_timestamp: Instant,
     event: &[u8],
@@ -349,7 +349,7 @@ fn create_signature_based_attestation_report(
     policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
 }
 
-fn print_signature_based_attestation_report(
+fn print_certificate_based_attestation_report(
     indent: usize,
     report: &Result<SessionBindingPublicKeyVerificationReport>,
 ) {

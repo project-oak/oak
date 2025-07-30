@@ -18,7 +18,9 @@
 /// Attestation type where the session binding key is signed by a key known to
 /// the client.
 #[allow(dead_code)]
-pub const SIGNATURE_BASED_ATTESTATION_ID: &str = "95553023-358f-4f8c-b75c-e6e185cc05ca";
+pub const CERTIFICATE_BASED_ATTESTATION_ID: &str = "95553023-358f-4f8c-b75c-e6e185cc05ca";
+// TODO: b/419209669 - remove this once all dependencies are updated.
+pub const SIGNATURE_BASED_ATTESTATION_ID: &str = CERTIFICATE_BASED_ATTESTATION_ID;
 
 /// Attestation type where the session binding key is included in a JWT which
 /// itself is signed by a certificate chain whose root is GCP Confidential
