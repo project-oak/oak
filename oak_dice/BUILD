@@ -15,7 +15,6 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:internal"],
@@ -28,13 +27,6 @@ rust_library(
     crate_features = [
         "no_std",
     ],
-    target_compatible_with = any_platform([
-        "//:aarch64-apple-setting",
-        "//:x86_64-linux-setting",
-        "//:x86_64-none-setting",
-        "//:x86_64-none-no_avx-setting",
-        "//:wasm32-none-setting",
-    ]),
     deps = [
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:ciborium",

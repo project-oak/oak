@@ -16,7 +16,6 @@
 
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
-load("//bazel:defs.bzl", "any_platform")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -30,13 +29,6 @@ rust_library(
         "@oak_crates_index//:async-trait",
         "@oak_crates_index//:prost-derive",
     ],
-    target_compatible_with = any_platform([
-        "//:aarch64-apple-setting",
-        "//:x86_64-linux-setting",
-        "//:x86_64-none-setting",
-        "//:x86_64-none-no_avx-setting",
-        "//:wasm32-none-setting",
-    ]),
     deps = [
         ":build",
         "@oak_crates_index//:prost",
