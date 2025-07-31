@@ -30,6 +30,8 @@ rust_binary(
         "//oak_session",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",

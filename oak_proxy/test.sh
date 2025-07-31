@@ -3,6 +3,8 @@
 set -e
 set -x
 
+export RUST_LOG=info
+
 # Create TOML config files
 cat > client.toml <<EOF
 listen_address = "127.0.0.1:9090"

@@ -26,7 +26,17 @@ use serde::Deserialize;
 
 use self::confidential_space::{ConfidentialSpaceGeneratorParams, ConfidentialSpaceVerifierParams};
 
-#[derive(Deserialize)]
+pub fn load_toml<T>(path: &str) -> anyhow::Result<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    let config_str = std::fs::read_to_string(path)?;
+    let config: T = toml::from_str(&config_str)?;
+
+    Ok(config)
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct ClientConfig {
     pub listen_address: SocketAddr,
     pub server_proxy_address: SocketAddr,
@@ -36,7 +46,7 @@ pub struct ClientConfig {
     pub attestation_verifiers: Vec<VerifierConfig>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ServerConfig {
     pub listen_address: SocketAddr,
     pub backend_address: SocketAddr,
@@ -46,13 +56,13 @@ pub struct ServerConfig {
     pub attestation_verifiers: Vec<VerifierConfig>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GeneratorConfig {
     ConfidentialSpace(ConfidentialSpaceGeneratorParams),
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum VerifierConfig {
     ConfidentialSpace(ConfidentialSpaceVerifierParams),

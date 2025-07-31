@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{fs, sync::Arc};
+use std::sync::Arc;
 
 use clap::Parser;
 use oak_proxy_lib::{
@@ -33,27 +33,27 @@ use tokio::{
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the TOML configuration file.
-    #[arg(long)]
-    config: String,
+    #[arg(long, value_parser = crate::config::load_toml::<ServerConfig>)]
+    config: ServerConfig,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-    let config_str = fs::read_to_string(args.config)?;
-    let config: ServerConfig = toml::from_str(&config_str)?;
+    env_logger::init();
+
+    let Args { config } = Args::parse();
 
     let listener = TcpListener::bind(config.listen_address).await?;
-    println!("[Server] Listening on {}", config.listen_address);
+    log::info!("[Server] Listening on {}", config.listen_address);
 
     let config = Arc::new(config);
     loop {
         let (stream, peer_address) = listener.accept().await?;
-        println!("[Server] Accepted connection from {}", peer_address);
+        log::info!("[Server] Accepted connection from {}", peer_address);
         let config = config.clone();
         tokio::spawn(async move {
             if let Err(err) = handle_connection(stream, &config).await {
-                eprintln!("[Server] Error handling connection: {:?}", err);
+                log::error!("[Server] Error handling connection: {:?}", err);
             }
         });
     }
@@ -82,10 +82,10 @@ async fn handle_connection(
         }
     }
 
-    println!("[Server] Oak Session established with client proxy.");
+    log::info!("[Server] Oak Session established with client proxy.");
 
     let backend_stream = TcpStream::connect(config.backend_address).await?;
-    println!("[Server] Connected to backend server at {}", config.backend_address);
+    log::info!("[Server] Connected to backend server at {}", config.backend_address);
 
     proxy::<
         ServerSession,

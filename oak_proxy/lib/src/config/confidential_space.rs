@@ -32,7 +32,7 @@ use serde::Deserialize;
 use sha2::Digest;
 use x509_cert::{der::DecodePem, Certificate};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ConfidentialSpaceGeneratorParams {}
 
 impl ConfidentialSpaceGeneratorParams {
@@ -69,7 +69,7 @@ impl ConfidentialSpaceGeneratorParams {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ConfidentialSpaceVerifierParams {
     pub root_certificate_pem_path: String,
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{fs, sync::Arc};
+use std::sync::Arc;
 
 use clap::Parser;
 use oak_proxy_lib::{
@@ -33,27 +33,27 @@ use tokio::{
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the TOML configuration file.
-    #[arg(long)]
-    config: String,
+    #[arg(long, value_parser = crate::config::load_toml::<ClientConfig>)]
+    config: ClientConfig,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-    let config_str = fs::read_to_string(args.config)?;
-    let config: ClientConfig = toml::from_str(&config_str)?;
+    env_logger::init();
+
+    let Args { config } = Args::parse();
 
     let listener = TcpListener::bind(config.listen_address).await?;
-    println!("[Client] Listening on {}", config.listen_address);
+    log::info!("[Client] Listening on {}", config.listen_address);
 
     let config = Arc::new(config);
     loop {
         let (stream, peer_address) = listener.accept().await?;
-        println!("[Client] Accepted connection from {}", peer_address);
+        log::info!("[Client] Accepted connection from {}", peer_address);
         let config = config.clone();
         tokio::spawn(async move {
             if let Err(err) = handle_connection(stream, &config).await {
-                eprintln!("[Client] Error handling connection: {:?}", err);
+                log::error!("[Client] Error handling connection: {:?}", err);
             }
         });
     }
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
     let mut server_proxy_stream = TcpStream::connect(config.server_proxy_address).await?;
-    println!("[Client] Connected to server proxy at {}", config.server_proxy_address);
+    log::info!("[Client] Connected to server proxy at {}", config.server_proxy_address);
 
     let client_config = config::build_session_config(
         &config.attestation_generators,
@@ -84,7 +84,7 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
         }
     }
 
-    println!("[Client] Oak Session established with server proxy.");
+    log::info!("[Client] Oak Session established with server proxy.");
 
     proxy::<
         ClientSession,

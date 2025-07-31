@@ -137,16 +137,16 @@ where
     tokio::select! {
         res = plaintext_to_encrypted_task => {
             if let Err(e) = res? {
-                println!("[{role}] Error in plaintext-to-encrypted task: {:?}", e);
+                log::error!("[{role}] Error in plaintext-to-encrypted task: {:?}", e);
             }
         },
         res = encrypted_to_plaintext_task => {
             if let Err(e) = res? {
-                println!("[{role}] Error in encrypted-to-plaintext task: {:?}", e);
+                log::error!("[{role}] Error in encrypted-to-plaintext task: {:?}", e);
             }
         },
     }
 
-    println!("[{role}] Connection closed.");
+    log::info!("[{role}] Connection closed.");
     Ok(())
 }
