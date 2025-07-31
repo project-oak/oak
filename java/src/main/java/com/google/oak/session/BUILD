@@ -171,3 +171,13 @@ android_library(
     srcs = ["OakSessionConfigBuilder.java"],
     deps = [],
 )
+
+java_library(
+    name = "attestation_publisher",
+    srcs = ["AttestationPublisher.java"],
+)
+
+android_library(
+    name = "attestation_publisher_android",
+    srcs = ["AttestationPublisher.java"],
+)

@@ -83,3 +83,15 @@ oak_android_jni_library(
         ":oak_session_config_builder_rust",
     ],
 )
+
+rust_library(
+    name = "oak_jni_attestation_publisher",
+    srcs = ["oak_jni_attestation_publisher.rs"],
+    deps = [
+        "//oak_proto_rust",
+        "//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:jni",
+        "@oak_crates_index//:prost",
+    ],
+)

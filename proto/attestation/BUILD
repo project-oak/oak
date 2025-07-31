@@ -196,6 +196,16 @@ cc_proto_library(
     deps = [":eventlog_proto"],
 )
 
+java_proto_library(
+    name = "eventlog_java_proto",
+    deps = [":eventlog_proto"],
+)
+
+java_lite_proto_library(
+    name = "eventlog_java_proto_lite",
+    deps = [":eventlog_proto"],
+)
+
 proto_library(
     name = "service_proto",
     srcs = ["service.proto"],

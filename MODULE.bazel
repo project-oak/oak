@@ -160,6 +160,7 @@ use_repo(
     "javax_inject_javax_inject",
     "junit_junit",
     "com_google_crypto_tink_tink",
+    "com_google_truth_truth",
     "org_bouncycastle_bcprov_jdk18on",
     "org_jetbrains_kotlin_kotlin_test",
     "org_mockito_kotlin_mockito_kotlin",
