@@ -18,6 +18,20 @@ similar yourself (e.g. by running `bazel` directly in similar ways).
 After editing files, please run `just format` - at least once, at the end of
 completing all edits - to format the code appropriately.
 
+## API Design
+
+When writing new APIs follow the guidelines:
+
+* Write extensive doc comments explaining the intended use of all parts of the APIs and the interaction between the components
+* Design for testability: make sure all dependencies can be replaced by mocks for testing, where possible create appropriate mocks
+* The APIs should be safe:
+  * Avoid using `unsafe` code
+  * When handling cryptographic primitives don't create unnecessary copies of private keys
+  * Don't keep the keys in memory when they are no longer in use
+  * Make it hard for the API users to do unsafe things. For example don't return raw private keys to the caller, instead create a handler with intended operations for them to use
+* Utilize structured errors (such as provided by `thiserror`) to provide sufficient context to the API callers
+* APIs should utilize the type system to make invalid states unrepresentable
+
 ## Writing Tests
 
 This project uses `googletest` whenever possible for both C++ and Rust tests.
