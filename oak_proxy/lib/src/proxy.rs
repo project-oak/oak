@@ -14,16 +14,18 @@
 // limitations under the License.
 //
 
-use std::{fmt, sync::Arc};
+use std::{collections::VecDeque, fmt, time::Duration};
 
+use bytes::Bytes;
+use futures::{SinkExt, StreamExt};
 use oak_session::{ProtocolEngine, Session};
 use prost::Message;
+use rand::Rng;
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
-    sync::Mutex,
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
 };
-
-use crate::framing::{read_message, write_message};
+use tokio_tungstenite::{tungstenite, MaybeTlsStream, WebSocketStream};
 
 pub enum PeerRole {
     Client,
@@ -39,75 +41,6 @@ impl fmt::Display for PeerRole {
     }
 }
 
-/// Pumps data from a reader to a writer, using the session to transform the
-/// data.
-///
-/// This function is used to handle one direction of a bidirectional proxy.
-///
-/// - `plaintext_reader`: The source of plaintext data.
-/// - `encrypted_writer`: The destination for encrypted data.
-/// - `session`: The `oak_session` instance used for encryption.
-async fn plaintext_to_encrypted<R, W, S, I, O>(
-    mut plaintext_reader: R,
-    mut encrypted_writer: W,
-    session: Arc<Mutex<S>>,
-) -> anyhow::Result<()>
-where
-    R: AsyncRead + Unpin,
-    W: AsyncWrite + Unpin,
-    S: ProtocolEngine<I, O> + Session,
-    I: Message + Default,
-    O: Message + Default,
-{
-    let mut buf = vec![0; 1024];
-    loop {
-        let n = plaintext_reader.read(&mut buf).await?;
-        if n == 0 {
-            break;
-        }
-        let mut session = session.lock().await;
-        session.write(oak_proto_rust::oak::session::v1::PlaintextMessage {
-            plaintext: buf[..n].to_vec(),
-        })?;
-        if let Some(encrypted) = session.get_outgoing_message()? {
-            write_message(&mut encrypted_writer, &encrypted).await?;
-        }
-    }
-    Ok(())
-}
-
-/// Pumps data from a reader to a writer, using the session to transform the
-/// data.
-///
-/// This function is used to handle one direction of a bidirectional proxy.
-///
-/// - `encrypted_reader`: The source of encrypted data.
-/// - `plaintext_writer`: The destination for plaintext data.
-/// - `session`: The `oak_session` instance used for decryption.
-async fn encrypted_to_plaintext<R, W, S, I, O>(
-    mut encrypted_reader: R,
-    mut plaintext_writer: W,
-    session: Arc<Mutex<S>>,
-) -> anyhow::Result<()>
-where
-    R: AsyncRead + Unpin,
-    W: AsyncWrite + Unpin,
-    S: ProtocolEngine<I, O> + Session,
-    I: Message + Default,
-    O: Message + Default,
-{
-    loop {
-        let message: I = read_message(&mut encrypted_reader).await?;
-        let mut session = session.lock().await;
-        session.put_incoming_message(message)?;
-        if let Some(plaintext) = session.read()? {
-            plaintext_writer.write_all(&plaintext.plaintext).await?;
-        }
-    }
-    #[allow(unreachable_code)]
-    Ok(())
-}
-
 /// Manages a bidirectional proxy between a local stream and a remote stream.
 ///
 /// - `plaintext_stream`: The stream connected to the local application or
@@ -116,37 +49,105 @@ where
 /// - `session`: The `oak_session` instance.
 pub async fn proxy<S, I, O>(
     role: PeerRole,
-    plaintext_stream: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
-    encrypted_stream: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
-    session: Arc<Mutex<S>>,
+    mut session: S,
+    plaintext_stream: TcpStream,
+    encrypted_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    keep_alive_interval: Duration,
 ) -> anyhow::Result<()>
 where
     S: ProtocolEngine<I, O> + Session + Send + 'static,
     I: Message + Default + Send + 'static,
     O: Message + Default + Send + 'static,
 {
-    let (plaintext_reader, plaintext_writer) = tokio::io::split(plaintext_stream);
-    let (encrypted_reader, encrypted_writer) = tokio::io::split(encrypted_stream);
+    let (mut plaintext_reader, mut plaintext_writer) = tokio::io::split(plaintext_stream);
+    let (mut encrypted_writer, mut encrypted_reader) = encrypted_stream.split();
 
-    let plaintext_to_encrypted_task =
-        tokio::spawn(plaintext_to_encrypted(plaintext_reader, encrypted_writer, session.clone()));
+    let mut plaintext_buffer = vec![0; 1024];
 
-    let encrypted_to_plaintext_task =
-        tokio::spawn(encrypted_to_plaintext(encrypted_reader, plaintext_writer, session.clone()));
+    // Stores whether we are in the middle of a ping
+    let mut ping_queue: VecDeque<Bytes> = VecDeque::new();
+    // The interval between pings, and also the timeout for their corresponding pong
+    let mut keep_alive = tokio::time::interval(keep_alive_interval);
+    // The first tick is immediate, so we consume it before starting the loop.
+    keep_alive.tick().await;
 
-    tokio::select! {
-        res = plaintext_to_encrypted_task => {
-            if let Err(e) = res? {
-                log::error!("[{role}] Error in plaintext-to-encrypted task: {:?}", e);
+    let mut application_done = false;
+    let mut peer_done = false;
+
+    loop {
+        if application_done && peer_done {
+            encrypted_writer.send(tungstenite::Message::Close(None)).await?;
+            break;
+        }
+
+        tokio::select! {
+            Some(res) = encrypted_reader.next() => {
+                match res? {
+                    tungstenite::Message::Binary(data) => {
+                        anyhow::ensure!(!peer_done, "Peer was only mostly half-closed");
+                        if data.is_empty() {
+                            peer_done = true;
+                            log::debug!("[{role}] Peer half-closed, shutting down plaintext writer.");
+                            plaintext_writer.shutdown().await?;
+                        } else {
+                            log::debug!("[{role}] Peer sent more data.");
+                            // let mut session = session.lock().await;
+                            let message = I::decode(data)?;
+                            session.put_incoming_message(message)?;
+                            if let Some(plaintext) = session.read()? {
+                                plaintext_writer.write_all(&plaintext.plaintext).await?;
+                            }
+                        }
+                    }
+                    tungstenite::Message::Ping(ping_data) => {
+                        log::debug!("[{role}] Peer sent ping message {}", hex::encode(&ping_data));
+                        encrypted_writer.send(tungstenite::Message::Pong(ping_data)).await?;
+                    }
+                    tungstenite::Message::Pong(pong_data) => {
+                        match ping_queue.pop_back() {
+                            Some(ping_data) if ping_data == pong_data => {
+                                log::debug!("[{role}] Peer sent pong message {}", hex::encode(pong_data));
+                            }
+                            _ => {
+                                anyhow::bail!("[{role}] Peer sent unexpected pong: {}", hex::encode(pong_data));
+                            }
+                        }
+                    }
+                    _ => anyhow::bail!("Peer sent unsupported message type"),
+                }
             }
-        },
-        res = encrypted_to_plaintext_task => {
-            if let Err(e) = res? {
-                log::error!("[{role}] Error in encrypted-to-plaintext task: {:?}", e);
+            Ok(n) = plaintext_reader.read(&mut plaintext_buffer), if !application_done => {
+                if n == 0 {
+                    log::debug!("[{role}] Application closed, sending half-close.");
+                    application_done = true;
+                    encrypted_writer.send(tungstenite::Message::Binary(Bytes::new())).await?;
+                } else {
+                    //let mut session = session.lock().await;
+                    log::debug!("[{role}] Application sent {n} more bytes.");
+                    session.write(oak_proto_rust::oak::session::v1::PlaintextMessage {
+                        plaintext: plaintext_buffer[..n].to_vec(),
+                    })?;
+                    if let Some(encrypted) = session.get_outgoing_message()? {
+                        encrypted_writer.send(tungstenite::Message::Binary(encrypted.encode_to_vec().into())).await?;
+                    }
+                }
             }
-        },
+            _ = keep_alive.tick() => {
+                if !ping_queue.is_empty() {
+                    anyhow::bail!("[{role}] The peer did not sent a pong for previous ping on time");
+                }
+
+                // Send a randomly generated ping
+                let mut payload = vec![0u8; 8];
+                rand::thread_rng().fill(&mut payload[..]);
+                log::debug!("[{role}] Ding, dong! It's pinging time! Sending ping {}", hex::encode(&payload));
+                ping_queue.push_front(payload.clone().into());
+                encrypted_writer.send(tungstenite::Message::Ping(payload.into())).await?;
+            }
+        }
     }
 
-    log::info!("[{role}] Connection closed.");
+    log::debug!("[{role}] Proxy stream ended.");
+
     Ok(())
 }

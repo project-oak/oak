@@ -395,6 +395,8 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     # Use same version as cargo, newer versions has compatibility issues.
     "http": crate.spec(version = "1.3"),
     "http-body-util": crate.spec(version = "0.1.2"),
+    "humantime": crate.spec(version = "2.2.0"),
+    "humantime-serde": crate.spec(version = "1.1.1"),
     "hyper": crate.spec(
         features = [
             "full",
@@ -549,6 +551,24 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.1.14",
     ),
     "tokio-util": crate.spec(version = "0.7.10"),
+    "tokio-tungstenite": crate.spec(
+        version = "0.27.0",
+        features = [
+            "rustls-tls-native-roots",
+        ],
+    ),
+    "tungstenite": crate.spec(
+        version = "0.27.0",
+        features = [
+            "url",
+        ],
+    ),
+    "url": crate.spec(
+        version = "2.5.2",
+        features = [
+            "serde",
+        ],
+    ),
     "tokio-vsock": crate.spec(
         version = "*",
         features = ["tonic012"],

@@ -15,5 +15,5 @@
 //
 
 pub mod config;
-pub mod framing;
 pub mod proxy;
+pub mod websocket;

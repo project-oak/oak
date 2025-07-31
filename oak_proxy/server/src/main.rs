@@ -20,14 +20,12 @@ use clap::Parser;
 use oak_proxy_lib::{
     config,
     config::ServerConfig,
-    framing::{read_message, write_message},
     proxy::{proxy, PeerRole},
+    websocket::{read_message, write_message},
 };
 use oak_session::{ProtocolEngine, ServerSession, Session};
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_tungstenite::{accept_async, MaybeTlsStream};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -59,19 +57,17 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-async fn handle_connection(
-    mut client_stream: TcpStream,
-    config: &ServerConfig,
-) -> anyhow::Result<()> {
+async fn handle_connection(client_stream: TcpStream, config: &ServerConfig) -> anyhow::Result<()> {
+    let mut client_stream = accept_async(MaybeTlsStream::Plain(client_stream)).await?;
     let server_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
     )?;
-    let server_session = Arc::new(Mutex::new(ServerSession::create(server_config)?));
+    let mut session = ServerSession::create(server_config)?;
 
     // Handshake
     {
-        let mut session = server_session.lock().await;
+        //let mut session = server_session.lock().await;
         while !session.is_open() {
             let request = read_message(&mut client_stream).await?;
             session.put_incoming_message(request)?;
@@ -91,6 +87,6 @@ async fn handle_connection(
         ServerSession,
         oak_proto_rust::oak::session::v1::SessionRequest,
         oak_proto_rust::oak::session::v1::SessionResponse,
-    >(PeerRole::Server, backend_stream, client_stream, server_session)
+    >(PeerRole::Server, session, backend_stream, client_stream, config.keep_alive_interval)
     .await
 }

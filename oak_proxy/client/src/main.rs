@@ -18,16 +18,12 @@ use std::sync::Arc;
 
 use clap::Parser;
 use oak_proxy_lib::{
-    config,
-    config::ClientConfig,
-    framing::{read_message, write_message},
+    config::{self, ClientConfig},
     proxy::{proxy, PeerRole},
+    websocket::{read_message, write_message},
 };
 use oak_session::{ClientSession, ProtocolEngine, Session};
-use tokio::{
-    net::{TcpListener, TcpStream},
-    sync::Mutex,
-};
+use tokio::net::{TcpListener, TcpStream};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -60,27 +56,25 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
-    let mut server_proxy_stream = TcpStream::connect(config.server_proxy_address).await?;
-    log::info!("[Client] Connected to server proxy at {}", config.server_proxy_address);
+    let (mut server_proxy_stream, _) =
+        tokio_tungstenite::connect_async(&config.server_proxy_url).await?;
+    log::info!("[Client] Connected to server proxy at {}", config.server_proxy_url);
 
     let client_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
     )?;
-    let client_session = Arc::new(Mutex::new(ClientSession::create(client_config)?));
+    let mut session = ClientSession::create(client_config)?;
 
     // Handshake
-    {
-        let mut session = client_session.lock().await;
-        while !session.is_open() {
-            if let Some(request) = session.get_outgoing_message()? {
-                write_message(&mut server_proxy_stream, &request).await?;
-            }
+    while !session.is_open() {
+        if let Some(request) = session.get_outgoing_message()? {
+            write_message(&mut server_proxy_stream, &request).await?;
+        }
 
-            if !session.is_open() {
-                let response = read_message(&mut server_proxy_stream).await?;
-                session.put_incoming_message(response)?;
-            }
+        if !session.is_open() {
+            let response = read_message(&mut server_proxy_stream).await?;
+            session.put_incoming_message(response)?;
         }
     }
 
@@ -90,6 +84,6 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
         ClientSession,
         oak_proto_rust::oak::session::v1::SessionResponse,
         oak_proto_rust::oak::session::v1::SessionRequest,
-    >(PeerRole::Client, app_stream, server_proxy_stream, client_session)
+    >(PeerRole::Client, session, app_stream, server_proxy_stream, config.keep_alive_interval)
     .await
 }

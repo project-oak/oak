@@ -3,17 +3,21 @@
 set -e
 set -x
 
-export RUST_LOG=info
+export RUST_LOG=debug
 
 # Create TOML config files
 cat > client.toml <<EOF
 listen_address = "127.0.0.1:9090"
-server_proxy_address = "127.0.0.1:8081"
+server_proxy_url = "ws://127.0.0.1:8081"
+attestation_generators = []
+attestation_verifiers = []
 EOF
 
 cat > server.toml <<EOF
 listen_address = "127.0.0.1:8081"
 backend_address = "127.0.0.1:8080"
+attestation_generators = []
+attestation_verifiers = []
 EOF
 
 # Start the backend server
@@ -41,9 +45,9 @@ CLIENT_PID=$!
 # Wait for the client to start
 sleep 2
 
-# Send a message
+# Send a message, waiting for 20s after send so that the keep-alive is sent
 echo "Sending message..."
-echo "Hello, proxy!" | nc -w 1 127.0.0.1 9090
+echo "Hello, proxy!" | nc -w 20 127.0.0.1 9090
 
 # Wait for the message to be processed
 sleep 2

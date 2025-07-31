@@ -16,15 +16,20 @@
 
 pub mod confidential_space;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
 };
 use serde::Deserialize;
+use url::Url;
 
 use self::confidential_space::{ConfidentialSpaceGeneratorParams, ConfidentialSpaceVerifierParams};
+
+fn default_keep_alive_interval() -> Duration {
+    Duration::from_secs(10)
+}
 
 pub fn load_toml<T>(path: &str) -> anyhow::Result<T>
 where
@@ -39,10 +44,10 @@ where
 #[derive(Deserialize, Debug, Clone)]
 pub struct ClientConfig {
     pub listen_address: SocketAddr,
-    pub server_proxy_address: SocketAddr,
-    #[serde(default)]
+    pub server_proxy_url: Url,
+    #[serde(with = "humantime_serde", default = "default_keep_alive_interval")]
+    pub keep_alive_interval: Duration,
     pub attestation_generators: Vec<GeneratorConfig>,
-    #[serde(default)]
     pub attestation_verifiers: Vec<VerifierConfig>,
 }
 
@@ -50,6 +55,8 @@ pub struct ClientConfig {
 pub struct ServerConfig {
     pub listen_address: SocketAddr,
     pub backend_address: SocketAddr,
+    #[serde(with = "humantime_serde", default = "default_keep_alive_interval")]
+    pub keep_alive_interval: Duration,
     #[serde(default)]
     pub attestation_generators: Vec<GeneratorConfig>,
     #[serde(default)]
