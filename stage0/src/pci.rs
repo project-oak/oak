@@ -32,6 +32,7 @@ static_assertions::assert_eq_size!(PciCrsAllowlistEntry, [u8; 8]);
 pub const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 
 const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
+const EXTRA_ROOTS_FILE_NAME: &CStr = c"etc/extra-pci-roots";
 
 const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
 const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
@@ -300,14 +301,33 @@ impl PciBus {
     }
 }
 
-pub fn init<P: Platform>() -> Result<(), &'static str> {
+pub fn init<P: Platform>(firmware: &mut dyn Firmware) -> Result<(), &'static str> {
     // At this point we know nothing about the platform we're on, so we have to
     // rely on the legacy CAM to get the device ID of the first PCI root to
     // help us figure out on what kind of machine we are running.
     if let Some(mut bus) = PciBus::new::<P>(0)? {
         bus.init::<P>()?;
     }
+    // Find out if there are any extra roots.
+    let extra_roots = read_extra_roots(firmware)?;
+    if extra_roots > 0 {
+        log::debug!("{} extra root buses reported by VMM", extra_roots);
+    }
     Ok(())
+}
+
+fn read_extra_roots(firmware: &mut dyn Firmware) -> Result<u64, &'static str> {
+    if let Some(file) = firmware.find(EXTRA_ROOTS_FILE_NAME) {
+        if file.size() > core::mem::size_of::<u64>() {
+            return Ok(0);
+        }
+        let mut roots: u64 = 0;
+        firmware.read_file(&file, roots.as_mut_bytes())?;
+        return Ok(roots);
+    }
+
+    // File not found, no extra roots.
+    Ok(0)
 }
 
 pub fn read_pci_crs_allowlist(

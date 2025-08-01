@@ -174,7 +174,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     // Look into PCI first as we need to know where the PCI memory ranges are before
     // we build the ACPI tables.
-    pci::init::<P>().unwrap();
+    pci::init::<P>(&mut fwcfg).unwrap();
 
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
