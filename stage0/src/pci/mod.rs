@@ -222,6 +222,28 @@ fn pci_read_cam<P: Platform>(address: &PciAddress, offset: u8) -> Result<u32, &'
     // 0xFFFFFFFF)
     unsafe { data_port.try_read() }
 }
+
+#[allow(dead_code)]
+fn pci_write_cam<P: Platform>(
+    address: &PciAddress,
+    offset: u8,
+    value: u32,
+) -> Result<(), &'static str> {
+    let port_factory = P::port_factory();
+    let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
+    let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
+
+    // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
+    let address =
+        (1u32 << 31) | ((Into::<u16>::into(*address) as u32) << 8) | ((offset as u32) << 2);
+    // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
+    // be safe to write to even if we don't have a PCI bus.
+    unsafe { address_port.try_write(address) }?;
+    // Safety: PCI_PORT_CONFIGURATION_SPACE_DATA is a well-known port and should
+    // be safe to write to even if we don't have a PCI bus.
+    unsafe { data_port.try_write(value) }
+}
+
 struct BusDeviceIterator<P: Platform> {
     address: Option<PciAddress>,
     _phantom: PhantomData<P>,
