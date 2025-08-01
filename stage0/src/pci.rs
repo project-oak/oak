@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Display};
+use core::{ffi::CStr, fmt::Display, marker::PhantomData};
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
@@ -36,12 +36,12 @@ const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
 const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
 const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
 
+/// PCI address.
+///
+/// Basic structure: BBBBBBBBDDDDDFFF
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct PciAddress {
-    bus: u8,
-    device: u8,   // 5 bits.
-    function: u8, // 3 bits.
-}
+#[repr(transparent)]
+struct PciAddress(u16);
 
 impl PciAddress {
     pub const fn new(bus: u8, device: u8, function: u8) -> Result<Self, &'static str> {
@@ -52,28 +52,103 @@ impl PciAddress {
             return Err("invalid function number");
         }
 
-        Ok(Self { bus, device, function })
+        Ok(Self((bus as u16) << 8 | (device as u16) << 3 | (function as u16)))
+    }
+
+    /// Returns the Vendor ID and Device ID for the address.
+    fn vendor_device_id<P: Platform>(&self) -> Result<(u16, u16), &'static str> {
+        // Register 0x00: Device ID, Vendor ID (16b each)
+        let value = pci_read_cam::<P>(self, 0x00)?;
+        Ok(((value & 0xFFFF) as u16, (value >> 16) as u16))
+    }
+
+    // Returns the header type for the address.
+    fn header_type<P: Platform>(&self) -> Result<u8, &'static str> {
+        // Register 0x03: BIST, header type, latency timer, cache line size (8b each)
+        let value = pci_read_cam::<P>(self, 0x03)?;
+        Ok((value >> 16) as u8)
+    }
+
+    fn is_multi_function_device<P: Platform>(&self) -> Result<bool, &'static str> {
+        self.header_type::<P>().map(|value| value & 0x80 != 0)
+    }
+
+    /// Checks if the device exists at all.
+    fn exists<P: Platform>(&self) -> Result<bool, &'static str> {
+        let (vendor_id, _) = self.vendor_device_id::<P>()?;
+        Ok(vendor_id != 0xFFFF && vendor_id != 0x0000)
+    }
+
+    #[inline]
+    pub fn bus(&self) -> u8 {
+        (self.0 >> 8) as u8
+    }
+
+    #[inline]
+    pub fn device(&self) -> u8 {
+        ((self.0 >> 3) & 0b11111) as u8
+    }
+
+    #[inline]
+    pub fn function(&self) -> u8 {
+        (self.0 & 0b111) as u8
+    }
+
+    /// Returns the first function on the next device on the bus.
+    ///
+    /// Returns None if this is the last device on this device.
+    pub fn next_device(&self) -> Option<Self> {
+        let addr = Self((self.0 + (1 << 3)) & !0b111);
+        if addr.bus() != self.bus() {
+            None
+        } else {
+            Some(addr)
+        }
+    }
+
+    /// Returns the next function on the bus, crossing to the next device if
+    /// needed.
+    ///
+    /// Returns None if this is the last function on this bus.
+    pub fn next(&self) -> Option<Self> {
+        let addr = Self(self.0 + 1);
+        if addr.bus() != self.bus() {
+            None
+        } else {
+            Some(addr)
+        }
     }
 }
 
 impl Display for PciAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:02x}:{:02x}.{:x}", self.bus, self.device, self.function)
+        write!(f, "{:02x}:{:02x}.{:x}", self.bus(), self.device(), self.function())
+    }
+}
+
+impl TryFrom<(u8, u8, u8)> for PciAddress {
+    type Error = &'static str;
+
+    fn try_from((bus, device, function): (u8, u8, u8)) -> Result<Self, Self::Error> {
+        PciAddress::new(bus, device, function)
+    }
+}
+
+impl From<PciAddress> for u16 {
+    fn from(value: PciAddress) -> Self {
+        value.0
     }
 }
 
 /// Uses the legacy port-based IO method to read a u32 from the PCI
 /// configuration space.
-fn pci_read_cam<P: Platform>(address: PciAddress, offset: u8) -> Result<u32, &'static str> {
+fn pci_read_cam<P: Platform>(address: &PciAddress, offset: u8) -> Result<u32, &'static str> {
     let port_factory = P::port_factory();
     let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
     let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
 
-    let (bus, device, function) =
-        (address.bus as u32, address.device as u32, address.function as u32);
     // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
-    let value =
-        (1u32 << 31) | (bus << 16) | (device << 11) | (function << 8) | ((offset as u32) << 2);
+    let value = (1u32 << 31) | ((Into::<u16>::into(*address) as u32) << 8) | ((offset as u32) << 2);
     // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
     // be safe to write to even if we don't have a PCI bus.
     unsafe { address_port.try_write(value) }?;
@@ -82,18 +157,81 @@ fn pci_read_cam<P: Platform>(address: PciAddress, offset: u8) -> Result<u32, &'s
     // 0xFFFFFFFF)
     unsafe { data_port.try_read() }
 }
+struct BusDeviceIterator<P: Platform> {
+    address: Option<PciAddress>,
+    _phantom: PhantomData<P>,
+}
+
+impl<P: Platform> Iterator for BusDeviceIterator<P> {
+    type Item = PciAddress;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Shortcircuit if we've exhausted the bus.
+        let current_address = self.address?;
+
+        // Shortcut: if we know we're on a single-function device, step over to the next
+        // device.
+        self.address = if current_address.is_multi_function_device::<P>().unwrap() {
+            current_address.next()
+        } else {
+            current_address.next_device()
+        };
+
+        // Ensure said next device actually exists.
+        while let Some(address) = self.address {
+            // Does the device exist?
+            if address.exists::<P>().unwrap() {
+                // Yes, it does.
+                break;
+            }
+            // No; skip to the next function.
+            // For future: can we skip all the functions and skip to the next device if
+            // function() == 0? Inside a multi-function device there can be
+            // gaps, but we'll need to read from the spec if function 0 is
+            // always assumed to exist in multi-function devices.
+            self.address = address.next();
+        }
+
+        Some(current_address)
+    }
+}
+struct PciBus {
+    pub root: PciAddress,
+}
+
+impl PciBus {
+    fn new<P: Platform>(bus: u8) -> Result<Option<Self>, &'static str> {
+        let root = PciAddress::new(bus, 0, 0)?;
+        if root.exists::<P>()? {
+            Ok(Some(Self { root }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn init<P: Platform>(&mut self) -> Result<(), &'static str> {
+        for function in self.iter_devices::<P>() {
+            let (vendor_id, device_id) = function.vendor_device_id::<P>()?;
+            log::debug!("Found PCI device: {}, {:04x}:{:04x}", function, vendor_id, device_id);
+        }
+        Ok(())
+    }
+
+    fn iter_devices<P: Platform>(&self) -> BusDeviceIterator<P> {
+        // We cheat a bit; the `new()` will never error as (any u8, 0, 0) is always
+        // valid as an address. However, as we need a `Option` for the iterator, it's a
+        // convenient way to make the types work instead of unwrapping.
+        BusDeviceIterator { address: Some(self.root), _phantom: PhantomData }
+    }
+}
 
 pub fn init<P: Platform>() -> Result<(), &'static str> {
     // At this point we know nothing about the platform we're on, so we have to
-    // rely on the leagacy CAM to get the device ID of the first PCI root to
+    // rely on the legacy CAM to get the device ID of the first PCI root to
     // help us figure out on what kind of machine we are running.
-    let root = PciAddress::new(0, 0, 0).unwrap();
-    let (vendor_id, device_id) = {
-        let value = pci_read_cam::<P>(root, 0x00)?;
-        ((value & 0xFFFF) as u16, (value >> 16) as u16)
-    };
-    log::debug!("PCI root {}: {:04x}:{:04x}", root, vendor_id, device_id);
-
+    if let Some(mut bus) = PciBus::new::<P>(0)? {
+        bus.init::<P>()?;
+    }
     Ok(())
 }
 
