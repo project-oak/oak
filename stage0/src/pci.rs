@@ -36,6 +36,56 @@ const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
 const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
 const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
 
+/// PCI class codes.
+///
+/// We use a struct instead of enum because Rust enums are closed, but we will
+/// not give an exhaustive list of class codes.
+///
+/// See the PCI Code and ID Assignment Specification on pcisig.com for the
+/// authoritative source.
+#[derive(PartialEq, Eq)]
+#[repr(transparent)]
+struct PciClass(pub u8);
+
+impl PciClass {
+    pub const BRIDGE: PciClass = PciClass(0x06);
+}
+
+impl Display for PciClass {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}", self.0)
+    }
+}
+/// Subclass types for PCI devices
+///
+/// Again, we only list a subset, so we use a struct instead of an enum.
+///
+/// See the PCI Code and ID Assignment Specification on pcisig.com for the
+/// authoritative source.
+#[derive(PartialEq, Eq)]
+#[repr(transparent)]
+struct PciSubclass(pub u8);
+impl PciSubclass {
+    #[allow(dead_code)]
+    pub const HOST_BRIDGE: PciSubclass = PciSubclass(0x00);
+    pub const PCI_TO_PCI_BRIDGE: PciSubclass = PciSubclass(0x04);
+}
+
+impl Display for PciSubclass {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}", self.0)
+    }
+}
+
+#[derive(Debug, FromBytes, IntoBytes)]
+#[repr(C, packed)]
+#[allow(dead_code)]
+struct PciBridgeBusRegister {
+    pub secondary_latency_timer: u8,
+    pub subordinate_bus_number: u8,
+    pub secondary_bus_number: u8,
+    pub primary_bus_number: u8,
+}
 /// PCI address.
 ///
 /// Basic structure: BBBBBBBBDDDDDFFF
@@ -62,11 +112,22 @@ impl PciAddress {
         Ok(((value & 0xFFFF) as u16, (value >> 16) as u16))
     }
 
+    fn class_code<P: Platform>(&self) -> Result<(PciClass, PciSubclass), &'static str> {
+        // Register 0x02: Class Code, Subclass, Prog IF, Revision ID (8b each)
+        let value = pci_read_cam::<P>(self, 0x02)?;
+        Ok((PciClass((value >> 24) as u8), PciSubclass((value >> 16) as u8)))
+    }
+
     // Returns the header type for the address.
     fn header_type<P: Platform>(&self) -> Result<u8, &'static str> {
         // Register 0x03: BIST, header type, latency timer, cache line size (8b each)
         let value = pci_read_cam::<P>(self, 0x03)?;
         Ok((value >> 16) as u8)
+    }
+
+    fn bridge_bus_numbers<P: Platform>(&self) -> Result<PciBridgeBusRegister, &'static str> {
+        let value = pci_read_cam::<P>(self, 0x06)?;
+        Ok(PciBridgeBusRegister::read_from_bytes(value.as_bytes()).unwrap())
     }
 
     fn is_multi_function_device<P: Platform>(&self) -> Result<bool, &'static str> {
@@ -212,7 +273,21 @@ impl PciBus {
     fn init<P: Platform>(&mut self) -> Result<(), &'static str> {
         for function in self.iter_devices::<P>() {
             let (vendor_id, device_id) = function.vendor_device_id::<P>()?;
-            log::debug!("Found PCI device: {}, {:04x}:{:04x}", function, vendor_id, device_id);
+            let (class, subclass) = function.class_code::<P>()?;
+
+            log::debug!(
+                "Found PCI device: {}, {:04x}:{:04x}, class: {}{}",
+                function,
+                vendor_id,
+                device_id,
+                class,
+                subclass
+            );
+
+            if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
+                let bridge_bus_numbers = function.bridge_bus_numbers::<P>()?;
+                log::debug!("PCI to PCI bridge:  {:?}", bridge_bus_numbers);
+            }
         }
         Ok(())
     }
