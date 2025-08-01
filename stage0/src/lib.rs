@@ -172,6 +172,10 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // boundary as possible.
     acpi::setup_high_allocator(&mut zero_page).unwrap();
 
+    // Look into PCI first as we need to know where the PCI memory ranges are before
+    // we build the ACPI tables.
+    pci::init::<P>().unwrap();
+
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));

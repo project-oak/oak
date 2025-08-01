@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use core::ffi::CStr;
+use core::{ffi::CStr, fmt::Display};
 
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::fw_cfg::Firmware;
+use crate::{fw_cfg::Firmware, hal::Port, Platform};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, FromBytes, IntoBytes)]
@@ -31,6 +32,70 @@ static_assertions::assert_eq_size!(PciCrsAllowlistEntry, [u8; 8]);
 pub const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 
 const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
+
+const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
+const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct PciAddress {
+    bus: u8,
+    device: u8,   // 5 bits.
+    function: u8, // 3 bits.
+}
+
+impl PciAddress {
+    pub const fn new(bus: u8, device: u8, function: u8) -> Result<Self, &'static str> {
+        if device > 0b11111 {
+            return Err("invalid device number");
+        }
+        if function > 0b111 {
+            return Err("invalid function number");
+        }
+
+        Ok(Self { bus, device, function })
+    }
+}
+
+impl Display for PciAddress {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}:{:02x}.{:x}", self.bus, self.device, self.function)
+    }
+}
+
+/// Uses the legacy port-based IO method to read a u32 from the PCI
+/// configuration space.
+fn pci_read_cam<P: Platform>(address: PciAddress, offset: u8) -> Result<u32, &'static str> {
+    let port_factory = P::port_factory();
+    let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
+    let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
+
+    let (bus, device, function) =
+        (address.bus as u32, address.device as u32, address.function as u32);
+    // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
+    let value =
+        (1u32 << 31) | (bus << 16) | (device << 11) | (function << 8) | ((offset as u32) << 2);
+    // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
+    // be safe to write to even if we don't have a PCI bus.
+    unsafe { address_port.try_write(value) }?;
+    // Safety: PCI_PORT_CONFIGURATION_SPACE_DATA is a well-known port and should
+    // be safe to read from even if we don't have a PCI bus (it'll return
+    // 0xFFFFFFFF)
+    unsafe { data_port.try_read() }
+}
+
+pub fn init<P: Platform>() -> Result<(), &'static str> {
+    // At this point we know nothing about the platform we're on, so we have to
+    // rely on the leagacy CAM to get the device ID of the first PCI root to
+    // help us figure out on what kind of machine we are running.
+    let root = PciAddress::new(0, 0, 0).unwrap();
+    let (vendor_id, device_id) = {
+        let value = pci_read_cam::<P>(root, 0x00)?;
+        ((value & 0xFFFF) as u16, (value >> 16) as u16)
+    };
+    log::debug!("PCI root {}: {:04x}:{:04x}", root, vendor_id, device_id);
+
+    Ok(())
+}
 
 pub fn read_pci_crs_allowlist(
     firmware: &mut dyn Firmware,
