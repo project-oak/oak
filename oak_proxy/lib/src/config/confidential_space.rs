@@ -28,11 +28,11 @@ use oak_session::{
     session_binding::SignatureBinder,
 };
 use p256::ecdsa::{signature::rand_core::OsRng, SigningKey, VerifyingKey};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use x509_cert::{der::DecodePem, Certificate};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfidentialSpaceGeneratorParams {}
 
 impl ConfidentialSpaceGeneratorParams {
@@ -69,7 +69,7 @@ impl ConfidentialSpaceGeneratorParams {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfidentialSpaceVerifierParams {
     pub root_certificate_pem_path: String,
 }

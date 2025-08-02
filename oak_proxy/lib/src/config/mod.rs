@@ -22,7 +22,7 @@ use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use self::confidential_space::{ConfidentialSpaceGeneratorParams, ConfidentialSpaceVerifierParams};
@@ -41,7 +41,7 @@ where
     Ok(config)
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ClientConfig {
     pub listen_address: SocketAddr,
     pub server_proxy_url: Url,
@@ -51,7 +51,7 @@ pub struct ClientConfig {
     pub attestation_verifiers: Vec<VerifierConfig>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ServerConfig {
     pub listen_address: SocketAddr,
     pub backend_address: SocketAddr,
@@ -61,15 +61,39 @@ pub struct ServerConfig {
     pub attestation_generators: Vec<GeneratorConfig>,
     #[serde(default)]
     pub attestation_verifiers: Vec<VerifierConfig>,
+    #[serde(default)]
+    pub backend_command: Option<CommandConfig>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RestartPolicy {
+    /// The backend process crashing causes the proxy to terminate.
+    #[default]
+    Terminate,
+    /// The backend process is restarted by the proxy after a crash.
+    Always,
+    /// The backend process is not restarted by the proxy after a crash,
+    /// but the proxy does not terminate.
+    Never,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+pub struct CommandConfig {
+    pub cmd: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(default)]
+    pub restart_policy: RestartPolicy,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum GeneratorConfig {
     ConfidentialSpace(ConfidentialSpaceGeneratorParams),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum VerifierConfig {
     ConfidentialSpace(ConfidentialSpaceVerifierParams),

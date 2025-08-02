@@ -14,18 +14,27 @@
 # limitations under the License.
 #
 
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@rules_rust//rust:defs.bzl", "rust_test_suite")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-sh_test(
-    name = "proxy_test",
-    srcs = ["test.sh"],
+rust_test_suite(
+    name = "oak_proxy_integration_test",
+    srcs = ["tests/integration_test.rs"],
     data = [
         "//oak_proxy/client",
         "//oak_proxy/server",
+    ],
+    deps = [
+        "//oak_proxy/lib:oak_proxy_lib",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:toml",
     ],
 )

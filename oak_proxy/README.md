@@ -211,6 +211,14 @@ configuration file passed via the `--config` command-line argument.
 
 - `backend_address`: The `SocketAddr` of the final backend application where
   plaintext traffic should be forwarded.
+- `backend_command`: (Optional) A command to execute a backend process that the
+  server proxy will manage. The backend command should be configured with flags
+  to listen in `backend_address`. It has the following structure:
+  - `cmd`: The command to execute.
+  - `args`: A list of arguments for the command.
+  - `restart_policy`: Defines the behavior when the process exits. Can be
+    `terminate` (default, exits the proxy), `always` (restarts the process),
+    or `never` (does nothing).
 
 ### Attestation Modes
 
@@ -360,11 +368,14 @@ Let's say you want to add a new attestation mechanism called
 
 ## Testing
 
-The proxy has an automated test that simulates the manual steps described above.
+The proxy includes an integration test that simulates the manual steps described
+in the "Usage" section. It programmatically creates configurations, starts the
+proxies, and verifies that data can be sent and received correctly.
+
 To run the test:
 
 ```bash
-bazel test //oak_proxy:proxy_test
+bazel test //oak_proxy:oak_proxy_integration_test
 ```
 
 ## Future Work
