@@ -13,17 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{bail, ensure};
+use anyhow::{ensure, Context};
 use async_trait::async_trait;
 use log::info;
 use prost::Message;
-use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, EncryptedDataBlob, OpStatus, ReadDataBlobRequest, ReadUnencryptedDataBlobRequest,
+    DataBlob, EncryptedDataBlob, ReadDataBlobRequest, ReadUnencryptedDataBlobRequest,
     WriteBlobsRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
 };
-use tonic::transport::Channel;
+use tonic::{transport::Channel, Code};
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
@@ -46,12 +45,12 @@ pub trait DataBlobHandler {
         &mut self,
         id: &BlobId,
         strong_read: bool,
-    ) -> anyhow::Result<EncryptedDataBlob>;
+    ) -> anyhow::Result<Option<EncryptedDataBlob>>;
     async fn get_blobs(
         &mut self,
         ids: &[BlobId],
         strong_read: bool,
-    ) -> anyhow::Result<Vec<EncryptedDataBlob>>;
+    ) -> anyhow::Result<Vec<Option<EncryptedDataBlob>>>;
     async fn add_unencrypted_blob(
         &mut self,
         data_blob: DataBlob,
@@ -61,7 +60,7 @@ pub trait DataBlobHandler {
         &mut self,
         id: &BlobId,
         strong_read: bool,
-    ) -> anyhow::Result<DataBlob>;
+    ) -> anyhow::Result<Option<DataBlob>>;
 
     /// Writes a mix of encrypted and unencrypted blobs to the database in a
     /// batch.
@@ -70,7 +69,7 @@ pub trait DataBlobHandler {
         encrypted_contents: Vec<EncryptedDataBlob>,
         encrypted_ids: Option<Vec<BlobId>>,
         unencrypted_blobs: Vec<DataBlob>,
-    ) -> anyhow::Result<OpStatus>;
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -80,30 +79,19 @@ impl DataBlobHandler for ExternalDbClient {
         data_blob: EncryptedDataBlob,
         id: Option<BlobId>,
     ) -> anyhow::Result<BlobId> {
-        let id = id.unwrap_or_else(|| rand::rng().random::<u128>().to_string());
+        let id = id.unwrap_or_else(|| rand::random::<u128>().to_string());
         let blob = data_blob.encode_to_vec();
         let blob_size = blob.len() as u64;
         let data_blob = DataBlob { id: id.clone(), blob };
         let start_time = tokio::time::Instant::now();
-        let db_response = self
-            .write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) })
-            .await
-            .map_err(anyhow::Error::msg)?
-            .into_inner();
-        if let Some(status) = db_response.status {
-            if status.success {
-                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
-                if elapsed_time == 0 {
-                    elapsed_time = 1;
-                }
-                let speed = blob_size / 1024 / elapsed_time;
-                metrics::get_global_metrics().record_db_save_speed(speed);
-                return Ok(id);
-            } else {
-                bail!("Failed to write data blob: {}", status.error_message);
-            }
+        self.write_data_blob(WriteDataBlobRequest { data_blob: Some(data_blob) }).await?;
+        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+        if elapsed_time == 0 {
+            elapsed_time = 1;
         }
-        bail!("Failed to write data blob, server status was empty");
+        let speed = blob_size / 1024 / elapsed_time;
+        metrics::get_global_metrics().record_db_save_speed(speed);
+        Ok(id)
     }
 
     async fn add_blobs(
@@ -129,17 +117,15 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         id: &BlobId,
         strong_read: bool,
-    ) -> anyhow::Result<EncryptedDataBlob> {
+    ) -> anyhow::Result<Option<EncryptedDataBlob>> {
         let start_time = tokio::time::Instant::now();
-        let db_response = self
-            .read_data_blob(ReadDataBlobRequest { id: id.clone(), strong_read })
-            .await?
-            .into_inner();
-        if let Some(ref status) = db_response.status {
-            if status.success {
+        match self.read_data_blob(ReadDataBlobRequest { id: id.clone(), strong_read }).await {
+            Ok(response) => {
+                let db_response = response.into_inner();
                 if let Some(data_blob) = db_response.data_blob {
                     let blob_size = data_blob.blob.len() as u64;
-                    let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)?;
+                    let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)
+                        .context("Failed to decode EncryptedDataBlob")?;
 
                     let mut elapsed_time = start_time.elapsed().as_millis() as u64;
                     if elapsed_time == 0 {
@@ -147,20 +133,25 @@ impl DataBlobHandler for ExternalDbClient {
                     }
                     let speed = blob_size / 1024 / elapsed_time;
                     metrics::get_global_metrics().record_db_load_speed(speed);
-                    return Ok(data_blob);
+                    return Ok(Some(data_blob));
                 }
-            } else {
-                bail!("Failed to read data blob: {}", status.error_message);
+                Ok(None)
+            }
+            Err(status) => {
+                if status.code() == Code::NotFound {
+                    Ok(None)
+                } else {
+                    Err(status.into())
+                }
             }
         }
-        bail!("Failed to read data blob, server status was empty");
     }
 
     async fn get_blobs(
         &mut self,
         ids: &[BlobId],
         strong_read: bool,
-    ) -> anyhow::Result<Vec<EncryptedDataBlob>> {
+    ) -> anyhow::Result<Vec<Option<EncryptedDataBlob>>> {
         // TOOD: b/412698203 - Ideally we should have a rpc call that does batch get.
         let mut result = Vec::with_capacity(ids.len());
         for id in ids {
@@ -187,44 +178,31 @@ impl DataBlobHandler for ExternalDbClient {
             .await
             .map_err(anyhow::Error::msg)?
             .into_inner();
-        if let Some(ref status) = db_response.status {
-            if status.success {
-                info!("db response {:#?}", db_response);
-                return Ok(id);
-            } else {
-                bail!("Failed to write unencrypted data blob: {}", status.error_message);
-            }
-        }
-        bail!("Failed to write unencrypted data blob, server status was empty");
+        info!("db response {:#?}", db_response);
+        Ok(id)
     }
 
     async fn get_unencrypted_blob(
         &mut self,
         id: &BlobId,
         strong_read: bool,
-    ) -> anyhow::Result<DataBlob> {
-        let db_response = self
+    ) -> anyhow::Result<Option<DataBlob>> {
+        match self
             .read_unencrypted_data_blob(ReadUnencryptedDataBlobRequest {
                 id: id.clone(),
                 strong_read,
             })
             .await
-            .map_err(anyhow::Error::msg)?
-            .into_inner();
-        if let Some(status) = db_response.status {
-            if status.success {
-                if let Some(data_blob) = db_response.data_blob {
-                    return Ok(data_blob);
+        {
+            Ok(response) => Ok(response.into_inner().data_blob),
+            Err(status) => {
+                if status.code() == Code::NotFound {
+                    Ok(None)
+                } else {
+                    Err(status.into())
                 }
-            } else {
-                bail!(
-                    "Failed to read unencrypted data blob with id {}: {}",
-                    id,
-                    status.error_message
-                );
             }
         }
-        bail!("Failed to read unencrypted data blob with id: {}, server status was empty", id);
     }
 
     async fn add_mixed_blobs(
@@ -232,7 +210,7 @@ impl DataBlobHandler for ExternalDbClient {
         encrypted_contents: Vec<EncryptedDataBlob>,
         encrypted_ids: Option<Vec<BlobId>>,
         unencrypted_blobs: Vec<DataBlob>,
-    ) -> anyhow::Result<OpStatus> {
+    ) -> anyhow::Result<()> {
         let pbuf_encrypted_blobs: Vec<DataBlob> = match encrypted_ids {
             Some(ids) => {
                 ensure!(
@@ -258,14 +236,9 @@ impl DataBlobHandler for ExternalDbClient {
         let request =
             WriteBlobsRequest { encrypted_blobs: pbuf_encrypted_blobs, unencrypted_blobs };
 
-        let response = self
-            .write_blobs(request)
+        self.write_blobs(request)
             .await
-            .map_err(|e| anyhow::anyhow!("gRPC call to WriteBlobs failed: {:?}", e))?
-            .into_inner();
-
-        response
-            .status
-            .ok_or_else(|| anyhow::anyhow!("WriteBlobsResponse from server missing status field"))
+            .map_err(|e| anyhow::anyhow!("gRPC call to WriteBlobs failed: {:?}", e))?;
+        Ok(())
     }
 }

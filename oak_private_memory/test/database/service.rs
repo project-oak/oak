@@ -21,7 +21,7 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, OpStatus, ReadDataBlobRequest, ReadDataBlobResponse, ReadUnencryptedDataBlobRequest,
+    DataBlob, ReadDataBlobRequest, ReadDataBlobResponse, ReadUnencryptedDataBlobRequest,
     ReadUnencryptedDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
     WriteBlobsRequest, WriteBlobsResponse, WriteDataBlobRequest, WriteDataBlobResponse,
     WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
@@ -64,9 +64,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             request.data_blob.unwrap(),
         )
         .await;
-        Ok(tonic::Response::new(WriteDataBlobResponse {
-            status: Some(OpStatus { success: true, error_message: Default::default() }),
-        }))
+        Ok(tonic::Response::new(WriteDataBlobResponse {}))
     }
 
     async fn read_data_blob(
@@ -77,10 +75,11 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         let blob = self.get_blob_inner(&request.id).await;
         debug!("Read {:?}, blob {:?}", request, blob);
 
-        Ok(tonic::Response::new(ReadDataBlobResponse {
-            data_blob: blob,
-            status: Some(OpStatus { success: true, error_message: Default::default() }),
-        }))
+        if let Some(blob) = blob {
+            Ok(tonic::Response::new(ReadDataBlobResponse { data_blob: Some(blob) }))
+        } else {
+            Err(tonic::Status::not_found("Blob not found"))
+        }
     }
 
     async fn write_unencrypted_data_blob(
@@ -93,7 +92,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             request.data_blob.as_ref().expect("data_blob should be present").id.clone(),
             request.data_blob.unwrap(),
         );
-        Ok(tonic::Response::new(WriteUnencryptedDataBlobResponse::default()))
+        Ok(tonic::Response::new(WriteUnencryptedDataBlobResponse {}))
     }
 
     async fn read_unencrypted_data_blob(
@@ -102,11 +101,11 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<ReadUnencryptedDataBlobResponse>, tonic::Status> {
         let request = request.into_inner();
         let blob = self.unencrypted_database.lock().await.get(&request.id).cloned();
-        // The `encrypted_blob` field in DataBlob contains the unencrypted data here.
-        Ok(tonic::Response::new(ReadUnencryptedDataBlobResponse {
-            data_blob: blob,
-            status: Some(OpStatus { success: true, error_message: Default::default() }),
-        }))
+        if let Some(blob) = blob {
+            Ok(tonic::Response::new(ReadUnencryptedDataBlobResponse { data_blob: Some(blob) }))
+        } else {
+            Err(tonic::Status::not_found("Blob not found"))
+        }
     }
 
     async fn reset_database(
@@ -115,7 +114,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
     ) -> Result<tonic::Response<ResetDatabaseResponse>, tonic::Status> {
         self.database.lock().await.clear();
         self.unencrypted_database.lock().await.clear();
-        Ok(tonic::Response::new(ResetDatabaseResponse::default()))
+        Ok(tonic::Response::new(ResetDatabaseResponse {}))
     }
 
     async fn write_blobs(
@@ -130,9 +129,7 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         for blob in request.unencrypted_blobs {
             self.unencrypted_database.lock().await.insert(blob.id.clone(), blob);
         }
-        Ok(tonic::Response::new(WriteBlobsResponse {
-            status: Some(OpStatus { success: true, error_message: Default::default() }),
-        }))
+        Ok(tonic::Response::new(WriteBlobsResponse {}))
     }
 }
 

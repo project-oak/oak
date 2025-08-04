@@ -35,18 +35,9 @@ message WriteDataBlobRequest {
   DataBlob data_blob = 1;
 }
 
-message OpStatus {
-  bool success = 1;
-  string error_message = 2;
-}
+message WriteDataBlobResponse {}
 
-message WriteDataBlobResponse {
-  OpStatus status = 1;
-}
-
-message WriteUnencryptedDataBlobResponse {
-  OpStatus status = 1;
-}
+message WriteUnencryptedDataBlobResponse {}
 
 message ReadDataBlobRequest {
   string id = 1;
@@ -61,29 +52,23 @@ message ReadUnencryptedDataBlobRequest {
 }
 
 message ReadDataBlobResponse {
-  OpStatus status = 1;
-  DataBlob data_blob = 2;
+  DataBlob data_blob = 1;
 }
 
 message ReadUnencryptedDataBlobResponse {
-  OpStatus status = 1;
-  DataBlob data_blob = 2;
+  DataBlob data_blob = 1;
 }
 
 message ResetDatabaseRequest {}
 
-message ResetDatabaseResponse {
-  OpStatus status = 1;
-}
+message ResetDatabaseResponse {}
 
 message WriteBlobsRequest {
   repeated DataBlob encrypted_blobs = 1;
   repeated DataBlob unencrypted_blobs = 2;
 }
 
-message WriteBlobsResponse {
-  OpStatus status = 1;
-}
+message WriteBlobsResponse {}
 
 // The untrusted database service that the trusted application can connect to.
 service SealedMemoryDatabaseService {
