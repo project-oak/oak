@@ -155,6 +155,10 @@ impl AmdSevSnpDiceAttestationVerifier {
 }
 
 impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
+    // Verifies the AMD SEV-SNP attestation report and the EventLog in the
+    // evidence and returns [`AttestationResults`] with the Success status if
+    // verification is successful. Verification fails if one of the event
+    // verifiers fails. In this case [`Result::Err`] is returned.
     fn verify(
         &self,
         evidence: &Evidence,
@@ -226,7 +230,7 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
         Ok(AttestationResults {
-            status: Status::Unspecified.into(),
+            status: Status::Success.into(),
             reason: "".to_string(),
             encryption_public_key: vec![],
             signing_public_key: vec![],
@@ -264,7 +268,7 @@ impl AttestationVerifier for SoftwareRootedDiceAttestationVerifier {
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
         Ok(AttestationResults {
-            status: Status::Unspecified.into(),
+            status: Status::Success.into(),
             reason: "".to_string(),
             encryption_public_key: vec![],
             signing_public_key: vec![],

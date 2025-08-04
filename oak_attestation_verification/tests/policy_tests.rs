@@ -51,11 +51,11 @@ use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
     oak::{
         attestation::v1::{
-            binary_reference_value, endorsements, reference_values, AmdSevSnpEndorsement,
-            CbReferenceValues, CertificateAuthorityEndorsement, Endorsements, Event, EventLog,
-            Evidence, OakContainersReferenceValues, OakRestrictedKernelReferenceValues,
-            ReferenceValues, SessionBindingPublicKeyData, SessionBindingPublicKeyEndorsement,
-            SkipVerification,
+            attestation_results, binary_reference_value, endorsements, reference_values,
+            AmdSevSnpEndorsement, CbReferenceValues, CertificateAuthorityEndorsement, Endorsements,
+            Event, EventLog, Evidence, OakContainersReferenceValues,
+            OakRestrictedKernelReferenceValues, ReferenceValues, SessionBindingPublicKeyData,
+            SessionBindingPublicKeyEndorsement, SkipVerification,
         },
         crypto::v1::{
             Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
@@ -791,6 +791,7 @@ macro_rules! test_amd_sev_snp_verifier_success {
 
                     // TODO: b/356631062 - Verify detailed attestation results.
                     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+                    assert_eq!(result.unwrap().status(), attestation_results::Status::Success);
                 }
             )*
         }
@@ -798,6 +799,38 @@ macro_rules! test_amd_sev_snp_verifier_success {
 }
 
 test_amd_sev_snp_verifier_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    // Requires event-based endorsements for both. Enable once we have them.
+    // load_genoa_oc
+    // load_turin_oc
+    load_milan_rk_release
+    load_milan_rk_staging
+}
+
+macro_rules! test_amd_sev_snp_verifier_failure {
+    ($($name:tt)*) => {
+        mod test_amd_sev_snp_verifier_failure {
+            use super::*;
+
+            $(
+                #[test]
+                fn $name() {
+                    // Add an incorrect DICE key to the attestation evidence.
+                    let mut d = AttestationData::$name();
+                    d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+                    let clock = FixedClock::at_instant(d.make_valid_time());
+                    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
+
+                    let result = verifier.verify(&d.evidence, &d.endorsements);
+                    assert!(result.is_err());
+                }
+            )*
+        }
+    }
+}
+
+test_amd_sev_snp_verifier_failure! {
     load_milan_oc_release
     load_milan_oc_staging
     // Requires event-based endorsements for both. Enable once we have them.
