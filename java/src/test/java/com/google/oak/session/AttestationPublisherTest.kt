@@ -23,6 +23,7 @@ import com.google.oak.attestation.v1.EventLog
 import com.google.oak.attestation.v1.Evidence
 import com.google.oak.session.v1.Assertion
 import com.google.oak.session.v1.EndorsedEvidence
+import com.google.oak.session.v1.SessionBinding
 import com.google.protobuf.ByteString
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,13 +36,19 @@ class AttestationPublisherTest {
   fun oakSession_withJVMAttestationPublisher_publishes() {
     // Arrange: Set up of the session configs with a client publisher.
     var publishedEvidence: Map<String, EndorsedEvidence>? = null
-    var publishedAssertions: Map<String, Assertion>? = null
+    var publishedBindings: Map<String, SessionBinding>? = null
+    var publishedHandshakeHash: ByteArray? = null
 
     val publisher =
       object : AttestationPublisher {
-        override fun publish(evidence: Map<String, ByteArray>, assertions: Map<String, ByteArray>) {
+        override fun publish(
+          evidence: Map<String, ByteArray>,
+          bindings: Map<String, ByteArray>,
+          handshakeHash: ByteArray,
+        ) {
           publishedEvidence = evidence.mapValues { (_, value) -> EndorsedEvidence.parseFrom(value) }
-          publishedAssertions = assertions.mapValues { (_, value) -> Assertion.parseFrom(value) }
+          publishedBindings = bindings.mapValues { (_, value) -> SessionBinding.parseFrom(value) }
+          publishedHandshakeHash = handshakeHash
         }
       }
 
@@ -63,8 +70,8 @@ class AttestationPublisherTest {
         createEndorsedEventsWithSingleEventAndEndorsement("fake event", expectedEndorsement),
       )
 
-    assertThat(publishedAssertions)
-      .containsExactly("test id", createAssertionWithContent("fake assertion").build())
+    assertThat(publishedBindings?.get("test id")!!.binding).isNotEmpty()
+    assertThat(publishedHandshakeHash).isNotEmpty()
   }
 
   private fun String.toByteString() = ByteString.copyFromUtf8(this)

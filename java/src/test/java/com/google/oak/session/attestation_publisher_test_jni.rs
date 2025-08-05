@@ -31,10 +31,12 @@ use oak_proto_rust::oak::{
 };
 use oak_sdk_common::{StaticAttester, StaticEndorser};
 use oak_session::{
-    attestation::{AttestationPublisher, AttestationType},
+    attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
     generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
     handshake::HandshakeType,
+    session::AttestationPublisher,
+    session_binding::SessionBinder,
 };
 
 pub fn new_java_session_config_builder(
@@ -79,6 +81,14 @@ impl AssertionGenerator for FakeAssertionGenerator {
     }
 }
 
+struct FakeSessionBinder {}
+
+impl SessionBinder for FakeSessionBinder {
+    fn bind(&self, bound_data: &[u8]) -> Vec<u8> {
+        bound_data.to_vec()
+    }
+}
+
 #[no_mangle]
 extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCreateServerConfigBuilder(
     mut env: JNIEnv,
@@ -102,6 +112,7 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
         SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
             .add_self_attester("test id".to_string(), Box::new(StaticAttester::new(evidence)))
             .add_self_endorser("test id".to_string(), Box::new(StaticEndorser::new(endorsements)))
+            .add_session_binder("test id".to_string(), Box::new(FakeSessionBinder {}))
             .add_self_assertion_generator("test id".to_string(), Box::new(assertion_generator)),
     )
 }

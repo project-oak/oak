@@ -169,24 +169,6 @@ pub struct AttestationState {
     pub attestation_binding_token: Vec<u8>,
 }
 
-/// An [`AttestationPublisher`] can be added to a session configuration to allow
-/// publishing received evidence to an external component.
-pub trait AttestationPublisher: Send + Sync {
-    /// The session will call this method whenever it receives a new
-    /// [`EndorsedEvidence`] from the peer.
-    ///
-    /// Keep in mind that the function will be called from the session state
-    /// machine execution thread. So, implementation of a publisher should not
-    /// perform any long-running or blocking operations. In most cases, the best
-    /// approach is to queue the provided [`EndorsedEvidence`] for eventual
-    /// processing.
-    fn publish(
-        &self,
-        endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
-        assertions: BTreeMap<String, Assertion>,
-    );
-}
-
 /// Defines the configuration for the attestation flow between two parties.
 ///
 /// The terms "Self" and "Peer" are relative to the party configuring the
@@ -369,12 +351,6 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
         &mut self,
         incoming_message: AttestResponse,
     ) -> anyhow::Result<Option<()>> {
-        if let Some(publisher) = &self.config.attestation_publisher {
-            publisher.publish(
-                incoming_message.endorsed_evidence.clone(),
-                incoming_message.assertions.clone(),
-            );
-        }
         self.attestation_binding_token
             .extend(serialize_assertions(incoming_message.assertions.clone()));
 
@@ -528,12 +504,6 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
         &mut self,
         incoming_message: AttestRequest,
     ) -> anyhow::Result<Option<()>> {
-        if let Some(publisher) = &self.config.attestation_publisher {
-            publisher.publish(
-                incoming_message.endorsed_evidence.clone(),
-                incoming_message.assertions.clone(),
-            );
-        }
         self.attestation_binding_token
             .extend(serialize_assertions(incoming_message.assertions.clone()));
         if self.attestation_result.is_some() {

@@ -22,8 +22,7 @@ use jni::{
     objects::{GlobalRef, JMap, JObject},
     JNIEnv, JavaVM,
 };
-use oak_proto_rust::oak::session::v1::{Assertion, EndorsedEvidence};
-use oak_session::attestation::AttestationPublisher;
+use oak_session::session::{AttestationEvidence, AttestationPublisher};
 
 // An implementation of oak_session::attestation::AttestationPublisher that
 // calls out to a JVM-provided implementation.
@@ -78,27 +77,25 @@ impl JNIAttestationPublisher {
         Ok(map)
     }
 
-    fn publish_impl(
-        &self,
-        endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
-        assertions: BTreeMap<String, Assertion>,
-    ) -> anyhow::Result<()> {
+    fn publish_impl(&self, attestation_evidence: AttestationEvidence) -> anyhow::Result<()> {
         // Attaching an already attached thread is a no-op, so this should not be too
         // expensive for typical use cases.
         // If this fails, we can't do anything but bail, since we won't even have an env
         // for throwing exceptions.
         let mut attached = self.jni_vm.attach_current_thread().context("failed to attach to VM")?;
 
-        let ee_map = self.convert_map(&endorsed_evidence)?;
-        let assertions_map = self.convert_map(&assertions)?;
+        let ee_map = self.convert_map(&attestation_evidence.evidence)?;
+        let bindings_map = self.convert_map(&attestation_evidence.evidence_bindings)?;
+        let handshake_hash =
+            attached.byte_array_from_slice(attestation_evidence.handshake_hash.as_slice())?;
 
         // Call the java method with our converted maps.
         attached
             .call_method(
                 &self.jni_instance,
                 "publish",
-                "(Ljava/util/Map;Ljava/util/Map;)V",
-                &[(&ee_map).into(), (&assertions_map).into()],
+                "(Ljava/util/Map;Ljava/util/Map;[B)V",
+                &[(&ee_map).into(), (&bindings_map).into(), (&handshake_hash).into()],
             )
             .map_err(|e| anyhow::anyhow!("Failed to invoke JVM publish: {e:?}"))?;
 
@@ -107,12 +104,8 @@ impl JNIAttestationPublisher {
 }
 
 impl AttestationPublisher for JNIAttestationPublisher {
-    fn publish(
-        &self,
-        endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
-        assertions: BTreeMap<String, Assertion>,
-    ) {
-        if let Err(e) = self.publish_impl(endorsed_evidence, assertions) {
+    fn publish(&self, attesation_evidence: AttestationEvidence) {
+        if let Err(e) = self.publish_impl(attesation_evidence) {
             eprintln!("Failed to publish: {e:?}");
         }
     }

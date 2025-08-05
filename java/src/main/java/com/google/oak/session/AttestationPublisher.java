@@ -29,5 +29,6 @@ import java.util.Map;
  * should not perform any blocking or long-running operations.
  */
 public interface AttestationPublisher {
-  void publish(Map<String, byte[]> endorsedEvidence, Map<String, byte[]> assertions);
+  void publish(
+      Map<String, byte[]> endorsedEvidence, Map<String, byte[]> bindings, byte[] handshakeHash);
 }

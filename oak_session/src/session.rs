@@ -60,6 +60,7 @@ use alloc::{
     boxed::Box,
     collections::{BTreeMap, VecDeque},
     string::String,
+    sync::Arc,
     vec::Vec,
 };
 use core::mem;
@@ -136,6 +137,19 @@ pub struct AttestationEvidence {
     pub evidence_bindings: BTreeMap<String, SessionBinding>,
     /// The hash of the handshake transcript.
     pub handshake_hash: Vec<u8>,
+}
+
+/// An [`AttestationPublisher`] can be added to a session configuration to allow
+/// publishing received evidence to an external component.
+pub trait AttestationPublisher: Send + Sync {
+    /// The session will call this method once the session has been established.
+    ///
+    /// Keep in mind that the function will be called from the session state
+    /// machine execution thread. So, implementation of a publisher should not
+    /// perform any long-running or blocking operations. In most cases, the best
+    /// approach is to queue the provided [`AttestationEvidence`] for eventual
+    /// processing.
+    fn publish(&self, attestation_evidence: AttestationEvidence);
 }
 
 /// Trait defining the interface for an end-to-end encrypted, attested,
@@ -224,13 +238,18 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
         attester: AP,
         handshake_handler_provider: Box<dyn HandshakeHandlerBuilder<H>>,
         encryptor_provider: Box<dyn EncryptorProvider>,
+        attestation_publisher: Option<Arc<dyn AttestationPublisher>>,
     },
     /// Protocol step for performing the Noise handshake.
     ///
     /// Holds the active `handshaker`, the `encryptor_provider`, and the
     /// `attestation_results` obtained from the previous phase. These results
     /// may be used for verifying session bindings during the handshake.
-    Handshake { handshaker: H, encryptor_provider: Box<dyn EncryptorProvider> },
+    Handshake {
+        handshaker: H,
+        encryptor_provider: Box<dyn EncryptorProvider>,
+        attestation_publisher: Option<Arc<dyn AttestationPublisher>>,
+    },
     /// The phase where the session is established and ready for encrypted
     /// communication.
     ///
@@ -270,7 +289,12 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
         // ensuring the memory safety because of the objects' lifetime.
         let old_state = mem::replace(self, Step::Invalid);
         match old_state {
-            Step::Attestation { attester, handshake_handler_provider, encryptor_provider } => {
+            Step::Attestation {
+                attester,
+                handshake_handler_provider,
+                encryptor_provider,
+                attestation_publisher,
+            } => {
                 let attestation_state = attester.take_attestation_state()?;
                 if let PeerAttestationVerdict::AttestationFailed { reason, .. } =
                     attestation_state.peer_attestation_verdict
@@ -294,17 +318,24 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                     });
                 *self = Step::Handshake {
                     encryptor_provider,
+                    attestation_publisher,
                     handshaker: handshake_handler_provider
                         .build(expect_peer_bindings, attestation_state)?,
                 };
             }
-            Step::Handshake { handshaker, encryptor_provider } => {
+            Step::Handshake { handshaker, encryptor_provider, attestation_publisher } => {
                 let (handshake_result, attestation_state) = handshaker.take_handshake_result()?;
                 verify_session_binding(
                     &attestation_state.peer_session_binding_verifiers,
                     &handshake_result.handshake_state.peer_session_bindings,
                     handshake_result.handshake_state.handshake_binding_token.as_slice(),
                 )?;
+                if let Some(publisher) = attestation_publisher {
+                    publisher.publish(AttestationEvidence::new_from_state(
+                        &attestation_state,
+                        &handshake_result.handshake_state,
+                    ));
+                }
                 *self = Step::Open {
                     encryptor: encryptor_provider.provide_encryptor(handshake_result.crypter)?,
                     attestation_state,
@@ -339,29 +370,7 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
     fn get_peer_attestation_evidence(&self) -> Result<AttestationEvidence, Error> {
         match &self {
             Step::Open { attestation_state, handshake_state, .. } => {
-                let evidence = attestation_state
-                    .peer_attestation_verdict
-                    .get_attestation_results()
-                    .iter()
-                    .filter_map(|(id, verifier_result)| match verifier_result {
-                        VerifierResult::Success { evidence, .. } => {
-                            Some((id.clone(), evidence.clone()))
-                        }
-                        VerifierResult::Failure { evidence, .. } => {
-                            Some((id.clone(), evidence.clone()))
-                        }
-                        VerifierResult::Unverified { evidence } => {
-                            Some((id.clone(), evidence.clone()))
-                        }
-                        _ => None,
-                    })
-                    .collect();
-
-                Ok(AttestationEvidence {
-                    evidence,
-                    evidence_bindings: handshake_state.peer_session_bindings.clone(),
-                    handshake_hash: handshake_state.handshake_binding_token.clone(),
-                })
+                Ok(AttestationEvidence::new_from_state(attestation_state, handshake_state))
             }
             _ => Err(anyhow!("the session is not open")),
         }
@@ -398,6 +407,7 @@ impl ClientSession {
         Ok(Self {
             step: Step::Attestation {
                 attester: ClientAttestationHandler::create(config.attestation_handler_config)?,
+                attestation_publisher: config.attestation_publisher,
                 handshake_handler_provider: Box::new(ClientHandshakeHandlerBuilder {
                     config: config.handshake_handler_config,
                 }),
@@ -599,6 +609,7 @@ impl ServerSession {
         Ok(Self {
             step: Step::Attestation {
                 attester: ServerAttestationHandler::create(config.attestation_handler_config)?,
+                attestation_publisher: config.attestation_publisher,
                 handshake_handler_provider: Box::new(ServerHandshakeHandlerBuilder {
                     config: config.handshake_handler_config,
                 }),
@@ -796,4 +807,29 @@ fn verify_session_binding(
         )?;
     }
     Ok(())
+}
+
+impl AttestationEvidence {
+    fn new_from_state(
+        attestation_state: &AttestationState,
+        handshake_state: &HandshakeState,
+    ) -> Self {
+        Self {
+            evidence: attestation_state
+                .peer_attestation_verdict
+                .get_attestation_results()
+                .iter()
+                .filter_map(|(id, verifier_result)| match verifier_result {
+                    VerifierResult::Success { evidence, .. }
+                    | VerifierResult::Failure { evidence, .. }
+                    | VerifierResult::Unverified { evidence } => {
+                        Some((id.clone(), evidence.clone()))
+                    }
+                    _ => None,
+                })
+                .collect(),
+            evidence_bindings: handshake_state.peer_session_bindings.clone(),
+            handshake_hash: handshake_state.handshake_binding_token.clone(),
+        }
+    }
 }

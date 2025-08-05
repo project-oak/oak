@@ -14,17 +14,17 @@
 
 extern crate alloc;
 
+use core::cell::RefCell;
 use std::{
     boxed::Box,
-    collections::BTreeMap,
     string::{String, ToString},
-    sync::Arc,
+    sync::{Arc, Mutex},
     vec::Vec,
 };
 
 use anyhow::Context;
 use googletest::prelude::*;
-use mockall::{mock, predicate as mockp};
+use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_crypto::{
@@ -34,18 +34,18 @@ use oak_crypto::{
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, Assertion, EndorsedEvidence,
-        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response, EndorsedEvidence, PlaintextMessage,
+        SessionBinding, SessionRequest, SessionResponse,
     },
 };
 
 use crate::{
-    attestation::{AttestationPublisher, AttestationType},
+    attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
-    session::AttestationEvidence,
+    session::{AttestationEvidence, AttestationPublisher},
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
@@ -121,14 +121,24 @@ mock! {
     }
 }
 
-mock! {
-    TestAttestationPublisher {}
-    impl AttestationPublisher for TestAttestationPublisher {
-        fn publish(&
-            self,
-            endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
-            assertions: BTreeMap<String, Assertion>
-        );
+struct TestAttestationPublisher {
+    pub last_published: Mutex<RefCell<Option<AttestationEvidence>>>,
+}
+
+impl TestAttestationPublisher {
+    pub fn new() -> Self {
+        Self { last_published: Mutex::new(RefCell::new(None)) }
+    }
+
+    pub fn take(&self) -> Option<AttestationEvidence> {
+        self.last_published.lock().expect("failed to lock publish item").borrow_mut().take()
+    }
+}
+
+impl AttestationPublisher for TestAttestationPublisher {
+    fn publish(&self, attestation_evidence: AttestationEvidence) {
+        *self.last_published.lock().expect("failed to lock publish item").borrow_mut() =
+            Some(attestation_evidence)
     }
 }
 
@@ -183,19 +193,6 @@ fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVeri
         .expect_create_session_binding_verifier()
         .returning(|_| Ok(create_mock_session_binding_verifier()));
     Box::new(session_binding_verifier_provider)
-}
-
-fn create_mock_attestation_publisher(
-    expected_endorsed_evidence: BTreeMap<String, EndorsedEvidence>,
-    expected_assertions: BTreeMap<String, Assertion>,
-) -> Arc<dyn AttestationPublisher> {
-    let mut publisher = MockTestAttestationPublisher::new();
-    publisher
-        .expect_publish()
-        .with(mockp::eq(expected_endorsed_evidence), mockp::eq(expected_assertions))
-        .return_const(())
-        .times(1);
-    Arc::new(publisher)
 }
 
 #[derive(Debug, PartialEq)]
@@ -272,17 +269,12 @@ fn pairwise_nk_unattested_mismatched_keys_fails() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_nn_unattested_self_succeeds() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
     let client_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN)
-        .add_attestation_publisher(&create_mock_attestation_publisher(
-            BTreeMap::from([(
-                MATCHED_ATTESTER_ID1.to_string(),
-                EndorsedEvidence {
-                    evidence: Some(Evidence::default()),
-                    endorsements: Some(Endorsements::default()),
-                },
-            )]),
-            BTreeMap::default(),
-        ))
+        .add_attestation_publisher(
+            &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+        )
         .build();
     let server_config =
         SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
@@ -299,6 +291,24 @@ fn pairwise_nn_unattested_self_succeeds() -> anyhow::Result<()> {
     do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
 
     invoke_hello_world(&mut client_session, &mut server_session);
+
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: elements_are![(
+                &MATCHED_ATTESTER_ID1.to_string(),
+                &EndorsedEvidence {
+                    evidence: Some(Evidence { ..Default::default() }),
+                    endorsements: Some(Endorsements { ..Default::default() })
+                }
+            )],
+            evidence_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID1.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            handshake_hash: not(is_empty()),
+        }))
+    );
 
     Ok(())
 }
@@ -327,6 +337,8 @@ fn pairwise_nn_self_unattested_compatible() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
     let client_config =
         SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
             .add_peer_verifier_with_key_extractor(
@@ -334,16 +346,9 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
                 create_passing_mock_verifier(),
                 create_mock_key_extractor(),
             )
-            .add_attestation_publisher(&create_mock_attestation_publisher(
-                BTreeMap::from([(
-                    MATCHED_ATTESTER_ID1.to_string(),
-                    EndorsedEvidence {
-                        evidence: Some(Evidence::default()),
-                        endorsements: Some(Endorsements::default()),
-                    },
-                )]),
-                BTreeMap::default(),
-            ))
+            .add_attestation_publisher(
+                &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
             .build();
     let server_config =
         SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
@@ -360,6 +365,24 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
     do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
 
     invoke_hello_world(&mut client_session, &mut server_session);
+
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: elements_are![(
+                &MATCHED_ATTESTER_ID1.to_string(),
+                &EndorsedEvidence {
+                    evidence: Some(Evidence { ..Default::default() }),
+                    endorsements: Some(Endorsements { ..Default::default() })
+                }
+            )],
+            evidence_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID1.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            handshake_hash: not(is_empty()),
+        }))
+    );
 
     Ok(())
 }
@@ -399,21 +422,17 @@ fn pairwise_nn_self_peer_broken() -> anyhow::Result<()> {
 
 #[googletest::test]
 fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+    let server_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
     let client_config =
         SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
             .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
-            .add_attestation_publisher(&create_mock_attestation_publisher(
-                BTreeMap::from([(
-                    MATCHED_ATTESTER_ID2.to_string(),
-                    EndorsedEvidence {
-                        evidence: Some(Evidence::default()),
-                        endorsements: Some(Endorsements::default()),
-                    },
-                )]),
-                BTreeMap::default(),
-            ))
+            .add_attestation_publisher(
+                &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
             .build();
     let server_config =
         SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
@@ -425,16 +444,9 @@ fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
                 create_passing_mock_verifier(),
                 create_mock_key_extractor(),
             )
-            .add_attestation_publisher(&create_mock_attestation_publisher(
-                BTreeMap::from([(
-                    MATCHED_ATTESTER_ID1.to_string(),
-                    EndorsedEvidence {
-                        evidence: Some(Evidence::default()),
-                        endorsements: Some(Endorsements::default()),
-                    },
-                )]),
-                BTreeMap::default(),
-            ))
+            .add_attestation_publisher(
+                &(server_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
             .build();
 
     let mut client_session = ClientSession::create(client_config)?;
@@ -446,6 +458,41 @@ fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
 
     invoke_hello_world(&mut client_session, &mut server_session);
 
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: elements_are![(
+                &MATCHED_ATTESTER_ID2.to_string(),
+                &EndorsedEvidence {
+                    evidence: Some(Evidence { ..Default::default() }),
+                    endorsements: Some(Endorsements { ..Default::default() })
+                }
+            )],
+            evidence_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID2.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            handshake_hash: not(is_empty()),
+        }))
+    );
+
+    assert_that!(
+        server_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: elements_are![(
+                &MATCHED_ATTESTER_ID1.to_string(),
+                &EndorsedEvidence {
+                    evidence: Some(Evidence { ..Default::default() }),
+                    endorsements: Some(Endorsements { ..Default::default() })
+                }
+            )],
+            evidence_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID1.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            handshake_hash: not(is_empty()),
+        }))
+    );
     Ok(())
 }
 

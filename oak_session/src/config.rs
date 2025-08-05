@@ -49,11 +49,12 @@ use oak_crypto::{
 
 use crate::{
     aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
-    attestation::{AttestationPublisher, AttestationType},
+    attestation::AttestationType,
     encryptors::OrderedChannelEncryptor,
     generator::AssertionGenerator,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
+    session::AttestationPublisher,
     session_binding::{
         SessionBinder, SessionBindingVerifierProvider, SignatureBindingVerifierProvider,
     },
@@ -75,6 +76,10 @@ pub struct SessionConfig {
     pub handshake_handler_config: HandshakeHandlerConfig,
     /// Configuration for creating the session encryptor.
     pub encryptor_config: EncryptorConfig,
+    /// An [`AttestationPublisher`] can optionally be provided. If it is, it
+    /// will be called when the session receives an [`EndorsedEvidence`] from
+    /// the peer, before verification occurs.
+    pub attestation_publisher: Option<Arc<dyn AttestationPublisher>>,
 }
 
 impl SessionConfig {
@@ -144,6 +149,7 @@ impl SessionConfigBuilder {
             attestation_handler_config,
             handshake_handler_config,
             encryptor_config,
+            attestation_publisher: None,
         };
         Self { config }
     }
@@ -275,7 +281,7 @@ impl SessionConfigBuilder {
     /// Only one publisher can be set per configuration. If you called this
     /// function multiple times, only the most recent one will be added.
     pub fn add_attestation_publisher(mut self, publisher: &Arc<dyn AttestationPublisher>) -> Self {
-        self.config.attestation_handler_config.attestation_publisher = Some(publisher.clone());
+        self.config.attestation_publisher = Some(publisher.clone());
         self
     }
 
@@ -620,10 +626,6 @@ pub struct AttestationHandlerConfig {
     /// provides evidence from different attesters) into a single overall
     /// [`AttestationVerdict`].
     pub attestation_results_aggregator: Box<dyn VerifierResultsAggregator>,
-    /// An [`AttestationPublisher`] can optionally be provided. If it is, it
-    /// will be called when the session receives an [`EndorsedEvidence`] from
-    /// the peer, before verification occurs.
-    pub attestation_publisher: Option<Arc<dyn AttestationPublisher>>,
 }
 
 impl Default for alloc::boxed::Box<dyn VerifierResultsAggregator> {
