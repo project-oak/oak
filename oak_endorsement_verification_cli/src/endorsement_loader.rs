@@ -37,8 +37,8 @@ use oak_attestation_verification::{
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
-    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
-    VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, VerifyingKey,
+    VerifyingKeyReferenceValue, VerifyingKeySet,
 };
 
 use crate::list::MPM_CLAIM_TYPE;
@@ -331,11 +331,20 @@ impl ContentAddressableEndorsementLoader {
                 raw,
             })?;
 
+        let rekor_key = VerifyingKey {
+            r#type: KeyType::EcdsaP256Sha256.into(),
+            key_id: KEY_ID,
+            raw: get_rekor_public_key_raw(),
+        };
+
         let ref_value = EndorsementReferenceValue {
             endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
             required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
             rekor: Some(VerifyingKeyReferenceValue {
-                r#type: Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
+                r#type: Some(verifying_key_reference_value::Type::Verify(VerifyingKeySet {
+                    keys: [rekor_key].to_vec(),
+                    ..Default::default()
+                })),
             }),
             ..Default::default()
         };
