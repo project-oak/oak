@@ -16,148 +16,123 @@
 
 #![feature(try_blocks)]
 
+mod print;
+mod report;
+
 use std::{
     fs,
+    path::Path,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use clap::Parser;
-use oak_attestation_gcp::{
-    jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
-    policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
-};
-use oak_attestation_verification::policy::session_binding_public_key::{
-    SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
-};
-use oak_crypto::certificate::certificate_verifier::{
-    CertificateVerificationReport, CertificateVerifier,
-};
-use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::{
     attestation::{CERTIFICATE_BASED_ATTESTATION_ID, CONFIDENTIAL_SPACE_ATTESTATION_ID},
     oak::{
         attestation::v1::{
-            reference_values, CertificateBasedReferenceValues, CollectedAttestation,
-            ConfidentialSpaceReferenceValues, ReferenceValues, ReferenceValuesCollection,
+            reference_values, CollectedAttestation, ReferenceValues, ReferenceValuesCollection,
         },
-        session::v1::{EndorsedEvidence, SessionBinding},
+        session::v1::EndorsedEvidence,
         Variant,
     },
 };
-use oak_session::session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder};
 use oak_time::Instant;
-use p256::ecdsa::VerifyingKey;
 use prost::Message;
-use x509_cert::{der::DecodePem, Certificate};
+
+use crate::{print::print_indented, report::VerificationReport};
 
 #[derive(Parser, Debug)]
 #[group(required = true)]
 struct Flags {
     /// Path of the collected attestation, encoded as a binary protobuf.
-    #[arg(long, value_parser = proto_parser::<CollectedAttestation>)]
+    #[arg(long, value_parser = proto_decoder::<CollectedAttestation>)]
     attestation: CollectedAttestation,
 
-    #[arg(long, value_parser = proto_parser::<ReferenceValuesCollection>)]
+    #[arg(long, value_parser = proto_decoder::<ReferenceValuesCollection>)]
     reference_values: ReferenceValuesCollection,
 }
 
-fn proto_parser<T: Message + std::default::Default>(s: &str) -> Result<T> {
-    Ok(T::decode(fs::read(s)?.as_slice())?)
-}
-
-// Prints a format string with the given arguments, with the provided indent
-// prefix. Defined as a macro to enable accepting a variable number of arguments
-// to the format string.
-macro_rules! print_indented {
-    ($indent:expr, $fmt:expr $(, $args:expr)*) => {
-        {
-            let formatted_text = format!($fmt $(, $args)*);
-            println!("{}{}", "\t".repeat($indent), formatted_text);
-        }
-    };
-}
-
-// Prints one of two format string options (dependent on the condition), with
-// the provided indent prefix. Defined as a macro to enable accepting a variable
-// number of arguments to the format strings.
-macro_rules! print_indented_conditional {
-    ($indent:expr, $condition:expr, ($($true_args:tt)+), ($($false_args:tt)+)) => {
-        if $condition {
-            print_indented!($indent, $($true_args)+);
-        } else {
-            print_indented!($indent, $($false_args)+);
-        }
-    };
+/// Decodes the (binary format) proto stored in the [path] file. [path] may be
+/// an absolute or relative file path.
+fn proto_decoder<T: Message + std::default::Default>(path: &str) -> anyhow::Result<T> {
+    // https://bazel.build/docs/user-manual#running-executables
+    let path = Path::new(&std::env::var("BUILD_WORKING_DIRECTORY").unwrap_or_default()).join(path);
+    Ok(T::decode(fs::read(path)?.as_slice())?)
 }
 
 fn main() {
     let Flags { attestation, reference_values: ReferenceValuesCollection { reference_values } } =
         Flags::parse();
 
+    let indent = 0;
+
     let attestation_timestamp = get_timestamp(&attestation);
-    print_timestamp_report(&attestation_timestamp);
+    print_timestamp_report(indent, &attestation_timestamp);
     let attestation_timestamp = attestation_timestamp.unwrap_or(Instant::UNIX_EPOCH);
 
     let handshake_hash = attestation.handshake_hash.clone();
-    print_handshake_hash_report(&handshake_hash);
+    print_handshake_hash_report(indent, &handshake_hash);
 
-    // TODO: b/419209669 - push this loop (removing print statements) down into some
-    // new attestation verification library function (with tests!); make it return
-    // some combined result.
     for (attestation_type_id, endorsed_evidence) in attestation.endorsed_evidence.iter() {
-        let session_binding = attestation.session_bindings.get(attestation_type_id);
-        match attestation_type_id.as_str() {
-            CONFIDENTIAL_SPACE_ATTESTATION_ID => {
-                match reference_values.get(CONFIDENTIAL_SPACE_ATTESTATION_ID) {
-                    Some(ReferenceValues {
-                        r#type:
-                            Some(reference_values::Type::ConfidentialSpace(
-                                ref confidential_space_reference_values,
-                            )),
-                    }) => {
-                        process_confidential_space_attestation(
-                            confidential_space_reference_values,
-                            attestation_timestamp,
-                            &handshake_hash,
-                            endorsed_evidence,
-                            session_binding,
-                        );
-                    }
-                    _ => {
-                        println!(
-                            "❓ Could not find reference values for confidential space attestation"
-                        );
-                    }
-                }
+        match process_attestation(
+            attestation_type_id.clone(),
+            endorsed_evidence,
+            attestation_timestamp,
+            reference_values.get(attestation_type_id),
+        ) {
+            Ok(ref report) => {
+                report.print(
+                    indent,
+                    &handshake_hash,
+                    attestation.session_bindings.get(attestation_type_id),
+                );
             }
-            CERTIFICATE_BASED_ATTESTATION_ID => {
-                match reference_values.get(CERTIFICATE_BASED_ATTESTATION_ID) {
-                    Some(ReferenceValues {
-                        r#type:
-                            Some(reference_values::Type::CertificateBased(
-                                ref certificate_based_reference_values,
-                            )),
-                    }) => {
-                        process_certificate_based_attestation(
-                            certificate_based_reference_values,
-                            attestation_timestamp,
-                            &handshake_hash,
-                            endorsed_evidence,
-                            session_binding,
-                        );
-                    }
-                    _ => {
-                        println!(
-                            "❓ Could not find reference values for certificate-based attestation"
-                        );
-                    }
-                }
+            Err(ref err) => {
+                print_indented!(indent, "❌ Provided attestation is invalid: {}", err);
             }
-            _ => {
-                println!("❓ Unrecognized attestation type ID: {}", attestation_type_id);
-            }
-        };
+        }
+    }
+}
+
+// TODO: b/419209669 - add tests for process_attestation (or perhaps more
+// correctly the VerificationReport constructors).
+fn process_attestation(
+    attestation_type_id: String,
+    endorsed_evidence: &EndorsedEvidence,
+    attestation_timestamp: Instant,
+    reference_values: Option<&ReferenceValues>,
+) -> anyhow::Result<VerificationReport> {
+    match attestation_type_id.as_str() {
+        CONFIDENTIAL_SPACE_ATTESTATION_ID => match reference_values {
+            Some(ReferenceValues {
+                r#type:
+                    Some(reference_values::Type::ConfidentialSpace(
+                        ref confidential_space_reference_values,
+                    )),
+            }) => VerificationReport::confidential_space(
+                confidential_space_reference_values,
+                attestation_timestamp,
+                &find_single_event(endorsed_evidence)?,
+                &find_single_endorsement(endorsed_evidence)?,
+            ),
+            _ => Err(anyhow!("Found no reference values")),
+        },
+        CERTIFICATE_BASED_ATTESTATION_ID => match reference_values {
+            Some(ReferenceValues {
+                r#type:
+                    Some(reference_values::Type::CertificateBased(
+                        ref certificate_based_reference_values,
+                    )),
+            }) => VerificationReport::certificate_based(
+                certificate_based_reference_values,
+                attestation_timestamp,
+                &find_single_event(endorsed_evidence)?,
+                &find_single_endorsement(endorsed_evidence)?,
+            ),
+            _ => Err(anyhow!("Found no reference values")),
+        },
+        _ => Err(anyhow!("Unrecognized attestation type ID: {}", attestation_type_id)),
     }
 }
 
@@ -170,8 +145,7 @@ fn get_timestamp(attestation: &CollectedAttestation) -> anyhow::Result<Instant> 
 }
 
 /// Prints out a report for the provided timestamp
-fn print_timestamp_report(timestamp: &anyhow::Result<Instant>) {
-    let indent = 0;
+fn print_timestamp_report(indent: usize, timestamp: &anyhow::Result<Instant>) {
     print_indented!(indent, "🕠 Recorded timestamp:");
     match timestamp {
         Err(err) => {
@@ -180,230 +154,22 @@ fn print_timestamp_report(timestamp: &anyhow::Result<Instant>) {
         }
         Ok(timestamp) => {
             let indent = indent + 1;
-            print_indented_conditional!(
-                indent,
-                *timestamp != Instant::UNIX_EPOCH,
-                ("✅ is valid: {}", *timestamp),
-                ("❌ is unset")
-            );
+            if *timestamp != Instant::UNIX_EPOCH {
+                print_indented!(indent, "✅ is valid: {}", *timestamp);
+            } else {
+                print_indented!(indent, "❌ is unset");
+            }
         }
     }
 }
 
-fn print_handshake_hash_report(handshake_hash: &[u8]) {
-    let indent = 0;
+fn print_handshake_hash_report(indent: usize, handshake_hash: &[u8]) {
     print_indented!(indent, "🤝 Session handshake:");
     let indent = indent + 1;
     if handshake_hash.is_empty() {
         print_indented!(indent, "❌ is missing");
     } else {
         print_indented!(indent, "✅ is present");
-    }
-}
-
-fn process_confidential_space_attestation(
-    reference_values: &ConfidentialSpaceReferenceValues,
-    attestation_timestamp: Instant,
-    handshake_hash: &[u8],
-    endorsed_evidence: &EndorsedEvidence,
-    session_binding: Option<&SessionBinding>,
-) {
-    let indent = 0;
-    print_indented!(indent, "🧾 Confidential Space attestation:");
-    let indent = indent + 1;
-
-    let event = find_single_event(endorsed_evidence);
-    print_event_report(indent, &event);
-    let endorsement = find_single_endorsement(endorsed_evidence);
-    print_endorsement_report(indent, &endorsement);
-
-    if let (Ok(event), Ok(endorsement)) = (event, endorsement) {
-        let report = create_confidential_space_attestation_report(
-            reference_values,
-            attestation_timestamp,
-            &event,
-            &endorsement,
-        );
-        print_confidential_space_attestation_report(indent, &report);
-        print_session_binding_verification_report(
-            handshake_hash,
-            try { report?.session_binding_public_key },
-            session_binding,
-        );
-    }
-}
-
-fn create_confidential_space_attestation_report(
-    reference_values: &ConfidentialSpaceReferenceValues,
-    attestation_timestamp: Instant,
-    event: &[u8],
-    endorsement: &Variant,
-) -> Result<ConfidentialSpaceVerificationReport> {
-    let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
-        .map_err(anyhow::Error::msg)?;
-    // TODO: b/434899976 - provide reference values for the workload endorsement.
-    let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
-    policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
-}
-
-fn print_confidential_space_attestation_report(
-    indent: usize,
-    report: &Result<ConfidentialSpaceVerificationReport>,
-) {
-    match report {
-        Err(err) => {
-            print_indented!(indent, "❌ is invalid: {}", err)
-        }
-        Ok(report) => {
-            print_indented!(indent, "🔑 Public key:");
-            {
-                let indent = indent + 1;
-                match &report.public_key_verification {
-                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-                    Ok(()) => print_indented!(indent, "✅ verified successfully"),
-                }
-            }
-            print_token_report(indent, &report.token_report);
-            // TODO: b/434898491 - Print workload endorsement verification
-        }
-    }
-}
-
-fn print_token_report(indent: usize, report: &AttestationTokenVerificationReport) {
-    print_indented!(indent, "🪙 Token verification:");
-    let indent = indent + 1;
-    let AttestationTokenVerificationReport { validity, verification, issuer_report } = report;
-    match validity {
-        Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-        Ok(()) => print_indented!(indent, "✅ is valid"),
-    }
-    match verification {
-        Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-        Ok(_) => print_indented!(indent, "✅ verified successfully"),
-    }
-    print_indented!(indent, "📜 Certificate chain:");
-    print_certificate_chain(indent + 1, issuer_report);
-}
-
-fn print_certificate_chain(
-    indent: usize,
-    report: &Result<
-        CertificateReport,
-        oak_attestation_gcp::jwt::verification::AttestationVerificationError,
-    >,
-) {
-    match report {
-        Err(err) => print_indented!(indent, "❌ invalid: {}", err),
-        Ok(report) => {
-            print_indented!(indent, "📜 Certificate:");
-            {
-                let indent = indent + 1;
-                match &report.validity {
-                    Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-                    Ok(()) => print_indented!(indent, "✅ is valid"),
-                }
-                match &report.verification {
-                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-                    Ok(()) => print_indented!(indent, "✅ verified successfully"),
-                }
-                print_indented!(indent, "✍️  issued by:");
-            }
-            match report.issuer_report.as_ref() {
-                IssuerReport::OtherCertificate(report) => {
-                    print_certificate_chain(indent, report);
-                }
-                IssuerReport::Root => {
-                    print_indented!(indent, "🛡️ Confidential Space root certificate");
-                }
-            }
-        }
-    }
-}
-
-fn process_certificate_based_attestation(
-    reference_values: &CertificateBasedReferenceValues,
-    attestation_timestamp: Instant,
-    handshake_hash: &[u8],
-    endorsed_evidence: &EndorsedEvidence,
-    session_binding: Option<&SessionBinding>,
-) {
-    let indent = 0;
-    print_indented!(indent, "🧾 Certificate-based attestation:");
-    let indent = indent + 1;
-
-    let event = find_single_event(endorsed_evidence);
-    print_event_report(indent, &event);
-    let endorsement = find_single_endorsement(endorsed_evidence);
-    print_endorsement_report(indent, &endorsement);
-
-    if let (Ok(event), Ok(endorsement)) = (event, endorsement) {
-        let report = create_certificate_based_attestation_report(
-            reference_values,
-            attestation_timestamp,
-            &event,
-            &endorsement,
-        );
-        print_certificate_based_attestation_report(indent, &report);
-        print_session_binding_verification_report(
-            handshake_hash,
-            try { report?.session_binding_public_key },
-            session_binding,
-        );
-    }
-}
-
-fn create_certificate_based_attestation_report(
-    reference_values: &CertificateBasedReferenceValues,
-    attestation_timestamp: Instant,
-    event: &[u8],
-    endorsement: &Variant,
-) -> Result<SessionBindingPublicKeyVerificationReport> {
-    let policy = {
-        let tink_public_keyset = reference_values.clone().ca.unwrap_or_default().tink_proto_keyset;
-        let signature_verifier = SignatureVerifier::new(tink_public_keyset.as_slice());
-        let certificate_verifier = CertificateVerifier::new(signature_verifier);
-        SessionBindingPublicKeyPolicy::new(certificate_verifier)
-    };
-    policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
-}
-
-fn print_certificate_based_attestation_report(
-    indent: usize,
-    report: &Result<SessionBindingPublicKeyVerificationReport>,
-) {
-    match report {
-        Err(err) => {
-            print_indented!(indent, "❌ is invalid: {}", err)
-        }
-        Ok(session_binding_public_key_verification_report) => {
-            match &session_binding_public_key_verification_report.endorsement {
-                Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-                Ok(certificate_verification_report) => {
-                    print_certificate_verification_report(indent, certificate_verification_report)
-                }
-            }
-        }
-    }
-}
-
-fn print_certificate_verification_report(indent: usize, report: &CertificateVerificationReport) {
-    print_indented!(indent, "📜 Certificate:");
-    let indent = indent + 1;
-    let CertificateVerificationReport { validity, verification, freshness: freshness_option } =
-        report;
-    match validity {
-        Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-        Ok(()) => print_indented!(indent, "✅ is valid"),
-    }
-    match verification {
-        Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-        Ok(()) => print_indented!(indent, "✅ verified successfully"),
-    }
-    if let Some(freshness) = freshness_option {
-        match freshness {
-            Err(err) => print_indented!(indent, "❌ proof of freshness failed to verify: {}", err),
-            Ok(()) => print_indented!(indent, "✅ is fresh"),
-        }
     }
 }
 
@@ -417,17 +183,6 @@ fn find_single_event(endorsed_evidence: &EndorsedEvidence) -> anyhow::Result<Vec
     Ok(encoded_events.iter().next().ok_or(anyhow!("missing event"))?.clone())
 }
 
-fn print_event_report(indent: usize, event: &anyhow::Result<Vec<u8>>) {
-    match event {
-        Err(ref err) => {
-            print_indented!(indent, "❌ does not include usable evidence: {}", err);
-        }
-        Ok(_) => {
-            print_indented!(indent, "✅ includes evidence");
-        }
-    }
-}
-
 fn find_single_endorsement(endorsed_evidence: &EndorsedEvidence) -> anyhow::Result<Variant> {
     let endorsements =
         &endorsed_evidence.endorsements.clone().ok_or(anyhow!("missing endorsements"))?;
@@ -436,60 +191,4 @@ fn find_single_endorsement(endorsed_evidence: &EndorsedEvidence) -> anyhow::Resu
         Err(anyhow!("too many ({}) endorsements (expected: 1)", events.len()))?;
     }
     Ok(events.iter().next().ok_or(anyhow!("missing endorsement"))?.clone())
-}
-
-fn print_endorsement_report(indent: usize, endorsement: &anyhow::Result<Variant>) {
-    match endorsement {
-        Err(ref err) => {
-            print_indented!(indent, "❌ does not include usable endorsement: {}", err);
-        }
-        Ok(_) => {
-            print_indented!(indent, "✅ includes endorsement");
-        }
-    }
-}
-
-fn print_session_binding_verification_report(
-    handshake_hash: &[u8],
-    session_binding_public_key: Result<Vec<u8>>,
-    session_binding: Option<&SessionBinding>,
-) {
-    let indent = 1;
-    print_indented!(indent, "🔐 Session binding:");
-    let indent = indent + 1;
-
-    let session_binding_public_key = session_binding_public_key
-        .inspect_err(|err| print_indented!(indent, "❌ key could not be obtained: {}", err))
-        .ok();
-
-    if session_binding.is_none() {
-        print_indented!(indent, "❌ no binding found");
-    }
-
-    if let (Some(session_binding_public_key), Some(session_binding)) =
-        (session_binding_public_key, session_binding)
-    {
-        match verify_session_binding(
-            &session_binding_public_key,
-            handshake_hash,
-            &session_binding.binding,
-        ) {
-            Ok(()) => print_indented!(indent, "✅ verified successfully"),
-            Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-        }
-    }
-}
-
-fn verify_session_binding(
-    session_binding_public_key: &[u8],
-    handshake_hash: &[u8],
-    binding: &[u8],
-) -> anyhow::Result<()> {
-    let verifying_key = VerifyingKey::from_sec1_bytes(session_binding_public_key)
-        .map_err(|err| anyhow!("VerifyingKey construction failed: {}", err))?;
-    let verifier = SignatureBindingVerifierBuilder::default()
-        .verifier(Box::new(verifying_key))
-        .build()
-        .map_err(|err| anyhow!("SignatureBindingVerifier construction failed: {}", err))?;
-    verifier.verify_binding(handshake_hash, binding)
 }
