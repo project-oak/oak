@@ -11,15 +11,14 @@ oak_containers {
         skip {
         }
       }
-      # TODO: b/396666645 - Extend prototcol buffers and adapt verification.
-      # Right now the fields are not identified correctly, so we just set them
-      # all to zero to unblock the verification.
-      min_tcb_version {
-        boot_loader: 0
-        tee: 0
-        snp: 0
-        microcode: 0
-        # fmc: 0
+      turin {
+        minimum {
+          boot_loader: 1
+          tee: 0
+          snp: 2
+          microcode: 71
+          fmc: 0
+        }
       }
     }
   }

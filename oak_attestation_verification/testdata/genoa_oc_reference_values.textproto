@@ -10,10 +10,13 @@ oak_containers {
         skip {
         }
       }
-      min_tcb_version {
-        boot_loader: 7
-        snp: 15
-        microcode: 62
+      genoa {
+        minimum {
+          boot_loader: 7
+          tee: 0
+          snp: 15
+          microcode: 62
+        }
       }
     }
   }

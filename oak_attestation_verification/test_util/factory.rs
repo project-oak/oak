@@ -84,19 +84,16 @@ pub fn create_oc_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
+    // Assume this TCB version fits all attestation examples relying on the
+    // present reference values.
+    let tcb_version = TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209, fmc: 0 };
     let tcb_version_ref_value = TcbVersionReferenceValue {
-        r#type: Some(tcb_version_reference_value::Type::Skip(SkipVerification {})),
+        r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)),
     };
 
     #[allow(deprecated)]
     let amd_sev = AmdSevReferenceValues {
-        min_tcb_version: Some(TcbVersion {
-            boot_loader: 3,
-            tee: 0,
-            snp: 20,
-            microcode: 209,
-            fmc: 0,
-        }),
+        min_tcb_version: None,
         milan: Some(tcb_version_ref_value),
         genoa: Some(tcb_version_ref_value),
         turin: Some(tcb_version_ref_value),
@@ -140,13 +137,16 @@ pub fn create_rk_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
         r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
+    // Assume this TCB version fits all attestation examples relying on the
+    // present reference values.
+    let tcb_version = TcbVersion { boot_loader: 3, tee: 0, snp: 20, microcode: 209, fmc: 0 };
     let tcb_version_ref_value = TcbVersionReferenceValue {
-        r#type: Some(tcb_version_reference_value::Type::Skip(SkipVerification {})),
+        r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)),
     };
 
     #[allow(deprecated)]
     let amd_sev = AmdSevReferenceValues {
-        min_tcb_version: Some(TcbVersion { ..Default::default() }),
+        min_tcb_version: None,
         milan: Some(tcb_version_ref_value),
         genoa: Some(tcb_version_ref_value),
         turin: Some(tcb_version_ref_value),

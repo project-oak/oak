@@ -29,13 +29,16 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        text_reference_value, BinaryReferenceValue, Digests, Endorsements, Evidence,
-        ExpectedValues, ExtractedEvidence, ReferenceValues, Regex, TcbVersion, TextReferenceValue,
+        tcb_version_reference_value, text_reference_value, BinaryReferenceValue, Digests,
+        Endorsements, Evidence, ExpectedValues, ExtractedEvidence, ReferenceValues, Regex,
+        TcbVersion, TcbVersionReferenceValue, TeePlatform, TextReferenceValue,
     },
     RawDigest,
 };
+use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use prost::Message;
 use test_util::{attestation_data::AttestationData, factory::create_rk_reference_values};
+use zerocopy::FromBytes;
 
 const FAKE_EXPECTED_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_expected_values.binarypb";
@@ -51,6 +54,19 @@ fn make_reference_values(evidence: &Evidence) -> ReferenceValues {
     let extracted_evidence =
         verify_dice_chain_and_extract_evidence(evidence).expect("invalid DICE evidence");
     reference_values_from_evidence(extracted_evidence)
+}
+
+fn get_amd_product(d: &AttestationData) -> Option<AmdProduct> {
+    let root_layer = d.evidence.root_layer.as_ref().unwrap();
+    match root_layer.platform() {
+        TeePlatform::Unspecified => None,
+        TeePlatform::AmdSevSnp | TeePlatform::None => {
+            let report =
+                AttestationReport::ref_from_bytes(&root_layer.remote_attestation_report).unwrap();
+            Some(report.data.get_product())
+        }
+        TeePlatform::IntelTdx => None,
+    }
 }
 
 // Helper which asserts success of the legacy verify() call.
@@ -208,6 +224,7 @@ verify_manipulated_root_public_key_failure! {
     load_milan_rk_staging
     load_genoa_oc
     load_turin_oc
+    load_fake
 }
 
 macro_rules! verify_unsupported_tcb_version_failure {
@@ -256,49 +273,292 @@ verify_unsupported_tcb_version_failure! {
     load_turin_oc
 }
 
-#[test]
-fn verify_unpopulated_per_model_tcb_version_failure() {
-    let mut d = AttestationData::load_milan_oc_staging();
+// Remove TCB version reference value for all non-encountered CPU models.
+macro_rules! verify_unpopulated_tcb_version_success {
+    ($($name:tt)*) => {
+        #[allow(deprecated)]
+        mod verify_unpopulated_tcb_version_success {
+            use super::*;
 
-    #[allow(deprecated)]
-    match d.reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version = None;
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().milan = None;
+            $(
+                #[test]
+                fn $name() {
+                    let mut d = AttestationData::$name();
+                    let amd_product = get_amd_product(&d);
+
+                    match d.reference_values.r#type.as_mut() {
+                        Some(reference_values::Type::OakContainers(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => {
+                                    amd_sev.genoa = None;
+                                    amd_sev.turin = None;
+                                }
+                                Some(AmdProduct::Genoa) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.turin = None;
+                                }
+                                Some(AmdProduct::Turin) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.genoa = None;
+                                }
+                                _ => {panic!("unexpected AMD product")}
+                            }
+                        }
+                        Some(reference_values::Type::OakRestrictedKernel(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => {
+                                    amd_sev.genoa = None;
+                                    amd_sev.turin = None;
+                                }
+                                Some(AmdProduct::Genoa) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.turin = None;
+                                }
+                                Some(AmdProduct::Turin) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.genoa = None;
+                                }
+                                _ => panic!("unexpected AMD product"),
+                            }
+                        }
+                        _ => panic!("malformed reference values"),
+                    }
+
+                    assert_success(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
         }
-        Some(_) => {}
-        None => {}
-    };
-
-    assert_failure(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+    }
 }
 
-#[test]
-fn verify_unpopulated_per_model_tcb_version_success() {
-    let mut d = AttestationData::load_milan_oc_staging();
+verify_unpopulated_tcb_version_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
+    load_fake
+}
 
-    #[allow(deprecated)]
-    match d.reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakContainers(rfs)) => {
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().min_tcb_version = None;
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().genoa = None;
-            rfs.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap().turin = None;
+// Remove TCB version reference value for the encountered CPU model.
+macro_rules! verify_unpopulated_tcb_version_failure {
+    ($($load_name:tt)*) => {
+        #[allow(deprecated)]
+        mod verify_unpopulated_tcb_version_failure {
+            use super::*;
+
+            $(
+                #[test]
+                fn $load_name() {
+                    let mut d = AttestationData::$load_name();
+                    let amd_product = get_amd_product(&d);
+
+                    match d.reference_values.r#type.as_mut() {
+                        Some(reference_values::Type::OakContainers(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => {
+                                    amd_sev.milan = None;
+                                }
+                                Some(AmdProduct::Genoa) => {
+                                    amd_sev.genoa = None;
+                                }
+                                Some(AmdProduct::Turin) => {
+                                    amd_sev.turin = None;
+                                }
+                                _ => {panic!("unexpected AMD product")}
+                            }
+                        }
+                        Some(reference_values::Type::OakRestrictedKernel(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => {
+                                    amd_sev.milan = None;
+                                }
+                                Some(AmdProduct::Genoa) => {
+                                    amd_sev.genoa = None;
+                                }
+                                Some(AmdProduct::Turin) => {
+                                    amd_sev.turin = None;
+                                }
+                                _ => panic!("unexpected AMD product"),
+                            }
+                        }
+                        _ => panic!("malformed reference values"),
+                    }
+
+                    assert_failure(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
         }
-        Some(_) => {}
-        None => {}
-    };
+    }
+}
 
-    assert_success(verify(
-        d.make_valid_millis(),
-        &d.evidence,
-        &d.endorsements,
-        &d.reference_values,
-    ));
+verify_unpopulated_tcb_version_failure! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
+}
+
+fn manipulate_boot_loader(rv: &mut Option<TcbVersionReferenceValue>) {
+    if let Some(ref mut stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+            m.boot_loader = 256;
+        }
+    }
+}
+
+fn manipulate_microcode(rv: &mut Option<TcbVersionReferenceValue>) {
+    if let Some(ref mut stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+            m.microcode = 256;
+        }
+    }
+}
+
+fn manipulate_tee(rv: &mut Option<TcbVersionReferenceValue>) {
+    if let Some(ref mut stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+            m.tee = 256;
+        }
+    }
+}
+
+fn manipulate_snp(rv: &mut Option<TcbVersionReferenceValue>) {
+    if let Some(ref mut stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+            m.snp = 256;
+        }
+    }
+}
+
+fn manipulate_fmc(rv: &mut Option<TcbVersionReferenceValue>) {
+    if let Some(ref mut stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+            m.fmc = 256;
+        }
+    }
+}
+
+// $manip_fn sets various TCB version fields to 256 which is an invalid value.
+// All such values are represented as u8 in the attestation report, so it can
+// never be attained.
+macro_rules! verify_tcb_version_failure_tests {
+    ($module_name:tt, $manip_fn:tt, $($load_name:tt, )*) => {
+        #[allow(deprecated)]
+        mod $module_name {
+            use super::*;
+
+            $(
+                #[test]
+                fn $load_name() {
+                    let mut d = AttestationData::$load_name();
+                    let amd_product = get_amd_product(&d);
+
+                    match d.reference_values.r#type.as_mut() {
+                        Some(reference_values::Type::OakContainers(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => $manip_fn(&mut amd_sev.milan),
+                                Some(AmdProduct::Genoa) => $manip_fn(&mut amd_sev.genoa),
+                                Some(AmdProduct::Turin) => $manip_fn(&mut amd_sev.turin),
+                                _ => panic!("unexpected AMD product"),
+                            }
+                        }
+                        Some(reference_values::Type::OakRestrictedKernel(r)) => {
+                            let amd_sev = r.root_layer.as_mut().unwrap().amd_sev.as_mut().unwrap();
+                            amd_sev.min_tcb_version = None;
+                            match amd_product {
+                                Some(AmdProduct::Milan) => $manip_fn(&mut amd_sev.milan),
+                                Some(AmdProduct::Genoa) => $manip_fn(&mut amd_sev.genoa),
+                                Some(AmdProduct::Turin) => $manip_fn(&mut amd_sev.turin),
+                                _ => panic!("unexpected AMD product"),
+                            }
+                        }
+                        _ => panic!("malformed reference values"),
+                    }
+
+                    assert_failure(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &d.reference_values,
+                    ));
+                }
+            )*
+        }
+    }
+}
+
+verify_tcb_version_failure_tests! {
+    verify_invalid_tcb_version_boot_loader_failure, manipulate_boot_loader,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+verify_tcb_version_failure_tests! {
+    verify_invalid_tcb_version_microcode_failure, manipulate_microcode,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+verify_tcb_version_failure_tests! {
+    verify_invalid_tcb_version_tee_failure, manipulate_tee,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+verify_tcb_version_failure_tests! {
+    verify_invalid_tcb_version_snp_failure, manipulate_snp,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+verify_tcb_version_failure_tests! {
+    verify_invalid_tcb_version_fmc_failure, manipulate_fmc,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
 #[test]

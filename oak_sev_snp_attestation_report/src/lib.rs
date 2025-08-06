@@ -217,10 +217,10 @@ impl AttestationReportData {
                 AmdProduct::Unsupported
             }
         } else if self.cpuid_fam_id == 0x00 && self.cpuid_mod_id == 0x00 {
-            // TODO: b/396666645 - Clarify why the legacy Milan testdata
-            // and the Genoa CPU didn't properly report CPUID. We need to
-            // reliably determine the CPU model from the attestation report.
-            AmdProduct::Milan
+            // TODO: b/434633982 - The Genoa attestation example still has
+            // attestation report V2. Update the example, then error out
+            // here whenever CPU family and model are not set.
+            AmdProduct::Genoa
         } else {
             AmdProduct::Unsupported
         }
