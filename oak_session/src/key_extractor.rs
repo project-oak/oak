@@ -20,9 +20,7 @@
 use alloc::boxed::Box;
 
 use anyhow::{anyhow, Context, Error};
-use oak_attestation_verification::{
-    policy::SESSION_BINDING_PUBLIC_KEY_ID, verifier::get_event_artifact,
-};
+use oak_attestation_verification::results::get_session_binding_public_key;
 use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 use p256::ecdsa::VerifyingKey;
@@ -71,9 +69,8 @@ impl KeyExtractor for DefaultBindingKeyExtractor {
         &self,
         attestation_results: &AttestationResults,
     ) -> Result<Box<dyn Verifier>, Error> {
-        let session_binding_public_key =
-            get_event_artifact(attestation_results, SESSION_BINDING_PUBLIC_KEY_ID)
-                .context("couldn't find session binding key")?;
+        let session_binding_public_key = get_session_binding_public_key(attestation_results)
+            .context("couldn't find session binding key")?;
         Ok(Box::new(VerifyingKey::from_sec1_bytes(session_binding_public_key.as_slice()).map_err(|err| {
             anyhow!("couldn't create a verifying key from the session binding public key in the evidence: {}", err)
         })?))

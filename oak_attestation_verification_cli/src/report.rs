@@ -19,7 +19,7 @@ use oak_attestation_gcp::{
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
 };
-use oak_attestation_verification::policy::session_binding_public_key::{
+use oak_attestation_verification::{
     SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
 };
 use oak_crypto::certificate::certificate_verifier::{

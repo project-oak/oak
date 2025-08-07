@@ -20,17 +20,14 @@
 // endorsements are created and signed on the fly. For other tests (in
 // particular negative ones) see verifier_tests.rs.
 
-use std::collections::BTreeMap;
-
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
         reference_values, tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
-        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        Endorsements, EventAttestationResults, ExtractedEvidence, KernelBinaryReferenceValue,
-        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
-        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
+        ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, ExtractedEvidence,
+        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
         RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
         SystemLayerReferenceValues, TcbVersionReferenceValue, TextReferenceValue,
@@ -48,10 +45,7 @@ use crate::{
         binary_reference_value_for_endorser_pk, fake_endorsement, new_random_signing_keypair,
         serialize_and_sign_endorsement,
     },
-    verifier::{
-        get_event_artifact, to_attestation_results, verify, verify_event_artifacts_uniqueness,
-        Status,
-    },
+    verifier::{to_attestation_results, verify, Status},
 };
 
 // Pretend the tests run at this time: 1 Nov 2024, 12:00 UTC. This date
@@ -347,106 +341,4 @@ fn create_rk_endorsements_reference_values(
             )),
         },
     )
-}
-
-#[test]
-fn test_verify_event_artifacts_uniqueness_succeeds() {
-    let event_attestation_results = [
-        EventAttestationResults {
-            artifacts: [
-                ("id_1".to_string(), b"artifact_1".to_vec()),
-                ("id_2".to_string(), b"artifact_2".to_vec()),
-            ]
-            .into_iter()
-            .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-        EventAttestationResults {
-            artifacts: [
-                ("id_3".to_string(), b"artifact_3".to_vec()),
-                ("id_4".to_string(), b"artifact_4".to_vec()),
-            ]
-            .into_iter()
-            .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-        EventAttestationResults {
-            artifacts: [("id_5".to_string(), b"artifact_5".to_vec())]
-                .into_iter()
-                .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-    ];
-
-    assert!(verify_event_artifacts_uniqueness(&[]).is_ok());
-    assert!(verify_event_artifacts_uniqueness(&event_attestation_results).is_ok());
-}
-
-#[test]
-fn test_verify_event_artifacts_uniqueness_fails() {
-    let event_attestation_results = [
-        EventAttestationResults {
-            artifacts: [
-                ("id_1".to_string(), b"artifact_1".to_vec()),
-                ("id_2".to_string(), b"artifact_2".to_vec()),
-            ]
-            .into_iter()
-            .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-        EventAttestationResults {
-            artifacts: [
-                ("id_3".to_string(), b"artifact_3".to_vec()),
-                ("id_1".to_string(), b"artifact_1".to_vec()),
-            ]
-            .into_iter()
-            .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-        EventAttestationResults {
-            artifacts: [("id_5".to_string(), b"artifact_5".to_vec())]
-                .into_iter()
-                .collect::<BTreeMap<String, Vec<u8>>>(),
-        },
-    ];
-
-    assert!(verify_event_artifacts_uniqueness(&event_attestation_results).is_err());
-}
-
-#[test]
-fn test_get_event_artifact() {
-    let empty_results = AttestationResults { ..Default::default() };
-    let results = AttestationResults {
-        event_attestation_results: vec![
-            EventAttestationResults {
-                artifacts: [
-                    ("id_1".to_string(), b"artifact_1".to_vec()),
-                    ("id_2".to_string(), b"artifact_2".to_vec()),
-                ]
-                .into_iter()
-                .collect::<BTreeMap<String, Vec<u8>>>(),
-            },
-            EventAttestationResults {
-                artifacts: [
-                    ("id_3".to_string(), b"artifact_3".to_vec()),
-                    ("id_4".to_string(), b"artifact_4".to_vec()),
-                ]
-                .into_iter()
-                .collect::<BTreeMap<String, Vec<u8>>>(),
-            },
-            EventAttestationResults {
-                artifacts: [("id_5".to_string(), b"artifact_5".to_vec())]
-                    .into_iter()
-                    .collect::<BTreeMap<String, Vec<u8>>>(),
-            },
-        ],
-        ..Default::default()
-    };
-
-    assert!(get_event_artifact(&empty_results, "id_1").is_none());
-
-    let artifact_1 = get_event_artifact(&results, "id_1");
-    assert!(artifact_1.is_some());
-    assert_eq!(*artifact_1.unwrap(), b"artifact_1".to_vec());
-
-    let artifact_5 = get_event_artifact(&results, "id_5");
-    assert!(artifact_5.is_some());
-    assert_eq!(*artifact_5.unwrap(), b"artifact_5".to_vec());
-
-    assert!(get_event_artifact(&results, "id_999").is_none());
 }

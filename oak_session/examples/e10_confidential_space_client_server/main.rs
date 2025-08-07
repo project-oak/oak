@@ -37,7 +37,7 @@ mod intro_import {
     pub use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
 
     // The client will use these to verify the server's evidence.
-    pub use oak_attestation_verification::verifier::EventLogVerifier;
+    pub use oak_attestation_verification::EventLogVerifier;
     pub use oak_attestation_gcp::policy::ConfidentialSpacePolicy;
 
     // Confidential Space requires using X509 Certificates for verification.

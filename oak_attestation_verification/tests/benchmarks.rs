@@ -16,18 +16,13 @@
 #![feature(test)]
 
 extern crate test;
-use std::sync::Arc;
 
 use oak_attestation_verification::{
-    policy::{
-        application::ApplicationPolicy, container::ContainerPolicy, firmware::FirmwarePolicy,
-        kernel::KernelPolicy, platform::AmdSevSnpPolicy, system::SystemPolicy,
-    },
-    verifier::{to_attestation_results, verify, AmdSevSnpDiceAttestationVerifier},
+    create_verifier,
+    verifier::{to_attestation_results, verify},
     verify_endorsement,
 };
-use oak_attestation_verification_types::{policy::Policy, verifier::AttestationVerifier};
-use oak_proto_rust::oak::attestation::v1::{attestation_results::Status, reference_values};
+use oak_proto_rust::oak::attestation::v1::attestation_results::Status;
 use oak_time::clock::FixedClock;
 use test::Bencher;
 use test_util::{attestation_data::AttestationData, endorsement_data::EndorsementData};
@@ -86,25 +81,7 @@ fn bench_verify_attestation_rk_legacy(b: &mut Bencher) {
 fn bench_verify_attestation_oc(b: &mut Bencher) {
     let d = AttestationData::load_milan_oc_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
-    let rvs = match d.reference_values.r#type.as_ref() {
-        Some(reference_values::Type::OakContainers(r)) => r,
-        _ => panic!("missing oc reference values"),
-    };
-    let root_rv = rvs.root_layer.as_ref().unwrap();
-    let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rv).unwrap();
-    let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rv).unwrap();
-    let kernel_policy = KernelPolicy::new(rvs.kernel_layer.as_ref().unwrap());
-    let system_policy = SystemPolicy::new(rvs.system_layer.as_ref().unwrap());
-    let container_policy = ContainerPolicy::new(rvs.container_layer.as_ref().unwrap());
-    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-        vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
-
-    let verifier = AmdSevSnpDiceAttestationVerifier::new(
-        platform_policy,
-        Box::new(firmware_policy),
-        event_policies,
-        Arc::new(clock),
-    );
+    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
 
     b.iter(|| {
         let result = verifier.verify(&d.evidence, &d.endorsements);
@@ -116,24 +93,7 @@ fn bench_verify_attestation_oc(b: &mut Bencher) {
 fn bench_verify_attestation_rk(b: &mut Bencher) {
     let d = AttestationData::load_milan_rk_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
-    let rvs = match d.reference_values.r#type.as_ref() {
-        Some(reference_values::Type::OakRestrictedKernel(r)) => r,
-        _ => panic!("missing rk reference values"),
-    };
-    let root_rv = rvs.root_layer.as_ref().unwrap();
-    let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rv).unwrap();
-    let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rv).unwrap();
-    let kernel_policy = KernelPolicy::new(rvs.kernel_layer.as_ref().unwrap());
-    let application_policy = ApplicationPolicy::new(rvs.application_layer.as_ref().unwrap());
-    let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-        vec![Box::new(kernel_policy), Box::new(application_policy)];
-
-    let verifier = AmdSevSnpDiceAttestationVerifier::new(
-        platform_policy,
-        Box::new(firmware_policy),
-        event_policies,
-        Arc::new(clock),
-    );
+    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
 
     b.iter(|| {
         let result = verifier.verify(&d.evidence, &d.endorsements);

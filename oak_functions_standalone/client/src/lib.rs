@@ -19,7 +19,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{policy::ConfidentialSpacePolicy, CONFIDENTIAL_SPACE_ROOT_CERT_PEM};
-use oak_attestation_verification::verifier::EventLogVerifier;
+use oak_attestation_verification::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,

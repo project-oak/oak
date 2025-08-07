@@ -21,7 +21,7 @@ use oak_attestation_gcp::{
     attestation::request_attestation_token, policy::ConfidentialSpacePolicy,
     CONFIDENTIAL_SPACE_ATTESTATION_ID,
 };
-use oak_attestation_verification::verifier::EventLogVerifier;
+use oak_attestation_verification::EventLogVerifier;
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
 use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,

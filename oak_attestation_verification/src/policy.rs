@@ -23,11 +23,3 @@ pub mod kernel;
 pub mod platform;
 pub mod session_binding_public_key;
 pub mod system;
-
-/// Public key used to verify that the Noise handshake transcript signature.
-pub const SESSION_BINDING_PUBLIC_KEY_ID: &str = "oak-session-binding-public-key:ecdsa-p256";
-/// Key used to encrypt a single message with hybrid encryption before sending
-/// it to the enclave.
-pub const HYBRID_ENCRYPTION_PUBLIC_KEY_ID: &str = "oak-hybrid-encryption-public-key:X25519";
-/// Key used to verify artifacts generated and signed by the enclave.
-pub const SIGNING_PUBLIC_KEY_ID: &str = "oak-signing-public-key:ecdsa-p256";

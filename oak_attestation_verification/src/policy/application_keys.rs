@@ -14,12 +14,6 @@
 // limitations under the License.
 //
 
-use alloc::{
-    collections::BTreeMap,
-    string::{String, ToString},
-    vec::Vec,
-};
-
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -30,8 +24,8 @@ use oak_proto_rust::oak::{
 use oak_time::Instant;
 
 use crate::{
-    policy::{
-        HYBRID_ENCRYPTION_PUBLIC_KEY_ID, SESSION_BINDING_PUBLIC_KEY_ID, SIGNING_PUBLIC_KEY_ID,
+    results::{
+        set_hybrid_encryption_public_key, set_session_binding_public_key, set_signing_public_key,
     },
     util::decode_event_proto,
 };
@@ -63,24 +57,18 @@ impl Policy<[u8]> for ApplicationKeysPolicy {
 
         // TODO: b/399885537 - Verify that the key is signed by the CA.
 
-        let mut artifacts = BTreeMap::<String, Vec<u8>>::new();
+        let mut results = EventAttestationResults { ..Default::default() };
         if !event.session_binding_public_key.is_empty() {
-            artifacts.insert(
-                SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                event.session_binding_public_key.to_vec(),
-            );
+            set_session_binding_public_key(&mut results, &event.session_binding_public_key);
         }
         if !event.hybrid_encryption_public_key.is_empty() {
-            artifacts.insert(
-                HYBRID_ENCRYPTION_PUBLIC_KEY_ID.to_string(),
-                event.hybrid_encryption_public_key,
-            );
+            set_hybrid_encryption_public_key(&mut results, &event.hybrid_encryption_public_key);
         }
         if !event.signing_public_key.is_empty() {
-            artifacts.insert(SIGNING_PUBLIC_KEY_ID.to_string(), event.signing_public_key);
+            set_signing_public_key(&mut results, &event.signing_public_key);
         }
 
         // TODO: b/356631062 - Return detailed attestation results.
-        Ok(EventAttestationResults { artifacts })
+        Ok(results)
     }
 }

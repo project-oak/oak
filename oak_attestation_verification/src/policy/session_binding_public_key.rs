@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{collections::BTreeMap, string::ToString, vec::Vec};
+use alloc::vec::Vec;
 
 use oak_attestation_verification_types::policy::Policy;
 use oak_crypto::{
@@ -35,7 +35,7 @@ use oak_proto_rust::{
 };
 use oak_time::Instant;
 
-use crate::{policy::SESSION_BINDING_PUBLIC_KEY_ID, util::decode_event_proto};
+use crate::{results::set_session_binding_public_key, util::decode_event_proto};
 
 #[derive(Debug)]
 pub struct SessionBindingPublicKeyVerificationReport {
@@ -138,12 +138,9 @@ impl<V: Verifier> Policy<[u8]> for SessionBindingPublicKeyPolicy<V> {
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        Ok(EventAttestationResults {
-            artifacts: BTreeMap::from([(
-                SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                self.report(current_time, evidence, endorsement)?
-                    .into_session_binding_public_key()?,
-            )]),
-        })
+        let report = self.report(current_time, evidence, endorsement)?;
+        let mut results = EventAttestationResults { ..Default::default() };
+        set_session_binding_public_key(&mut results, &report.into_session_binding_public_key()?);
+        Ok(results)
     }
 }

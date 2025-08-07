@@ -21,22 +21,11 @@ use std::{fs, sync::Arc};
 
 use anyhow::Context;
 use oak_attestation_verification::{
-    policy::{
-        application::ApplicationPolicy,
-        container::ContainerPolicy,
-        firmware::FirmwarePolicy,
-        kernel::KernelPolicy,
-        platform::AmdSevSnpPolicy,
-        session_binding_public_key::{
-            SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationError,
-            SessionBindingPublicKeyVerificationReport,
-        },
-        system::SystemPolicy,
-        SESSION_BINDING_PUBLIC_KEY_ID,
-    },
-    verifier::{
-        AmdSevSnpDiceAttestationVerifier, EventLogVerifier, SoftwareRootedDiceAttestationVerifier,
-    },
+    create_verifier, results::get_session_binding_public_key,
+    verifier::SoftwareRootedDiceAttestationVerifier, AmdSevSnpDiceAttestationVerifier,
+    AmdSevSnpPolicy, ApplicationPolicy, ContainerPolicy, EventLogVerifier, FirmwarePolicy,
+    KernelPolicy, SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationError,
+    SessionBindingPublicKeyVerificationReport, SystemPolicy,
 };
 use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
@@ -64,7 +53,7 @@ use oak_proto_rust::{
     },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
-use oak_time::{clock::FixedClock, Clock, Instant};
+use oak_time::{clock::FixedClock, Instant};
 use prost::Message;
 use prost_types::Timestamp;
 use test_util::attestation_data::AttestationData;
@@ -571,10 +560,9 @@ fn event_log_verifier_succeeds() {
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 
     // Check that the policy correctly extracts the public key.
-    let event_attestation_results = result.unwrap().event_attestation_results;
-    assert!(event_attestation_results.len() == 1);
-    let extracted_public_key =
-        event_attestation_results[0].artifacts.get(SESSION_BINDING_PUBLIC_KEY_ID);
+    let results = result.unwrap();
+    assert!(results.event_attestation_results.len() == 1);
+    let extracted_public_key = get_session_binding_public_key(&results);
     assert!(extracted_public_key.is_some());
     assert!(*extracted_public_key.unwrap() == TEST_PUBLIC_KEY);
 }
@@ -710,69 +698,6 @@ fn rk_application_policy_verify_succeeds() {
 
     // TODO: b/356631062 - Verify detailed attestation results.
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
-}
-
-// Creates an AmdSevSnpDiceAttestationVerifier from reference values.
-// This function could become part of the public API.
-fn create_verifier<T: Clock + 'static>(
-    clock: T,
-    reference_values: &ReferenceValues,
-) -> anyhow::Result<AmdSevSnpDiceAttestationVerifier> {
-    match reference_values.r#type.as_ref() {
-        Some(reference_values::Type::OakContainers(rvs)) => {
-            let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
-            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)
-                .context("failed to create platform policy")?;
-            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)
-                .context("failed to create firmware policy")?;
-            let kernel_policy = KernelPolicy::new(
-                rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
-            );
-            let system_policy = SystemPolicy::new(
-                rvs.system_layer.as_ref().context("no system layer reference values")?,
-            );
-            // TODO: b/382550581 - Container reference values currently skip verification.
-            let container_policy = ContainerPolicy::new(
-                rvs.container_layer.as_ref().context("no container layer reference values")?,
-            );
-            let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-                vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
-
-            Ok(AmdSevSnpDiceAttestationVerifier::new(
-                platform_policy,
-                Box::new(firmware_policy),
-                event_policies,
-                Arc::new(clock),
-            ))
-        }
-        Some(reference_values::Type::OakRestrictedKernel(rvs)) => {
-            // Create platform and firmware policies.
-            // TODO: b/398859203 - Remove root layer reference values once old reference
-            // values have been updated.
-            let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
-            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)
-                .context("failed to create platform policy")?;
-            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)
-                .context("failed to create firmware policy")?;
-            let kernel_policy = KernelPolicy::new(
-                rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
-            );
-            // TODO: b/382550581 - Application reference values currently skip verification.
-            let application_policy = ApplicationPolicy::new(
-                rvs.application_layer.as_ref().context("no application layer reference values")?,
-            );
-            let event_policies: Vec<Box<dyn Policy<[u8]>>> =
-                vec![Box::new(kernel_policy), Box::new(application_policy)];
-
-            Ok(AmdSevSnpDiceAttestationVerifier::new(
-                platform_policy,
-                Box::new(firmware_policy),
-                event_policies,
-                Arc::new(clock),
-            ))
-        }
-        _ => anyhow::bail!("malformed reference values"),
-    }
 }
 
 macro_rules! test_amd_sev_snp_verifier_success {

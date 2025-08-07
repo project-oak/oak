@@ -19,31 +19,53 @@
 
 extern crate alloc;
 
-pub(crate) mod amd;
-pub(crate) mod compare;
-pub(crate) mod endorsement;
-pub mod expect;
-pub mod extract;
-pub(crate) mod intel;
-pub(crate) mod platform;
-pub mod policy;
-pub(crate) mod rekor;
+mod amd;
+mod compare;
+mod endorsement;
+mod expect;
+mod extract;
+mod intel;
+mod platform;
+mod policy;
+mod rekor;
+pub mod results;
 pub mod statement;
-pub(crate) mod util;
+mod util;
 pub mod verifier;
+mod verifiers;
 
 #[cfg(test)]
 mod test_util;
 
 use anyhow::Context;
+pub use expect::get_expected_values;
+pub use extract::extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
+};
+// TODO: b/437347358 - Most tests in policy_tests.rs are unit tests for a
+// policy. The policies here are exported only for that purpose. This
+// visibility should be revoked after moving the tests.
+pub use policy::{
+    application::ApplicationPolicy,
+    application_keys::ApplicationKeysPolicy,
+    binary::BinaryPolicy,
+    container::ContainerPolicy,
+    firmware::FirmwarePolicy,
+    kernel::KernelPolicy,
+    platform::AmdSevSnpPolicy,
+    session_binding_public_key::{
+        SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationError,
+        SessionBindingPublicKeyVerificationReport,
+    },
+    system::SystemPolicy,
 };
 pub use rekor::verify_rekor_log_entry;
 pub use util::{
     convert_pem_to_raw, decode_event_proto, decode_protobuf_any, hex_to_raw_digest,
     raw_to_hex_digest, reference_values_from_evidence,
 };
+pub use verifiers::{create_verifier, AmdSevSnpDiceAttestationVerifier, EventLogVerifier};
 
 /// Verifies a signed endorsement against a reference value.
 ///

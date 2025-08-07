@@ -14,14 +14,10 @@
 // limitations under the License.
 //
 
-use alloc::{
-    collections::BTreeMap,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{string::String, vec::Vec};
 
 use jwt::Token;
-use oak_attestation_verification::{decode_event_proto, policy::SESSION_BINDING_PUBLIC_KEY_ID};
+use oak_attestation_verification::{decode_event_proto, results::set_session_binding_public_key};
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -185,13 +181,10 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
         evidence: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
-        Ok(EventAttestationResults {
-            artifacts: BTreeMap::from([(
-                SESSION_BINDING_PUBLIC_KEY_ID.to_string(),
-                self.report(verification_time, evidence, endorsement)?
-                    .into_session_binding_public_key()?,
-            )]),
-        })
+        let report = self.report(verification_time, evidence, endorsement)?;
+        let mut results = EventAttestationResults { ..Default::default() };
+        set_session_binding_public_key(&mut results, &report.into_session_binding_public_key()?);
+        Ok(results)
     }
 }
 

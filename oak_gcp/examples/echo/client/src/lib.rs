@@ -21,7 +21,7 @@ use oak_attestation_gcp::{
     cosign::CosignReferenceValues, policy::ConfidentialSpacePolicy,
     CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
-use oak_attestation_verification::verifier::EventLogVerifier;
+use oak_attestation_verification::EventLogVerifier;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
