@@ -48,6 +48,7 @@ rust_library(
     crate_features = ["deny_sensitive_logging"],
     crate_name = "oak_functions_service",
     target_compatible_with = any_platform([
+        "//:aarch64-apple-setting",
         "//:x86_64-none-setting",
         "//:x86_64-linux-setting",  # Needed to run unit tests.
     ]),
