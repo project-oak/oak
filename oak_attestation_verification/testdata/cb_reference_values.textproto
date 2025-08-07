@@ -1,3 +1,8 @@
+# proto-file: third_party/oak/proto/attestation/reference_value.proto
+# proto-message: oak.attestation.v1.ReferenceValues
+#
+# Digest-based reference values for CB running on an AMD Milan machine.
+#
 cb {
   root_layer {
     amd_sev {
@@ -5,10 +10,13 @@ cb {
         skip {
         }
       }
-      min_tcb_version {
-        boot_loader: 4
-        snp: 24
-        microcode: 219
+      milan {
+        minimum {
+          boot_loader: 4
+          tee: 0
+          snp: 24
+          microcode: 219
+        }
       }
     }
   }
