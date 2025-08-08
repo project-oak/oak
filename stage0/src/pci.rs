@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Display, marker::PhantomData};
+use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
@@ -301,19 +301,35 @@ impl PciBus {
     }
 }
 
-pub fn init<P: Platform>(firmware: &mut dyn Firmware) -> Result<(), &'static str> {
+/// Location of the PCI resources on this machine.
+#[derive(Debug)]
+pub struct PciWindows {
+    // These are still memory addresses, but we use u32 here as they must be in 32-bit memory.
+    pub pci_window_32: Range<u32>,
+    pub pci_window_64: Range<u64>,
+}
+
+pub fn init<P: Platform>(firmware: &mut dyn Firmware) -> Result<Option<PciWindows>, &'static str> {
     // At this point we know nothing about the platform we're on, so we have to
     // rely on the legacy CAM to get the device ID of the first PCI root to
     // help us figure out on what kind of machine we are running.
     if let Some(mut bus) = PciBus::new::<P>(0)? {
         bus.init::<P>()?;
     }
+    // Recycle old values from add_pci_holes ACPI command; these will need to
+    // change.
+    let pci_windows = PciWindows {
+        pci_window_32: 0xE0000000u32..0xFEBFF000u32,
+        pci_window_64: 0x8000000000u64..0x10000000000u64,
+    };
+
+    log::info!("PCI: using windows {:?}", pci_windows);
     // Find out if there are any extra roots.
     let extra_roots = read_extra_roots(firmware)?;
     if extra_roots > 0 {
         log::debug!("{} extra root buses reported by VMM", extra_roots);
     }
-    Ok(())
+    Ok(Some(pci_windows))
 }
 
 fn read_extra_roots(firmware: &mut dyn Firmware) -> Result<u64, &'static str> {

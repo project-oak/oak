@@ -27,7 +27,7 @@ use crate::{
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::{read_pci_crs_allowlist, PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT},
+    pci::{read_pci_crs_allowlist, PciWindows, PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT},
 };
 
 const PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT: usize =
@@ -55,6 +55,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage2 {
         &self,
         files: &mut F,
         fwcfg: &mut FW,
+        _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage2 not tested; ACPI tables may be broken! Command: {:?}", self);

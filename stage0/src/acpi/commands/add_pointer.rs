@@ -25,7 +25,7 @@ use zerocopy::Immutable;
 use zerocopy::IntoBytes;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::{acpi::files::Files, fw_cfg::Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 /// COMMAND_ADD_POINTER - patch the table (originating from `dest_file`) at
 /// `offset`, by adding a pointer to the table originating from `src_file`.
@@ -77,6 +77,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPointer {
         &self,
         files: &mut F,
         _fwcfg: &mut FW,
+        _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let src_file_ptr = files.get_file(self.src_file())?.as_ptr();

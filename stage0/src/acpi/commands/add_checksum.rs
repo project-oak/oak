@@ -24,7 +24,7 @@ use sha2::Sha256;
 use zerocopy::{Immutable, IntoBytes};
 
 use super::{Invoke, Pad, RomfileName};
-use crate::{acpi::files::Files, fw_cfg::Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 /// COMMAND_ADD_CHECKSUM - calculate checksum of the range specified by `start`
 /// and `length` fields, and then add the value at `offset`.
@@ -85,6 +85,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddChecksum {
         &self,
         files: &mut F,
         _fwcfg: &mut FW,
+        _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;

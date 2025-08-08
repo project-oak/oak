@@ -31,6 +31,7 @@ use crate::{
         DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     fw_cfg::FwCfg,
+    pci::PciWindows,
     Madt, ZeroPage,
 };
 
@@ -116,6 +117,7 @@ pub fn setup_high_allocator(zero_page: &mut ZeroPage) -> Result<(), &'static str
 pub fn build_acpi_tables<P: crate::Platform>(
     fwcfg: &mut FwCfg<P>,
     acpi_digest: &mut Sha256,
+    pci_windows: Option<PciWindows>,
 ) -> Result<&'static Rsdp, &'static str> {
     let mut files = MemFiles::new(&LOW_MEMORY_ALLOCATOR, &HIGH_MEMORY_ALLOCATOR);
 
@@ -141,7 +143,7 @@ pub fn build_acpi_tables<P: crate::Platform>(
     };
 
     for command in commands {
-        command.invoke(&mut files, fwcfg, acpi_digest)?;
+        command.invoke(&mut files, fwcfg, pci_windows.as_ref(), acpi_digest)?;
     }
 
     // Strictly speaking we should search through the low memory to find the RSDP,
@@ -320,7 +322,7 @@ mod tests {
         );
 
         AddChecksum::new("test", 12, 0, 12)
-            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
             .expect("failed to compute checksum");
 
         assert_that!(
@@ -336,7 +338,12 @@ mod tests {
 
         // File does not exist.
         expect_that!(
-            AddChecksum::new("test", 12, 0, 12).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 12, 0, 12).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             err(anything())
         );
 
@@ -344,30 +351,55 @@ mod tests {
 
         // Offset past the end of file.
         expect_that!(
-            AddChecksum::new("test", 4, 0, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 4, 0, 3).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             err(anything())
         );
 
         // Start past the end of file.
         expect_that!(
-            AddChecksum::new("test", 3, 4, 1).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 3, 4, 1).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             err(anything())
         );
 
         // Offset would read beyond the file.
         expect_that!(
-            AddChecksum::new("test", 0, 3, 2).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 0, 3, 2).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             err(anything())
         );
 
         // Finally, a basic success test (although we don't check the result)
         expect_that!(
-            AddChecksum::new("test", 0, 1, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 0, 1, 3).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             ok(())
         );
 
         expect_that!(
-            AddChecksum::new("test", 3, 0, 3).invoke(&mut files, &mut TestFirmware, &mut digest),
+            AddChecksum::new("test", 3, 0, 3).invoke(
+                &mut files,
+                &mut TestFirmware,
+                None,
+                &mut digest
+            ),
             ok(())
         );
     }
@@ -385,7 +417,7 @@ mod tests {
 
         // Check 1: can we just write our own address?
         AddPointer::new("test", "test", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
             .expect("failed to add pointer");
 
         let expected = address.to_le_bytes();
@@ -397,7 +429,7 @@ mod tests {
 
         let expected = (address + offset).to_le_bytes();
         AddPointer::new("test", "test", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
 
@@ -407,7 +439,7 @@ mod tests {
         // Check 3: store a most definitely 32-bit address and see that it works.
         files.get_file_mut(c"test").unwrap().zeroize();
         AddPointer::new("test", "32bit", 0, 8)
-            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&address.to_le_bytes()[..])));
 
@@ -416,7 +448,7 @@ mod tests {
         files.get_file_mut(c"test").unwrap().zeroize();
         let expected: [u8; 8] = [0x00, 0x00, 0x00, 0x00, 0xDD, 0xCC, 0xBB, 0xAA];
         AddPointer::new("test", "32bit", 4, 4)
-            .invoke(&mut files, &mut TestFirmware, &mut digest)
+            .invoke(&mut files, &mut TestFirmware, None, &mut digest)
             .expect("failed to add pointer");
         expect_that!(files.get_file(c"test"), ok(eq(&expected[..])));
     }

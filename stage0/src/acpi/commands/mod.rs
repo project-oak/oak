@@ -17,7 +17,7 @@
 use sha2::Sha256;
 use strum::FromRepr;
 
-use crate::{acpi::files::Files, fw_cfg::Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 mod add_checksum;
 mod add_pci_holes;
@@ -63,6 +63,7 @@ pub trait Invoke<FW: Firmware, F: Files> {
         &self,
         files: &mut F,
         fwcfg: &mut FW,
+        pci_windows: Option<&PciWindows>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str>;
 }
@@ -154,6 +155,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
         &self,
         files: &mut F,
         fwcfg: &mut FW,
+        pci_windows: Option<&PciWindows>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
@@ -181,6 +183,6 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for RomfileCommand {
             Some(CommandTag::AddPciRootStage2) => unsafe { &self.body.pci_root_stage2 },
             _ => return Err("Invalid command tag in table-loader"),
         };
-        command.invoke(files, fwcfg, acpi_digest)
+        command.invoke(files, fwcfg, pci_windows, acpi_digest)
     }
 }

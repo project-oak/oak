@@ -24,7 +24,7 @@ use crate::{
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::read_pci_crs_allowlist,
+    pci::{read_pci_crs_allowlist, PciWindows},
 };
 
 pub const PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT: usize = 4;
@@ -67,6 +67,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
         &self,
         files: &mut F,
         fwcfg: &mut FW,
+        pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::warn!("AddPciRootStage1 untested; command: {:?}", self);
@@ -76,27 +77,27 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
             return Err("AddPciRootStage1: only bus 0 supported for now");
         }
 
-        // Use the same hardcoded values as ADD_PCI_HOLES, for now.
-        let data = crate::acpi::commands::add_pci_holes::populate_firmware_data()?;
+        let data = pci_windows.ok_or("no PCI holes for AddPciRootStage1 to add")?;
 
         file[self.pci32_start_offset as usize
-            ..(self.pci32_start_offset as usize + size_of_val(&data.pci_window_32.base))]
-            .copy_from_slice(&data.pci_window_32.base.to_le_bytes());
+            ..(self.pci32_start_offset as usize + size_of_val(&data.pci_window_32.start))]
+            .copy_from_slice(&data.pci_window_32.start.to_le_bytes());
         file[self.pci32_end_offset as usize
             ..(self.pci32_end_offset as usize + size_of_val(&data.pci_window_32.end))]
             .copy_from_slice(&data.pci_window_32.end.to_le_bytes());
 
-        if data.pci_window_64.base != 0 {
+        if data.pci_window_64.start != 0 {
+            let len = data.pci_window_64.end - data.pci_window_64.start;
             file[self.pci64_valid_offset as usize] = 1;
             file[self.pci64_start_offset as usize
-                ..(self.pci64_start_offset as usize + size_of_val(&data.pci_window_64.base))]
-                .copy_from_slice(&data.pci_window_64.base.to_le_bytes());
+                ..(self.pci64_start_offset as usize + size_of_val(&data.pci_window_64.start))]
+                .copy_from_slice(&data.pci_window_64.start.to_le_bytes());
             file[self.pci64_end_offset as usize
                 ..(self.pci64_end_offset as usize + size_of_val(&data.pci_window_64.end))]
                 .copy_from_slice(&data.pci_window_64.end.to_le_bytes());
             file[self.pci64_length_offset as usize
-                ..(self.pci64_length_offset as usize + size_of_val(&data.pci_window_64.len()))]
-                .copy_from_slice(&data.pci_window_64.len().to_le_bytes());
+                ..(self.pci64_length_offset as usize + size_of_val(&len))]
+                .copy_from_slice(&len.to_le_bytes());
         } else {
             file[self.pci64_valid_offset as usize] = 0;
         }

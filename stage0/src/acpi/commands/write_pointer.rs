@@ -22,7 +22,7 @@ use core::{
 use sha2::Sha256;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::{acpi::files::Files, fw_cfg::Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 /// COMMAND_WRITE_POINTER - write the fw_cfg file (originating from `dest_file`)
 /// at `offset`, by adding a pointer to `src_offset` within the table
@@ -56,6 +56,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for WritePointer {
         &self,
         _files: &mut F,
         _fwcfg: &mut FW,
+        _pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         log::debug!("{:?}", self);

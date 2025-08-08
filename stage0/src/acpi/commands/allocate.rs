@@ -27,6 +27,7 @@ use super::{Invoke, Pad, RomfileName};
 use crate::{
     acpi::{files::Files, Zone},
     fw_cfg::Firmware,
+    pci::PciWindows,
 };
 
 /// COMMAND_ALLOCATE - allocate a table from `file` subject to `align` alignment
@@ -73,6 +74,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for Allocate {
         &self,
         files: &mut F,
         fwcfg: &mut FW,
+        _pci_windows: Option<&PciWindows>,
         acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();

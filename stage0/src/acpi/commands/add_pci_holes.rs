@@ -23,7 +23,7 @@ use core::{
 use sha2::Sha256;
 
 use super::{Invoke, Pad, RomfileName};
-use crate::{acpi::files::Files, fw_cfg::Firmware};
+use crate::{acpi::files::Files, fw_cfg::Firmware, pci::PciWindows};
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -39,32 +39,6 @@ pub struct AddPciHoles {
 }
 static_assertions::assert_eq_size!(AddPciHoles, Pad);
 
-pub(crate) struct Window<T> {
-    pub base: T,
-    pub end: T,
-}
-
-impl<T: core::ops::Sub<Output = T> + Copy> Window<T> {
-    pub(crate) fn len(&self) -> T {
-        self.end - self.base
-    }
-}
-
-pub(crate) struct FirmwareData {
-    pub pci_window_32: Window<u32>,
-    pub pci_window_64: Window<u64>,
-}
-
-pub(crate) fn populate_firmware_data() -> Result<FirmwareData, &'static str> {
-    // There may be a way how to dynamically determine these values, but for now,
-    // hard-code the expected values as it's unlikely they will ever change.
-
-    Ok(FirmwareData {
-        pci_window_32: Window { base: 0xE0000000u32, end: 0xFEBFF000u32 },
-        pci_window_64: Window { base: 0x8000000000u64, end: 0x10000000000u64 },
-    })
-}
-
 impl AddPciHoles {
     pub fn file(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.file).unwrap()
@@ -76,6 +50,7 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciHoles {
         &self,
         files: &mut F,
         _fwcfg: &mut FW,
+        pci_windows: Option<&PciWindows>,
         _acpi_digest: &mut Sha256,
     ) -> Result<(), &'static str> {
         let file = files.get_file_mut(self.file())?;
@@ -97,28 +72,29 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciHoles {
             return Err("ADD_PCI_HOLES invalid; offsets would overflow file");
         }
 
-        let data: FirmwareData = populate_firmware_data()?;
+        let data = pci_windows.ok_or("no PCI holes for AddPciHoles to add")?;
 
         // 32 bit
         file[self.pci_start_offset_32 as usize
-            ..(self.pci_start_offset_32 as usize + size_of_val(&data.pci_window_32.base))]
-            .copy_from_slice(&data.pci_window_32.base.to_le_bytes());
+            ..(self.pci_start_offset_32 as usize + size_of_val(&data.pci_window_32.start))]
+            .copy_from_slice(&data.pci_window_32.start.to_le_bytes());
         file[self.pci_end_offset_32 as usize
             ..(self.pci_end_offset_32 as usize + size_of_val(&data.pci_window_32.end))]
             .copy_from_slice(&data.pci_window_32.end.to_le_bytes());
 
         // 64-bit
-        if data.pci_window_64.base != 0 {
+        if data.pci_window_64.start != 0 {
+            let len = data.pci_window_64.end - data.pci_window_64.start;
             file[self.pci_valid_offset_64 as usize] = 1;
             file[self.pci_start_offset_64 as usize
-                ..(self.pci_start_offset_64 as usize + size_of_val(&data.pci_window_64.base))]
-                .copy_from_slice(&data.pci_window_64.base.to_le_bytes());
+                ..(self.pci_start_offset_64 as usize + size_of_val(&data.pci_window_64.start))]
+                .copy_from_slice(&data.pci_window_64.start.to_le_bytes());
             file[self.pci_end_offset_64 as usize
                 ..(self.pci_end_offset_64 as usize + size_of_val(&data.pci_window_64.end))]
                 .copy_from_slice(&data.pci_window_64.end.to_le_bytes());
             file[self.pci_length_offset_64 as usize
-                ..(self.pci_length_offset_64 as usize + size_of_val(&data.pci_window_64.len()))]
-                .copy_from_slice(&data.pci_window_64.len().to_le_bytes());
+                ..(self.pci_length_offset_64 as usize + size_of_val(&len))]
+                .copy_from_slice(&len.to_le_bytes());
         } else {
             file[self.pci_valid_offset_64 as usize] = 0;
         }
