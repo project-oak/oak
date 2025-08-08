@@ -191,7 +191,15 @@ fn print_confidential_space_attestation_report(
         }
     }
     print_token_report(indent, &report.token_report);
-    // TODO: b/434898491 - Print workload endorsement verification
+    print_indented!(indent, "📦 Workload endorsement:");
+    {
+        let indent = indent + 1;
+        match &report.workload_endorsement_verification {
+            None => print_indented!(indent, "🤷 not present"),
+            Some(Err(err)) => print_indented!(indent, "❌ failed to verify: {}", err),
+            Some(Ok(())) => print_indented!(indent, "✅ verified successfully"),
+        }
+    }
 }
 
 fn print_token_report(indent: usize, report: &AttestationTokenVerificationReport) {
