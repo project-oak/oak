@@ -211,7 +211,7 @@ impl AttestationReportData {
         } else if self.cpuid_fam_id == 0x19 {
             if self.cpuid_mod_id == 0x01 {
                 AmdProduct::Milan
-            } else if self.cpuid_mod_id == 0x02 {
+            } else if self.cpuid_mod_id == 0x02 || self.cpuid_mod_id == 0x11 {
                 AmdProduct::Genoa
             } else {
                 AmdProduct::Unsupported
