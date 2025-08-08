@@ -216,7 +216,9 @@
 
                 EOF
               '';
-              packages = [ ];
+              packages = [
+                pkgs.terraform
+              ];
               inputsFrom = [
                 containers
                 rust

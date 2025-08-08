@@ -43,109 +43,17 @@ reasons:
   - e.g. a quantum computer is constructed that allows brute forcing inputs to
     the sha2-256 to find the pre-image
 
-## Testing locally
+## Testing
+
+The following script builds the latest version of the binary and Container image
+and deploys it to GCP using Terraform.
+
+Note this is not a production set up and it is only used for short-lived
+deployments, so we don't check in the terraform state files into this
+repository.
 
 ```bash
-gcloud auth configure-docker europe-west1-docker.pkg.dev
-```
-
-```bash
-IMAGE_URL='europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2'
-bazel build //ctf_sha2:image.digest
-gcrane push ./bazel-bin/ctf_sha2/image "${IMAGE_URL}:latest"
-```
-
-Prints various lines, ending with
-
-```bash
-europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2@sha256:74e00884496c802368a8f4da38605833bc00b97f33e014806a9e68f125a57e90
-```
-
-Then copy paste the last line into the following:
-
-```bash
-docker run 'europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2@sha256:74e00884496c802368a8f4da38605833bc00b97f33e014806a9e68f125a57e90'
-```
-
-## Deploying
-
-### Push Image
-
-```bash
-bazel run ctf_sha2:image_push
-```
-
-(the above also rebuilds the image if necessary)
-
-or
-
-```bash
-IMAGE_URL='europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2'
-bazel build //ctf_sha2:image.digest
-gcrane push ./bazel-bin/ctf_sha2/image ${IMAGE_URL}
-IMAGE_DIGEST="${IMAGE_URL}@$(cat ./bazel-bin/ctf_sha2/image.json.sha256)"
-```
-
-### Create Instance (First Time)
-
-```bash
-bazel run ctf_sha2:instance_create
-```
-
-or
-
-```bash
-gcloud compute instances create ctf-sha2-test \
-    --shielded-secure-boot \
-    --confidential-compute-type=TDX \
-    --image-project=confidential-space-images \
-    --image-family=confidential-space \
-    --maintenance-policy=TERMINATE \
-    --scopes=cloud-platform \
-    --zone=us-west1-b \
-    --metadata="^~^tee-image-reference=${IMAGE_DIGEST}~tee-container-log-redirect=true"
-```
-
-### Update Instance Metadata (Subsequent Times)
-
-Note: this does not restart the instance, it just updates the metadata so it can
-be run with a different configuration the next time it is (re)started.
-
-```bash
-bazel run ctf_sha2:instance_update
-```
-
-or
-
-```bash
-gcloud compute instances add-metadata ctf-sha2-test \
-    --zone=us-west1-b \
-    --metadata="^~^tee-image-reference=${IMAGE_DIGEST}~tee-container-log-redirect=true"
-```
-
-### Start Instance (short-lived)
-
-```bash
-bazel run ctf_sha2:instance_start
-```
-
-or
-
-```bash
-gcloud compute instances start ctf-sha2-test \
-    --zone=us-west1-b
-```
-
-### Restart Instance (long-lived)
-
-```bash
-bazel run ctf_sha2:instance_reset
-```
-
-or
-
-```bash
-gcloud compute instances reset ctf-sha2-test \
+./ctf_sha2/deploy.sh
 ```
 
 ### Inspect Logs

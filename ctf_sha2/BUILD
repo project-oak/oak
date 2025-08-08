@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -54,68 +53,8 @@ oci_image(
     tars = [":tar"],
 )
 
-# The following rules are used to deploy the container image to GCE.
-# See ctf_sha2/README.md for more details.
-
-IMAGE_URL = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2"
-
-INSTANCE_NAME = "ctf-sha2-test"
-
-ZONE = "us-west1-b"
-
-sh_binary(
+oci_push(
     name = "image_push",
-    srcs = ["image_push.sh"],
-    args = ["$(location :image)"],
-    data = [":image"],
-    env = {
-        "IMAGE_URL": IMAGE_URL,
-    },
-    tags = ["manual"],
-)
-
-sh_binary(
-    name = "instance_create",
-    srcs = ["instance_create.sh"],
-    args = ["$(location :image.json.sha256)"],
-    data = [":image.json.sha256"],
-    env = {
-        "IMAGE_URL": IMAGE_URL,
-        "INSTANCE_NAME": INSTANCE_NAME,
-        "ZONE": ZONE,
-    },
-    tags = ["manual"],
-)
-
-sh_binary(
-    name = "instance_update",
-    srcs = ["instance_update.sh"],
-    args = ["$(location :image.json.sha256)"],
-    data = [":image.json.sha256"],
-    env = {
-        "IMAGE_URL": IMAGE_URL,
-        "INSTANCE_NAME": INSTANCE_NAME,
-        "ZONE": ZONE,
-    },
-    tags = ["manual"],
-)
-
-sh_binary(
-    name = "instance_reset",
-    srcs = ["instance_reset.sh"],
-    env = {
-        "INSTANCE_NAME": INSTANCE_NAME,
-        "ZONE": ZONE,
-    },
-    tags = ["manual"],
-)
-
-sh_binary(
-    name = "instance_start",
-    srcs = ["instance_start.sh"],
-    env = {
-        "INSTANCE_NAME": INSTANCE_NAME,
-        "ZONE": ZONE,
-    },
-    tags = ["manual"],
+    image = ":image",
+    repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2",
 )

@@ -137,3 +137,16 @@ toolchain/toolchain.tar.bz2
 
 # Developer-local justfile
 justfile.local
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# tf lock file
+.terraform.lock.hcl
+
+terraform.tfstate
+terraform.tfstate.backup
