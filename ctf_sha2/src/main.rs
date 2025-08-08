@@ -13,9 +13,14 @@
 // limitations under the License.
 
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
-use sha2::{Digest, Sha512};
+use sha2::{Digest, Sha256};
 
 fn assert_crypto_rng<T: CryptoRng>(_rng: &T) {}
+
+// Unique audience for this binary, to prevent confused deputy attacks.
+// Randomly generated with
+// printf "z%020lu\n" "0x$(openssl rand -hex 8)"
+const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 
 fn main() {
     // Initialize an empty byte array which will be filled with the secret flag.
@@ -29,9 +34,23 @@ fn main() {
     assert_crypto_rng(&rng);
     rng.fill_bytes(&mut flag);
 
-    let mut hasher = Sha512::new();
+    let mut hasher = Sha256::new();
     hasher.update(flag);
-    let digest = hasher.finalize();
+    let flag_digest = hasher.finalize();
 
-    eprintln!("{:x}", digest);
+    let flag_digest_string = format!("{flag_digest:x}");
+
+    eprintln!("flag_digest");
+    eprintln!("{flag_digest_string}");
+
+    eprintln!();
+
+    let attestation_token = oak_attestation_gcp::attestation::request_attestation_token(
+        OAK_CTF_SHA2_AUDIENCE,
+        &flag_digest_string,
+    )
+    .expect("could not request attestation token");
+
+    eprintln!("attestation token");
+    eprintln!("{attestation_token}");
 }

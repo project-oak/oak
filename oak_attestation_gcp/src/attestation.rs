@@ -56,6 +56,8 @@ pub fn read_confidential_space_attestation() -> Result<String, AttestationReques
 /// Requests a Confidential Space attestation token from the Confidential Space
 /// TEE.
 ///
+/// `nonce` must be between 8 and 88 bytes long (inclusive)[^1].
+///
 /// The token can be used to prove to clients of a container about the claims
 /// that are upheld by the Confidential Space TEE. For more information about
 /// the supported claims and the format see Google Cloud documentation[^1].
