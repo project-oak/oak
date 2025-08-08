@@ -304,6 +304,11 @@ impl ZeroPage {
         );
     }
 
+    pub fn find_e820_entry(&self, addr: usize) -> Option<&BootE820Entry> {
+        //extern crate std; std::eprintln!("entries: {:?}", self.e820_table());
+        self.e820_table().iter().find(|&entry| entry.addr() <= addr && entry.end() > addr)
+    }
+
     /// Updates the physical address of the ACPI RSDP table in the zero page.
     pub fn set_acpi_rsdp_addr(&mut self, addr: PhysAddr) {
         self.inner.acpi_rsdp_addr = addr.as_u64();

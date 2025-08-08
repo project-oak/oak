@@ -18,6 +18,7 @@
 #![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
+#![feature(let_chains)]
 #![allow(static_mut_refs)]
 
 extern crate alloc;
@@ -174,7 +175,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     // Look into PCI first as we need to know where the PCI memory ranges are before
     // we build the ACPI tables.
-    let pci_windows = pci::init::<P>(&mut fwcfg).unwrap();
+    let pci_windows = pci::init::<P>(&mut fwcfg, &mut zero_page).unwrap();
 
     let mut acpi_digest = Sha256::default();
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest, pci_windows).unwrap();

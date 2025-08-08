@@ -19,7 +19,7 @@ use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::{fw_cfg::Firmware, hal::Port, Platform};
+use crate::{fw_cfg::Firmware, hal::Port, Platform, ZeroPage};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, FromBytes, IntoBytes)]
@@ -33,6 +33,8 @@ pub const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 
 const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
 const EXTRA_ROOTS_FILE_NAME: &CStr = c"etc/extra-pci-roots";
+const PCI_MMIO32_HOLE_BASE_FILE_NAME: &CStr = c"etc/pci-mmio32-hole-base";
+const MMCFG_MEM_RESERVATION_FILE: &CStr = c"etc/mmcfg_mem_reservation";
 
 const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
 const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
@@ -309,27 +311,187 @@ pub struct PciWindows {
     pub pci_window_64: Range<u64>,
 }
 
-pub fn init<P: Platform>(firmware: &mut dyn Firmware) -> Result<Option<PciWindows>, &'static str> {
-    // At this point we know nothing about the platform we're on, so we have to
-    // rely on the legacy CAM to get the device ID of the first PCI root to
-    // help us figure out on what kind of machine we are running.
-    if let Some(mut bus) = PciBus::new::<P>(0)? {
-        bus.init::<P>()?;
+trait Machine {
+    const PCI_VENDOR_ID: u16;
+    const PCI_DEVICE_ID: u16;
+
+    fn mmio32_hole(
+        firmware: &mut dyn Firmware,
+        zero_page: &ZeroPage,
+    ) -> Result<Range<u32>, &'static str>;
+}
+
+struct I440fx {}
+
+impl Machine for I440fx {
+    const PCI_VENDOR_ID: u16 = 0x8086;
+    const PCI_DEVICE_ID: u16 = 0x1237;
+
+    fn mmio32_hole(
+        firmware: &mut dyn Firmware,
+        zero_page: &ZeroPage,
+    ) -> Result<Range<u32>, &'static str> {
+        let mut mmio32_hole_base = firmware
+            .find(PCI_MMIO32_HOLE_BASE_FILE_NAME)
+            .and_then(|file| {
+                // The VMM is providing us the start of the hole.
+                if file.size() > core::mem::size_of::<u64>() {
+                    return None;
+                }
+                let mut hole: u64 = 0;
+                // reading can fail, so now we will have an Option<Result> so that we can
+                // propagate the error
+                Some(firmware.read_file(&file, hole.as_mut_bytes()).and_then(|_| {
+                    hole.try_into().map_err(|_| "VMM reported MMIO hole did not fit in u32")
+                }))
+            })
+            .unwrap_or_else(|| {
+                // No base from the VMM. Try to guess reasonable defaults; for this we look if
+                // some well-known memory addresses are backed by real RAM or not. If not,
+                // that's where we guess the hole will be.
+                //
+                // This mirrors what SeaBIOS is doing:
+                // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L470
+                // In EDK2, the magic happens here:
+                // https://github.com/tianocore/edk2/blob/b58ce4c226768ced972bd49886e20c5ae6dfd8f0/OvmfPkg/Library/PlatformInitLib/Platform.c#L186
+                // with `Uc32Base` determined here:
+                // https://github.com/tianocore/edk2/blob/b58ce4c226768ced972bd49886e20c5ae6dfd8f0/OvmfPkg/Library/PlatformInitLib/MemDetect.c#L84
+                //
+                // SeaBIOS/EDK2 keep track of the "low" and "high" memory separately. We don't,
+                // but we have a full e820 map to check whether the addresses are backed by real
+                // memory or not.
+                if zero_page.find_e820_entry(0x8000_0000).is_none() {
+                    return Ok(0x8000_0000);
+                }
+                if zero_page.find_e820_entry(0xC000_0000).is_none() {
+                    return Ok(0xC000_0000);
+                }
+                // We have no idea where the hole should go :(
+                Err("could not find memory region for 32-bit PCI MMIO hole")
+            })?;
+
+        if let Some(file) = firmware.find(MMCFG_MEM_RESERVATION_FILE)
+            && file.size() <= core::mem::size_of::<u64>()
+        {
+            let mut should_reserve: u64 = 0;
+            firmware.read_file(&file, should_reserve.as_mut_bytes())?;
+            if should_reserve == 1 {
+                // Bump the base by 256 MoB
+                mmio32_hole_base += 0x10000000;
+            }
+        }
+
+        // EDK2 code:
+        // https://github.com/tianocore/edk2/blob/b58ce4c226768ced972bd49886e20c5ae6dfd8f0/OvmfPkg/Library/PlatformInitLib/Platform.c#L187 (defined ad 0xFC00_0000)
+        // SeaBIOS code:
+        // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L51 (defined at 0xFEC0_0000)
+        // For now we choose the lower of the two.
+        let mmio32_hole_end = 0xFC00_0000;
+
+        Ok(mmio32_hole_base..mmio32_hole_end)
     }
+}
+
+struct Q35 {}
+
+impl Machine for Q35 {
+    const PCI_VENDOR_ID: u16 = 0x8086;
+    const PCI_DEVICE_ID: u16 = 0x29C0;
+
+    fn mmio32_hole(
+        _firmware: &mut dyn Firmware,
+        _zero_page: &ZeroPage,
+    ) -> Result<Range<u32>, &'static str> {
+        // SeaBIOS: PCI EXBAR start is hardcoded to 0xB000_0000 and size is 256 MiB:
+        // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/dev-q35.h#L11
+        // The PCI memory starts just past that (at 0xC000_0000, the 3G mark).
+        // PCI memory end is hardcoded, same constant as with 440fx above.
+        //
+        // EDK2:
+        // Uc32Base and Uc32Size determined here:
+        // https://github.com/tianocore/edk2/blob/b58ce4c226768ced972bd49886e20c5ae6dfd8f0/OvmfPkg/Library/PlatformInitLib/MemDetect.c#L84
+        // PCIe base address fixed at build to 0xE000_0000:
+        // https://github.com/tianocore/edk2/blob/8d984e6a5742220d2b28bd85121000136d820fcb/OvmfPkg/OvmfPkgX64.dsc#L646
+        //
+        // Interestingly enough this means that the PCI MMIO and MMCONFIG regions are in
+        // effect flipped for SeaBIOS and EDK2.
+
+        // SeaBIOS memory layout (starts at 2.75 GiB):
+        // [0xB000_0000, 0xC000_0000) - 256 MiB, PCI EXBAR
+        // [0xC000_0000, 0xFC00_0000) - 960 MiB, PCI MMIO
+        // [0xFC00_0000, 0xFFFF_FFFF) -  64 MiB, IO-APIC, HPET, LAPIC etc
+        //
+        // EDK2 memory layout:
+        // [Uc32Base, 0xE000_0000) - PCI MMIO
+        // [0xE000_0000, 0xF000_0000) - 256 MiB, MMCONFIG
+        // [0xF000_0000, 0xFC00_0000) - 192 MiB, unused
+        // [0xFC00_0000, 0xFFFF_FFFF) -  64 MiB, IO-APIC, HPET, LAPIC etc
+
+        // For now we choose a hybrid approach. PCI MMIO will start at 0xB000_0000, the
+        // 3G mark. This should always be unused with QEMU.
+        let mmio32_hole_start = 0xB000_0000;
+        // The end will be at 0xE000_0000, similar to EDK2. We will put MMCONFIG after
+        // that, similar to EDK2. This leaves 768 MiB for the PCI MMIO memory.
+        let mmio32_hole_end = 0xE000_0000;
+
+        Ok(mmio32_hole_start..mmio32_hole_end)
+    }
+}
+
+fn init_machine<P: Platform, M: Machine>(
+    mut root_bus: PciBus,
+    firmware: &mut dyn Firmware,
+    zero_page: &mut ZeroPage,
+) -> Result<Option<PciWindows>, &'static str> {
+    // Determine the PCI holes. How this is done is unfortunately extremely clunky
+    // and machine-specific.
+    let mmio32_hole = M::mmio32_hole(firmware, zero_page)?;
+
     // Recycle old values from add_pci_holes ACPI command; these will need to
     // change.
-    let pci_windows = PciWindows {
-        pci_window_32: 0xE0000000u32..0xFEBFF000u32,
-        pci_window_64: 0x8000000000u64..0x10000000000u64,
-    };
+    let mmio64_hole = 0x8000000000u64..0x10000000000u64;
+    let pci_windows = PciWindows { pci_window_32: mmio32_hole, pci_window_64: mmio64_hole };
 
     log::info!("PCI: using windows {:?}", pci_windows);
+
+    root_bus.init::<P>()?;
+
     // Find out if there are any extra roots.
     let extra_roots = read_extra_roots(firmware)?;
     if extra_roots > 0 {
         log::debug!("{} extra root buses reported by VMM", extra_roots);
     }
     Ok(Some(pci_windows))
+}
+
+pub fn init<P: Platform>(
+    firmware: &mut dyn Firmware,
+    zero_page: &mut ZeroPage,
+) -> Result<Option<PciWindows>, &'static str> {
+    // At this point we know nothing about the platform we're on, so we have to
+    // rely on the legacy CAM to get the device ID of the first PCI root to
+    // help us figure out on what kind of machine we are running.
+    let root_bus = match PciBus::new::<P>(0)? {
+        Some(bus) => bus,
+        None => return Ok(None),
+    };
+
+    match root_bus.root.vendor_device_id::<P>()? {
+        (I440fx::PCI_VENDOR_ID, I440fx::PCI_DEVICE_ID) => {
+            init_machine::<P, I440fx>(root_bus, firmware, zero_page)
+        }
+        (Q35::PCI_VENDOR_ID, Q35::PCI_DEVICE_ID) => {
+            init_machine::<P, Q35>(root_bus, firmware, zero_page)
+        }
+        (vendor_id, device_id) => {
+            log::error!(
+                "Unknown PCI root device: {:04x}:{:04x} -- will not initialize PCI bus",
+                vendor_id,
+                device_id
+            );
+            Ok(None)
+        }
+    }
 }
 
 fn read_extra_roots(firmware: &mut dyn Firmware) -> Result<u64, &'static str> {
@@ -370,6 +532,7 @@ mod tests {
     use std::{collections::BTreeMap, ffi::CString};
 
     use googletest::prelude::*;
+    use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 
     use super::*;
 
@@ -440,5 +603,63 @@ mod tests {
         );
 
         assert_that!(read_pci_crs_allowlist(&mut firmware), err(anything()));
+    }
+
+    #[googletest::test]
+    fn pc_hole_from_fwcfg() {
+        let mut firmware = TestFirmware::default();
+        let zero_page = ZeroPage::new();
+
+        firmware.files.insert(
+            PCI_MMIO32_HOLE_BASE_FILE_NAME.to_owned(),
+            Box::new(0x1234_0000u64.to_le_bytes()),
+        );
+
+        // We don't really test for the end right now; as long as it's after the start,
+        // we're fine.
+        assert_that!(
+            I440fx::mmio32_hole(&mut firmware, &zero_page),
+            ok(all!(field!(&Range.start, 0x1234_0000), field!(&Range.end, gt(0x1234_0000))))
+        );
+    }
+
+    #[googletest::test]
+    fn pc_hole_from_low_memory() {
+        let mut firmware = TestFirmware::default();
+        let mut zero_page = ZeroPage::new();
+        // 32 MiB of memory. Welcome to the 90s!
+        zero_page.insert_e820_entry(BootE820Entry::new(0x0, 0x200_0000, E820EntryType::RAM));
+        // the hole should be at the 2 GiB mark
+        assert_that!(
+            I440fx::mmio32_hole(&mut firmware, &zero_page),
+            ok(all!(field!(&Range.start, 0x8000_0000), field!(&Range.end, gt(0x8000_0000))))
+        );
+    }
+
+    #[googletest::test]
+    fn pc_hole_from_high_memory() {
+        let mut firmware = TestFirmware::default();
+        let mut zero_page = ZeroPage::new();
+        // 2.5 GiB of memory. Welcome to the 00s! This guarantees we cover the 2GiB
+        // mark, but don't fill the full 3G space.
+        zero_page.insert_e820_entry(BootE820Entry::new(0x0, 0xA000_0000, E820EntryType::RAM));
+        // the hole should now be at 3 GiB mark
+        assert_that!(
+            I440fx::mmio32_hole(&mut firmware, &zero_page),
+            ok(all!(field!(&Range.start, 0xC000_0000), field!(&Range.end, gt(0xC000_0000))))
+        );
+    }
+    #[googletest::test]
+    fn q35_hole() {
+        // Not much to test, besides there being a hole.
+        let mut firmware = TestFirmware::default();
+        let zero_page = ZeroPage::new();
+        assert_that!(
+            Q35::mmio32_hole(&mut firmware, &zero_page),
+            ok(all!(
+                field!(&Range.start, gt(0x8000_0000)), // higher than 2 GiB
+                field!(&Range.end, le(0xFE00_0000))    // less than the reserved location
+            ))
+        )
     }
 }
