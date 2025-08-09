@@ -83,7 +83,8 @@ pub type RawTcbVersion = [u8; 8];
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
-    /// This implementation is based on version 3.
+    /// This implementation is based on version 5 and is backwards compatible
+    /// down to version 3. Versions 1 and 2 can be parsed but won't validate.
     pub version: u32,
     /// The guest security version number.
     pub guest_svn: u32,
@@ -182,6 +183,7 @@ static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
 /// The AMD EPYC CPU model.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AmdProduct {
+    /// Any model that does not support SEV-SNP, or is not explicitly listed.
     Unsupported = 0,
     Milan = 1,
     Genoa = 2,
@@ -197,12 +199,10 @@ impl AttestationReportData {
         PlatformInfo::from_bits_truncate(self.platform_info)
     }
 
-    /// Determines the AMD CPU model from the attestation report.
+    /// Determines the AMD CPU model from the attestation report. Source:
+    /// https://github.com/LIT-Protocol/sev-snp-utils/blob/2db12052f1daa0b240594cb2e24d73c66d3379a5/src/guest/measure/vcpu_types.rs#L71
     pub fn get_product(&self) -> AmdProduct {
         if self.cpuid_fam_id == 0x1a {
-            // TODO: b/396666645 - Clarify CPU IDs.
-            // The model value 2 for Turin contradicts the AMD spec
-            // and https://en.wikichip.org/wiki/amd/cpuid#Family_26_.281Ah.29.
             if self.cpuid_mod_id == 0x02 {
                 AmdProduct::Turin
             } else {
@@ -211,16 +211,11 @@ impl AttestationReportData {
         } else if self.cpuid_fam_id == 0x19 {
             if self.cpuid_mod_id == 0x01 {
                 AmdProduct::Milan
-            } else if self.cpuid_mod_id == 0x02 || self.cpuid_mod_id == 0x11 {
+            } else if self.cpuid_mod_id == 0x11 {
                 AmdProduct::Genoa
             } else {
                 AmdProduct::Unsupported
             }
-        } else if self.cpuid_fam_id == 0x00 && self.cpuid_mod_id == 0x00 {
-            // TODO: b/434633982 - The Genoa attestation example still has
-            // attestation report V2. Update the example, then error out
-            // here whenever CPU family and model are not set.
-            AmdProduct::Genoa
         } else {
             AmdProduct::Unsupported
         }
@@ -294,6 +289,12 @@ impl AttestationReportData {
     /// Checks that fields with specific expected values or ranges are valid and
     /// the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
+        // We require attestation report version at least three since we
+        // rely on the availability of CPU ID. Version zero must go through
+        // since it represents the fake/insecure case.
+        if self.version == 1 || self.version == 2 {
+            return Err("outdated attestation report version - upgrade firmware");
+        }
         self.policy.validate()?;
         if self._reserved_4 != 0 {
             return Err("nonzero value in _reserved_4");

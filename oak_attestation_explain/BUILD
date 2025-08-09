@@ -40,7 +40,6 @@ rust_library(
 rust_test_suite(
     name = "oak_attestation_explain_integration_tests",
     srcs = glob(["tests/**/*.rs"]),
-    compile_data = glob(["testdata/**"]),
     deps = [
         "//oak_attestation_explain",
         "//oak_attestation_verification",

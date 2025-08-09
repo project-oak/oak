@@ -18,20 +18,16 @@
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
 use oak_attestation_verification::extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{
-    extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData, ReferenceValues,
+    extracted_evidence::EvidenceValues, OakRestrictedKernelData,
 };
-use prost::Message;
-use test_util::create_reference_values_for_extracted_evidence;
-
-const RK_EVIDENCE: &[u8] = include_bytes!("../testdata/rk_evidence.binarypb").as_slice();
+use test_util::{
+    attestation_data::AttestationData, create_reference_values_for_extracted_evidence,
+};
 
 #[test]
-fn produces_expected_explaination() {
-    let mut extracted_evidence = {
-        // TODO: b/334900893 - Generate extracted evidence programatically.
-        let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
-        extract_evidence(&evidence).expect("could not extract evidence")
-    };
+fn produces_expected_explanation() {
+    let d = AttestationData::load_milan_rk_staging();
+    let mut extracted_evidence = extract_evidence(&d.evidence).expect("could not extract evidence");
     match extracted_evidence.evidence_values.take() {
         Some(EvidenceValues::OakRestrictedKernel(restricted_kernel_evidence)) => {
             assert_eq!(
@@ -49,29 +45,29 @@ fn produces_expected_explaination() {
                         "The attestation is rooted in an AMD SEV-SNP TEE.
 
 Attestations identifying the firmware captured in the evidence can be found here:
-https://search.sigstore.dev/?hash=33d5453b09e16ed0d6deb7c9f076b66b92a1b472d89534034717143554f6746d
+https://search.sigstore.dev/?hash=30fa578f7781cdffc9f5c52ecfab95fe09e067583660c32d17ef3d18f9f33d87
 
-ⓘ The firmware attestation digest is the SHA2-256 hash of the SHA2-384 hash of the initial memory state taken by the AMD SoC. The original SHA2-384 hash of the initial memory is: SHA2-384:6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a; it is listed as the 'initial_measurement' in the evidence of this layer.
+ⓘ The firmware attestation digest is the SHA2-256 hash of the SHA2-384 hash of the initial memory state taken by the AMD SoC. The original SHA2-384 hash of the initial memory is: SHA2-384:0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20; it is listed as the 'initial_measurement' in the evidence of this layer.
 
 The evidence describing this layer is outlined below.
 
 sev_snp:
   current_tcb:
-    boot_loader: 3
+    boot_loader: 4
     fmc: 0
-    microcode: 209
-    snp: 20
+    microcode: 219
+    snp: 24
     tee: 0
   debug: false
-  hardware_id: 42e1f92660cc2bf7d996a4db5ebeafe83361eac6f96db350a70c7e07115fad60a85f5ae98b8fb87ec76ce2a3f81ad70df8aebbde1c3c21797897a04b616235ef
-  initial_measurement: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
-  product: 2
-  report_data: 8fc67415b81201f189f2d19cbe57aa66f7282916b5b9e6cca83ab8688f4499d30000000000000000000000000000000000000000000000000000000000000000
+  hardware_id: 6c65aee8a139e984657ee8bfe50cbdc39067e3a99da09bba4e948236c91df95baa7bbd233fa56b101b90d136c7a78091013a7ce62c31fc25be1c6ca87da31a5a
+  initial_measurement: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
+  product: 1
+  report_data: 3e25197771c57f52a65c7bc55aada68f667d3a85f8b3fb0c15493ce0ae4e68b60000000000000000000000000000000000000000000000000000000000000000
   reported_tcb:
-    boot_loader: 3
+    boot_loader: 4
     fmc: 0
-    microcode: 209
-    snp: 20
+    microcode: 219
+    snp: 24
     tee: 0
   vmpl: 0
 "
@@ -79,22 +75,22 @@ sev_snp:
                     assert_eq!(
                         kernel_layer.description().unwrap(),
 "Attestations identifying the binaries captured in the evidence in this layer can be found as outlined below.
-Kernel: https://search.sigstore.dev/?hash=ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
-Initial Ramdisk: https://search.sigstore.dev/?hash=daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+Kernel: https://search.sigstore.dev/?hash=3e7c371858f2bd9c032894694bd5bb4893f2403ce8a0bcf73c07af3ef6a35a15
+Initial Ramdisk: https://search.sigstore.dev/?hash=15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 
 The evidence describing the kernel layer is outlined below.
 
 acpi:
-  sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
+  sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
 init_ram_fs:
-  sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+  sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 kernel_image:
-  sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+  sha2_256: 3e7c371858f2bd9c032894694bd5bb4893f2403ce8a0bcf73c07af3ef6a35a15
 kernel_raw_cmd_line: console=ttyS0
 kernel_setup_data:
   sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
 memory_map:
-  sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
+  sha2_256: 79ae6053b1afd95db05643d3676af49fa7ea30c5b3579d090be9a18ae7030308
 "
                     );
                     assert_eq!(
@@ -102,7 +98,7 @@ memory_map:
                         "The evidence describing the application is outlined below.
 
 binary:
-  sha2_256: 7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb
+  sha2_256: 41e322b8cabb0890f9100b58886fa28b0eba7c9514b5e73f292d2900fe4c9eae
 config: {}
 "
                     );
@@ -116,22 +112,18 @@ config: {}
 
 #[test]
 fn produces_expected_reference_values_explaination() {
-    let reference_values: ReferenceValues = {
-        let extracted_evidence = {
-            let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
-            extract_evidence(&evidence).expect("could not extract evidence")
-        };
-        create_reference_values_for_extracted_evidence(extracted_evidence)
-    };
+    let d = AttestationData::load_milan_rk_staging();
+    let extracted_evidence = extract_evidence(&d.evidence).expect("could not extract evidence");
+    let reference_values = create_reference_values_for_extracted_evidence(extracted_evidence);
 
     assert_eq!(
         reference_values.description().expect("could not get reference values description"),
-"_____ Root Layer _____
+  "_____ Root Layer _____
 
 The attestation must be rooted in an AMD SEV-SNP TEE.
 
 Attestations identifying firmware artifacts accepted by the reference values for this layer can be found at:
-- https://search.sigstore.dev/?hash=33d5453b09e16ed0d6deb7c9f076b66b92a1b472d89534034717143554f6746d
+- https://search.sigstore.dev/?hash=30fa578f7781cdffc9f5c52ecfab95fe09e067583660c32d17ef3d18f9f33d87
 
 ⓘ In reference values for AMD SEV-SNP TEEs, the firmware is captured as a SHA2-384 hash. This is the expected memory measurement that would be taken by the TEE. Attestations that describe this firmware, reference it using the SHA2-256 hash of the SHA2-384 hash.
 
@@ -141,33 +133,33 @@ amd_sev:
   allow_debug: false
   genoa:
     minimum:
-      boot_loader: 3
+      boot_loader: 4
       fmc: 0
-      microcode: 209
-      snp: 20
+      microcode: 219
+      snp: 24
       tee: 0
   milan:
     minimum:
-      boot_loader: 3
+      boot_loader: 4
       fmc: 0
-      microcode: 209
-      snp: 20
+      microcode: 219
+      snp: 24
       tee: 0
   min_tcb_version:
-    boot_loader: 3
+    boot_loader: 4
     fmc: 0
-    microcode: 209
-    snp: 20
+    microcode: 219
+    snp: 24
     tee: 0
   stage0:
     digests:
-    - sha2_384: 6c090e4594fd40ee186c90d43f7ad8d904838baa9643a4be1d9d4ff0fdd670a62565e2417660008e058cc2f2029eac8a
+    - sha2_384: 0a3c0fa3f1558a883660cb3f37491e6da05e3445dc0f517ab5f9b8f7be6dc2ae2fa46a23b501d66d1d7e24796d1c2e20
   turin:
     minimum:
-      boot_loader: 3
+      boot_loader: 4
       fmc: 0
-      microcode: 209
-      snp: 20
+      microcode: 219
+      snp: 24
       tee: 0
 
 
@@ -176,23 +168,23 @@ _____ Kernel Layer _____
 Attestations identifying artifacts accepted by the reference values for this layer are described below.
 
 Accepted Kernel Image Artifacts:
-- https://search.sigstore.dev/?hash=ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+- https://search.sigstore.dev/?hash=3e7c371858f2bd9c032894694bd5bb4893f2403ce8a0bcf73c07af3ef6a35a15
 Accepted Initial Ramdisk Artifacts:
-- https://search.sigstore.dev/?hash=daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+- https://search.sigstore.dev/?hash=15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 
 
 The reference values describing this layer are printed below.
 
 acpi:
   digests:
-  - sha2_256: 64f555327287a2141476681e4e4dd80d5f75ab9c276f6db8effc55236dba9953
+  - sha2_256: 141f52e83b42331118ed7b2a0b8b1f1bbab304e01973c79ad4cf6e172612d9f8
 init_ram_fs:
   digests:
-  - sha2_256: daf79f24b5744340ac18c2b468e7e0a7915684c5dfda2450acfa7225bdc75bb8
+  - sha2_256: 15fe687a68a1f0d8aff14611fd4d108d7c132e3f8072bb64ff1073fb816a9ae8
 kernel:
   digests:
     image:
-    - sha2_256: ec752c660481432f525f49d0be1521c7ea42ebbf2ce705aad2781a329e1001d8
+    - sha2_256: 3e7c371858f2bd9c032894694bd5bb4893f2403ce8a0bcf73c07af3ef6a35a15
     setup_data:
     - sha2_256: 4cd020820da663063f4185ca14a7e803cd7c9ca1483c64e836db840604b6fac1
 kernel_cmd_line_text:
@@ -200,16 +192,15 @@ kernel_cmd_line_text:
   - console=ttyS0
 memory_map:
   digests:
-  - sha2_256: 1a7d55e1f4b3d13b5f537b2b50fd5cd8e94fddcde80b15524ab935289c2e3a08
+  - sha2_256: 79ae6053b1afd95db05643d3676af49fa7ea30c5b3579d090be9a18ae7030308
 
 
 _____ Application Layer _____
 
 binary:
   digests:
-  - sha2_256: 7d4682a9a0f97ade0fad9a47f247e1cb6ed326e80ba05ea39fc84b2fe6bcacfb
+  - sha2_256: 41e322b8cabb0890f9100b58886fa28b0eba7c9514b5e73f292d2900fe4c9eae
 configuration:
   skip: {}
-"
-    );
+");
 }

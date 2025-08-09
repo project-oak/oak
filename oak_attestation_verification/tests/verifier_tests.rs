@@ -311,7 +311,12 @@ macro_rules! verify_unpopulated_tcb_version_success {
                                     amd_sev.milan = None;
                                     amd_sev.genoa = None;
                                 }
-                                _ => {panic!("unexpected AMD product")}
+                                Some(AmdProduct::Unsupported) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.genoa = None;
+                                    amd_sev.turin = None;
+                                }
+                                None => panic!("missing AMD product"),
                             }
                         }
                         Some(reference_values::Type::OakRestrictedKernel(r)) => {
@@ -330,7 +335,12 @@ macro_rules! verify_unpopulated_tcb_version_success {
                                     amd_sev.milan = None;
                                     amd_sev.genoa = None;
                                 }
-                                _ => panic!("unexpected AMD product"),
+                                Some(AmdProduct::Unsupported) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.genoa = None;
+                                    amd_sev.turin = None;
+                                }
+                                None => panic!("missing AMD product"),
                             }
                         }
                         Some(reference_values::Type::Cb(r)) => {
@@ -349,7 +359,12 @@ macro_rules! verify_unpopulated_tcb_version_success {
                                     amd_sev.milan = None;
                                     amd_sev.genoa = None;
                                 }
-                                _ => panic!("unexpected AMD product"),
+                                Some(AmdProduct::Unsupported) => {
+                                    amd_sev.milan = None;
+                                    amd_sev.genoa = None;
+                                    amd_sev.turin = None;
+                                }
+                                None => panic!("missing AMD product"),
                             }
                         }
                         _ => panic!("malformed reference values"),
