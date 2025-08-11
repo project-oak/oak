@@ -262,7 +262,7 @@ sequenceDiagram
     CAP->>+CE: endorse(client_evidence)
     CE-->>-CAP: client_endorsements
 
-    CAP--)+SAP: attesattion request (client_evidence, client_endorsements)
+    CAP--)+SAP: attestation request (client_evidence, client_endorsements)
 
     SAP->>SAV: verify(client_evidence, client_endorsements)
     SAV-->>SAP: result

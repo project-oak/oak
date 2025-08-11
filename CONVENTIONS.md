@@ -1,7 +1,7 @@
 # Conventions in the Oak Repository
 
 This document is a collection of conventions related to package naming,
-directory structure, and project organization in the Oak respository.
+directory structure, and project organization in the Oak repository.
 
 ## Directory Structure
 
@@ -11,11 +11,11 @@ For example, rather than:
 
 ```none
 - /oak_containers_attestation
-- /oak_contaierns_orchestrator
+- /oak_containers_orchestrator
 - /oak_containers_syslogd
 ```
 
-Use;
+Use:
 
 ```none
 - /oak_containers
@@ -60,7 +60,7 @@ For test code, stick to the following conventions:
   optionally prefixed with a descriptor if you have multiple test groups
   (`client_tests.rs`, `server_tests.rs`, etc).
 
-- Copmlicated, multi-create integration tests should be in a sub-folder called
+- Complicated, multi-crate integration tests should be in a sub-folder called
   `tests`.
 
 #### Examples
@@ -92,7 +92,7 @@ Acceptable layouts:
 Conventionally, the primary crate name in the package should consist of the path
 to the BUILD file containing the target, with `/` replaced by `_`.
 
-The `crate_name` attribute is not allowed intnernally at Google. So avoid using
+The `crate_name` attribute is not allowed internally at Google. So avoid using
 this attribute on any crates that are intended for internal use. The target name
 should be the same as the intended crate name.
 
