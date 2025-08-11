@@ -16,6 +16,7 @@
 
 use anyhow::anyhow;
 use oak_attestation_gcp::{
+    cosign::{CosignVerificationReport, StatementReport},
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
 };
@@ -197,7 +198,26 @@ fn print_confidential_space_attestation_report(
         match &report.workload_endorsement_verification {
             None => print_indented!(indent, "🤷 not present"),
             Some(Err(err)) => print_indented!(indent, "❌ failed to verify: {}", err),
-            Some(Ok(())) => print_indented!(indent, "✅ verified successfully"),
+            Some(Ok(CosignVerificationReport { statement_verification })) => {
+                print_indented!(indent, " Statement");
+                let indent = indent + 1;
+                match statement_verification {
+                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
+                    Ok(StatementReport { statement_validation, rekor_verification }) => {
+                        match statement_validation {
+                            Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
+                            Ok(()) => print_indented!(indent, "✅ is valid"),
+                        }
+                        match rekor_verification {
+                            None => print_indented!(indent, "🤷 not verified"),
+                            Some(Err(err)) => {
+                                print_indented!(indent, "❌ failed to verify: {}", err)
+                            }
+                            Some(Ok(())) => print_indented!(indent, "✅ verified successfully"),
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -30,7 +30,10 @@ use sha2::{Digest, Sha256};
 use x509_cert::Certificate;
 
 use crate::{
-    cosign::{self, CosignEndorsement, CosignReferenceValues, CosignVerificationError},
+    cosign::{
+        self, CosignEndorsement, CosignReferenceValues, CosignVerificationError,
+        CosignVerificationReport,
+    },
     jwt::{
         verification::{
             report_attestation_token, AttestationTokenVerificationReport,
@@ -44,8 +47,8 @@ use crate::{
 pub struct ConfidentialSpaceVerificationReport {
     pub session_binding_public_key: Vec<u8>,
     pub public_key_verification: Result<(), ConfidentialSpaceVerificationError>,
-    // TODO: b/434898491 - Provide a more detailed report.
-    pub workload_endorsement_verification: Option<Result<(), CosignVerificationError>>,
+    pub workload_endorsement_verification:
+        Option<Result<CosignVerificationReport, CosignVerificationError>>,
     pub token_report: AttestationTokenVerificationReport,
 }
 
@@ -57,21 +60,20 @@ impl ConfidentialSpaceVerificationReport {
             ConfidentialSpaceVerificationReport {
                 session_binding_public_key,
                 public_key_verification: Ok(()),
-                workload_endorsement_verification: None | Some(Ok(())),
+                workload_endorsement_verification,
                 token_report,
-            } => Ok(token_report.into_checked_token().map(|_| session_binding_public_key)?),
+            } => {
+                if let Some(workload_endorsement_verification) = workload_endorsement_verification {
+                    workload_endorsement_verification?.into_checked()?;
+                }
+                Ok(token_report.into_checked_token().map(|_| session_binding_public_key)?)
+            }
             ConfidentialSpaceVerificationReport {
                 session_binding_public_key: _,
                 public_key_verification: Err(err),
                 workload_endorsement_verification: _,
                 token_report: _,
             } => Err(err),
-            ConfidentialSpaceVerificationReport {
-                session_binding_public_key: _,
-                public_key_verification: Ok(()),
-                token_report: _,
-                workload_endorsement_verification: Some(Err(err)),
-            } => Err(ConfidentialSpaceVerificationError::CosignVerificationError(err)),
         }
     }
 }
@@ -149,12 +151,12 @@ impl ConfidentialSpacePolicy {
         let workload_endorsement_verification =
             self.workload_reference_values.as_ref().map(|ref_values| {
                 match &endorsement.workload_endorsement {
-                    Some(workload_endorsement) => cosign::report_endorsement(
+                    Some(workload_endorsement) => Ok(cosign::report_endorsement(
                         CosignEndorsement::from_proto(workload_endorsement)?,
                         &image_reference,
                         ref_values,
                         verification_time,
-                    ),
+                    )),
                     None => Err(CosignVerificationError::MissingEndorsement),
                 }
             });
@@ -217,7 +219,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        cosign::CosignReferenceValues,
+        cosign::{CosignReferenceValues, StatementReport},
         jwt::verification::{CertificateReport, IssuerReport},
     };
 
@@ -326,7 +328,12 @@ mod tests {
                         })),
                     }),
                 },
-                workload_endorsement_verification: Some(Ok(())),
+                workload_endorsement_verification: Some(Ok(CosignVerificationReport {
+                statement_verification: Ok(StatementReport{
+                    statement_validation: Ok(()),
+                    rekor_verification: None
+                })
+            })),
             }) if *session_binding_public_key == BINDING_KEY_BYTES
         );
     }

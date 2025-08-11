@@ -46,6 +46,8 @@ pub enum CosignVerificationError {
     RekorError(&'static str, sigstore::error::Error),
     #[error("rekor payload deserialization error: {0}")]
     RekorPayloadParseError(serde_json::Error),
+    #[error("Unknown error: {0}")]
+    UnknownError(&'static str),
 }
 
 pub struct CosignEndorsement {
@@ -114,50 +116,97 @@ impl CosignReferenceValues {
     }
 }
 
+#[derive(Debug)]
+pub struct CosignVerificationReport {
+    pub statement_verification: Result<StatementReport, CosignVerificationError>,
+}
+
+impl CosignVerificationReport {
+    pub fn into_checked(self) -> Result<(), CosignVerificationError> {
+        match self {
+            CosignVerificationReport {
+                statement_verification:
+                    Ok(StatementReport {
+                        statement_validation: Ok(()),
+                        rekor_verification: None | Some(Ok(())),
+                    }),
+            } => Ok(()),
+            CosignVerificationReport { statement_verification } => {
+                let statement_verification = statement_verification?;
+                statement_verification.statement_validation?;
+                if let Some(rekor_verification) = statement_verification.rekor_verification {
+                    rekor_verification?;
+                }
+                Err(CosignVerificationError::UnknownError(
+                    "CosignVerificationReport verification failed",
+                ))
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct StatementReport {
+    pub statement_validation: Result<(), CosignVerificationError>,
+    pub rekor_verification: Option<Result<(), CosignVerificationError>>,
+}
+
 pub fn report_endorsement(
     endorsement: CosignEndorsement,
     image_reference: &Reference,
     ref_values: &CosignReferenceValues,
     verification_time: Instant,
-) -> Result<(), CosignVerificationError> {
-    let statement = (endorsement.statement)
-        .verify(&ref_values.developer_public_key)
-        .map_err(CosignVerificationError::StatementVerificationError)?;
-    let parsed_statement: EndorsementStatement = serde_json::from_slice(statement.message())
-        .map_err(CosignVerificationError::StatementParseError)?;
+) -> CosignVerificationReport {
+    let statement_verification = try {
+        let statement = (endorsement.statement)
+            .verify(&ref_values.developer_public_key)
+            .map_err(CosignVerificationError::StatementVerificationError)?;
+        let statement_validation = try {
+            let parsed_statement: EndorsementStatement =
+                serde_json::from_slice(statement.message())
+                    .map_err(CosignVerificationError::StatementParseError)?;
 
-    let subject = image_reference.try_into().map_err(|err: anyhow::Error| {
-        CosignVerificationError::ImageReferenceError(err.to_string())
-    })?;
-    parsed_statement
-        .validate(verification_time, &subject, &[])
-        .map_err(|err| CosignVerificationError::StatementValidationError(err.to_string()))?;
-
-    if let Some(rekor_public_key) = &ref_values.rekor_public_key {
-        if let Some(rekor) = endorsement.rekor {
-            let rekor = rekor.verify(rekor_public_key).map_err(|err| {
-                CosignVerificationError::RekorError("verifying rekor bundle", err)
+            let subject = image_reference.try_into().map_err(|err: anyhow::Error| {
+                CosignVerificationError::ImageReferenceError(err.to_string())
             })?;
-            let rekor: RekorPayload = serde_json::from_slice(rekor.message())
-                .map_err(CosignVerificationError::RekorPayloadParseError)?;
-            let hashed_rekord: HashedRekord<hashedrekord::Unverified> =
-                rekor.payload_body().map_err(|err| {
-                    CosignVerificationError::RekorError("parsing hashedrekord payload", err)
-                })?;
-            hashed_rekord.verify(&ref_values.developer_public_key, statement.message()).map_err(
-                |err| CosignVerificationError::RekorError("verifying rekor payload", err),
-            )?;
-        } else {
-            return Err(CosignVerificationError::MissingEndorsement);
-        }
-    }
+            parsed_statement
+                .validate(verification_time, &subject, &[])
+                .map_err(|err| CosignVerificationError::StatementValidationError(err.to_string()))?
+        };
 
-    Ok(())
+        let rekor_verification = ref_values.rekor_public_key.as_ref().map(|rekor_public_key| {
+            if let Some(rekor) = endorsement.rekor {
+                try {
+                    let rekor = rekor.verify(rekor_public_key).map_err(|err| {
+                        CosignVerificationError::RekorError("verifying rekor bundle", err)
+                    })?;
+                    let rekor: RekorPayload = serde_json::from_slice(rekor.message())
+                        .map_err(CosignVerificationError::RekorPayloadParseError)?;
+                    let hashed_rekord: HashedRekord<hashedrekord::Unverified> =
+                        rekor.payload_body().map_err(|err| {
+                            CosignVerificationError::RekorError("parsing hashedrekord payload", err)
+                        })?;
+                    hashed_rekord
+                        .verify(&ref_values.developer_public_key, statement.message())
+                        .map_err(|err| {
+                            CosignVerificationError::RekorError("verifying rekor payload", err)
+                        })?;
+                }
+            } else {
+                Err(CosignVerificationError::MissingEndorsement)
+            }
+        });
+
+        StatementReport { statement_validation, rekor_verification }
+    };
+
+    CosignVerificationReport { statement_verification }
 }
 
 #[cfg(test)]
 mod tests {
-    use googletest::prelude::*;
+    use core::assert_matches::assert_matches;
+
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_time::Instant;
     use p256::pkcs8::DecodePublicKey;
@@ -185,7 +234,15 @@ mod tests {
             &CosignReferenceValues::partial(developer_public_key),
             verification_time,
         );
-        assert_that!(result, ok(()));
+        assert_matches!(
+            result,
+            CosignVerificationReport {
+                statement_verification: Ok(StatementReport {
+                    statement_validation: Ok(()),
+                    rekor_verification: None
+                })
+            }
+        );
     }
 
     #[test]
@@ -209,7 +266,7 @@ mod tests {
             &CosignReferenceValues::partial(developer_public_key),
             verification_time,
         );
-        assert_that!(result, err(anything()));
+        assert_matches!(result, CosignVerificationReport { statement_verification: Err(_) });
     }
 
     #[test]
@@ -233,6 +290,14 @@ mod tests {
             &CosignReferenceValues::partial(developer_public_key),
             verification_time,
         );
-        assert_that!(result, ok(()));
+        assert_matches!(
+            result,
+            CosignVerificationReport {
+                statement_verification: Ok(StatementReport {
+                    statement_validation: Ok(()),
+                    rekor_verification: None
+                })
+            }
+        );
     }
 }
