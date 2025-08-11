@@ -34,7 +34,7 @@ def _common_crates(std):
         "aml": crate.spec(version = "0.16.4"),
         "anyhow": crate.spec(
             default_features = False,
-            version = "1.0.79",
+            version = "1.0.87",
         ),
         "arrayvec": crate.spec(
             default_features = False,
@@ -230,7 +230,7 @@ def _common_crates(std):
         "serde": crate.spec(
             default_features = False,
             features = ["derive"],
-            version = "1.0.195",
+            version = "1.0.210",
         ),
         "serde_json": crate.spec(
             default_features = False,
