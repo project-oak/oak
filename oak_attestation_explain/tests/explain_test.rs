@@ -16,11 +16,12 @@
 #![feature(assert_matches)]
 
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
-use oak_attestation_verification::{extract_evidence, reference_values_from_evidence};
+use oak_attestation_verification::extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData, ReferenceValues,
 };
 use prost::Message;
+use test_util::create_reference_values_for_extracted_evidence;
 
 const RK_EVIDENCE: &[u8] = include_bytes!("../testdata/rk_evidence.binarypb").as_slice();
 
@@ -120,7 +121,7 @@ fn produces_expected_reference_values_explaination() {
             let evidence = Evidence::decode(RK_EVIDENCE).expect("could not decode evidence");
             extract_evidence(&evidence).expect("could not extract evidence")
         };
-        reference_values_from_evidence(extracted_evidence)
+        create_reference_values_for_extracted_evidence(extracted_evidence)
     };
 
     assert_eq!(

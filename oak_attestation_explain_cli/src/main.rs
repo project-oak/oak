@@ -18,11 +18,12 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
-use oak_attestation_verification::{extract_evidence, reference_values_from_evidence};
+use oak_attestation_verification::extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{
     extracted_evidence::EvidenceValues, Evidence, OakRestrictedKernelData,
 };
 use prost::Message;
+use test_util::create_reference_values_for_extracted_evidence;
 
 #[derive(Parser, Debug)]
 #[group(skip)]
@@ -114,7 +115,7 @@ fn main() {
         _ => panic!("not restricted kernel evidence"),
     };
 
-    let reference_values = reference_values_from_evidence(extracted_evidence);
+    let reference_values = create_reference_values_for_extracted_evidence(extracted_evidence);
 
     print!("{}", title("Reference values that describe this evidence:"));
 

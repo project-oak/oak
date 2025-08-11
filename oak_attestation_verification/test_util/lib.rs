@@ -14,8 +14,14 @@
 // limitations under the License.
 //
 
-// Test-only library with functions needed in both unit and integration tests.
-
+/// Library with functions needed in both unit and integration tests. While it
+/// is intended for tests, there are no restrictions on its use.
 pub mod attestation_data;
 pub mod endorsement_data;
-pub mod factory;
+mod factory;
+
+pub use factory::{
+    create_oc_endorsements, create_oc_reference_values,
+    create_reference_values_for_extracted_evidence, create_rk_endorsements,
+    create_rk_reference_values,
+};

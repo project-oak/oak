@@ -17,7 +17,7 @@
 use std::fs;
 
 use oak_attestation_verification::{
-    get_expected_values, reference_values_from_evidence,
+    get_expected_values,
     verifier::{
         to_attestation_results, verify, verify_dice_chain_and_extract_evidence,
         verify_with_expected_values,
@@ -36,7 +36,10 @@ use oak_proto_rust::oak::{
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use prost::Message;
-use test_util::{attestation_data::AttestationData, factory::create_rk_reference_values};
+use test_util::{
+    attestation_data::AttestationData, create_reference_values_for_extracted_evidence,
+    create_rk_reference_values,
+};
 use zerocopy::FromBytes;
 
 const FAKE_EXPECTED_VALUES_PATH: &str =
@@ -52,7 +55,7 @@ fn create_fake_expected_values() -> ExpectedValues {
 fn make_reference_values(evidence: &Evidence) -> ReferenceValues {
     let extracted_evidence =
         verify_dice_chain_and_extract_evidence(evidence).expect("invalid DICE evidence");
-    reference_values_from_evidence(extracted_evidence)
+    create_reference_values_for_extracted_evidence(extracted_evidence)
 }
 
 fn get_amd_product(d: &AttestationData) -> Option<AmdProduct> {
