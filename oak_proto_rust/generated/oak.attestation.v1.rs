@@ -1407,23 +1407,24 @@ pub mod expected_values {
         Cb(super::CbExpectedValues),
     }
 }
-/// Represents a verification result. Can be extended to return certain
-/// measurements and other detail to the client for further processing.
-/// Nomenclature follows RFC 9334.
+/// Represents a verification result along with certain measurements and other
+/// detail to the client for further processing. Nomenclature follows RFC 9334.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AttestationResults {
-    /// Indicates whether the verification passed and perhaps more.
+    /// Indicates whether the verification passed. Used only in conjunction
+    /// with legacy attestation verification; for policy-based verification
+    /// this must be STATUS_SUCCESS (note that this is not the default).
     #[prost(enumeration = "attestation_results::Status", tag = "1")]
     pub status: i32,
     /// Provides the reason why verification did not pass, on non-success status.
+    /// Used only in conjunction with legacy attestation verification; for
+    /// policy-based verification this field must not be used.
     #[prost(string, tag = "2")]
     pub reason: ::prost::alloc::string::String,
     /// Contains the verified public key for encryption whenever the status
     /// indicates success. The key is serialized as an X25519 octet string.
     ///
-    /// Deprecated: will be replaced by the
-    /// `extracted_evidence.encryption_public_key` field. For now both are
-    /// populated.
+    /// Deprecated: Use `extracted_evidence.encryption_public_key` instead.
     #[deprecated]
     #[prost(bytes = "vec", tag = "3")]
     pub encryption_public_key: ::prost::alloc::vec::Vec<u8>,
@@ -1431,15 +1432,16 @@ pub struct AttestationResults {
     /// indicates success. The key is serialized using the SEC 1
     /// Elliptic-Curve-Point-to-Octet-String conversion.
     ///
-    /// Deprecated: will be replaced by the `extracted_evidence.signing_public_key`
-    /// field. For now both are populated.
+    /// Deprecated: Use `extracted_evidence.signing_public_key` instead.
     #[deprecated]
     #[prost(bytes = "vec", tag = "4")]
     pub signing_public_key: ::prost::alloc::vec::Vec<u8>,
     /// Contains the evidence values whenever the status indicates success.
     #[prost(message, optional, tag = "5")]
     pub extracted_evidence: ::core::option::Option<ExtractedEvidence>,
-    /// Detailed attestation verification results each event.
+    /// Detailed attestation verification results for each event. The length and
+    /// order coincides with the number and order of policies in the verifier.
+    /// Field will not be populated with legacy attestation verification.
     #[prost(message, repeated, tag = "6")]
     pub event_attestation_results: ::prost::alloc::vec::Vec<EventAttestationResults>,
 }
@@ -1486,7 +1488,6 @@ pub mod attestation_results {
     }
 }
 /// Attestation verification results for an individual event.
-/// TODO: b/366419879 - Implement descriptive per-event attestation results.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventAttestationResults {
     /// Map of artifacts extracted from current event.
