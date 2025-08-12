@@ -32,11 +32,13 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:thiserror",
         "@oak_crates_index//:ureq",
+        "@oak_crates_index//:x509-cert",
     ],
 )
 
 rust_test(
     name = "nist_pulse_verifier_tests",
+    compile_data = ["src/testdata/certificate.pem"],
     crate = ":nist_pulse_verifier",
     deps = [
         "//oak_proto_rust",

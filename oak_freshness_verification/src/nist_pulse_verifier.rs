@@ -23,6 +23,7 @@ use hex::FromHexError;
 use mockall::automock;
 use oak_proto_rust::oak::crypto::v1::ProofOfFreshness;
 use serde::{Deserialize, Serialize};
+use x509_cert::{der::DecodePem, Certificate};
 
 const NIST_WEB_PREFIX: &str = "https://beacon.nist.gov";
 // TODO: b/424736845 - Add support for version 2.1
@@ -38,6 +39,12 @@ pub enum ProofOfFreshnessVerificationError {
     ApiCallFailed(#[from] Box<dyn Error>),
     #[error("JSON parsing failed: {0}")]
     JsonParsingFailed(#[from] serde_json::Error),
+    // Utilize the error string since x509_cert::der::Error requires StdErr support and x509_cert
+    // in Oak is used for no-std crates.
+    #[error("Unable to parse certificate: {err}")]
+    CertificateParsingFailed { err: String },
+    #[error("Signature verification not implemented")]
+    SignatureVerificationNotImplemented,
 }
 
 /// Represents a single value within the `listValues` array.
@@ -125,6 +132,12 @@ fn create_nist_pulse_uri(proof_of_freshness: &ProofOfFreshness) -> String {
     )
 }
 
+// Formats the expected nist beacon certificate URI from the ProofOfFreshness
+// proto.
+fn create_nist_beacon_certificate_uri(certificate_id: &String) -> String {
+    format!("{NIST_WEB_PREFIX}/beacon/{NIST_VERSION}/certificate/{certificate_id}")
+}
+
 // Ensures that the ProofOfFreshness output value is equal to the passed in
 // output_value.
 fn verify_output_value(
@@ -159,10 +172,21 @@ impl NistPulseVerifier {
         proof_of_freshness: ProofOfFreshness,
     ) -> Result<(), ProofOfFreshnessVerificationError> {
         let nist_pulse_uri = create_nist_pulse_uri(&proof_of_freshness);
-        let result_str = self.data_fetcher.get(&nist_pulse_uri)?;
-        let pulse_response: PulseResponse = serde_json::from_str(&result_str)?;
+
+        let pulse_str = self.data_fetcher.get(&nist_pulse_uri)?;
+        let pulse_response: PulseResponse = serde_json::from_str(&pulse_str)?;
 
         verify_output_value(&proof_of_freshness, &pulse_response.pulse.output_value)?;
-        Ok(())
+
+        // TODO: b/424736845 - Inject certificate code into the NistPulseVerifier type
+        // so the crate can be agnostic to how certificate is fetched.
+        let nist_beacon_certificate_uri =
+            create_nist_beacon_certificate_uri(&pulse_response.pulse.certificate_id);
+        let certificate_str = self.data_fetcher.get(&nist_beacon_certificate_uri)?;
+        let _certificate = Certificate::from_pem(certificate_str.as_bytes()).map_err(|e| {
+            ProofOfFreshnessVerificationError::CertificateParsingFailed { err: e.to_string() }
+        })?;
+
+        Err(ProofOfFreshnessVerificationError::SignatureVerificationNotImplemented)
     }
 }

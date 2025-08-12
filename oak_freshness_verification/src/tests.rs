@@ -25,6 +25,8 @@ use crate::nist_pulse_verifier::{
     self, MockApiGetter, NistPulseVerifier, ProofOfFreshnessVerificationError,
 };
 
+const MOCK_CERTIFICATE_RESPONSE_STRING: &str = include_str!("testdata/certificate.pem");
+
 const MOCK_JSON_RESPONSE_STRING: &str = r#"{
         "pulse": {
             "uri": "https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1352280",
@@ -49,18 +51,24 @@ const MOCK_JSON_RESPONSE_STRING: &str = r#"{
         }
     }"#;
 
-// Modifies the mock api getter to expect a single get call to `https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1352280`.
-fn expect_get_once(mock_getter: &mut MockApiGetter) -> &mut Expectation {
-    mock_getter
-        .expect_get()
-        .with(predicate::eq("https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1352280"))
-        .once()
+const DEFAULT_PULSE_URL: &str = "https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1352280";
+const DEFAULT_CERTIFICATE_URL: &str = "https://beacon.nist.gov/beacon/2.0/certificate/some-cert-id";
+
+// Modifies the mock api getter to expect a single get call to the url.
+fn expect_get_once<'a>(
+    mock_getter: &'a mut MockApiGetter,
+    url: &'static str,
+) -> &'a mut Expectation {
+    mock_getter.expect_get().with(predicate::eq(url)).once()
 }
 
 #[test]
 fn verify_nist_pulse_successful() {
     let mut mock_getter = MockApiGetter::new();
-    expect_get_once(&mut mock_getter).returning(move |_| Ok(MOCK_JSON_RESPONSE_STRING.to_string()));
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(move |_| Ok(MOCK_JSON_RESPONSE_STRING.to_string()));
+    expect_get_once(&mut mock_getter, DEFAULT_CERTIFICATE_URL)
+        .returning(move |_| Ok(MOCK_CERTIFICATE_RESPONSE_STRING.to_string()));
 
     let verifier = NistPulseVerifier::new(Box::new(mock_getter));
     let nist_pulse = ProofOfFreshness {
@@ -69,13 +77,17 @@ fn verify_nist_pulse_successful() {
         nist_pulse_output_value: hex::decode("B097474508DA9EEFEA3DC10F882F9262C6F2D3D9F428FCF981BB67271DA57606226E1E138EDD481712F6DBAF6BCA1B3E0E55FB3F2011EC4FFFBAD5A5635E722E")
             .unwrap(),
     };
-    assert_matches!(verifier.verify(nist_pulse), Ok(()));
+    assert_matches!(
+        verifier.verify(nist_pulse),
+        Err(ProofOfFreshnessVerificationError::SignatureVerificationNotImplemented)
+    );
 }
 
 #[test]
 fn verify_nist_pulse_mismatch_output_value() {
     let mut mock_getter = MockApiGetter::new();
-    expect_get_once(&mut mock_getter).returning(move |_| Ok(MOCK_JSON_RESPONSE_STRING.to_string()));
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(move |_| Ok(MOCK_JSON_RESPONSE_STRING.to_string()));
 
     let verifier = NistPulseVerifier::new(Box::new(mock_getter));
     let incorrect_pulse_output_value = "7435D447C495ECB94CDF749F87EFFC758FEFF18020E4DBACC5D5BB5A6D0AD8338D049A04B3B51B9D5CE9E9E7454427210AB3252D5AF38142B5A374E6BDC8E616";
@@ -107,7 +119,8 @@ fn verify_nist_pulse_invalid_hexadecimal() {
         "B097474508DA9EEFEA3DC10F882F9262C6F2D3D9F428FCF981BB67271DA57606226E1E138EDD481712F6DBAF6BCA1B3E0E55FB3F2011EC4FFFBAD5A5635E722E",
         "invalid-hex",
     );
-    expect_get_once(&mut mock_getter).returning(move |_| Ok(invalid_hex_response.clone()));
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(move |_| Ok(invalid_hex_response.clone()));
 
     let verifier = NistPulseVerifier::new(Box::new(mock_getter));
     let nist_pulse_with_invalid_hex = ProofOfFreshness {
@@ -124,7 +137,8 @@ fn verify_nist_pulse_invalid_hexadecimal() {
 #[test]
 fn verify_nist_pulse_api_call_failed() {
     let mut mock_getter = MockApiGetter::new();
-    expect_get_once(&mut mock_getter).returning(|_| Err("API call failed".into()));
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(|_| Err("API call failed".into()));
 
     let verifier = NistPulseVerifier::new(Box::new(mock_getter));
     let nist_pulse = ProofOfFreshness {
@@ -141,7 +155,8 @@ fn verify_nist_pulse_api_call_failed() {
 #[test]
 fn verify_nist_pulse_json_parsing_failed() {
     let mut mock_getter = MockApiGetter::new();
-    expect_get_once(&mut mock_getter).returning(|_| Ok("invalid-json".to_string()));
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(|_| Ok("invalid-json".to_string()));
 
     let verifier = NistPulseVerifier::new(Box::new(mock_getter));
     let nist_pulse = ProofOfFreshness {
@@ -152,5 +167,27 @@ fn verify_nist_pulse_json_parsing_failed() {
     assert_matches!(
         verifier.verify(nist_pulse),
         Err(ProofOfFreshnessVerificationError::JsonParsingFailed(_))
+    );
+}
+
+#[test]
+fn verify_nist_pulse_json_certificate_parsing_failed() {
+    let mut mock_getter = MockApiGetter::new();
+    expect_get_once(&mut mock_getter, DEFAULT_PULSE_URL)
+        .returning(|_| Ok(MOCK_JSON_RESPONSE_STRING.to_string()));
+    expect_get_once(&mut mock_getter, DEFAULT_CERTIFICATE_URL)
+        .returning(|_| Ok("invalid certificate".to_string()));
+
+    let verifier = NistPulseVerifier::new(Box::new(mock_getter));
+    let nist_pulse = ProofOfFreshness {
+        nist_chain_index: 2,
+        nist_pulse_index: 1352280,
+        nist_pulse_output_value: hex::decode("B097474508DA9EEFEA3DC10F882F9262C6F2D3D9F428FCF981BB67271DA57606226E1E138EDD481712F6DBAF6BCA1B3E0E55FB3F2011EC4FFFBAD5A5635E722E")
+            .unwrap(),
+    };
+
+    assert_matches!(
+        verifier.verify(nist_pulse),
+        Err(ProofOfFreshnessVerificationError::CertificateParsingFailed { .. })
     );
 }
