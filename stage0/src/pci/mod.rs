@@ -17,6 +17,7 @@
 use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use x86_64::align_down;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 use crate::{fw_cfg::Firmware, hal::Port, Platform, ZeroPage};
@@ -319,7 +320,16 @@ trait Machine {
         firmware: &mut dyn Firmware,
         zero_page: &ZeroPage,
     ) -> Result<Range<u32>, &'static str>;
+
+    fn mmio64_hole<P: Platform>(
+        firmware: &mut dyn Firmware,
+        zero_page: &ZeroPage,
+    ) -> Result<Range<u64>, &'static str>;
 }
+
+// How much memory to reserve for the 64-bit PCI hole. This is a fairly
+// conservative 32 GiB.
+const MMIO64_HOLE_SIZE: usize = 0x8_0000_0000;
 
 struct I440fx {}
 
@@ -390,6 +400,76 @@ impl Machine for I440fx {
 
         Ok(mmio32_hole_base..mmio32_hole_end)
     }
+
+    fn mmio64_hole<P: Platform>(
+        firmware: &mut dyn Firmware,
+        zero_page: &ZeroPage,
+    ) -> Result<Range<u64>, &'static str> {
+        // It is possible for the host to provide PCI bridge address information in a
+        // fw_cfg file, `etc/hardware-info`. EDK2 supports that mechanism, but I don't
+        // see that mechanism being used in any the VMMs that immediately interest us.
+        // Thus, let's kick that particular can down the road until we encounter a VMM
+        // that requires us to support that mechanism.
+        // But we should still print a warning if that file exists so that it wouldn't
+        // come as a complete surprise.
+        if firmware.find(c"etc/hardware-info").is_some() {
+            log::warn!("your VMM exposes `etc/hardware-info`; stage0 currently does not support parsing that file and will ignore it!");
+        }
+
+        // EDK2 places the 64-bit hole at (2^(physmem_bits-3)..2^physmem_bits) (unless
+        // otherwise instructed):
+        //
+        // https://github.com/tianocore/edk2/blob/d46aa46c8361194521391aa581593e556c707c6e/OvmfPkg/Library/PlatformInitLib/MemDetect.c#L796
+        //
+        // After which it moves it down if there is a conflict:
+        //
+        // https://github.com/tianocore/edk2/blob/d46aa46c8361194521391aa581593e556c707c6e/OvmfPkg/Library/PlatformInitLib/MemDetect.c#L809
+        //
+        // This is known as the "dynamic MMIO window".
+        //
+        // Otherwise, the window size is at least 32 GB (look for `PcdPciMmio64Size` in
+        // the dsc files), the "classic MMIO window".
+        //
+        // SeaBIOS prefers to place the window somewhere around 512 GiB..1024 GiB mark:
+        // BUILD_PCIMEM64_START = 0x80_0000_0000 (512 GB mark)
+        // BUILD_PCIMEM64_END = 0x100_0000_0000 (1024 GB mark)
+        // These are the build time defaults. But also see:
+        // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L1138
+        // https://github.com/coreboot/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L1157
+        //
+        // Let's make some simplifying assumptions and try to fit a 32 GiB window
+        // somewhere at the top of the available physical memory. You'd hope we can just
+        // assume (at least) 48 bits available, but no.
+        let addr_size = P::guest_phys_addr_size();
+        let top_of_memory: u64 = 1 << addr_size;
+        // We'll also be relatively conservative and try to get away with just reserving
+        // 32 GiB for the hole.
+
+        // The hole should be aligned to 1G addresses. With enough bits, that should be
+        // vacuously true, but just in case let's ensure that the top_of_memory is a
+        // multiple of the hole size.
+        let top_of_memory = align_down(top_of_memory, MMIO64_HOLE_SIZE as u64) as usize;
+
+        // Let's start by sticking it at the very end of the address space.
+        let mut mmio64_hole = top_of_memory - MMIO64_HOLE_SIZE..top_of_memory;
+
+        // Keep scaling down until we find a hole or run out of memory.
+        // In theory we could scale down by 1G chunks until we get to the 4G boundary,
+        // but there should be enough address space available to use bigger, hole-sized
+        // chunks.
+        while !zero_page.check_e820_gap(mmio64_hole.clone())
+            && mmio64_hole.start >= MMIO64_HOLE_SIZE
+        {
+            mmio64_hole.start -= MMIO64_HOLE_SIZE;
+            mmio64_hole.end -= MMIO64_HOLE_SIZE;
+        }
+
+        if mmio64_hole.start < MMIO64_HOLE_SIZE {
+            Err("could not find memory region for 64-bit PCI MMIO hole")
+        } else {
+            Ok(mmio64_hole.start as u64..mmio64_hole.end as u64)
+        }
+    }
 }
 
 struct Q35 {}
@@ -436,6 +516,14 @@ impl Machine for Q35 {
 
         Ok(mmio32_hole_start..mmio32_hole_end)
     }
+
+    fn mmio64_hole<P: Platform>(
+        firmware: &mut dyn Firmware,
+        zero_page: &ZeroPage,
+    ) -> Result<Range<u64>, &'static str> {
+        // No special treatment here.
+        I440fx::mmio64_hole::<P>(firmware, zero_page)
+    }
 }
 
 fn init_machine<P: Platform, M: Machine>(
@@ -445,12 +533,10 @@ fn init_machine<P: Platform, M: Machine>(
 ) -> Result<Option<PciWindows>, &'static str> {
     // Determine the PCI holes. How this is done is unfortunately extremely clunky
     // and machine-specific.
-    let mmio32_hole = M::mmio32_hole(firmware, zero_page)?;
-
-    // Recycle old values from add_pci_holes ACPI command; these will need to
-    // change.
-    let mmio64_hole = 0x8000000000u64..0x10000000000u64;
-    let pci_windows = PciWindows { pci_window_32: mmio32_hole, pci_window_64: mmio64_hole };
+    let pci_windows = PciWindows {
+        pci_window_32: M::mmio32_hole(firmware, zero_page)?,
+        pci_window_64: M::mmio64_hole::<P>(firmware, zero_page)?,
+    };
 
     log::info!("PCI: using windows {:?}", pci_windows);
 
@@ -533,8 +619,13 @@ mod tests {
 
     use googletest::prelude::*;
     use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+    use x86_64::{
+        structures::paging::{Page, PageSize, Size4KiB},
+        PhysAddr,
+    };
 
     use super::*;
+    use crate::hal::Base;
 
     #[derive(Default)]
     struct TestFirmware {
@@ -649,6 +740,7 @@ mod tests {
             ok(all!(field!(&Range.start, 0xC000_0000), field!(&Range.end, gt(0xC000_0000))))
         );
     }
+
     #[googletest::test]
     fn q35_hole() {
         // Not much to test, besides there being a hole.
@@ -661,5 +753,160 @@ mod tests {
                 field!(&Range.end, le(0xFE00_0000))    // less than the reserved location
             ))
         )
+    }
+
+    struct MockPlatform;
+
+    impl Platform for MockPlatform {
+        type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
+
+        type Attester = <Base as Platform>::Attester;
+
+        fn cpuid(_leaf: u32) -> core::arch::x86_64::CpuidResult {
+            unimplemented!()
+        }
+
+        unsafe fn mmio<S: PageSize>(_base_address: PhysAddr) -> Self::Mmio<S> {
+            unimplemented!()
+        }
+
+        fn port_factory() -> crate::hal::PortFactory {
+            unimplemented!()
+        }
+
+        fn early_initialize_platform() {
+            unimplemented!()
+        }
+
+        fn prefill_e820_table<T: IntoBytes + FromBytes>(
+            _input: &mut T,
+        ) -> core::result::Result<usize, &'static str> {
+            unimplemented!()
+        }
+
+        fn initialize_platform(_e820_table: &[BootE820Entry]) {
+            unimplemented!()
+        }
+
+        fn finalize_acpi_tables(_rsdp: &mut crate::Rsdp) -> core::result::Result<(), &'static str> {
+            unimplemented!()
+        }
+
+        fn deinit_platform() {
+            unimplemented!()
+        }
+
+        fn populate_zero_page(_zero_page: &mut ZeroPage) {
+            unimplemented!()
+        }
+
+        fn get_attester() -> core::result::Result<Self::Attester, &'static str> {
+            unimplemented!()
+        }
+
+        fn get_derived_key() -> core::result::Result<oak_stage0_dice::DerivedKey, &'static str> {
+            unimplemented!()
+        }
+
+        fn change_page_state(_page: Page<Size4KiB>, _state: crate::hal::PageAssignment) {
+            unimplemented!()
+        }
+
+        fn revalidate_page(_page: Page<Size4KiB>) {
+            unimplemented!()
+        }
+
+        fn page_table_mask(_encryption_state: crate::paging::PageEncryption) -> u64 {
+            unimplemented!()
+        }
+
+        fn encrypted() -> u64 {
+            unimplemented!()
+        }
+
+        fn tee_platform() -> oak_dice::evidence::TeePlatform {
+            unimplemented!()
+        }
+
+        unsafe fn read_msr(_msr: u32) -> u64 {
+            unimplemented!()
+        }
+
+        unsafe fn write_msr(_msr: u32, _value: u64) {
+            unimplemented!()
+        }
+
+        fn wbvind() {
+            unimplemented!()
+        }
+
+        fn guest_phys_addr_size() -> u8 {
+            48
+        }
+    }
+
+    #[googletest::test]
+    fn mmio64_hole() {
+        let mut firmware = TestFirmware::default();
+        let mut zero_page = ZeroPage::new();
+        let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
+
+        // We didn't reserve any memory, so the hole should be right at the very top.
+        assert_that!(
+            hole,
+            ok(all!(field!(&Range.start, le(1 << 48)), field!(&Range.end, eq(1 << 48))))
+        );
+
+        // 1 GB at the very top is reserved. The hole should have moved down.
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            (1 << 48) - 0x4000_0000,
+            0x4000_0000,
+            E820EntryType::RAM,
+        ));
+        let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
+        assert_that!(
+            hole,
+            ok(all!(
+                field!(&Range.start, le((1 << 48) - 0x4000_0000)),
+                field!(&Range.end, le((1 << 48) - 0x4000_0000))
+            ))
+        );
+
+        // There is no address space available. How did you get such a machine?
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            0,
+            (1 << 48) - 0x4000_0000,
+            E820EntryType::RAM,
+        ));
+        let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
+        assert_that!(hole, err(anything()));
+
+        // Okay, _fine_, there is a hole. But it's too small.
+        let mut zero_page = ZeroPage::new();
+        zero_page.insert_e820_entry(BootE820Entry::new(0, MMIO64_HOLE_SIZE, E820EntryType::RAM));
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            MMIO64_HOLE_SIZE + (MMIO64_HOLE_SIZE / 2),
+            (1 << 48) - MMIO64_HOLE_SIZE - (MMIO64_HOLE_SIZE / 2),
+            E820EntryType::RAM,
+        ));
+        let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
+        assert_that!(hole, err(anything()));
+
+        // There is an exactly perfect hole.
+        let mut zero_page = ZeroPage::new();
+        zero_page.insert_e820_entry(BootE820Entry::new(0, MMIO64_HOLE_SIZE, E820EntryType::RAM));
+        zero_page.insert_e820_entry(BootE820Entry::new(
+            MMIO64_HOLE_SIZE + MMIO64_HOLE_SIZE,
+            (1 << 48) - MMIO64_HOLE_SIZE - MMIO64_HOLE_SIZE,
+            E820EntryType::RAM,
+        ));
+        let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
+        assert_that!(
+            hole,
+            ok(all!(
+                field!(&Range.start, eq(MMIO64_HOLE_SIZE as u64)),
+                field!(&Range.end, eq((MMIO64_HOLE_SIZE + MMIO64_HOLE_SIZE) as u64))
+            ))
+        );
     }
 }

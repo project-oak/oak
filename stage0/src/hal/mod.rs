@@ -185,6 +185,28 @@ pub trait Platform {
     /// Writes back all modified cache lines in the processor’s internal cache
     /// to main memory and invalidates (flushes) the internal caches.
     fn wbvind();
+
+    /// Returns the number of bits in use in guest physical memory addresses.
+    ///
+    /// This is dependent on both the (real physical) CPU on the machine and the
+    /// VMM.
+    fn guest_phys_addr_size() -> u8 {
+        let cpuid = Self::cpuid(0x8000_0008); // Long Mode Size Identifiers
+
+        // EDK2 treads carefully here as sometimes QEMU can report more physical bits
+        // than the CPU actually supports. We'll just assume these are correct and the
+        // CPUs *have* at least 40 physical address bits. We don't need to support
+        // particularly old machines, after all.
+
+        // First, see if GuestPhysAddrSize is set (bits 23:16):
+        let addr_size = ((cpuid.eax >> 16) & 0xFF) as u8;
+        if addr_size == 0 {
+            // not specified, it's the same as PhysAddrSize (bits 7:0)
+            (cpuid.eax & 0xFF) as u8
+        } else {
+            addr_size
+        }
+    }
 }
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending

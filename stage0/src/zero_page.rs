@@ -15,7 +15,7 @@
 //
 
 use alloc::{ffi::CString, vec::Vec};
-use core::{mem::size_of, slice};
+use core::{mem::size_of, ops::Range, slice};
 
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
@@ -291,6 +291,15 @@ impl ZeroPage {
         }
     }
 
+    /// Checks if the given range is _not_ covered by any entries int he memory
+    /// map.
+    pub fn check_e820_gap(&self, range: Range<usize>) -> bool {
+        !self
+            .e820_table()
+            .iter()
+            .any(|&entry| entry.addr() < range.end && entry.end() > range.start)
+    }
+
     fn validate_e820_table(&self) {
         // Check that the table is sorted.
         for i in 0..((self.inner.e820_entries - 1) as usize) {
@@ -305,7 +314,6 @@ impl ZeroPage {
     }
 
     pub fn find_e820_entry(&self, addr: usize) -> Option<&BootE820Entry> {
-        //extern crate std; std::eprintln!("entries: {:?}", self.e820_table());
         self.e820_table().iter().find(|&entry| entry.addr() <= addr && entry.end() > addr)
     }
 
@@ -589,5 +597,23 @@ mod tests {
         zero_page.ensure_e820_gap(140, 30);
 
         assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn test_gap_exists() {
+        let mut zero_page = ZeroPage::new();
+        zero_page.inner.append_e820_entry(BootE820Entry::new(0, 1000, E820EntryType::RAM));
+        zero_page.inner.append_e820_entry(BootE820Entry::new(2000, 4000, E820EntryType::RAM));
+
+        assert!(!zero_page.check_e820_gap(0..1000));
+        assert!(!zero_page.check_e820_gap(0..100));
+        assert!(!zero_page.check_e820_gap(900..2100));
+        assert!(!zero_page.check_e820_gap(900..1100));
+        assert!(zero_page.check_e820_gap(1000..2000));
+        assert!(zero_page.check_e820_gap(1100..1900));
+        assert!(!zero_page.check_e820_gap(1100..2100));
+        assert!(!zero_page.check_e820_gap(2000..2100));
+        assert!(!zero_page.check_e820_gap(2000..4000));
+        assert!(!zero_page.check_e820_gap(0..4000));
     }
 }
