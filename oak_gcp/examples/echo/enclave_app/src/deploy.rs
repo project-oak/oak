@@ -92,10 +92,15 @@ fn main() -> Result<()> {
     }
 
     if let Some(cosign_key_path) = &args.cosign_key {
-        let key_content = std::fs::read_to_string(cosign_key_path)?;
-        if key_content.contains("ENCRYPTED") && std::env::var("COSIGN_PASSWORD").is_err() {
-            let password = rpassword::prompt_password("Enter password for cosign key: ")?;
-            std::env::set_var("COSIGN_PASSWORD", password);
+        // If the path does not have a scheme, like gcpkms://, assume it's a local file.
+        // Local files can be password protected, so we check for that and ask for the
+        // password if necessary.
+        if !cosign_key_path.contains("://") {
+            let key_content = std::fs::read_to_string(cosign_key_path)?;
+            if key_content.contains("ENCRYPTED") && std::env::var("COSIGN_PASSWORD").is_err() {
+                let password = rpassword::prompt_password("Enter password for cosign key: ")?;
+                std::env::set_var("COSIGN_PASSWORD", password);
+            }
         }
     }
 
@@ -113,7 +118,8 @@ fn main() -> Result<()> {
 
     run(
         &format!("Pushing OCI image to {}...", args.repository),
-        Command::new("gcrane").args(["push", image_dir, &image_uri]),
+        Command::new("oak_gcp/examples/echo/enclave_app/push_push.sh")
+            .args(["--repository", &args.repository]),
     )?;
 
     println!("{} Image pushed to {}", "INFO:".green(), image_uri);
@@ -157,17 +163,6 @@ fn main() -> Result<()> {
                 instance_name,
                 &format!("--zone={zone}"),
                 &format!("--metadata={metadata}"),
-            ]),
-        )?;
-
-        run(
-            "Rebooting VM...",
-            Command::new("gcloud").args([
-                "compute",
-                "instances",
-                "reset",
-                instance_name,
-                &format!("--zone={zone}"),
             ]),
         )?;
     }

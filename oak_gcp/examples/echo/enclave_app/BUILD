@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
@@ -87,12 +87,25 @@ oci_image(
     tars = [":tar"],
 )
 
+oci_push(
+    name = "push",
+    image = ":image",
+    remote_tags = ["latest"],
+    # This repository can only be used by the Oak team. You can pass the --repository flag to
+    # override it:
+    #
+    # $ bazel run //oak_gcp/examples/echo/enclave_app:push -- --repository=${YOUR_REPO}
+    #
+    repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/echo_enclave_app",
+)
+
 rust_binary(
     name = "deploy",
     srcs = ["src/deploy.rs"],
     data = [
         ":claims.toml",
         ":image",
+        ":push",
         "//trex/doremint",
     ],
     deps = [
