@@ -31,7 +31,7 @@ impl ErrorOrFfiAttester {
         Self { result, error: std::ptr::null() }
     }
 
-    pub fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl std::fmt::Display) -> Self {
         Self { result: FfiAttester::null(), error: Error::new_raw(message) }
     }
 }
@@ -64,7 +64,7 @@ impl ErrorOrFfiEndorser {
         Self { result, error: std::ptr::null() }
     }
 
-    pub fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl std::fmt::Display) -> Self {
         Self { result: FfiEndorser::null(), error: Error::new_raw(message) }
     }
 }

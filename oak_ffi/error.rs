@@ -25,11 +25,13 @@ pub struct Error {
 
 impl Error {
     /// Create a new instance containing the provided [`message`].
-    pub fn new(message: impl AsRef<str>) -> Error {
-        Error { message: RustBytes::new(message.as_ref().as_bytes().to_vec().into_boxed_slice()) }
+    pub fn new(message: impl std::fmt::Display) -> Error {
+        Error {
+            message: RustBytes::new(format!("{message:#}").as_bytes().to_vec().into_boxed_slice()),
+        }
     }
 
-    pub fn new_raw(message: impl AsRef<str>) -> *mut Error {
+    pub fn new_raw(message: impl std::fmt::Display) -> *mut Error {
         Box::into_raw(Box::new(Error::new(message)))
     }
 
@@ -52,7 +54,7 @@ pub struct ErrorOrRustBytes {
 impl ErrorOrRustBytes {
     /// Create a new instance with the `error` field populated with a newly
     /// created Error instance.
-    pub fn err(msg: impl AsRef<str>) -> ErrorOrRustBytes {
+    pub fn err(msg: impl std::fmt::Display) -> ErrorOrRustBytes {
         ErrorOrRustBytes { result: std::ptr::null_mut(), error: Error::new_raw(msg) }
     }
 

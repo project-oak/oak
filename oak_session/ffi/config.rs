@@ -347,7 +347,7 @@ impl ErrorOrSessionConfigBuilder {
         Self { result, error: std::ptr::null() }
     }
 
-    pub fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl std::fmt::Display) -> Self {
         Self { result: std::ptr::null_mut(), error: Error::new_raw(message) }
     }
 }
@@ -363,7 +363,7 @@ impl ErrorOrIdentityKey {
         Self { result, error: std::ptr::null() }
     }
 
-    pub fn err(message: impl AsRef<str>) -> Self {
+    pub fn err(message: impl std::fmt::Display) -> Self {
         Self { result: std::ptr::null_mut(), error: Error::new_raw(message) }
     }
 }

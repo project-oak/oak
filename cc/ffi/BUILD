@@ -4,6 +4,7 @@
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -37,6 +38,25 @@ cc_library(
         ":bytes_bindings",
         "//oak_ffi:oak_ffi_error",
         "@com_google_absl//absl/status",
+    ],
+)
+
+rust_library(
+    name = "error_bindings_test_foreign",
+    srcs = ["error_bindings_test_foreign.rs"],
+    deps = [
+        "//oak_ffi:oak_ffi_error",
+        "@oak_crates_index//:anyhow",
+    ],
+)
+
+cc_test(
+    name = "error_bindings_test",
+    srcs = ["error_bindings_test.cc"],
+    deps = [
+        ":error_bindings",
+        ":error_bindings_test_foreign",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
