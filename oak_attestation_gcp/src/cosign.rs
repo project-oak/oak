@@ -15,7 +15,10 @@
 //
 
 use endorsement::intoto::EndorsementStatement;
-use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
+use oak_proto_rust::oak::attestation::v1::{
+    CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
+    VerifyingKey as ProtoVerifyingKey,
+};
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use p256::ecdsa::VerifyingKey;
@@ -46,6 +49,10 @@ pub enum CosignVerificationError {
     RekorError(&'static str, sigstore::error::Error),
     #[error("rekor payload deserialization error: {0}")]
     RekorPayloadParseError(serde_json::Error),
+    #[error("Invalid verifying key: {0}")]
+    InvalidVerifyingKey(&'static str),
+    #[error("VerifyingKey parsing error: {0}")]
+    VerifyingKeyParseError(p256::ecdsa::Error),
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),
 }
@@ -111,8 +118,30 @@ impl CosignReferenceValues {
         Self { developer_public_key, rekor_public_key: Some(rekor_public_key) }
     }
 
-    pub fn from_proto(_proto: &EndorsementReferenceValue) -> Result<Self, CosignVerificationError> {
-        Err(CosignVerificationError::MissingEndorsement)
+    pub fn from_proto(proto: &ProtoCosignReferenceValues) -> Result<Self, CosignVerificationError> {
+        match &proto.developer_public_key {
+            None => Err(CosignVerificationError::MissingEndorsement),
+            Some(developer_public_key) => {
+                let developer_public_key = parse_verifying_key(developer_public_key.clone())?;
+                match &proto.rekor_public_key {
+                    None => Ok(Self::partial(developer_public_key)),
+                    Some(rekor_public_key) => {
+                        let rekor_public_key = parse_verifying_key(rekor_public_key.clone())?;
+                        Ok(Self::full(developer_public_key, rekor_public_key))
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn parse_verifying_key(proto: ProtoVerifyingKey) -> Result<VerifyingKey, CosignVerificationError> {
+    match proto.r#type() {
+        KeyType::EcdsaP256Sha256 => VerifyingKey::from_sec1_bytes(&proto.raw)
+            .map_err(CosignVerificationError::VerifyingKeyParseError),
+        _ => Err(CosignVerificationError::InvalidVerifyingKey(
+            "VerifyingKey.type is not EcdsaP256Sha256",
+        )),
     }
 }
 

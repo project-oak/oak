@@ -823,10 +823,28 @@ pub fn serialize_certificate_based_reference_values(
 pub fn serialize_confidential_space_reference_values(
     instance: &ConfidentialSpaceReferenceValues,
 ) -> serde_json::Value {
-    let ConfidentialSpaceReferenceValues { root_certificate_pem } = instance;
-    json!({
-        "root_certificate_pem": root_certificate_pem
-    })
+    let ConfidentialSpaceReferenceValues { root_certificate_pem, cosign_reference_values } =
+        instance;
+    let mut result = json!({
+        "root_certificate_pem": root_certificate_pem,
+    });
+    if let Some(cosign_reference_values) = cosign_reference_values {
+        result["cosign_reference_values"] =
+            serialize_cosign_reference_values(cosign_reference_values);
+    }
+    result
+}
+
+pub fn serialize_cosign_reference_values(instance: &CosignReferenceValues) -> serde_json::Value {
+    let CosignReferenceValues { developer_public_key, rekor_public_key } = instance;
+    let mut result = json!({});
+    if let Some(developer_public_key) = developer_public_key {
+        result["developer_public_key"] = serialize_verifying_key(developer_public_key);
+    }
+    if let Some(rekor_public_key) = rekor_public_key {
+        result["rekor_public_key"] = serialize_verifying_key(rekor_public_key);
+    }
+    result
 }
 
 pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Value {

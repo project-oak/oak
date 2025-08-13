@@ -349,6 +349,11 @@ message ApplicationKeysReferenceValues {
   PublicKeyReferenceValue signing_public_key = 3;
 }
 
+message CosignReferenceValues {
+  VerifyingKey developer_public_key = 1;
+  VerifyingKey rekor_public_key = 2;
+}
+
 message OakRestrictedKernelReferenceValues {
   RootLayerReferenceValues root_layer = 1;
   KernelLayerReferenceValues kernel_layer = 2;
@@ -376,6 +381,8 @@ message ConfidentialSpaceReferenceValues {
   // The PEM-encoded root certificate for verifying Confidential Space
   // attestations.
   string root_certificate_pem = 1;
+
+  CosignReferenceValues cosign_reference_values = 2;
 }
 
 message ReferenceValues {

@@ -683,6 +683,13 @@ pub struct ApplicationKeysReferenceValues {
     pub signing_public_key: ::core::option::Option<PublicKeyReferenceValue>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CosignReferenceValues {
+    #[prost(message, optional, tag = "1")]
+    pub developer_public_key: ::core::option::Option<VerifyingKey>,
+    #[prost(message, optional, tag = "2")]
+    pub rekor_public_key: ::core::option::Option<VerifyingKey>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OakRestrictedKernelReferenceValues {
     #[prost(message, optional, tag = "1")]
     pub root_layer: ::core::option::Option<RootLayerReferenceValues>,
@@ -720,6 +727,8 @@ pub struct ConfidentialSpaceReferenceValues {
     /// attestations.
     #[prost(string, tag = "1")]
     pub root_certificate_pem: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "2")]
+    pub cosign_reference_values: ::core::option::Option<CosignReferenceValues>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReferenceValues {
