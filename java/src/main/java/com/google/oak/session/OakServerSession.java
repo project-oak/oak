@@ -23,80 +23,120 @@ import com.google.oak.session.v1.SessionRequest;
 import com.google.oak.session.v1.SessionResponse;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock; // Import the Lock interface
+import java.util.concurrent.locks.ReentrantLock; // Import the ReentrantLock implementation
 
 /**
  * Class representing a streaming Oak Session using the Noise protocol (server).
  */
 public class OakServerSession implements AutoCloseable {
-  // Managed by the native code.
+  private final Lock nativeCallLock = new ReentrantLock();
   private final long nativePtr;
   private boolean closed = false;
 
   public OakServerSession(OakSessionConfigBuilder builder) {
-    this.nativePtr = nativeCreateServerSession(builder.consume());
+    nativeCallLock.lock();
+    try {
+      this.nativePtr = nativeCreateServerSession(builder.consume());
+    } finally {
+      nativeCallLock.unlock();
+    }
   }
 
   public static void loadNativeLib() {
+    // This method loads the native library and is typically called once at application startup.
+    // It does not operate on an instance's nativePtr, so an instance-specific lock is not applied
+    // here.
     System.loadLibrary("oak_server_session_jni");
   }
 
   /** Returns true if the message was expected, false otherwise. */
   public boolean putIncomingMessage(SessionRequest request) {
-    if (closed) {
-      throw new OakSessionException("Session is closed");
+    nativeCallLock.lock();
+    try {
+      if (closed) {
+        throw new OakSessionException("Session is closed");
+      }
+      return nativePutIncomingMessage(nativePtr, request.toByteArray());
+    } finally {
+      nativeCallLock.unlock();
     }
-    return nativePutIncomingMessage(nativePtr, request.toByteArray());
   }
 
   public Optional<SessionResponse> getOutgoingMessage() {
-    if (closed) {
-      throw new OakSessionException("Session is closed");
-    }
-    byte[] serializedMessage = nativeGetOutgoingMessage(nativePtr);
-    if (serializedMessage == null) {
-      return Optional.empty();
-    }
+    nativeCallLock.lock();
     try {
-      return Optional.of(SessionResponse.parseFrom(serializedMessage));
-    } catch (InvalidProtocolBufferException e) {
-      throw new OakSessionException("Couldn't parse the proto from the native session", e);
+      if (closed) {
+        throw new OakSessionException("Session is closed");
+      }
+      byte[] serializedMessage = nativeGetOutgoingMessage(nativePtr);
+      if (serializedMessage == null) {
+        return Optional.empty();
+      }
+      try {
+        return Optional.of(SessionResponse.parseFrom(serializedMessage));
+      } catch (InvalidProtocolBufferException e) {
+        throw new OakSessionException("Couldn't parse the proto from the native session", e);
+      }
+    } finally {
+      nativeCallLock.unlock();
     }
   }
 
   public boolean isOpen() {
-    if (closed) {
-      throw new OakSessionException("Session is closed");
+    nativeCallLock.lock();
+    try {
+      if (closed) {
+        throw new OakSessionException("Session is closed");
+      }
+      return nativeIsSessionOpen(nativePtr);
+    } finally {
+      nativeCallLock.unlock();
     }
-    return nativeIsSessionOpen(nativePtr);
   }
 
   public Optional<PlaintextMessage> read() {
-    if (closed) {
-      throw new OakSessionException("Session is closed");
-    }
-    byte[] serializedMessage = nativeRead(nativePtr);
-    if (serializedMessage == null) {
-      return Optional.empty();
-    }
+    nativeCallLock.lock();
     try {
-      return Optional.of(PlaintextMessage.parseFrom(serializedMessage));
-    } catch (InvalidProtocolBufferException e) {
-      throw new OakSessionException("Couldn't parse the proto from the native session", e);
+      if (closed) {
+        throw new OakSessionException("Session is closed");
+      }
+      byte[] serializedMessage = nativeRead(nativePtr);
+      if (serializedMessage == null) {
+        return Optional.empty();
+      }
+      try {
+        return Optional.of(PlaintextMessage.parseFrom(serializedMessage));
+      } catch (InvalidProtocolBufferException e) {
+        throw new OakSessionException("Couldn't parse the proto from the native session", e);
+      }
+    } finally {
+      nativeCallLock.unlock();
     }
   }
 
   public void write(PlaintextMessage plaintext) {
-    if (closed) {
-      throw new OakSessionException("Session is closed");
+    nativeCallLock.lock();
+    try {
+      if (closed) {
+        throw new OakSessionException("Session is closed");
+      }
+      nativeWrite(nativePtr, plaintext.toByteArray());
+    } finally {
+      nativeCallLock.unlock();
     }
-    nativeWrite(nativePtr, plaintext.toByteArray());
   }
 
   public byte[] getSessionBindingToken(byte[] info) {
-    if (closed) {
-      throw new IllegalStateException("Session was closed");
+    nativeCallLock.lock();
+    try {
+      if (closed) {
+        throw new IllegalStateException("Session was closed");
+      }
+      return nativeGetSessionBindingToken(nativePtr, info);
+    } finally {
+      nativeCallLock.unlock();
     }
-    return nativeGetSessionBindingToken(nativePtr, info);
   }
 
   /**
@@ -106,11 +146,16 @@ public class OakServerSession implements AutoCloseable {
    */
   @Override
   public void close() {
-    if (closed) {
-      return;
+    nativeCallLock.lock();
+    try {
+      if (closed) {
+        return;
+      }
+      nativeClose(nativePtr);
+      closed = true;
+    } finally {
+      nativeCallLock.unlock();
     }
-    nativeClose(nativePtr);
-    closed = true;
   }
 
   private static native long nativeCreateServerSession(long nativeBuilderPtr);
