@@ -19,7 +19,7 @@ import? "~/.oak_justfile.local"
 presubmit: \
     format \
     build-and-test \
-    clippy-ci \
+    clippy \
     cargo-audit \
     private_memory_presubmit
 
@@ -136,7 +136,7 @@ std-crates:
     # When no platform is specified, build for Bazel host platform (x86_64, Linux):
     # bazel test will build all targets as well unless --build_tests_only is specified.
     # We can specify it here to make sure .bazelrc changes don't catch us by surprise.
-    bazel test --keep_going //...:all
+    bazel test --config=release //...:all -- -//third_party/...
 
 [working-directory: 'codelab']
 test-codelab:
@@ -159,10 +159,7 @@ list-bare-metal-crates:
     bazel query "{{bare_metal_crates_query}}"
 
 bazel-clippy:
-    bazel build --keep_going --config=clippy "$@" //...:all -- -third_party/...
-
-bazel-clippy-ci:
-    scripts/clippy_clean
+    bazel build --config=release --config=clippy "$@" //...:all -- -third_party/...
 
 bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
 
@@ -183,8 +180,6 @@ bazel-rustfmt:
     bazel build --config=rustfmt //...:all -- -third_party/...
 
 clippy: bazel-clippy
-
-clippy-ci: bazel-clippy-ci
 
 cargo-audit:
     #!/bin/sh

@@ -24,22 +24,18 @@ function run_as_test_case() {
     local -r stderr_log="${logdir}/stderr.log"
     local -r combined_log="${logdir}/sponge_log.log"
 
-    # Don't exit on failures, we're counting them all and reporting to total.
-    set +o errexit
     # Reset the special bash SECONDS variable so we can time the command.
     SECONDS=0
     if ! run_command_with_logfiles "${stderr_log}" "${combined_log}" "${command}"
     then
         # Seconds will have counted the number of seconds since it was reset.
         local -r time=$SECONDS
-        set -o errexit
         echo "${name} FAILED"
         emit_test_fail "${name}" "${stderr_log}" "${time}"
-        failures+=("${name}")
+        return 1
     else
         # Seconds will have counted the number of seconds since it was reset.
         local -r time=$SECONDS
-        set -o errexit
         echo "${name} PASSED"
         emit_test_pass "${name}" "${combined_log}" "${time}"
     fi
