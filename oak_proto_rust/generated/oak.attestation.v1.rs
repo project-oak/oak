@@ -743,6 +743,7 @@ pub mod reference_values {
         OakRestrictedKernel(super::OakRestrictedKernelReferenceValues),
         #[prost(message, tag = "2")]
         OakContainers(super::OakContainersReferenceValues),
+        /// TODO: b/437347371 - move this field out of the Oak codebase.
         #[prost(message, tag = "3")]
         Cb(super::CbReferenceValues),
         #[prost(message, tag = "4")]
@@ -1533,6 +1534,7 @@ pub mod extracted_evidence {
         OakRestrictedKernel(super::OakRestrictedKernelData),
         #[prost(message, tag = "2")]
         OakContainers(super::OakContainersData),
+        /// TODO: b/437347371 - move this field out of the Oak codebase.
         #[prost(message, tag = "3")]
         Cb(super::CbData),
         #[prost(message, tag = "7625")]

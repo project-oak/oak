@@ -389,7 +389,8 @@ message ReferenceValues {
   oneof type {
     OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
     OakContainersReferenceValues oak_containers = 2;
-    CBReferenceValues cb = 3;
+    // TODO: b/437347371 - move this field out of the Oak codebase.
+    CBReferenceValues cb = 3 [deprecated = true];
     CertificateBasedReferenceValues certificate_based = 4;
     ConfidentialSpaceReferenceValues confidential_space = 5;
   }

@@ -97,7 +97,8 @@ message ExtractedEvidence {
   oneof evidence_values {
     OakRestrictedKernelData oak_restricted_kernel = 1;
     OakContainersData oak_containers = 2;
-    CbData cb = 3;
+    // TODO: b/437347371 - move this field out of the Oak codebase.
+    CbData cb = 3 [deprecated = true];
     OakStandaloneData standalone = 7625;
   }
 
