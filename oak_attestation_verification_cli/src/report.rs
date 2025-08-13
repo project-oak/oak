@@ -16,7 +16,7 @@
 
 use anyhow::anyhow;
 use oak_attestation_gcp::{
-    cosign::{CosignVerificationReport, StatementReport},
+    cosign::{CosignReferenceValues, CosignVerificationReport, StatementReport},
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
     policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
 };
@@ -51,12 +51,16 @@ impl VerificationReport {
         event: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<VerificationReport> {
-        Ok(VerificationReport::CertificateBased(create_certificate_based_attestation_report(
-            reference_values,
-            attestation_timestamp,
-            event,
-            endorsement,
-        )?))
+        let policy = {
+            let tink_public_keyset =
+                reference_values.clone().ca.unwrap_or_default().tink_proto_keyset;
+            let signature_verifier = SignatureVerifier::new(tink_public_keyset.as_slice());
+            let certificate_verifier = CertificateVerifier::new(signature_verifier);
+            SessionBindingPublicKeyPolicy::new(certificate_verifier)
+        };
+        let report =
+            policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)?;
+        Ok(VerificationReport::CertificateBased(report))
     }
 
     pub fn confidential_space(
@@ -65,12 +69,18 @@ impl VerificationReport {
         event: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<VerificationReport> {
-        Ok(VerificationReport::ConfidentialSpace(create_confidential_space_attestation_report(
-            reference_values,
-            attestation_timestamp,
-            event,
-            endorsement,
-        )?))
+        let policy = {
+            let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
+                .map_err(anyhow::Error::msg)?;
+            let cosign_reference_values = CosignReferenceValues::from_proto(
+                &reference_values.cosign_reference_values.clone().unwrap_or_default(),
+            )
+            .map_err(anyhow::Error::msg)?;
+            ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values)
+        };
+        let report =
+            policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)?;
+        Ok(VerificationReport::ConfidentialSpace(report))
     }
 
     pub fn print(
@@ -118,21 +128,6 @@ impl VerificationReport {
     }
 }
 
-fn create_certificate_based_attestation_report(
-    reference_values: &CertificateBasedReferenceValues,
-    attestation_timestamp: Instant,
-    event: &[u8],
-    endorsement: &Variant,
-) -> anyhow::Result<SessionBindingPublicKeyVerificationReport> {
-    let policy = {
-        let tink_public_keyset = reference_values.clone().ca.unwrap_or_default().tink_proto_keyset;
-        let signature_verifier = SignatureVerifier::new(tink_public_keyset.as_slice());
-        let certificate_verifier = CertificateVerifier::new(signature_verifier);
-        SessionBindingPublicKeyPolicy::new(certificate_verifier)
-    };
-    policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
-}
-
 fn print_certificate_based_attestation_report(
     indent: usize,
     report: &SessionBindingPublicKeyVerificationReport,
@@ -164,19 +159,6 @@ fn print_certificate_verification_report(indent: usize, report: &CertificateVeri
             Ok(()) => print_indented!(indent, "✅ is fresh"),
         }
     }
-}
-
-fn create_confidential_space_attestation_report(
-    reference_values: &ConfidentialSpaceReferenceValues,
-    attestation_timestamp: Instant,
-    event: &[u8],
-    endorsement: &Variant,
-) -> anyhow::Result<ConfidentialSpaceVerificationReport> {
-    let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
-        .map_err(anyhow::Error::msg)?;
-    // TODO: b/434899976 - provide reference values for the workload endorsement.
-    let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
-    policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)
 }
 
 fn print_confidential_space_attestation_report(
