@@ -14,7 +14,12 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
+use core::{
+    ffi::CStr,
+    fmt::Display,
+    marker::PhantomData,
+    ops::{Add, Range},
+};
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use strum::FromRepr;
@@ -399,6 +404,55 @@ impl<P: Platform> Iterator for BusDeviceIterator<P> {
         Some(current_address)
     }
 }
+
+trait ResourceAllocatorIdx: Add<Output = Self> + PartialOrd + Sized + Clone + Copy {
+    fn next_multiple_of(self, rhs: Self) -> Self;
+}
+
+impl ResourceAllocatorIdx for u16 {
+    fn next_multiple_of(self, rhs: Self) -> Self {
+        self.next_multiple_of(rhs)
+    }
+}
+
+impl ResourceAllocatorIdx for u32 {
+    fn next_multiple_of(self, rhs: Self) -> Self {
+        self.next_multiple_of(rhs)
+    }
+}
+
+impl ResourceAllocatorIdx for u64 {
+    fn next_multiple_of(self, rhs: Self) -> Self {
+        self.next_multiple_of(rhs)
+    }
+}
+
+#[allow(dead_code)]
+struct ResourceAllocator<Idx: ResourceAllocatorIdx> {
+    range: Range<Idx>,
+    index: Idx,
+}
+
+#[allow(dead_code)]
+impl<Idx: ResourceAllocatorIdx> ResourceAllocator<Idx> {
+    pub fn new(range: Range<Idx>) -> Self {
+        let index = range.start;
+        Self { range, index }
+    }
+
+    pub fn allocate(&mut self, size: Idx) -> Option<Range<Idx>> {
+        // Ensure alignment with `size`.
+        let index = self.index.next_multiple_of(size);
+        if index + size > self.range.end {
+            None
+        } else {
+            let result = index..index + size;
+            self.index = index + size;
+            Some(result)
+        }
+    }
+}
+
 struct PciBus {
     pub root: PciAddress,
 }
@@ -1012,5 +1066,13 @@ mod tests {
                 field!(&Range.end, eq((MMIO64_HOLE_SIZE + MMIO64_HOLE_SIZE) as u64))
             ))
         );
+    }
+
+    #[googletest::test]
+    fn test_resource_allocator() {
+        let mut allocator = ResourceAllocator::new(16u32..128u32);
+        assert_that!(allocator.allocate(16), some(eq(&(16..32))));
+        assert_that!(allocator.allocate(64), some(eq(&(64..128))));
+        assert_that!(allocator.allocate(16), none());
     }
 }
