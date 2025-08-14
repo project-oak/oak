@@ -107,10 +107,10 @@ struct IoBar {
     bar_size: u32,
 }
 
-enum PciBar {
-    Memory32(MemoryBar<u32>),
-    Memory64(MemoryBar<u64>),
-    Io(IoBar),
+enum PciBar<'a> {
+    Memory32(&'a PciAddress, MemoryBar<u32>),
+    Memory64(&'a PciAddress, MemoryBar<u64>),
+    Io(&'a PciAddress, IoBar),
 }
 
 #[derive(FromRepr, PartialEq)]
@@ -145,8 +145,8 @@ struct BarIter<'a, P: Platform> {
     _phantom: PhantomData<P>,
 }
 
-impl<P: Platform> Iterator for BarIter<'_, P> {
-    type Item = PciBar;
+impl<'a, P: Platform> Iterator for BarIter<'a, P> {
+    type Item = PciBar<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Try to find a next BAR.
@@ -181,22 +181,28 @@ impl<P: Platform> Iterator for BarIter<'_, P> {
                         let upper_half = pci_read_cam::<P>(self.device, offset + 1).ok()? as u64;
                         let _ = self.index.insert(index + 2);
 
-                        return Some(PciBar::Memory64(MemoryBar {
-                            offset: index,
-                            bar_size: !((upper_half << 32) + (value as u64)) + 1,
-                        }));
+                        return Some(PciBar::Memory64(
+                            self.device,
+                            MemoryBar {
+                                offset: index,
+                                bar_size: !((upper_half << 32) + (value as u64)) + 1,
+                            },
+                        ));
                     } else {
                         let _ = self.index.insert(index + 1);
-                        return Some(PciBar::Memory32(MemoryBar {
-                            offset: index,
-                            bar_size: !value + 1,
-                        }));
+                        return Some(PciBar::Memory32(
+                            self.device,
+                            MemoryBar { offset: index, bar_size: !value + 1 },
+                        ));
                     }
                 }
                 PciBarKind::Io => {
                     let value = value & !0b1;
                     let _ = self.index.insert(index + 1);
-                    return Some(PciBar::Io(IoBar { offset: index, bar_size: !value + 1 }));
+                    return Some(PciBar::Io(
+                        self.device,
+                        IoBar { offset: index, bar_size: !value + 1 },
+                    ));
                 }
             }
         }
@@ -427,13 +433,11 @@ impl ResourceAllocatorIdx for u64 {
     }
 }
 
-#[allow(dead_code)]
 struct ResourceAllocator<Idx: ResourceAllocatorIdx> {
     range: Range<Idx>,
     index: Idx,
 }
 
-#[allow(dead_code)]
 impl<Idx: ResourceAllocatorIdx> ResourceAllocator<Idx> {
     pub fn new(range: Range<Idx>) -> Self {
         let index = range.start;
@@ -467,7 +471,12 @@ impl PciBus {
         }
     }
 
-    fn init<P: Platform>(&mut self) -> Result<(), &'static str> {
+    fn init<P: Platform>(&mut self, windows: &PciWindows) -> Result<(), &'static str> {
+        // Prepare the allocators for all the resources.
+        let mut io_allocator = ResourceAllocator::new(windows.pci_window_16.clone());
+        let mut mem32_allocator = ResourceAllocator::new(windows.pci_window_32.clone());
+        let mut mem64_allocator = ResourceAllocator::new(windows.pci_window_64.clone());
+
         for function in self.iter_devices::<P>() {
             let (vendor_id, device_id) = function.vendor_device_id::<P>()?;
             let (class, subclass) = function.class_code::<P>()?;
@@ -491,18 +500,58 @@ impl PciBus {
 
             for bar in function.iter_bars::<P>()? {
                 match bar {
-                    PciBar::Memory32(bar) => {
+                    PciBar::Memory32(address, bar) => {
                         log::debug!("  BAR{}: memory, size {}", bar.offset, bar.bar_size);
+                        let allocation = mem32_allocator
+                            .allocate(bar.bar_size)
+                            .ok_or("out of memory for 32-bit memory BAR")?
+                            .start;
+                        log::debug!(
+                            "    assigning [{:08x}-{:08x})",
+                            allocation,
+                            allocation + bar.bar_size
+                        );
+                        pci_write_cam::<P>(address, 0x4 + bar.offset, allocation)?;
                     }
-                    PciBar::Memory64(bar) => {
+                    PciBar::Memory64(address, bar) => {
                         log::debug!(
                             "  BAR{}: memory, 64-bit pref, size {}",
                             bar.offset,
                             bar.bar_size
                         );
+                        let allocation = mem64_allocator
+                            .allocate(bar.bar_size)
+                            .ok_or("out of memory for 64-bit memory BAR")?
+                            .start;
+                        log::debug!(
+                            "    assigning [{:016x}-{:016x})",
+                            allocation,
+                            allocation + bar.bar_size
+                        );
+                        pci_write_cam::<P>(
+                            address,
+                            0x4 + bar.offset,
+                            (allocation & 0xFFFF_FFFF) as u32,
+                        )?;
+                        pci_write_cam::<P>(
+                            address,
+                            0x4 + bar.offset + 1,
+                            (allocation >> 32) as u32,
+                        )?;
                     }
-                    PciBar::Io(bar) => {
+                    PciBar::Io(address, bar) => {
                         log::debug!("  BAR{}: I/O, size {}", bar.offset, bar.bar_size);
+                        let bar_size = bar.bar_size.try_into().unwrap();
+                        let allocation = io_allocator
+                            .allocate(bar_size)
+                            .ok_or("out of memory for 64-bit memory BAR")?
+                            .start;
+                        log::debug!(
+                            "    assigning [{:04x}-{:04x})",
+                            allocation,
+                            allocation + bar_size
+                        );
+                        pci_write_cam::<P>(address, 0x4 + bar.offset, allocation as u32 & !0b11)?;
                     }
                 }
             }
@@ -782,7 +831,7 @@ fn init_machine<P: Platform, M: Machine>(
 
     log::info!("PCI: using windows {:?}", pci_windows);
 
-    root_bus.init::<P>()?;
+    root_bus.init::<P>(&pci_windows)?;
 
     // Find out if there are any extra roots.
     let extra_roots = read_extra_roots(firmware)?;
