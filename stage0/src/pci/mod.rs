@@ -17,6 +17,7 @@
 use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use strum::FromRepr;
 use x86_64::align_down;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
@@ -90,6 +91,113 @@ struct PciBridgeBusRegister {
     pub secondary_bus_number: u8,
     pub primary_bus_number: u8,
 }
+
+struct MemoryBar<T> {
+    offset: u8,
+    bar_size: T,
+}
+
+struct IoBar {
+    offset: u8,
+    bar_size: u32,
+}
+
+enum PciBar {
+    Memory32(MemoryBar<u32>),
+    Memory64(MemoryBar<u64>),
+    Io(IoBar),
+}
+
+#[derive(FromRepr, PartialEq)]
+#[repr(u32)]
+/// Values representing the two kinds of PCI BARs.
+enum PciBarKind {
+    Memory = 0b0,
+    Io = 0b1,
+}
+
+impl PciBarKind {
+    const MASK: u32 = 0b1;
+}
+
+#[derive(FromRepr, Debug, PartialEq)]
+#[repr(u32)]
+enum PciMemoryBarSize {
+    Size32 = 0b000,
+    // 0b010 -- reserved
+    Size64 = 0b100,
+    // 0b110 -- unused
+}
+impl PciMemoryBarSize {
+    const MASK: u32 = 0b110;
+}
+
+struct BarIter<'a, P: Platform> {
+    device: &'a PciAddress,
+    // Bridges have up to 2 BARs, normal devices 6.
+    max_bars: u8,
+    index: Option<u8>,
+    _phantom: PhantomData<P>,
+}
+
+impl<P: Platform> Iterator for BarIter<'_, P> {
+    type Item = PciBar;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Try to find a next BAR.
+        loop {
+            self.index = self.index.filter(|&index| index < self.max_bars);
+            let index = self.index?;
+            let offset = 0x4 + index;
+
+            // Proble the BAR by writing all-ones.
+            pci_write_cam::<P>(self.device, offset, 0xFFFF_FFFF).ok()?;
+            let value = pci_read_cam::<P>(self.device, offset).ok()?;
+
+            if value == 0 {
+                // Unimplemented BAR.
+                let _ = self.index.insert(index + 1);
+                continue;
+            }
+
+            // We have a valid BAR. I/O and 32-bit memory BARs take one slot,
+            // 64-bit memory BARs two slots.
+            let bar_type = PciBarKind::from_repr(value & PciBarKind::MASK)?;
+
+            match bar_type {
+                PciBarKind::Memory => {
+                    let size = PciMemoryBarSize::from_repr(value & PciMemoryBarSize::MASK)?;
+                    // Mask away all but the BAR size field.
+                    let value = value & !0b1111;
+
+                    if size == PciMemoryBarSize::Size64 {
+                        // For 64-bit BARs, we need to read the next register as well.
+                        pci_write_cam::<P>(self.device, offset + 1, 0xFFFF_FFFF).ok()?;
+                        let upper_half = pci_read_cam::<P>(self.device, offset + 1).ok()? as u64;
+                        let _ = self.index.insert(index + 2);
+
+                        return Some(PciBar::Memory64(MemoryBar {
+                            offset: index,
+                            bar_size: !((upper_half << 32) + (value as u64)) + 1,
+                        }));
+                    } else {
+                        let _ = self.index.insert(index + 1);
+                        return Some(PciBar::Memory32(MemoryBar {
+                            offset: index,
+                            bar_size: !value + 1,
+                        }));
+                    }
+                }
+                PciBarKind::Io => {
+                    let value = value & !0b1;
+                    let _ = self.index.insert(index + 1);
+                    return Some(PciBar::Io(IoBar { offset: index, bar_size: !value + 1 }));
+                }
+            }
+        }
+    }
+}
+
 /// PCI address.
 ///
 /// Basic structure: BBBBBBBBDDDDDFFF
@@ -138,6 +246,15 @@ impl PciAddress {
         self.header_type::<P>().map(|value| value & 0x80 != 0)
     }
 
+    fn iter_bars<P: Platform>(&self) -> Result<BarIter<'_, P>, &'static str> {
+        let (class, subclass) = self.class_code::<P>()?;
+        let max_bars = if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
+            2
+        } else {
+            6
+        };
+        Ok(BarIter { device: self, max_bars, index: Some(0), _phantom: PhantomData })
+    }
     /// Checks if the device exists at all.
     fn exists<P: Platform>(&self) -> Result<bool, &'static str> {
         let (vendor_id, _) = self.vendor_device_id::<P>()?;
@@ -313,6 +430,27 @@ impl PciBus {
             if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
                 let bridge_bus_numbers = function.bridge_bus_numbers::<P>()?;
                 log::debug!("PCI to PCI bridge:  {:?}", bridge_bus_numbers);
+                log::warn!(
+                    "UNIMPLEMENTED: leaving PCI bridge unconfigured, file a bug if you see this!"
+                );
+            }
+
+            for bar in function.iter_bars::<P>()? {
+                match bar {
+                    PciBar::Memory32(bar) => {
+                        log::debug!("  BAR{}: memory, size {}", bar.offset, bar.bar_size);
+                    }
+                    PciBar::Memory64(bar) => {
+                        log::debug!(
+                            "  BAR{}: memory, 64-bit pref, size {}",
+                            bar.offset,
+                            bar.bar_size
+                        );
+                    }
+                    PciBar::Io(bar) => {
+                        log::debug!("  BAR{}: I/O, size {}", bar.offset, bar.bar_size);
+                    }
+                }
             }
         }
         Ok(())
