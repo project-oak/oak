@@ -619,13 +619,9 @@ mod tests {
 
     use googletest::prelude::*;
     use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-    use x86_64::{
-        structures::paging::{Page, PageSize, Size4KiB},
-        PhysAddr,
-    };
 
     use super::*;
-    use crate::hal::Base;
+    use crate::hal::MockPlatform;
 
     #[derive(Default)]
     struct TestFirmware {
@@ -755,98 +751,13 @@ mod tests {
         )
     }
 
-    struct MockPlatform;
-
-    impl Platform for MockPlatform {
-        type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
-
-        type Attester = <Base as Platform>::Attester;
-
-        fn cpuid(_leaf: u32) -> core::arch::x86_64::CpuidResult {
-            unimplemented!()
-        }
-
-        unsafe fn mmio<S: PageSize>(_base_address: PhysAddr) -> Self::Mmio<S> {
-            unimplemented!()
-        }
-
-        fn port_factory() -> crate::hal::PortFactory {
-            unimplemented!()
-        }
-
-        fn early_initialize_platform() {
-            unimplemented!()
-        }
-
-        fn prefill_e820_table<T: IntoBytes + FromBytes>(
-            _input: &mut T,
-        ) -> core::result::Result<usize, &'static str> {
-            unimplemented!()
-        }
-
-        fn initialize_platform(_e820_table: &[BootE820Entry]) {
-            unimplemented!()
-        }
-
-        fn finalize_acpi_tables(_rsdp: &mut crate::Rsdp) -> core::result::Result<(), &'static str> {
-            unimplemented!()
-        }
-
-        fn deinit_platform() {
-            unimplemented!()
-        }
-
-        fn populate_zero_page(_zero_page: &mut ZeroPage) {
-            unimplemented!()
-        }
-
-        fn get_attester() -> core::result::Result<Self::Attester, &'static str> {
-            unimplemented!()
-        }
-
-        fn get_derived_key() -> core::result::Result<oak_stage0_dice::DerivedKey, &'static str> {
-            unimplemented!()
-        }
-
-        fn change_page_state(_page: Page<Size4KiB>, _state: crate::hal::PageAssignment) {
-            unimplemented!()
-        }
-
-        fn revalidate_page(_page: Page<Size4KiB>) {
-            unimplemented!()
-        }
-
-        fn page_table_mask(_encryption_state: crate::paging::PageEncryption) -> u64 {
-            unimplemented!()
-        }
-
-        fn encrypted() -> u64 {
-            unimplemented!()
-        }
-
-        fn tee_platform() -> oak_dice::evidence::TeePlatform {
-            unimplemented!()
-        }
-
-        unsafe fn read_msr(_msr: u32) -> u64 {
-            unimplemented!()
-        }
-
-        unsafe fn write_msr(_msr: u32, _value: u64) {
-            unimplemented!()
-        }
-
-        fn wbvind() {
-            unimplemented!()
-        }
-
-        fn guest_phys_addr_size() -> u8 {
-            48
-        }
-    }
-
     #[googletest::test]
     fn mmio64_hole() {
+        // This sets global state for MockPlatform, so beware! However, I don't think
+        // we'll ever need different values in other tests.
+        let ctx = MockPlatform::guest_phys_addr_size_context();
+        ctx.expect().returning(|| 48);
+
         let mut firmware = TestFirmware::default();
         let mut zero_page = ZeroPage::new();
         let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);

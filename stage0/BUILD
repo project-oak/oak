@@ -74,8 +74,6 @@ rust_library(
         "stage0_test",
     ],
     target_compatible_with = any_platform([
-        "//:x86_64-none-setting",
-        "//:x86_64-none-no_avx-setting",
         "//:x86_64-linux-setting",  # Needed for unit testing.
     ]),
     deps = [
@@ -97,6 +95,7 @@ rust_library(
         "@oak_crates_index//:hkdf",
         "@oak_crates_index//:linked_list_allocator",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:mockall",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
@@ -114,7 +113,7 @@ rust_library(
 rust_test(
     name = "stage0_test",
     size = "small",
-    crate = ":stage0",
+    crate = ":stage0_for_test",
     data = ["testdata/table_loader"],
     deps = [
         "//oak_file_utils",

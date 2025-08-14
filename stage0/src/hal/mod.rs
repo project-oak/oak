@@ -19,6 +19,8 @@ pub mod base;
 use core::arch::x86_64::CpuidResult;
 
 pub use base::Base;
+#[cfg(test)]
+use mockall;
 use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
@@ -70,6 +72,10 @@ pub enum PageAssignment {
     Private,
 }
 
+#[cfg_attr(test, mockall::automock(
+    type Mmio<S: PageSize> = <Base as Platform>::Mmio<S>;
+    type Attester = <Base as Platform>::Attester;
+))]
 pub trait Platform {
     type Mmio<S: PageSize>: Mmio<S>;
     type Attester: Attester + Serializable;
@@ -81,7 +87,7 @@ pub trait Platform {
     //   - base_address is aligned to u32
     //   - we've checked it's within the page size
     //   - we were promised that he memory is valid
-    unsafe fn mmio<S: PageSize>(base_address: PhysAddr) -> Self::Mmio<S>;
+    unsafe fn mmio<S: PageSize + 'static>(base_address: PhysAddr) -> Self::Mmio<S>;
 
     fn port_factory() -> PortFactory;
 
@@ -103,7 +109,9 @@ pub trait Platform {
     /// and measure them. This gets executed before asking the fw_cfg device
     /// for E820 table. It should populate the inner E820 table. If this
     /// function returns Ok, stage0 will not ask fw_cfg for E820 table.
-    fn prefill_e820_table<T: IntoBytes + FromBytes>(input: &mut T) -> Result<usize, &'static str>;
+    fn prefill_e820_table<T: IntoBytes + FromBytes + 'static>(
+        input: &mut T,
+    ) -> Result<usize, &'static str>;
 
     /// Platform-specific intialization.
     ///
