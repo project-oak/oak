@@ -257,7 +257,9 @@ pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSession
     info!("Persistence service started");
     while let Some(mut user_context) = rx.recv().await {
         info!("Persistence service received a session to save");
+        get_global_metrics().record_db_persist_queue_size(rx.len() as u64);
         if let Err(e) = persist_database(&mut user_context).await {
+            get_global_metrics().inc_db_persist_failures();
             info!("Failed to persist database: {:?}", e);
         }
     }

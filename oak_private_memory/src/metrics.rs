@@ -25,7 +25,7 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
-    metrics::{Counter, Histogram},
+    metrics::{Counter, Histogram, ObservableGauge},
     KeyValue, Value,
 };
 use prost::Name;
@@ -46,6 +46,10 @@ pub struct Metrics {
     db_persist_latency: Histogram<u64>,
     // Number of retries when connecting to the database.
     db_connect_retries: Counter<u64>,
+    // Number of failures when persisting the database.
+    db_persist_failures: Counter<u64>,
+    // Queue size of the in the database persist queue.
+    db_persist_queue_size: ObservableGauge<u64>,
 }
 
 /// The possible metrics request types.
@@ -105,11 +109,29 @@ impl Metrics {
             .with_description("Number of retries when connecting to the database.")
             .init();
 
+        let db_persist_failures = observer
+            .meter
+            .u64_counter("db_persist_failures")
+            .with_description("Number of failures when persisting the database.")
+            .init();
+
+        let db_persist_queue_size = observer
+            .meter
+            .u64_observable_gauge("db_persist_queue_size")
+            .with_description("Number of items in the database persist queue.")
+            .init();
+
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
+        db_size.record(1, &[]);
+        db_init_latency.record(1, &[]);
+        db_persist_latency.record(1, &[]);
+        db_connect_retries.add(0, &[]);
+        db_persist_failures.add(0, &[]);
+        db_persist_queue_size.observe(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -117,6 +139,8 @@ impl Metrics {
         observer.register_metric(db_init_latency.clone());
         observer.register_metric(db_persist_latency.clone());
         observer.register_metric(db_connect_retries.clone());
+        observer.register_metric(db_persist_failures.clone());
+        observer.register_metric(db_persist_queue_size.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -125,6 +149,8 @@ impl Metrics {
             db_init_latency,
             db_persist_latency,
             db_connect_retries,
+            db_persist_failures,
+            db_persist_queue_size,
         }
     }
 
@@ -186,6 +212,14 @@ impl Metrics {
 
     pub fn inc_db_connect_retries(&self) {
         self.db_connect_retries.add(1, &[]);
+    }
+
+    pub fn inc_db_persist_failures(&self) {
+        self.db_persist_failures.add(1, &[]);
+    }
+
+    pub fn record_db_persist_queue_size(&self, max: u64) {
+        self.db_persist_queue_size.observe(max, &[]);
     }
 }
 
