@@ -329,6 +329,7 @@ impl PciBus {
 /// Location of the PCI resources on this machine.
 #[derive(Debug)]
 pub struct PciWindows {
+    pub pci_window_16: Range<u16>,
     // These are still memory addresses, but we use u32 here as they must be in 32-bit memory.
     pub pci_window_32: Range<u32>,
     pub pci_window_64: Range<u64>,
@@ -337,6 +338,21 @@ pub struct PciWindows {
 trait Machine {
     const PCI_VENDOR_ID: u16;
     const PCI_DEVICE_ID: u16;
+
+    fn io_port_range(
+        _firmware: &mut dyn Firmware,
+        _zero_page: &ZeroPage,
+    ) -> Result<Range<u16>, &'static str> {
+        // 16-bit I/O port ranges.
+        // According to SeaBIOS here:
+        // https://github.com/qemu/seabios/blob/b686f4600792c504f01929f761be473e298de33d/src/fw/pciinit.c#L1009
+        // there are two common port ranges, depending on how many I/O assignments we
+        // will need.
+        //
+        // For now, hard-code the (smaller) range of 0xc000 + 0x4000.
+
+        Ok(0xc000..0xffff)
+    }
 
     fn mmio32_hole(
         firmware: &mut dyn Firmware,
@@ -567,6 +583,7 @@ fn init_machine<P: Platform, M: Machine>(
     // Determine the PCI holes. How this is done is unfortunately extremely clunky
     // and machine-specific.
     let pci_windows = PciWindows {
+        pci_window_16: M::io_port_range(firmware, zero_page)?,
         pci_window_32: M::mmio32_hole(firmware, zero_page)?,
         pci_window_64: M::mmio64_hole::<P>(firmware, zero_page)?,
     };

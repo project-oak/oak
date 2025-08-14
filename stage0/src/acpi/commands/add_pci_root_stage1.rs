@@ -102,13 +102,12 @@ impl<FW: Firmware, F: Files> Invoke<FW, F> for AddPciRootStage1 {
             file[self.pci64_valid_offset as usize] = 0;
         }
 
-        // Ignore PCI16 for now, as we don't know what to write there. For now.
-        //file[self.pci16_io_start_offset as usize
-        //    ..(self.pci16_io_start_offset as usize + size_of::<u16>())]
-        //    .copy_from_slice(????to_le_bytes());
-        //file[self.pci16_io_end_offset as usize
-        //    ..(self.pci16_io_end_offset as usize + size_of::<u16>())]
-        //    .copy_from_slice(????.to_le_bytes());
+        file[self.pci16_io_start_offset as usize
+            ..(self.pci16_io_start_offset as usize + size_of::<u16>())]
+            .copy_from_slice(&data.pci_window_16.start.to_le_bytes());
+        file[self.pci16_io_end_offset as usize
+            ..(self.pci16_io_end_offset as usize + size_of::<u16>())]
+            .copy_from_slice(&data.pci_window_16.end.to_le_bytes());
 
         let crs_allowlist = read_pci_crs_allowlist(fwcfg)?.unwrap_or_default();
         log::debug!("PCI CRS allowlist: {:?}", crs_allowlist);
