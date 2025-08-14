@@ -38,6 +38,7 @@ use tonic::transport::{Channel, Endpoint};
 
 const MAX_CONNECT_RETRIES: usize = 5;
 const INITIAL_BACKOFF_MS: u64 = 100;
+const MAX_DECODE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
 
 pub struct SharedDbClient {
     database_service_host: SocketAddr,
@@ -80,7 +81,8 @@ impl SharedDbClient {
 
             match endpoint.connect().await {
                 Ok(channel) => {
-                    let new_client = SealedMemoryDatabaseServiceClient::new(channel);
+                    let new_client = SealedMemoryDatabaseServiceClient::new(channel)
+                        .max_decoding_message_size(MAX_DECODE_SIZE);
                     *write_guard = Some(new_client.clone());
                     info!("Successfully created and cached new DB client");
                     return Ok(new_client);
@@ -268,6 +270,7 @@ async fn get_or_create_db(
     dek: &[u8],
 ) -> anyhow::Result<(IcingMetaDatabase, bool)> {
     if let Some(data_blob) = db_client.get_blob(uid, true).await? {
+        info!("Loaded database from blob: Length: {}", data_blob.data.len());
         let encrypted_info = decrypt_database(data_blob, dek)?;
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
