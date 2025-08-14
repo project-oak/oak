@@ -20,8 +20,11 @@ pub mod attestation_data;
 pub mod endorsement_data;
 mod factory;
 
+pub use attestation_data::AttestationData;
+pub use endorsement_data::EndorsementData;
 pub use factory::{
     create_oc_endorsements, create_oc_reference_values,
     create_reference_values_for_extracted_evidence, create_rk_endorsements,
-    create_rk_reference_values,
+    create_rk_reference_values, extract_attestation_report, get_cb_reference_values,
+    get_oc_reference_values, get_rk_reference_values,
 };

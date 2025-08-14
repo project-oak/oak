@@ -211,11 +211,11 @@ impl AttestationVerifier for EventLogVerifier {
     }
 }
 
-// Creates a verifier from reference values.
-pub fn create_verifier<T: Clock + 'static>(
+// Creates an AMD SEV-SNP verifier from reference values.
+pub fn create_amd_verifier<T: Clock + 'static>(
     clock: T,
     reference_values: &ReferenceValues,
-) -> anyhow::Result<Box<dyn AttestationVerifier>> {
+) -> anyhow::Result<AmdSevSnpDiceAttestationVerifier> {
     match reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakContainers(rvs)) => {
             let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
@@ -236,12 +236,12 @@ pub fn create_verifier<T: Clock + 'static>(
             let event_policies: Vec<Box<dyn Policy<[u8]>>> =
                 vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
 
-            Ok(Box::new(AmdSevSnpDiceAttestationVerifier::new(
+            Ok(AmdSevSnpDiceAttestationVerifier::new(
                 platform_policy,
                 Box::new(firmware_policy),
                 event_policies,
                 Arc::new(clock),
-            )))
+            ))
         }
         Some(reference_values::Type::OakRestrictedKernel(rvs)) => {
             // Create platform and firmware policies.
@@ -262,12 +262,12 @@ pub fn create_verifier<T: Clock + 'static>(
             let event_policies: Vec<Box<dyn Policy<[u8]>>> =
                 vec![Box::new(kernel_policy), Box::new(application_policy)];
 
-            Ok(Box::new(AmdSevSnpDiceAttestationVerifier::new(
+            Ok(AmdSevSnpDiceAttestationVerifier::new(
                 platform_policy,
                 Box::new(firmware_policy),
                 event_policies,
                 Arc::new(clock),
-            )))
+            ))
         }
         _ => anyhow::bail!("malformed reference values"),
     }

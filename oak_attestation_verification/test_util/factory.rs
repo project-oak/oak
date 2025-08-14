@@ -14,22 +14,28 @@
 // limitations under the License.
 //
 
+/// Focus is on protocol buffer acrobatics without introducing any additional
+/// dependencies.
+use anyhow::Context;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsements, extracted_evidence::EvidenceValues,
         kernel_binary_reference_value, reference_values, root_layer_data::Report,
         tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
         ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests, Endorsements,
-        ExtractedEvidence, InsecureReferenceValues, KernelBinaryReferenceValue, KernelDigests,
-        KernelLayerData, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerData, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerReferenceValues, Digests,
+        Endorsements, Evidence, ExtractedEvidence, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelDigests, KernelLayerData, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerData, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
+        StringLiterals, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        TcbVersionReferenceValue, TextReferenceValue,
     },
     RawDigest,
 };
+use oak_sev_snp_attestation_report::AttestationReport;
+use zerocopy::FromBytes;
 
 // Creates mock endorsements for an Oak Containers chain.
 pub fn create_oc_endorsements(vcek_cert: &[u8]) -> Endorsements {
@@ -355,4 +361,56 @@ fn kernel_layer_reference_values_from_evidence(
             })),
         }),
     }
+}
+
+/// Shorthand to extract Oak Containers reference values subtype.
+pub fn get_oc_reference_values(reference_values: &ReferenceValues) -> OakContainersReferenceValues {
+    let oc_reference_values = match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::OakContainers(containers_reference_values)) => {
+            containers_reference_values.clone()
+        }
+        _ => panic!("no Oak Containers reference values"),
+    };
+    assert!(oc_reference_values.root_layer.is_some());
+    assert!(oc_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
+    assert!(oc_reference_values.kernel_layer.is_some());
+    assert!(oc_reference_values.system_layer.is_some());
+    assert!(oc_reference_values.container_layer.is_some());
+    oc_reference_values
+}
+
+/// Shorthand to extract Oak Restricted Kernel reference values subtype.
+pub fn get_rk_reference_values(
+    reference_values: &ReferenceValues,
+) -> OakRestrictedKernelReferenceValues {
+    let rk_reference_values = match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::OakRestrictedKernel(rk_reference_values)) => {
+            rk_reference_values.clone()
+        }
+        _ => panic!("no Oak Restricted Kernel reference values"),
+    };
+    assert!(rk_reference_values.root_layer.is_some());
+    assert!(rk_reference_values.kernel_layer.is_some());
+    assert!(rk_reference_values.application_layer.is_some());
+    rk_reference_values
+}
+
+/// Shorthand to extract CB reference values subtype.
+pub fn get_cb_reference_values(reference_values: &ReferenceValues) -> CbReferenceValues {
+    let cb_reference_values = match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::Cb(cb_reference_values)) => cb_reference_values.clone(),
+        _ => panic!("no CB reference values"),
+    };
+    assert!(cb_reference_values.root_layer.is_some());
+    assert!(cb_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
+    assert!(!cb_reference_values.layers.is_empty());
+    cb_reference_values
+}
+
+/// Shorthand to extract AMD attestation report from an AMD SEV-SNP evidence.
+pub fn extract_attestation_report(evidence: &Evidence) -> anyhow::Result<&AttestationReport> {
+    let root_layer =
+        &evidence.root_layer.as_ref().context("root DICE layer wasn't provided in the evidence")?;
+    AttestationReport::ref_from_bytes(&root_layer.remote_attestation_report)
+        .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))
 }

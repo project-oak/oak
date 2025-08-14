@@ -71,3 +71,29 @@ impl Policy<[u8]> for ApplicationPolicy {
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use test_util::{get_rk_reference_values, AttestationData};
+
+    use super::*;
+
+    const RK_APPLICATION_EVENT_INDEX: usize = 1;
+
+    #[test]
+    fn verify_succeeds() {
+        let d = AttestationData::load_milan_rk_release();
+        let ref_values = get_rk_reference_values(&d.reference_values);
+        // TODO: b/382550581 - Application reference values currently skip verification.
+        let app_ref_values = ref_values.application_layer.as_ref().unwrap();
+        let policy = ApplicationPolicy::new(app_ref_values);
+        let event =
+            &d.evidence.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
+        let endorsement = &d.endorsements.events[RK_APPLICATION_EVENT_INDEX];
+
+        let result = policy.verify(d.make_valid_time(), event, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

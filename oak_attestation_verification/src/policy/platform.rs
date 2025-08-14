@@ -85,3 +85,32 @@ impl Policy<AttestationReport> for AmdSevSnpPolicy {
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use oak_proto_rust::oak::attestation::v1::endorsements;
+    use test_util::{extract_attestation_report, get_oc_reference_values, AttestationData};
+
+    use super::*;
+
+    #[test]
+    fn verify_oc_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let attestation_report = extract_attestation_report(&d.evidence).unwrap();
+        let endorsement = AmdSevSnpEndorsement {
+            tee_certificate: match d.endorsements.r#type.as_ref() {
+                Some(endorsements::Type::OakContainers(e)) => {
+                    e.root_layer.as_ref().unwrap().tee_certificate.to_vec()
+                }
+                _ => panic!("bad endorsement type"),
+            },
+        };
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let platform_ref_values = ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
+        let policy = AmdSevSnpPolicy::new(platform_ref_values);
+
+        let result = policy.verify(d.make_valid_time(), attestation_report, &endorsement.into());
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

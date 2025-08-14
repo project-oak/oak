@@ -93,3 +93,34 @@ impl Policy<[u8]> for FirmwarePolicy {
         Ok(EventAttestationResults { artifacts })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use test_util::{extract_attestation_report, get_oc_reference_values, AttestationData};
+
+    use super::*;
+
+    #[test]
+    fn verify_oc_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let measurement = &extract_attestation_report(&d.evidence).unwrap().data.measurement;
+        let endorsement = d.endorsements.initial.as_ref().unwrap();
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let firmware_reference_values = ref_values
+            .root_layer
+            .as_ref()
+            .unwrap()
+            .amd_sev
+            .as_ref()
+            .unwrap()
+            .stage0
+            .as_ref()
+            .unwrap();
+        let policy = FirmwarePolicy::new(firmware_reference_values);
+
+        let result = policy.verify(d.make_valid_time(), measurement, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

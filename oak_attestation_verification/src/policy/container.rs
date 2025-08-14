@@ -86,3 +86,27 @@ impl Policy<[u8]> for ContainerPolicy {
         Ok(results)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use test_util::{get_oc_reference_values, AttestationData};
+
+    use super::*;
+
+    const CONTAINER_EVENT_INDEX: usize = 2;
+
+    #[test]
+    fn verify_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
+        let endorsement = &d.endorsements.events[CONTAINER_EVENT_INDEX];
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        // TODO: b/382550581 - Container reference values currently skip verification.
+        let policy = ContainerPolicy::new(ref_values.container_layer.as_ref().unwrap());
+
+        let result = policy.verify(d.make_valid_time(), event, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

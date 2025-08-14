@@ -69,3 +69,40 @@ impl Policy<[u8]> for KernelPolicy {
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use test_util::{get_oc_reference_values, get_rk_reference_values, AttestationData};
+
+    use super::*;
+
+    const KERNEL_EVENT_INDEX: usize = 0;
+
+    #[test]
+    fn verify_oc_success() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
+        let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let policy = KernelPolicy::new(ref_values.kernel_layer.as_ref().unwrap());
+
+        let result = policy.verify(d.make_valid_time(), event, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn verify_rk_success() {
+        let d: AttestationData = AttestationData::load_milan_rk_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[KERNEL_EVENT_INDEX];
+        let endorsement = &d.endorsements.events[KERNEL_EVENT_INDEX];
+        let ref_values = get_rk_reference_values(&d.reference_values);
+        let policy = KernelPolicy::new(ref_values.kernel_layer.as_ref().unwrap());
+
+        let result = policy.verify(d.make_valid_time(), event, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

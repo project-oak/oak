@@ -67,3 +67,26 @@ impl Policy<[u8]> for SystemPolicy {
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use test_util::{get_oc_reference_values, AttestationData};
+
+    use super::*;
+
+    const SYSTEM_EVENT_INDEX: usize = 1;
+
+    #[test]
+    fn verify_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
+        let endorsement = &d.endorsements.events[SYSTEM_EVENT_INDEX];
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let policy = SystemPolicy::new(ref_values.system_layer.as_ref().unwrap());
+
+        let result = policy.verify(d.make_valid_time(), event, endorsement);
+
+        // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+}

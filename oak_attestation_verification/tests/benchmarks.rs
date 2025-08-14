@@ -18,14 +18,15 @@
 extern crate test;
 
 use oak_attestation_verification::{
-    create_verifier,
+    create_amd_verifier,
     verifier::{to_attestation_results, verify},
     verify_endorsement,
 };
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::attestation::v1::attestation_results::Status;
 use oak_time::clock::FixedClock;
 use test::Bencher;
-use test_util::{attestation_data::AttestationData, endorsement_data::EndorsementData};
+use test_util::{AttestationData, EndorsementData};
 
 #[bench]
 fn bench_verify_endorsement(b: &mut Bencher) {
@@ -81,7 +82,8 @@ fn bench_verify_attestation_rk_legacy(b: &mut Bencher) {
 fn bench_verify_attestation_oc(b: &mut Bencher) {
     let d = AttestationData::load_milan_oc_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
-    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
+    let verifier =
+        create_amd_verifier(clock, &d.reference_values).expect("failed to create verifier");
 
     b.iter(|| {
         let result = verifier.verify(&d.evidence, &d.endorsements);
@@ -93,7 +95,8 @@ fn bench_verify_attestation_oc(b: &mut Bencher) {
 fn bench_verify_attestation_rk(b: &mut Bencher) {
     let d = AttestationData::load_milan_rk_release();
     let clock = FixedClock::at_instant(d.make_valid_time());
-    let verifier = create_verifier(clock, &d.reference_values).expect("failed to create verifier");
+    let verifier =
+        create_amd_verifier(clock, &d.reference_values).expect("failed to create verifier");
 
     b.iter(|| {
         let result = verifier.verify(&d.evidence, &d.endorsements);
