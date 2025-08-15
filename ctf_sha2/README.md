@@ -12,16 +12,16 @@ TEE-related software and hardware components.
 ## Claim
 
 The main claim about this binary is that for any execution, it generates a
-random flag, calculates its digest, discards the original flag, and creates an
-attestation containing the flag digest. A falsifier of this claim would be an
-attestation containing a nonce that is the digest of a value provided alongside
-the attestation itself.
+random number, calculates its digest, discards the original number, and creates
+an attestation containing the number's digest.
 
-If anyone can show an attestation, that is correctly validated by the existing
-attestation verification logic and appropriate reference values (including a
-specific image digest confirming this specific binary was used to generate it),
-alongside the pre-image of the nonce in the JWT, then the claim is considered
-falsified.
+Any falsifier of this claim must consist of just such a number alongside an
+attestation containing a nonce which is the digest of that number. That
+attestation must successfully verify according to the existing attestation
+verification logic, with appropriate reference values (including a
+specific image digest confirming this specific binary was used to generate it).
+If the provided number is indeed the pre-image of the attestation (JWT) nonce,
+and all verification checks pass, then the claim is considered falsified.
 
 Note that a falsification of the claim may be due to one (or more) fundamental
 reasons:
