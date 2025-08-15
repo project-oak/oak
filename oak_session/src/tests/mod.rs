@@ -18,4 +18,5 @@ mod attestation_tests;
 mod encryptor_tests;
 mod handshake_tests;
 mod proptests;
+mod session_binding_tests;
 mod session_tests;

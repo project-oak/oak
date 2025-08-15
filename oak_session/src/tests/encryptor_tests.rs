@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::vec::Vec;
+use std::vec::Vec;
 
 use googletest::prelude::*;
 use oak_crypto::{
@@ -20,8 +20,7 @@ use oak_crypto::{
     noise_handshake::{UnorderedCrypter, SYMMETRIC_KEY_LEN},
 };
 use oak_proto_rust::oak::session::v1::PlaintextMessage;
-
-use crate::encryptors::UnorderedChannelEncryptor;
+use oak_session::encryptors::UnorderedChannelEncryptor;
 
 fn test_messages() -> Vec<PlaintextMessage> {
     vec![

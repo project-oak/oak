@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{
+use std::{
     boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
@@ -25,8 +25,7 @@ use oak_crypto::{
     identity_key::{IdentityKey, IdentityKeyHandle},
 };
 use oak_proto_rust::oak::session::v1::{Assertion, PlaintextMessage, SessionBinding};
-
-use crate::{
+use oak_session::{
     attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,
     encryptors::OrderedChannelEncryptor,

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate alloc;
-
 use core::cell::RefCell;
 use std::{
     boxed::Box,
@@ -38,8 +36,7 @@ use oak_proto_rust::oak::{
         SessionBinding, SessionRequest, SessionResponse,
     },
 };
-
-use crate::{
+use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,

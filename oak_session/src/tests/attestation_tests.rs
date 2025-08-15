@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate alloc;
+extern crate std;
 
-use alloc::{
+use std::{
     boxed::Box,
     collections::BTreeMap,
     string::{String, ToString},
@@ -29,8 +29,7 @@ use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence, SessionBinding},
 };
-
-use crate::{
+use oak_session::{
     attestation::{
         AttestationHandler, ClientAttestationHandler, PeerAttestationVerdict,
         ServerAttestationHandler, VerifierResult,

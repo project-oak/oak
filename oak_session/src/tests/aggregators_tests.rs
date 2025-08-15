@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{boxed::Box, collections::BTreeMap, string::String};
+use std::{
+    boxed::Box,
+    collections::BTreeMap,
+    string::{String, ToString},
+};
 
 use googletest::prelude::*;
 use oak_proto_rust::oak::{
     attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
     session::v1::EndorsedEvidence,
 };
-
-use crate::{
+use oak_session::{
     aggregators::{DefaultVerifierResultsAggregator, VerifierResultsAggregator},
-    alloc::string::ToString,
     attestation::{PeerAttestationVerdict, VerifierResult},
 };
 
