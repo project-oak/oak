@@ -24,7 +24,7 @@ use oak_proto_rust::oak::attestation::v1::{endorsements, Endorsements, Evidence,
 use oak_time::{make_instant, Instant};
 use prost::Message;
 
-use crate::factory::{allow_insecure, create_oc_reference_values, create_rk_reference_values};
+use crate::factory::{create_oc_reference_values, create_rk_reference_values};
 
 const CB_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/cb_evidence.binarypb";
 const CB_ENDORSEMENTS_PATH: &str = "oak_attestation_verification/testdata/cb_endorsements.binarypb";
@@ -79,6 +79,8 @@ const TURIN_OC_REFERENCE_VALUES_PATH: &str =
 const FAKE_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/fake_evidence.binarypb";
 const FAKE_ENDORSEMENTS_PATH: &str =
     "oak_attestation_verification/testdata/fake_endorsements.binarypb";
+const FAKE_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/fake_reference_values.binarypb";
 
 pub struct AttestationData {
     pub valid_not_before: Instant,
@@ -179,15 +181,12 @@ impl AttestationData {
     // Loads an attestation example observed on "insecure" hardware.
     pub fn load_fake() -> AttestationData {
         AttestationData {
-            valid_not_before: make_instant!("2025-07-29T00:00:00.000000Z"),
-            valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
+            // Validity period is inferred from endorsements.
+            valid_not_before: make_instant!("2025-08-03T02:23:14.000000Z"),
+            valid_not_after: make_instant!("2025-11-01T02:23:13.000000Z"),
             evidence: load_evidence(FAKE_EVIDENCE_PATH),
             endorsements: load_endorsements(FAKE_ENDORSEMENTS_PATH),
-            reference_values: {
-                let mut rvs = create_oc_reference_values();
-                allow_insecure(&mut rvs);
-                rvs
-            },
+            reference_values: load_reference_values(FAKE_REFERENCE_VALUES_PATH),
         }
     }
 

@@ -30,7 +30,8 @@ pub trait AttestationVerifier: Send + Sync {
     ///
     /// Returns:
     ///   Ok whenever the attestation verification succeeded. In that case,
-    ///   the `AttestationResults`` payload is passed back to the caller.
+    ///   the `AttestationResults`` payload is passed back to the caller which
+    ///   contains status == SUCCESS and empty reason.
     ///
     /// TODO: b/356629314 - Deduplicate the error in the Result and the status
     /// in AttestationResults.

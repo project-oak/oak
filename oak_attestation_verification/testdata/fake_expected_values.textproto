@@ -1,3 +1,8 @@
+# proto-file: third_party/oak/proto/attestation/expected_value.proto
+# proto-message: oak.attestation.v1.ExpectedValues
+#
+# Expected values for fake attestation.
+#
 {	# (oak.attestation.v1.ExpectedValues) size=504B
   oak_containers: {	# (oak.attestation.v1.OakContainersExpectedValues) size=501B
     root_layer: {	# (oak.attestation.v1.RootLayerExpectedValues) size=2B
@@ -9,14 +14,14 @@
         image: {	# (oak.attestation.v1.ExpectedDigests) size=39B
           digests: {	# (oak.attestation.v1.RawDigests) size=37B
             digests: {	# (oak.RawDigest) size=35B
-              sha2_256: "\xD4*\xAB\x02ۅ\x85\xC8\xC6\x45ś\xBF\xCE>\x8F&*\xBE\xC1W\x03m\x1A\xEA\x93u\xA8\x39[\xA4\x06"	# size=32
+              sha2_256: "\xF9\xD0XBG\xB4l\xC2\x34\xA8\x62\xAA\x8CЇe\xB3\x84\x05\x02\"S\xA7\x8B\x9A\xF1\x89\xC4\xCE\xDB\xE4G"	# size=32
             }	# oak_containers.kernel_layer.kernel.image.digests.digests[0]
           }	# oak_containers.kernel_layer.kernel.image.digests
         }	# oak_containers.kernel_layer.kernel.image
         setup_data: {	# (oak.attestation.v1.ExpectedDigests) size=39B
           digests: {	# (oak.attestation.v1.RawDigests) size=37B
             digests: {	# (oak.RawDigest) size=35B
-              sha2_256: "\x01\xD2\xEB\x1A\xABL_\xEE\xA4\x12!\x04\x81\x9C\xC0`\x0E\xB6\xFFlo;g\x19\x00\xB0\xE5\x99\xD7\xF9\x82\x41"	# size=32
+              sha2_256: "Z\\\xD4+\x94q\xAAߖ\xDC-$\x07\xD9ܻ\x11\x65~\xEA\x1A\x0BN\x9Cr\xCF\x06#\xBB\xBA"	# size=32
             }	# oak_containers.kernel_layer.kernel.setup_data.digests.digests[0]
           }	# oak_containers.kernel_layer.kernel.setup_data.digests
         }	# oak_containers.kernel_layer.kernel.setup_data
@@ -29,21 +34,21 @@
       init_ram_fs: {	# (oak.attestation.v1.ExpectedDigests) size=39B
         digests: {	# (oak.attestation.v1.RawDigests) size=37B
           digests: {	# (oak.RawDigest) size=35B
-            sha2_256: "\x18\xC3M\x8C\xC7\x37\xFBW\t\xA9\x9A\xCB\x07<\xDC^ؤ\x04P?bl\xEAn\x0B\xAD\n@`\x02\xFC"	# size=32
+            sha2_256: "\xE2\x87\xE5h\xB5\x88\x0B\x0Eq\xF4\xDE,\xF9\xD2\x06\xB9i\x8F\xF0\xAE\x98\r\xD0\x35\xAE\x94;ԵU\x14,"	# size=32
           }	# oak_containers.kernel_layer.init_ram_fs.digests.digests[0]
         }	# oak_containers.kernel_layer.init_ram_fs.digests
       }	# oak_containers.kernel_layer.init_ram_fs
       memory_map: {	# (oak.attestation.v1.ExpectedDigests) size=39B
         digests: {	# (oak.attestation.v1.RawDigests) size=37B
           digests: {	# (oak.RawDigest) size=35B
-            sha2_256: "p\n\xA0\xD1:\xFFy\xFC\x37\xA0S\xA5r\xB1X\xC6\xD4\x62\x02i i\xF8\x83PI8\x8F\x10\x19\xA1\xF7"	# size=32
+            sha2_256: "y\xAE`S\xB1\xAF\xD9]\xB0VC\xD3gj\xF4\x9F\xA7\xEA\x30ųW\x9D\t\x0B顊\xE7\x03\x03\x08"	# size=32
           }	# oak_containers.kernel_layer.memory_map.digests.digests[0]
         }	# oak_containers.kernel_layer.memory_map.digests
       }	# oak_containers.kernel_layer.memory_map
       acpi: {	# (oak.attestation.v1.ExpectedDigests) size=39B
         digests: {	# (oak.attestation.v1.RawDigests) size=37B
           digests: {	# (oak.RawDigest) size=35B
-            sha2_256: "Z\x80J\xF7\xE9\x07t\x92\xDA\xC2\xE2\xDBg\x10\xA6ͦ\x87\xD9]A\\rA\x95х1\x08\"\xB1\xB0"	# size=32
+            sha2_256: "\x14\x1FR\xE8;B3\x11\x18\xED{*\x0B\x8B\x1F\x1B\xBA\xB3\x04\xE0\x19sǚ\xD4\xCFn\x17&\x12\xD9\xF8"	# size=32
           }	# oak_containers.kernel_layer.acpi.digests.digests[0]
         }	# oak_containers.kernel_layer.acpi.digests
       }	# oak_containers.kernel_layer.acpi
@@ -52,7 +57,7 @@
       system_image: {	# (oak.attestation.v1.ExpectedDigests) size=39B
         digests: {	# (oak.attestation.v1.RawDigests) size=37B
           digests: {	# (oak.RawDigest) size=35B
-            sha2_256: "\xD2r\x05\x66;L\x86\xB7\x17_\x8F;\xB6R\xF1\x07\xCF\xD8w!\x96u\x1B\xBA\x17\x93\x32\xF1\xE5(\xBB\x17"	# size=32
+            sha2_256: "\x1Cv\x1F\t\x96\x15\xB1\xE1m%!$\x07p\xC0\xFB\xCF\x66;\xB9\x03\xF6?g\xE2\x01\xF4\x1C\x7F\xBA\x32\xA4"	# size=32
           }	# oak_containers.system_layer.system_image.digests.digests[0]
         }	# oak_containers.system_layer.system_image.digests
       }	# oak_containers.system_layer.system_image
@@ -61,7 +66,7 @@
       bundle: {	# (oak.attestation.v1.ExpectedDigests) size=39B
         digests: {	# (oak.attestation.v1.RawDigests) size=37B
           digests: {	# (oak.RawDigest) size=35B
-            sha2_256: "s+\x0E=/_\x88\xC1\xB7\x38\xEB\xA2*\xB9\x14wl\x08`\x16H=4\x03\nY\xD1xz}\xE2\xC2"	# size=32
+            sha2_256: "\xF2\xF9\xCF\xE4\xB9\f\f,(vg\x92\x0Bv\x0F\x84{n\xE0?=\xCFo\xED\xA8\x41\x9C`?{\tS"	# size=32
           }	# oak_containers.container_layer.bundle.digests.digests[0]
         }	# oak_containers.container_layer.bundle.digests
       }	# oak_containers.container_layer.bundle

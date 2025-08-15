@@ -17,7 +17,7 @@
 use std::{fs, sync::Arc};
 
 use oak_attestation_verification::{
-    create_amd_verifier,
+    create_amd_verifier, create_insecure_verifier,
     verifier::{verify_dice_chain_and_extract_evidence, SoftwareRootedDiceAttestationVerifier},
     AmdSevSnpDiceAttestationVerifier, AmdSevSnpPolicy, FirmwarePolicy,
 };
@@ -33,7 +33,8 @@ use oak_proto_rust::oak::{
 use oak_time::{clock::FixedClock, Instant};
 use prost::Message;
 use test_util::{
-    create_reference_values_for_extracted_evidence, get_cb_reference_values, AttestationData,
+    allow_insecure, create_reference_values_for_extracted_evidence, get_cb_reference_values,
+    AttestationData,
 };
 
 use crate::attestation_results::Status;
@@ -148,6 +149,17 @@ fn verify_amd(
     v.verify(evidence, endorsements)
 }
 
+fn verify_insecure(
+    timestamp: Instant,
+    evidence: &Evidence,
+    endorsements: &Endorsements,
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<AttestationResults> {
+    let clock = FixedClock::at_instant(timestamp);
+    let v = create_insecure_verifier(clock, reference_values).expect("no verifier");
+    v.verify(evidence, endorsements)
+}
+
 macro_rules! verify_amd_success {
     ($($name:tt)*) => {
         mod verify_amd_success {
@@ -168,6 +180,7 @@ verify_amd_success! {
     load_milan_oc_release
     load_milan_oc_staging
     // Requires event-based endorsements for both. Enable once we have them.
+    // (Applies everywhere.)
     // load_genoa_oc
     // load_turin_oc
     load_milan_rk_release
@@ -194,9 +207,6 @@ macro_rules! verify_amd_success_explicit_reference_values {
 verify_amd_success_explicit_reference_values! {
     load_milan_oc_release
     load_milan_oc_staging
-    // Requires event-based endorsements for both. Enable once we have them.
-    // load_genoa_oc
-    // load_turin_oc
     load_milan_rk_release
     load_milan_rk_staging
 }
@@ -221,9 +231,58 @@ macro_rules! verify_amd_manipulated_root_public_key_failure {
 verify_amd_manipulated_root_public_key_failure! {
     load_milan_oc_release
     load_milan_oc_staging
-    // Requires event-based endorsements for both. Enable once we have them.
-    // load_genoa_oc
-    // load_turin_oc
     load_milan_rk_release
     load_milan_rk_staging
+    load_fake
+}
+
+macro_rules! verify_insecure_success {
+    ($($name:tt)*) => {
+        mod verify_insecure_success {
+            use super::*;
+
+            $(
+                #[test]
+                fn $name() {
+                    let mut d = AttestationData::$name();
+                    allow_insecure(&mut d.reference_values);
+                    assert_success(verify_insecure(d.make_valid_time(), &d.evidence, &d.endorsements, &d.reference_values));
+                }
+            )*
+        }
+    }
+}
+
+verify_insecure_success! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_fake
+}
+
+macro_rules! verify_insecure_manipulated_root_public_key_failure {
+    ($($name:tt)*) => {
+        mod verify_insecure_manipulated_root_public_key_failure {
+            use super::*;
+
+            $(
+                #[test]
+                fn $name() {
+                    let mut d = AttestationData::$name();
+                    allow_insecure(&mut d.reference_values);
+                    d.evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+                    assert_failure(verify_insecure(d.make_valid_time(), &d.evidence, &d.endorsements, &d.reference_values));
+                }
+            )*
+        }
+    }
+}
+
+verify_insecure_manipulated_root_public_key_failure! {
+    load_milan_oc_release
+    load_milan_oc_staging
+    load_milan_rk_release
+    load_milan_rk_staging
+    load_fake
 }

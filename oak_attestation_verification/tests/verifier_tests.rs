@@ -190,9 +190,7 @@ fn verify_fake_evidence_explicit_reference_values_expected_values_correct() {
         .encode(&mut buf)
         .expect("Could not encode expected values from result");
 
-    let expected_expected_values = create_fake_expected_values();
-
-    assert!(computed_expected_values == expected_expected_values)
+    assert_eq!(computed_expected_values, create_fake_expected_values());
 }
 
 macro_rules! verify_manipulated_root_public_key_failure {

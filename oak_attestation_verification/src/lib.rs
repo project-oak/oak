@@ -66,7 +66,10 @@ pub use util::{
     convert_pem_to_raw, decode_event_proto, decode_protobuf_any, hex_to_raw_digest,
     raw_to_hex_digest,
 };
-pub use verifiers::{create_amd_verifier, AmdSevSnpDiceAttestationVerifier, EventLogVerifier};
+pub use verifiers::{
+    create_amd_verifier, create_insecure_verifier, AmdSevSnpDiceAttestationVerifier,
+    EventLogVerifier, InsecureAttestationVerifier,
+};
 
 /// Verifies a signed endorsement against a reference value.
 ///
