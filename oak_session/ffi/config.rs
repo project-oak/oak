@@ -317,7 +317,7 @@ pub unsafe extern "C" fn new_identity_key_from_bytes(bytes: BytesView) -> ErrorO
         Ok(bytes) => {
             ErrorOrIdentityKey::ok(Box::into_raw(Box::new(IdentityKey::from_bytes(bytes))))
         }
-        Err(e) => ErrorOrIdentityKey::err(e.to_string()),
+        Err(e) => ErrorOrIdentityKey::err(e),
     }
 }
 
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn identity_key_get_public_key(
 ) -> ErrorOrRustBytes {
     match (*identity_key).get_public_key() {
         Ok(ik) => ErrorOrRustBytes::ok(ik.into_boxed_slice()),
-        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => ErrorOrRustBytes::err(e),
     }
 }
 

@@ -59,10 +59,7 @@ pub unsafe extern "C" fn new_server_session(
             result: Box::into_raw(Box::new(session)),
             error: std::ptr::null(),
         },
-        Err(e) => ErrorOrServerSession {
-            result: std::ptr::null_mut(),
-            error: Error::new_raw(e.to_string()),
-        },
+        Err(e) => ErrorOrServerSession { result: std::ptr::null_mut(), error: Error::new_raw(e) },
     }
 }
 
@@ -105,14 +102,14 @@ fn safe_server_put_incoming_message(
 ) -> *const Error {
     let request = match SessionRequest::decode(request_slice) {
         Ok(r) => r,
-        Err(e) => return Error::new_raw(e.to_string()),
+        Err(e) => return Error::new_raw(e),
     };
 
     let result = (*session).put_incoming_message(request);
 
     match result {
         Ok(_) => std::ptr::null(),
-        Err(e) => Error::new_raw(e.to_string()),
+        Err(e) => Error::new_raw(e),
     }
 }
 
@@ -140,7 +137,7 @@ fn safe_server_get_outgoing_message(session: &mut ServerSession) -> ErrorOrRustB
     let outgoing_message = match session.get_outgoing_message() {
         Ok(Some(om)) => om,
         Ok(None) => return ErrorOrRustBytes::null(),
-        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => return ErrorOrRustBytes::err(e),
     };
 
     ErrorOrRustBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
@@ -174,7 +171,7 @@ fn safe_server_read(session: &mut ServerSession) -> ErrorOrRustBytes {
     let decrypted_message = match session.read() {
         Ok(Some(om)) => om,
         Ok(None) => return ErrorOrRustBytes::null(),
-        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => return ErrorOrRustBytes::err(e),
     };
 
     ErrorOrRustBytes::ok(decrypted_message.plaintext.into_boxed_slice())
@@ -212,7 +209,7 @@ pub unsafe extern "C" fn server_write(
 fn safe_server_write(session: &mut ServerSession, plaintext_slice: &[u8]) -> *const Error {
     match session.write(PlaintextMessage { plaintext: plaintext_slice.to_vec() }) {
         Ok(()) => std::ptr::null(),
-        Err(e) => Error::new_raw(e.to_string()),
+        Err(e) => Error::new_raw(e),
     }
 }
 
@@ -236,7 +233,7 @@ pub unsafe extern "C" fn server_get_session_binding_token(
 fn safe_server_get_session_binding_token(session: &ServerSession, info: &[u8]) -> ErrorOrRustBytes {
     match session.get_session_binding_token(info) {
         Ok(st) => ErrorOrRustBytes::ok(st.into_boxed_slice()),
-        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => ErrorOrRustBytes::err(e),
     }
 }
 
@@ -271,7 +268,7 @@ fn safe_server_get_peer_attestation_evidence(session: &ServerSession) -> ErrorOr
             };
             ErrorOrRustBytes::ok(Message::encode_to_vec(&proto_evidence).into_boxed_slice())
         }
-        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => ErrorOrRustBytes::err(e),
     }
 }
 

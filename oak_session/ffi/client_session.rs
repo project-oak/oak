@@ -57,10 +57,7 @@ pub unsafe extern "C" fn new_client_session(config: *mut SessionConfig) -> Error
             result: Box::into_raw(Box::new(session)),
             error: std::ptr::null(),
         },
-        Err(e) => ErrorOrClientSession {
-            result: std::ptr::null_mut(),
-            error: Error::new_raw(e.to_string()),
-        },
+        Err(e) => ErrorOrClientSession { result: std::ptr::null_mut(), error: Error::new_raw(e) },
     }
 }
 
@@ -99,7 +96,7 @@ fn safe_client_get_outgoing_message(session: &mut ClientSession) -> ErrorOrRustB
     let outgoing_message = match session.get_outgoing_message() {
         Ok(Some(om)) => om,
         Ok(None) => return ErrorOrRustBytes::null(),
-        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => return ErrorOrRustBytes::err(e),
     };
 
     ErrorOrRustBytes::ok(Message::encode_to_vec(&outgoing_message).into_boxed_slice())
@@ -132,14 +129,14 @@ fn safe_client_put_incoming_message(
 ) -> *const Error {
     let session_response = match SessionResponse::decode(session_response_slice) {
         Ok(r) => r,
-        Err(e) => return Error::new_raw(e.to_string()),
+        Err(e) => return Error::new_raw(e),
     };
 
     let result = session.put_incoming_message(session_response);
 
     match result {
         Ok(_) => std::ptr::null(),
-        Err(e) => Error::new_raw(e.to_string()),
+        Err(e) => Error::new_raw(e),
     }
 }
 
@@ -170,7 +167,7 @@ fn safe_client_read(session: &mut ClientSession) -> ErrorOrRustBytes {
     let decrypted_message = match session.read() {
         Ok(Some(om)) => om,
         Ok(None) => return ErrorOrRustBytes::null(),
-        Err(e) => return ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => return ErrorOrRustBytes::err(e),
     };
 
     ErrorOrRustBytes::ok(decrypted_message.plaintext.into_boxed_slice())
@@ -207,7 +204,7 @@ pub unsafe extern "C" fn client_write(
 fn safe_client_write(session: &mut ClientSession, plaintext_bytes_slice: &[u8]) -> *const Error {
     match session.write(PlaintextMessage { plaintext: plaintext_bytes_slice.to_vec() }) {
         Ok(()) => std::ptr::null(),
-        Err(e) => Error::new_raw(e.to_string()),
+        Err(e) => Error::new_raw(e),
     }
 }
 
@@ -231,7 +228,7 @@ pub unsafe extern "C" fn client_get_session_binding_token(
 fn safe_client_get_session_binding_token(session: &ClientSession, info: &[u8]) -> ErrorOrRustBytes {
     match session.get_session_binding_token(info) {
         Ok(st) => ErrorOrRustBytes::ok(st.into_boxed_slice()),
-        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => ErrorOrRustBytes::err(e),
     }
 }
 
@@ -265,7 +262,7 @@ fn safe_client_get_peer_attestation_evidence(session: &ClientSession) -> ErrorOr
             };
             ErrorOrRustBytes::ok(Message::encode_to_vec(&proto_evidence).into_boxed_slice())
         }
-        Err(e) => ErrorOrRustBytes::err(e.to_string()),
+        Err(e) => ErrorOrRustBytes::err(e),
     }
 }
 
