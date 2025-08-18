@@ -20,6 +20,7 @@ mod print;
 mod report;
 
 use std::{
+    fmt::Write,
     fs,
     path::Path,
     time::{SystemTime, UNIX_EPOCH},
@@ -61,18 +62,19 @@ fn proto_decoder<T: Message + std::default::Default>(path: &str) -> anyhow::Resu
     Ok(T::decode(fs::read(path)?.as_slice())?)
 }
 
-fn main() {
+fn main() -> std::fmt::Result {
     let Flags { attestation, reference_values: ReferenceValuesCollection { reference_values } } =
         Flags::parse();
 
+    let mut buffer = String::new();
     let indent = 0;
 
     let attestation_timestamp = get_timestamp(&attestation);
-    print_timestamp_report(indent, &attestation_timestamp);
+    print_timestamp_report(&mut buffer, indent, &attestation_timestamp)?;
     let attestation_timestamp = attestation_timestamp.unwrap_or(Instant::UNIX_EPOCH);
 
     let handshake_hash = attestation.handshake_hash.clone();
-    print_handshake_hash_report(indent, &handshake_hash);
+    print_handshake_hash_report(&mut buffer, indent, &handshake_hash)?;
 
     for (attestation_type_id, endorsed_evidence) in attestation.endorsed_evidence.iter() {
         match process_attestation(
@@ -83,16 +85,24 @@ fn main() {
         ) {
             Ok(ref report) => {
                 report.print(
+                    &mut buffer,
                     indent,
                     &handshake_hash,
                     attestation.session_bindings.get(attestation_type_id),
-                );
+                )?;
             }
             Err(ref err) => {
-                print_indented!(indent, "❌ Provided attestation is invalid: {}", err);
+                print_indented!(
+                    &mut buffer,
+                    indent,
+                    "❌ Provided attestation is invalid: {}",
+                    err
+                )?;
             }
         }
     }
+    println!("{}", buffer);
+    Ok(())
 }
 
 // TODO: b/419209669 - add tests for process_attestation (or perhaps more
@@ -145,32 +155,42 @@ fn get_timestamp(attestation: &CollectedAttestation) -> anyhow::Result<Instant> 
 }
 
 /// Prints out a report for the provided timestamp
-fn print_timestamp_report(indent: usize, timestamp: &anyhow::Result<Instant>) {
-    print_indented!(indent, "🕠 Recorded timestamp:");
+fn print_timestamp_report(
+    writer: &mut impl Write,
+    indent: usize,
+    timestamp: &anyhow::Result<Instant>,
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "🕠 Recorded timestamp:")?;
     match timestamp {
         Err(err) => {
             let indent = indent + 1;
-            print_indented!(indent, "❌ is invalid: {:?}", err);
+            print_indented!(writer, indent, "❌ is invalid: {:?}", err)?;
         }
         Ok(timestamp) => {
             let indent = indent + 1;
             if *timestamp != Instant::UNIX_EPOCH {
-                print_indented!(indent, "✅ is valid: {}", *timestamp);
+                print_indented!(writer, indent, "✅ is valid: {}", *timestamp)?;
             } else {
-                print_indented!(indent, "❌ is unset");
+                print_indented!(writer, indent, "❌ is unset")?;
             }
         }
     }
+    Ok(())
 }
 
-fn print_handshake_hash_report(indent: usize, handshake_hash: &[u8]) {
-    print_indented!(indent, "🤝 Session handshake:");
+fn print_handshake_hash_report(
+    writer: &mut impl Write,
+    indent: usize,
+    handshake_hash: &[u8],
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "🤝 Session handshake:")?;
     let indent = indent + 1;
     if handshake_hash.is_empty() {
-        print_indented!(indent, "❌ is missing");
+        print_indented!(writer, indent, "❌ is missing")?;
     } else {
-        print_indented!(indent, "✅ is present");
+        print_indented!(writer, indent, "✅ is present")?;
     }
+    Ok(())
 }
 
 fn find_single_event(endorsed_evidence: &EndorsedEvidence) -> anyhow::Result<Vec<u8>> {

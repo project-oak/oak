@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::fmt::Write;
+
 use anyhow::anyhow;
 use oak_attestation_gcp::{
     cosign::{CosignReferenceValues, CosignVerificationReport, StatementReport},
@@ -85,35 +87,37 @@ impl VerificationReport {
 
     pub fn print(
         &self,
+        writer: &mut impl Write,
         indent: usize,
         handshake_hash: &[u8],
         session_binding: Option<&SessionBinding>,
-    ) {
+    ) -> std::fmt::Result {
         match self {
             VerificationReport::ConfidentialSpace(report) => {
-                print_confidential_space_attestation_report(indent, report)
+                print_confidential_space_attestation_report(writer, indent, report)?;
             }
             VerificationReport::CertificateBased(report) => {
-                print_certificate_based_attestation_report(indent, report)
+                print_certificate_based_attestation_report(writer, indent, report)?;
             }
         }
 
         let indent = indent + 1;
         match session_binding {
-            None => print_indented!(indent, "❌ No session binding found"),
+            None => print_indented!(writer, indent, "❌ No session binding found")?,
             Some(session_binding) => {
-                print_indented!(indent, "🔐 Session binding:");
+                print_indented!(writer, indent, "🔐 Session binding:")?;
                 let indent = indent + 1;
                 match verify_session_binding(
                     &self.session_binding_public_key(),
                     handshake_hash,
                     &session_binding.binding,
                 ) {
-                    Ok(()) => print_indented!(indent, "✅ verified successfully"),
-                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
+                    Ok(()) => print_indented!(writer, indent, "✅ verified successfully")?,
+                    Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
                 }
             }
         }
+        Ok(())
     }
 
     fn session_binding_public_key(&self) -> Vec<u8> {
@@ -129,126 +133,143 @@ impl VerificationReport {
 }
 
 fn print_certificate_based_attestation_report(
+    writer: &mut impl Write,
     indent: usize,
     report: &SessionBindingPublicKeyVerificationReport,
-) {
+) -> std::fmt::Result {
     match &report.endorsement {
-        Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
+        Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err),
         Ok(certificate_verification_report) => {
-            print_certificate_verification_report(indent, certificate_verification_report)
+            print_certificate_verification_report(writer, indent, certificate_verification_report)
         }
     }
 }
 
-fn print_certificate_verification_report(indent: usize, report: &CertificateVerificationReport) {
-    print_indented!(indent, "📜 Certificate:");
+fn print_certificate_verification_report(
+    writer: &mut impl Write,
+    indent: usize,
+    report: &CertificateVerificationReport,
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "📜 Certificate:")?;
     let indent = indent + 1;
     let CertificateVerificationReport { validity, verification, freshness: freshness_option } =
         report;
     match validity {
-        Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-        Ok(()) => print_indented!(indent, "✅ is valid"),
+        Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err)?,
+        Ok(()) => print_indented!(writer, indent, "✅ is valid")?,
     }
     match verification {
-        Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-        Ok(()) => print_indented!(indent, "✅ verified successfully"),
+        Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
+        Ok(()) => print_indented!(writer, indent, "✅ verified successfully")?,
     }
     if let Some(freshness) = freshness_option {
         match freshness {
-            Err(err) => print_indented!(indent, "❌ proof of freshness failed to verify: {}", err),
-            Ok(()) => print_indented!(indent, "✅ is fresh"),
+            Err(err) => {
+                print_indented!(writer, indent, "❌ proof of freshness failed to verify: {}", err)?
+            }
+            Ok(()) => print_indented!(writer, indent, "✅ is fresh")?,
         }
     }
+    Ok(())
 }
 
 fn print_confidential_space_attestation_report(
+    writer: &mut impl Write,
     indent: usize,
     report: &ConfidentialSpaceVerificationReport,
-) {
-    print_indented!(indent, "🔑 Public key:");
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "🔑 Public key:")?;
     {
         let indent = indent + 1;
         match &report.public_key_verification {
-            Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-            Ok(()) => print_indented!(indent, "✅ verified successfully"),
+            Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
+            Ok(()) => print_indented!(writer, indent, "✅ verified successfully")?,
         }
     }
-    print_token_report(indent, &report.token_report);
-    print_indented!(indent, "📦 Workload endorsement:");
+    print_token_report(writer, indent, &report.token_report)?;
+    print_indented!(writer, indent, "📦 Workload endorsement:")?;
     {
         let indent = indent + 1;
         match &report.workload_endorsement_verification {
-            None => print_indented!(indent, "🤷 not present"),
-            Some(Err(err)) => print_indented!(indent, "❌ failed to verify: {}", err),
+            None => print_indented!(writer, indent, "🤷 not present")?,
+            Some(Err(err)) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
             Some(Ok(CosignVerificationReport { statement_verification })) => {
-                print_indented!(indent, " Statement");
+                print_indented!(writer, indent, " Statement")?;
                 let indent = indent + 1;
                 match statement_verification {
-                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
+                    Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
                     Ok(StatementReport { statement_validation, rekor_verification }) => {
                         match statement_validation {
-                            Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-                            Ok(()) => print_indented!(indent, "✅ is valid"),
+                            Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err)?,
+                            Ok(()) => print_indented!(writer, indent, "✅ is valid")?,
                         }
                         match rekor_verification {
-                            None => print_indented!(indent, "🤷 not verified"),
+                            None => print_indented!(writer, indent, "🤷 not verified")?,
                             Some(Err(err)) => {
-                                print_indented!(indent, "❌ failed to verify: {}", err)
+                                print_indented!(writer, indent, "❌ failed to verify: {}", err)?
                             }
-                            Some(Ok(())) => print_indented!(indent, "✅ verified successfully"),
+                            Some(Ok(())) => {
+                                print_indented!(writer, indent, "✅ verified successfully")?
+                            }
                         }
                     }
                 }
             }
         }
     }
+    Ok(())
 }
 
-fn print_token_report(indent: usize, report: &AttestationTokenVerificationReport) {
-    print_indented!(indent, "🪙 Token verification:");
+fn print_token_report(
+    writer: &mut impl Write,
+    indent: usize,
+    report: &AttestationTokenVerificationReport,
+) -> std::fmt::Result {
+    print_indented!(writer, indent, "🪙 Token verification:")?;
     let indent = indent + 1;
     let AttestationTokenVerificationReport { validity, verification, issuer_report } = report;
     match validity {
-        Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-        Ok(()) => print_indented!(indent, "✅ is valid"),
+        Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err)?,
+        Ok(()) => print_indented!(writer, indent, "✅ is valid")?,
     }
     match verification {
-        Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-        Ok(_) => print_indented!(indent, "✅ verified successfully"),
+        Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
+        Ok(_) => print_indented!(writer, indent, "✅ verified successfully")?,
     }
-    print_indented!(indent, "📜 Certificate chain:");
-    print_certificate_chain(indent + 1, issuer_report);
+    print_indented!(writer, indent, "📜 Certificate chain:")?;
+    print_certificate_chain(writer, indent + 1, issuer_report)
 }
 
 fn print_certificate_chain(
+    writer: &mut impl Write,
     indent: usize,
     report: &Result<
         CertificateReport,
         oak_attestation_gcp::jwt::verification::AttestationVerificationError,
     >,
-) {
+) -> std::fmt::Result {
     match report {
-        Err(err) => print_indented!(indent, "❌ invalid: {}", err),
+        Err(err) => print_indented!(writer, indent, "❌ invalid: {}", err),
         Ok(report) => {
-            print_indented!(indent, "📜 Certificate:");
+            print_indented!(writer, indent, "📜 Certificate:")?;
             {
                 let indent = indent + 1;
                 match &report.validity {
-                    Err(err) => print_indented!(indent, "❌ is invalid: {}", err),
-                    Ok(()) => print_indented!(indent, "✅ is valid"),
+                    Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err)?,
+                    Ok(()) => print_indented!(writer, indent, "✅ is valid")?,
                 }
                 match &report.verification {
-                    Err(err) => print_indented!(indent, "❌ failed to verify: {}", err),
-                    Ok(()) => print_indented!(indent, "✅ verified successfully"),
+                    Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
+                    Ok(()) => print_indented!(writer, indent, "✅ verified successfully")?,
                 }
-                print_indented!(indent, "✍️  issued by:");
+                print_indented!(writer, indent, "✍️  issued by:")?;
             }
             match report.issuer_report.as_ref() {
                 IssuerReport::OtherCertificate(report) => {
-                    print_certificate_chain(indent, report);
+                    print_certificate_chain(writer, indent, report)
                 }
                 IssuerReport::Root => {
-                    print_indented!(indent, "🛡️ Confidential Space root certificate");
+                    print_indented!(writer, indent, "🛡️ Confidential Space root certificate")
                 }
             }
         }

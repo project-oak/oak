@@ -14,15 +14,12 @@
 // limitations under the License.
 //
 
-/// Prints a format string with the given arguments, with the provided indent
-/// prefix. Defined as a macro to enable accepting a variable number of
+/// Writes a format string with the given arguments and indent prefix to the
+/// given writer. Defined as a macro to enable accepting a variable number of
 /// arguments to the format string.
 macro_rules! print_indented {
-    ($indent:expr, $fmt:expr $(, $args:expr)*) => {
-        {
-            let formatted_text = format!($fmt $(, $args)*);
-            println!("{}{}", "\t".repeat($indent), formatted_text);
-        }
+    ($writer:expr, $indent:expr, $fmt:expr $(, $args:expr)*) => {
+        writeln!($writer, "{}{}", "\t".repeat($indent), format!($fmt $(, $args)*))
     };
 }
 
