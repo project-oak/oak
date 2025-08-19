@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_test_suite")
 
 package(
@@ -37,4 +39,32 @@ rust_test_suite(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
     ],
+)
+
+pkg_tar(
+    name = "oak_proxy_tar",
+    srcs = [
+        "//oak_proxy/client",
+        "//oak_proxy/server",
+    ],
+    package_dir = "/usr/local/bin",
+    remap_paths = {
+        "oak_proxy/server/client": "oak_proxy_client",
+        "oak_proxy/server/server": "oak_proxy_server",
+    },
+)
+
+oci_image(
+    name = "oak_proxy_image",
+    base = "@distroless_cc_debian12",
+    labels = {
+        "tee.launch_policy.allow_cmd_override": "true",
+    },
+    tars = [":oak_proxy_tar"],
+)
+
+oci_load(
+    name = "oak_proxy_load_image",
+    image = ":oak_proxy_image",
+    repo_tags = ["oak_proxy:latest"],
 )
