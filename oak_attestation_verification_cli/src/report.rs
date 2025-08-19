@@ -262,7 +262,7 @@ fn print_certificate_chain(
                     Err(err) => print_indented!(writer, indent, "❌ failed to verify: {}", err)?,
                     Ok(()) => print_indented!(writer, indent, "✅ verified successfully")?,
                 }
-                print_indented!(writer, indent, "✍️  issued by:")?;
+                print_indented!(writer, indent, "✍️ issued by:")?;
             }
             match report.issuer_report.as_ref() {
                 IssuerReport::OtherCertificate(report) => {
@@ -288,4 +288,294 @@ fn verify_session_binding(
         .build()
         .map_err(|err| anyhow!("SignatureBindingVerifier construction failed: {}", err))?;
     verifier.verify_binding(handshake_hash, binding)
+}
+
+#[cfg(test)]
+mod tests {
+    use oak_attestation_gcp::{
+        cosign::{CosignVerificationError, CosignVerificationReport, StatementReport},
+        jwt::verification::{
+            AttestationTokenVerificationReport, AttestationVerificationError, CertificateReport,
+            IssuerReport,
+        },
+        policy::{ConfidentialSpaceVerificationError, ConfidentialSpaceVerificationReport},
+    };
+    use oak_attestation_verification::SessionBindingPublicKeyVerificationReport;
+    use oak_crypto::certificate::certificate_verifier::{
+        CertificateVerificationError, CertificateVerificationReport,
+    };
+
+    use super::*;
+
+    const INDENT: usize = 0;
+    const HANDSHAKE_HASH: &[u8] = b"";
+    const SESSION_BINDING: Option<&SessionBinding> = None;
+
+    // TODO: b/419209669 - Use a non-empty session binding key (and session binding)
+    // in these tests and assert on the session binding verification report.
+
+    #[test]
+    fn test_print_certificate_based_report_success() {
+        let report =
+            VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
+                endorsement: Ok(CertificateVerificationReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    freshness: Some(Ok(())),
+                }),
+                session_binding_public_key: vec![],
+            });
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "📜 Certificate:",
+                "✅ is valid",
+                "✅ verified successfully",
+                "✅ is fresh",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_certificate_based_report_endorsement_error() {
+        let report =
+            VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
+                endorsement: Err(CertificateVerificationError::UnknownError("endorsement error")),
+                session_binding_public_key: vec![],
+            });
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &["❌ is invalid: Unknown error: endorsement error", "❌ No session binding found"],
+        );
+    }
+
+    #[test]
+    fn test_print_certificate_based_report_certificate_verification_errors() {
+        let report =
+            VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
+                endorsement: Ok(CertificateVerificationReport {
+                    validity: Err(CertificateVerificationError::UnknownError("validity error")),
+                    verification: Err(CertificateVerificationError::UnknownError(
+                        "verification error",
+                    )),
+                    freshness: Some(Err(CertificateVerificationError::UnknownError(
+                        "freshness error",
+                    ))),
+                }),
+                session_binding_public_key: vec![],
+            });
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "📜 Certificate:",
+                "❌ is invalid: Unknown error: validity error",
+                "❌ failed to verify: Unknown error: verification error",
+                "❌ proof of freshness failed to verify: Unknown error: freshness error",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_confidential_space_report_success() {
+        let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
+            public_key_verification: Ok(()),
+            token_report: AttestationTokenVerificationReport {
+                validity: Ok(()),
+                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
+                verification: Err(AttestationVerificationError::UnknownError(
+                    "verification skipped",
+                )),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: Box::new(IssuerReport::Root),
+                }),
+            },
+            workload_endorsement_verification: Some(Ok(CosignVerificationReport {
+                statement_verification: Ok(StatementReport {
+                    statement_validation: Ok(()),
+                    rekor_verification: Some(Ok(())),
+                }),
+            })),
+            session_binding_public_key: vec![],
+        });
+
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🔑 Public key:",
+                "✅ verified successfully",
+                "🪙 Token verification:",
+                "✅ is valid",
+                "❌ failed to verify: Unknown error: verification skipped",
+                "📜 Certificate chain:",
+                "📜 Certificate:",
+                "✅ is valid",
+                "✅ verified successfully",
+                "✍️ issued by:",
+                "🛡️ Confidential Space root certificate",
+                "📦 Workload endorsement:",
+                "Statement",
+                "✅ is valid",
+                "✅ verified successfully",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_confidential_space_report_success_no_workload_endorsement() {
+        let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
+            public_key_verification: Ok(()),
+            token_report: AttestationTokenVerificationReport {
+                validity: Ok(()),
+                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
+                verification: Err(AttestationVerificationError::UnknownError(
+                    "verification skipped",
+                )),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: Box::new(IssuerReport::Root),
+                }),
+            },
+            workload_endorsement_verification: None,
+            session_binding_public_key: vec![],
+        });
+
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🔑 Public key:",
+                "✅ verified successfully",
+                "🪙 Token verification:",
+                "✅ is valid",
+                "❌ failed to verify: Unknown error: verification skipped",
+                "📜 Certificate chain:",
+                "📜 Certificate:",
+                "✅ is valid",
+                "✅ verified successfully",
+                "✍️ issued by:",
+                "🛡️ Confidential Space root certificate",
+                "📦 Workload endorsement:",
+                "🤷 not present",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_confidential_space_report_errors() {
+        let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
+            public_key_verification: Err(ConfidentialSpaceVerificationError::MissingField(
+                "public key",
+            )),
+            token_report: AttestationTokenVerificationReport {
+                validity: Err(AttestationVerificationError::UnknownError("token validity error")),
+                verification: Err(AttestationVerificationError::UnknownError("verification error")),
+                issuer_report: Err(AttestationVerificationError::UnknownError("issuer error")),
+            },
+            workload_endorsement_verification: Some(Err(
+                CosignVerificationError::StatementValidationError(
+                    "workload endorsement error".to_string(),
+                ),
+            )),
+            session_binding_public_key: vec![],
+        });
+
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🔑 Public key:",
+                "❌ failed to verify: Missing field: public key",
+                "🪙 Token verification:",
+                "❌ is invalid: Unknown error: token validity error",
+                "❌ failed to verify: Unknown error: verification error",
+                "📜 Certificate chain:",
+                "❌ invalid: Unknown error: issuer error",
+                "📦 Workload endorsement:",
+                "❌ failed to verify: endorsement validation error: workload endorsement error",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    #[test]
+    fn test_print_confidential_space_report_statement_rekor_errors() {
+        let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
+            public_key_verification: Ok(()),
+            token_report: AttestationTokenVerificationReport {
+                validity: Ok(()),
+                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
+                verification: Err(AttestationVerificationError::UnknownError(
+                    "verification skipped",
+                )),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: Box::new(IssuerReport::Root),
+                }),
+            },
+            workload_endorsement_verification: Some(Ok(CosignVerificationReport {
+                statement_verification: Ok(StatementReport {
+                    statement_validation: Err(CosignVerificationError::StatementValidationError(
+                        "statement validation error".to_string(),
+                    )),
+                    rekor_verification: Some(Err(CosignVerificationError::UnknownError(
+                        "rekor verification error",
+                    ))),
+                }),
+            })),
+            session_binding_public_key: vec![],
+        });
+
+        let mut writer = String::new();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        assert_eq_trimmed_lines(
+            &writer,
+            &[
+                "🔑 Public key:",
+                "✅ verified successfully",
+                "🪙 Token verification:",
+                "✅ is valid",
+                "❌ failed to verify: Unknown error: verification skipped",
+                "📜 Certificate chain:",
+                "📜 Certificate:",
+                "✅ is valid",
+                "✅ verified successfully",
+                "✍️ issued by:",
+                "🛡️ Confidential Space root certificate",
+                "📦 Workload endorsement:",
+                "Statement",
+                "❌ is invalid: endorsement validation error: statement validation error",
+                "❌ failed to verify: Unknown error: rekor verification error",
+                "❌ No session binding found",
+            ],
+        );
+    }
+
+    /// Asserts that the (trimmed) lines in [actual] are equal to those in
+    /// [expected].
+    fn assert_eq_trimmed_lines(actual: &str, expected: &[&str]) {
+        let lines: Vec<&str> = actual
+            .split("\n")
+            .map(|line| line.trim())
+            .filter(|line| !line.trim().is_empty())
+            .collect();
+        assert_eq!(lines.as_slice(), expected);
+    }
 }

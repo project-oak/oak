@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -39,4 +39,9 @@ rust_binary(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:x509-cert",
     ],
+)
+
+rust_test(
+    name = "oak_attestation_verification_tests",
+    crate = ":oak_attestation_verification_cli",
 )
