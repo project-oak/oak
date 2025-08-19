@@ -36,5 +36,6 @@ rust_binary(
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",
+        "@oak_crates_index//:url",
     ],
 )

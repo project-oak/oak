@@ -27,6 +27,7 @@ use anyhow::Context;
 use clap::{Args, Subcommand};
 use oak_attestation_verification::verify_endorsement;
 use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
+use url::Url;
 
 use crate::endorsement_loader;
 
@@ -77,21 +78,70 @@ pub(crate) struct VerifyFileArgs {
 //   verify remote --endorsement_hash=${hash} --fbucket=12345 --ibucket=67890
 #[derive(Args)]
 pub(crate) struct VerifyRemoteArgs {
-    #[arg(long, help = "Content addressable hash of the endorsement.")]
+    #[arg(
+        long,
+        help = "Typed hash of the endorsement.",
+        value_parser = parse_typed_hash,
+    )]
     endorsement_hash: String,
 
     #[arg(
         long,
         help = "URL prefix of the content addressable storage.",
-        default_value = "https://storage.googleapis.com"
+        default_value = "https://storage.googleapis.com",
+        value_parser = parse_url,
     )]
-    url_prefix: String,
+    url_prefix: Url,
 
-    #[arg(long, help = "Bucket name of the content addressable file storage bucket.")]
+    #[arg(
+        long,
+        help = "Name of the file bucket associated with the index bucket.",
+        value_parser = parse_bucket_name,
+    )]
     fbucket: String,
 
-    #[arg(long, help = "Bucket name of the content addressable index storage bucket.")]
+    #[arg(
+        long,
+        help = "Name of the index GCS bucket.",
+        value_parser = parse_bucket_name,
+    )]
     ibucket: String,
+}
+
+// Verifies only the most basic things from
+// https://cloud.google.com/storage/docs/buckets#naming
+pub(crate) fn parse_bucket_name(arg: &str) -> Result<String, anyhow::Error> {
+    if arg.len() < 3 || arg.len() > 222 {
+        anyhow::bail!("length of bucket name outside valid range");
+    }
+    if !arg.chars().all(|c| {
+        char::is_ascii_digit(&c) || char::is_ascii_lowercase(&c) || c == '_' || c == '-' || c == '.'
+    }) {
+        anyhow::bail!("invalid character in bucket name");
+    }
+    Ok(arg.to_string())
+}
+
+// Parses command line arguments that represent URLs.
+pub(crate) fn parse_url(arg: &str) -> Result<Url, anyhow::Error> {
+    Ok(Url::parse(arg)?)
+}
+
+// Rejects anything that does not look like a typed hash, e.g.:
+// sha2-256:00bb342c482f7ce24c89a32e0a7c44ae3751e931d7975ac1a27ae630c62cb1e4
+pub(crate) fn parse_typed_hash(arg: &str) -> Result<String, anyhow::Error> {
+    let mut splitted = arg.split(':');
+    if splitted.next() != Some("sha2-256") {
+        anyhow::bail!("only SHA2_256 hashes are in use right now");
+    }
+    let value = splitted.next().ok_or(anyhow::anyhow!("malformed typed hash"))?;
+    if value.len() != 2 * 32 {
+        anyhow::bail!("bad length of SHA2_256 hash");
+    }
+    if value.chars().any(|c| !char::is_ascii_hexdigit(&c)) {
+        anyhow::bail!("invalid character in hex-encoded hash");
+    }
+    Ok(arg.to_string())
 }
 
 // Verifies an endorsement from a local file.

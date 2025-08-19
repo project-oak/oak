@@ -40,6 +40,7 @@ use oak_proto_rust::oak::attestation::v1::{
     EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, VerifyingKey,
     VerifyingKeyReferenceValue, VerifyingKeySet,
 };
+use url::Url;
 
 use crate::list::MPM_CLAIM_TYPE;
 
@@ -358,7 +359,7 @@ impl ContentAddressableEndorsementLoader {
 #[derive(Builder)]
 pub(crate) struct HTTPContentAddressableStorage {
     // The prefix of the URL to the content addressable storage.
-    url_prefix: String,
+    url_prefix: Url,
     // The name of the bucket containing the files.
     fbucket: String,
     // The name of the bucket containing the linked files.
@@ -367,7 +368,9 @@ pub(crate) struct HTTPContentAddressableStorage {
 
 impl ContentAddressableStorage for HTTPContentAddressableStorage {
     fn get_file(&self, file_hash: &str) -> Result<Vec<u8>> {
-        fetch(format!("{}/{}/{file_hash}", self.url_prefix, self.fbucket).as_str())
+        let suffix = format!("{}/{}", self.fbucket, file_hash);
+        let url = self.url_prefix.join(&suffix)?;
+        fetch(&url)
     }
 
     fn get_linked_file(&self, file_hash: &str, link_type: &str) -> Result<Vec<u8>> {
@@ -378,11 +381,10 @@ impl ContentAddressableStorage for HTTPContentAddressableStorage {
     }
 
     fn get_link(&self, file_hash: &str, link_type: &str) -> Result<String> {
-        let link_file_content =
-            fetch(format!("{}/{}/{link_type}/{file_hash}", self.url_prefix, self.ibucket).as_str())
-                .with_context(|| format!("reading link {link_type} for file {file_hash}"))?;
-
-        link_file_content
+        let suffix = format!("{}/{}/{}", self.ibucket, link_type, file_hash);
+        let url = self.url_prefix.join(&suffix)?;
+        let fetch_result = fetch(&url)?;
+        fetch_result
             .try_into()
             .with_context(|| format!("parsing link {link_type} for file {file_hash}"))
     }
@@ -390,8 +392,8 @@ impl ContentAddressableStorage for HTTPContentAddressableStorage {
 
 // Fetches the content of the given URL.
 // This probably should be a mockable trait of some kind to help with testing.
-fn fetch(url: &str) -> Result<Vec<u8>> {
-    let response = ureq::get(url).call().with_context(|| format!("fetching URL {url}"))?;
+fn fetch(url: &Url) -> Result<Vec<u8>> {
+    let response = ureq::get(url.as_ref()).call().with_context(|| format!("fetching URL {url}"))?;
     let mut buffer = Vec::new();
     response
         .into_reader()

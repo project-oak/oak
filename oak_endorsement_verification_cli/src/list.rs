@@ -24,8 +24,12 @@ use clap::Args;
 use oak_attestation_verification::{statement::Validity, verify_endorsement};
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use prost::Message;
+use url::Url;
 
-use crate::endorsement_loader;
+use crate::{
+    endorsement_loader,
+    verify::{parse_bucket_name, parse_typed_hash, parse_url},
+};
 
 // Subcommand for listing all endorsements for a given endorser key.
 //
@@ -34,29 +38,43 @@ use crate::endorsement_loader;
 // be used to override the default storage location (Google Cloud Storage).
 //
 // Example:
-//   list --endorser_key_hash=12345 --fbucket=12345 --ibucket=67890
+//   list --endorser_key_hash=sha2-256:12345 --fbucket=12345 --ibucket=67890
 #[derive(Args)]
 pub(crate) struct ListArgs {
-    #[arg(long, help = "Content addressable hash of the endorser key used to sign endorsements.")]
+    #[arg(
+        long,
+        help = "Typed hash of the verifying key used to sign endorsements.",
+        value_parser = parse_typed_hash,
+    )]
     endorser_key_hash: Option<String>,
 
     #[arg(
         long,
-        help = "Content addressable hash of the rotating endorser keyset used to sign endorsements."
+        help = "Typed hash of the endorser keyset used to sign endorsements.",
+        value_parser = parse_typed_hash,
     )]
     endorser_keyset_hash: Option<String>,
 
     #[arg(
         long,
         help = "URL prefix of the content addressable storage.",
-        default_value = "https://storage.googleapis.com"
+        default_value = "https://storage.googleapis.com",
+        value_parser = parse_url,
     )]
-    url_prefix: String,
+    url_prefix: Url,
 
-    #[arg(long, help = "Bucket name of the content addressable file storage bucket.")]
+    #[arg(
+        long,
+        help = "Name of the file bucket associated with the index bucket.",
+        value_parser = parse_bucket_name,
+    )]
     fbucket: String,
 
-    #[arg(long, help = "Bucket name of the content addressable index storage bucket.")]
+    #[arg(
+        long,
+        help = "Name of the index GCS bucket.",
+        value_parser = parse_bucket_name,
+    )]
     ibucket: String,
 }
 
