@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Tests for legacy attestation verification.
+
 use std::fs;
 
 use oak_attestation_verification::{
@@ -27,18 +29,24 @@ use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
-        kernel_binary_reference_value, reference_values, root_layer_data::Report,
-        tcb_version_reference_value, text_reference_value, BinaryReferenceValue, Digests,
-        Endorsements, Evidence, ExpectedValues, ExtractedEvidence, ReferenceValues, Regex,
-        TcbVersion, TcbVersionReferenceValue, TeePlatform, TextReferenceValue,
+        reference_values, root_layer_data::Report, tcb_version_reference_value,
+        text_reference_value, BinaryReferenceValue, Digests, Endorsements, Evidence,
+        ExpectedValues, ExtractedEvidence, ReferenceValues, Regex, TcbVersion,
+        TcbVersionReferenceValue, TeePlatform, TextReferenceValue,
     },
     RawDigest,
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use prost::Message;
 use test_util::{
-    attestation_data::AttestationData, create_reference_values_for_extracted_evidence,
-    create_rk_reference_values,
+    attestation_data::AttestationData,
+    create_reference_values_for_extracted_evidence, create_rk_reference_values,
+    manipulate::{
+        get_acpi_rv, get_init_ram_fs_rv, get_kernel_cmd_line_rv, get_kernel_rv, get_oc_config_rv,
+        get_oc_container_rv, get_oc_system_image_rv, get_rk_application_rv, get_rk_config_rv,
+        get_stage0_rv, manipulate_kernel_cmd_line, manipulate_kernel_image,
+        manipulate_kernel_setup_data, manipulate_sha2_256, manipulate_sha2_384,
+    },
 };
 use zerocopy::FromBytes;
 
@@ -743,26 +751,6 @@ fn verify_fails_with_empty_args() {
 }
 
 #[test]
-fn verify_non_matching_command_line_reference_value_failure() {
-    let d = AttestationData::load_milan_rk_staging();
-
-    let mut reference_values = create_rk_reference_values();
-    match reference_values.r#type.as_mut() {
-        Some(reference_values::Type::OakRestrictedKernel(rfs)) => {
-            rfs.kernel_layer.as_mut().unwrap().kernel_cmd_line_text = Some(TextReferenceValue {
-                r#type: Some(text_reference_value::Type::Regex(Regex {
-                    value: String::from("this will fail"),
-                })),
-            });
-        }
-        Some(_) => {}
-        None => {}
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
 #[cfg(not(feature = "regex"))]
 fn verify_fails_with_matching_command_line_reference_value_regex_set_and_regex_disabled() {
     let d = AttestationData::load_milan_rk_staging();
@@ -908,323 +896,6 @@ fn containers_invalid_tcb_tee_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
-#[test]
-fn containers_invalid_stage0_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .root_layer
-        .as_mut()
-        .expect("no root layer")
-        .amd_sev
-        .as_mut()
-        .expect("invalid TEE platform")
-        .stage0
-        .as_mut()
-        .expect("no stage 0 measurement")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_384
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_acpi_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .acpi
-        .as_mut()
-        .expect("no acpi value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_init_ram_fs_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .init_ram_fs
-        .as_mut()
-        .expect("no init RAM fs value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_kernel_cmd_line_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel_cmd_line_text
-        .as_mut()
-        .expect("no kernel command-line value")
-        .r#type
-        .as_mut()
-        .expect("no text reference value")
-    {
-        text_reference_value::Type::StringLiterals(strings) => {
-            strings.value.clear();
-            strings.value.push("wrong".to_owned());
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_kernel_image_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel
-        .as_mut()
-        .expect("no kernel value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        kernel_binary_reference_value::Type::Digests(digests) => {
-            digests
-                .image
-                .as_mut()
-                .expect("no kernel image")
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_kernel_setup_data_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel
-        .as_mut()
-        .expect("no kernel value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        kernel_binary_reference_value::Type::Digests(digests) => {
-            digests
-                .setup_data
-                .as_mut()
-                .expect("no kernel setup data")
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_system_image_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .system_layer
-        .as_mut()
-        .expect("no system layer")
-        .system_image
-        .as_mut()
-        .expect("no system image value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_container_bundle_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .container_layer
-        .as_mut()
-        .expect("no container layer")
-        .binary
-        .as_mut()
-        .expect("no container bundle value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
-#[test]
-fn containers_invalid_container_config_fails() {
-    let d = AttestationData::load_milan_oc_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let oc = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakContainers(oc) => oc,
-        _ => panic!("wrong reference value type"),
-    };
-    match oc
-        .container_layer
-        .as_mut()
-        .expect("no container layer")
-        .configuration
-        .as_mut()
-        .expect("no container config value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
-}
-
 #[allow(deprecated)]
 #[test]
 fn verify_rk_invalid_boot_loader_fails() {
@@ -1328,269 +999,136 @@ fn restricted_kernel_invalid_tcb_tee_fails() {
     assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
 }
 
-#[test]
-fn restricted_kernel_invalid_stage0_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
+// Macro that creates many tests that observe failure after manipulating
+// reference values of a working attestation sample.
+macro_rules! manipulate_tests {
+    ($module_name:tt, $get_fn:tt, $manip_fn:tt, $($load_name:tt, )*) => {
+        mod $module_name {
+            use super::*;
 
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .root_layer
-        .as_mut()
-        .expect("no root layer")
-        .amd_sev
-        .as_mut()
-        .expect("invalid TEE platform")
-        .stage0
-        .as_mut()
-        .expect("no stage 0 measurement")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_384
-                .as_mut_slice()[5] ^= 255;
+            $(
+                #[test]
+                fn $load_name() {
+                    let d = AttestationData::$load_name();
+                    let mut rvs = make_reference_values(&d.evidence);
+                    let rv = $get_fn(&mut rvs);
+                    $manip_fn(rv);
+
+                    assert_failure(verify(
+                        d.make_valid_millis(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &rvs,
+                    ));
+                }
+            )*
         }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+    }
 }
 
-#[test]
-fn restricted_kernel_invalid_acpi_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .acpi
-        .as_mut()
-        .expect("no acpi value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_stage0_manipulate_digests_failure,
+    get_stage0_rv, manipulate_sha2_384,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_invalid_init_ram_fs_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .init_ram_fs
-        .as_mut()
-        .expect("no init RAM fs value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_init_ram_fs_manipulate_digests_failure,
+    get_init_ram_fs_rv, manipulate_sha2_256,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_invalid_kernel_cmd_line_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel_cmd_line_text
-        .as_mut()
-        .expect("no kernel command-line value")
-        .r#type
-        .as_mut()
-        .expect("no text reference value")
-    {
-        text_reference_value::Type::StringLiterals(strings) => {
-            strings.value.clear();
-            strings.value.push("wrong".to_owned());
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_acpi_manipulate_digests_failure,
+    get_acpi_rv, manipulate_sha2_256,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_invalid_kernel_image_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel
-        .as_mut()
-        .expect("no kernel value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        kernel_binary_reference_value::Type::Digests(digests) => {
-            digests
-                .image
-                .as_mut()
-                .expect("no kernel image")
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_kernel_image_manipulate_digests_failure,
+    get_kernel_rv, manipulate_kernel_image,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_invalid_kernel_setup_data_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .kernel_layer
-        .as_mut()
-        .expect("no kernel layer")
-        .kernel
-        .as_mut()
-        .expect("no kernel value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        kernel_binary_reference_value::Type::Digests(digests) => {
-            digests
-                .setup_data
-                .as_mut()
-                .expect("no kernel setup data")
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_kernel_setup_data_manipulate_digests_failure,
+    get_kernel_rv, manipulate_kernel_setup_data,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_invalid_application_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
-
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    match rk
-        .application_layer
-        .as_mut()
-        .expect("no application layer")
-        .binary
-        .as_mut()
-        .expect("no application binary value")
-        .r#type
-        .as_mut()
-        .expect("no binary reference value")
-    {
-        binary_reference_value::Type::Digests(digests) => {
-            digests
-                .digests
-                .as_mut_slice()
-                .first_mut()
-                .expect("no digest")
-                .sha2_256
-                .as_mut_slice()[5] ^= 255;
-        }
-        _ => panic!("wrong reference value type."),
-    };
-
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_kernel_cmd_line_manipulate_value_failure,
+    get_kernel_cmd_line_rv, manipulate_kernel_cmd_line,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
 }
 
-#[test]
-fn restricted_kernel_application_config_fails() {
-    let d = AttestationData::load_milan_rk_staging();
-    let mut reference_values = make_reference_values(&d.evidence);
+manipulate_tests! {
+    amd_oc_system_image_manipulate_digests_failure,
+    get_oc_system_image_rv, manipulate_sha2_256,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
 
-    let rk = match reference_values.r#type.as_mut().expect("no reference values") {
-        reference_values::Type::OakRestrictedKernel(rk) => rk,
-        _ => panic!("wrong reference value type"),
-    };
-    rk.application_layer.as_mut().expect("no application layer").configuration.replace(
-        BinaryReferenceValue {
-            r#type: Some(binary_reference_value::Type::Digests(Digests {
-                digests: vec![RawDigest { sha2_256: vec![1; 32], ..Default::default() }],
-            })),
-        },
-    );
+manipulate_tests! {
+    amd_oc_container_manipulate_digests_failure,
+    get_oc_container_rv, manipulate_sha2_256,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
 
-    assert_failure(verify(d.make_valid_millis(), &d.evidence, &d.endorsements, &reference_values));
+manipulate_tests! {
+    amd_oc_config_manipulate_digests_failure,
+    get_oc_config_rv, manipulate_sha2_256,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_rk_application_manipulate_digests_failure,
+    get_rk_application_rv, manipulate_sha2_256,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+}
+
+manipulate_tests! {
+    amd_rk_config_manipulate_digests_failure,
+    get_rk_config_rv, manipulate_sha2_256,
+    load_milan_rk_release,
+    load_milan_rk_staging,
 }

@@ -19,6 +19,7 @@
 pub mod attestation_data;
 pub mod endorsement_data;
 mod factory;
+pub mod manipulate;
 
 pub use attestation_data::AttestationData;
 pub use endorsement_data::EndorsementData;

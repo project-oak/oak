@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Tests for policy-based attestation verification.
+
 use std::{fs, sync::Arc};
 
 use oak_attestation_verification::{
@@ -34,6 +36,12 @@ use oak_time::{clock::FixedClock, Instant};
 use prost::Message;
 use test_util::{
     allow_insecure, create_reference_values_for_extracted_evidence, get_cb_reference_values,
+    manipulate::{
+        get_acpi_rv, get_init_ram_fs_rv, get_kernel_cmd_line_rv, get_kernel_rv, get_oc_config_rv,
+        get_oc_container_rv, get_oc_system_image_rv, get_rk_application_rv, get_rk_config_rv,
+        get_stage0_rv, manipulate_kernel_cmd_line, manipulate_kernel_image,
+        manipulate_kernel_setup_data, manipulate_sha2_256, manipulate_sha2_384,
+    },
     AttestationData,
 };
 
@@ -285,4 +293,138 @@ verify_insecure_manipulated_root_public_key_failure! {
     load_milan_rk_release
     load_milan_rk_staging
     load_fake
+}
+
+// Macro that creates many tests that observe failure after manipulating
+// reference values of a working attestation sample.
+macro_rules! manipulate_tests {
+    ($module_name:tt, $get_fn:tt, $manip_fn:tt, $verify_fn:tt, $($load_name:tt, )*) => {
+        mod $module_name {
+            use super::*;
+
+            $(
+                #[test]
+                fn $load_name() {
+                    let d = AttestationData::$load_name();
+                    let mut rvs = make_reference_values(&d.evidence);
+                    let rv = $get_fn(&mut rvs);
+                    $manip_fn(rv);
+
+                    assert_failure($verify_fn(
+                        d.make_valid_time(),
+                        &d.evidence,
+                        &d.endorsements,
+                        &rvs,
+                    ));
+                }
+            )*
+        }
+    }
+}
+
+manipulate_tests! {
+    amd_stage0_manipulate_digests_failure,
+    get_stage0_rv, manipulate_sha2_384, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_init_ram_fs_manipulate_digests_failure,
+    get_init_ram_fs_rv, manipulate_sha2_256, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_acpi_manipulate_digests_failure,
+    get_acpi_rv, manipulate_sha2_256, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_kernel_image_manipulate_digests_failure,
+    get_kernel_rv, manipulate_kernel_image, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_kernel_setup_data_manipulate_digests_failure,
+    get_kernel_rv, manipulate_kernel_setup_data, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_kernel_cmd_line_manipulate_value_failure,
+    get_kernel_cmd_line_rv, manipulate_kernel_cmd_line, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_oc_system_image_manipulate_digests_failure,
+    get_oc_system_image_rv, manipulate_sha2_256, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_oc_container_manipulate_digests_failure,
+    get_oc_container_rv, manipulate_sha2_256, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_oc_config_manipulate_digests_failure,
+    get_oc_config_rv, manipulate_sha2_256, verify_amd,
+    load_milan_oc_release,
+    load_milan_oc_staging,
+    load_genoa_oc,
+    load_turin_oc,
+}
+
+manipulate_tests! {
+    amd_rk_application_manipulate_digests_failure,
+    get_rk_application_rv, manipulate_sha2_256, verify_amd,
+    load_milan_rk_release,
+    load_milan_rk_staging,
+}
+
+manipulate_tests! {
+    amd_rk_config_manipulate_digests_failure,
+    get_rk_config_rv, manipulate_sha2_256, verify_amd,
+    load_milan_rk_release,
+    load_milan_rk_staging,
 }
