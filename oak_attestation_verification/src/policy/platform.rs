@@ -16,23 +16,25 @@
 
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
+use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults,
+        AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults, RootLayerEvidence,
         RootLayerReferenceValues,
     },
     Variant,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use oak_time::Instant;
-use x509_cert::{der::Decode, Certificate};
+use zerocopy::FromBytes;
 
 use crate::{
     expect::get_amd_sev_snp_expected_values,
     platform::{
         convert_amd_sev_snp_attestation_report, verify_amd_sev_attestation_report_values,
-        verify_amd_sev_snp_attestation_report_validity,
+        verify_root_attestation_signature,
     },
+    results::set_initial_measurement,
 };
 
 pub struct AmdSevSnpPolicy {
@@ -57,31 +59,67 @@ impl AmdSevSnpPolicy {
     }
 }
 
-impl Policy<AttestationReport> for AmdSevSnpPolicy {
+// Policy which verifies the AMD SEV-SNP hardware root.
+impl Policy<RootLayerEvidence> for AmdSevSnpPolicy {
     fn verify(
         &self,
         verification_time: Instant,
-        evidence: &AttestationReport,
+        evidence: &RootLayerEvidence,
         endorsement: &Variant,
     ) -> anyhow::Result<EventAttestationResults> {
+        if evidence.platform != TeePlatform::AmdSevSnp as i32 {
+            anyhow::bail!("unsupported TEE platform value");
+        }
+
         let endorsement: AmdSevSnpEndorsement =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
-        let vcek_cert = Certificate::from_der(&endorsement.tee_certificate)
-            .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
-
-        // Ensure the Attestation report is properly signed by the platform and the
-        // corresponding certificate is signed by AMD.
-        verify_amd_sev_snp_attestation_report_validity(verification_time, evidence, &vcek_cert)
-            .context("couldn't verify AMD SEV-SNP attestation validity")?;
+        verify_root_attestation_signature(
+            verification_time.into_unix_millis(),
+            evidence,
+            &endorsement.tee_certificate,
+        )?;
 
         // Verify attestation report values.
-        let report = convert_amd_sev_snp_attestation_report(evidence)?;
+        let report = AttestationReport::ref_from_bytes(&evidence.remote_attestation_report)
+            .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
+        let amd_report = convert_amd_sev_snp_attestation_report(report)?;
         let expected_values = get_amd_sev_snp_expected_values(&self.reference_values)
             .context("couldn't extract AMD SEV-SNP expected values from the endorsement")?;
-        verify_amd_sev_attestation_report_values(&report, &expected_values)
+        verify_amd_sev_attestation_report_values(&amd_report, &expected_values)
             .context("couldn't verify attestation report fields")?;
 
-        // TODO: b/356631062 - Return detailed attestation results.
+        let mut results = EventAttestationResults { ..Default::default() };
+        set_initial_measurement(&mut results, &report.data.measurement);
+        Ok(results)
+    }
+}
+
+pub struct InsecurePolicy {}
+
+impl InsecurePolicy {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+// Policy which verifies an insecure hardware root.
+impl Policy<RootLayerEvidence> for InsecurePolicy {
+    fn verify(
+        &self,
+        verification_time: Instant,
+        evidence: &RootLayerEvidence,
+        endorsement: &Variant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        // No check for TEE platform value - also secure setups can be
+        // verified with the insecure policy.
+        let endorsement: AmdSevSnpEndorsement =
+            endorsement.try_into().map_err(anyhow::Error::msg)?;
+        verify_root_attestation_signature(
+            verification_time.into_unix_millis(),
+            evidence,
+            &endorsement.tee_certificate,
+        )?;
+
         Ok(EventAttestationResults { ..Default::default() })
     }
 }
@@ -89,14 +127,13 @@ impl Policy<AttestationReport> for AmdSevSnpPolicy {
 #[cfg(test)]
 mod tests {
     use oak_proto_rust::oak::attestation::v1::endorsements;
-    use test_util::{extract_attestation_report, get_oc_reference_values, AttestationData};
+    use test_util::{get_oc_reference_values, AttestationData};
 
     use super::*;
 
     #[test]
     fn verify_oc_succeeds() {
         let d = AttestationData::load_milan_oc_release();
-        let attestation_report = extract_attestation_report(&d.evidence).unwrap();
         let endorsement = AmdSevSnpEndorsement {
             tee_certificate: match d.endorsements.r#type.as_ref() {
                 Some(endorsements::Type::OakContainers(e)) => {
@@ -109,7 +146,11 @@ mod tests {
         let platform_ref_values = ref_values.root_layer.as_ref().unwrap().amd_sev.as_ref().unwrap();
         let policy = AmdSevSnpPolicy::new(platform_ref_values);
 
-        let result = policy.verify(d.make_valid_time(), attestation_report, &endorsement.into());
+        let result = policy.verify(
+            d.make_valid_time(),
+            d.evidence.root_layer.as_ref().unwrap(),
+            &endorsement.into(),
+        );
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }

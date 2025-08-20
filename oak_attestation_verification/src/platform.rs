@@ -44,12 +44,29 @@ const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
 const ASK_TURIN_CERT_PEM: &str = include_str!("../data/ask_turin.pem");
 
+/// Check that the root ECA public key for the DICE chain is bound to the
+/// attestation report to ensure that the entire chain is valid.
+pub fn verify_dice_root_eca_key(
+    attestation_report: &AttestationReport,
+    eca_public_key: &[u8],
+) -> anyhow::Result<()> {
+    let expected = &hash_sha2_256(eca_public_key)[..];
+    let actual = attestation_report.data.report_data;
+    anyhow::ensure!(
+        // The report data contains 64 bytes by default, but we only use the
+        // first 32 bytes at the moment.
+        expected.len() < actual.len() && expected == &actual[..expected.len()],
+        "the root ECA public key is not bound to the AMD SEV-SNP attestation report"
+    );
+    Ok(())
+}
+
 /// Verifies the signature chain for the attestation report included in the
 /// root.
 pub fn verify_root_attestation_signature(
     _now_utc_millis: i64,
     root_layer: &RootLayerEvidence,
-    serialized_certificate: &[u8],
+    tee_certificate: &[u8],
 ) -> anyhow::Result<()> {
     match root_layer.platform() {
         TeePlatform::Unspecified => anyhow::bail!("unspecified TEE platform"),
@@ -59,7 +76,7 @@ pub fn verify_root_attestation_signature(
             )
             .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
 
-            let vcek = Certificate::from_der(serialized_certificate)
+            let vcek_cert = Certificate::from_der(tee_certificate)
                 .map_err(|err| anyhow::anyhow!("couldn't parse VCEK certificate: {:?}", err))?;
 
             // Ensure the Attestation report is properly signed by the platform and the
@@ -67,26 +84,23 @@ pub fn verify_root_attestation_signature(
             verify_amd_sev_snp_attestation_report_validity(
                 Instant::from_unix_millis(_now_utc_millis),
                 attestation_report,
-                &vcek,
+                &vcek_cert,
             )
             .context("couldn't verify AMD SEV-SNP attestation report validity")?;
 
-            // Check that the root ECA public key for the DICE chain is bound to the
-            // attestation report to ensure that the entire chain is valid.
-            let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
-            let actual = attestation_report.data.report_data;
-
-            anyhow::ensure!(
-                // The report data contains 64 bytes by default, but we only use the first 32 bytes
-                // at the moment.
-                expected.len() < actual.len() && expected == &actual[..expected.len()],
-                "The root layer's ECA public key is not bound to the attestation report"
-            );
-
-            Ok(())
+            verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
         }
         TeePlatform::IntelTdx => anyhow::bail!("not supported"),
-        TeePlatform::None => Ok(()),
+
+        // For non-AMD-SEV-SNP and non-Intel-TDX we just verify that the
+        // attestation report contains the expected public key.
+        TeePlatform::None => {
+            let attestation_report = AttestationReport::ref_from_bytes(
+                &root_layer.remote_attestation_report,
+            )
+            .map_err(|err| anyhow::anyhow!("failed to parse attestation report: {}", err))?;
+            verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
+        }
     }
 }
 

@@ -20,6 +20,9 @@ use alloc::{string::ToString, vec::Vec};
 
 use oak_proto_rust::oak::attestation::v1::{AttestationResults, EventAttestationResults};
 
+/// Key for the initial measurement of stage0.
+const INITIAL_MEASUREMENT_ID: &str = "initial-measurement";
+
 /// Denotes an artifact ID of a public key used to verify the Noise handshake
 /// transcript signature.
 const SESSION_BINDING_PUBLIC_KEY_ID: &str = "oak-session-binding-public-key:ecdsa-p256";
@@ -31,6 +34,14 @@ const HYBRID_ENCRYPTION_PUBLIC_KEY_ID: &str = "oak-hybrid-encryption-public-key:
 /// Denotes an artifact ID of a key used to verify artifacts generated and
 /// signed by the enclave.
 const SIGNING_PUBLIC_KEY_ID: &str = "oak-signing-public-key:ecdsa-p256";
+
+pub fn get_initial_measurement(results: &EventAttestationResults) -> Option<&Vec<u8>> {
+    results.artifacts.get(INITIAL_MEASUREMENT_ID)
+}
+
+pub fn set_initial_measurement(results: &mut EventAttestationResults, key: &[u8]) {
+    results.artifacts.insert(INITIAL_MEASUREMENT_ID.to_string(), key.to_vec());
+}
 
 pub fn get_session_binding_public_key(results: &AttestationResults) -> Option<&Vec<u8>> {
     get_event_artifact(results, SESSION_BINDING_PUBLIC_KEY_ID)

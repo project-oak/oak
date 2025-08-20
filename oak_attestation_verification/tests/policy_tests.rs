@@ -195,6 +195,27 @@ verify_amd_success! {
     load_milan_rk_staging
 }
 
+// Some samples cannot be verified with the AMD verifier.
+macro_rules! verify_amd_failure {
+    ($($name:tt)*) => {
+        mod verify_amd_failure {
+            use super::*;
+
+            $(
+                #[test]
+                fn $name() {
+                    let d = AttestationData::$name();
+                    assert_failure(verify_amd(d.make_valid_time(), &d.evidence, &d.endorsements, &d.reference_values));
+                }
+            )*
+        }
+    }
+}
+
+verify_amd_failure! {
+    load_fake
+}
+
 macro_rules! verify_amd_success_explicit_reference_values {
     ($($name:tt)*) => {
         mod verify_amd_success_explicit_reference_values {
@@ -241,7 +262,6 @@ verify_amd_manipulated_root_public_key_failure! {
     load_milan_oc_staging
     load_milan_rk_release
     load_milan_rk_staging
-    load_fake
 }
 
 macro_rules! verify_insecure_success {
@@ -292,6 +312,8 @@ verify_insecure_manipulated_root_public_key_failure! {
     load_milan_oc_staging
     load_milan_rk_release
     load_milan_rk_staging
+    load_genoa_oc
+    load_turin_oc
     load_fake
 }
 
