@@ -129,8 +129,14 @@ oci_image(
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_functions_standalone"],
     exposed_ports = ["8080/tcp"],
+    # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
+        # CMD arguments will be limited to the oak_functions_standalone
+        # executable, specified in the ENTRYPOINT.
+        # See https://docs.docker.com/reference/dockerfile/#cmd
         "tee.launch_policy.allow_cmd_override": "true",
+        # Logs from the open-sourced code are permitted.
+        "tee.launch_policy.log_redirect": "always",
     },
     tars = [":oak_functions_standalone_tar"],
 )

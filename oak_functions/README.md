@@ -58,9 +58,9 @@ from the conventional computing model.
 
 ### Oak Functions Launcher and the Trusted Runtime
 
-The [Oak Functions Launcher](/oak_functions_launcher/) starts the Oak Functions
-trusted runtime and loads a Wasm module as workload. The Oak Functions trusted
-runtime and the Wasm module communicate through
+The [Oak Functions Launcher](/oak_functions_launcher/), in most cases, starts
+the Oak Functions trusted runtime and loads a Wasm module as workload. The Oak
+Functions trusted runtime and the Wasm module communicate through
 [ABI Functions](/oak_functions_abi/) and [a Rust SDK](/oak_functions_sdk/).The
 Oak Functions trusted runtime allows to specify policies such as a fixed size
 and processing time for responses returned by the trusted runtime, and a fixed
@@ -70,6 +70,14 @@ processing time.
 
 The [Remote Attestation protocol](/docs/remote-attestation.md) implemented in
 Oak is currently integrated in Oak Functions.
+
+### In-Memory Database
+
+Oak Functions includes an in-memory database, referred to as "lookup data," that
+the untrusted code can query in a read-only manner. The trusted component of the
+application can update this database at any time, providing the untrusted logic
+with access to the most current data without compromising privacy or security
+claims about the application.
 
 ## Applications
 
