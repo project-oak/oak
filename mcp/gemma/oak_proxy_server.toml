@@ -1,0 +1,9 @@
+listen_address = "0.0.0.0:8080"
+backend_address = "127.0.0.1:11434"
+attestation_generators = []
+attestation_verifiers = []
+
+[backend_command]
+cmd = "/bin/ollama"
+args = ["serve"]
+restart_policy = "always"

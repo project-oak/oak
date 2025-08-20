@@ -15,6 +15,7 @@
 #
 
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StdioConnectionParams
 import os
 
@@ -37,10 +38,9 @@ def get_user_location() -> dict:
         },
     }
 
-
 root_agent = Agent(
     name='weather_agent',
-    model='gemini-2.5-flash',
+    model=LiteLlm(model="ollama/gemma:2b"),
     description=(
         'Agent to answer questions about the weather at the current user location.'
     ),

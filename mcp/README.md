@@ -17,7 +17,7 @@ source .venv/bin/activate
 Install ADK:
 
 ```bash
-pip install google-adk
+pip install google-adk litellm
 ```
 
 Get an API key from
