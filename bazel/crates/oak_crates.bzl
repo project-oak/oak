@@ -409,7 +409,12 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "jni": crate.spec(
         version = "0.21.1",
     ),
-    "jwt": crate.spec(version = "0.16.0"),
+    "jwt": crate.spec(
+        features = [
+            "openssl",
+        ],
+        version = "0.16.0",
+    ),
     "nix": crate.spec(
         features = [
             "fs",
@@ -432,6 +437,9 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "oci-spec": crate.spec(version = "0.8.1"),
     "once_cell": crate.spec(version = "1.19.0"),
+    "openssl": crate.spec(
+        version = "0.10.73",
+    ),
     # TODO b/350061567 - Remove opentelemetry version pins
     "opentelemetry": crate.spec(
         features = [

@@ -44,4 +44,9 @@ rust_binary(
 rust_test(
     name = "oak_attestation_verification_tests",
     crate = ":oak_attestation_verification_cli",
+    deps = [
+        "@oak_crates_index//:jwt",
+        "@oak_crates_index//:openssl",
+        "@oak_crates_index//:serde",
+    ],
 )

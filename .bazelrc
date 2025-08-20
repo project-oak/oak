@@ -43,6 +43,11 @@ common --@rules_rust//rust/settings:toolchain_generated_sysroot=True
 # control. (See: https://github.com/bazelbuild/rules_rust/pull/3120)
 common --@rules_rust//rust/settings:lto=manual
 
+# Required to enable building the openssl Rust crate. See
+# https://nixos.wiki/wiki/Rust#Building_Rust_crates_that_require_external_system_libraries
+# for more information.
+build --action_env=PKG_CONFIG_PATH
+
 # Setup clippy aspect to run clippy automatically on all rust targets
 # See: https://bazelbuild.github.io/rules_rust/rust_clippy.html
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect

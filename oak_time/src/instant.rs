@@ -47,7 +47,7 @@ const SECONDS_TO_NANOS: i128 = 1_000_000_000;
 ///
 /// Internally, it stores signed nanonseconds anchored at Unix epoch
 /// (January 1, 1970, 00:00:00 UTC).
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Instant {
     nanoseconds: i128,
 }
@@ -358,7 +358,7 @@ pub mod rfc3339 {
 ///
 /// [with]: https://serde.rs/field-attrs.html#with
 pub mod unix_timestamp {
-    use serde::{Deserialize, Deserializer};
+    use serde::{Deserialize, Deserializer, Serializer};
 
     use super::Instant;
 
@@ -369,6 +369,14 @@ pub mod unix_timestamp {
     {
         let seconds = i64::deserialize(deserializer)?;
         Ok(Instant::from_unix_seconds(seconds))
+    }
+
+    pub fn serialize<S>(instant: &Instant, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let seconds = instant.into_unix_seconds();
+        serializer.serialize_i64(seconds)
     }
 }
 

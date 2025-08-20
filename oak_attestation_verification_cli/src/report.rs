@@ -292,11 +292,18 @@ fn verify_session_binding(
 
 #[cfg(test)]
 mod tests {
+    use jwt::{
+        algorithm::{openssl::PKeyWithDigest, AlgorithmType},
+        SignWithKey, SigningAlgorithm, Token, Verified, VerifyWithKey, VerifyingAlgorithm,
+    };
     use oak_attestation_gcp::{
         cosign::{CosignVerificationError, CosignVerificationReport, StatementReport},
-        jwt::verification::{
-            AttestationTokenVerificationReport, AttestationVerificationError, CertificateReport,
-            IssuerReport,
+        jwt::{
+            verification::{
+                AttestationTokenVerificationReport, AttestationVerificationError,
+                CertificateReport, IssuerReport,
+            },
+            Claims, Header,
         },
         policy::{ConfidentialSpaceVerificationError, ConfidentialSpaceVerificationReport},
     };
@@ -304,6 +311,7 @@ mod tests {
     use oak_crypto::certificate::certificate_verifier::{
         CertificateVerificationError, CertificateVerificationReport,
     };
+    use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa};
 
     use super::*;
 
@@ -389,10 +397,7 @@ mod tests {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
                 validity: Ok(()),
-                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
-                verification: Err(AttestationVerificationError::UnknownError(
-                    "verification skipped",
-                )),
+                verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
                     validity: Ok(()),
                     verification: Ok(()),
@@ -417,7 +422,7 @@ mod tests {
                 "✅ verified successfully",
                 "🪙 Token verification:",
                 "✅ is valid",
-                "❌ failed to verify: Unknown error: verification skipped",
+                "✅ verified successfully",
                 "📜 Certificate chain:",
                 "📜 Certificate:",
                 "✅ is valid",
@@ -439,10 +444,7 @@ mod tests {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
                 validity: Ok(()),
-                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
-                verification: Err(AttestationVerificationError::UnknownError(
-                    "verification skipped",
-                )),
+                verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
                     validity: Ok(()),
                     verification: Ok(()),
@@ -462,7 +464,7 @@ mod tests {
                 "✅ verified successfully",
                 "🪙 Token verification:",
                 "✅ is valid",
-                "❌ failed to verify: Unknown error: verification skipped",
+                "✅ verified successfully",
                 "📜 Certificate chain:",
                 "📜 Certificate:",
                 "✅ is valid",
@@ -520,10 +522,7 @@ mod tests {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
                 validity: Ok(()),
-                // TODO: b/419209669 - Use an Ok() result here (containing a verified jwt Token).
-                verification: Err(AttestationVerificationError::UnknownError(
-                    "verification skipped",
-                )),
+                verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
                     validity: Ok(()),
                     verification: Ok(()),
@@ -552,7 +551,7 @@ mod tests {
                 "✅ verified successfully",
                 "🪙 Token verification:",
                 "✅ is valid",
-                "❌ failed to verify: Unknown error: verification skipped",
+                "✅ verified successfully",
                 "📜 Certificate chain:",
                 "📜 Certificate:",
                 "✅ is valid",
@@ -577,5 +576,57 @@ mod tests {
             .filter(|line| !line.trim().is_empty())
             .collect();
         assert_eq!(lines.as_slice(), expected);
+    }
+
+    fn generate_verified_token() -> anyhow::Result<Token<Header, Claims, Verified>> {
+        let key: PKey<openssl::pkey::Private> = PKey::from_rsa(Rsa::generate(2048)?)?;
+        let private_key = PKeyWithDigest { digest: MessageDigest::sha256(), key: key.clone() };
+        let public_key = PKeyWithDigest {
+            digest: MessageDigest::sha256(),
+            key: PKey::public_key_from_pem(key.public_key_to_pem()?.as_slice())?,
+        };
+        let header = Header { algorithm: AlgorithmType::Rs256, x509_chain: vec![] };
+        let claims = Claims { ..Default::default() };
+        let signed_token = Token::new(header, claims)
+            .sign_with_key(&Rs256PKeyWithDigest { delegate: private_key })?;
+        let unverified_token: Token<Header, Claims, _> =
+            Token::parse_unverified(signed_token.as_str())?;
+        Ok(unverified_token.verify_with_key(&Rs256PKeyWithDigest { delegate: public_key })?)
+    }
+
+    // This is a hack, and _shouldn't_ be necessary.
+    // https://github.com/mikkyang/rust-jwt/blob/47e8fbb/src/token/verified.rs#L171-L194
+    // shows an example of the jwt crate doing the same as the code above
+    // (generating a token, signing it, and verifying it), but I cannot get this
+    // to work. No matter how I generate a key, the error at
+    // https://github.com/mikkyang/rust-jwt/blob/47e8fbb/src/algorithm/openssl.rs#L44
+    // is thrown, apparently because the key ID never gets set correctly.
+    // So instead, we have this hack to completely override the algorithm_type()
+    // function.
+    struct Rs256PKeyWithDigest<T> {
+        delegate: PKeyWithDigest<T>,
+    }
+
+    impl SigningAlgorithm for Rs256PKeyWithDigest<openssl::pkey::Private> {
+        fn algorithm_type(&self) -> AlgorithmType {
+            AlgorithmType::Rs256
+        }
+        fn sign(&self, header: &str, claims: &str) -> Result<String, jwt::error::Error> {
+            self.delegate.sign(header, claims)
+        }
+    }
+
+    impl VerifyingAlgorithm for Rs256PKeyWithDigest<openssl::pkey::Public> {
+        fn algorithm_type(&self) -> AlgorithmType {
+            AlgorithmType::Rs256
+        }
+        fn verify_bytes(
+            &self,
+            header: &str,
+            claims: &str,
+            signature: &[u8],
+        ) -> Result<bool, jwt::error::Error> {
+            self.delegate.verify_bytes(header, claims, signature)
+        }
     }
 }

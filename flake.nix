@@ -132,7 +132,8 @@
             bazelShell = with pkgs; mkShell {
               shellHook = ''
                 export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
-                export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2";
+                export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2"
+                export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig"
 
                 # Prevent issues when trying to do nix builds inside of a nix shell.
                 # https://github.com/NixOS/nix/issues/262
@@ -146,6 +147,8 @@
                 bazel_7
                 androidSdk
                 bazel-buildtools
+                openssl
+                pkg-config
               ];
             };
             # Shell for building containers system image. This is not included in the

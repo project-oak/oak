@@ -19,7 +19,7 @@ use alloc::{collections::BTreeMap, str::FromStr};
 use jwt::{algorithm::AlgorithmType, header::JoseHeader};
 use oak_time::Instant;
 use oci_spec::distribution::{ParseError, Reference as OciReference};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod algorithm;
 pub mod verification;
@@ -28,7 +28,7 @@ pub mod verification;
 /// of the PKI flavour of Confidential Space JWT tokens.
 ///
 /// https://cloud.google.com/confidential-computing/confidential-space/docs/connect-external-resources#attestation_token_structure
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Header {
     /// The algorithm used to sign the JWT.
     ///
@@ -55,7 +55,7 @@ impl JoseHeader for Header {
 ///
 /// A number of fields have been omitted: eat_profile, secboot, oemid, hwmodel,
 /// swname, swversion, dbgstat
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Claims {
     /// Audience this token is intendedd for.
     #[serde(rename = "aud")]
@@ -95,14 +95,14 @@ impl Claims {
 /// Nested claims about sub-modules.
 ///
 /// Some fields have been omitted: confidential_space, gce
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Submods {
     /// Claims about the container.
     pub container: ContainerClaims,
 }
 
 /// Claims about the container.
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct ContainerClaims {
     /// The container image reference.
     pub image_reference: String,
