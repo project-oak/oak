@@ -292,6 +292,8 @@ fn verify_session_binding(
 
 #[cfg(test)]
 mod tests {
+    use core::str::FromStr;
+
     use jwt::{
         algorithm::{openssl::PKeyWithDigest, AlgorithmType},
         SignWithKey, SigningAlgorithm, Token, Verified, VerifyWithKey, VerifyingAlgorithm,
@@ -312,18 +314,30 @@ mod tests {
         CertificateVerificationError, CertificateVerificationReport,
     };
     use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa};
+    use p256::ecdsa::{signature::SignerMut, Signature, SigningKey};
 
     use super::*;
 
     const INDENT: usize = 0;
-    const HANDSHAKE_HASH: &[u8] = b"";
-    const SESSION_BINDING: Option<&SessionBinding> = None;
 
-    // TODO: b/419209669 - Use a non-empty session binding key (and session binding)
-    // in these tests and assert on the session binding verification report.
+    // This is a test-only key.
+    const SIGNING_KEY: &str = "
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgrvnMHLTorFFIv81o
+tY7X8XNBXwBH9yNp9Nza8ymFRbmhRANCAAShmAYmC7YQ2SHOzTaugBQDSVQrjwnh
+Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
+-----END PRIVATE KEY-----
+";
+    const HANDSHAKE_HASH: &[u8] = b"abc123def";
+
+    // TODO: b/419209669 - Add test cases for the VerificationReport constructor
+    // methods.
 
     #[test]
     fn test_print_certificate_based_report_success() {
+        let mut signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+        let handshake_signature: Signature = signing_key.sign(HANDSHAKE_HASH);
+
         let report =
             VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
                 endorsement: Ok(CertificateVerificationReport {
@@ -331,10 +345,17 @@ mod tests {
                     verification: Ok(()),
                     freshness: Some(Ok(())),
                 }),
-                session_binding_public_key: vec![],
+                session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
             });
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Option::Some(&session_binding(&handshake_signature.to_bytes())),
+            )
+            .unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -342,20 +363,21 @@ mod tests {
                 "✅ is valid",
                 "✅ verified successfully",
                 "✅ is fresh",
-                "❌ No session binding found",
+                "🔐 Session binding:",
+                "✅ verified successfully",
             ],
         );
     }
 
     #[test]
-    fn test_print_certificate_based_report_endorsement_error() {
+    fn test_print_certificate_based_report_endorsement_error_no_binding() {
         let report =
             VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
                 endorsement: Err(CertificateVerificationError::UnknownError("endorsement error")),
                 session_binding_public_key: vec![],
             });
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, Option::None).unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &["❌ is invalid: Unknown error: endorsement error", "❌ No session binding found"],
@@ -363,7 +385,9 @@ mod tests {
     }
 
     #[test]
-    fn test_print_certificate_based_report_certificate_verification_errors() {
+    fn test_print_certificate_based_report_certificate_verification_session_binding_errors() {
+        let signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+
         let report =
             VerificationReport::CertificateBased(SessionBindingPublicKeyVerificationReport {
                 endorsement: Ok(CertificateVerificationReport {
@@ -375,10 +399,17 @@ mod tests {
                         "freshness error",
                     ))),
                 }),
-                session_binding_public_key: vec![],
+                session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
             });
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Option::Some(&session_binding("nonsense".as_bytes())),
+            )
+            .unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -386,13 +417,17 @@ mod tests {
                 "❌ is invalid: Unknown error: validity error",
                 "❌ failed to verify: Unknown error: verification error",
                 "❌ proof of freshness failed to verify: Unknown error: freshness error",
-                "❌ No session binding found",
+                "🔐 Session binding:",
+                "❌ failed to verify: could not parse signature",
             ],
         );
     }
 
     #[test]
     fn test_print_confidential_space_report_success() {
+        let mut signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+        let handshake_signature: Signature = signing_key.sign(HANDSHAKE_HASH);
+
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
@@ -410,11 +445,18 @@ mod tests {
                     rekor_verification: Some(Ok(())),
                 }),
             })),
-            session_binding_public_key: vec![],
+            session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
         });
 
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Option::Some(&session_binding(&handshake_signature.to_bytes())),
+            )
+            .unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -433,13 +475,14 @@ mod tests {
                 "Statement",
                 "✅ is valid",
                 "✅ verified successfully",
-                "❌ No session binding found",
+                "🔐 Session binding:",
+                "✅ verified successfully",
             ],
         );
     }
 
     #[test]
-    fn test_print_confidential_space_report_success_no_workload_endorsement() {
+    fn test_print_confidential_space_report_success_no_workload_endorsement_no_binding() {
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
@@ -456,7 +499,7 @@ mod tests {
         });
 
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report.print(&mut writer, INDENT, HANDSHAKE_HASH, Option::None).unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -480,6 +523,8 @@ mod tests {
 
     #[test]
     fn test_print_confidential_space_report_errors() {
+        let signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Err(ConfidentialSpaceVerificationError::MissingField(
                 "public key",
@@ -494,11 +539,18 @@ mod tests {
                     "workload endorsement error".to_string(),
                 ),
             )),
-            session_binding_public_key: vec![],
+            session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
         });
 
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Option::Some(&session_binding("nonsense".as_bytes())),
+            )
+            .unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -511,13 +563,17 @@ mod tests {
                 "❌ invalid: Unknown error: issuer error",
                 "📦 Workload endorsement:",
                 "❌ failed to verify: endorsement validation error: workload endorsement error",
-                "❌ No session binding found",
+                "🔐 Session binding:",
+                "❌ failed to verify: could not parse signature",
             ],
         );
     }
 
     #[test]
     fn test_print_confidential_space_report_statement_rekor_errors() {
+        let mut signing_key = SigningKey::from_str(SIGNING_KEY).unwrap();
+        let handshake_signature: Signature = signing_key.sign(HANDSHAKE_HASH);
+
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
@@ -539,11 +595,18 @@ mod tests {
                     ))),
                 }),
             })),
-            session_binding_public_key: vec![],
+            session_binding_public_key: signing_key.verifying_key().to_sec1_bytes().to_vec(),
         });
 
         let mut writer = String::new();
-        report.print(&mut writer, INDENT, HANDSHAKE_HASH, SESSION_BINDING).unwrap();
+        report
+            .print(
+                &mut writer,
+                INDENT,
+                HANDSHAKE_HASH,
+                Option::Some(&session_binding(&handshake_signature.to_bytes())),
+            )
+            .unwrap();
         assert_eq_trimmed_lines(
             &writer,
             &[
@@ -562,7 +625,8 @@ mod tests {
                 "Statement",
                 "❌ is invalid: endorsement validation error: statement validation error",
                 "❌ failed to verify: Unknown error: rekor verification error",
-                "❌ No session binding found",
+                "🔐 Session binding:",
+                "✅ verified successfully",
             ],
         );
     }
@@ -576,6 +640,10 @@ mod tests {
             .filter(|line| !line.trim().is_empty())
             .collect();
         assert_eq!(lines.as_slice(), expected);
+    }
+
+    fn session_binding(session_binding: &[u8]) -> SessionBinding {
+        SessionBinding { binding: session_binding.to_vec() }
     }
 
     fn generate_verified_token() -> anyhow::Result<Token<Header, Claims, Verified>> {
