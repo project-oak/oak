@@ -30,8 +30,9 @@ use oak_containers_attestation::{InstanceKeys, InstancePublicKeys};
 use oak_crypto::encryption_key::{generate_encryption_key_pair, EncryptionKey};
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Stage0Measurements},
+    attestation::v1::{endorsements, AmdSevSnpEndorsement, Endorsements, Stage0Measurements},
     session::v1::EndorsedEvidence,
+    Variant,
 };
 use oak_sdk_common::StaticEncryptionKeyHandle;
 use p256::ecdsa::{SigningKey, VerifyingKey};
@@ -214,7 +215,7 @@ impl<'a> StandaloneBuilder<'a> {
         )?;
 
         Ok(Standalone::new(EndorsedEvidence {
-            evidence: Some(evidence.clone()),
+            evidence: Some(evidence),
             endorsements: Some(Endorsements {
                 r#type: Some(endorsements::Type::OakContainers(
                     oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
@@ -224,9 +225,92 @@ impl<'a> StandaloneBuilder<'a> {
                         ..Default::default()
                     },
                 )),
-                // TODO: b/375137648 - Populate `events` proto field.
+                platform: Some(AmdSevSnpEndorsement::default().into()),
+                events: vec![Variant::default(), Variant::default(), Variant::default()],
                 ..Default::default()
             }),
         }, instance_private_keys.encryption_key))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use oak_attestation_verification::{
+        results::get_signing_public_key, ContainerPolicy, InsecureAttestationVerifier,
+        KernelPolicy, SystemPolicy,
+    };
+    use oak_attestation_verification_types::verifier::AttestationVerifier;
+    use oak_proto_rust::oak::attestation::v1::{
+        attestation_results, binary_reference_value, kernel_binary_reference_value,
+        text_reference_value, BinaryReferenceValue, ContainerLayerReferenceValues,
+        KernelBinaryReferenceValue, KernelLayerReferenceValues, SkipVerification,
+        SystemLayerReferenceValues, TextReferenceValue,
+    };
+    use oak_time_std::clock::SystemTimeClock;
+
+    use super::*;
+
+    #[test]
+    fn test_standalone_evidence_verification() {
+        let endorsed_evidence = Standalone::builder().build().unwrap().endorsed_evidence();
+        let verifier = InsecureAttestationVerifier::new(
+            Arc::new(SystemTimeClock {}),
+            vec![
+                Box::new(KernelPolicy::new(&KernelLayerReferenceValues {
+                    kernel: Some(KernelBinaryReferenceValue {
+                        r#type: Some(kernel_binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                    kernel_cmd_line_text: Some(TextReferenceValue {
+                        r#type: Some(text_reference_value::Type::Skip(SkipVerification::default())),
+                    }),
+                    init_ram_fs: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                    memory_map: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                    acpi: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                })),
+                Box::new(SystemPolicy::new(&SystemLayerReferenceValues {
+                    system_image: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                })),
+                Box::new(ContainerPolicy::new(&ContainerLayerReferenceValues {
+                    binary: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                    configuration: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            SkipVerification::default(),
+                        )),
+                    }),
+                })),
+            ],
+        );
+        let results = verifier
+            .verify(
+                &endorsed_evidence.evidence.expect("missing evidence"),
+                &endorsed_evidence.endorsements.expect("missing endorsements"),
+            )
+            .expect("attestation verification failed");
+        assert_eq!(results.status, attestation_results::Status::Success as i32);
+        get_signing_public_key(&results).expect("missing signing public key");
     }
 }

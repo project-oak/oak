@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -38,6 +38,16 @@ rust_library(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:p256",
         "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test(
+    name = "oak_sdk_standalone_test",
+    crate = ":oak_sdk_standalone",
+    deps = [
+        "//oak_attestation_verification",
+        "//oak_attestation_verification_types",
+        "//oak_time:oak_time_std",
     ],
 )
 
