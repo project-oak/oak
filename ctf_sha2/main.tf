@@ -49,6 +49,10 @@ resource "google_compute_instance" "ctf_sha2_instance" {
   # The network interface uses the default network.
   network_interface {
     network = "default"
+    # This is needed for the VM to boot somehow.
+    access_config {
+      # Ephemeral public IP.
+    }
   }
 
   # Metadata required by Confidential Space to launch the container.
