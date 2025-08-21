@@ -12,7 +12,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the GCE instance."
-  default     = "ctf-sha2-test-2"
+  default     = "ctf-sha2-test"
 }
 
 variable "machine_type" {

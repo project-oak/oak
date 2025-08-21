@@ -59,7 +59,7 @@ repository.
 ### Inspect Logs
 
 Go to
-<https://pantheon.corp.google.com/compute/instancesDetail/zones/us-west1-b/instances/ctf-sha2-test>
+<https://console.cloud.google.com/compute/instancesDetail/zones/us-west1-b/instances/ctf-sha2-test?project=oak-examples-477357>
 and then click on "Logging".
 
 Find the entry that printed the attestation token, expand it and then click on

@@ -8,6 +8,7 @@ set -o errexit
 set -o pipefail
 set -o nounset
 set -o xtrace
+shopt -s inherit_errexit
 
 # --- Configuration ---
 # The GCP Project ID where the instance will be deployed.
@@ -25,7 +26,7 @@ echo "Building container image and calculating digest..."
 bazel build //ctf_sha2:image.digest
 
 # First push the image. The command returns the full URL with the digest of the image that was just pushed.
-readonly FULL_IMAGE_DIGEST="$(bazel run //ctf_sha2:image_push)"
+FULL_IMAGE_DIGEST="$(bazel run //ctf_sha2:image_push)"
 
 echo "Image digest: ${FULL_IMAGE_DIGEST}"
 
