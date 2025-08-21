@@ -5,8 +5,9 @@ as [JSON] objects.
 
 ## Schema
 
-Endorsements are [in-toto statement]s (V1 only) with a custom predicate. In the following
-example, only the subject, the timestamps and the claim types are variable.
+Endorsements are [in-toto statement]s (V1 only) with a custom predicate. In the
+following example, only the subject, the timestamps and the claim types are
+variable.
 
 ```jsonc
 {

@@ -22,28 +22,40 @@ completing all edits - to format the code appropriately.
 
 When writing new APIs follow the guidelines:
 
-* Write extensive doc comments explaining the intended use of all parts of the APIs and the interaction between the components
-* Design for testability: make sure all dependencies can be replaced by mocks for testing, where possible create appropriate mocks
-* The APIs should be safe:
-  * Avoid using `unsafe` code
-  * When handling cryptographic primitives don't create unnecessary copies of private keys
-  * Don't keep the keys in memory when they are no longer in use
-  * Make it hard for the API users to do unsafe things. For example don't return raw private keys to the caller, instead create a handler with intended operations for them to use
-* Utilize structured errors (such as provided by `thiserror`) to provide sufficient context to the API callers
-* APIs should utilize the type system to make invalid states unrepresentable
+- Write extensive doc comments explaining the intended use of all parts of the
+  APIs and the interaction between the components
+- Design for testability: make sure all dependencies can be replaced by mocks
+  for testing, where possible create appropriate mocks
+- The APIs should be safe:
+  - Avoid using `unsafe` code
+  - When handling cryptographic primitives don't create unnecessary copies of
+    private keys
+  - Don't keep the keys in memory when they are no longer in use
+  - Make it hard for the API users to do unsafe things. For example don't return
+    raw private keys to the caller, instead create a handler with intended
+    operations for them to use
+- Utilize structured errors (such as provided by `thiserror`) to provide
+  sufficient context to the API callers
+- APIs should utilize the type system to make invalid states unrepresentable
 
 ## Writing Tests
 
 This project uses `googletest` whenever possible for both C++ and Rust tests.
 
-While `just build-and-test` is available to run all tests, it can be slow. For a faster, more targeted approach, you can run tests for a specific package using `bazel test //path/to/package:all`. For example, to run only the tests for the `oak_time` crate, use `bazel test //oak_time:all`.
+While `just build-and-test` is available to run all tests, it can be slow. For a
+faster, more targeted approach, you can run tests for a specific package using
+`bazel test //path/to/package:all`. For example, to run only the tests for the
+`oak_time` crate, use `bazel test //oak_time:all`.
 
-If a target does not have any tests, running `bazel test` on it will fail. In this case, use `bazel build` to verify the target instead.
+If a target does not have any tests, running `bazel test` on it will fail. In
+this case, use `bazel build` to verify the target instead.
 
-Note: The following two test targets are expected to fail when running `just build-and-test` in the local development environment. This is known behavior and can be disregarded:
+Note: The following two test targets are expected to fail when running
+`just build-and-test` in the local development environment. This is known
+behavior and can be disregarded:
 
-* `//oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests_tests/integration_test_test`
-* `//oak_functions_containers_launcher:oak_functions_containers_launcher_test_tests/integration_test_test`
+- `//oak_containers/examples/hello_world/host_app:oak_containers_hello_world_host_app_tests_tests/integration_test_test`
+- `//oak_functions_containers_launcher:oak_functions_containers_launcher_test_tests/integration_test_test`
 
 ## Rust
 
@@ -58,7 +70,9 @@ and break that.
 
 ## Working with Protobufs
 
-The project's protobuf files are located in the `proto` directory. After modifying any of these files, you must run the following command to regenerate the corresponding Rust code:
+The project's protobuf files are located in the `proto` directory. After
+modifying any of these files, you must run the following command to regenerate
+the corresponding Rust code:
 
 ```bash
 bazel run oak_proto_rust:copy_generated_files
@@ -69,30 +83,31 @@ bazel run oak_proto_rust:copy_generated_files
 To add a new crate dependency to the project, you need to:
 
 1. **Add the crate to `bazel/crates/oak_crates.bzl`**. Be mindful of the
-    following:
-    * **Dependency Group:** Add the crate to the appropriate dictionary.
-      * `_common_crates`: For crates that are used in both `std` and `no_std`
-        environments.
-      * `OAK_NO_STD_CRATES`: For crates that are only used in `no_std`
-        environments.
-      * `OAK_STD_CRATES`: For crates that are only used in `std` environments.
-    * **Features:** Carefully select the features for each crate. For `no_std`
-      builds, it's critical to set `default_features = False` and only enable
-      the features that are compatible with a `no_std` environment (e.g.,
-      `alloc`).
+   following:
+   - **Dependency Group:** Add the crate to the appropriate dictionary.
+     - `_common_crates`: For crates that are used in both `std` and `no_std`
+       environments.
+     - `OAK_NO_STD_CRATES`: For crates that are only used in `no_std`
+       environments.
+     - `OAK_STD_CRATES`: For crates that are only used in `std` environments.
+   - **Features:** Carefully select the features for each crate. For `no_std`
+     builds, it's critical to set `default_features = False` and only enable the
+     features that are compatible with a `no_std` environment (e.g., `alloc`).
 2. **Run `just bazel-repin-all`** to update the lockfiles and BUILD files.
 
 ## Documentation
 
-If you learn anything new about the codebase, please update this file with those details.
+If you learn anything new about the codebase, please update this file with those
+details.
 
 ## Style Guide
 
-* Do not use the word "learning". Use "lesson" instead.
+- Do not use the word "learning". Use "lesson" instead.
 
 ## Git
 
 ### Commits
 
-* When writing commit messages, any backticks (`) must be escaped with a
-  backslash (\`) to ensure they are correctly written.
+- When writing commit messages, any backticks
+  (`) must be escaped with a backslash (\`) to ensure they are correctly
+  written.

@@ -6,15 +6,15 @@
 
 # Oak Attestation Verification SDK
 
-This library provides the tools to validate the authenticity and integrity of a workload running in
-a Trusted Execution Environment (TEE) by verifying remote attestation artifacts such as
-[`Evidence`](../proto/attestation/evidence.proto) and
-[`Endorsements`](../proto/attestation/endorsement.proto).
+This library provides the tools to validate the authenticity and integrity of a
+workload running in a Trusted Execution Environment (TEE) by verifying remote
+attestation artifacts such as [`Evidence`](../proto/attestation/evidence.proto)
+and [`Endorsements`](../proto/attestation/endorsement.proto).
 
 ## Attestation Verifier
 
-The main entry point for this library is the `AttestationVerifier` trait, which provides a
-standard interface for attestation verification.
+The main entry point for this library is the `AttestationVerifier` trait, which
+provides a standard interface for attestation verification.
 
 ```rust
 pub trait AttestationVerifier {
@@ -29,35 +29,37 @@ pub trait AttestationVerifier {
 Oak provides several implementations of this trait:
 
 - `AmdSevSnpDiceAttestationVerifier`: that verifies the
-[AMD SEV-SNP](https://www.amd.com/en/developer/sev.html) attestation report and also verifies the
-validity of the [DICE](../docs/remote-attestation.md) chain.
-- `EventLogVerifier`: a special verifier that only validates that the values in the event log
-entries match the expected values (reference values or endorsements).
-Note: it doesn't check that the event log is rooted in hardware attestation _(needed for use-cases
-where the evidence is produced by a trusted party outside of the TEE)_.
+  [AMD SEV-SNP](https://www.amd.com/en/developer/sev.html) attestation report
+  and also verifies the validity of the [DICE](../docs/remote-attestation.md)
+  chain.
+- `EventLogVerifier`: a special verifier that only validates that the values in
+  the event log entries match the expected values (reference values or
+  endorsements). Note: it doesn't check that the event log is rooted in hardware
+  attestation _(needed for use-cases where the evidence is produced by a trusted
+  party outside of the TEE)_.
 
 The final result of the attestation verification is an
-[`AttestationResults`](../proto/attestation/verification.proto) message, which indicates success or
-failure and also includes various artifacts extracted from the evidence _(such as public keys
-associated with the workload)_.
+[`AttestationResults`](../proto/attestation/verification.proto) message, which
+indicates success or failure and also includes various artifacts extracted from
+the evidence _(such as public keys associated with the workload)_.
 
 ## Verification Policies
 
-On the lower level attestation verification is implemented by Verification Policies (also called
-_"Appraisal Policies"_ in
+On the lower level attestation verification is implemented by Verification
+Policies (also called _"Appraisal Policies"_ in
 [RFC9334](https://datatracker.ietf.org/doc/html/rfc9334#name-appraisal-policies)).
 
-A Verification Policy is a function that can validate the authenticity and integrity of an
-individual event provided by the `Evidence`.
-Here we consider both "events" from the [`EventLog`](../proto/attestation/eventlog.proto) and also
-"special events" such as Platform event (i.e. containing an AMD SEV-SNP attestation report) and
-Firmware event (i.e. containing measurements for [stage0](../stage0_bin/README.md)).
-In addition to verifying an event, Verification Policy also needs to verify that this Event is
-endorsed.
-This means that each event from the `Evidence` needs to have a corresponding event endorsement in
-the `Endorsements`.
-These event endorsements are represented by the `platform`, `initial` (firmware) and the `events`
-fields of the `Endorsements` message.
+A Verification Policy is a function that can validate the authenticity and
+integrity of an individual event provided by the `Evidence`. Here we consider
+both "events" from the [`EventLog`](../proto/attestation/eventlog.proto) and
+also "special events" such as Platform event (i.e. containing an AMD SEV-SNP
+attestation report) and Firmware event (i.e. containing measurements for
+[stage0](../stage0_bin/README.md)). In addition to verifying an event,
+Verification Policy also needs to verify that this Event is endorsed. This means
+that each event from the `Evidence` needs to have a corresponding event
+endorsement in the `Endorsements`. These event endorsements are represented by
+the `platform`, `initial` (firmware) and the `events` fields of the
+`Endorsements` message.
 
 Verification policy is represented as a `Policy` trait:
 
@@ -72,18 +74,32 @@ pub trait Policy<T> {
 }
 ```
 
-Additional argument that is provided to policies is `now_utc_millis`, which corresponds to the current time and is used to check certificate validity (e.g. for [Transparent Release](../docs/tr/README.md)).
+Additional argument that is provided to policies is `now_utc_millis`, which
+corresponds to the current time and is used to check certificate validity (e.g.
+for [Transparent Release](../docs/tr/README.md)).
 
-Each event type requires having an individual implementation of the policy trait that can verify such an event.
-For example, the Kernel Event, that corresponds to loading and measuring the kernel, requires a [`KernelPolicy`](src/policy/kernel.rs).
-Oak attestation verification library provides a set of [default policies](src/policy/), which can be initialized with reference values that these policies will use to validate the event and the event endorsement.
+Each event type requires having an individual implementation of the policy trait
+that can verify such an event. For example, the Kernel Event, that corresponds
+to loading and measuring the kernel, requires a
+[`KernelPolicy`](src/policy/kernel.rs). Oak attestation verification library
+provides a set of [default policies](src/policy/), which can be initialized with
+reference values that these policies will use to validate the event and the
+event endorsement.
 
-Verification policies are also used to create instances of the `AttestationVerifier` (e.g. `AmdSevSnpDiceAttestationVerifier`), which the verifier uses internally by iterating over the provided events and calling respective verification policies.
-Keep in mind that the implementation `AttestationVerifier` still needs to validate that those events are rooted in the attestation report, which is not done by policies and instead uses other mechanisms internal to the `AttestationVerifier` implementation (such as [DICE](https://trustedcomputinggroup.org/work-groups/dice-architectures/) mechanism).
+Verification policies are also used to create instances of the
+`AttestationVerifier` (e.g. `AmdSevSnpDiceAttestationVerifier`), which the
+verifier uses internally by iterating over the provided events and calling
+respective verification policies. Keep in mind that the implementation
+`AttestationVerifier` still needs to validate that those events are rooted in
+the attestation report, which is not done by policies and instead uses other
+mechanisms internal to the `AttestationVerifier` implementation (such as
+[DICE](https://trustedcomputinggroup.org/work-groups/dice-architectures/)
+mechanism).
 
 ## Example
 
-This example shows how to perform attestation verification for [Oak Containers](../oak_containers/README.md):
+This example shows how to perform attestation verification for
+[Oak Containers](../oak_containers/README.md):
 
 ```rust
 use anyhow::Context;

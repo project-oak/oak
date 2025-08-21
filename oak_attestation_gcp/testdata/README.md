@@ -7,15 +7,15 @@ testing GCP attestation verification logic.
 
 The tests require various JWTs to cover different scenarios:
 
-* Valid tokens that should pass verification.
-* Invalid tokens that should fail verification for specific reasons (e.g., bad
-    signature, expired, invalid claims).
+- Valid tokens that should pass verification.
+- Invalid tokens that should fail verification for specific reasons (e.g., bad
+  signature, expired, invalid claims).
 
 While some of these tokens may have been originally obtained from a live GCP
 environment, it is not necessary to do so for adding new tests or updating
 existing ones. For most cases, you can generate self-signed JWTs. The key is
-that the token is structurally correct and signed by a key that corresponds
-to the first certificate in the `x5c` header.
+that the token is structurally correct and signed by a key that corresponds to
+the first certificate in the `x5c` header.
 
 ## Generating New Test JWTs
 
@@ -68,39 +68,39 @@ header.
 
 ### 4. Assemble the JWT
 
-Go to [jwt.io](https://jwt.io) to construct the token, make sure to select
-"JWT Encoder".
+Go to [jwt.io](https://jwt.io) to construct the token, make sure to select "JWT
+Encoder".
 
-1. **Header**: Update the header to include the `x5c` parameter, and use
-    the RS256 algorithm.
+1. **Header**: Update the header to include the `x5c` parameter, and use the
+   RS256 algorithm.
 
-    ```json
-    {
-      "alg": "RS256",
-      "typ": "JWT",
-      "x5c": ["<paste the Base64-encoded certificate from step 3 here>"]
-    }
-    ```
+   ```json
+   {
+     "alg": "RS256",
+     "typ": "JWT",
+     "x5c": ["<paste the Base64-encoded certificate from step 3 here>"]
+   }
+   ```
 
 2. **Payload**: Define the claims for your test case.
 
 3. **Signature**: In the "JWT Private Key" section, paste the content of
-    `private_key.pem`.
+   `private_key.pem`.
 
 The encoded JWT will be generated on the right. You can copy this and save it to
 a new file in this directory to use in your tests.
 
 ## Creating Invalid Tokens for Testing
 
-To test failure scenarios, you can create invalid tokens by modifying the process
-above:
+To test failure scenarios, you can create invalid tokens by modifying the
+process above:
 
-* **Bad Signature**: Sign the JWT with a different private key than the one
-    corresponding to the certificate in the `x5c` header, or simply alter the
-    signature bytes of a valid token.
-* **Expired Token**: Set the `exp` claim in the payload to a timestamp in the
-    past.
-* **Invalid Issuer**: Change the `iss` claim to a value that the verifier will
-    not accept.
-* **Malformed Certificate**: Intentionally corrupt the Base64 certificate
-    string in the `x5c` header.
+- **Bad Signature**: Sign the JWT with a different private key than the one
+  corresponding to the certificate in the `x5c` header, or simply alter the
+  signature bytes of a valid token.
+- **Expired Token**: Set the `exp` claim in the payload to a timestamp in the
+  past.
+- **Invalid Issuer**: Change the `iss` claim to a value that the verifier will
+  not accept.
+- **Malformed Certificate**: Intentionally corrupt the Base64 certificate string
+  in the `x5c` header.

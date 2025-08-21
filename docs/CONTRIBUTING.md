@@ -67,7 +67,9 @@ docs according to our style guide.
 
 ### Rust
 
-- Make sure code is [`cargo clippy`](https://crates.io/crates/clippy) clean. Since we use bazel to build, you can use the `--config=clippy` flag on a bazel build command, or run `just clippy` to run clippy on all targets.
+- Make sure code is [`cargo clippy`](https://crates.io/crates/clippy) clean.
+  Since we use bazel to build, you can use the `--config=clippy` flag on a bazel
+  build command, or run `just clippy` to run clippy on all targets.
 
 ### C++
 

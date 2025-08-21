@@ -16,7 +16,9 @@ must be built.
 
 (instructions gained from inspecting xtask, may change in the future)
 
-The easiest way to run the launcher is to use the included just command, which will use the default support dependencies, so you only need to provide the target of an enclave app to run.
+The easiest way to run the launcher is to use the included just command, which
+will use the default support dependencies, so you only need to provide the
+target of an enclave app to run.
 
 ```shell
 

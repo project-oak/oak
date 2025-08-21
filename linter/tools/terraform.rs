@@ -18,21 +18,21 @@ use std::path::Path;
 
 use super::has_extension;
 
-pub struct PrettierTool {}
+pub struct TerraformFmtTool {}
 
-impl linter::LinterTool for PrettierTool {
-    const NAME: &'static str = "Prettier";
+impl linter::LinterTool for TerraformFmtTool {
+    const NAME: &'static str = "Terraform";
     const SUPPORTS_FIX: bool = true;
 
     fn accept(&self, path: &Path) -> anyhow::Result<bool> {
-        Ok(has_extension(path, &["yaml", "yml", "html", "htm", "js", "ts", "tsx", "msj", "md"]))
+        Ok(has_extension(path, &["tf"]))
     }
 
     fn check(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("prettier", &["--check", "--log-level=warn"], path)
+        super::linter_command("terraform", &["fmt", "-check"], path)
     }
 
     fn fix(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("prettier", &["--write", "--log-level=warn"], path)
+        super::linter_command("terraform", &["fmt", "-write=true"], path)
     }
 }

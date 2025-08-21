@@ -51,8 +51,7 @@ these two proxies.
   Client Proxy. It decrypts the traffic and forwards the plaintext to the final
   backend application server.
 - **Shared Library (`//oak_proxy/lib`)**: A shared Rust library containing the
-  common logic for proxying, used by both the client and server
-  binaries.
+  common logic for proxying, used by both the client and server binaries.
 
 ### How It Works
 
@@ -67,7 +66,8 @@ these two proxies.
      stream.
    - It passes these bytes to its `ClientSession` instance, which encrypts them.
    - The `ClientSession` produces an encrypted Protobuf message.
-   - The Client Proxy sends this message as a binary frame over the WebSocket to the Server Proxy.
+   - The Client Proxy sends this message as a binary frame over the WebSocket to
+     the Server Proxy.
    - The Server Proxy receives the binary WebSocket frame.
    - It passes the encrypted message to its `ServerSession`, which decrypts it.
    - The resulting plaintext is written to the TCP stream connected to the
@@ -198,8 +198,8 @@ configuration file passed via the `--config` command-line argument.
 
 - `listen_address`: The `SocketAddr` (e.g., `"127.0.0.1:9090"`) where the proxy
   should listen for incoming connections.
-- `attestation_generators`: (Optional) A list of generators to use for generating
-  attestation evidence to send to the peer.
+- `attestation_generators`: (Optional) A list of generators to use for
+  generating attestation evidence to send to the peer.
 - `attestation_verifiers`: (Optional) A list of verifiers to use for validating
   the peer's attestation evidence.
 
@@ -217,13 +217,13 @@ configuration file passed via the `--config` command-line argument.
   - `cmd`: The command to execute.
   - `args`: A list of arguments for the command.
   - `restart_policy`: Defines the behavior when the process exits. Can be
-    `terminate` (default, exits the proxy), `always` (restarts the process),
-    or `never` (does nothing).
+    `terminate` (default, exits the proxy), `always` (restarts the process), or
+    `never` (does nothing).
 
 ### Attestation Modes
 
-The presence of the `attestation_generators` and `attestation_verifiers` sections
-determines the attestation mode:
+The presence of the `attestation_generators` and `attestation_verifiers`
+sections determines the attestation mode:
 
 1. **Unattested (Default)**: If both are omitted, the session is unattested.
 2. **Unidirectional Attestation**: If one proxy has a `generator` and the other

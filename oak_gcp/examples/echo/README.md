@@ -27,7 +27,7 @@ Google Cloud attestation service to generate endorsements.
 2. **gcloud CLI:** Make sure the `gcloud` CLI is installed and configured.
 
    - **Authentication:** Log in to your Google account. Also, create a set of
-   application-default credentials for other commands, like cosign, to use:
+     application-default credentials for other commands, like cosign, to use:
 
      ```bash
      gcloud auth login
@@ -79,8 +79,8 @@ Google Cloud attestation service to generate endorsements.
    Your user or service account needs the `Cloud KMS CryptoKey Signer/Verifier`
    IAM role to be able to use the key for signing.
 
-   For initial experimentation, you can also use a local key pair. Note that
-   you should never use this approach for a real workload:
+   For initial experimentation, you can also use a local key pair. Note that you
+   should never use this approach for a real workload:
 
    ```bash
    cosign generate-key-pair

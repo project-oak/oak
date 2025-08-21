@@ -25,6 +25,7 @@ pub mod prettier;
 pub mod rustfmt;
 pub mod shell_check;
 pub mod source_license;
+pub mod terraform;
 
 use std::{
     fs::File,

@@ -76,6 +76,7 @@ fn main() {
     counts += context.lint(tools::ktfmt::KtfmtTool {});
     counts += context.lint(tools::prettier::PrettierTool {});
     counts += context.lint(tools::shell_check::ShellCheckTool {});
+    counts += context.lint(tools::terraform::TerraformFmtTool {});
     counts += context.lint(tools::rustfmt::RustfmtTool {});
     counts += context.lint(tools::markdownlint::MarkdownlintTool {});
     counts += context.lint(tools::source_license::SourceLicenseTool {});

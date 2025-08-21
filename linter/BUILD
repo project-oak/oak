@@ -46,20 +46,7 @@ rust_library(
 
 rust_library(
     name = "tools",
-    srcs = [
-        "tools/bad_todos.rs",
-        "tools/build_license.rs",
-        "tools/buildifier.rs",
-        "tools/clang_format.rs",
-        "tools/hadolint.rs",
-        "tools/ktfmt.rs",
-        "tools/lib.rs",
-        "tools/markdownlint.rs",
-        "tools/prettier.rs",
-        "tools/rustfmt.rs",
-        "tools/shell_check.rs",
-        "tools/source_license.rs",
-    ],
+    srcs = glob(["tools/*.rs"]),
     deps = [
         ":lib",
         "@oak_crates_index//:anyhow",
