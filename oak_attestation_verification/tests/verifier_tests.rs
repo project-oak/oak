@@ -88,7 +88,7 @@ fn assert_success(result: anyhow::Result<ExtractedEvidence>) {
         eprintln!("code={} reason={}", proto.status, proto.reason);
         eprintln!("======================================");
     }
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     assert!(proto.status() == Status::Success);
 }
 
@@ -101,7 +101,7 @@ fn assert_failure(result: anyhow::Result<ExtractedEvidence>) {
         eprintln!("code={} reason={}", proto.status, proto.reason);
         eprintln!("======================================");
     }
-    assert!(result.is_err());
+    assert!(result.is_err(), "Expected failure but got success: {:?}", result);
     assert!(proto.status() == Status::GenericFailure);
 }
 

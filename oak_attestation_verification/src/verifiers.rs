@@ -254,8 +254,10 @@ pub fn create_amd_verifier<T: Clock + 'static>(
     match reference_values.r#type.as_ref() {
         Some(reference_values::Type::OakContainers(rvs)) => {
             let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
-            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)?;
-            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)?;
+            let amd = root_rvs.amd_sev.as_ref().context("no AMD SEV-SNP reference values")?;
+            let platform_policy = AmdSevSnpPolicy::new(amd);
+            let firmware_policy =
+                FirmwarePolicy::new(amd.stage0.as_ref().context("no stage0 reference value")?);
             let kernel_policy = KernelPolicy::new(
                 rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
             );
@@ -276,10 +278,11 @@ pub fn create_amd_verifier<T: Clock + 'static>(
             ))
         }
         Some(reference_values::Type::OakRestrictedKernel(rvs)) => {
-            // Create platform and firmware policies.
             let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
-            let platform_policy = AmdSevSnpPolicy::from_root_layer_reference_values(root_rvs)?;
-            let firmware_policy = FirmwarePolicy::from_root_layer_reference_values(root_rvs)?;
+            let amd = root_rvs.amd_sev.as_ref().context("no AMD SEV-SNP reference values")?;
+            let platform_policy = AmdSevSnpPolicy::new(amd);
+            let firmware_policy =
+                FirmwarePolicy::new(amd.stage0.as_ref().context("no firmware reference value")?);
             let kernel_policy = KernelPolicy::new(
                 rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
             );

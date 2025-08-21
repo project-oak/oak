@@ -74,7 +74,7 @@ fn assert_failure(result: anyhow::Result<AttestationResults>) {
         eprintln!("code={} reason={}", proto.status, proto.reason);
         eprintln!("======================================");
     }
-    assert!(result.is_err());
+    assert!(result.is_err(), "Expected failure but got success: {:?}", result);
 }
 
 // Shorthand that produces digest-based reference values from evidence.

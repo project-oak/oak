@@ -20,7 +20,6 @@ use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{
     attestation::v1::{
         AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults, RootLayerEvidence,
-        RootLayerReferenceValues,
     },
     Variant,
 };
@@ -45,21 +44,12 @@ impl AmdSevSnpPolicy {
     pub fn new(reference_values: &AmdSevReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
     }
-
-    // TODO: b/398859203 - Remove this function once old reference values have been
-    // updated.
-    pub fn from_root_layer_reference_values(
-        root_layer: &RootLayerReferenceValues,
-    ) -> anyhow::Result<Self> {
-        let platform_reference_values = root_layer
-            .amd_sev
-            .as_ref()
-            .context("AMD SEV-SNP attestation report wasn't provided")?;
-        Ok(Self::new(platform_reference_values))
-    }
 }
 
 // Policy which verifies the AMD SEV-SNP hardware root.
+//
+// On success, returns the (unverified) initial measurement which will be
+// verified by the firmware policy.
 impl Policy<RootLayerEvidence> for AmdSevSnpPolicy {
     fn verify(
         &self,
