@@ -520,36 +520,23 @@ impl<'a> QeReportCertificationData<'a> {
 #[cfg(test)]
 mod tests {
     use alloc::vec::Vec;
-    use std::fs;
 
     use googletest::prelude::*;
-    use oak_file_utils::data_path;
-    use oak_proto_rust::oak::attestation::v1::{Evidence, TeePlatform};
-    use prost::Message;
+    use oak_proto_rust::oak::attestation::v1::TeePlatform;
+    use test_util::AttestationData;
 
     use super::*;
 
-    // TDX Oak Containers attestation
-    const OC_TDX_EVIDENCE_PATH: &str =
-        "oak_attestation_verification/testdata/oc_evidence_tdx.binarypb";
-
-    // Loads a valid Intel TDX evidence instance for Oak Containers.
-    fn get_oc_evidence_tdx() -> Evidence {
-        let serialized =
-            fs::read(data_path(OC_TDX_EVIDENCE_PATH)).expect("could not read evidence");
-        Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
-    }
-
     fn get_evidence_quote_bytes() -> Vec<u8> {
-        let evidence = get_oc_evidence_tdx();
-        evidence.root_layer.expect("no root layer").remote_attestation_report
+        let d = AttestationData::load_tdx_oc();
+        d.evidence.root_layer.expect("no root layer").remote_attestation_report
     }
 
     #[test]
     fn ensure_evidence_is_for_tdx() {
-        let evidence = get_oc_evidence_tdx();
+        let d = AttestationData::load_tdx_oc();
         assert_that!(
-            evidence.root_layer.as_ref().expect("no root layer").platform,
+            d.evidence.root_layer.as_ref().expect("no root layer").platform,
             eq(TeePlatform::IntelTdx as i32)
         );
     }

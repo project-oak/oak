@@ -110,9 +110,11 @@ filegroup(
 
 # Example attestation evidence on Intel TDX for the Oak Containers stack.
 filegroup(
-    name = "oc_attestation_tdx",
+    name = "tdx_oc_attestation",
     srcs = [
-        "oc_evidence_tdx.binarypb",
+        "tdx_oc_endorsements.binarypb",
+        "tdx_oc_evidence.binarypb",
+        "tdx_oc_reference_values.binarypb",
     ],
 )
 

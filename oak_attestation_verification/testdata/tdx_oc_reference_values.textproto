@@ -1,0 +1,53 @@
+# proto-file: third_party/oak/proto/attestation/reference_value.proto
+# proto-message: oak.attestation.v1.ReferenceValues
+#
+# Digest-based reference values matching an Oak Containers chain running
+# on Intel TDX.
+#
+oak_containers {
+  root_layer {
+    # TODO: b/440236844 - Should not be needed for the insecure verifier.
+    amd_sev {
+    }
+    intel_tdx {
+    }
+  }
+  kernel_layer {
+    kernel {
+      skip {
+      }
+    }
+    init_ram_fs {
+      skip {
+      }
+    }
+    memory_map {
+      skip {
+      }
+    }
+    acpi {
+      skip {
+      }
+    }
+    kernel_cmd_line_text {
+      skip {
+      }
+    }
+  }
+  system_layer {
+    system_image {
+      skip {
+      }
+    }
+  }
+  container_layer {
+    binary {
+      skip {
+      }
+    }
+    configuration {
+      skip {
+      }
+    }
+  }
+}

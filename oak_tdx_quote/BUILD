@@ -39,11 +39,8 @@ rust_library(
 rust_test(
     name = "oak_tdx_quote_tests",
     crate = ":oak_tdx_quote",
-    data = [
-        "//oak_attestation_verification/testdata:oc_attestation_tdx",
-    ],
     deps = [
-        "//oak_file_utils",
+        "//oak_attestation_verification:test_util",
         "//oak_proto_rust",
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:prost",

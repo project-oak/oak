@@ -82,6 +82,13 @@ const FAKE_ENDORSEMENTS_PATH: &str =
 const FAKE_REFERENCE_VALUES_PATH: &str =
     "oak_attestation_verification/testdata/fake_reference_values.binarypb";
 
+// Intel TDX attestation with Oak Containers.
+const TDX_OC_EVIDENCE_PATH: &str = "oak_attestation_verification/testdata/tdx_oc_evidence.binarypb";
+const TDX_OC_ENDORSEMENTS_PATH: &str =
+    "oak_attestation_verification/testdata/tdx_oc_endorsements.binarypb";
+const TDX_OC_REFERENCE_VALUES_PATH: &str =
+    "oak_attestation_verification/testdata/tdx_oc_reference_values.binarypb";
+
 pub struct AttestationData {
     pub valid_not_before: Instant,
     pub valid_not_after: Instant,
@@ -187,6 +194,18 @@ impl AttestationData {
             evidence: load_evidence(FAKE_EVIDENCE_PATH),
             endorsements: load_endorsements(FAKE_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(FAKE_REFERENCE_VALUES_PATH),
+        }
+    }
+
+    // Loads an attestation example involving Oak Containers on Intel TDX.
+    pub fn load_tdx_oc() -> AttestationData {
+        AttestationData {
+            // Validity is not used since there are no endorsements.
+            valid_not_before: make_instant!("2025-01-01T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-12-31T00:00:00.000000Z"),
+            evidence: load_evidence(TDX_OC_EVIDENCE_PATH),
+            endorsements: load_endorsements(TDX_OC_ENDORSEMENTS_PATH),
+            reference_values: load_reference_values(TDX_OC_REFERENCE_VALUES_PATH),
         }
     }
 

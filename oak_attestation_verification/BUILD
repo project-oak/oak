@@ -69,7 +69,6 @@ rust_test(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
-        "//oak_attestation_verification/testdata:oc_attestation_tdx",
     ],
     deps = [
         ":test_util",
@@ -157,7 +156,6 @@ rust_test(
     data = [
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
-        "//oak_attestation_verification/testdata:oc_attestation_tdx",
     ],
     deps = [
         ":test_util",
@@ -210,6 +208,7 @@ rust_library(
         "//oak_attestation_verification/testdata:milan_oc_staging_attestation",
         "//oak_attestation_verification/testdata:milan_rk_release_attestation",
         "//oak_attestation_verification/testdata:milan_rk_staging_attestation",
+        "//oak_attestation_verification/testdata:tdx_oc_attestation",
         "//oak_attestation_verification/testdata:turin_oc_attestation",
     ],
     deps = [
