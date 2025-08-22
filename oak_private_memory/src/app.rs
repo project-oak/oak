@@ -279,18 +279,11 @@ impl SealedMemorySessionHandler {
         request: AddMemoryRequest,
     ) -> anyhow::Result<AddMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            let database = &mut context.database;
-            if let Some(memory) = request.memory {
-                let memory_id = database.add_memory(memory).await?;
-                Ok(AddMemoryResponse { id: memory_id.to_string() })
-            } else {
-                bail!("memory not set in AddMemoryRequest")
-            }
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let memory = request.memory.context("memory not set in AddMemoryRequest")?;
+
+        let memory_id = database.add_memory(memory).await?;
+        Ok(AddMemoryResponse { id: memory_id.to_string() })
     }
 
     pub async fn get_memories_handler(
@@ -298,23 +291,14 @@ impl SealedMemorySessionHandler {
         request: GetMemoriesRequest,
     ) -> anyhow::Result<GetMemoriesResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            let database = &mut context.database;
-            let page_token = PageToken::try_from(request.page_token)
-                .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-            let (memories, next_page_token) = database
-                .get_memories_by_tag(
-                    &request.tag,
-                    &request.result_mask,
-                    request.page_size,
-                    page_token,
-                )
-                .await?;
-            Ok(GetMemoriesResponse { memories, next_page_token: next_page_token.into() })
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+
+        let page_token = PageToken::try_from(request.page_token)
+            .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
+        let (memories, next_page_token) = database
+            .get_memories_by_tag(&request.tag, &request.result_mask, request.page_size, page_token)
+            .await?;
+        Ok(GetMemoriesResponse { memories, next_page_token: next_page_token.into() })
     }
 
     pub async fn get_memory_by_id_handler(
@@ -322,15 +306,11 @@ impl SealedMemorySessionHandler {
         request: GetMemoryByIdRequest,
     ) -> anyhow::Result<GetMemoryByIdResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            let database = &mut context.database;
-            let memory = database.get_memory_by_id(request.id, &request.result_mask).await?;
-            let success = memory.is_some();
-            Ok(GetMemoryByIdResponse { memory, success })
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+
+        let memory = database.get_memory_by_id(request.id, &request.result_mask).await?;
+        let success = memory.is_some();
+        Ok(GetMemoryByIdResponse { memory, success })
     }
 
     pub async fn reset_memory_handler(
@@ -338,14 +318,10 @@ impl SealedMemorySessionHandler {
         _request: ResetMemoryRequest,
     ) -> anyhow::Result<ResetMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            let database = &mut context.database;
-            database.reset_memory().await;
-            Ok(ResetMemoryResponse { success: true, ..Default::default() })
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+
+        database.reset_memory().await;
+        Ok(ResetMemoryResponse { success: true, ..Default::default() })
     }
 
     async fn setup_user_session_context(
@@ -515,16 +491,12 @@ impl SealedMemorySessionHandler {
         request: SearchMemoryRequest,
     ) -> anyhow::Result<SearchMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            // The extraction of embedding details is now done in
-            // IcingMetaDatabase::embedding_search
-            let database = &mut context.database;
-            let (results, next_page_token) = database.search_memory(request).await?;
-            Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+
+        // The extraction of embedding details is now done in
+        // IcingMetaDatabase::embedding_search
+        let (results, next_page_token) = database.search_memory(request).await?;
+        Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
     }
 
     pub async fn delete_memory_handler(
@@ -532,17 +504,13 @@ impl SealedMemorySessionHandler {
         request: DeleteMemoryRequest,
     ) -> anyhow::Result<DeleteMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let context: &mut Option<UserSessionContext> = &mut mutex_guard;
-        if let Some(context) = context {
-            let database = &mut context.database;
-            let memory_ids: Vec<MemoryId> = request.ids.into_iter().collect();
-            Ok(DeleteMemoryResponse {
-                success: database.delete_memories(memory_ids).await.is_ok(),
-                ..Default::default()
-            })
-        } else {
-            bail!("You need to call key sync first")
-        }
+        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+
+        let memory_ids: Vec<MemoryId> = request.ids.into_iter().collect();
+        Ok(DeleteMemoryResponse {
+            success: database.delete_memories(memory_ids).await.is_ok(),
+            ..Default::default()
+        })
     }
 }
 
