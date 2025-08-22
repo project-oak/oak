@@ -733,14 +733,14 @@ impl DatabaseWithCache {
         self.changed || self.database.newly_created()
     }
 
-    pub async fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
+    pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
         if memory.id.is_empty() {
             memory.id = rand::rng().random::<u64>().to_string();
         }
-        let blob_id = self.cache.add_memory(&memory).await.ok()?;
-        let _ = self.meta_db().add_memory(&memory, blob_id);
+        let blob_id = self.cache.add_memory(&memory).await?;
+        self.meta_db().add_memory(&memory, blob_id)?;
         self.changed = true;
-        Some(memory.id)
+        Ok(memory.id)
     }
 
     pub async fn get_memories_by_tag(

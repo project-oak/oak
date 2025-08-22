@@ -283,12 +283,8 @@ impl SealedMemorySessionHandler {
         if let Some(context) = context {
             let database = &mut context.database;
             if let Some(memory) = request.memory {
-                let memory_id = database.add_memory(memory).await;
-                if let Some(memory_id) = memory_id {
-                    Ok(AddMemoryResponse { id: memory_id.to_string() })
-                } else {
-                    bail!("Failed to add memory!")
-                }
+                let memory_id = database.add_memory(memory).await?;
+                Ok(AddMemoryResponse { id: memory_id.to_string() })
             } else {
                 bail!("memory not set in AddMemoryRequest")
             }
