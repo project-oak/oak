@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use anyhow::{bail, ensure, Context};
 use encryption::{decrypt, encrypt, generate_nonce};
 pub use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
-use icing::IcingGroundTruthFilesHelper;
+use icing::{DocumentProto, IcingGroundTruthFilesHelper};
 use log::{debug, error};
 use prost::Message;
 use rand::Rng;
@@ -108,6 +108,38 @@ pub trait DbMigration {
     where
         Self: Sized;
     fn export(&self) -> Self::ExportTo;
+}
+
+/// The generated metadata for a memory.
+/// This contains the information needed to write the metadata to the icing
+/// database.
+struct PendingMetadata {
+    icing_document: DocumentProto,
+}
+
+impl PendingMetadata {
+    pub fn new(memory: &Memory, blob_id: BlobId) -> Self {
+        let memory_id = &memory.id;
+        let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
+        let embeddings: Vec<_> = memory
+            .embeddings
+            .iter()
+            .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
+            .collect();
+        let icing_document = icing::create_document_builder()
+            .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
+            .set_schema(SCHMA_NAME.as_bytes())
+            .add_string_property(TAG_NAME.as_bytes(), &tags)
+            .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
+            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
+            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
+            .build();
+        Self { icing_document }
+    }
+
+    pub fn document(&self) -> &DocumentProto {
+        &self.icing_document
+    }
 }
 
 impl IcingMetaDatabase {
@@ -204,22 +236,12 @@ impl IcingMetaDatabase {
     }
 
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
-        let memory_id = &memory.id;
-        let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
-        let embeddings: Vec<_> = memory
-            .embeddings
-            .iter()
-            .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
-            .collect();
-        let doc = icing::create_document_builder()
-            .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
-            .set_schema(SCHMA_NAME.as_bytes())
-            .add_string_property(TAG_NAME.as_bytes(), &tags)
-            .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
-            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
-            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
-            .build();
-        let result = self.icing_search_engine.put(&doc);
+        let pending_metadata = PendingMetadata::new(memory, blob_id);
+        self.add_pending_metadata(&pending_metadata)
+    }
+
+    fn add_pending_metadata(&mut self, pending_metadata: &PendingMetadata) -> anyhow::Result<()> {
+        let result = self.icing_search_engine.put(pending_metadata.document());
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {

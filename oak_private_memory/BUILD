@@ -125,6 +125,7 @@ rust_library(
         ":log",
         "//proto:sealed_memory_rust_proto",
         "//src/icing",
+        "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
