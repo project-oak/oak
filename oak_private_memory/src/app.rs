@@ -208,38 +208,39 @@ impl SealedMemorySessionHandler {
         Self { session_context: Default::default(), db_client, metrics, persistence_tx }
     }
 
-    pub async fn session_context_established(&self) -> bool {
-        self.session_context().await.is_some()
-    }
-
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
         self.session_context.lock().await
-    }
-
-    pub async fn get_message_type(&self) -> MessageType {
-        self.session_context().await.as_mut().unwrap().message_type
     }
 
     pub fn is_message_type_json(&self, request_bytes: &[u8]) -> bool {
         serde_json::from_slice::<SealedMemoryRequest>(request_bytes).is_ok()
     }
 
+    async fn session_message_type(&self) -> Option<MessageType> {
+        let guarded_session = self.session_context().await;
+        guarded_session.as_ref().map(|session| session.message_type)
+    }
+
     pub async fn deserialize_request(&self, request_bytes: &[u8]) -> Option<SealedMemoryRequest> {
-        if self.session_context_established().await {
-            match self.get_message_type().await {
-                MessageType::BinaryProto => SealedMemoryRequest::decode(request_bytes).ok(),
-                MessageType::Json => {
-                    serde_json::from_slice::<SealedMemoryRequest>(request_bytes).ok()
+        match self.session_message_type().await {
+            Some(MessageType::BinaryProto) => SealedMemoryRequest::decode(request_bytes).ok(),
+            Some(MessageType::Json) => {
+                serde_json::from_slice::<SealedMemoryRequest>(request_bytes).ok()
+            }
+            None => {
+                // Default to trying all the options.
+                if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
+                    info!("Request is in binary proto format");
+                    Some(request)
+                } else if let Ok(request) =
+                    serde_json::from_slice::<SealedMemoryRequest>(request_bytes)
+                {
+                    info!("Request is in json format {:?}", request);
+                    Some(request)
+                } else {
+                    None
                 }
             }
-        } else if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
-            info!("Request is in binary proto format");
-            Some(request)
-        } else if let Ok(request) = serde_json::from_slice::<SealedMemoryRequest>(request_bytes) {
-            info!("Request is in json format {:?}", request);
-            Some(request)
-        } else {
-            None
         }
     }
 
@@ -248,23 +249,17 @@ impl SealedMemorySessionHandler {
         response: &SealedMemoryResponse,
         message_type: Option<MessageType>,
     ) -> anyhow::Result<Vec<u8>> {
-        if self.session_context_established().await {
-            match self.get_message_type().await {
-                MessageType::BinaryProto => {
-                    return Ok(response.encode_to_vec());
-                }
-                MessageType::Json => {
-                    return Ok(serde_json::to_vec(response)?);
-                }
-            }
-        }
-        if let Some(message_type) = message_type {
-            if message_type == MessageType::Json {
-                return Ok(serde_json::to_vec(response)?);
-            }
-        }
-        // Default to binary proto if the session is not established.
-        Ok(response.encode_to_vec())
+        let message_type = self
+            .session_message_type()
+            .await
+            // If no session, use the caller-provided type.
+            // If no caller-provided type, default to binaryproto.
+            .unwrap_or(message_type.unwrap_or(MessageType::BinaryProto));
+
+        Ok(match message_type {
+            MessageType::BinaryProto => response.encode_to_vec(),
+            MessageType::Json => serde_json::to_vec(response)?,
+        })
     }
 
     fn is_valid_key(key: &[u8]) -> bool {
