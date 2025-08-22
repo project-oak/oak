@@ -462,7 +462,18 @@ impl Machine for I440fx {
         // Let's make some simplifying assumptions and try to fit a 32 GiB window
         // somewhere at the top of the available physical memory. You'd hope we can just
         // assume (at least) 48 bits available, but no.
-        let addr_size = P::guest_phys_addr_size();
+
+        // We've now run into a VM where CPUID reports 48 bits of physical address
+        // space, but the VMM is only backing it with 41.6 bits of address space, and we
+        // place the MMIO range outside of what the VMM supports.
+        //
+        // Oops.
+        //
+        // We'll have to come back to this and figure out how to see through the VMM's
+        // lies, but for now, let's lie and say 40 bits. This will break if the VM has
+        // more than ~800 GiB of memory.
+        let addr_size = 40;
+        //let addr_size = P::guest_phys_addr_size();
         let top_of_memory: u64 = 1 << addr_size;
         // We'll also be relatively conservative and try to get away with just reserving
         // 32 GiB for the hole.
@@ -775,10 +786,12 @@ mod tests {
 
     #[googletest::test]
     fn mmio64_hole() {
+        let gpa_bits = 40;
+
         // This sets global state for MockPlatform, so beware! However, I don't think
         // we'll ever need different values in other tests.
         let ctx = MockPlatform::guest_phys_addr_size_context();
-        ctx.expect().returning(|| 48);
+        ctx.expect().returning(move || gpa_bits);
 
         let mut firmware = TestFirmware::default();
         let mut zero_page = ZeroPage::new();
@@ -787,12 +800,15 @@ mod tests {
         // We didn't reserve any memory, so the hole should be right at the very top.
         assert_that!(
             hole,
-            ok(all!(field!(&Range.start, le(1 << 48)), field!(&Range.end, eq(1 << 48))))
+            ok(all!(
+                field!(&Range.start, le(1 << gpa_bits)),
+                field!(&Range.end, eq(1 << gpa_bits))
+            ))
         );
 
         // 1 GB at the very top is reserved. The hole should have moved down.
         zero_page.insert_e820_entry(BootE820Entry::new(
-            (1 << 48) - 0x4000_0000,
+            (1 << gpa_bits) - 0x4000_0000,
             0x4000_0000,
             E820EntryType::RAM,
         ));
@@ -800,15 +816,15 @@ mod tests {
         assert_that!(
             hole,
             ok(all!(
-                field!(&Range.start, le((1 << 48) - 0x4000_0000)),
-                field!(&Range.end, le((1 << 48) - 0x4000_0000))
+                field!(&Range.start, le((1 << gpa_bits) - 0x4000_0000)),
+                field!(&Range.end, le((1 << gpa_bits) - 0x4000_0000))
             ))
         );
 
         // There is no address space available. How did you get such a machine?
         zero_page.insert_e820_entry(BootE820Entry::new(
             0,
-            (1 << 48) - 0x4000_0000,
+            (1 << gpa_bits) - 0x4000_0000,
             E820EntryType::RAM,
         ));
         let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
@@ -819,7 +835,7 @@ mod tests {
         zero_page.insert_e820_entry(BootE820Entry::new(0, MMIO64_HOLE_SIZE, E820EntryType::RAM));
         zero_page.insert_e820_entry(BootE820Entry::new(
             MMIO64_HOLE_SIZE + (MMIO64_HOLE_SIZE / 2),
-            (1 << 48) - MMIO64_HOLE_SIZE - (MMIO64_HOLE_SIZE / 2),
+            (1 << gpa_bits) - MMIO64_HOLE_SIZE - (MMIO64_HOLE_SIZE / 2),
             E820EntryType::RAM,
         ));
         let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
@@ -830,7 +846,7 @@ mod tests {
         zero_page.insert_e820_entry(BootE820Entry::new(0, MMIO64_HOLE_SIZE, E820EntryType::RAM));
         zero_page.insert_e820_entry(BootE820Entry::new(
             MMIO64_HOLE_SIZE + MMIO64_HOLE_SIZE,
-            (1 << 48) - MMIO64_HOLE_SIZE - MMIO64_HOLE_SIZE,
+            (1 << gpa_bits) - MMIO64_HOLE_SIZE - MMIO64_HOLE_SIZE,
             E820EntryType::RAM,
         ));
         let hole = I440fx::mmio64_hole::<MockPlatform>(&mut firmware, &zero_page);
