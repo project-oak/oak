@@ -134,7 +134,7 @@ impl SenderContext {
     ) -> anyhow::Result<Vec<u8>> {
         let ciphertext =
             crate::hpke::aead::encrypt(&self.request_key, nonce, plaintext, associated_data)
-                .context("couldn't encrypt request message")?;
+                .context("encrypting request message")?;
         Ok(ciphertext)
     }
 
@@ -149,7 +149,7 @@ impl SenderContext {
     ) -> anyhow::Result<Vec<u8>> {
         let plaintext =
             crate::hpke::aead::decrypt(&self.response_key, nonce, ciphertext, associated_data)
-                .context("couldn't decrypt response message")?;
+                .context("decrypting response message")?;
         Ok(plaintext)
     }
 }
@@ -170,7 +170,7 @@ impl RecipientContext {
     ) -> anyhow::Result<Vec<u8>> {
         let plaintext =
             crate::hpke::aead::decrypt(&self.request_key, nonce, ciphertext, associated_data)
-                .context("couldn't decrypt request message")?;
+                .context("decrypting request message")?;
         Ok(plaintext)
     }
 
@@ -185,7 +185,7 @@ impl RecipientContext {
     ) -> anyhow::Result<Vec<u8>> {
         let ciphertext =
             crate::hpke::aead::encrypt(&self.response_key, nonce, plaintext, associated_data)
-                .context("couldn't encrypt response message")?;
+                .context("encrypting response message")?;
         Ok(ciphertext)
     }
 

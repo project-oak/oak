@@ -65,7 +65,7 @@ impl EncryptionKey {
         peer_public_key: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
         let mut client_encryptor =
-            ClientEncryptor::create(peer_public_key).context("couldn't create client encryptor")?;
+            ClientEncryptor::create(peer_public_key).context("creating client encryptor")?;
         client_encryptor
             .encrypt(&Zeroizing::new(self.private_key.to_bytes()), EMPTY_ASSOCIATED_DATA)
     }
@@ -87,7 +87,7 @@ impl EncryptionKeyHandle for EncryptionKey {
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext> {
         setup_base_recipient(encapsulated_public_key, &self.private_key, OAK_HPKE_INFO)
-            .context("couldn't generate recipient crypto context")
+            .context("setting up base recipient")
     }
 }
 

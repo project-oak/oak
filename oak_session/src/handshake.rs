@@ -287,17 +287,17 @@ impl ClientHandshakeHandler {
             HandshakeType::NoiseKN => core::unimplemented!(),
             HandshakeType::NoiseKK => HandshakeInitiator::new_kk(
                 peer_static_public_key
-                    .context("handshake_handler_config missing the peer public key")?
+                    .context("no peer_static_public_key in handshake_handler_config")?
                     .as_slice()
                     .try_into()
                     .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
                 handshake_handler_config
                     .self_static_private_key
-                    .context("handshake_handler_config missing the self static private key")?,
+                    .context("no self_static_private_key in handshake_handler_config")?,
             ),
             HandshakeType::NoiseNK => HandshakeInitiator::new_nk(
                 peer_static_public_key
-                    .context("handshake_handler_config missing the peer public key")?
+                    .context("no peer_static_public_key in handshake_handler_config")?
                     .as_slice()
                     .try_into()
                     .map_err(|error| anyhow!("invalid peer public key: {:?}", error))?,
@@ -587,7 +587,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                         HandshakeType::NoiseKK => respond_kk(
                             self.self_identity_key
                                 .as_ref()
-                                .context("handshake_handler_config missing the self private key")?
+                                .context("no self_identity_key in handshake_handler_config")?
                                 .as_ref(),
                             self.peer_public_key
                                 .as_ref()
@@ -598,7 +598,7 @@ impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHand
                         HandshakeType::NoiseNK => respond_nk(
                             self.self_identity_key
                                 .as_ref()
-                                .context("handshake_handler_config missing the self private key")?
+                                .context("no self_identity_key in handshake_handler_config")?
                                 .as_ref(),
                             &noise_message.into(),
                         )

@@ -40,18 +40,18 @@ pub trait SessionChannel<I, O>: ProtocolEngine<I, O> + Session {
     fn encrypt(&mut self, plaintext: impl Into<Vec<u8>>) -> anyhow::Result<O> {
         anyhow::ensure!(self.is_open(), "Session is not open");
         self.write(PlaintextMessage { plaintext: plaintext.into() })
-            .context("failed to write message for encryption")?;
+            .context("writing message for encryption")?;
         self.get_outgoing_message()
-            .context("failed to get outgoing message")?
+            .context("getting outgoing message")?
             .context("(Library Error, please report) unexpectedly empty outgoing message")
     }
 
     fn decrypt(&mut self, incoming_message: I) -> anyhow::Result<Vec<u8>> {
         anyhow::ensure!(self.is_open(), "Session is not open");
-        self.put_incoming_message(incoming_message).context("failed to put incoming message")?;
+        self.put_incoming_message(incoming_message).context("putting incoming message")?;
         Ok(self
             .read()
-            .context("failed to read decrypted message")?
+            .context("reading decrypted message")?
             .context("(Library Error, please report) unexpectedly empty decrypted message")?
             .plaintext)
     }
@@ -98,13 +98,13 @@ pub trait SessionInitializer<I, O>: ProtocolEngine<I, O> + Session {
     fn next_init_message(&mut self) -> anyhow::Result<O> {
         anyhow::ensure!(!self.is_open(), "Session already open");
         self.get_outgoing_message()
-            .context("failed to get next outgoing message")?
+            .context("getting next outgoing message")?
             .context("unexpected empty first init message")
     }
 
     fn handle_init_message(&mut self, response: I) -> anyhow::Result<()> {
         anyhow::ensure!(!self.is_open(), "Session already open");
-        self.put_incoming_message(response).context("failed to put incoming message")?;
+        self.put_incoming_message(response).context("putting incoming message")?;
         Ok(())
     }
 }

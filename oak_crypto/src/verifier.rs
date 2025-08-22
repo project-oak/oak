@@ -20,6 +20,7 @@ pub trait Verifier: Send + Sync {
     fn verify(&self, message: &[u8], signature: &[u8]) -> anyhow::Result<()>;
 }
 
+// Signature verifier for an ECDSA key with curve P-256.
 impl Verifier for p256::ecdsa::VerifyingKey {
     fn verify(&self, message: &[u8], signature: &[u8]) -> anyhow::Result<()> {
         let parsed_signature = p256::ecdsa::Signature::from_slice(signature)

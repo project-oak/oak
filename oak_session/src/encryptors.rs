@@ -92,9 +92,9 @@ impl TryFrom<(OrderedCrypter, u32)> for UnorderedChannelEncryptor {
 
     fn try_from(sk_and_window_size: (OrderedCrypter, u32)) -> Result<Self, Error> {
         Ok(Self {
-            crypter: sk_and_window_size.try_into().context(
-                "error creating Noise crypter from the provided session keys and window size",
-            )?,
+            crypter: sk_and_window_size
+                .try_into()
+                .context("creating Noise crypter from the provided session keys and window size")?,
         })
     }
 }

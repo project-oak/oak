@@ -110,7 +110,7 @@ impl ClientEncryptor {
     pub fn create(serialized_server_public_key: &[u8]) -> anyhow::Result<Self> {
         let (serialized_encapsulated_public_key, sender_context) =
             setup_base_sender(serialized_server_public_key, OAK_HPKE_INFO)
-                .context("couldn't create sender crypto context")?;
+                .context("setting up base sender")?;
         Ok(Self {
             serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key.to_vec()),
             sender_context,
@@ -129,7 +129,7 @@ impl ClientEncryptor {
         let ciphertext = self
             .sender_context
             .seal(&nonce, plaintext, associated_data)
-            .context("couldn't encrypt request")?;
+            .context("sealing request")?;
 
         Ok(EncryptedRequest {
             encrypted_message: Some(AeadEncryptedMessage {
@@ -153,13 +153,12 @@ impl ClientEncryptor {
             .encrypted_message
             .as_ref()
             .context("response doesn't contain encrypted message")?;
-        let nonce =
-            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
+        let nonce = deserialize_nonce(&encrypted_message.nonce).context("deserializing nonce")?;
 
         let plaintext = self
             .sender_context
             .open(&nonce, &encrypted_message.ciphertext, &encrypted_message.associated_data)
-            .context("couldn't decrypt response")?;
+            .context("decrypting response")?;
         Ok((plaintext, encrypted_message.associated_data.to_vec()))
     }
 }
@@ -192,7 +191,7 @@ impl ServerEncryptor {
             .context("initial request message doesn't contain encapsulated public key")?;
         let recipient_context = encryption_key_handle
             .generate_recipient_context(serialized_encapsulated_public_key)
-            .context("couldn't generate recipient crypto context")?;
+            .context("generating recipient context")?;
         let encryptor = Self { recipient_context };
         let (plaintext, associated_data) = encryptor.decrypt_inner(encrypted_request)?;
         Ok((encryptor, plaintext, associated_data))
@@ -214,7 +213,7 @@ impl ServerEncryptor {
         let recipient_context = encryption_key_handle
             .generate_recipient_context(serialized_encapsulated_public_key)
             .await
-            .context("couldn't generate recipient crypto context")?;
+            .context("generating recipient context")?;
         let encryptor = Self { recipient_context };
         let (plaintext, associated_data) = encryptor.decrypt_inner(encrypted_request)?;
         Ok((encryptor, plaintext, associated_data))
@@ -232,13 +231,12 @@ impl ServerEncryptor {
             .encrypted_message
             .as_ref()
             .context("request doesn't contain encrypted message")?;
-        let nonce =
-            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
+        let nonce = deserialize_nonce(&encrypted_message.nonce).context("deserializing nonce")?;
 
         let plaintext = self
             .recipient_context
             .open(&nonce, &encrypted_message.ciphertext, &encrypted_message.associated_data)
-            .context("couldn't decrypt request")?;
+            .context("decrypting request")?;
         Ok((plaintext, encrypted_message.associated_data.to_vec()))
     }
 
@@ -254,7 +252,7 @@ impl ServerEncryptor {
         let ciphertext = self
             .recipient_context
             .seal(&nonce, plaintext, associated_data)
-            .context("couldn't encrypt response")?;
+            .context("sealing response")?;
 
         Ok(EncryptedResponse {
             encrypted_message: Some(AeadEncryptedMessage {

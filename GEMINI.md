@@ -104,6 +104,21 @@ details.
 
 - Do not use the word "learning". Use "lesson" instead.
 
+### Errors
+
+Add `context("message")` to errors when it reduces ambiguity. Higher up in the
+stack, use a `message` that starts with a verb and use gerund. Fine to repeat a
+human readable version of the function name the context is attached to. Negative
+terms like "fail" or "missing" should only be used in actual errors at the
+deepest level. Don't be too verbose in these context messages.
+
+Examples:
+
+```rust
+verify_signature(evidence).context("verifying signature")?;
+let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
+```
+
 ## Git
 
 ### Commits

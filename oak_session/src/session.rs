@@ -432,7 +432,7 @@ impl Session for ClientSession {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
-                    .context("couldn't encrypt the supplied plaintext")?;
+                    .context("encrypting plaintext")?;
                 self.outgoing_requests.push_back(SessionRequest {
                     request: Some(Request::EncryptedMessage(encrypted_message)),
                 });
@@ -459,7 +459,7 @@ impl Session for ClientSession {
                         encryptor
                             .decrypt(encrypted_message.into())
                             .map(From::from)
-                            .context("couldn't decrypt the supplied plaintext")?,
+                            .context("decrypting plaintext")?,
                     ))
                 }
                 None => Ok(None),
@@ -634,7 +634,7 @@ impl Session for ServerSession {
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
-                    .context("couldn't encrypt the supplied plaintext")?;
+                    .context("encrypting plaintext")?;
                 self.outgoing_responses.push_back(SessionResponse {
                     response: Some(Response::EncryptedMessage(encrypted_message)),
                 });
@@ -661,7 +661,7 @@ impl Session for ServerSession {
                         encryptor
                             .decrypt(encrypted_message.into())
                             .map(From::from)
-                            .context("couldn't decrypt the supplied plaintext")?,
+                            .context("decrypting plaintext")?,
                     ))
                 }
                 None => Ok(None),

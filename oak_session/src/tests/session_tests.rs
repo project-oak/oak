@@ -832,32 +832,26 @@ async fn channel_pair_test(
 
         // Handshake Sequence
         while !server_session.is_open() {
-            let next_request =
-                client_rx.recv().await.context("failed to get next client message")?;
-            server_session
-                .handle_init_message(next_request)
-                .context("failed to handle init message")?;
+            let next_request = client_rx.recv().await.context("getting next client message")?;
+            server_session.handle_init_message(next_request).context("handling init message")?;
             if !server_session.is_open() {
-                let next_response = server_session
-                    .next_init_message()
-                    .context("failed to get next init message")?;
-                server_tx.send(next_response).await.context("failed to send response to client")?
+                let next_response =
+                    server_session.next_init_message().context("getting next init message")?;
+                server_tx.send(next_response).await.context("sending response to client")?
             }
         }
 
         // Receive a Request
-        let request: SessionRequest =
-            client_rx.recv().await.context("failed to receive client request")?;
-        let decrypted_request =
-            server_session.decrypt(request).context("failed to decrypt result")?;
+        let request: SessionRequest = client_rx.recv().await.context("receiving client request")?;
+        let decrypted_request = server_session.decrypt(request).context("decrypting request")?;
 
         // Process Request
         let response = format!("Hello {}", String::from_utf8_lossy(decrypted_request.as_slice()));
 
         // Send Response
         let encrypted_response =
-            server_session.encrypt(response.as_bytes()).context("failed to encrypt respnose")?;
-        server_tx.send(encrypted_response).await.context("failed to send response")?;
+            server_session.encrypt(response.as_bytes()).context("encrypting response")?;
+        server_tx.send(encrypted_response).await.context("sending response")?;
 
         // All done
         Ok(())
@@ -869,17 +863,17 @@ async fn channel_pair_test(
     while !client_session.is_open() {
         let request = client_session.next_init_message().expect("failed to get init messge");
         client_tx.send(request).await.expect("failed to send init message");
-        let response = server_rx.recv().await.context("failed to get next server message")?;
+        let response = server_rx.recv().await.context("getting next server message")?;
         client_session.handle_init_message(response).expect("failed to handle init response");
     }
 
     // Send Message
     let message_to_server = client_session.encrypt(b"Mister Tester")?;
-    client_tx.send(message_to_server).await.context("Failed to send message to server")?;
+    client_tx.send(message_to_server).await.context("sending message to server")?;
 
     // Receive Response
-    let response = server_rx.recv().await.context("Failed to get server response")?;
+    let response = server_rx.recv().await.context("getting server response")?;
     assert_that!(client_session.decrypt(response)?, eq(b"Hello Mister Tester"));
 
-    server_join.await.context("failed to join server")?.context("server result failed")
+    server_join.await.context("joining server")?.context("server failing")
 }
