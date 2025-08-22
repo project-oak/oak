@@ -221,27 +221,30 @@ impl SealedMemorySessionHandler {
         guarded_session.as_ref().map(|session| session.message_type)
     }
 
-    pub async fn deserialize_request(&self, request_bytes: &[u8]) -> Option<SealedMemoryRequest> {
-        match self.session_message_type().await {
-            Some(MessageType::BinaryProto) => SealedMemoryRequest::decode(request_bytes).ok(),
+    pub async fn deserialize_request(
+        &self,
+        request_bytes: &[u8],
+    ) -> anyhow::Result<SealedMemoryRequest> {
+        Ok(match self.session_message_type().await {
+            Some(MessageType::BinaryProto) => SealedMemoryRequest::decode(request_bytes)?,
             Some(MessageType::Json) => {
-                serde_json::from_slice::<SealedMemoryRequest>(request_bytes).ok()
+                serde_json::from_slice::<SealedMemoryRequest>(request_bytes)?
             }
             None => {
                 // Default to trying all the options.
                 if let Ok(request) = SealedMemoryRequest::decode(request_bytes) {
                     info!("Request is in binary proto format");
-                    Some(request)
+                    request
                 } else if let Ok(request) =
                     serde_json::from_slice::<SealedMemoryRequest>(request_bytes)
                 {
                     info!("Request is in json format {:?}", request);
-                    Some(request)
+                    request
                 } else {
-                    None
+                    anyhow::bail!("The provided request could not be decoded with any strategy")
                 }
             }
-        }
+        })
     }
 
     pub async fn serialize_response(
@@ -623,56 +626,53 @@ impl SealedMemorySessionHandler {
     /// deserialize into a proto, and dispatch to various handlers from
     /// there.
     pub async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let request = self.deserialize_request(request_bytes).await;
+        let request = self
+            .deserialize_request(request_bytes)
+            .await
+            .context("failed to deserialize request")?;
         let mut message_type = None;
-        let response = if request.is_none() {
-            InvalidRequestResponse { error_message: "Invalid json or binary proto format".into() }
-                .into_response()
-        } else {
-            let request = request.unwrap();
-            let request_id = request.request_id;
-            let request_variant = request.request.context("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
 
-            let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
-            self.metrics.inc_requests(metric_name.clone());
+        let request_id = request.request_id;
+        let request_variant = request.request.context("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
 
-            let start_time = Instant::now();
-            let mut response = match request_variant {
-                sealed_memory_request::Request::UserRegistrationRequest(request) => {
-                    let is_json = self.is_message_type_json(request_bytes);
-                    if is_json {
-                        message_type = Some(MessageType::Json);
-                    };
-                    self.boot_strap_handler(request, is_json).await?.into_response()
-                }
-                sealed_memory_request::Request::KeySyncRequest(request) => self
-                    .key_sync_handler(request, self.is_message_type_json(request_bytes))
-                    .await?
-                    .into_response(),
-                sealed_memory_request::Request::AddMemoryRequest(request) => {
-                    self.add_memory_handler(request).await?.into_response()
-                }
-                sealed_memory_request::Request::GetMemoriesRequest(request) => {
-                    self.get_memories_handler(request).await?.into_response()
-                }
-                sealed_memory_request::Request::ResetMemoryRequest(request) => {
-                    self.reset_memory_handler(request).await?.into_response()
-                }
-                sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
-                    self.get_memory_by_id_handler(request).await?.into_response()
-                }
-                sealed_memory_request::Request::SearchMemoryRequest(request) => {
-                    self.search_memory_handler(request).await?.into_response()
-                }
-                sealed_memory_request::Request::DeleteMemoryRequest(request) => {
-                    self.delete_memory_handler(request).await?.into_response()
-                }
-            };
-            let elapsed_time = start_time.elapsed().as_millis() as u64;
-            self.metrics.record_latency(elapsed_time, metric_name);
-            response.request_id = request_id;
-            response
+        let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
+        self.metrics.inc_requests(metric_name.clone());
+
+        let start_time = Instant::now();
+        let mut response = match request_variant {
+            sealed_memory_request::Request::UserRegistrationRequest(request) => {
+                let is_json = self.is_message_type_json(request_bytes);
+                if is_json {
+                    message_type = Some(MessageType::Json);
+                };
+                self.boot_strap_handler(request, is_json).await?.into_response()
+            }
+            sealed_memory_request::Request::KeySyncRequest(request) => self
+                .key_sync_handler(request, self.is_message_type_json(request_bytes))
+                .await?
+                .into_response(),
+            sealed_memory_request::Request::AddMemoryRequest(request) => {
+                self.add_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetMemoriesRequest(request) => {
+                self.get_memories_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::ResetMemoryRequest(request) => {
+                self.reset_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
+                self.get_memory_by_id_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::SearchMemoryRequest(request) => {
+                self.search_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::DeleteMemoryRequest(request) => {
+                self.delete_memory_handler(request).await?.into_response()
+            }
         };
+        let elapsed_time = start_time.elapsed().as_millis() as u64;
+        self.metrics.record_latency(elapsed_time, metric_name);
+        response.request_id = request_id;
 
         self.serialize_response(&response, message_type).await
     }
