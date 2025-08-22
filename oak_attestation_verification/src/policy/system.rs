@@ -58,10 +58,10 @@ impl Policy<[u8]> for SystemPolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("couldn't verify system endorsement")?;
+        .context("acquiring system event expected values")?;
 
         compare_system_layer_measurement_digests(&event, &expected_values)
-            .context("couldn't verify system event")?;
+            .context("comparing system event digests")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults { ..Default::default() })

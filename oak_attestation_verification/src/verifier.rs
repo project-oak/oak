@@ -85,8 +85,7 @@ impl AttestationVerifier for SoftwareRootedDiceAttestationVerifier {
         // Verify DICE chain integrity.
         // The output argument is ommited because last layer's certificate authority key
         // is not used to sign anything.
-        let _ =
-            verify_software_rooted_dice_chain(evidence).context("couldn't verify DICE chain")?;
+        let _ = verify_software_rooted_dice_chain(evidence).context("verifying DICE chain")?;
 
         // TODO: b/366419879 - Combine per-event attestation results.
         #[allow(deprecated)]
@@ -115,7 +114,7 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
             .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
         let cose_key = get_public_key_from_claims_set(&claims)
             .map_err(|msg| anyhow::anyhow!(msg))
-            .context("couldn't get a public key from claims")?;
+            .context("getting public key from claims")?;
         cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?
     };
 
@@ -137,12 +136,12 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
             let cose_key = get_public_key_from_claims_set(&claims)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("couldn't get a public key from claims")?;
+                .context("getting public key from claims")?;
             cose_key_to_verifying_key(&cose_key)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("couldn't convert cose key")
+                .context("converting COSE key")
         })
-        .context("couldn't verify DICE chain")?;
+        .context("verifying DICE chain")?;
 
     // Verify the event log claim for this layer if it exists. This is done for all
     // layers here, since the event log is tied uniquely closely to the DICE chain.
@@ -154,7 +153,7 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
                                   // the end
         };
         validate_that_event_log_is_captured_in_dice_layers(event_log, layers_to_check)
-            .context("events in log do not match the digests in the dice chain")?
+            .context("validating that event log is captured in DICE layers")?
     } else {
         anyhow::bail!("event log is not present in the evidence");
     }
@@ -179,6 +178,7 @@ pub fn verify(
         .context("getting expected values")?;
 
     verify_with_expected_values(now_utc_millis, evidence, endorsements, &expected_values)
+        .context("verifying expected values")
 }
 
 /// Verifies entire setup by forwarding to individual setup types.
@@ -220,7 +220,7 @@ pub fn verify_with_expected_values(
     // Ensure the DICE chain signatures are valid and extract the measurements,
     // public keys and other attestation-related data from the DICE chain.
     let extracted_evidence =
-        verify_dice_chain_and_extract_evidence(evidence).context("invalid DICE chain")?;
+        verify_dice_chain_and_extract_evidence(evidence).context("verifying DICE chain")?;
 
     compare_expected_values(&extracted_evidence, expected_values)
         .context("comparing expected values to evidence")?;
@@ -262,18 +262,18 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<VerifyingKey> {
                 .map_err(|_cose_err| anyhow::anyhow!("couldn't parse claims set"))?;
             let cose_key = get_public_key_from_claims_set(&claims)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("couldn't get a public key from claims")?;
+                .context("getting public key from claims")?;
             cose_key_to_verifying_key(&cose_key)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("couldn't convert cose key")
+                .context("converting COSE key")
         })
-        .context("couldn't verify DICE chain")?;
+        .context("verifying DICE chain")?;
 
     // Verify the event log claim for this layer if it exists. This is done for all
     // layers here, since the event log is tied uniquely closely to the DICE chain.
     if let Some(event_log) = &evidence.event_log {
         validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
-            .context("events in log do not match the digests in the dice chain")?
+            .context("validating that event log is captured in DICE layers")?
     } else {
         anyhow::bail!("event log is not present in the evidence");
     }
@@ -319,10 +319,10 @@ pub fn verify_dice_chain_and_extract_evidence(
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
             let cose_key = get_public_key_from_claims_set(&claims)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("getting pk from claims")?;
+                .context("getting public key from claims")?;
             cose_key_to_verifying_key(&cose_key)
                 .map_err(|msg| anyhow::anyhow!(msg))
-                .context("converting cose key")
+                .context("converting COSE key")
         })
         .context("getting last layer key")?;
 
@@ -343,7 +343,7 @@ pub fn verify_dice_chain_and_extract_evidence(
                 last_layer_verifying_key.verify(contents, &sig)
             })
             .map_err(|error| anyhow::anyhow!(error))
-            .context("failed to verify CWT signature")?;
+            .context("verifying CWT signature")?;
 
         // Verify signing certificate.
         let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
@@ -360,7 +360,7 @@ pub fn verify_dice_chain_and_extract_evidence(
     // layers here, since the event log is tied uniquely closely to the DICE chain.
     if let Some(event_log) = &evidence.event_log {
         validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
-            .context("events in log do not match the digests in the dice chain")?
+            .context("validating that event log is captured in DICE layers")?
     }
     extract_evidence(evidence)
 }
@@ -377,9 +377,9 @@ fn validate_that_event_log_is_captured_in_dice_layers(
                 let claims = claims_set_from_serialized_cert(&current_layer.eca_certificate)
                     .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
                 extract_event_data(&claims)
-                    .context("couldn't extract event claim")?
+                    .context("extracting event data")?
                     .event
-                    .context("Missing event")?
+                    .context("missing event")?
             };
             let actual_event_hash = &<sha2::Sha256 as sha2::Digest>::digest(encoded_event).to_vec();
             if actual_event_hash != &event_digest.sha2_256 {

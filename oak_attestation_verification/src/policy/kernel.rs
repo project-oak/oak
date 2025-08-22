@@ -60,10 +60,10 @@ impl Policy<[u8]> for KernelPolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("couldn't verify kernel endorsements")?;
+        .context("acquiring kernel event expected values")?;
 
         compare_kernel_layer_measurement_digests(&event, &expected_values)
-            .context("couldn't verify kernel event")?;
+            .context("comparing kernel event digests")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults { ..Default::default() })

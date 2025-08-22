@@ -74,9 +74,9 @@ impl Policy<RootLayerEvidence> for AmdSevSnpPolicy {
             .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
         let amd_report = convert_amd_sev_snp_attestation_report(report)?;
         let expected_values = get_amd_sev_snp_expected_values(&self.reference_values)
-            .context("couldn't extract AMD SEV-SNP expected values from the endorsement")?;
+            .context("getting AMD SEV-SNP expected values")?;
         verify_amd_sev_attestation_report_values(&amd_report, &expected_values)
-            .context("couldn't verify attestation report fields")?;
+            .context("verifying AMD SEV-SNP attestation report values")?;
 
         let mut results = EventAttestationResults { ..Default::default() };
         set_initial_measurement(&mut results, &report.data.measurement);

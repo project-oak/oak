@@ -86,7 +86,7 @@ pub fn verify_root_attestation_signature(
                 attestation_report,
                 &vcek_cert,
             )
-            .context("couldn't verify AMD SEV-SNP attestation report validity")?;
+            .context("verifying AMD SEV-SNP attestation report validity")?;
 
             verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
         }
@@ -121,14 +121,14 @@ pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
         .map_err(|_err| anyhow::anyhow!("couldn't parse ASK certificate for {:?}", product))?;
 
     // We demand that the product-specific ASK signs the VCEK.
-    verify_cert_signature(&ask, vcek_cert).context("couldn't verify VCEK certificate")?;
+    verify_cert_signature(&ask, vcek_cert).context("verifying cert signature")?;
 
     // Validate attestation report signature format.
     attestation_report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
     // Ensure that the attestation report is signed by the VCEK public key.
     verify_attestation_report_signature(vcek_cert, attestation_report)
-        .context("couldn't verify attestation report signature")
+        .context("verifying attestation report signature")
 }
 
 // Returns Ok whenever each component in `expected` is less or equal to the

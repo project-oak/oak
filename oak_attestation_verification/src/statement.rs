@@ -127,12 +127,12 @@ pub type DefaultStatement = Statement<DefaultPredicate>;
 
 /// Parses the given serialized JSON into an endorsement statement.
 pub fn parse_statement(bytes: &[u8]) -> anyhow::Result<DefaultStatement> {
-    serde_json::from_slice(bytes).context("failed to parse endorsement statement")
+    serde_json::from_slice(bytes).context("parsing endorsement statement")
 }
 
 /// Serializes an endorsement statement as JSON.
 pub fn serialize_statement(statement: &DefaultStatement) -> anyhow::Result<Vec<u8>> {
-    serde_json::to_vec(statement).context("failed to serialize endorsement statement")
+    serde_json::to_vec(statement).context("serializing endorsement statement")
 }
 
 /// Creates an endorsement statement from ingredients.

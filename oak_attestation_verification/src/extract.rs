@@ -57,12 +57,12 @@ pub(crate) struct ApplicationKeyValues {
 /// marked as dangerous.
 pub fn extract_evidence(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
     let evidence_values =
-        Some(extract_evidence_values(evidence).context("couldn't extract evidence values")?);
+        Some(extract_evidence_values(evidence).context("extracting evidence values")?);
     let ApplicationKeyValues { encryption_public_key, signing_public_key } =
         extract_application_key_values(
             evidence.application_keys.as_ref().context("no application keys")?,
         )
-        .context("couldn't extract application key values")?;
+        .context("extracting application key values")?;
 
     Ok(ExtractedEvidence { evidence_values, encryption_public_key, signing_public_key })
 }
@@ -243,7 +243,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                 .context("no application keys")?
                 .encryption_public_key_certificate,
         )
-        .context("couldn't parse final DICE layer certificate")?;
+        .context("parsing final DICE layer certificate")?;
 
         // Determine the type of evidence from the claims in the certificate for the
         // final.
@@ -253,16 +253,16 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     let kernel_layer = Some(
                         extract_kernel_values(
                             &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                                .context("couldn't parse kernel DICE layer certificate")?,
+                                .context("parsing claims from kernel cert")?,
                         )
-                        .context("couldn't extract kernel values")?,
+                        .context("extracting kernel values")?,
                     );
                     let system_layer = Some(
                         extract_system_layer_data(
                             &claims_set_from_serialized_cert(&system_layer.eca_certificate)
-                                .context("couldn't parse system DICE layer certificate")?,
+                                .context("parsing claims from system cert")?,
                         )
-                        .context("couldn't extract system layer values")?,
+                        .context("extracting system layer data")?,
                     );
 
                     let container_layer = Some(container_layer_data);
@@ -283,9 +283,9 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     let kernel_layer = Some(
                         extract_kernel_values(
                             &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
-                                .context("couldn't parse kernel DICE layer certificate")?,
+                                .context("parsing claims from kernel cert")?,
                         )
-                        .context("couldn't extract kernel values")?,
+                        .context("extracting kernel values")?,
                     );
 
                     let application_layer = Some(application_layer_data);
@@ -305,9 +305,9 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                     .map(|layer| {
                         let extracted_data = extract_event_data(
                             &claims_set_from_serialized_cert(&layer.eca_certificate)
-                                .context("couldn't parse CB DICE layer certificate")?,
+                                .context("parsing claims from CB layer cert")?,
                         )
-                        .context("couldn't extract layer values")?;
+                        .context("extracting event data")?;
                         Ok(Some(extracted_data))
                     })
                     .collect();
@@ -361,20 +361,21 @@ pub(crate) fn extract_application_key_values(
         .context("getting encryption claims")?;
         let encryption_cose_key = get_public_key_from_claims_set(&encryption_claims)
             .map_err(|msg| anyhow::anyhow!(msg))
-            .context("getting encryption cose key")?;
+            .context("getting encryption COSE key")?;
         let encryption_public_key = cose_key_to_hpke_public_key(&encryption_cose_key)
             .map_err(|msg| anyhow::anyhow!(msg))
-            .context("converting encryption cose key")?;
+            .context("converting encryption COSE key")?;
 
         let signing_claims =
             claims_set_from_serialized_cert(&application_keys.signing_public_key_certificate[..])
                 .context("getting signing claims")?;
         let signing_cose_key: CoseKey = get_public_key_from_claims_set(&signing_claims)
             .map_err(|msg| anyhow::anyhow!(msg))
-            .context("getting signing cose key")?;
-        let signing_verifying_key = cose_key_to_verifying_key(&signing_cose_key)
-            .map_err(|msg| anyhow::anyhow!(msg))
-            .context("getting signing verifying key")?;
+            .context("getting signing COSE key")?;
+        let signing_verifying_key: ecdsa::VerifyingKey<p256::NistP256> =
+            cose_key_to_verifying_key(&signing_cose_key)
+                .map_err(|msg| anyhow::anyhow!(msg))
+                .context("getting signing verifying key")?;
         let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
         Ok((encryption_public_key, signing_public_key))
@@ -393,7 +394,7 @@ pub(crate) fn extract_application_key_values(
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption claims set"))?;
             let encryption_public_key =
                 extract_bytes_from_claims_set(&encryption_claims, APPLICATION_KEY_ID)
-                    .context("key ID not found")?;
+                    .context("extracting bytes from claims")?;
 
             let signing_cert =
                 coset::CoseSign1::from_slice(&application_keys.signing_public_key_certificate)
@@ -406,7 +407,7 @@ pub(crate) fn extract_application_key_values(
                 .map_err(|_cose_err| anyhow::anyhow!("could not parse signing claims set"))?;
             let signing_public_key =
                 extract_bytes_from_claims_set(&signing_claims, APPLICATION_KEY_ID)
-                    .context("key ID not found")?;
+                    .context("extracting bytes from claims")?;
 
             (encryption_public_key, signing_public_key)
         }
@@ -416,8 +417,8 @@ pub(crate) fn extract_application_key_values(
 
 /// Extracts the measurement values for the event data.
 pub(crate) fn extract_event_data(claims: &ClaimsSet) -> anyhow::Result<EventData> {
-    let values =
-        extract_value_from_claims_set(claims, EVENT_ID).context("event data layer ID not found")?;
+    let values = extract_value_from_claims_set(claims, EVENT_ID)
+        .context("extracting event data from claims")?;
     let event = Some(value_to_raw_digest(values)?);
     Ok(EventData { event })
 }
@@ -425,7 +426,7 @@ pub(crate) fn extract_event_data(claims: &ClaimsSet) -> anyhow::Result<EventData
 /// Extracts the measurement values for the kernel layer.
 fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> {
     let values =
-        extract_layer_data(claims, KERNEL_LAYER_ID).context("kernel layer ID not found")?;
+        extract_layer_data(claims, KERNEL_LAYER_ID).context("extracting kernel layer data")?;
     let kernel_image = Some(value_to_raw_digest(extract_value(values, KERNEL_MEASUREMENT_ID)?)?);
     let kernel_setup_data =
         Some(value_to_raw_digest(extract_value(values, SETUP_DATA_MEASUREMENT_ID)?)?);
@@ -447,8 +448,8 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> 
 
 /// Extracts the measurement values for the system image layer.
 fn extract_system_layer_data(claims: &ClaimsSet) -> anyhow::Result<SystemLayerData> {
-    let values =
-        extract_layer_data(claims, SYSTEM_IMAGE_LAYER_ID).context("system layer ID not found")?;
+    let values = extract_layer_data(claims, SYSTEM_IMAGE_LAYER_ID)
+        .context("extracting system layer data")?;
     let system_image =
         Some(value_to_raw_digest(extract_value(values, LAYER_2_CODE_MEASUREMENT_ID)?)?);
     Ok(SystemLayerData { system_image })
@@ -457,7 +458,7 @@ fn extract_system_layer_data(claims: &ClaimsSet) -> anyhow::Result<SystemLayerDa
 /// Extracts the measurement values for the system image layer.
 fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerLayerData> {
     let values = extract_layer_data(claims, CONTAINER_IMAGE_LAYER_ID)
-        .context("system layer ID not found")?;
+        .context("extracting container layer data")?;
     let bundle = Some(value_to_raw_digest(extract_value(values, LAYER_3_CODE_MEASUREMENT_ID)?)?);
     let config =
         Some(value_to_raw_digest(extract_value(values, FINAL_LAYER_CONFIG_MEASUREMENT_ID)?)?);
@@ -474,7 +475,7 @@ fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerL
 /// Extracts the measurement values for the enclave application layer.
 fn extract_application_layer_data(claims: &ClaimsSet) -> anyhow::Result<ApplicationLayerData> {
     let values = extract_layer_data(claims, ENCLAVE_APPLICATION_LAYER_ID)
-        .context("system layer ID not found")?;
+        .context("extracting application layer data")?;
     let binary = Some(value_to_raw_digest(extract_value(values, LAYER_2_CODE_MEASUREMENT_ID)?)?);
     let config =
         Some(value_to_raw_digest(extract_value(values, FINAL_LAYER_CONFIG_MEASUREMENT_ID)?)?);

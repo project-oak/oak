@@ -172,14 +172,14 @@ fn compare_root_layer_measurement_digests(
                     .as_ref()
                     .context("no stage0 expected value provided")?,
             )
-            .context("firmware layer verification failed")?;
+            .context("comparing firmware layer digests")?;
             verify_amd_sev_attestation_report_values(report_values, amd_sev_values)
         }
         (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
             verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
         }
         (_, _, _, Some(insecure_values)) => {
-            verify_insecure(insecure_values).context("insecure root layer verification failed")
+            verify_insecure(insecure_values).context("verifying insecure")
         }
         (Some(Report::Fake(_)), _, _, None) => {
             Err(anyhow::anyhow!("unexpected insecure attestation report"))
@@ -197,7 +197,6 @@ pub(crate) fn compare_firmware_layer_measurement_digests(
 ) -> anyhow::Result<()> {
     let measurement = convert_amd_sev_snp_initial_measurement(initial_measurement);
     compare_measurement_digest(&measurement, expected_values)
-        .context("firmware measurement values failed verification")
 }
 
 /// Verifies the measurement values of the kernel layer, which is common to both
@@ -215,7 +214,7 @@ pub(crate) fn compare_kernel_layer_measurement_digests(
             .as_ref()
             .context("expected values contained no image digests")?,
     )
-    .context("kernel image failed verification")?;
+    .context("comparing kernel image digests")?;
 
     compare_measurement_digest(
         values.kernel_setup_data.as_ref().context("no kernel setup data evidence value")?,
@@ -224,7 +223,7 @@ pub(crate) fn compare_kernel_layer_measurement_digests(
             .as_ref()
             .context("expected values contained no setup_data digests")?,
     )
-    .context("kernel setup data failed verification")?;
+    .context("comparing kernel setup data digests")?;
 
     // TODO: b/331252282 - Remove temporary workaround for cmd line.
     match (&values.kernel_raw_cmd_line, &expected.kernel_cmd_line_text) {
@@ -245,17 +244,17 @@ pub(crate) fn compare_kernel_layer_measurement_digests(
         values.init_ram_fs.as_ref().context("no initramfs value provided")?,
         expected.init_ram_fs.as_ref().context("no initramfs expected value provided")?,
     )
-    .context("initramfs value failed verification")?;
+    .context("comparing init_ram_fs digests")?;
     compare_measurement_digest(
         values.memory_map.as_ref().context("no memory_map value provided")?,
         expected.memory_map.as_ref().context("no memory_map expected value provided")?,
     )
-    .context("memory_map value failed verification")?;
+    .context("comparing memory_map digests")?;
     compare_measurement_digest(
         values.acpi.as_ref().context("no ACPI table value provided")?,
         expected.acpi.as_ref().context("no ACPI table expected value provided")?,
     )
-    .context("ACPI table value failed verification")
+    .context("comparing ACPI digests")
 }
 
 pub(crate) fn compare_event_measurement_digests(
@@ -266,7 +265,6 @@ pub(crate) fn compare_event_measurement_digests(
         values.event.as_ref().context("no event evidence value")?,
         expected.event.as_ref().context("no event image value")?,
     )
-    .context("event failed verification")
 }
 
 pub(crate) fn compare_system_layer_measurement_digests(
@@ -277,7 +275,6 @@ pub(crate) fn compare_system_layer_measurement_digests(
         values.system_image.as_ref().context("no system image evidence value")?,
         expected.system_image.as_ref().context("no expected system image value")?,
     )
-    .context("system layer system image failed verification")
 }
 
 pub(crate) fn compare_application_layer_measurement_digests(
@@ -288,12 +285,12 @@ pub(crate) fn compare_application_layer_measurement_digests(
         values.binary.as_ref().context("no binary evidence value")?,
         expected.binary.as_ref().context("no expected binary value")?,
     )
-    .context("application layer binary failed verification")?;
+    .context("comparing application binary digests")?;
     compare_measurement_digest(
         values.config.as_ref().context("no config evidence value")?,
         expected.configuration.as_ref().context("no expected config value")?,
     )
-    .context("application layer config failed verification")
+    .context("comparing application config digests")
 }
 
 pub(crate) fn compare_container_layer_measurement_digests(
@@ -304,12 +301,12 @@ pub(crate) fn compare_container_layer_measurement_digests(
         values.bundle.as_ref().context("no bundle evidence value")?,
         expected.bundle.as_ref().context("no expected bundle value")?,
     )
-    .context("container bundle failed verification")?;
+    .context("comparing container bundle digests")?;
     compare_measurement_digest(
         values.config.as_ref().context("no config evidence value")?,
         expected.config.as_ref().context("no expected config value")?,
     )
-    .context("container config failed verification")
+    .context("comparing container config digests")
 }
 
 /// Verifies the measurement digest value against a reference value and
@@ -337,7 +334,7 @@ fn compare_text_value(actual: &str, expected: &TextExpectedValue) -> anyhow::Res
     match expected.r#type.as_ref() {
         Some(text_expected_value::Type::Skipped(_)) => Ok(()),
         Some(text_expected_value::Type::Regex(regex)) => {
-            verify_regex(actual, &regex.value).context("regex from endorsement does not match")
+            verify_regex(actual, &regex.value).context("verifying regex")
         }
         Some(text_expected_value::Type::StringLiterals(string_literals)) => {
             if string_literals.value.iter().any(|sl| sl == actual) {

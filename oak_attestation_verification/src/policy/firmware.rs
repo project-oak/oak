@@ -52,10 +52,10 @@ impl Policy<[u8]> for FirmwarePolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("getting firmware layer values")?;
+        .context("acquiring firmware expected values")?;
 
         compare_firmware_layer_measurement_digests(evidence, &expected_values)
-            .context("couldn't verify firmware layer")?;
+            .context("comparing firmware digests")?;
 
         Ok(EventAttestationResults { ..Default::default() })
     }

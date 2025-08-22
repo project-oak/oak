@@ -38,7 +38,7 @@ const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certificatio
 /// Key (PCK) root certificate.
 #[allow(unused)]
 pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Result<()> {
-    let signature_data = quote.parse_signature_data().context("signature data parsing failed")?;
+    let signature_data = quote.parse_signature_data().context("parsing signature data")?;
 
     let report_certification = match signature_data.certification_data {
         QeCertificationData::QeReportCertificationData(report_certification) => {
@@ -50,7 +50,7 @@ pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Resul
     // Verify that the PCK certificate chain is valid.
     let pck_leaf =
         verify_quote_cert_chain_and_extract_leaf(&report_certification.certification_data)
-            .context("invalid certificate chain")?;
+            .context("verifying quote cert chain")?;
 
     // Verify that the Quoting Enclave report is signed using the PCK leaf
     // certificate.
@@ -62,9 +62,8 @@ pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Resul
         .map_err(|_err| anyhow::anyhow!("QE Report signature verification failed"))?;
 
     // Verify that the Attestation Key is bound to the Quoting Enclave Report.
-    let qe_report = report_certification
-        .parse_enclave_report_body()
-        .context("couldn't parse enclave report body")?;
+    let qe_report =
+        report_certification.parse_enclave_report_body().context("parsing enclave report body")?;
     let mut key_binding_data = signature_data.ecdsa_attestation_key.to_vec();
     key_binding_data.extend_from_slice(report_certification.authentication_data);
     anyhow::ensure!(
@@ -96,7 +95,7 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
     let mut certificates = if let &QeCertificationData::PckCertChain(chain) = certification_data {
         Ok(Certificate::load_pem_chain(chain)
             .map_err(anyhow::Error::msg)
-            .context("couldn't parse certificate chain")?)
+            .context("parsing certificate chain")?)
     } else {
         Err(anyhow!("certification data is not a PCK certificate chain"))
     }?;
@@ -106,14 +105,14 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
     certificates.pop().ok_or_else(|| anyhow!("certificate chain is empty"))?;
     let root = Certificate::from_pem(PCK_ROOT.as_bytes())
         .map_err(anyhow::Error::msg)
-        .context("couldn't parse known root certificate")?;
+        .context("parsing known root certificate")?;
     certificates.push(root);
     let mut chain = certificates.iter();
     let mut signee = chain.next().ok_or_else(|| anyhow!("certificate chain is empty"))?;
     let leaf = signee.clone();
     // Each certificate must be signed by the next one in the chain.
     for signer in chain {
-        verify_ecdsa_cert_signature(signer, signee).context("certificate chain is not valid")?;
+        verify_ecdsa_cert_signature(signer, signee).context("verifying cert signature")?;
         signee = signer;
     }
     Ok(leaf)

@@ -53,10 +53,10 @@ impl Policy<[u8]> for BinaryPolicy {
             verification_time.into_unix_millis(),
             &self.reference_values,
         )
-        .context("couldn't verify event endorsements")?;
+        .context("acquiring event expected values")?;
 
         compare_event_measurement_digests(&event, &expected_values)
-            .context("couldn't verify generic event")?;
+            .context("comparing event digests")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults { ..Default::default() })

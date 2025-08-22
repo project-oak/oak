@@ -66,10 +66,10 @@ impl Policy<[u8]> for ContainerPolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("couldn't verify container endorsements")?;
+        .context("acquiring container event expected values")?;
 
         compare_container_layer_measurement_digests(&event, &expected_values)
-            .context("couldn't verify container event")?;
+            .context("comparing container layer digests")?;
 
         let mut results = EventAttestationResults { ..Default::default() };
         if !event.session_binding_public_key.is_empty() {

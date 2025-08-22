@@ -213,7 +213,7 @@ fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<()> {
     let public_key = convert_pem_to_raw(public_key_pem)?;
 
     verify_signature_ecdsa(&signature, contents_bytes, &public_key)
-        .context("couldn't verify signature over the endorsement")
+        .context("verifying endorsement signature")
 }
 
 fn verify_rekor_signature(log_entry: &LogEntry, rekor_public_key: &[u8]) -> anyhow::Result<()> {

@@ -81,7 +81,7 @@ pub(crate) fn verify_endorsement(
         parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
     let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
     validate_statement(now_utc_millis, &claims, &statement)
-        .context("verifying endorsement statement")?;
+        .context("validating endorsement statement")?;
 
     let rekor_ref_value =
         ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;

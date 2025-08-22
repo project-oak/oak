@@ -62,10 +62,10 @@ impl Policy<[u8]> for ApplicationPolicy {
             endorsement.as_ref(),
             &self.reference_values,
         )
-        .context("couldn't verify application endorsements")?;
+        .context("acquiring application event expected values")?;
 
         compare_application_layer_measurement_digests(&event, &expected_values)
-            .context("couldn't verify application event")?;
+            .context("comparing application event digests")?;
 
         // TODO: b/356631062 - Return detailed attestation results.
         Ok(EventAttestationResults { ..Default::default() })
