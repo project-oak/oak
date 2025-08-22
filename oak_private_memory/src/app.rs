@@ -156,7 +156,7 @@ async fn get_or_create_db(
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
-) -> anyhow::Result<(IcingMetaDatabase, bool)> {
+) -> anyhow::Result<IcingMetaDatabase> {
     if let Some(data_blob) = db_client.get_blob(uid, true).await? {
         info!("Loaded database from blob: Length: {}", data_blob.data.len());
         let encrypted_info = decrypt_database(data_blob, dek)?;
@@ -166,7 +166,7 @@ async fn get_or_create_db(
             let db = IcingMetaDatabase::import(&icing_db.encode_to_vec(), None)?;
             let elapsed = now.elapsed();
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
-            return Ok((db, false));
+            return Ok(db);
         }
     } else {
         debug!("no blob for {}", uid);
@@ -176,7 +176,7 @@ async fn get_or_create_db(
     // has not been created, or if the blob exists but is empty.
     let temp_path = tempfile::tempdir()?.path().to_str().context("invalid temp path")?.to_string();
     let db = IcingMetaDatabase::new(&temp_path)?;
-    Ok((db, false))
+    Ok(db)
 }
 
 // The implementation for one active Oak Private Memory session.
@@ -360,18 +360,12 @@ impl SealedMemorySessionHandler {
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         is_json: bool,
     ) -> anyhow::Result<()> {
-        let (database, newly_created_database) =
-            get_or_create_db(&mut db_client, &uid, &dek).await?;
+        let database = get_or_create_db(&mut db_client, &uid, &dek).await?;
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
-        let database = DatabaseWithCache::new(
-            database,
-            newly_created_database,
-            dek.clone(),
-            db_client.clone(),
-            key_derivation_info,
-        );
+        let database =
+            DatabaseWithCache::new(database, dek.clone(), db_client.clone(), key_derivation_info);
 
         *mutex_guard = Some(UserSessionContext {
             dek,

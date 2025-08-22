@@ -84,6 +84,7 @@ impl From<u64> for PageToken {
 pub struct IcingMetaDatabase {
     icing_search_engine: cxx::UniquePtr<icing::IcingSearchEngine>,
     base_dir: String,
+    newly_created: bool,
 }
 
 // `IcingMetaBase` is safe to send because it is behind a unique_ptr,
@@ -232,7 +233,7 @@ impl IcingMetaDatabase {
                 == Some(icing::status_proto::Code::Ok.into())
         );
 
-        Ok(Self { icing_search_engine, base_dir: base_dir.to_string() })
+        Ok(Self { icing_search_engine, base_dir: base_dir.to_string(), newly_created: true })
     }
 
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
@@ -475,6 +476,12 @@ impl IcingMetaDatabase {
         }
         Ok(())
     }
+
+    /// Returns true if this instance was created fresh, without any previously
+    /// existing data.
+    pub fn newly_created(&self) -> bool {
+        self.newly_created
+    }
 }
 
 impl DbMigration for IcingMetaDatabase {
@@ -516,7 +523,7 @@ impl DbMigration for IcingMetaDatabase {
             bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
         }
 
-        Ok(Self { icing_search_engine, base_dir: base_dir_str })
+        Ok(Self { icing_search_engine, base_dir: base_dir_str, newly_created: false })
     }
 }
 
@@ -693,7 +700,6 @@ pub struct DatabaseWithCache {
 impl DatabaseWithCache {
     pub fn new(
         database: IcingMetaDatabase,
-        newly_created: bool,
         dek: Vec<u8>,
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
@@ -702,7 +708,7 @@ impl DatabaseWithCache {
             database,
             cache: MemoryCache::new(db_client, dek),
             key_derivation_info,
-            changed: newly_created,
+            changed: false,
         }
     }
 
@@ -724,7 +730,7 @@ impl DatabaseWithCache {
     /// Returns true if the cached database contains content that doesnt exist
     /// in durable storage, and should be written back.
     pub fn changed(&self) -> bool {
-        self.changed
+        self.changed || self.database.newly_created()
     }
 
     pub async fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
