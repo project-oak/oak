@@ -18,7 +18,6 @@ use std::{net::SocketAddr, sync::Arc};
 pub mod app_service;
 
 use anyhow::{bail, Context};
-use async_trait::async_trait;
 use database::{
     decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache, DbMigration,
     IcingMetaDatabase, MemoryId, PageToken,
@@ -100,119 +99,6 @@ impl SharedDbClient {
     }
 }
 
-#[async_trait]
-trait MemoryInterface {
-    async fn add_memory(&mut self, memory: Memory) -> Option<MemoryId>;
-    async fn get_memories_by_tag(
-        &mut self,
-        tag: &str,
-        page_size: i32,
-        page_token: PageToken,
-    ) -> anyhow::Result<(Vec<Memory>, PageToken)>;
-    async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>>;
-    async fn reset_memory(&mut self) -> bool;
-    async fn search_memory(
-        &mut self,
-        request: SearchMemoryRequest,
-    ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)>;
-    async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()>;
-}
-
-// Helper function to apply the result mask to a single Memory object.
-fn apply_mask_to_memory(memory: &mut Memory, mask: &ResultMask) {
-    // include_fields is not empty, so it acts as an "only include these" list.
-    if !mask.include_fields.contains(&(MemoryField::Id as i32)) {
-        memory.id.clear();
-    }
-    if !mask.include_fields.contains(&(MemoryField::Tags as i32)) {
-        memory.tags.clear();
-    }
-    if !mask.include_fields.contains(&(MemoryField::Embeddings as i32)) {
-        memory.embeddings.clear();
-    }
-
-    if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
-        memory.content = None;
-    } else if !mask.include_content_fields.is_empty() {
-        if let Some(content_struct) = memory.content.as_mut() {
-            // Filter the 'contents' map based on 'include_content_fields'.
-            content_struct.contents.retain(|key, _| mask.include_content_fields.contains(key));
-        }
-    }
-}
-
-#[async_trait]
-impl MemoryInterface for DatabaseWithCache {
-    async fn add_memory(&mut self, mut memory: Memory) -> Option<MemoryId> {
-        if memory.id.is_empty() {
-            memory.id = rand::rng().random::<u64>().to_string();
-        }
-        let blob_id = self.cache.add_memory(&memory).await.ok()?;
-        let _ = self.meta_db().add_memory(&memory, blob_id);
-        self.changed = true;
-        Some(memory.id)
-    }
-
-    async fn get_memories_by_tag(
-        &mut self,
-        tag: &str,
-        page_size: i32,
-        page_token: PageToken,
-    ) -> anyhow::Result<(Vec<Memory>, PageToken)> {
-        let (all_blob_ids, next_page_token) =
-            self.meta_db().get_memories_by_tag(tag, page_size, page_token)?;
-
-        if all_blob_ids.is_empty() {
-            return Ok((Vec::new(), PageToken::Start));
-        }
-
-        let memories = self.cache.get_memories_by_blob_ids(&all_blob_ids).await?;
-        Ok((memories, next_page_token))
-    }
-
-    async fn get_memory_by_id(&mut self, id: MemoryId) -> anyhow::Result<Option<Memory>> {
-        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id)? {
-            self.cache.get_memory_by_blob_id(&blob_id).await.map(Some)
-        } else {
-            Ok(None)
-        }
-    }
-
-    async fn reset_memory(&mut self) -> bool {
-        self.changed = true;
-        self.meta_db().reset();
-        true
-    }
-
-    async fn search_memory(
-        &mut self,
-        request: SearchMemoryRequest,
-    ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
-        let (blob_ids, scores, next_page_token) = self.meta_db().embedding_search(&request)?;
-        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
-
-        if let Some(result_mask) = request.result_mask {
-            for memory_item in memories.iter_mut() {
-                apply_mask_to_memory(memory_item, &result_mask);
-            }
-        }
-
-        let results = memories
-            .into_iter()
-            .zip(scores.into_iter())
-            .map(|(memory, _score)| SearchMemoryResultItem { memory: Some(memory) })
-            .collect();
-        Ok((results, next_page_token))
-    }
-
-    async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
-        self.changed = true;
-        self.meta_db().delete_memories(&ids)?;
-        self.cache.delete_memories(&ids).await?;
-        Ok(())
-    }
-}
-
 /// The state for each client connection.
 pub struct UserSessionContext {
     pub dek: Vec<u8>,
@@ -232,7 +118,7 @@ pub enum MessageType {
 }
 
 async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
-    if !user_context.database.changed {
+    if !user_context.database.changed() {
         info!("Database is not changed, skip saving");
         return Ok(());
     }
@@ -290,7 +176,7 @@ async fn get_or_create_db(
     // has not been created, or if the blob exists but is empty.
     let temp_path = tempfile::tempdir()?.path().to_str().context("invalid temp path")?.to_string();
     let db = IcingMetaDatabase::new(&temp_path)?;
-    Ok((db, true))
+    Ok((db, false))
 }
 
 // The implementation for one active Oak Private Memory session.
@@ -421,13 +307,14 @@ impl SealedMemorySessionHandler {
             let database = &mut context.database;
             let page_token = PageToken::try_from(request.page_token)
                 .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-            let (mut memories, next_page_token) =
-                database.get_memories_by_tag(&request.tag, request.page_size, page_token).await?;
-            if let Some(result_mask) = request.result_mask {
-                for memory in memories.iter_mut() {
-                    apply_mask_to_memory(memory, &result_mask);
-                }
-            }
+            let (memories, next_page_token) = database
+                .get_memories_by_tag(
+                    &request.tag,
+                    &request.result_mask,
+                    request.page_size,
+                    page_token,
+                )
+                .await?;
             Ok(GetMemoriesResponse { memories, next_page_token: next_page_token.into() })
         } else {
             bail!("You need to call key sync first")
@@ -442,13 +329,8 @@ impl SealedMemorySessionHandler {
         let context: &mut Option<UserSessionContext> = &mut mutex_guard;
         if let Some(context) = context {
             let database = &mut context.database;
-            let mut memory = database.get_memory_by_id(request.id).await?;
+            let memory = database.get_memory_by_id(request.id, &request.result_mask).await?;
             let success = memory.is_some();
-            if let Some(result_mask) = request.result_mask {
-                if let Some(memory) = memory.as_mut() {
-                    apply_mask_to_memory(memory, &result_mask);
-                }
-            }
             Ok(GetMemoryByIdResponse { memory, success })
         } else {
             bail!("You need to call key sync first")
@@ -483,9 +365,13 @@ impl SealedMemorySessionHandler {
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
-        let mut database =
-            DatabaseWithCache::new(database, dek.clone(), db_client.clone(), key_derivation_info);
-        database.changed = newly_created_database;
+        let database = DatabaseWithCache::new(
+            database,
+            newly_created_database,
+            dek.clone(),
+            db_client.clone(),
+            key_derivation_info,
+        );
 
         *mutex_guard = Some(UserSessionContext {
             dek,

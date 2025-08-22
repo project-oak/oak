@@ -24,7 +24,7 @@ pub mod v1 {
         MemoryValue, PlainTextUserInfo, ResetMemoryRequest, ResetMemoryResponse, ResultMask,
         ScoreRange, SealedMemoryCredentials, SealedMemoryRequest, SealedMemoryResponse,
         SealedMemorySessionRequest, SealedMemorySessionResponse, SearchMemoryQuery,
-        SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserRegistrationRequest,
-        UserRegistrationResponse, WrappedDataEncryptionKey,
+        SearchMemoryRequest, SearchMemoryResponse, SearchMemoryResultItem, UserDb,
+        UserRegistrationRequest, UserRegistrationResponse, WrappedDataEncryptionKey,
     };
 }
