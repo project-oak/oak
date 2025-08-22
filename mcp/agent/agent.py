@@ -47,22 +47,6 @@ root_agent = Agent(
     instruction=(
         'You are a helpful agent who can provide current user location and also tell weather at this location.'
     ),
-    tools=[
-        get_user_location,
-        MCPToolset(
-            connection_params=StdioConnectionParams(
-                server_params=StdioServerParameters(
-                    command='nix',
-                    args=[
-                        'develop',
-                        '--command',
-                        'sh',
-                        '-c',
-                        f'cd .. && bazel run {BUILD_TARGET} -- --tool-url {TOOL_URL}',
-                    ],
-                    timeout=30.0,
-                ),
-                timeout=30.0,
-            ),
-        )],
+    # TODO: b/433455122 - Use tools once an MCP server runs in Confidential Space.
+    tools=[],
 )

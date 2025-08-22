@@ -41,6 +41,17 @@ RUN bash -o pipefail -c 'echo "${MODEL_SHA256SUM} ${MODELS_DIR}/manifests/regist
 COPY bin/oak_proxy_server /usr/local/bin/oak_proxy_server
 COPY oak_proxy_server.toml /etc/oak_proxy_server.toml
 
+# Enable logging for Oak Proxy.
+# This doesn't log the underlying secure communication.
+ENV RUST_LOG=info
+
+# Expose the port Oak Proxy is listening on.
+EXPOSE 8080
+
+# https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
+LABEL "tee.launch_policy.allow_env_override"="CONTAINER_IMAGE"
+LABEL "tee.launch_policy.log_redirect"="always"
+
 # Run Oak Proxy that terminates the Oak Session and redirects HTTP requests to
 # Ollama.
 ENTRYPOINT [ \
