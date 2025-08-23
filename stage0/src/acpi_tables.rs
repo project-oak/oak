@@ -146,7 +146,7 @@ impl Rsdp {
         if &self.signature != b"RSD PTR " {
             return Err("Invalid RSDP signature");
         }
-        let len = if self.revision > 2 { self.length } else { 20 } as usize;
+        let len = if self.revision >= 2 { self.length } else { 20 } as usize;
 
         if len > size_of::<Rsdp>() {
             return Err("invalid RSDP size");
