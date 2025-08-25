@@ -14,16 +14,20 @@
 // limitations under the License.
 //
 
+use alloc::vec;
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        AmdSevReferenceValues, AmdSevSnpEndorsement, EventAttestationResults, RootLayerEvidence,
+        binary_reference_value, tcb_version_reference_value, AmdSevReferenceValues,
+        AmdSevSnpEndorsement, BinaryReferenceValue, Digests, EventAttestationResults,
+        RootLayerEvidence, TcbVersion, TcbVersionReferenceValue,
     },
-    Variant,
+    RawDigest, Variant,
 };
-use oak_sev_snp_attestation_report::AttestationReport;
+use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use oak_time::Instant;
 use zerocopy::FromBytes;
 
@@ -43,6 +47,62 @@ pub struct AmdSevSnpPolicy {
 impl AmdSevSnpPolicy {
     pub fn new(reference_values: &AmdSevReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    /// Returns AmdSevReferenceValues and firmware reference values
+    /// (BinaryReferenceValue) that accept only the version in the evidence.
+    ///
+    /// The evidence should contain the same information that would be passed to
+    /// `verify`.
+    pub fn evidence_to_reference_values(
+        evidence: &RootLayerEvidence,
+    ) -> anyhow::Result<(AmdSevReferenceValues, BinaryReferenceValue)> {
+        if evidence.platform != TeePlatform::AmdSevSnp as i32 {
+            anyhow::bail!("unsupported TEE platform value");
+        }
+        let report = AttestationReport::ref_from_bytes(&evidence.remote_attestation_report)
+            .map_err(|err| anyhow::anyhow!("invalid AMD SEV-SNP attestation report: {}", err))?;
+
+        #[allow(deprecated)]
+        let mut rv = AmdSevReferenceValues {
+            min_tcb_version: None,
+            milan: None,
+            genoa: None,
+            turin: None,
+            allow_debug: report
+                .has_debug_flag()
+                .map_err(|err| anyhow::anyhow!("failed to get debug flag: {}", err))?,
+            stage0: None,
+        };
+        let tcb_version = report.data.get_reported_tcb_version();
+        let product = match report.data.get_product() {
+            AmdProduct::Milan => &mut rv.milan,
+            AmdProduct::Genoa => &mut rv.genoa,
+            AmdProduct::Turin => &mut rv.turin,
+            _ => anyhow::bail!("unsupported AMD product value"),
+        };
+        *product = Some(TcbVersionReferenceValue {
+            // Note that while we use `Minimum` here, if the reference values are
+            // used for mutation attestation of both ends of a connection, >= on
+            // both sides is effectively ==.
+            r#type: Some(tcb_version_reference_value::Type::Minimum(TcbVersion {
+                boot_loader: tcb_version.boot_loader as u32,
+                tee: tcb_version.tee as u32,
+                snp: tcb_version.snp as u32,
+                microcode: tcb_version.microcode as u32,
+                fmc: tcb_version.fmc as u32,
+            })),
+        });
+
+        let firmware_rv = BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                digests: vec![RawDigest {
+                    sha2_384: report.data.measurement.to_vec(),
+                    ..Default::default()
+                }],
+            })),
+        };
+        Ok((rv, firmware_rv))
     }
 }
 
@@ -120,6 +180,7 @@ mod tests {
     use test_util::{get_oc_reference_values, AttestationData};
 
     use super::*;
+    use crate::{results::get_initial_measurement, FirmwarePolicy};
 
     #[test]
     fn verify_oc_succeeds() {
@@ -142,6 +203,64 @@ mod tests {
             &endorsement.into(),
         );
 
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn evidence_to_reference_values_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = d.evidence.root_layer.as_ref().unwrap();
+        let endorsement = AmdSevSnpEndorsement {
+            tee_certificate: match d.endorsements.r#type.as_ref() {
+                Some(endorsements::Type::OakContainers(e)) => {
+                    e.root_layer.as_ref().unwrap().tee_certificate.to_vec()
+                }
+                _ => panic!("bad endorsement type"),
+            },
+        };
+
+        let (rv, firmware_rv) = AmdSevSnpPolicy::evidence_to_reference_values(event)
+            .expect("evidence_to_reference_values failed");
+        #[allow(deprecated)]
+        {
+            assert!(
+                matches!(
+                    rv,
+                    AmdSevReferenceValues {
+                        min_tcb_version: None,
+                        milan: Some(TcbVersionReferenceValue {
+                            r#type: Some(tcb_version_reference_value::Type::Minimum(..))
+                        }),
+                        genoa: None,
+                        turin: None,
+                        allow_debug: false,
+                        stage0: None,
+                        ..
+                    }
+                ),
+                "reference values missing fields: {:?}",
+                rv
+            );
+        }
+        assert!(
+            matches!(
+                firmware_rv,
+                BinaryReferenceValue { r#type: Some(binary_reference_value::Type::Digests(..)) }
+            ),
+            "firmware reference values missing fields: {:?}",
+            firmware_rv
+        );
+
+        let result =
+            AmdSevSnpPolicy::new(&rv).verify(d.make_valid_time(), event, &endorsement.into());
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+
+        let measurement = get_initial_measurement(result.as_ref().unwrap()).unwrap();
+        let result = FirmwarePolicy::new(&firmware_rv).verify(
+            d.make_valid_time(),
+            measurement,
+            &Variant::default(),
+        );
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 }

@@ -14,14 +14,17 @@
 // limitations under the License.
 //
 
+use alloc::vec;
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        ApplicationEndorsement, ApplicationLayerData, ApplicationLayerReferenceValues,
-        EventAttestationResults,
+        binary_reference_value, ApplicationEndorsement, ApplicationLayerData,
+        ApplicationLayerReferenceValues, BinaryReferenceValue, Digests, EventAttestationResults,
+        SkipVerification,
     },
-    Variant,
+    RawDigest, Variant,
 };
 use oak_time::Instant;
 
@@ -37,6 +40,40 @@ pub struct ApplicationPolicy {
 impl ApplicationPolicy {
     pub fn new(reference_values: &ApplicationLayerReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    /// Returns reference values that accept only the version in the evidence.
+    ///
+    /// The evidence should contain the same information that would be passed to
+    /// `verify`.
+    pub fn evidence_to_reference_values(
+        evidence: &[u8],
+    ) -> anyhow::Result<ApplicationLayerReferenceValues> {
+        let event = decode_event_proto::<ApplicationLayerData>(
+            "type.googleapis.com/oak.attestation.v1.ApplicationLayerData",
+            evidence,
+        )?;
+        Ok(ApplicationLayerReferenceValues {
+            binary: Some(BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(Digests {
+                    digests: vec![event.binary.context("no binary in evidence")?],
+                })),
+            }),
+            configuration: Some(BinaryReferenceValue {
+                r#type: Some(match event.config.context("no config in evidence")? {
+                    // oak_restricted_kernel_orchestrator does not currently populate
+                    // config hashes. Since matching against an empty set of hashes
+                    // fails, it's necessary to skip verification in this case.
+                    config if config == RawDigest::default() => {
+                        binary_reference_value::Type::Skip(SkipVerification::default())
+                    }
+
+                    config => {
+                        binary_reference_value::Type::Digests(Digests { digests: vec![config] })
+                    }
+                }),
+            }),
+        })
     }
 }
 
@@ -94,6 +131,33 @@ mod tests {
         let result = policy.verify(d.make_valid_time(), event, endorsement);
 
         // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn evidence_to_reference_values_succeeds() {
+        let d = AttestationData::load_milan_rk_release();
+        let event =
+            &d.evidence.event_log.as_ref().unwrap().encoded_events[RK_APPLICATION_EVENT_INDEX];
+
+        let rv = ApplicationPolicy::evidence_to_reference_values(event)
+            .expect("evidence_to_reference_values failed");
+        assert!(
+            matches!(
+                rv,
+                ApplicationLayerReferenceValues {
+                    binary: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Digests(..))
+                    }),
+                    configuration: Some(BinaryReferenceValue { r#type: Some(..) }),
+                }
+            ),
+            "reference values missing fields: {:?}",
+            rv
+        );
+
+        let result =
+            ApplicationPolicy::new(&rv).verify(d.make_valid_time(), event, &Variant::default());
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 }

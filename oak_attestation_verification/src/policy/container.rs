@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
+use alloc::vec;
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        ContainerEndorsement, ContainerLayerData, ContainerLayerReferenceValues,
-        EventAttestationResults,
+        binary_reference_value, BinaryReferenceValue, ContainerEndorsement, ContainerLayerData,
+        ContainerLayerReferenceValues, Digests, EventAttestationResults,
     },
     Variant,
 };
@@ -41,6 +43,31 @@ pub struct ContainerPolicy {
 impl ContainerPolicy {
     pub fn new(reference_values: &ContainerLayerReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    /// Returns reference values that accept only the version in the evidence.
+    ///
+    /// The evidence should contain the same information that would be passed to
+    /// `verify`.
+    pub fn evidence_to_reference_values(
+        evidence: &[u8],
+    ) -> anyhow::Result<ContainerLayerReferenceValues> {
+        let event = decode_event_proto::<ContainerLayerData>(
+            "type.googleapis.com/oak.attestation.v1.ContainerLayerData",
+            evidence,
+        )?;
+        Ok(ContainerLayerReferenceValues {
+            binary: Some(BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(Digests {
+                    digests: vec![event.bundle.context("no bundle in evidence")?],
+                })),
+            }),
+            configuration: Some(BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(Digests {
+                    digests: vec![event.config.context("no config in evidence")?],
+                })),
+            }),
+        })
     }
 }
 
@@ -107,6 +134,34 @@ mod tests {
         let result = policy.verify(d.make_valid_time(), event, endorsement);
 
         // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn evidence_to_reference_values_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[CONTAINER_EVENT_INDEX];
+
+        let rv = ContainerPolicy::evidence_to_reference_values(event)
+            .expect("evidence_to_reference_values failed");
+        assert!(
+            matches!(
+                rv,
+                ContainerLayerReferenceValues {
+                    binary: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Digests(..))
+                    }),
+                    configuration: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Digests(..))
+                    }),
+                }
+            ),
+            "reference values missing fields: {:?}",
+            rv
+        );
+
+        let result =
+            ContainerPolicy::new(&rv).verify(d.make_valid_time(), event, &Variant::default());
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 }

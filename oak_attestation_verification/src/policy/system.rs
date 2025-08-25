@@ -14,11 +14,14 @@
 // limitations under the License.
 //
 
+use alloc::vec;
+
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        EventAttestationResults, SystemEndorsement, SystemLayerData, SystemLayerReferenceValues,
+        binary_reference_value, BinaryReferenceValue, Digests, EventAttestationResults,
+        SystemEndorsement, SystemLayerData, SystemLayerReferenceValues,
     },
     Variant,
 };
@@ -36,6 +39,26 @@ pub struct SystemPolicy {
 impl SystemPolicy {
     pub fn new(reference_values: &SystemLayerReferenceValues) -> Self {
         Self { reference_values: reference_values.clone() }
+    }
+
+    /// Returns reference values that accept only the version in the evidence.
+    ///
+    /// The evidence should contain the same information that would be passed to
+    /// `verify`.
+    pub fn evidence_to_reference_values(
+        evidence: &[u8],
+    ) -> anyhow::Result<SystemLayerReferenceValues> {
+        let event = decode_event_proto::<SystemLayerData>(
+            "type.googleapis.com/oak.attestation.v1.SystemLayerData",
+            evidence,
+        )?;
+        Ok(SystemLayerReferenceValues {
+            system_image: Some(BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Digests(Digests {
+                    digests: vec![event.system_image.context("no system_image in evidence")?],
+                })),
+            }),
+        })
     }
 }
 
@@ -87,6 +110,30 @@ mod tests {
         let result = policy.verify(d.make_valid_time(), event, endorsement);
 
         // TODO: b/356631062 - Verify detailed attestation results.
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn evidence_to_reference_values_succeeds() {
+        let d = AttestationData::load_milan_oc_release();
+        let event = &d.evidence.event_log.as_ref().unwrap().encoded_events[SYSTEM_EVENT_INDEX];
+
+        let rv = SystemPolicy::evidence_to_reference_values(event)
+            .expect("evidence_to_reference_values failed");
+        assert!(
+            matches!(
+                rv,
+                SystemLayerReferenceValues {
+                    system_image: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Digests(..))
+                    }),
+                }
+            ),
+            "reference values missing fields: {:?}",
+            rv
+        );
+
+        let result = SystemPolicy::new(&rv).verify(d.make_valid_time(), event, &Variant::default());
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
     }
 }
