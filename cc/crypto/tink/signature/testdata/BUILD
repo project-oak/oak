@@ -32,6 +32,9 @@ cc_binary(
     name = "generate_keyset_and_sign",
     srcs = ["generate_keyset_and_sign.cc"],
     deps = [
+        "//cc/crypto:signing_key",
+        "//cc/crypto/certificate:certificate_authority",
+        "//cc/crypto/certificate:utils",
         "@com_github_tink_crypto_tink_cc//tink:configuration",
         "@com_github_tink_crypto_tink_cc//tink:keyset_handle",
         "@com_github_tink_crypto_tink_cc//tink:proto_keyset_format",
@@ -45,5 +48,7 @@ cc_binary(
         "@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
     ],
 )
