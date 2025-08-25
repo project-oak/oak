@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::vec::Vec;
+use std::{sync::Arc, vec::Vec};
 
 use googletest::prelude::*;
+use oak_attestation_types::{attester::Attester, endorser::Endorser};
+use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::session::v1::{
     session_request::Request, session_response::Response, PlaintextMessage, SessionRequest,
     SessionResponse,
@@ -24,6 +26,7 @@ use oak_session::{
     config::SessionConfig,
     handshake::HandshakeType,
     session::{AttestationEvidence, Session},
+    session_binding::{SessionBinder, SessionBindingVerifierProvider},
     ClientSession, ProtocolEngine, ServerSession,
 };
 
@@ -69,6 +72,47 @@ pub fn test_unattested_nn_encryption_and_decryption_inner(message: Vec<u8>) {
     client_session.put_incoming_message(encrypted_response).unwrap();
     let decrypted_response = client_session.read().unwrap().unwrap();
     assert_eq!(decrypted_response.plaintext, message);
+}
+
+pub fn test_verifier_success(
+    attester: &Arc<dyn Attester>,
+    endorser: &Arc<dyn Endorser>,
+    session_binder: &Arc<dyn SessionBinder>,
+    verifier: &Arc<dyn AttestationVerifier>,
+    binding_verifier_provider: &Arc<dyn SessionBindingVerifierProvider>,
+) {
+    let attestation_id = "test_id".to_string();
+
+    // We can use verification success both in the client and in the server session
+    // simultaneously.
+    let client_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_self_attester_ref(attestation_id.clone(), attester)
+            .add_self_endorser_ref(attestation_id.clone(), endorser)
+            .add_session_binder_ref(attestation_id.clone(), session_binder)
+            .add_peer_verifier_with_binding_verifier_provider_ref(
+                attestation_id.clone(),
+                verifier,
+                binding_verifier_provider,
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_self_attester_ref(attestation_id.clone(), attester)
+            .add_self_endorser_ref(attestation_id.clone(), endorser)
+            .add_session_binder_ref(attestation_id.clone(), session_binder)
+            .add_peer_verifier_with_binding_verifier_provider_ref(
+                attestation_id.clone(),
+                verifier,
+                binding_verifier_provider,
+            )
+            .build();
+
+    let mut client_session = ClientSession::create(client_config).unwrap();
+    let mut server_session = ServerSession::create(server_config).unwrap();
+
+    do_attest(&mut client_session, &mut server_session).unwrap();
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::Expected).unwrap();
 }
 
 pub fn do_attest(

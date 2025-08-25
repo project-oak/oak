@@ -72,6 +72,8 @@ rust_library(
     srcs = glob(["testing/*.rs"]),
     deps = [
         ":oak_session",
+        "//oak_attestation_types",
+        "//oak_attestation_verification_types",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:googletest",
