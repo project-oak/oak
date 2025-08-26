@@ -18,13 +18,14 @@ use std::{net::SocketAddr, sync::Arc};
 pub mod app_service;
 
 use anyhow::{bail, Context};
-use database::{
-    decrypt_database, encrypt_database, BlobId, DataBlobHandler, DatabaseWithCache, DbMigration,
-    IcingMetaDatabase, MemoryId, PageToken,
-};
 use encryption::{decrypt, encrypt, generate_nonce};
+use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info};
 use metrics::{get_global_metrics, RequestMetricName};
+use oak_private_memory_database::{
+    encryption::{decrypt_database, encrypt_database},
+    DatabaseWithCache, DbMigration, IcingMetaDatabase, MemoryId, PageToken,
+};
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;

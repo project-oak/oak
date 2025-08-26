@@ -21,6 +21,7 @@ load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -117,24 +118,6 @@ rust_library(
 )
 
 rust_library(
-    name = "database",
-    srcs = ["src/database.rs"],
-    deps = [
-        ":encryption",
-        ":external_db_client",
-        ":log",
-        "//proto:sealed_memory_rust_proto",
-        "//src/icing",
-        "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:rand",
-        "@oak_crates_index//:tempfile",
-    ],
-)
-
-rust_library(
     name = "app",
     srcs = [
         "src/app.rs",
@@ -145,10 +128,11 @@ rust_library(
     ],
     deps = [
         ":app_config",
-        ":database",
         ":encryption",
+        ":external_db_client",
         ":log",
         ":metrics",
+        "//database",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_proto_rust",
@@ -176,11 +160,11 @@ rust_library(
     deps = [
         ":app",
         ":app_config",
-        ":database",
         ":encryption",
         ":external_db_client",
         ":log",
         ":metrics",
+        "//database",
     ],
 )
 
