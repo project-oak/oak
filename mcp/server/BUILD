@@ -26,6 +26,9 @@ rust_binary(
     srcs = glob([
         "src/*.rs",
     ]),
+    proc_macro_deps = [
+        "@oak_std_crates_index//:rmcp-macros",
+    ],
     deps = [
         "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
         "//oak_proto_rust",

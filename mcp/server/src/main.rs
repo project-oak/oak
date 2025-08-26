@@ -16,15 +16,16 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use clap::Parser;
+use futures::Future;
 use log::{error, info, warn};
 use oak_functions_standalone_client_lib::OakFunctionsClient;
 use oak_session::attestation::AttestationType;
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
-use prost::Message;
 use rmcp::{
+    handler::server::{router::tool::ToolRouter, tool::Parameters},
     model::{
         CallToolResult, Content, Implementation, InitializeRequestParam, InitializeResult,
         ProtocolVersion, ServerCapabilities, ServerInfo,
@@ -32,33 +33,35 @@ use rmcp::{
     schemars,
     serde_json::json,
     service::RequestContext,
-    tool,
+    tool, tool_handler, tool_router,
     transport::stdio,
-    Error as McpError, RoleServer, ServerHandler, ServiceExt,
+    ErrorData as McpError, RoleServer, ServerHandler, ServiceExt,
 };
+use serde::Deserialize;
 
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(short, long)]
     tool_url: String,
-    #[arg(short, long)]
-    attestation_output_path: Option<String>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct WeatherService {
     pub tool_url: String,
-    pub attestation_output_path: Option<String>,
+    tool_router: ToolRouter<Self>,
 }
 
-#[tool(tool_box)]
+#[derive(Deserialize, schemars::JsonSchema)]
+struct GetWeatherRequest {
+    #[schemars(description = "Latitude")]
+    latitude: f32,
+    #[schemars(description = "Longitude")]
+    longitude: f32,
+}
+
 impl WeatherService {
     pub fn new(tool_url: &str) -> Self {
-        Self { tool_url: tool_url.to_string(), attestation_output_path: None }
-    }
-
-    pub fn set_attestation_output_path(&mut self, attestation_output_path: &str) {
-        self.attestation_output_path = Some(attestation_output_path.to_string())
+        Self { tool_url: tool_url.to_string(), tool_router: Self::tool_router() }
     }
 
     pub async fn send_tool_request(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
@@ -74,15 +77,12 @@ impl WeatherService {
         .await
         .context("couldn't connect to server")?;
 
-        if let Some(attestation_output_path) = &self.attestation_output_path {
-            let attestation = client.fetch_attestation(self.tool_url.clone(), clock)?;
-            std::fs::write(attestation_output_path, attestation.encode_to_vec())?;
-            info!("Writing attestation report to: {}", attestation_output_path);
-        }
-
         client.invoke(request_bytes).await.context("couldn't send request")
     }
+}
 
+#[tool_router]
+impl WeatherService {
     #[tool(description = "Provides current user coordinates")]
     fn get_user_location(&self) -> Result<CallToolResult, McpError> {
         let result = json!({
@@ -101,13 +101,9 @@ impl WeatherService {
     )]
     async fn get_weather(
         &self,
-        #[tool(param)]
-        #[schemars(description = "Latitude")]
-        latitude: f32,
-        #[tool(param)]
-        #[schemars(description = "Longitude")]
-        longitude: f32,
+        params: Parameters<GetWeatherRequest>,
     ) -> Result<CallToolResult, McpError> {
+        let Parameters(GetWeatherRequest { latitude, longitude }) = params;
         info!("Requested weather for ({}, {})", latitude, longitude);
 
         info!("Sending a tool request at: {}", self.tool_url);
@@ -138,7 +134,7 @@ impl WeatherService {
     }
 }
 
-#[tool(tool_box)]
+#[tool_handler]
 impl ServerHandler for WeatherService {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
@@ -172,10 +168,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Args::parse();
 
     info!("Starting weather service");
-    let mut service = WeatherService::new(&cli.tool_url);
-    if let Some(attestation_output_path) = &cli.attestation_output_path {
-        service.set_attestation_output_path(attestation_output_path);
-    }
+    let service = WeatherService::new(&cli.tool_url);
     let service = service.serve(stdio()).await.inspect_err(|e| {
         error!("serving error: {:?}", e);
     })?;

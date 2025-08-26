@@ -517,8 +517,18 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "rpassword": crate.spec(version = "7.3.1"),
     "ring": crate.spec(version = "0.17.14"),
     "rmcp": crate.spec(
-        features = ["server", "transport-io"],
-        version = "0.1",
+        features = [
+            "macros",
+            "server",
+            "transport-io",
+            "transport-streamable-http-server",
+            "transport-worker",
+        ],
+        version = "0.6.0",
+    ),
+    "rmcp-macros": crate.spec(
+        default_features = False,
+        version = "0.6.0",
     ),
     "rtnetlink": crate.spec(version = "0.14.1"),
     "serde_yaml": crate.spec(version = "0.9.30"),
