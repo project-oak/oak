@@ -58,3 +58,19 @@ oci_push(
     image = ":image",
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2",
 )
+
+rust_binary(
+    name = "falsify",
+    testonly = True,
+    srcs = ["falsify/main.rs"],
+    deps = [
+        "//falsify",
+        "//oak_attestation_gcp",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:jwt",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:x509-cert",
+    ],
+)

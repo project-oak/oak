@@ -34,8 +34,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/containers/orchestrator_crypto.proto",
         "../proto/crypto/certificate.proto",
         "../proto/crypto/crypto.proto",
+        "../proto/ctf_sha2/falsify.proto",
         "../proto/digest.proto",
-        "../proto/variant.proto",
         "../proto/oak_debug/service/oak_debug.proto",
         "../proto/oak_functions/abi.proto",
         "../proto/oak_functions/application_config.proto",
@@ -49,6 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/session/messages.proto",
         "../proto/session/service_streaming.proto",
         "../proto/session/session.proto",
+        "../proto/variant.proto",
         "../third_party/google/profile.proto",
     ];
 

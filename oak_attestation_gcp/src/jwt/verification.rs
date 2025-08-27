@@ -172,6 +172,8 @@ pub struct CertificateReport {
 /// Returns a full report on the success/failure status of verifying the JWT
 /// attestation token from Confidential Space using the provided root
 /// certificate.
+/// TODO: b/436216021 - require that the JWT is running on a STABLE container
+/// image: https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#submods-claims
 pub fn report_attestation_token(
     token: Token<Header, Claims, Unverified>,
     root: &Certificate,
