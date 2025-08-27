@@ -7,8 +7,6 @@
     flake-utils.inputs.systems.follows = "systems";
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
-    crane.url = "github:ipetkov/crane";
-    crane.inputs.nixpkgs.follows = "nixpkgs";
   };
   outputs = { self, systems, nixpkgs, flake-utils, rust-overlay, crane }:
     (flake-utils.lib.eachDefaultSystem
@@ -64,13 +62,6 @@
               ];
               packages = [
                 (rust-bin.selectLatestNightlyWith (toolchain: rustToolchain))
-                cargo-audit
-                cargo-deadlinks
-                cargo-binutils
-                cargo-deny
-                cargo-nextest
-                cargo-udeps
-                cargo-vet
                 protobuf
                 buf # utility to convert binary protobuf to json; for breaking change detection.
                 systemd

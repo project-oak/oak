@@ -36,7 +36,7 @@
             }).androidsdk;
           rustToolchain =
             # This should be kept in sync with the value in bazel/rust/defs.bzl
-            pkgs.rust-bin.nightly."2024-11-01".default.override {
+            pkgs.rust-bin.nightly."2025-03-01".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -91,13 +91,6 @@
               ];
               packages = [
                 (rust-bin.selectLatestNightlyWith (toolchain: rustToolchain))
-                cargo-audit
-                cargo-deadlinks
-                cargo-binutils
-                cargo-deny
-                cargo-nextest
-                cargo-udeps
-                cargo-vet
                 protobuf
                 buf # utility to convert binary protobuf to json; for breaking change detection.
                 qemu_kvm

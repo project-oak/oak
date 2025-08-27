@@ -39,5 +39,5 @@ common --noexperimental_check_desugar_deps
 # rebuilding the standard libraries for stage 0 and the restricted kernel wrapper.
 common --@rules_rust//rust/settings:toolchain_generated_sysroot=True
 
-import %workspace%/../.ci.bazelrc
+try-import %workspace%/../.ci.bazelrc
 try-import %workspace%/../.tmp.ci.bazelrc
