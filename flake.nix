@@ -91,6 +91,7 @@
               ];
               packages = [
                 (rust-bin.selectLatestNightlyWith (toolchain: rustToolchain))
+                cargo-audit
                 protobuf
                 buf # utility to convert binary protobuf to json; for breaking change detection.
                 qemu_kvm
