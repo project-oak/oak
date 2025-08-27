@@ -16,13 +16,11 @@
 
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters, StdioConnectionParams
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StreamableHTTPConnectionParams
 import os
 
 
-TARGET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../server/Cargo.toml')
-BUILD_TARGET = os.path.join(os.path.dirname(os.path.abspath(__file__)), '//mcp/server:mcp_server')
-TOOL_URL = 'http://localhost:8080'
+MCP_SERVER_URL = 'http://localhost:8080/mcp'
 
 def get_user_location() -> dict:
     '''Retrieves the current user's location.
@@ -47,6 +45,11 @@ root_agent = Agent(
     instruction=(
         'You are a helpful agent who can provide current user location and also tell weather at this location.'
     ),
-    # TODO: b/433455122 - Use tools once an MCP server runs in Confidential Space.
-    tools=[],
+    tools=[
+        MCPToolset(
+            connection_params=StreamableHTTPConnectionParams(
+                url=MCP_SERVER_URL,
+                timeout=30.0,
+            ),
+        )],
 )

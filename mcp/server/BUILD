@@ -37,6 +37,7 @@ rust_binary(
         "//oak_time",
         "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:axum",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:futures",

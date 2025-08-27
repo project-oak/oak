@@ -371,6 +371,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         default_features = False,
         version = "0.1.77",
     ),
+    "axum": crate.spec(
+        features = [
+            "http2",
+            "tokio",
+        ],
+        version = "0.7.9",
+    ),
     "bmrng": crate.spec(version = "0.5.2"),
     "clap": crate.spec(
         features = [
@@ -517,10 +524,11 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "rpassword": crate.spec(version = "7.3.1"),
     "ring": crate.spec(version = "0.17.14"),
     "rmcp": crate.spec(
+        default_features = False,
         features = [
+            "base64",
             "macros",
             "server",
-            "transport-io",
             "transport-streamable-http-server",
             "transport-worker",
         ],

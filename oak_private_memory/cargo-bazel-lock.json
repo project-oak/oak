@@ -1,5 +1,5 @@
 {
-  "checksum": "0d9c1be9c454e6bc7a0de6dbd04936a614ce816f2ba0e5e3206561b870c19324",
+  "checksum": "22b5788fa224905894005c0f0ee777a19dcf3363cdcaba265dcb1787868c469f",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1804,6 +1804,22 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "default",
+            "form",
+            "http1",
+            "http2",
+            "json",
+            "matched-path",
+            "original-uri",
+            "query",
+            "tokio",
+            "tower-log",
+            "tracing"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -1829,6 +1845,14 @@
             {
               "id": "http-body-util 0.1.3",
               "target": "http_body_util"
+            },
+            {
+              "id": "hyper 1.6.0",
+              "target": "hyper"
+            },
+            {
+              "id": "hyper-util 0.1.14",
+              "target": "hyper_util"
             },
             {
               "id": "itoa 1.0.15",
@@ -1859,8 +1883,24 @@
               "target": "serde"
             },
             {
+              "id": "serde_json 1.0.140",
+              "target": "serde_json"
+            },
+            {
+              "id": "serde_path_to_error 0.1.17",
+              "target": "serde_path_to_error"
+            },
+            {
+              "id": "serde_urlencoded 0.7.1",
+              "target": "serde_urlencoded"
+            },
+            {
               "id": "sync_wrapper 1.0.2",
               "target": "sync_wrapper"
+            },
+            {
+              "id": "tokio 1.45.1",
+              "target": "tokio"
             },
             {
               "id": "tower 0.5.2",
@@ -1873,6 +1913,10 @@
             {
               "id": "tower-service 0.3.3",
               "target": "tower_service"
+            },
+            {
+              "id": "tracing 0.1.41",
+              "target": "tracing"
             }
           ],
           "selects": {}
@@ -1928,6 +1972,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "tracing"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -1969,6 +2019,10 @@
             {
               "id": "tower-service 0.3.3",
               "target": "tower_service"
+            },
+            {
+              "id": "tracing 0.1.41",
+              "target": "tracing"
             }
           ],
           "selects": {}
@@ -7807,6 +7861,10 @@
             {
               "id": "atomic_refcell 0.1.13",
               "target": "atomic_refcell"
+            },
+            {
+              "id": "axum 0.7.9",
+              "target": "axum"
             },
             {
               "id": "base64 0.21.7",
@@ -25772,13 +25830,11 @@
         "crate_features": {
           "common": [
             "base64",
-            "default",
             "macros",
             "server",
             "server-side-http",
             "tower",
             "transport-async-rw",
-            "transport-io",
             "transport-streamable-http-server",
             "transport-streamable-http-server-session",
             "transport-worker",
@@ -28399,6 +28455,7 @@
           "common": [
             "alloc",
             "default",
+            "raw_value",
             "std"
           ],
           "selects": {}
@@ -28441,6 +28498,58 @@
         "data_glob": [
           "**"
         ]
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "serde_path_to_error 0.1.17": {
+      "name": "serde_path_to_error",
+      "version": "0.1.17",
+      "package_url": "https://github.com/dtolnay/path-to-error",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/serde_path_to_error/0.1.17/download",
+          "sha256": "59fab13f937fa393d08645bf3a84bdfe86e296747b506ada67bb15f10f218b2a"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "serde_path_to_error",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "serde_path_to_error",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "itoa 1.0.15",
+              "target": "itoa"
+            },
+            {
+              "id": "serde 1.0.219",
+              "target": "serde"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.1.17"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -33380,10 +33489,13 @@
             "__common",
             "futures-core",
             "futures-util",
+            "log",
+            "make",
             "pin-project-lite",
             "sync_wrapper",
             "timeout",
             "tokio",
+            "tracing",
             "util"
           ],
           "selects": {}
@@ -33417,6 +33529,10 @@
             {
               "id": "tower-service 0.3.3",
               "target": "tower_service"
+            },
+            {
+              "id": "tracing 0.1.41",
+              "target": "tracing"
             }
           ],
           "selects": {}
@@ -43127,6 +43243,7 @@
     "async-stream 0.3.6",
     "async-trait 0.1.88",
     "atomic_refcell 0.1.13",
+    "axum 0.7.9",
     "base64 0.21.7",
     "bitflags 2.9.1",
     "bitvec 1.0.1",
