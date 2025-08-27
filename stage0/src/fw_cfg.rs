@@ -559,3 +559,27 @@ impl<P: crate::Platform> Firmware for FwCfg<P> {
         self.read_file(file, buf)
     }
 }
+
+#[cfg(test)]
+#[derive(Default)]
+pub struct TestFirmware {
+    pub files: std::collections::BTreeMap<std::ffi::CString, Box<[u8]>>,
+}
+
+#[cfg(test)]
+impl Firmware for TestFirmware {
+    fn find(&mut self, name: &core::ffi::CStr) -> Option<crate::fw_cfg::DirEntry> {
+        let file = self.files.get(name)?;
+        Some(crate::fw_cfg::DirEntry::new(name, file.len() as u32, 0))
+    }
+
+    fn read_file(
+        &mut self,
+        file: &crate::fw_cfg::DirEntry,
+        buf: &mut [u8],
+    ) -> std::result::Result<usize, &'static str> {
+        let file = self.files.get(file.name()).ok_or("file not found")?;
+        buf.copy_from_slice(file);
+        Ok(file.len())
+    }
+}
