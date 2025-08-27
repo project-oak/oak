@@ -25,7 +25,11 @@
 // TODO: b/436216021 - Replace TOML with binary protobuf for the output file
 // format.
 
-use std::{fs, panic};
+use std::{
+    convert::Infallible,
+    fs, panic,
+    path::{Path, PathBuf},
+};
 
 use clap::Parser;
 use serde::Serialize;
@@ -33,10 +37,15 @@ use serde::Serialize;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long)]
-    input_file: String,
-    #[arg(long)]
-    output_file_toml: String,
+    #[arg(long, value_parser = path_parser)]
+    input_file: PathBuf,
+    #[arg(long, value_parser = path_parser)]
+    output_file_toml: PathBuf,
+}
+
+fn path_parser(arg_value: &str) -> Result<PathBuf, Infallible> {
+    // https://bazel.build/docs/user-manual#running-executables
+    Ok(Path::new(&std::env::var("BUILD_WORKING_DIRECTORY").unwrap_or_default()).join(arg_value))
 }
 
 #[derive(Serialize)]
@@ -54,7 +63,7 @@ pub struct FalsifyResult {
     status: Status,
 }
 
-fn get_input_bytes(input_file: &str) -> Result<Vec<u8>, std::io::Error> {
+fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
     fs::read(input_file)
 }
 
@@ -109,7 +118,8 @@ where
             status: Status::SetupError {
                 error_message: format!(
                     "Could not read input file: {}\nError: {}",
-                    args.input_file, err,
+                    args.input_file.display(),
+                    err,
                 ),
             },
         },
