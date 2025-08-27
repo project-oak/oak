@@ -118,9 +118,6 @@ pkg_tar(
     name = "oak_functions_standalone_tar",
     srcs = [
         ":oak_functions_standalone",
-        "//oak_functions/examples/echo",
-        "//oak_functions/examples/key_value_lookup",
-        "//oak_functions_standalone/testdata:fake_weather_data.binarypb",
     ],
     package_dir = "/usr/local/bin",
 )
