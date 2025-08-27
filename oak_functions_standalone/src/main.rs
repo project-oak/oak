@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 
 use clap::{Parser, ValueEnum};
 use oak_attestation_gcp::attestation::request_attestation_token;
@@ -28,8 +28,6 @@ use prost::Message;
 use sha2::Digest;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
-
-const OAK_FUNCTIONS_STANDALONE_PORT: u16 = 8080;
 
 #[global_allocator]
 static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -70,6 +68,10 @@ struct Args {
         hide_short_help = true,
     )]
     attestation_type: AttestationTypeParam,
+
+    // Address to listen on
+    #[arg(long, help = "The port to listen on", default_value = "0.0.0.0:8080")]
+    listen_address: SocketAddr,
 }
 
 fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -150,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let application_config = ApplicationConfig::default();
     let wasmtime_config = application_config.wasmtime_config.unwrap_or_default();
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), OAK_FUNCTIONS_STANDALONE_PORT);
+    let addr = args.listen_address;
 
     let oak_functions_session_args = OakFunctionsSessionArgs {
         wasm_initialization: InitializeRequest {
