@@ -14,9 +14,14 @@
     "swversion": [
         "250301"
     ],
-    "dbgstat": "enabled",
+    "dbgstat": "disabled-since-boot",
     "submods": {
         "confidential_space": {
+            "support_attributes": [
+                "LATEST",
+                "STABLE",
+                "USABLE"
+            ],
             "monitoring_enabled": {
                 "memory": false
             }

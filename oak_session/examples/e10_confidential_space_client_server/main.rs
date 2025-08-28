@@ -74,8 +74,8 @@ fn main() {
     // token. This hardcoded token is representative of a real token, signed with
     // a fake Confidential Space root certificate. You can use http://jwt.io to inspect
     // the contents and verify the signature.
-    const ENDORSEMENT: &str = include_str!("data/endorsement.jwt");
-    const CSPACE_ROOT: &str = include_str!("data/c_space_root.pem");
+    const ENDORSEMENT: &str = include_str!("data/token.jwt");
+    const CSPACE_ROOT: &str = include_str!("data/root_ca_cert.pem");
 
     // Create a server session configured with self-attestation.
     // The attestation is based on a binding key endorsed inside of a JWT.
@@ -109,7 +109,7 @@ fn main() {
         vec![Box::new(policy)],
         // Tuesday, 1 July 2025 01:30:00 GMT+01:00
         // This time covers the validity of the root certificate and JWT.
-        Arc::new(FixedClock::at_instant(Instant::from_unix_seconds(1751329800))),
+        Arc::new(FixedClock::at_instant(Instant::from_unix_seconds(1751391092))),
     );
 
     let client_config: SessionConfig =

@@ -227,7 +227,16 @@ fn print_token_report(
 ) -> std::fmt::Result {
     print_indented!(writer, indent, "🪙 Token verification:")?;
     let indent = indent + 1;
-    let AttestationTokenVerificationReport { validity, verification, issuer_report } = report;
+    let AttestationTokenVerificationReport {
+        production_image,
+        validity,
+        verification,
+        issuer_report,
+    } = report;
+    match production_image {
+        Err(err) => print_indented!(writer, indent, "❌ obtained from a debug image: {}", err)?,
+        Ok(()) => print_indented!(writer, indent, "✅ obtained from a production image")?,
+    }
     match validity {
         Err(err) => print_indented!(writer, indent, "❌ is invalid: {}", err)?,
         Ok(()) => print_indented!(writer, indent, "✅ is valid")?,
@@ -431,6 +440,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
@@ -463,6 +473,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "🔑 Public key:",
                 "✅ verified successfully",
                 "🪙 Token verification:",
+                "✅ obtained from a production image",
                 "✅ is valid",
                 "✅ verified successfully",
                 "📜 Certificate chain:",
@@ -486,6 +497,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
@@ -506,6 +518,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "🔑 Public key:",
                 "✅ verified successfully",
                 "🪙 Token verification:",
+                "✅ obtained from a production image",
                 "✅ is valid",
                 "✅ verified successfully",
                 "📜 Certificate chain:",
@@ -530,6 +543,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "public key",
             )),
             token_report: AttestationTokenVerificationReport {
+                production_image: Err(AttestationVerificationError::UnknownError("debug image")),
                 validity: Err(AttestationVerificationError::UnknownError("token validity error")),
                 verification: Err(AttestationVerificationError::UnknownError("verification error")),
                 issuer_report: Err(AttestationVerificationError::UnknownError("issuer error")),
@@ -557,6 +571,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "🔑 Public key:",
                 "❌ failed to verify: Missing field: public key",
                 "🪙 Token verification:",
+                "❌ obtained from a debug image: Unknown error: debug image",
                 "❌ is invalid: Unknown error: token validity error",
                 "❌ failed to verify: Unknown error: verification error",
                 "📜 Certificate chain:",
@@ -577,6 +592,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
         let report = VerificationReport::ConfidentialSpace(ConfidentialSpaceVerificationReport {
             public_key_verification: Ok(()),
             token_report: AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(generate_verified_token().unwrap()),
                 issuer_report: Ok(CertificateReport {
@@ -613,6 +629,7 @@ Nj98VHCkMOChdP0NoY0+ASi3S9WesDHql/SS3TeVKIW0W7VRIYDz51rU
                 "🔑 Public key:",
                 "✅ verified successfully",
                 "🪙 Token verification:",
+                "✅ obtained from a production image",
                 "✅ is valid",
                 "✅ verified successfully",
                 "📜 Certificate chain:",

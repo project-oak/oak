@@ -56,6 +56,7 @@ rust_test(
     name = "oak_attestation_gcp_tests",
     crate = ":oak_attestation_gcp",
     data = [
+        "//oak_attestation_gcp/testdata:debug_token",
         "//oak_attestation_gcp/testdata:developer_key_public_key",
         "//oak_attestation_gcp/testdata:endorsement.json",
         "//oak_attestation_gcp/testdata:endorsement_signature",

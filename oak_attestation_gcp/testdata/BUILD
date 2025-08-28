@@ -92,6 +92,15 @@ jwt_token(
     signing_key = ":signing_private_key",
 )
 
+# An token from a debug image.
+jwt_token(
+    name = "debug_token",
+    claims = ":debug_claims.json",
+    root_ca_cert = ":root_ca_cert",
+    signing_cert = ":signing_cert",
+    signing_key = ":signing_private_key",
+)
+
 # A key pair for signing endorsements.
 ecdsa_p256_key_pair(name = "developer_key")
 

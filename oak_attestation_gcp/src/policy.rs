@@ -316,6 +316,7 @@ mod tests {
                 ref session_binding_public_key,
                 public_key_verification: Ok(()),
                 token_report: AttestationTokenVerificationReport {
+                    production_image: Ok(()),
                     validity: Ok(()),
                     verification: Ok(_),
                     issuer_report: Ok(CertificateReport {
@@ -362,6 +363,7 @@ mod tests {
                 ref session_binding_public_key,
                 public_key_verification: Ok(()),
                 token_report: AttestationTokenVerificationReport {
+                    production_image: Ok(()),
                     validity: Ok(()),
                     verification: Ok(_),
                     issuer_report: Ok(CertificateReport {

@@ -28,8 +28,6 @@ use crate::jwt::{algorithm::CertificateAlgorithm, Claims, Header};
 pub enum AttestationVerificationError {
     #[error("Failed to verify JWT: {0}")]
     JWTError(#[from] jwt::Error),
-    #[error("Invalid format parsing field {0}: {1}")]
-    InvalidFormat(&'static str, &'static str),
     #[error("Failed to decode x5c: {0}")]
     X5CDecodeError(#[from] serde_json::Error),
     #[error("Failed to verify certificate: {0}")]
@@ -48,6 +46,12 @@ pub enum AttestationVerificationError {
     JWTValidityExpiration { exp: Instant, current_time: Instant },
     #[error("Empty X509 certificate chain")]
     EmptyX509Chain,
+    #[error("Invalid debug status: want {want}, got {got}")]
+    InvalidDebugStatus { want: &'static str, got: String },
+    #[error("Invalid software name: want {want}, got {got}")]
+    InvalidSoftwareName { want: &'static str, got: String },
+    #[error("{want} is a required software attribute, but only got {got:?}")]
+    MissingRequiredSupportAttribute { want: &'static str, got: Vec<String> },
     #[error("Unknown error: {0}")]
     UnknownError(&'static str),
 }
@@ -82,6 +86,9 @@ pub fn verify_attestation_token(
 
 /// Contains the results of (as complete as possible) verification of a JWT.
 pub struct AttestationTokenVerificationReport {
+    // Whether or not the token was produced using a production image.
+    // https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-images#types_of_images
+    pub production_image: Result<(), AttestationVerificationError>,
     /// Whether or not the token is valid (with respect to a timestamp).
     pub validity: Result<(), AttestationVerificationError>,
     /// The result of verifying the token (with respect to its signature
@@ -106,6 +113,7 @@ impl AttestationTokenVerificationReport {
     ) -> Result<Token<Header, Claims, Verified>, AttestationVerificationError> {
         match self {
             AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(verified_token),
                 issuer_report,
@@ -134,8 +142,14 @@ impl AttestationTokenVerificationReport {
                     }
                 }
             }
-            AttestationTokenVerificationReport { validity, verification, issuer_report: _ } => {
+            AttestationTokenVerificationReport {
+                production_image,
+                validity,
+                verification,
+                issuer_report: _,
+            } => {
                 // This matches any non-Ok cases.
+                production_image?;
                 validity?;
                 verification?;
                 Err(AttestationVerificationError::UnknownError(
@@ -172,8 +186,6 @@ pub struct CertificateReport {
 /// Returns a full report on the success/failure status of verifying the JWT
 /// attestation token from Confidential Space using the provided root
 /// certificate.
-/// TODO: b/436216021 - require that the JWT is running on a STABLE container
-/// image: https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#submods-claims
 pub fn report_attestation_token(
     token: Token<Header, Claims, Unverified>,
     root: &Certificate,
@@ -209,6 +221,7 @@ pub fn report_attestation_token(
     let issuer_report = issuer_report.unwrap_or(Err(AttestationVerificationError::EmptyX509Chain));
 
     AttestationTokenVerificationReport {
+        production_image: verify_production_image(token.claims()),
         validity: verify_token_validity(&token, current_time),
         verification: try {
             // See https://cloud.google.com/confidential-computing/confidential-vm/docs/token-claims#token_items:
@@ -217,6 +230,34 @@ pub fn report_attestation_token(
         },
         issuer_report,
     }
+}
+
+fn verify_production_image(claims: &Claims) -> Result<(), AttestationVerificationError> {
+    // See 'dbgstat' in
+    // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#top-level_claims.
+    if claims.debug_status != "disabled-since-boot" {
+        return Err(AttestationVerificationError::InvalidDebugStatus {
+            want: "disabled-since-boot",
+            got: claims.debug_status.clone(),
+        });
+    }
+    // See 'swname' in
+    // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#top-level_claims.
+    if claims.software_name != "CONFIDENTIAL_SPACE" {
+        return Err(AttestationVerificationError::InvalidSoftwareName {
+            want: "CONFIDENTIAL_SPACE",
+            got: claims.software_name.clone(),
+        });
+    }
+    // See 'support_attributes' in
+    // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#submods-claims.
+    if !claims.submods.confidential_space.support_attributes.contains(&"STABLE".to_string()) {
+        return Err(AttestationVerificationError::MissingRequiredSupportAttribute {
+            want: "STABLE",
+            got: claims.submods.confidential_space.support_attributes.clone(),
+        });
+    }
+    Ok(())
 }
 
 fn verify_certificate_validity(
@@ -330,6 +371,7 @@ mod tests {
         assert_matches!(
             report_attestation_token(unverified_token, &root, &current_time()),
             AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
@@ -379,6 +421,7 @@ mod tests {
         assert_matches!(
             report_attestation_token(unverified_token, &root, &current_time()),
             AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Err(AttestationVerificationError::JWTError(
                     jwt::Error::InvalidSignature
@@ -426,6 +469,7 @@ mod tests {
         assert_matches!(
             report_attestation_token(unverified_token, &root, &current_time()),
             AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Err(AttestationVerificationError::JWTValidityExpiration { .. }),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
@@ -481,10 +525,57 @@ mod tests {
         assert_matches!(
             report_attestation_token(unverified_token, &root, &expired_current_time),
             AttestationTokenVerificationReport {
+                production_image: Ok(()),
                 validity: Ok(()),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
                     validity: Err(AttestationVerificationError::X509ValidityNotAfter { .. }),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::Root
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_debug_token() -> Result<()> {
+        let token_str = read_testdata("debug_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        let result = verify_attestation_token(unverified_token, &root, &current_time());
+        let err = unsafe { result.unwrap_err_unchecked() };
+        assert_matches!(err, AttestationVerificationError::InvalidDebugStatus { .. });
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_debug_token() -> Result<()> {
+        let token_str = read_testdata("debug_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &current_time()),
+            AttestationTokenVerificationReport {
+                production_image: Err(AttestationVerificationError::InvalidDebugStatus { .. }),
+                validity: Ok(()),
+                verification: Ok(_),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
                     verification: Ok(()),
                     issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
                         validity: Ok(()),

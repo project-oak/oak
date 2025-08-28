@@ -54,10 +54,10 @@ impl JoseHeader for Header {
 /// https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims
 ///
 /// A number of fields have been omitted: eat_profile, secboot, oemid, hwmodel,
-/// swname, swversion, dbgstat
+/// swversion
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Claims {
-    /// Audience this token is intendedd for.
+    /// Audience this token is intended for.
     #[serde(rename = "aud")]
     pub audience: String,
     /// Issuer of the token.
@@ -76,10 +76,15 @@ pub struct Claims {
     /// Time from which the token is valid, in seconds since the Unix epoch.
     #[serde(rename = "nbf", with = "oak_time::instant::unix_timestamp")]
     pub not_before: Instant,
+    /// The debug status for the hardware.
+    #[serde(rename = "dbgstat")]
+    pub debug_status: String,
     /// Attestation nonce. We only expect one nonce currently.
     pub eat_nonce: String,
     /// Nested claims about sub-modules.
     pub submods: Submods,
+    #[serde(rename = "swname")]
+    pub software_name: String,
 }
 
 impl Claims {
@@ -97,8 +102,20 @@ impl Claims {
 /// Some fields have been omitted: confidential_space, gce
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Submods {
+    /// Claims about Confidential Space.
+    pub confidential_space: ConfidentialSpaceClaims,
     /// Claims about the container.
     pub container: ContainerClaims,
+}
+
+/// Claims about Confidential Space.
+///
+/// Some fields have been omitted: monitoring_enabled
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct ConfidentialSpaceClaims {
+    /// Confidential Space image support attributes:
+    /// https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-images#image-lifecycle
+    pub support_attributes: Vec<String>,
 }
 
 /// Claims about the container.

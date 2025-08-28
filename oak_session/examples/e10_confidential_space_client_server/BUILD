@@ -25,9 +25,9 @@ rust_binary(
     name = "main",
     srcs = ["main.rs"],
     compile_data = [
-        "//oak_session/examples/e10_confidential_space_client_server:data/binding_key.pem",
-        "//oak_session/examples/e10_confidential_space_client_server:data/c_space_root.pem",
-        "//oak_session/examples/e10_confidential_space_client_server:data/endorsement.jwt",
+        "//oak_session/examples/e10_confidential_space_client_server/data:binding_key.pem",
+        "//oak_session/examples/e10_confidential_space_client_server/data:root_ca_cert.pem",
+        "//oak_session/examples/e10_confidential_space_client_server/data:token.jwt",
     ],
     deps = [
         "//oak_attestation",
