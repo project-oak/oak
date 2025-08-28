@@ -1,0 +1,12 @@
+listen_address = "0.0.0.0:8080"
+backend_address = "127.0.0.1:8081"
+attestation_generators = []
+attestation_verifiers = []
+
+[backend_command]
+cmd = "/bin/mcp_server"
+args = [
+    "--listen-address=127.0.0.1:8081",
+    "--tool-url=http://localhost:8080",
+]
+restart_policy = "always"

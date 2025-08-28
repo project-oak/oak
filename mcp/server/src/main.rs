@@ -49,11 +49,14 @@ pub struct Args {
     listen_address: String,
     #[arg(short, long)]
     tool_url: String,
+    #[arg(short, long)]
+    attestation: bool,
 }
 
 #[derive(Clone)]
 pub struct WeatherService {
     tool_url: String,
+    attestation: bool,
     tool_router: ToolRouter<Self>,
 }
 
@@ -66,8 +69,8 @@ struct GetWeatherRequest {
 }
 
 impl WeatherService {
-    pub fn new(tool_url: &str) -> Self {
-        Self { tool_url: tool_url.to_string(), tool_router: Self::tool_router() }
+    pub fn new(tool_url: &str, attestation: bool) -> Self {
+        Self { tool_url: tool_url.to_string(), attestation, tool_router: Self::tool_router() }
     }
 
     pub async fn send_tool_request(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
@@ -77,7 +80,11 @@ impl WeatherService {
 
         let mut client = OakFunctionsClient::create(
             &self.tool_url,
-            AttestationType::PeerUnidirectional,
+            if self.attestation {
+                AttestationType::PeerUnidirectional
+            } else {
+                AttestationType::Unattested
+            },
             clock.clone(),
         )
         .await
@@ -171,7 +178,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     info!("Starting weather service");
-    let service = WeatherService::new(&args.tool_url);
+    let service = WeatherService::new(&args.tool_url, args.attestation);
     let http_service = StreamableHttpService::new(
         move || Ok(service.clone()),
         LocalSessionManager::default().into(),

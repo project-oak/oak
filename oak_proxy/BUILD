@@ -47,11 +47,7 @@ pkg_tar(
         "//oak_proxy/client",
         "//oak_proxy/server",
     ],
-    package_dir = "/usr/local/bin",
-    remap_paths = {
-        "oak_proxy/server/client": "oak_proxy_client",
-        "oak_proxy/server/server": "oak_proxy_server",
-    },
+    package_dir = "/bin",
 )
 
 oci_image(
@@ -66,5 +62,5 @@ oci_image(
 oci_load(
     name = "oak_proxy_load_image",
     image = ":oak_proxy_image",
-    repo_tags = ["oak_proxy:latest"],
+    repo_tags = ["oak-proxy:latest"],
 )

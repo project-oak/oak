@@ -1,3 +1,7 @@
+# Stage 1: Load oak-proxy.
+FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:9def78165d90bb2bb5a7d5d05a4498611595a76c218255eaed6487372789fd15 as oak_proxy
+
+# Stage 2: Main image.
 FROM ollama/ollama:0.11.6
 
 # Reduce logging verbosity.
@@ -37,9 +41,10 @@ ARG MODEL_SHA256SUM=b50d6c999e592ae4f79acae23b4feaefbdfceaa7cd366df2610e3072c052
 # Ollama repository.
 RUN bash -o pipefail -c 'echo "${MODEL_SHA256SUM} ${MODELS_DIR}/manifests/registry.ollama.ai/library/gemma/2b" | sha256sum --check'
 
-# Copy the Oak Proxy binary and the config file from the build context.
-COPY bin/oak_proxy_server /usr/local/bin/oak_proxy_server
-COPY oak_proxy_server.toml /etc/oak_proxy_server.toml
+# Copy the Oak Proxy binary from the first stage and the config file from the
+# build context.
+COPY --from=oak_proxy /bin/server /bin/oak_proxy_server
+COPY oak_proxy_server.toml /etc/proxy.toml
 
 # Enable logging for Oak Proxy.
 # This doesn't log the underlying secure communication.
@@ -55,6 +60,6 @@ LABEL "tee.launch_policy.log_redirect"="always"
 # Run Oak Proxy that terminates the Oak Session and redirects HTTP requests to
 # Ollama.
 ENTRYPOINT [ \
-    "/usr/local/bin/oak_proxy_server", \
-    "--config=/etc/oak_proxy_server.toml" \
+    "/bin/oak_proxy_server", \
+    "--config=/etc/proxy.toml" \
 ]
