@@ -33,10 +33,10 @@ rust_library(
         "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:bytes",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand",
-        "@oak_crates_index//:tempfile",
     ],
 )
 
@@ -45,6 +45,7 @@ rust_test(
     crate = ":oak_private_memory_database",
     deps = [
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:tempfile",
     ],
 )
 

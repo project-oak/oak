@@ -12,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use std::path::Path;
+
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
@@ -24,7 +26,6 @@ use sealed_memory_rust_proto::{
     },
     prelude::v1::*,
 };
-use tempfile::tempdir;
 
 use crate::MemoryId;
 
@@ -62,17 +63,6 @@ const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
-
-pub trait DbMigration {
-    type ImportFrom;
-    type ExportTo;
-
-    /// Import from `source` to `path`.
-    fn import(source: &Self::ImportFrom, path: Option<&str>) -> anyhow::Result<Self>
-    where
-        Self: Sized;
-    fn export(&self) -> Self::ExportTo;
-}
 
 /// The generated metadata for a memory.
 /// This contains the information needed to write the metadata to the icing
@@ -207,24 +197,40 @@ impl IcingMetaDatabase {
 
     /// Create a new icing database in `base_dir`. If there is already a icing
     /// db in `base_dir`, the old one will be deleted.
-    pub fn new(base_dir: &str) -> anyhow::Result<Self> {
+    pub fn new(base_dir: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let base_dir_str = base_dir.as_ref().to_str().context("failed to convert path to str")?;
+        let icing_search_engine = Self::initialize_icing_database(base_dir_str)?;
         let schema = Self::create_schema();
+        let result_proto = icing_search_engine.set_schema(&schema);
+        ensure!(
+            result_proto.status.context("no status")?.code
+                == Some(icing::status_proto::Code::Ok.into())
+        );
+        Ok(Self { icing_search_engine, base_dir: base_dir_str.to_string(), newly_created: true })
+    }
 
-        let options_bytes = icing::get_default_icing_options(base_dir).encode_to_vec();
+    /// Create a new icing database in `base_dir`. Using the provided import
+    /// data.
+    pub fn import(base_dir: impl AsRef<Path>, data: impl bytes::Buf) -> anyhow::Result<Self> {
+        let base_dir_str = base_dir.as_ref().to_str().context("failed to convert path to str")?;
+        let ground_truth = icing::IcingGroundTruthFiles::decode(data)?;
+        ground_truth.migrate(base_dir_str)?;
+
+        let icing_search_engine = Self::initialize_icing_database(base_dir_str)?;
+        Ok(Self { icing_search_engine, base_dir: base_dir_str.to_string(), newly_created: false })
+    }
+
+    fn initialize_icing_database(
+        base_dir_str: &str,
+    ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
+        let options_bytes = icing::get_default_icing_options(base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
         let result_proto = icing_search_engine.initialize();
         ensure!(
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-
-        let result_proto = icing_search_engine.set_schema(&schema);
-        ensure!(
-            result_proto.status.context("no status")?.code
-                == Some(icing::status_proto::Code::Ok.into())
-        );
-
-        Ok(Self { icing_search_engine, base_dir: base_dir.to_string(), newly_created: true })
+        Ok(icing_search_engine)
     }
 
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
@@ -602,12 +608,8 @@ impl IcingMetaDatabase {
     pub fn newly_created(&self) -> bool {
         self.newly_created
     }
-}
 
-impl DbMigration for IcingMetaDatabase {
-    type ImportFrom = Vec<u8>;
-    type ExportTo = anyhow::Result<icing::IcingGroundTruthFiles>;
-    fn export(&self) -> Self::ExportTo {
+    pub fn export(&self) -> anyhow::Result<icing::IcingGroundTruthFiles> {
         let result_proto =
             self.icing_search_engine.persist_to_disk(icing::persist_type::Code::Full.into());
         let result_proto = icing::PersistToDiskResultProto::decode(result_proto.as_slice())?;
@@ -616,34 +618,6 @@ impl DbMigration for IcingMetaDatabase {
                 == Some(icing::status_proto::Code::Ok.into())
         );
         icing::IcingGroundTruthFiles::new(&self.base_dir)
-    }
-
-    /// Rebuild the icing database in `target_base_dir` given the content of the
-    /// ground truth files in `buffer`.
-    fn import(buffer: &Vec<u8>, target_base_dir: Option<&str>) -> anyhow::Result<Self> {
-        let base_dir_str = match target_base_dir {
-            Some(dir) => dir.to_string(),
-            _ => {
-                let temp_dir = tempdir()?;
-                temp_dir.path().to_str().context("invalid temp path")?.to_string()
-            }
-        };
-        debug!("import to {:?}", base_dir_str);
-
-        let ground_truth = icing::IcingGroundTruthFiles::decode(buffer.as_slice())?;
-
-        ground_truth.migrate(&base_dir_str)?;
-
-        let options_bytes = icing::get_default_icing_options(&base_dir_str).encode_to_vec();
-        let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
-        if result_proto.status.clone().context("no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Failed to initialize Icing engine after import: {:?}", result_proto.status);
-        }
-
-        Ok(Self { icing_search_engine, base_dir: base_dir_str, newly_created: false })
     }
 }
 
@@ -708,8 +682,7 @@ mod tests {
     #[gtest]
     fn basic_icing_search_test() -> anyhow::Result<()> {
         let temp_dir = tempdir()?;
-        let mut icing_database =
-            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
 
         let memory = Memory {
             id: "Thisisanid".to_string(),
@@ -734,8 +707,7 @@ mod tests {
     #[gtest]
     fn icing_import_export_test() -> anyhow::Result<()> {
         let temp_dir = tempdir()?;
-        let base_dir = temp_dir.path().to_str().context("invalid temp path")?;
-        let mut icing_database = IcingMetaDatabase::new(base_dir)?;
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
 
         let memory_id1 = "memory_id_export_1".to_string();
         let blob_id1 = 654321.to_string();
@@ -755,8 +727,9 @@ mod tests {
 
         // Import into a new directory (or the same one after cleaning)
         let import_temp_dir = tempdir()?;
-        let import_base_dir = import_temp_dir.path().to_str().context("invalid temp path")?;
-        let imported_database = IcingMetaDatabase::import(&exported_data, Some(import_base_dir))?;
+        let imported_database =
+            IcingMetaDatabase::import(import_temp_dir, exported_data.as_slice())
+                .expect("failed to import");
 
         // Verify data exists in the imported database
         expect_that!(
@@ -772,8 +745,7 @@ mod tests {
     #[gtest]
     fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
         let temp_dir = tempdir()?;
-        let mut icing_database =
-            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
 
         let memory_id1 = "memory_id_1".to_string();
         let blob_id1 = 54321.to_string();

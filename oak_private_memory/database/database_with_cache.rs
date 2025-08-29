@@ -19,7 +19,7 @@ use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
 use crate::{
-    icing::{DbMigration, IcingMetaDatabase, PageToken},
+    icing::{IcingMetaDatabase, PageToken},
     memory_cache::MemoryCache,
     MemoryId,
 };

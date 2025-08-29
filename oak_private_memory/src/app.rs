@@ -24,12 +24,13 @@ use log::{debug, info};
 use metrics::{get_global_metrics, RequestMetricName};
 use oak_private_memory_database::{
     encryption::{decrypt_database, encrypt_database},
-    DatabaseWithCache, DbMigration, IcingMetaDatabase, MemoryId, PageToken,
+    DatabaseWithCache, IcingMetaDatabase, MemoryId, PageToken,
 };
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
+use tempfile::tempdir;
 use tokio::{
     sync::{mpsc, Mutex, MutexGuard, RwLock},
     time::Instant,
@@ -164,7 +165,8 @@ async fn get_or_create_db(
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
             info!("Loaded database successfully!!");
-            let db = IcingMetaDatabase::import(&icing_db.encode_to_vec(), None)?;
+            let temp_dir = tempdir()?;
+            let db = IcingMetaDatabase::import(temp_dir, icing_db.encode_to_vec().as_slice())?;
             let elapsed = now.elapsed();
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
             return Ok(db);
