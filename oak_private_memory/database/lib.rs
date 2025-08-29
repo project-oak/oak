@@ -16,7 +16,7 @@
 
 mod database_with_cache;
 pub mod encryption;
-mod icing;
+pub mod icing;
 mod memory_cache;
 
 pub use crate::{

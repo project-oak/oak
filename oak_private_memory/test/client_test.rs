@@ -25,7 +25,10 @@ use private_memory_server_lib::{
     app::{app_service, run_persistence_service},
     app_config::ApplicationConfig,
 };
-use sealed_memory_rust_proto::prelude::v1::*;
+use sealed_memory_rust_proto::{
+    oak::private_memory::{text_query, MatchType, TextQuery},
+    prelude::v1::*,
+};
 use tokio::net::TcpListener;
 
 static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
@@ -163,5 +166,80 @@ async fn test_client_pagination() {
         }
         assert!(next_page_token.is_empty());
         assert_eq!(expected_ids, actual_ids_search);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_client_text_query() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_text_query_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let memory1 = Memory {
+            id: "memory1".to_string(),
+            created_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
+            ..Default::default()
+        };
+        client.add_memory(memory1).await.unwrap();
+
+        let memory2 = Memory {
+            id: "memory2".to_string(),
+            created_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
+            ..Default::default()
+        };
+        client.add_memory(memory2).await.unwrap();
+
+        let memory3 = Memory {
+            id: "memory3".to_string(),
+            created_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
+            ..Default::default()
+        };
+        client.add_memory(memory3).await.unwrap();
+
+        // Test timestamp filtering
+        let gte_query = TextQuery {
+            field: MemoryField::CreatedTimestamp as i32,
+            match_type: MatchType::Gte as i32,
+            value: Some(text_query::Value::TimestampVal(prost_types::Timestamp {
+                seconds: 200,
+                nanos: 0,
+            })),
+        };
+        let query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                    gte_query,
+                ),
+            ),
+        };
+        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        assert_eq!(response.results.len(), 2);
+        let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
+        assert!(ids.contains(&"memory2".to_string()));
+        assert!(ids.contains(&"memory3".to_string()));
+
+        // Test ID filtering
+        let eq_query = TextQuery {
+            field: MemoryField::Id as i32,
+            match_type: MatchType::Equal as i32,
+            value: Some(text_query::Value::StringVal("memory1".to_string())),
+        };
+        let query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                    eq_query,
+                ),
+            ),
+        };
+        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        assert_eq!(response.results.len(), 1);
+        assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
     }
 }

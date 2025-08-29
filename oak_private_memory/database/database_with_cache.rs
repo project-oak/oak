@@ -124,7 +124,16 @@ impl DatabaseWithCache {
         &mut self,
         request: SearchMemoryRequest,
     ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
-        let (blob_ids, scores, next_page_token) = self.meta_db().embedding_search(&request)?;
+        let page_token = PageToken::try_from(request.page_token)
+            .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
+        let (blob_ids, scores, next_page_token) = match request.query.unwrap().clause.unwrap() {
+            search_memory_query::Clause::EmbeddingQuery(query) => {
+                self.meta_db().embedding_search(&query, request.page_size, page_token)?
+            }
+            search_memory_query::Clause::TextQuery(query) => {
+                self.meta_db().text_search(&query, request.page_size, page_token)?
+            }
+        };
         let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 

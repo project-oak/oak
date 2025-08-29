@@ -107,6 +107,7 @@ mod ffi {
             match_type: i32,
             tokenizer: i32,
         ) -> &'a PropertyConfigBuilder;
+        fn set_data_type_int64<'a>(&'a self, value: i32) -> &'a PropertyConfigBuilder;
 
         fn set_data_type_document<'a>(
             &'a self,

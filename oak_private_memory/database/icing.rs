@@ -17,7 +17,10 @@ use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
 use log::debug;
 use prost::Message;
-use sealed_memory_rust_proto::prelude::v1::*;
+use sealed_memory_rust_proto::{
+    oak::private_memory::{text_query, MatchType, TextQuery},
+    prelude::v1::*,
+};
 use tempfile::tempdir;
 
 use crate::MemoryId;
@@ -181,14 +184,14 @@ impl IcingMetaDatabase {
             ).add_property(
                 icing::create_property_config_builder()
                     .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
             ).add_property(
                 icing::create_property_config_builder()
                     .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
@@ -360,22 +363,12 @@ impl IcingMetaDatabase {
     ///    return the first `limit` ones with highest scores.
     pub fn embedding_search(
         &self,
-        request: &SearchMemoryRequest,
+        embedding_query: &EmbeddingQuery,
+        page_size: i32,
+        page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let search_query_container =
-            request.query.as_ref().context("SearchMemoryRequest must contain a 'query' field")?;
-
-        let embedding_query_details = match search_query_container.clause.as_ref() {
-            Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
-                    eq,
-                ),
-            ) => eq,
-            _ => bail!("SearchMemoryQuery must contain an 'EmbeddingQuery' clause"),
-        };
-
-        let query_embeddings: &[Embedding] = &embedding_query_details.embedding;
-        let score_op: Option<ScoreRange> = embedding_query_details.score_range;
+        let query_embeddings: &[Embedding] = &embedding_query.embedding;
+        let score_op: Option<ScoreRange> = embedding_query.score_range;
         let mut scoring_spec = icing::get_default_scoring_spec();
         scoring_spec.rank_by = Some(
             icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
@@ -412,14 +405,13 @@ impl IcingMetaDatabase {
             ..Default::default()
         };
         const LIMIT: i32 = 10;
-        let limit = if request.page_size > 0 { request.page_size } else { LIMIT };
+        let limit = if page_size > 0 { page_size } else { LIMIT };
 
         let mut result_spec =
             icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
 
         // We only need the `BlobId`.
         result_spec.type_property_masks.push(Self::create_blob_id_projection());
-        let page_token = request.page_token.clone().try_into()?;
         let search_result = match page_token {
             PageToken::Start => {
                 self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec)
@@ -439,6 +431,86 @@ impl IcingMetaDatabase {
             .iter()
             .map(|x| x.score.map(|s| s as f32).context("no score"))
             .collect::<anyhow::Result<Vec<_>>>()?;
+        let next_page_token =
+            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+        ensure!(blob_ids.len() == scores.len());
+        if blob_ids.is_empty() {
+            return Ok((blob_ids, scores, PageToken::Start));
+        }
+        Ok((blob_ids, scores, next_page_token))
+    }
+
+    pub fn text_search(
+        &self,
+        text_query: &TextQuery,
+        page_size: i32,
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+        let value =
+            if let Some(text_query::Value::TimestampVal(timestamp)) = text_query.value.as_ref() {
+                timestamp_to_i64(timestamp).to_string()
+            } else if let Some(text_query::Value::StringVal(text)) = text_query.value.as_ref() {
+                text.to_string()
+            } else {
+                bail!("unsupported value type for text search");
+            };
+
+        let field_name = match text_query.field() {
+            MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
+            MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
+            MemoryField::Id => MEMORY_ID_NAME,
+            MemoryField::Tags => TAG_NAME,
+            _ => bail!("unsupported field for text search"),
+        };
+
+        let query = match text_query.match_type() {
+            MatchType::Equal => {
+                if field_name == CREATED_TIMESTAMP_NAME || field_name == EVENT_TIMESTAMP_NAME {
+                    format!("{field_name} == {value}")
+                } else {
+                    format!("{field_name}:{value}")
+                }
+            }
+            MatchType::Gte => format!("{field_name} >= {value}"),
+            MatchType::Lte => format!("{field_name} <= {value}"),
+            MatchType::Gt => format!("{field_name} > {value}"),
+            MatchType::Lt => format!("{field_name} < {value}"),
+            _ => bail!("unsupported match type for text search"),
+        };
+
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query),
+            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            ..Default::default()
+        };
+
+        const LIMIT: i32 = 10;
+        let limit = if page_size > 0 { page_size } else { LIMIT };
+
+        let mut result_spec =
+            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
+        result_spec.type_property_masks.push(Self::create_blob_id_projection());
+
+        let search_result = match page_token {
+            PageToken::Start => self.icing_search_engine.search(
+                &search_spec,
+                &icing::get_default_scoring_spec(),
+                &result_spec,
+            ),
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Invalid => bail!("invalid page token"),
+        };
+
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed for {:?}", search_result.status);
+        }
+
+        let scores: Vec<f32> =
+            search_result.results.iter().map(|x| x.score.unwrap_or(0.0) as f32).collect();
         let next_page_token =
             search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
@@ -698,27 +770,23 @@ mod tests {
         };
         icing_database.add_memory(&memory2, blob_id2.clone())?;
 
-        let mut request = SearchMemoryRequest {
-            page_size: 10,
-            query: Some(sealed_memory_rust_proto::oak::private_memory::SearchMemoryQuery {
-                clause: Some(sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
-                    sealed_memory_rust_proto::oak::private_memory::EmbeddingQuery {
-                        embedding: vec![Embedding { identifier: "test_model".to_string(), values: vec![0.9, 0.1, 0.0] }],
-                        ..Default::default()
-                    },
-                )),
-            }),
+        let embedding_query = sealed_memory_rust_proto::oak::private_memory::EmbeddingQuery {
+            embedding: vec![Embedding {
+                identifier: "test_model".to_string(),
+                values: vec![0.9, 0.1, 0.0],
+            }],
             ..Default::default()
         };
         // Query embedding close to embedding1
-        let (blob_ids, scores, _) = icing_database.embedding_search(&request)?;
+        let (blob_ids, scores, _) =
+            icing_database.embedding_search(&embedding_query, 10, PageToken::Start)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
         assert_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
-        request.page_size = 1;
-        let (blob_ids, scores, _) = icing_database.embedding_search(&request)?;
+        let (blob_ids, scores, _) =
+            icing_database.embedding_search(&embedding_query, 1, PageToken::Start)?;
         // Expect memory1 (blob_id1) to be the top result due to higher dot product
         assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient

@@ -60,6 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.SealedMemoryWrapperResponse",
         "oak.private_memory.DeleteMemoryRequest",
         "oak.private_memory.DeleteMemoryResponse",
+        "oak.private_memory.TextQuery",
     ];
 
     let oneof_field_names = [
@@ -67,6 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.SealedMemoryRequest.request",
         "oak.private_memory.SearchMemoryQuery.clause",
         "oak.private_memory.MemoryValue.value",
+        "oak.private_memory.TextQuery.value",
     ];
     for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
         config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");
@@ -118,6 +120,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.EmbeddingQuery.metric_type",
         "#[serde(with=\"crate::embedding_query_metric_type_converter\")]",
     );
+    config.field_attribute(
+        "oak.private_memory.TextQuery.match_type",
+        "#[serde(with=\"crate::text_query_match_type_converter\")]",
+    );
 
     // Timestamp converters
     config.field_attribute(
@@ -127,6 +133,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.field_attribute(
         "oak.private_memory.Memory.event_timestmap",
         "#[serde(with=\"crate::timestamp_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.TextQuery.value.timestamp_val",
+        "#[serde(with=\"crate::non_optional_timestamp_converter\")]",
     );
 
     config.enable_type_names();

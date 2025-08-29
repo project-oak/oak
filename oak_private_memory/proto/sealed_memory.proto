@@ -21,8 +21,8 @@ syntax = "proto3";
 
 package oak.private_memory;
 
-import "proto/session/session.proto";
 import "google/protobuf/timestamp.proto";
+import "proto/session/session.proto";
 
 message Embedding {
   // Identifier for the model that generated this embedding.
@@ -182,9 +182,31 @@ message EmbeddingQuery {
   ScoreRange score_range = 3;
 }
 
+enum MatchType {
+  UNSPECIFIED = 0;
+  EQUAL = 1;
+  GTE = 2;
+  LTE = 3;
+  LT = 4;
+  GT = 5;
+}
+
+// Represents a single clause in a query.
+message TextQuery {
+  MatchType match_type = 1;
+  // The field to search within (e.g., "tags", "id").
+  MemoryField field = 2;
+  // The value to search for in the specified 'field'.
+  oneof value {
+    string string_val = 3;
+    google.protobuf.Timestamp timestamp_val = 4;
+  }
+}
+
 message SearchMemoryQuery {
   oneof clause {
     EmbeddingQuery embedding_query = 1;
+    TextQuery text_query = 2;
   }
 }
 

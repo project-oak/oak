@@ -257,6 +257,13 @@ class PropertyConfigBuilder {
     return *this;
   }
 
+  const PropertyConfigBuilder& set_data_type_int64(int32_t value) const {
+    inner_->SetDataTypeInt64(
+        static_cast<icing::lib::IntegerIndexingConfig_NumericMatchType_Code>(
+            value));
+    return *this;
+  }
+
   const PropertyConfigBuilder& set_data_type_vector(int data_type) const {
     inner_->SetDataTypeVector(
         (icing::lib::EmbeddingIndexingConfig::EmbeddingIndexingType::Code)
