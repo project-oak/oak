@@ -18,12 +18,16 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
-    cosign::CosignReferenceValues, policy::ConfidentialSpacePolicy,
+    policy_generator::confidential_space_policy_from_reference_values,
     CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::EventLogVerifier;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
-use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
+use oak_proto_rust::oak::{
+    attestation::v1::{ConfidentialSpaceReferenceValues, CosignReferenceValues},
+    session::v1::{SessionRequest, SessionResponse},
+};
+use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
 use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -37,7 +41,6 @@ use oak_time::Clock;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use sigstore::rekor::REKOR_PUBLIC_KEY_PEM;
 use tonic::transport::{Channel, Uri};
-use x509_cert::{der::DecodePem, Certificate};
 
 const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
 
@@ -69,13 +72,19 @@ impl EchoClient {
 
         // We don't have a noise client impl yet, so we need to manage the session
         // manually.
-        let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
-            .expect("Failed to parse root certificate");
         let rekor_public_key = VerifyingKey::from_public_key_pem(REKOR_PUBLIC_KEY_PEM)
             .map_err(|e| anyhow::anyhow!("failed to parse rekor public key: {}", e))?;
 
-        let reference_values = CosignReferenceValues::full(developer_public_key, rekor_public_key);
-        let policy = ConfidentialSpacePolicy::new(root, reference_values);
+        let reference_values = ConfidentialSpaceReferenceValues {
+            root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
+            cosign_reference_values: Some(CosignReferenceValues {
+                developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
+                    &developer_public_key,
+                )),
+                rekor_public_key: Some(p256_ecdsa_verifying_key_to_proto(&rekor_public_key)),
+            }),
+        };
+        let policy = confidential_space_policy_from_reference_values(&reference_values)?;
         let attestation_verifier = EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 
         let client_config: SessionConfig =

@@ -18,13 +18,19 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use futures::channel::mpsc::{self, Sender};
-use oak_attestation_gcp::{policy::ConfidentialSpacePolicy, CONFIDENTIAL_SPACE_ROOT_CERT_PEM};
+use oak_attestation_gcp::{
+    policy_generator::confidential_space_policy_from_reference_values,
+    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+};
 use oak_attestation_verification::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{
-        attestation::v1::{collected_attestation::RequestMetadata, CollectedAttestation},
+        attestation::v1::{
+            collected_attestation::RequestMetadata, CollectedAttestation,
+            ConfidentialSpaceReferenceValues,
+        },
         functions::standalone::{OakSessionRequest, OakSessionResponse},
     },
 };
@@ -38,7 +44,6 @@ use oak_session::{
 };
 use oak_time::Clock;
 use tonic::transport::{Channel, Uri};
-use x509_cert::{der::DecodePem, Certificate};
 
 /// A client for streaming requests to the Oak Functions Standalone server over
 /// an E2EE Noise Protocol session.
@@ -78,10 +83,11 @@ impl OakFunctionsClient {
 
             AttestationType::PeerUnidirectional => {
                 println!("creating peer unidirectional client session");
-                let root = Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM)
-                    .map_err(|err| anyhow!("failed to fetch root certificate: {:?}", err))?;
-
-                let policy = ConfidentialSpacePolicy::new_unendorsed(root);
+                let reference_values = ConfidentialSpaceReferenceValues {
+                    root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
+                    cosign_reference_values: None,
+                };
+                let policy = confidential_space_policy_from_reference_values(&reference_values)?;
                 let attestation_verifier =
                     EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 

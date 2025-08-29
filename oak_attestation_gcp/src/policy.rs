@@ -114,7 +114,7 @@ pub struct ConfidentialSpacePolicy {
 impl ConfidentialSpacePolicy {
     /// Creates a new policy with reference values for the platform and the
     /// workload.
-    pub fn new(
+    pub(crate) fn new(
         root_certificate: Certificate,
         workload_reference_values: CosignReferenceValues,
     ) -> Self {
@@ -123,7 +123,7 @@ impl ConfidentialSpacePolicy {
 
     /// Creates a new policy with reference values only for the platform
     /// certificate.
-    pub fn new_unendorsed(root_certificate: Certificate) -> Self {
+    pub(crate) fn new_unendorsed(root_certificate: Certificate) -> Self {
         Self { root_certificate, workload_reference_values: None }
     }
 
@@ -210,12 +210,14 @@ mod tests {
 
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, Endorsement, Event, Signature, SignedEndorsement,
+        endorsement::Format, CosignReferenceValues as CosignReferenceValuesProto, Endorsement,
+        Event, Signature, SignedEndorsement,
     };
+    use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
     use oak_time::make_instant;
-    use p256::ecdsa::VerifyingKey;
+    use p256::pkcs8::DecodePublicKey;
     use prost::Message;
-    use x509_cert::{der::DecodePem, spki::DecodePublicKey};
+    use x509_cert::der::DecodePem;
 
     use super::*;
     use crate::{
@@ -238,9 +240,6 @@ mod tests {
         // root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
-        let developer_public_key =
-            VerifyingKey::from_public_key_pem(&read_testdata_string!("developer_key.pub.pem"))
-                .unwrap();
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
         let workload_endorsement = Some(SignedEndorsement {
@@ -261,12 +260,21 @@ mod tests {
             workload_endorsement,
         };
 
-        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
+        let developer_public_key =
+            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
 
-        let policy = ConfidentialSpacePolicy::new(
-            root_cert,
-            CosignReferenceValues::partial(developer_public_key),
-        );
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let cosign_reference_values_proto = CosignReferenceValuesProto {
+            developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(&developer_public_key)),
+            ..Default::default()
+        };
+        let cosign_reference_values =
+            CosignReferenceValues::from_proto(&cosign_reference_values_proto).unwrap();
+
+        let policy = ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values);
+
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
@@ -278,10 +286,6 @@ mod tests {
         // root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
-        let developer_public_key =
-            VerifyingKey::from_public_key_pem(&read_testdata_string!("developer_key.pub.pem"))
-                .unwrap();
-
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
         let workload_endorsement = Some(SignedEndorsement {
@@ -302,12 +306,21 @@ mod tests {
             workload_endorsement,
         };
 
-        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
+        let developer_public_key =
+            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
 
-        let policy = ConfidentialSpacePolicy::new(
-            root_cert,
-            CosignReferenceValues::partial(developer_public_key),
-        );
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let cosign_reference_values_proto = CosignReferenceValuesProto {
+            developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(&developer_public_key)),
+            ..Default::default()
+        };
+        let cosign_reference_values =
+            CosignReferenceValues::from_proto(&cosign_reference_values_proto).unwrap();
+
+        let policy = ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values);
+
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert_matches!(
@@ -330,11 +343,11 @@ mod tests {
                     }),
                 },
                 workload_endorsement_verification: Some(Ok(CosignVerificationReport {
-                statement_verification: Ok(StatementReport{
-                    statement_validation: Ok(()),
-                    rekor_verification: None
-                })
-            })),
+                    statement_verification: Ok(StatementReport {
+                        statement_validation: Ok(()),
+                        rekor_verification: None
+                    })
+                })),
             }) if *session_binding_public_key == BINDING_KEY_BYTES
         );
     }
@@ -352,9 +365,12 @@ mod tests {
             ..Default::default()
         };
 
-        let root_cert = Certificate::from_pem(read_testdata_string!("root_ca_cert.pem")).unwrap();
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
 
-        let policy = ConfidentialSpacePolicy::new_unendorsed(root_cert);
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+
+        let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
+
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
 
         assert_matches!(

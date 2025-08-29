@@ -32,6 +32,7 @@ rust_library(
         "//oak_attestation_verification",
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
+        "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_time",
         "//trex/endorsement",
         "//trex/sigstore",

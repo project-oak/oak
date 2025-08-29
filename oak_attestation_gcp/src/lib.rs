@@ -24,6 +24,7 @@ pub mod attestation;
 pub mod cosign;
 pub mod jwt;
 pub mod policy;
+pub mod policy_generator;
 
 pub const CONFIDENTIAL_SPACE_ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
 

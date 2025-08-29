@@ -18,9 +18,10 @@ use std::fmt::Write;
 
 use anyhow::anyhow;
 use oak_attestation_gcp::{
-    cosign::{CosignReferenceValues, CosignVerificationReport, StatementReport},
+    cosign::{CosignVerificationReport, StatementReport},
     jwt::verification::{AttestationTokenVerificationReport, CertificateReport, IssuerReport},
-    policy::{ConfidentialSpacePolicy, ConfidentialSpaceVerificationReport},
+    policy::ConfidentialSpaceVerificationReport,
+    policy_generator::confidential_space_policy_from_reference_values,
 };
 use oak_attestation_verification::{
     SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationReport,
@@ -37,7 +38,6 @@ use oak_proto_rust::oak::{
 use oak_session::session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder};
 use oak_time::Instant;
 use p256::ecdsa::VerifyingKey;
-use x509_cert::{der::DecodePem, Certificate};
 
 use crate::print::print_indented;
 
@@ -71,15 +71,7 @@ impl VerificationReport {
         event: &[u8],
         endorsement: &Variant,
     ) -> anyhow::Result<VerificationReport> {
-        let policy = {
-            let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
-                .map_err(anyhow::Error::msg)?;
-            let cosign_reference_values = CosignReferenceValues::from_proto(
-                &reference_values.cosign_reference_values.clone().unwrap_or_default(),
-            )
-            .map_err(anyhow::Error::msg)?;
-            ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values)
-        };
+        let policy = confidential_space_policy_from_reference_values(reference_values)?;
         let report =
             policy.report(attestation_timestamp, event, endorsement).map_err(anyhow::Error::msg)?;
         Ok(VerificationReport::ConfidentialSpace(report))

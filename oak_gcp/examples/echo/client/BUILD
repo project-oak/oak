@@ -35,6 +35,7 @@ rust_library(
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
+        "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_session",
         "//oak_time",
         "//trex/sigstore",

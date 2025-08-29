@@ -18,11 +18,14 @@ use std::sync::Arc;
 
 use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
 use oak_attestation_gcp::{
-    attestation::request_attestation_token, policy::ConfidentialSpacePolicy,
+    attestation::request_attestation_token,
+    policy_generator::confidential_space_policy_from_reference_values,
     CONFIDENTIAL_SPACE_ATTESTATION_ID,
 };
 use oak_attestation_verification::EventLogVerifier;
-use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
+use oak_proto_rust::oak::attestation::v1::{
+    ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
+};
 use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,
     session_binding::SignatureBinder,
@@ -30,7 +33,6 @@ use oak_session::{
 use p256::ecdsa::{signature::rand_core::OsRng, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use x509_cert::{der::DecodePem, Certificate};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfidentialSpaceGeneratorParams {}
@@ -78,8 +80,12 @@ impl ConfidentialSpaceVerifierParams {
     pub fn apply(&self, builder: SessionConfigBuilder) -> anyhow::Result<SessionConfigBuilder> {
         let root_pem = std::fs::read_to_string(&self.root_certificate_pem_path)
             .expect("could not read root certificate");
-        let root = Certificate::from_pem(root_pem).expect("Failed to parse root certificate");
-        let policy = ConfidentialSpacePolicy::new_unendorsed(root);
+
+        let reference_values = ConfidentialSpaceReferenceValues {
+            root_certificate_pem: root_pem,
+            cosign_reference_values: None,
+        };
+        let policy = confidential_space_policy_from_reference_values(&reference_values)?;
         let attestation_verifier = EventLogVerifier::new(
             vec![Box::new(policy)],
             // Use the current time for verifying endorsements.

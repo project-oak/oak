@@ -34,14 +34,11 @@ mod intro_import {
     // These are used by the server,
     pub use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
     // This is the endorsemment format for a public key in a JWT tokens.
-    pub use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
+    pub use oak_proto_rust::oak::attestation::v1::{ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues};
 
     // The client will use these to verify the server's evidence.
     pub use oak_attestation_verification::EventLogVerifier;
-    pub use oak_attestation_gcp::policy::ConfidentialSpacePolicy;
-
-    // Confidential Space requires using X509 Certificates for verification.
-    pub use x509_cert::{Certificate, der::DecodePem};
+    pub use oak_attestation_gcp::policy_generator::confidential_space_policy_from_reference_values;
 
     // This should be a unique identifier that client and server agree on.
     pub const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
@@ -100,11 +97,15 @@ fn main() {
     // Create a client session configured with peer attestation.
     // The setup implicitly adds a binding verifier that relies on the key,
     // which is extracted from the evidence.
-    let root = Certificate::from_pem(CSPACE_ROOT).expect("Failed to parse root certificate");
-
+    let reference_values = ConfidentialSpaceReferenceValues {
+        root_certificate_pem: CSPACE_ROOT.to_owned(),
+        cosign_reference_values: None,
+    };
     // Normally you would use an endorsed policy where the workload (a container) is
     // signed by the developer and the signature committed to Rekor, using Cosign.
-    let policy = ConfidentialSpacePolicy::new_unendorsed(root);
+    let policy = confidential_space_policy_from_reference_values(&reference_values)
+        .expect("failed to generate policy");
+
     let attestation_verifier = EventLogVerifier::new(
         vec![Box::new(policy)],
         // Tuesday, 1 July 2025 01:30:00 GMT+01:00

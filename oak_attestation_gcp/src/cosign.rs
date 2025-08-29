@@ -19,6 +19,7 @@ use oak_proto_rust::oak::attestation::v1::{
     CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
     VerifyingKey as ProtoVerifyingKey,
 };
+use oak_proto_rust_lib::parse_p256_ecdsa_verifying_key;
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use p256::ecdsa::VerifyingKey;
@@ -137,7 +138,7 @@ impl CosignReferenceValues {
 
 fn parse_verifying_key(proto: ProtoVerifyingKey) -> Result<VerifyingKey, CosignVerificationError> {
     match proto.r#type() {
-        KeyType::EcdsaP256Sha256 => VerifyingKey::from_sec1_bytes(&proto.raw)
+        KeyType::EcdsaP256Sha256 => parse_p256_ecdsa_verifying_key(proto)
             .map_err(CosignVerificationError::VerifyingKeyParseError),
         _ => Err(CosignVerificationError::InvalidVerifyingKey(
             "VerifyingKey.type is not EcdsaP256Sha256",
