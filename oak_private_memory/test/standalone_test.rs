@@ -26,6 +26,7 @@ use private_memory_server_lib::{
     app_config::ApplicationConfig,
 };
 use prost::Message;
+use prost_types::Timestamp;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{net::TcpListener, sync::mpsc as tokio_mpsc};
 
@@ -192,4 +193,13 @@ fn proto_serialization_test() {
     let json_str6 = r#"{"int64Val":"12345"}"#;
     let memory_value_from_string_num = serde_json::from_str::<MemoryValue>(json_str6).unwrap();
     assert_eq!(memory_value.encode_to_vec(), memory_value_from_string_num.encode_to_vec());
+
+    // Test Timestamp
+    let timestamp = Timestamp { seconds: 1733152000, nanos: 0 };
+    let memory = Memory { created_timestamp: Some(timestamp), ..Default::default() };
+    let json_str7 = r#"{"createdTimestamp":"2024-12-02T15:06:40+00:00"}"#;
+    let timestamp_from_string_num = serde_json::from_str::<Memory>(json_str7).unwrap();
+    println!("timestamp: {:?}", timestamp);
+    println!("timestamp_from_string_num: {:?}", timestamp_from_string_num);
+    assert_eq!(timestamp_from_string_num.encode_to_vec(), memory.encode_to_vec());
 }

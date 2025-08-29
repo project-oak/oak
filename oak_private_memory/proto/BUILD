@@ -31,6 +31,7 @@ proto_library(
         "sealed_memory.proto",
     ],
     deps = [
+        "@com_google_protobuf//:timestamp_proto",
         "@oak//proto/session:session_proto",
     ],
 )
@@ -86,6 +87,7 @@ rust_library(
         ":build",
         "@oak//oak_proto_rust",
         "@oak_crates_index//:base64",
+        "@oak_crates_index//:chrono",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",

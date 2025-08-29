@@ -118,6 +118,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.EmbeddingQuery.metric_type",
         "#[serde(with=\"crate::embedding_query_metric_type_converter\")]",
     );
+
+    // Timestamp converters
+    config.field_attribute(
+        "oak.private_memory.Memory.created_timestamp",
+        "#[serde(with=\"crate::timestamp_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.Memory.event_timestmap",
+        "#[serde(with=\"crate::timestamp_converter\")]",
+    );
+
     config.enable_type_names();
     config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
 

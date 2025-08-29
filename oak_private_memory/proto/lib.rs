@@ -313,3 +313,37 @@ enum_converter!(
     doc_string = "a string or an integer representing an EmbeddingQueryMetricType variant",
     valid_variants = &["DOT_PRODUCT"]
 );
+
+pub mod timestamp_converter {
+    use chrono::{DateTime, Utc};
+    use prost_types::Timestamp;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    extern crate alloc;
+    use alloc::string::String;
+
+    pub fn serialize<S: Serializer>(
+        timestamp: &Option<Timestamp>,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        if let Some(ref ts) = timestamp {
+            let datetime = DateTime::<Utc>::from_timestamp(ts.seconds, ts.nanos as u32)
+                .ok_or_else(|| serde::ser::Error::custom("invalid timestamp"))?;
+            return String::serialize(&datetime.to_rfc3339(), s);
+        }
+        s.serialize_none()
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Timestamp>, D::Error> {
+        let rfc3339_string: Option<String> = Option::deserialize(d)?;
+        if let Some(s) = rfc3339_string {
+            let datetime = DateTime::parse_from_rfc3339(&s)
+                .map_err(serde::de::Error::custom)?
+                .with_timezone(&Utc);
+            return Ok(Some(Timestamp {
+                seconds: datetime.timestamp(),
+                nanos: datetime.timestamp_subsec_nanos() as i32,
+            }));
+        }
+        Ok(None)
+    }
+}

@@ -22,6 +22,7 @@ syntax = "proto3";
 package oak.private_memory;
 
 import "proto/session/session.proto";
+import "google/protobuf/timestamp.proto";
 
 message Embedding {
   // Identifier for the model that generated this embedding.
@@ -50,6 +51,22 @@ message Memory {
   repeated string tags = 3;
   repeated Embedding embeddings = 4;
   MemoryContent content = 5;
+  // The time when the memory is uploaded. Set by backend.
+  google.protobuf.Timestamp created_timestamp = 6;
+  // The time when the event described by the data happens. Should be
+  // set by the client. If not set, the `created_timestamp` will be
+  // used.
+  google.protobuf.Timestamp event_timestmap = 7;
+}
+
+enum MemoryField {
+  UNKNOWN = 0;            // Default value, should not be used.
+  ID = 1;                 // The 'id' field of the Memory message.
+  TAGS = 2;               // The 'tags' field.
+  EMBEDDINGS = 3;         // The 'embeddings' field.
+  CONTENT = 4;            // The 'content' field .
+  CREATED_TIMESTAMP = 5;  // The 'created_timestamp' field.
+  EVENT_TIMESTAMP = 6;    // The 'event_timestamp' field.
 }
 
 message AddMemoryRequest {
@@ -169,14 +186,6 @@ message SearchMemoryQuery {
   oneof clause {
     EmbeddingQuery embedding_query = 1;
   }
-}
-
-enum MemoryField {
-  UNKNOWN = 0;     // Default value, should not be used.
-  ID = 1;          // The 'id' field of the Memory message.
-  TAGS = 2;        // The 'tags' field.
-  EMBEDDINGS = 3;  // The 'embeddings' field.
-  CONTENT = 4;     // The 'content' field .
 }
 
 // Defines which parts of the Memory object to return.

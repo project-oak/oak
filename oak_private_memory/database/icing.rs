@@ -22,6 +22,10 @@ use tempfile::tempdir;
 
 use crate::MemoryId;
 
+fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
+    timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
+}
+
 /// The essential database that stores all the meta information
 /// except the raw document content of a user.
 ///
@@ -50,6 +54,8 @@ const TAG_NAME: &str = "tag";
 const MEMORY_ID_NAME: &str = "memoryId";
 const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
+const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
+const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
 
 pub trait DbMigration {
     type ImportFrom;
@@ -78,14 +84,28 @@ impl PendingMetadata {
             .iter()
             .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
             .collect();
-        let icing_document = icing::create_document_builder()
+        let document_builder = icing::create_document_builder();
+        let document_builder = document_builder
             .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
             .set_schema(SCHMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
-            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings)
-            .build();
+            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings);
+
+        if let Some(ref created_timestamp) = memory.created_timestamp {
+            document_builder.add_int64_property(
+                CREATED_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(created_timestamp),
+            );
+        }
+        if let Some(ref event_timestamp) = memory.event_timestmap {
+            document_builder.add_int64_property(
+                EVENT_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(event_timestamp),
+            );
+        }
+        let icing_document = document_builder.build();
         Self { icing_document }
     }
 
@@ -158,6 +178,20 @@ impl IcingMetaDatabase {
                         icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
                     )
                     .set_cardinality(icing::property_config_proto::cardinality::Code::Repeated.into())
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
             );
 
         let schema_builder = icing::create_schema_builder();

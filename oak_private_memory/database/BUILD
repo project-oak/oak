@@ -34,6 +34,7 @@ rust_library(
         "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand",
         "@oak_crates_index//:tempfile",
     ],
