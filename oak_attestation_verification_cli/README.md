@@ -1,11 +1,55 @@
-# Oak attestation verification CLI
+# Oak Attestation Verification CLI
 
-CLI tool used to verify collected evidence/endorsements from attestations.
+CLI tool used to verify collected evidence and endorsements from attestations
+against a set of reference values.
 
 ## Instructions
+
+The tool requires paths to binary protobuf files for both the collected
+attestation and the reference values.
 
 Run with:
 
 ```sh
-bazel run //oak_attestation_verification_cli:oak_attestation_verification_cli -- --attestation=<COLLECTED_ATTESTATION_PB_FILE>
+bazel run //oak_attestation_verification_cli:oak_attestation_verification_cli -- --attestation=<PATH_TO_COLLECTED_ATTESTATION> --reference-values=<PATH_TO_REFERENCE_VALUES>
 ```
+
+Where:
+
+- `<PATH_TO_COLLECTED_ATTESTATION>` is the path to a binary protobuf file
+  containing `oak.attestation.v1.CollectedAttestation`.
+- `<PATH_TO_REFERENCE_VALUES>` is the path to a binary protobuf file containing
+  `oak.attestation.v1.ReferenceValuesCollection`.
+
+## Supported Attestation Types
+
+The tool currently supports the following attestation verification flows:
+
+- **Confidential Space:** For verifying attestations originating from Google
+  Cloud Confidential Space environments.
+- **Certificate-Based:** For verifying attestations that are endorsed by a
+  certificate chain.
+
+## Understanding the Inputs
+
+- **Collected Attestation:** This file contains the evidence and endorsements
+  gathered from the untrusted execution environment. It includes cryptographic
+  measurements, certificates, and proofs generated during the attestation
+  process.
+- **Reference Values:** This file defines the "golden" values that the collected
+  attestation is compared against. It represents the expectations of a trusted
+  and secure environment, containing items like root certificates and expected
+  measurement values.
+
+## Interpreting the Output
+
+The tool outputs a human-readable report detailing the verification steps and
+their outcomes, using emojis to indicate the status of each check (e.g., ✅ for
+success, ❌ for failure).
+
+A failure at any step indicates a potential security risk. For example:
+
+- A failure in **certificate validation** may mean that an endorsement cannot be
+  trusted because its signing key is not properly certified.
+- A failure in **session binding verification** could indicate that the secure
+  session is vulnerable to a man-in-the-middle attack.
