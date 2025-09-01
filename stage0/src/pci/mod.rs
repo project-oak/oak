@@ -14,14 +14,20 @@
 // limitations under the License.
 //
 
-use core::{ffi::CStr, fmt::Display, marker::PhantomData, ops::Range};
+use alloc::{boxed::Box, rc::Rc};
+use core::{ffi::CStr, fmt::Display, ops::Range};
 
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
+use spinning_top::Spinlock;
 use strum::FromRepr;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-use crate::{fw_cfg::Firmware, hal::Port, Platform, ZeroPage};
+use crate::{
+    fw_cfg::Firmware,
+    pci::config_access::{ConfigAccess, CAM},
+    Platform, ZeroPage,
+};
 
+mod config_access;
 mod device;
 mod machine;
 mod resource_allocator;
@@ -42,9 +48,6 @@ pub const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 
 const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
 const EXTRA_ROOTS_FILE_NAME: &CStr = c"etc/extra-pci-roots";
-
-const PCI_PORT_CONFIGURATION_SPACE_ADDRESS: u16 = 0xCF8;
-const PCI_PORT_CONFIGURATION_SPACE_DATA: u16 = 0xCFC;
 
 /// PCI class codes.
 ///
@@ -137,15 +140,15 @@ impl PciMemoryBarSize {
     const MASK: u32 = 0b110;
 }
 
-struct BarIter<P: Platform> {
+struct BarIter {
     device: Bdf,
     // Bridges have up to 2 BARs, normal devices 6.
     max_bars: u8,
     index: Option<u8>,
-    _phantom: PhantomData<P>,
+    access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
 }
 
-impl<P: Platform> Iterator for BarIter<P> {
+impl Iterator for BarIter {
     type Item = PciBar;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -156,8 +159,11 @@ impl<P: Platform> Iterator for BarIter<P> {
             let offset = 0x4 + index;
 
             // Proble the BAR by writing all-ones.
-            pci_write_cam::<P>(self.device, offset, 0xFFFF_FFFF).ok()?;
-            let value = pci_read_cam::<P>(self.device, offset).ok()?;
+            let value = {
+                let mut access = self.access.lock();
+                access.write(self.device, offset, 0xFFFF_FFFF).ok()?;
+                access.read(self.device, offset).ok()?
+            };
 
             if value == 0 {
                 // Unimplemented BAR.
@@ -177,8 +183,11 @@ impl<P: Platform> Iterator for BarIter<P> {
 
                     if size == PciMemoryBarSize::Size64 {
                         // For 64-bit BARs, we need to read the next register as well.
-                        pci_write_cam::<P>(self.device, offset + 1, 0xFFFF_FFFF).ok()?;
-                        let upper_half = pci_read_cam::<P>(self.device, offset + 1).ok()? as u64;
+                        let upper_half = {
+                            let mut access = self.access.lock();
+                            access.write(self.device, offset + 1, 0xFFFF_FFFF).ok()?;
+                            access.read(self.device, offset + 1).ok()? as u64
+                        };
                         let _ = self.index.insert(index + 2);
 
                         return Some(PciBar::Memory64(
@@ -220,46 +229,58 @@ impl PciAddress {
     }
 
     /// Returns the Vendor ID and Device ID for the address.
-    fn vendor_device_id<P: Platform>(&self) -> Result<(u16, u16), &'static str> {
+    fn vendor_device_id(&self, access: &mut dyn ConfigAccess) -> Result<(u16, u16), &'static str> {
         // Register 0x00: Device ID, Vendor ID (16b each)
-        let value = pci_read_cam::<P>(self.0, 0x00)?;
+        let value = access.read(self.0, 0x00)?;
         Ok(((value & 0xFFFF) as u16, (value >> 16) as u16))
     }
 
-    fn class_code<P: Platform>(&self) -> Result<(PciClass, PciSubclass), &'static str> {
+    fn class_code(
+        &self,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<(PciClass, PciSubclass), &'static str> {
         // Register 0x02: Class Code, Subclass, Prog IF, Revision ID (8b each)
-        let value = pci_read_cam::<P>(self.0, 0x02)?;
+        let value = access.read(self.0, 0x02)?;
         Ok((PciClass((value >> 24) as u8), PciSubclass((value >> 16) as u8)))
     }
 
     // Returns the header type for the address.
-    fn header_type<P: Platform>(&self) -> Result<u8, &'static str> {
+    fn header_type(&self, access: &mut dyn ConfigAccess) -> Result<u8, &'static str> {
         // Register 0x03: BIST, header type, latency timer, cache line size (8b each)
-        let value = pci_read_cam::<P>(self.0, 0x03)?;
+        let value = access.read(self.0, 0x03)?;
         Ok((value >> 16) as u8)
     }
 
-    fn bridge_bus_numbers<P: Platform>(&self) -> Result<PciBridgeBusRegister, &'static str> {
-        let value = pci_read_cam::<P>(self.0, 0x06)?;
+    fn bridge_bus_numbers(
+        &self,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<PciBridgeBusRegister, &'static str> {
+        let value = access.read(self.0, 0x06)?;
         Ok(PciBridgeBusRegister::read_from_bytes(value.as_bytes()).unwrap())
     }
 
-    fn is_multi_function_device<P: Platform>(&self) -> Result<bool, &'static str> {
-        self.header_type::<P>().map(|value| value & 0x80 != 0)
+    fn is_multi_function_device(
+        &self,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<bool, &'static str> {
+        self.header_type(access).map(|value| value & 0x80 != 0)
     }
 
-    fn iter_bars<P: Platform>(&self) -> Result<BarIter<P>, &'static str> {
-        let (class, subclass) = self.class_code::<P>()?;
+    fn iter_bars(
+        &self,
+        access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
+    ) -> Result<BarIter, &'static str> {
+        let (class, subclass) = self.class_code(access.lock().as_mut())?;
         let max_bars = if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
             2
         } else {
             6
         };
-        Ok(BarIter { device: self.0, max_bars, index: Some(0), _phantom: PhantomData })
+        Ok(BarIter { device: self.0, max_bars, index: Some(0), access })
     }
     /// Checks if the device exists at all.
-    fn exists<P: Platform>(&self) -> Result<bool, &'static str> {
-        let (vendor_id, _) = self.vendor_device_id::<P>()?;
+    fn exists(&self, access: &mut dyn ConfigAccess) -> Result<bool, &'static str> {
+        let (vendor_id, _) = self.vendor_device_id(access)?;
         Ok(vendor_id != 0xFFFF && vendor_id != 0x0000)
     }
 
@@ -299,46 +320,12 @@ impl From<PciAddress> for u16 {
     }
 }
 
-/// Uses the legacy port-based IO method to read a u32 from the PCI
-/// configuration space.
-fn pci_read_cam<P: Platform>(address: Bdf, offset: u8) -> Result<u32, &'static str> {
-    let port_factory = P::port_factory();
-    let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
-    let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
-
-    // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
-    let value = (1u32 << 31) | ((Into::<u16>::into(address) as u32) << 8) | ((offset as u32) << 2);
-    // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
-    // be safe to write to even if we don't have a PCI bus.
-    unsafe { address_port.try_write(value) }?;
-    // Safety: PCI_PORT_CONFIGURATION_SPACE_DATA is a well-known port and should
-    // be safe to read from even if we don't have a PCI bus (it'll return
-    // 0xFFFFFFFF)
-    unsafe { data_port.try_read() }
-}
-
-fn pci_write_cam<P: Platform>(address: Bdf, offset: u8, value: u32) -> Result<(), &'static str> {
-    let port_factory = P::port_factory();
-    let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
-    let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
-
-    // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
-    let address =
-        (1u32 << 31) | ((Into::<u16>::into(address) as u32) << 8) | ((offset as u32) << 2);
-    // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
-    // be safe to write to even if we don't have a PCI bus.
-    unsafe { address_port.try_write(address) }?;
-    // Safety: PCI_PORT_CONFIGURATION_SPACE_DATA is a well-known port and should
-    // be safe to write to even if we don't have a PCI bus.
-    unsafe { data_port.try_write(value) }
-}
-
-struct BusDeviceIterator<P: Platform> {
+struct BusDeviceIterator {
     address: Option<PciAddress>,
-    _phantom: PhantomData<P>,
+    access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
 }
 
-impl<P: Platform> Iterator for BusDeviceIterator<P> {
+impl Iterator for BusDeviceIterator {
     type Item = PciAddress;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -347,16 +334,17 @@ impl<P: Platform> Iterator for BusDeviceIterator<P> {
 
         // Shortcut: if we know we're on a single-function device, step over to the next
         // device.
-        self.address = if current_address.is_multi_function_device::<P>().unwrap() {
-            current_address.next()
-        } else {
-            current_address.next_device()
-        };
+        self.address =
+            if current_address.is_multi_function_device(self.access.lock().as_mut()).unwrap() {
+                current_address.next()
+            } else {
+                current_address.next_device()
+            };
 
         // Ensure said next device actually exists.
         while let Some(address) = self.address {
             // Does the device exist?
-            if address.exists::<P>().unwrap() {
+            if address.exists(self.access.lock().as_mut()).unwrap() {
                 // Yes, it does.
                 break;
             }
@@ -377,24 +365,29 @@ struct PciBus {
 }
 
 impl PciBus {
-    fn new<P: Platform>(bus: u8) -> Result<Option<Self>, &'static str> {
+    fn new(bus: u8, access: &mut dyn ConfigAccess) -> Result<Option<Self>, &'static str> {
         let root = PciAddress::new(bus, 0, 0)?;
-        if root.exists::<P>()? {
+        if root.exists(access)? {
             Ok(Some(Self { root }))
         } else {
             Ok(None)
         }
     }
 
-    fn init<P: Platform>(&mut self, windows: &PciWindows) -> Result<(), &'static str> {
+    fn init(
+        &mut self,
+        windows: &PciWindows,
+        config_access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
+    ) -> Result<(), &'static str> {
         // Prepare the allocators for all the resources.
         let mut io_allocator = ResourceAllocator::new(windows.pci_window_16.clone());
         let mut mem32_allocator = ResourceAllocator::new(windows.pci_window_32.clone());
         let mut mem64_allocator = ResourceAllocator::new(windows.pci_window_64.clone());
 
-        for function in self.iter_devices::<P>() {
-            let (vendor_id, device_id) = function.vendor_device_id::<P>()?;
-            let (class, subclass) = function.class_code::<P>()?;
+        for function in self.iter_devices(config_access.clone()) {
+            let (vendor_id, device_id) =
+                function.vendor_device_id(config_access.lock().as_mut())?;
+            let (class, subclass) = function.class_code(config_access.lock().as_mut())?;
 
             log::debug!(
                 "Found PCI device: {}, {:04x}:{:04x}, class: {}{}",
@@ -406,14 +399,15 @@ impl PciBus {
             );
 
             if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
-                let bridge_bus_numbers = function.bridge_bus_numbers::<P>()?;
+                let bridge_bus_numbers =
+                    function.bridge_bus_numbers(config_access.lock().as_mut())?;
                 log::debug!("PCI to PCI bridge:  {:?}", bridge_bus_numbers);
                 log::warn!(
                     "UNIMPLEMENTED: leaving PCI bridge unconfigured, file a bug if you see this!"
                 );
             }
 
-            for bar in function.iter_bars::<P>()? {
+            for bar in function.iter_bars(config_access.clone())? {
                 match bar {
                     PciBar::Memory32(address, bar) => {
                         log::debug!("  BAR{}: memory, size {}", bar.offset, bar.bar_size);
@@ -426,7 +420,7 @@ impl PciBus {
                             allocation,
                             allocation + bar.bar_size
                         );
-                        pci_write_cam::<P>(address, 0x4 + bar.offset, allocation)?;
+                        config_access.lock().write(address, 0x4 + bar.offset, allocation)?;
                     }
                     PciBar::Memory64(address, bar) => {
                         log::debug!(
@@ -443,16 +437,19 @@ impl PciBus {
                             allocation,
                             allocation + bar.bar_size
                         );
-                        pci_write_cam::<P>(
-                            address,
-                            0x4 + bar.offset,
-                            (allocation & 0xFFFF_FFFF) as u32,
-                        )?;
-                        pci_write_cam::<P>(
-                            address,
-                            0x4 + bar.offset + 1,
-                            (allocation >> 32) as u32,
-                        )?;
+                        {
+                            let mut access = config_access.lock();
+                            access.write(
+                                address,
+                                0x4 + bar.offset,
+                                (allocation & 0xFFFF_FFFF) as u32,
+                            )?;
+                            access.write(
+                                address,
+                                0x4 + bar.offset + 1,
+                                (allocation >> 32) as u32,
+                            )?;
+                        }
                     }
                     PciBar::Io(address, bar) => {
                         log::debug!("  BAR{}: I/O, size {}", bar.offset, bar.bar_size);
@@ -466,7 +463,11 @@ impl PciBus {
                             allocation,
                             allocation + bar_size
                         );
-                        pci_write_cam::<P>(address, 0x4 + bar.offset, allocation as u32 & !0b11)?;
+                        config_access.lock().write(
+                            address,
+                            0x4 + bar.offset,
+                            allocation as u32 & !0b11,
+                        )?;
                     }
                 }
             }
@@ -474,11 +475,8 @@ impl PciBus {
         Ok(())
     }
 
-    fn iter_devices<P: Platform>(&self) -> BusDeviceIterator<P> {
-        // We cheat a bit; the `new()` will never error as (any u8, 0, 0) is always
-        // valid as an address. However, as we need a `Option` for the iterator, it's a
-        // convenient way to make the types work instead of unwrapping.
-        BusDeviceIterator { address: Some(self.root), _phantom: PhantomData }
+    fn iter_devices(&self, access: Rc<Spinlock<Box<dyn ConfigAccess>>>) -> BusDeviceIterator {
+        BusDeviceIterator { address: Some(self.root), access }
     }
 }
 
@@ -495,6 +493,7 @@ fn init_machine<P: Platform, M: Machine>(
     mut root_bus: PciBus,
     firmware: &mut dyn Firmware,
     zero_page: &mut ZeroPage,
+    config_access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
 ) -> Result<Option<PciWindows>, &'static str> {
     // Determine the PCI holes. How this is done is unfortunately extremely clunky
     // and machine-specific.
@@ -506,7 +505,7 @@ fn init_machine<P: Platform, M: Machine>(
 
     log::info!("PCI: using windows {:?}", pci_windows);
 
-    root_bus.init::<P>(&pci_windows)?;
+    root_bus.init(&pci_windows, config_access)?;
 
     // Find out if there are any extra roots.
     let extra_roots = read_extra_roots(firmware)?;
@@ -523,17 +522,28 @@ pub fn init<P: Platform>(
     // At this point we know nothing about the platform we're on, so we have to
     // rely on the legacy CAM to get the device ID of the first PCI root to
     // help us figure out on what kind of machine we are running.
-    let root_bus = match PciBus::new::<P>(0)? {
+
+    // This type is convoluted because...
+    // (a) we need an Rc because of reference counting;
+    // (b) we need Spinlock to enforce mutual exclusion (technically not an issue
+    // because we don't have concurrency in stage0 but Rust enforces that)
+    // (c) a Box because we want `dyn ConfigAccess`, not a concrete type.
+    let config_access: Rc<Spinlock<Box<dyn ConfigAccess>>> =
+        Rc::new(Spinlock::new(Box::new(CAM::new::<P>())));
+
+    let root_bus = match PciBus::new(0, config_access.lock().as_mut())? {
         Some(bus) => bus,
         None => return Ok(None),
     };
 
-    match root_bus.root.vendor_device_id::<P>()? {
+    let root_bridge_device_id =
+        root_bus.root.vendor_device_id(config_access.clone().lock().as_mut())?;
+    match root_bridge_device_id {
         (I440fx::PCI_VENDOR_ID, I440fx::PCI_DEVICE_ID) => {
-            init_machine::<P, I440fx>(root_bus, firmware, zero_page)
+            init_machine::<P, I440fx>(root_bus, firmware, zero_page, config_access)
         }
         (Q35::PCI_VENDOR_ID, Q35::PCI_DEVICE_ID) => {
-            init_machine::<P, Q35>(root_bus, firmware, zero_page)
+            init_machine::<P, Q35>(root_bus, firmware, zero_page, config_access)
         }
         (vendor_id, device_id) => {
             log::error!(
