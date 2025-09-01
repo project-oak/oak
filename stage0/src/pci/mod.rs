@@ -22,9 +22,11 @@ use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 use crate::{fw_cfg::Firmware, hal::Port, Platform, ZeroPage};
 
+mod device;
 mod machine;
 mod resource_allocator;
 
+use device::Bdf;
 use machine::{I440fx, Machine, Q35};
 use resource_allocator::ResourceAllocator;
 
@@ -208,22 +210,13 @@ impl<'a, P: Platform> Iterator for BarIter<'a, P> {
 }
 
 /// PCI address.
-///
-/// Basic structure: BBBBBBBBDDDDDFFF
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(transparent)]
-struct PciAddress(u16);
+struct PciAddress(Bdf);
 
 impl PciAddress {
-    pub const fn new(bus: u8, device: u8, function: u8) -> Result<Self, &'static str> {
-        if device > 0b11111 {
-            return Err("invalid device number");
-        }
-        if function > 0b111 {
-            return Err("invalid function number");
-        }
-
-        Ok(Self((bus as u16) << 8 | (device as u16) << 3 | (function as u16)))
+    pub fn new(bus: u8, device: u8, function: u8) -> Result<Self, &'static str> {
+        Bdf::new(bus, device, function).map(Self)
     }
 
     /// Returns the Vendor ID and Device ID for the address.
@@ -270,31 +263,11 @@ impl PciAddress {
         Ok(vendor_id != 0xFFFF && vendor_id != 0x0000)
     }
 
-    #[inline]
-    pub fn bus(&self) -> u8 {
-        (self.0 >> 8) as u8
-    }
-
-    #[inline]
-    pub fn device(&self) -> u8 {
-        ((self.0 >> 3) & 0b11111) as u8
-    }
-
-    #[inline]
-    pub fn function(&self) -> u8 {
-        (self.0 & 0b111) as u8
-    }
-
     /// Returns the first function on the next device on the bus.
     ///
     /// Returns None if this is the last device on this device.
     pub fn next_device(&self) -> Option<Self> {
-        let addr = Self((self.0 + (1 << 3)) & !0b111);
-        if addr.bus() != self.bus() {
-            None
-        } else {
-            Some(addr)
-        }
+        self.0.next_device().map(Self)
     }
 
     /// Returns the next function on the bus, crossing to the next device if
@@ -302,18 +275,13 @@ impl PciAddress {
     ///
     /// Returns None if this is the last function on this bus.
     pub fn next(&self) -> Option<Self> {
-        let addr = Self(self.0 + 1);
-        if addr.bus() != self.bus() {
-            None
-        } else {
-            Some(addr)
-        }
+        self.0.next().map(Self)
     }
 }
 
 impl Display for PciAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:02x}:{:02x}.{:x}", self.bus(), self.device(), self.function())
+        self.0.fmt(f)
     }
 }
 
@@ -327,7 +295,7 @@ impl TryFrom<(u8, u8, u8)> for PciAddress {
 
 impl From<PciAddress> for u16 {
     fn from(value: PciAddress) -> Self {
-        value.0
+        value.0.into()
     }
 }
 
