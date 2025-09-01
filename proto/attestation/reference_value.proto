@@ -382,7 +382,16 @@ message ConfidentialSpaceReferenceValues {
   // attestations.
   string root_certificate_pem = 1;
 
-  CosignReferenceValues cosign_reference_values = 2;
+  // Reference values specific to the workload container.
+  oneof container_image {
+    CosignReferenceValues cosign_reference_values = 2;
+
+    // Image reference from the Confidential Space attestation. See
+    // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims
+    // TODO: b/439861326 - Remove this field and introduce new endorsement field
+    // that relies on Oak Transparent release.
+    string container_image_reference = 3;
+  }
 }
 
 message ReferenceValues {

@@ -24,7 +24,10 @@ use oak_attestation_gcp::{
 use oak_attestation_verification::EventLogVerifier;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::{
-    attestation::v1::{ConfidentialSpaceReferenceValues, CosignReferenceValues},
+    attestation::v1::{
+        confidential_space_reference_values::ContainerImage, ConfidentialSpaceReferenceValues,
+        CosignReferenceValues,
+    },
     session::v1::{SessionRequest, SessionResponse},
 };
 use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
@@ -77,12 +80,12 @@ impl EchoClient {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
-            cosign_reference_values: Some(CosignReferenceValues {
+            r#container_image: Some(ContainerImage::CosignReferenceValues(CosignReferenceValues {
                 developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
                     &developer_public_key,
                 )),
                 rekor_public_key: Some(p256_ecdsa_verifying_key_to_proto(&rekor_public_key)),
-            }),
+            })),
         };
         let policy = confidential_space_policy_from_reference_values(&reference_values)?;
         let attestation_verifier = EventLogVerifier::new(vec![Box::new(policy)], clock.clone());

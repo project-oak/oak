@@ -99,7 +99,7 @@ fn main() {
     // which is extracted from the evidence.
     let reference_values = ConfidentialSpaceReferenceValues {
         root_certificate_pem: CSPACE_ROOT.to_owned(),
-        cosign_reference_values: None,
+        r#container_image: None,
     };
     // Normally you would use an endorsed policy where the workload (a container) is
     // signed by the developer and the signature committed to Rekor, using Cosign.

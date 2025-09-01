@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceReferenceValues;
+use oak_proto_rust::oak::attestation::v1::{
+    confidential_space_reference_values, ConfidentialSpaceReferenceValues,
+};
 use x509_cert::{der::DecodePem, Certificate};
 
 use crate::{cosign::CosignReferenceValues, policy::ConfidentialSpacePolicy};
@@ -27,23 +29,31 @@ pub fn confidential_space_policy_from_reference_values(
     let root_certificate = Certificate::from_pem(&reference_values.root_certificate_pem)
         .map_err(anyhow::Error::msg)?;
 
-    if reference_values.cosign_reference_values.is_none() {
-        return Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate));
+    match &reference_values.r#container_image {
+        Some(confidential_space_reference_values::ContainerImage::CosignReferenceValues(
+            cosign_reference_values,
+        )) => {
+            let cosign_reference_values =
+                CosignReferenceValues::from_proto(cosign_reference_values)
+                    .map_err(anyhow::Error::msg)?;
+            Ok(ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values))
+        }
+        Some(confidential_space_reference_values::ContainerImage::ContainerImageReference(
+            _container_image_reference,
+        )) => {
+            // TODO: b/439861326 - Generate policy based on container image reference.
+            Err(anyhow::Error::msg("Container image reference not yet supported"))
+        }
+        None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),
     }
-
-    let cosign_reference_values = CosignReferenceValues::from_proto(
-        &reference_values.cosign_reference_values.clone().unwrap_or_default(),
-    )
-    .map_err(anyhow::Error::msg)?;
-
-    Ok(ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values))
 }
 
 #[cfg(test)]
 mod tests {
     use oak_file_utils::read_testdata_string;
     use oak_proto_rust::oak::attestation::v1::{
-        ConfidentialSpaceReferenceValues, CosignReferenceValues as CosignReferenceValuesProto,
+        confidential_space_reference_values, ConfidentialSpaceReferenceValues,
+        CosignReferenceValues as CosignReferenceValuesProto,
     };
     use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
     use p256::pkcs8::DecodePublicKey;
@@ -59,12 +69,16 @@ mod tests {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem,
-            cosign_reference_values: Some(CosignReferenceValuesProto {
-                developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                    &developer_public_key,
-                )),
-                ..Default::default()
-            }),
+            r#container_image: Some(
+                confidential_space_reference_values::ContainerImage::CosignReferenceValues(
+                    CosignReferenceValuesProto {
+                        developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
+                            &developer_public_key,
+                        )),
+                        ..Default::default()
+                    },
+                ),
+            ),
         };
 
         let policy = confidential_space_policy_from_reference_values(&reference_values);
@@ -76,10 +90,8 @@ mod tests {
     fn confidential_space_policy_no_cosign_reference_values() {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
 
-        let reference_values = ConfidentialSpaceReferenceValues {
-            root_certificate_pem,
-            cosign_reference_values: None,
-        };
+        let reference_values =
+            ConfidentialSpaceReferenceValues { root_certificate_pem, r#container_image: None };
 
         let policy = confidential_space_policy_from_reference_values(&reference_values);
         assert!(policy.is_ok(), "Failed: {:?}", policy.err().unwrap());
@@ -93,12 +105,16 @@ mod tests {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: "".to_string(),
-            cosign_reference_values: Some(CosignReferenceValuesProto {
-                developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                    &developer_public_key,
-                )),
-                ..Default::default()
-            }),
+            r#container_image: Some(
+                confidential_space_reference_values::ContainerImage::CosignReferenceValues(
+                    CosignReferenceValuesProto {
+                        developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
+                            &developer_public_key,
+                        )),
+                        ..Default::default()
+                    },
+                ),
+            ),
         };
 
         let policy = confidential_space_policy_from_reference_values(&reference_values);

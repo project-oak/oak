@@ -69,19 +69,13 @@ pub fn serialize_root_layer_data(instance: &RootLayerData) -> serde_json::Value 
     let RootLayerData { report } = instance;
     match report {
         Some(root_layer_data::Report::SevSnp(instance)) => {
-            json!({
-                "sev_snp": serialize_amd_attestation_report(instance)
-            })
+            json!({ "sev_snp": serialize_amd_attestation_report(instance) })
         }
         Some(root_layer_data::Report::Tdx(instance)) => {
-            json!({
-                "tdx": serialize_intel_tdx_attestation_report(instance)
-            })
+            json!({ "tdx": serialize_intel_tdx_attestation_report(instance) })
         }
         Some(root_layer_data::Report::Fake(instance)) => {
-            json!({
-                "fake": serialize_fake_attestation_report(instance)
-            })
+            json!({ "fake": serialize_fake_attestation_report(instance) })
         }
         None => json!(null),
     }
@@ -283,19 +277,13 @@ pub fn serialize_extracted_evidence(instance: &ExtractedEvidence) -> serde_json:
 
     match evidence_values {
         Some(extracted_evidence::EvidenceValues::OakRestrictedKernel(instance)) => {
-            json!({
-                "oak_restricted_kernel": serialize_oak_restricted_kernel_data(instance)
-            })
+            json!({ "oak_restricted_kernel": serialize_oak_restricted_kernel_data(instance) })
         }
         Some(extracted_evidence::EvidenceValues::OakContainers(instance)) => {
-            json!({
-                "oak_containers": serialize_oak_containers_data(instance)
-            })
+            json!({ "oak_containers": serialize_oak_containers_data(instance) })
         }
         Some(extracted_evidence::EvidenceValues::Cb(instance)) => {
-            json!({
-                "cb": serialize_cb_data(instance)
-            })
+            json!({ "cb": serialize_cb_data(instance) })
         }
         Some(extracted_evidence::EvidenceValues::Standalone(instance)) => {
             json!({
@@ -454,14 +442,10 @@ fn serialize_verifying_key_reference_value(
     let VerifyingKeyReferenceValue { r#type } = instance;
     match r#type {
         Some(verifying_key_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
+            json!({ "skip": serialize_skip_verification(instance) })
         }
         Some(verifying_key_reference_value::Type::Verify(instance)) => {
-            json!({
-                "verify": serialize_verifying_key_set(instance)
-            })
+            json!({ "verify": serialize_verifying_key_set(instance) })
         }
         None => json!(null),
     }
@@ -509,19 +493,13 @@ pub fn serialize_binary_reference_value(instance: &BinaryReferenceValue) -> serd
     let BinaryReferenceValue { r#type } = instance;
     match r#type {
         Some(binary_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
+            json!({ "skip": serialize_skip_verification(instance) })
         }
         Some(binary_reference_value::Type::Endorsement(instance)) => {
-            json!({
-                "endorsement": serialize_endorsement_reference_value(instance)
-            })
+            json!({ "endorsement": serialize_endorsement_reference_value(instance) })
         }
         Some(binary_reference_value::Type::Digests(instance)) => {
-            json!({
-                "digests": serialize_digests(instance)
-            })
+            json!({ "digests": serialize_digests(instance) })
         }
         None => json!(null),
     }
@@ -549,19 +527,13 @@ pub fn serialize_kernel_binary_reference_value(
     let KernelBinaryReferenceValue { r#type } = instance;
     match r#type {
         Some(kernel_binary_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
+            json!({ "skip": serialize_skip_verification(instance) })
         }
         Some(kernel_binary_reference_value::Type::Endorsement(instance)) => {
-            json!({
-                "endorsement": serialize_endorsement_reference_value(instance)
-            })
+            json!({ "endorsement": serialize_endorsement_reference_value(instance) })
         }
         Some(kernel_binary_reference_value::Type::Digests(instance)) => {
-            json!({
-                "digests": serialize_kernel_digests(instance)
-            })
+            json!({ "digests": serialize_kernel_digests(instance) })
         }
         None => json!(null),
     }
@@ -602,24 +574,16 @@ pub fn serialize_text_reference_value(instance: &TextReferenceValue) -> serde_js
     let TextReferenceValue { r#type } = instance;
     match r#type {
         Some(text_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
+            json!({ "skip": serialize_skip_verification(instance) })
         }
         Some(text_reference_value::Type::Endorsement(instance)) => {
-            json!({
-                "endorsement": serialize_endorsement_reference_value(instance)
-            })
+            json!({ "endorsement": serialize_endorsement_reference_value(instance) })
         }
         Some(text_reference_value::Type::Regex(instance)) => {
-            json!({
-                "regex": serialize_regex(instance)
-            })
+            json!({ "regex": serialize_regex(instance) })
         }
         Some(text_reference_value::Type::StringLiterals(instance)) => {
-            json!({
-                "string_literals": serialize_string_literals(instance)
-            })
+            json!({ "string_literals": serialize_string_literals(instance) })
         }
         None => json!(null),
     }
@@ -635,14 +599,10 @@ pub fn serialize_tcb_version_reference_value(
     let TcbVersionReferenceValue { r#type } = instance;
     match r#type {
         Some(tcb_version_reference_value::Type::Skip(instance)) => {
-            json!({
-                "skip": serialize_skip_verification(instance)
-            })
+            json!({ "skip": serialize_skip_verification(instance) })
         }
         Some(tcb_version_reference_value::Type::Minimum(instance)) => {
-            json!({
-                "minimum": serialize_tcb_version(instance)
-            })
+            json!({ "minimum": serialize_tcb_version(instance) })
         }
         None => json!(null),
     }
@@ -823,14 +783,24 @@ pub fn serialize_certificate_based_reference_values(
 pub fn serialize_confidential_space_reference_values(
     instance: &ConfidentialSpaceReferenceValues,
 ) -> serde_json::Value {
-    let ConfidentialSpaceReferenceValues { root_certificate_pem, cosign_reference_values } =
-        instance;
+    let ConfidentialSpaceReferenceValues { root_certificate_pem, r#container_image } = instance;
     let mut result = json!({
         "root_certificate_pem": root_certificate_pem,
     });
-    if let Some(cosign_reference_values) = cosign_reference_values {
-        result["cosign_reference_values"] =
-            serialize_cosign_reference_values(cosign_reference_values);
+    if let Some(r#container_image) = r#container_image {
+        match r#container_image {
+            confidential_space_reference_values::ContainerImage::CosignReferenceValues(
+                cosign_reference_values,
+            ) => {
+                result["cosign_reference_values"] =
+                    serialize_cosign_reference_values(cosign_reference_values);
+            }
+            confidential_space_reference_values::ContainerImage::ContainerImageReference(
+                container_image_reference,
+            ) => {
+                result["container_image_reference"] = json!(container_image_reference);
+            }
+        }
     }
     result
 }
@@ -860,24 +830,16 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
             })
         }
         Some(reference_values::Type::OakContainers(instance)) => {
-            json!({
-                "oak_containers": serialize_oak_containers_reference_values(instance)
-            })
+            json!({ "oak_containers": serialize_oak_containers_reference_values(instance) })
         }
         Some(reference_values::Type::Cb(instance)) => {
-            json!({
-                "cb": serialize_cb_reference_values(instance)
-            })
+            json!({ "cb": serialize_cb_reference_values(instance) })
         }
         Some(reference_values::Type::CertificateBased(instance)) => {
-            json!({
-                "certificate_based": serialize_certificate_based_reference_values(instance)
-            })
+            json!({ "certificate_based": serialize_certificate_based_reference_values(instance) })
         }
         Some(reference_values::Type::ConfidentialSpace(instance)) => {
-            json!({
-                "confidential_space": serialize_confidential_space_reference_values(instance)
-            })
+            json!({ "confidential_space": serialize_confidential_space_reference_values(instance) })
         }
         None => json!(null),
     }

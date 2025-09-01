@@ -85,7 +85,7 @@ impl OakFunctionsClient {
                 println!("creating peer unidirectional client session");
                 let reference_values = ConfidentialSpaceReferenceValues {
                     root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
-                    cosign_reference_values: None,
+                    r#container_image: None,
                 };
                 let policy = confidential_space_policy_from_reference_values(&reference_values)?;
                 let attestation_verifier =

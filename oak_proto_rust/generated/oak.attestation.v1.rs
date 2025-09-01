@@ -727,8 +727,29 @@ pub struct ConfidentialSpaceReferenceValues {
     /// attestations.
     #[prost(string, tag = "1")]
     pub root_certificate_pem: ::prost::alloc::string::String,
-    #[prost(message, optional, tag = "2")]
-    pub cosign_reference_values: ::core::option::Option<CosignReferenceValues>,
+    /// Reference values specific to the workload container.
+    #[prost(
+        oneof = "confidential_space_reference_values::ContainerImage",
+        tags = "2, 3"
+    )]
+    pub container_image: ::core::option::Option<
+        confidential_space_reference_values::ContainerImage,
+    >,
+}
+/// Nested message and enum types in `ConfidentialSpaceReferenceValues`.
+pub mod confidential_space_reference_values {
+    /// Reference values specific to the workload container.
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum ContainerImage {
+        #[prost(message, tag = "2")]
+        CosignReferenceValues(super::CosignReferenceValues),
+        /// Image reference from the Confidential Space attestation. See
+        /// <https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims>
+        /// TODO: b/439861326 - Remove this field and introduce new endorsement field
+        /// that relies on Oak Transparent release.
+        #[prost(string, tag = "3")]
+        ContainerImageReference(::prost::alloc::string::String),
+    }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReferenceValues {
