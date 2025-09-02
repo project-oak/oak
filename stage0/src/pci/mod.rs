@@ -107,10 +107,10 @@ struct IoBar {
     bar_size: u32,
 }
 
-enum PciBar<'a> {
-    Memory32(&'a PciAddress, MemoryBar<u32>),
-    Memory64(&'a PciAddress, MemoryBar<u64>),
-    Io(&'a PciAddress, IoBar),
+enum PciBar {
+    Memory32(Bdf, MemoryBar<u32>),
+    Memory64(Bdf, MemoryBar<u64>),
+    Io(Bdf, IoBar),
 }
 
 #[derive(FromRepr, PartialEq)]
@@ -137,16 +137,16 @@ impl PciMemoryBarSize {
     const MASK: u32 = 0b110;
 }
 
-struct BarIter<'a, P: Platform> {
-    device: &'a PciAddress,
+struct BarIter<P: Platform> {
+    device: Bdf,
     // Bridges have up to 2 BARs, normal devices 6.
     max_bars: u8,
     index: Option<u8>,
     _phantom: PhantomData<P>,
 }
 
-impl<'a, P: Platform> Iterator for BarIter<'a, P> {
-    type Item = PciBar<'a>;
+impl<P: Platform> Iterator for BarIter<P> {
+    type Item = PciBar;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Try to find a next BAR.
@@ -222,25 +222,25 @@ impl PciAddress {
     /// Returns the Vendor ID and Device ID for the address.
     fn vendor_device_id<P: Platform>(&self) -> Result<(u16, u16), &'static str> {
         // Register 0x00: Device ID, Vendor ID (16b each)
-        let value = pci_read_cam::<P>(self, 0x00)?;
+        let value = pci_read_cam::<P>(self.0, 0x00)?;
         Ok(((value & 0xFFFF) as u16, (value >> 16) as u16))
     }
 
     fn class_code<P: Platform>(&self) -> Result<(PciClass, PciSubclass), &'static str> {
         // Register 0x02: Class Code, Subclass, Prog IF, Revision ID (8b each)
-        let value = pci_read_cam::<P>(self, 0x02)?;
+        let value = pci_read_cam::<P>(self.0, 0x02)?;
         Ok((PciClass((value >> 24) as u8), PciSubclass((value >> 16) as u8)))
     }
 
     // Returns the header type for the address.
     fn header_type<P: Platform>(&self) -> Result<u8, &'static str> {
         // Register 0x03: BIST, header type, latency timer, cache line size (8b each)
-        let value = pci_read_cam::<P>(self, 0x03)?;
+        let value = pci_read_cam::<P>(self.0, 0x03)?;
         Ok((value >> 16) as u8)
     }
 
     fn bridge_bus_numbers<P: Platform>(&self) -> Result<PciBridgeBusRegister, &'static str> {
-        let value = pci_read_cam::<P>(self, 0x06)?;
+        let value = pci_read_cam::<P>(self.0, 0x06)?;
         Ok(PciBridgeBusRegister::read_from_bytes(value.as_bytes()).unwrap())
     }
 
@@ -248,14 +248,14 @@ impl PciAddress {
         self.header_type::<P>().map(|value| value & 0x80 != 0)
     }
 
-    fn iter_bars<P: Platform>(&self) -> Result<BarIter<'_, P>, &'static str> {
+    fn iter_bars<P: Platform>(&self) -> Result<BarIter<P>, &'static str> {
         let (class, subclass) = self.class_code::<P>()?;
         let max_bars = if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
             2
         } else {
             6
         };
-        Ok(BarIter { device: self, max_bars, index: Some(0), _phantom: PhantomData })
+        Ok(BarIter { device: self.0, max_bars, index: Some(0), _phantom: PhantomData })
     }
     /// Checks if the device exists at all.
     fn exists<P: Platform>(&self) -> Result<bool, &'static str> {
@@ -301,13 +301,13 @@ impl From<PciAddress> for u16 {
 
 /// Uses the legacy port-based IO method to read a u32 from the PCI
 /// configuration space.
-fn pci_read_cam<P: Platform>(address: &PciAddress, offset: u8) -> Result<u32, &'static str> {
+fn pci_read_cam<P: Platform>(address: Bdf, offset: u8) -> Result<u32, &'static str> {
     let port_factory = P::port_factory();
     let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
     let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
 
     // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
-    let value = (1u32 << 31) | ((Into::<u16>::into(*address) as u32) << 8) | ((offset as u32) << 2);
+    let value = (1u32 << 31) | ((Into::<u16>::into(address) as u32) << 8) | ((offset as u32) << 2);
     // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
     // be safe to write to even if we don't have a PCI bus.
     unsafe { address_port.try_write(value) }?;
@@ -317,19 +317,14 @@ fn pci_read_cam<P: Platform>(address: &PciAddress, offset: u8) -> Result<u32, &'
     unsafe { data_port.try_read() }
 }
 
-#[allow(dead_code)]
-fn pci_write_cam<P: Platform>(
-    address: &PciAddress,
-    offset: u8,
-    value: u32,
-) -> Result<(), &'static str> {
+fn pci_write_cam<P: Platform>(address: Bdf, offset: u8, value: u32) -> Result<(), &'static str> {
     let port_factory = P::port_factory();
     let mut address_port: Port<u32> = port_factory.new_writer(PCI_PORT_CONFIGURATION_SPACE_ADDRESS);
     let mut data_port: Port<u32> = port_factory.new_reader(PCI_PORT_CONFIGURATION_SPACE_DATA);
 
     // Address register implemented per Section 3.2.2.3.2 of PCI spec, Rev 3.0.
     let address =
-        (1u32 << 31) | ((Into::<u16>::into(*address) as u32) << 8) | ((offset as u32) << 2);
+        (1u32 << 31) | ((Into::<u16>::into(address) as u32) << 8) | ((offset as u32) << 2);
     // Safety: PCI_PORT_CONFIGURATION_SPACE_ADDRESS is a well-known port and should
     // be safe to write to even if we don't have a PCI bus.
     unsafe { address_port.try_write(address) }?;
