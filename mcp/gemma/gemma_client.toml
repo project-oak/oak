@@ -1,0 +1,4 @@
+listen_address = "0.0.0.0:11434"
+server_proxy_url = "ws://127.0.0.1:8080"
+attestation_generators = []
+attestation_verifiers = []

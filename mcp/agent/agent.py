@@ -17,7 +17,6 @@
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StreamableHTTPConnectionParams
-import os
 
 
 MCP_SERVER_URL = 'http://localhost:8080/mcp'

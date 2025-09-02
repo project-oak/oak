@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 IMAGE_NAME="attested-gemma"
 PROJECT_ID="oak-examples-477357"
 REPOSITORY_NAME="attested-gemma"
