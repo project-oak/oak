@@ -61,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.DeleteMemoryRequest",
         "oak.private_memory.DeleteMemoryResponse",
         "oak.private_memory.TextQuery",
+        "oak.private_memory.QueryClauses",
     ];
 
     let oneof_field_names = [
@@ -123,6 +124,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.field_attribute(
         "oak.private_memory.TextQuery.match_type",
         "#[serde(with=\"crate::text_query_match_type_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.QueryClauses.operator",
+        "#[serde(with=\"crate::operator_converter\")]",
     );
 
     // Timestamp converters

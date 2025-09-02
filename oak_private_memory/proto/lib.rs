@@ -323,6 +323,14 @@ enum_converter!(
     valid_variants = &["UNSPECIFIED", "EQUAL", "GTE", "LTE", "LT", "GT"]
 );
 
+enum_converter!(
+    module_name = operator_converter,
+    enum_type = crate::oak::private_memory::Operator,
+    unspecified_variant = crate::oak::private_memory::Operator::default(),
+    doc_string = "a string or an integer representing an Operator variant",
+    valid_variants = &["OPERATOR_UNSPECIFIED", "OPERATOR_AND", "OPERATOR_OR"]
+);
+
 pub mod timestamp_converter {
     use chrono::{DateTime, Utc};
     use prost_types::Timestamp;

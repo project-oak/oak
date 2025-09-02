@@ -203,11 +203,24 @@ message TextQuery {
   }
 }
 
+// Logical operator for combining query clauses.
+enum Operator {
+  OPERATOR_UNSPECIFIED = 0;
+  OPERATOR_AND = 1;  // All clauses must match.
+  OPERATOR_OR = 2;   // Any clause can match.
+}
+
 message SearchMemoryQuery {
   oneof clause {
     EmbeddingQuery embedding_query = 1;
     TextQuery text_query = 2;
+    QueryClauses operator = 3;
   }
+}
+
+message QueryClauses {
+  Operator operator = 1;
+  repeated SearchMemoryQuery clauses = 2;
 }
 
 // Defines which parts of the Memory object to return.
