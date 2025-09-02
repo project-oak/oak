@@ -18,7 +18,10 @@ use icing::{DocumentProto, IcingGroundTruthFilesHelper};
 use log::debug;
 use prost::Message;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{text_query, MatchType, TextQuery},
+    oak::private_memory::{
+        search_memory_query, text_query, EmbeddingQuery, MatchType, Operator, QueryClauses,
+        SearchMemoryQuery, TextQuery,
+    },
     prelude::v1::*,
 };
 use tempfile::tempdir;
@@ -349,35 +352,171 @@ impl IcingMetaDatabase {
         self.icing_search_engine.set_schema(&schema);
     }
 
-    /// Search based on the document embedding.
-    /// The process is as follow:
-    /// 1. For each memory, we find all the document embeddings that matches the
-    ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
-    ///    ...]`.
-    /// 2. Perform a dot product on `search_embedding` and the matched
-    ///    `[doc1_embedding, ...]`, which gives a list of scores `[score1,
-    ///    score2, ...]`.
-    /// 3. Sum the scores, and the corresponding memory has the final score
-    ///    `score_sum`.
-    /// 4. We repeat 1-3 for all memories, rank the memories by `score_sum`, and
-    ///    return the first `limit` ones with highest scores.
-    pub fn embedding_search(
+    fn execute_search(
         &self,
-        embedding_query: &EmbeddingQuery,
+        search_spec: &icing::SearchSpecProto,
+        scoring_spec: &icing::ScoringSpecProto,
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let query_embeddings: &[Embedding] = &embedding_query.embedding;
-        let score_op: Option<ScoreRange> = embedding_query.score_range;
+        const DEFAULT_LIMIT: i32 = 10;
+        let limit = if page_size > 0 { page_size } else { DEFAULT_LIMIT };
+
+        let mut result_spec =
+            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
+
+        // We only need the `BlobId`.
+        result_spec.type_property_masks.push(Self::create_blob_id_projection());
+
+        let search_result = match page_token {
+            PageToken::Start => {
+                self.icing_search_engine.search(search_spec, scoring_spec, &result_spec)
+            }
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Invalid => bail!("invalid page token"),
+        };
+
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed for {:?}", search_result.status);
+        }
+
+        let scores: Vec<f32> = search_result
+            .results
+            .iter()
+            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
+            .collect();
+        let next_page_token =
+            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+        ensure!(blob_ids.len() == scores.len());
+        if blob_ids.is_empty() {
+            return Ok((blob_ids, scores, PageToken::Start));
+        }
+        Ok((blob_ids, scores, next_page_token))
+    }
+
+    pub fn search(
+        &self,
+        query: &SearchMemoryQuery,
+        page_size: i32,
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+        let (search_spec, scoring_spec) = self.build_query_specs(query)?;
+        self.execute_search(&search_spec, &scoring_spec.unwrap_or_default(), page_size, page_token)
+    }
+
+    fn build_query_specs(
+        &self,
+        query: &SearchMemoryQuery,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        match query.clause.as_ref().context("no clause")? {
+            search_memory_query::Clause::TextQuery(text_query) => {
+                self.build_text_query_specs(text_query)
+            }
+            search_memory_query::Clause::EmbeddingQuery(embedding_query) => {
+                self.build_embedding_query_specs(embedding_query)
+            }
+            search_memory_query::Clause::Operator(clauses) => {
+                self.build_clauses_query_specs(clauses)
+            }
+        }
+    }
+
+    fn build_clauses_query_specs(
+        &self,
+        clauses: &QueryClauses,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        let operator = match clauses.operator() {
+            Operator::And => "AND",
+            Operator::Or => "OR",
+            _ => bail!("unsupported operator"),
+        };
+
+        let mut sub_queries = Vec::new();
+        let mut score_spec = icing::ScoringSpecProto::default();
+        for clause in &clauses.clauses {
+            let (spec, sub_score_spec) = self.build_query_specs(clause)?;
+            if let Some(sub_score_spec) = sub_score_spec {
+                score_spec = sub_score_spec;
+            }
+            sub_queries.push(format!("({})", spec.query.context("no sub query")?));
+        }
+
+        let query = sub_queries.join(&format!(" {} ", operator));
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query),
+            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            ..Default::default()
+        };
+        Ok((search_spec, Some(score_spec)))
+    }
+
+    fn build_text_query_specs(
+        &self,
+        text_query: &TextQuery,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        let value =
+            if let Some(text_query::Value::TimestampVal(timestamp)) = text_query.value.as_ref() {
+                timestamp_to_i64(timestamp).to_string()
+            } else if let Some(text_query::Value::StringVal(text)) = text_query.value.as_ref() {
+                text.to_string()
+            } else {
+                bail!("unsupported value type for text search");
+            };
+
+        let field_name = match text_query.field() {
+            MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
+            MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
+            MemoryField::Id => MEMORY_ID_NAME,
+            MemoryField::Tags => TAG_NAME,
+            _ => bail!("unsupported field for text search"),
+        };
+
+        let query = match text_query.match_type() {
+            MatchType::Equal => {
+                if field_name == CREATED_TIMESTAMP_NAME || field_name == EVENT_TIMESTAMP_NAME {
+                    format!("({field_name} == {value})")
+                } else {
+                    format!("({field_name}:{value})")
+                }
+            }
+            MatchType::Gte => format!("({field_name} >= {value})"),
+            MatchType::Lte => format!("({field_name} <= {value})"),
+            MatchType::Gt => format!("({field_name} > {value})"),
+            MatchType::Lt => format!("({field_name} < {value})"),
+            _ => bail!("unsupported match type for text search"),
+        };
+
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query),
+            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            ..Default::default()
+        };
+        Ok((search_spec, None))
+    }
+
+    fn build_scoring_spec(&self) -> icing::ScoringSpecProto {
+        // Caculate the sum of the scores of all matching embeddings.
+        const SUM_ALL_MATCHING_EMBEDDING: &str =
+            "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
         let mut scoring_spec = icing::get_default_scoring_spec();
         scoring_spec.rank_by = Some(
             icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
         );
-
-        // Caculate the sum of the scores of all matching embeddings.
-        const SUM_ALL_MATCHING_EMBEDDING: &str =
-            "sum(this.matchedSemanticScores(getEmbeddingParameter(0)))";
         scoring_spec.advanced_scoring_expression = Some(SUM_ALL_MATCHING_EMBEDDING.to_string());
+        scoring_spec
+    }
+
+    fn build_embedding_query_specs(
+        &self,
+        embedding_query: &EmbeddingQuery,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        let query_embeddings: &[Embedding] = &embedding_query.embedding;
+        let score_op: Option<ScoreRange> = embedding_query.score_range;
 
         // Search the first embedding property, specified by `EMBEDDING_NAME`.
         // Since we have only one embedding property, this is the one to go.
@@ -404,41 +543,30 @@ impl IcingMetaDatabase {
             enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
         };
-        const LIMIT: i32 = 10;
-        let limit = if page_size > 0 { page_size } else { LIMIT };
 
-        let mut result_spec =
-            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
+        Ok((search_spec, Some(self.build_scoring_spec())))
+    }
 
-        // We only need the `BlobId`.
-        result_spec.type_property_masks.push(Self::create_blob_id_projection());
-        let search_result = match page_token {
-            PageToken::Start => {
-                self.icing_search_engine.search(&search_spec, &scoring_spec, &result_spec)
-            }
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
-            PageToken::Invalid => unreachable!(), // Already handled
-        };
-
-        if search_result.status.clone().context("no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed for {:?}", search_result.status);
-        }
-
-        let scores: Vec<f32> = search_result
-            .results
-            .iter()
-            .map(|x| x.score.map(|s| s as f32).context("no score"))
-            .collect::<anyhow::Result<Vec<_>>>()?;
-        let next_page_token =
-            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
-        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(blob_ids.len() == scores.len());
-        if blob_ids.is_empty() {
-            return Ok((blob_ids, scores, PageToken::Start));
-        }
-        Ok((blob_ids, scores, next_page_token))
+    /// Search based on the document embedding.
+    /// The process is as follow:
+    /// 1. For each memory, we find all the document embeddings that matches the
+    ///    name of the search embedding, say `[doc_embeding1, doc_embedding2,
+    ///    ...]`.
+    /// 2. Perform a dot product on `search_embedding` and the matched
+    ///    `[doc1_embedding, ...]`, which gives a list of scores `[score1,
+    ///    score2, ...]`.
+    /// 3. Sum the scores, and the corresponding memory has the final score
+    ///    `score_sum`.
+    /// 4. We repeat 1-3 for all memories, rank the memories by `score_sum`, and
+    ///    return the first `limit` ones with highest scores.
+    pub fn embedding_search(
+        &self,
+        embedding_query: &EmbeddingQuery,
+        page_size: i32,
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+        let (search_spec, scoring_spec) = self.build_embedding_query_specs(embedding_query)?;
+        self.execute_search(&search_spec, &scoring_spec.unwrap_or_default(), page_size, page_token)
     }
 
     pub fn text_search(
@@ -447,78 +575,13 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let value =
-            if let Some(text_query::Value::TimestampVal(timestamp)) = text_query.value.as_ref() {
-                timestamp_to_i64(timestamp).to_string()
-            } else if let Some(text_query::Value::StringVal(text)) = text_query.value.as_ref() {
-                text.to_string()
-            } else {
-                bail!("unsupported value type for text search");
-            };
-
-        let field_name = match text_query.field() {
-            MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
-            MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
-            MemoryField::Id => MEMORY_ID_NAME,
-            MemoryField::Tags => TAG_NAME,
-            _ => bail!("unsupported field for text search"),
-        };
-
-        let query = match text_query.match_type() {
-            MatchType::Equal => {
-                if field_name == CREATED_TIMESTAMP_NAME || field_name == EVENT_TIMESTAMP_NAME {
-                    format!("{field_name} == {value}")
-                } else {
-                    format!("{field_name}:{value}")
-                }
-            }
-            MatchType::Gte => format!("{field_name} >= {value}"),
-            MatchType::Lte => format!("{field_name} <= {value}"),
-            MatchType::Gt => format!("{field_name} > {value}"),
-            MatchType::Lt => format!("{field_name} < {value}"),
-            _ => bail!("unsupported match type for text search"),
-        };
-
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query),
-            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            ..Default::default()
-        };
-
-        const LIMIT: i32 = 10;
-        let limit = if page_size > 0 { page_size } else { LIMIT };
-
-        let mut result_spec =
-            icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
-        result_spec.type_property_masks.push(Self::create_blob_id_projection());
-
-        let search_result = match page_token {
-            PageToken::Start => self.icing_search_engine.search(
-                &search_spec,
-                &icing::get_default_scoring_spec(),
-                &result_spec,
-            ),
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
-            PageToken::Invalid => bail!("invalid page token"),
-        };
-
-        if search_result.status.clone().context("no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed for {:?}", search_result.status);
-        }
-
-        let scores: Vec<f32> =
-            search_result.results.iter().map(|x| x.score.unwrap_or(0.0) as f32).collect();
-        let next_page_token =
-            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
-        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(blob_ids.len() == scores.len());
-        if blob_ids.is_empty() {
-            return Ok((blob_ids, scores, PageToken::Start));
-        }
-        Ok((blob_ids, scores, next_page_token))
+        let (search_spec, _) = self.build_text_query_specs(text_query)?;
+        self.execute_search(
+            &search_spec,
+            &icing::ScoringSpecProto::default(),
+            page_size,
+            page_token,
+        )
     }
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {

@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::bail;
+use anyhow::Context;
 use external_db_client::ExternalDbClient;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -127,17 +127,11 @@ impl DatabaseWithCache {
     ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
         let page_token = PageToken::try_from(request.page_token)
             .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-        let (blob_ids, scores, next_page_token) = match request.query.unwrap().clause.unwrap() {
-            search_memory_query::Clause::EmbeddingQuery(query) => {
-                self.meta_db().embedding_search(&query, request.page_size, page_token)?
-            }
-            search_memory_query::Clause::TextQuery(query) => {
-                self.meta_db().text_search(&query, request.page_size, page_token)?
-            }
-            search_memory_query::Clause::Operator(_) => {
-                bail!("Operator queries are not supported.")
-            }
-        };
+        let (blob_ids, scores, next_page_token) = self.meta_db().search(
+            &request.query.context("the query must be non-empty")?,
+            request.page_size,
+            page_token,
+        )?;
         let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
         Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 
