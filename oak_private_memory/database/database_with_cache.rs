@@ -31,7 +31,6 @@ pub struct DatabaseWithCache {
     database: IcingMetaDatabase,
     cache: MemoryCache,
     key_derivation_info: KeyDerivationInfo,
-    changed: bool,
 }
 
 impl DatabaseWithCache {
@@ -41,12 +40,7 @@ impl DatabaseWithCache {
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
     ) -> Self {
-        Self {
-            database,
-            cache: MemoryCache::new(db_client, dek),
-            key_derivation_info,
-            changed: false,
-        }
+        Self { database, cache: MemoryCache::new(db_client, dek), key_derivation_info }
     }
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
@@ -67,7 +61,7 @@ impl DatabaseWithCache {
     /// Returns true if the cached database contains content that doesnt exist
     /// in durable storage, and should be written back.
     pub fn changed(&self) -> bool {
-        self.changed || self.database.newly_created()
+        self.database.needs_writeback()
     }
 
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
@@ -76,7 +70,6 @@ impl DatabaseWithCache {
         }
         let blob_id = self.cache.add_memory(&memory).await?;
         self.meta_db().add_memory(&memory, blob_id)?;
-        self.changed = true;
         Ok(memory.id)
     }
 
@@ -116,7 +109,6 @@ impl DatabaseWithCache {
     }
 
     pub async fn reset_memory(&mut self) -> bool {
-        self.changed = true;
         self.meta_db().reset();
         true
     }
@@ -144,7 +136,6 @@ impl DatabaseWithCache {
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
-        self.changed = true;
         self.meta_db().delete_memories(&ids)?;
         self.cache.delete_memories(&ids).await?;
         Ok(())

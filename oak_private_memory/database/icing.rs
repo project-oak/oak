@@ -17,7 +17,7 @@ use std::path::Path;
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
-use log::debug;
+use log::{debug, error};
 use prost::Message;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
@@ -46,7 +46,7 @@ fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
 pub struct IcingMetaDatabase {
     icing_search_engine: cxx::UniquePtr<icing::IcingSearchEngine>,
     base_dir: String,
-    newly_created: bool,
+    applied_operations: Vec<MutationOperation>,
 }
 
 // `IcingMetaBase` is safe to send because it is behind a unique_ptr,
@@ -64,15 +64,40 @@ const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
 
+/// A representation of a mutation operation.
+/// These are used to track changes that have been applied to the local
+/// in-memory metadata database, but not yet committed to durable storage.
+#[allow(dead_code)]
+enum MutationOperation {
+    // No action for this one, it just indicates that the database was newly created.
+    Create,
+
+    // A new item was added. The content blob will have been written separately, this operation
+    // contains only the metadata changes that need to be re-written to a new database version on
+    // version conflicts.
+    Add(PendingMetadata),
+
+    // The item with the given ID was removed.
+    // Note that exact operation timing is not maintained. So if another session
+    // wrote this ID later than the remove occurred, but wrote its metadatabase
+    // back earlier, this remove would still result in removing the item.
+    Remove(MemoryId),
+
+    // The entire metadata database was reset.
+    // Note that exact operation timing is not maintained.
+    Reset,
+}
+
 /// The generated metadata for a memory.
 /// This contains the information needed to write the metadata to the icing
 /// database.
+#[derive(Debug, Clone)]
 struct PendingMetadata {
     icing_document: DocumentProto,
 }
 
 impl PendingMetadata {
-    pub fn new(memory: &Memory, blob_id: BlobId) -> Self {
+    pub fn new(memory: &Memory, blob_id: &BlobId) -> Self {
         let memory_id = &memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embeddings: Vec<_> = memory
@@ -206,7 +231,11 @@ impl IcingMetaDatabase {
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-        Ok(Self { icing_search_engine, base_dir: base_dir_str.to_string(), newly_created: true })
+        Ok(Self {
+            icing_search_engine,
+            base_dir: base_dir_str.to_string(),
+            applied_operations: vec![MutationOperation::Create],
+        })
     }
 
     /// Create a new icing database in `base_dir`. Using the provided import
@@ -217,7 +246,11 @@ impl IcingMetaDatabase {
         ground_truth.migrate(base_dir_str)?;
 
         let icing_search_engine = Self::initialize_icing_database(base_dir_str)?;
-        Ok(Self { icing_search_engine, base_dir: base_dir_str.to_string(), newly_created: false })
+        Ok(Self {
+            icing_search_engine,
+            base_dir: base_dir_str.to_string(),
+            applied_operations: vec![],
+        })
     }
 
     fn initialize_icing_database(
@@ -233,12 +266,14 @@ impl IcingMetaDatabase {
         Ok(icing_search_engine)
     }
 
+    // Adds a new memory to the cache.
+    // The generated metadta is returned so that it can be re-applied if needed.
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
-        let pending_metadata = PendingMetadata::new(memory, blob_id);
-        self.add_pending_metadata(&pending_metadata)
+        let pending_metadata = PendingMetadata::new(memory, &blob_id);
+        self.add_pending_metadata(pending_metadata)
     }
 
-    fn add_pending_metadata(&mut self, pending_metadata: &PendingMetadata) -> anyhow::Result<()> {
+    fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
         let result = self.icing_search_engine.put(pending_metadata.document());
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
@@ -248,6 +283,7 @@ impl IcingMetaDatabase {
         ensure!(
             result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
         );
+        self.applied_operations.push(MutationOperation::Add(pending_metadata));
         Ok(())
     }
 
@@ -352,10 +388,11 @@ impl IcingMetaDatabase {
             .cloned()
     }
 
-    pub fn reset(&self) {
+    pub fn reset(&mut self) {
         self.icing_search_engine.reset();
         let schema = Self::create_schema();
         self.icing_search_engine.set_schema(&schema);
+        self.applied_operations.push(MutationOperation::Reset);
     }
 
     fn execute_search(
@@ -599,14 +636,61 @@ impl IcingMetaDatabase {
             {
                 bail!("Failed to delete memory with id {}: {:?}", memory_id, result.status);
             }
+            self.applied_operations.push(MutationOperation::Remove(memory_id.clone()));
         }
         Ok(())
     }
 
     /// Returns true if this instance was created fresh, without any previously
     /// existing data.
-    pub fn newly_created(&self) -> bool {
-        self.newly_created
+    pub fn needs_writeback(&self) -> bool {
+        !self.applied_operations.is_empty()
+    }
+
+    // Return a new [`IcingMetadataBase`] instance that contains all changes applied
+    // to this one, but on top of a new base blob.
+    //
+    // The current instance is consumed, and a new one is returned.
+    //
+    // The expectation is that all operations can be applied without error.
+    //
+    // new_base_dir should be different that the base_dir for this instance,
+    // otherwise unexpected errors may occur.
+    //
+    // If there is a failure when applying the new operation, no error will be
+    // returning, but the error message will be logged.
+    pub fn import_with_changes(
+        new_base_dir: impl AsRef<Path>,
+        new_base_blob: &[u8],
+        apply_changes_from: &IcingMetaDatabase,
+    ) -> anyhow::Result<Self> {
+        let mut new_db = Self::import(new_base_dir, new_base_blob)?;
+
+        // Apply each operation to the new database.
+        // This will also recreate the applied operations on the new database as a side
+        // effect, in case it also needs to be rebased.
+        for operation in apply_changes_from.applied_operations.iter() {
+            let result = match operation {
+                MutationOperation::Create => {
+                    // No action, now the database is created.
+                    Ok(())
+                }
+                MutationOperation::Add(pending_metadata) => {
+                    new_db.add_pending_metadata(pending_metadata.clone())
+                }
+                MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
+                MutationOperation::Reset => {
+                    new_db.reset();
+                    Ok(())
+                }
+            };
+
+            if result.is_err() {
+                error!("Warning: failed to apply operation onto new database")
+            }
+        }
+
+        Ok(new_db)
     }
 
     pub fn export(&self) -> anyhow::Result<icing::IcingGroundTruthFiles> {
@@ -827,5 +911,158 @@ mod tests {
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_with_changes_test_add_memory() -> anyhow::Result<()> {
+        // Original base db.
+        let tempdir1 = tempdir()?;
+        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
+        let (_mid_b, bid_b) = add_test_memory(&mut db1, "B");
+
+        // Now "write it back"
+        let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
+
+        // First concurrent changer import and first changer adds E and F
+        let tempdir2 = tempdir()?;
+        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        let (_mid_c, bid_c) = add_test_memory(&mut db2, "C");
+        let (_mid_d, bid_d) = add_test_memory(&mut db2, "D");
+
+        // First concurrent changer import and first changer adds G and H
+        let tempdir3 = tempdir()?;
+        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        let (_mid_e, bid_e) = add_test_memory(&mut db3, "E");
+        let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
+
+        // First concurrent changer is "written back" first.
+        let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
+
+        // When db3 writeback detects that it needs a fresher copy, it will import with
+        // its own changes.
+        let tempdir4 = tempdir()?;
+        let db3_prime =
+            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+
+        // Should contain all items.
+        assert_that!(
+            db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
+            ok((
+                unordered_elements_are![
+                    eq(bid_a.as_str()),
+                    eq(bid_b.as_str()),
+                    eq(bid_c.as_str()),
+                    eq(bid_d.as_str()),
+                    eq(bid_e.as_str()),
+                    eq(bid_f.as_str()),
+                ],
+                eq(&PageToken::Start),
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_with_changes_test_add_and_delete_memory() -> anyhow::Result<()> {
+        // Original base db.
+        let tempdir1 = tempdir()?;
+        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
+        let (mid_b, _mid_b) = add_test_memory(&mut db1, "B");
+        let (mid_c, _bid_c) = add_test_memory(&mut db1, "C");
+        let (_mid_d, bid_d) = add_test_memory(&mut db1, "D");
+
+        // Now "write it back"
+        let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
+
+        // First concurrent changer import and first changer removes B, adds E
+        let tempdir2 = tempdir()?;
+        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        db2.delete_memories(&[mid_b.clone()])?;
+        let (_mid_e, bid_e) = add_test_memory(&mut db2, "E");
+
+        // Second concurrent changer import and first changer removes B and C, add F
+        // The remove will be redundant, but should not cause error or failures.
+        let tempdir3 = tempdir()?;
+        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        db3.delete_memories(&[mid_b.clone(), mid_c.clone()])?;
+        let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
+
+        // First concurrent changer is "written back" first.
+        let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
+
+        // When db3 writeback detects that it needs a fresher copy, it will import with
+        // its own changes.
+        let tempdir4 = tempdir()?;
+        let db3_prime =
+            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+
+        assert_that!(
+            db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
+            ok((
+                unordered_elements_are![
+                    eq(bid_a.as_str()),
+                    // B and C were deleted.
+                    eq(bid_d.as_str()),
+                    eq(bid_e.as_str()),
+                    eq(bid_f.as_str())
+                ],
+                eq(&PageToken::Start),
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_import_with_changes_test_reset() -> anyhow::Result<()> {
+        // Original base db.
+        let tempdir1 = tempdir()?;
+        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let (_mid_a, _bid_a) = add_test_memory(&mut db1, "A");
+        let (mid_b, _bid_b) = add_test_memory(&mut db1, "B");
+        let (_mid_c, _bid_c) = add_test_memory(&mut db1, "C");
+
+        // Now "write it back"
+        let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
+
+        // First concurrent changer import and first changer removes B, adds E
+        let tempdir2 = tempdir()?;
+        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        db2.delete_memories(&[mid_b.clone()])?;
+        let (_mid_e, _bid_e) = add_test_memory(&mut db2, "E");
+
+        // First concurrent changer is "written back" first.
+        let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
+
+        // Second concurrent changer import and reset.
+        let tempdir3 = tempdir()?;
+        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        db3.reset();
+
+        // When db3 writeback detects that it needs a fresher copy, it will import with
+        // its own changes.
+        let tempdir4 = tempdir()?;
+        let db3_prime =
+            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+
+        assert_that!(
+            db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
+            ok((is_empty(), eq(&PageToken::Start),))
+        );
+        Ok(())
+    }
+
+    fn add_test_memory(db: &mut IcingMetaDatabase, suffix: &str) -> (MemoryId, BlobId) {
+        let memory_id = format!("memory_id_{suffix}");
+        let blob_id = format!("blob_id_{suffix}");
+        db.add_memory(
+            &Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() },
+            blob_id.clone(),
+        )
+        .expect("failed to add memory");
+        (memory_id, blob_id)
     }
 }
