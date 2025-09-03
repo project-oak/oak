@@ -58,14 +58,6 @@ rust_test(
 )
 
 rust_library(
-    name = "app_config",
-    srcs = ["src/app_config.rs"],
-    deps = [
-        "@oak_crates_index//:serde",
-    ],
-)
-
-rust_library(
     name = "encryption",
     srcs = ["src/encryption.rs"],
     deps = [
@@ -118,52 +110,16 @@ rust_library(
 )
 
 rust_library(
-    name = "app",
-    srcs = [
-        "src/app.rs",
-        "src/app_service.rs",
-    ],
-    proc_macro_deps = [
-        "@oak_crates_index//:async-trait",
-    ],
-    deps = [
-        ":app_config",
-        ":encryption",
-        ":external_db_client",
-        ":log",
-        ":metrics",
-        "//database",
-        "//proto:sealed_memory_rust_proto",
-        "//proto/grpc:sealed_memory_grpc_proto",
-        "@oak//oak_proto_rust",
-        "@oak//oak_session",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:async-stream",
-        "@oak_crates_index//:futures",
-        "@oak_crates_index//:opentelemetry",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:rand",
-        "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:tempfile",
-        "@oak_crates_index//:tokio",
-        "@oak_crates_index//:tokio-stream",
-        "@oak_crates_index//:tonic",
-    ],
-)
-
-rust_library(
     name = "private_memory_server_lib",
     srcs = [
         "src/lib.rs",
     ],
     deps = [
-        ":app",
-        ":app_config",
         ":encryption",
         ":external_db_client",
         ":log",
         ":metrics",
+        "//app",
         "//database",
     ],
 )

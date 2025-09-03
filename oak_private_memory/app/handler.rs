@@ -12,10 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-use std::{net::SocketAddr, sync::Arc};
-
-pub mod app_service;
+//
+use std::sync::Arc;
 
 use anyhow::{bail, Context};
 use encryption::{decrypt, encrypt, generate_nonce};
@@ -32,156 +30,14 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
 use sealed_memory_rust_proto::prelude::v1::*;
 use tempfile::tempdir;
 use tokio::{
-    sync::{mpsc, Mutex, MutexGuard, RwLock},
+    sync::{mpsc, Mutex, MutexGuard},
     time::Instant,
 };
-use tonic::transport::{Channel, Endpoint};
+use tonic::transport::Channel;
 
-const MAX_CONNECT_RETRIES: usize = 5;
-const INITIAL_BACKOFF_MS: u64 = 100;
-const MAX_DECODE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
-
-pub struct SharedDbClient {
-    database_service_host: SocketAddr,
-    client: RwLock<Option<SealedMemoryDatabaseServiceClient<Channel>>>,
-}
-
-impl SharedDbClient {
-    pub fn new(database_service_host: SocketAddr) -> Self {
-        Self { database_service_host, client: RwLock::new(None) }
-    }
-
-    pub async fn get_or_connect(
-        &self,
-    ) -> anyhow::Result<SealedMemoryDatabaseServiceClient<Channel>> {
-        // First, try to get a read lock and check if the client is already initialized.
-        {
-            let read_guard = self.client.read().await;
-            if let Some(client) = read_guard.as_ref() {
-                info!("Reusing cached DB client");
-                return Ok(client.clone());
-            }
-        }
-
-        // If the client is not initialized, get a write lock to initialize it.
-        let mut write_guard = self.client.write().await;
-        // Check again in case another thread initialized it while we were waiting for
-        // the write lock.
-        if let Some(client) = write_guard.as_ref() {
-            info!("Reusing cached DB client initialized by another thread");
-            return Ok(client.clone());
-        }
-
-        let mut backoff = INITIAL_BACKOFF_MS;
-        let db_addr = self.database_service_host;
-        let db_url = format!("http://{db_addr}");
-        info!("Database service URL: {}", db_url);
-        let endpoint = Endpoint::from_shared(db_url.clone())?;
-        for attempt in 0..MAX_CONNECT_RETRIES {
-            info!("Creating new DB client, attempt {}", attempt + 1);
-
-            match endpoint.connect().await {
-                Ok(channel) => {
-                    let new_client = SealedMemoryDatabaseServiceClient::new(channel)
-                        .max_decoding_message_size(MAX_DECODE_SIZE);
-                    *write_guard = Some(new_client.clone());
-                    info!("Successfully created and cached new DB client");
-                    return Ok(new_client);
-                }
-                Err(err) => {
-                    info!("Failed to connect to database service: {}", err);
-                }
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
-            backoff *= 2;
-            get_global_metrics().inc_db_connect_retries();
-        }
-        bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
-    }
-}
-
-/// The state for each client connection.
-pub struct UserSessionContext {
-    pub dek: Vec<u8>,
-    pub uid: String,
-    pub message_type: MessageType,
-
-    pub database: DatabaseWithCache,
-    pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
-}
-
-// The message format for the plaintext.
-#[derive(Default, Copy, Clone, PartialEq)]
-pub enum MessageType {
-    #[default]
-    BinaryProto,
-    Json,
-}
-
-async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
-    if !user_context.database.changed() {
-        info!("Database is not changed, skip saving");
-        return Ok(());
-    }
-
-    let exported_db = user_context.database.export()?;
-    let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
-    let database = encrypt_database(&encrypted_info, &user_context.dek)?;
-
-    let db_size = database.data.len() as u64;
-    info!("Saving db size: {}", db_size);
-    get_global_metrics().record_db_size(db_size);
-
-    let now = Instant::now();
-    user_context.database_service_client.add_blob(database, Some(user_context.uid.clone())).await?;
-    let elapsed = now.elapsed();
-    get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
-
-    Ok(())
-}
-
-pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {
-    info!("Persistence service started");
-    while let Some(mut user_context) = rx.recv().await {
-        info!("Persistence service received a session to save");
-        get_global_metrics().record_db_persist_queue_size(rx.len() as u64);
-        if let Err(e) = persist_database(&mut user_context).await {
-            get_global_metrics().inc_db_persist_failures();
-            info!("Failed to persist database: {:?}", e);
-        }
-    }
-    info!("Persistence service finished");
-}
-
-async fn get_or_create_db(
-    db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
-    uid: &BlobId,
-    dek: &[u8],
-) -> anyhow::Result<IcingMetaDatabase> {
-    if let Some(data_blob) = db_client.get_blob(uid, true).await? {
-        info!("Loaded database from blob: Length: {}", data_blob.data.len());
-        let encrypted_info = decrypt_database(data_blob, dek)?;
-        if let Some(icing_db) = encrypted_info.icing_db {
-            let now = Instant::now();
-            info!("Loaded database successfully!!");
-            let temp_dir = tempdir()?;
-            let db = IcingMetaDatabase::import(temp_dir, icing_db.encode_to_vec().as_slice())?;
-            let elapsed = now.elapsed();
-            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
-            return Ok(db);
-        }
-    } else {
-        debug!("no blob for {}", uid);
-    }
-
-    // This case can happen if the user is just registered, but the initial database
-    // has not been created, or if the blob exists but is empty.
-    let temp_path = tempfile::tempdir()?.path().to_str().context("invalid temp path")?.to_string();
-    let db = IcingMetaDatabase::new(&temp_path)?;
-    Ok(db)
-}
-
+use crate::{
+    context::UserSessionContext, db_client::SharedDbClient, packing::ResponsePacking, MessageType,
+};
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
 pub struct SealedMemorySessionHandler {
@@ -515,114 +371,6 @@ impl SealedMemorySessionHandler {
     }
 }
 
-pub trait RequestUnpacking {
-    fn from_request(x: SealedMemoryRequest) -> Option<Self>
-    where
-        Self: Sized;
-    fn into_request(self) -> SealedMemoryRequest;
-}
-pub trait ResponsePacking {
-    fn into_response(self) -> SealedMemoryResponse;
-    fn from_response(x: SealedMemoryResponse) -> Option<Self>
-    where
-        Self: Sized;
-}
-
-macro_rules! impl_packing {
-    (Request => $name:ident) => {
-        impl RequestUnpacking for $name {
-            fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-                match x.request {
-                    Some(sealed_memory_request::Request::$name(request)) => Some(request),
-                    _ => None,
-                }
-            }
-
-            fn into_request(self) -> SealedMemoryRequest {
-                SealedMemoryRequest {
-                    request: Some(sealed_memory_request::Request::$name(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-
-    (Response => $name:ident) => {
-        impl ResponsePacking for $name {
-            fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-                match x.response {
-                    Some(sealed_memory_response::Response::$name(response)) => Some(response),
-                    _ => None,
-                }
-            }
-
-            fn into_response(self) -> SealedMemoryResponse {
-                SealedMemoryResponse {
-                    response: Some(sealed_memory_response::Response::$name(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-    (Request => DeleteMemoryRequest) => {
-        impl RequestUnpacking for DeleteMemoryRequest {
-            fn from_request(x: SealedMemoryRequest) -> Option<Self> {
-                match x.request {
-                    Some(sealed_memory_request::Request::DeleteMemoryRequest(request)) => {
-                        Some(request)
-                    }
-                    _ => None,
-                }
-            }
-
-            fn into_request(self) -> SealedMemoryRequest {
-                SealedMemoryRequest {
-                    request: Some(sealed_memory_request::Request::DeleteMemoryRequest(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-
-    (Response => DeleteMemoryResponse) => {
-        impl ResponsePacking for DeleteMemoryResponse {
-            fn from_response(x: SealedMemoryResponse) -> Option<Self> {
-                match x.response {
-                    Some(sealed_memory_response::Response::DeleteMemoryResponse(response)) => {
-                        Some(response)
-                    }
-                    _ => None,
-                }
-            }
-
-            fn into_response(self) -> SealedMemoryResponse {
-                SealedMemoryResponse {
-                    response: Some(sealed_memory_response::Response::DeleteMemoryResponse(self)),
-                    request_id: 0,
-                }
-            }
-        }
-    };
-}
-impl_packing!(Request => AddMemoryRequest);
-impl_packing!(Request => GetMemoriesRequest);
-impl_packing!(Request => ResetMemoryRequest);
-impl_packing!(Request => KeySyncRequest);
-impl_packing!(Request => GetMemoryByIdRequest);
-impl_packing!(Request => SearchMemoryRequest);
-impl_packing!(Request => UserRegistrationRequest);
-impl_packing!(Request => DeleteMemoryRequest);
-
-impl_packing!(Response => AddMemoryResponse);
-impl_packing!(Response => GetMemoriesResponse);
-impl_packing!(Response => ResetMemoryResponse);
-impl_packing!(Response => InvalidRequestResponse);
-impl_packing!(Response => KeySyncResponse);
-impl_packing!(Response => GetMemoryByIdResponse);
-impl_packing!(Response => SearchMemoryResponse);
-impl_packing!(Response => DeleteMemoryResponse);
-impl_packing!(Response => UserRegistrationResponse);
-
 impl SealedMemorySessionHandler {
     /// This implementation is quite simple, since there's just a single request
     /// that is a string. In a real implementation, we'd probably
@@ -679,4 +427,32 @@ impl SealedMemorySessionHandler {
 
         self.serialize_response(&response, message_type).await
     }
+}
+
+async fn get_or_create_db(
+    db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
+    uid: &BlobId,
+    dek: &[u8],
+) -> anyhow::Result<IcingMetaDatabase> {
+    if let Some(data_blob) = db_client.get_blob(uid, true).await? {
+        info!("Loaded database from blob: Length: {}", data_blob.data.len());
+        let encrypted_info = decrypt_database(data_blob, dek)?;
+        if let Some(icing_db) = encrypted_info.icing_db {
+            let now = Instant::now();
+            info!("Loaded database successfully!!");
+            let temp_dir = tempdir()?;
+            let db = IcingMetaDatabase::import(temp_dir, icing_db.encode_to_vec().as_slice())?;
+            let elapsed = now.elapsed();
+            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
+            return Ok(db);
+        }
+    } else {
+        debug!("no blob for {}", uid);
+    }
+
+    // This case can happen if the user is just registered, but the initial database
+    // has not been created, or if the blob exists but is empty.
+    let temp_path = tempfile::tempdir()?.path().to_str().context("invalid temp path")?.to_string();
+    let db = IcingMetaDatabase::new(&temp_path)?;
+    Ok(db)
 }

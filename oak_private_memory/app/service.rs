@@ -16,7 +16,6 @@
 use std::{pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
-use app_config::ApplicationConfig;
 use log::debug;
 use metrics::RequestMetricName;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
@@ -34,7 +33,10 @@ use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{net::TcpListener, sync::mpsc};
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
-use super::{SealedMemorySessionHandler, SharedDbClient, UserSessionContext};
+use crate::{
+    context::UserSessionContext, db_client::SharedDbClient, handler::SealedMemorySessionHandler,
+    ApplicationConfig,
+};
 
 // The struct that holds the service implementation.
 // One instance of this is created on startup.

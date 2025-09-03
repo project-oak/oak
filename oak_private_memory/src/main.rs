@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .context("failed to get application config")?;
 
-    let application_config: private_memory_server_lib::app_config::ApplicationConfig =
+    let application_config: private_memory_server_lib::app::ApplicationConfig =
         serde_json::from_slice(application_config_bytes.as_slice())
             .expect("Invalid application config");
 
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
 
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
-    let join_handle = tokio::spawn(private_memory_server_lib::app::app_service::create(
+    let join_handle = tokio::spawn(private_memory_server_lib::app::service::create(
         listener,
         application_config,
         metrics,

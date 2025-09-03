@@ -13,12 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::net::SocketAddr;
 
-use serde::{Deserialize, Serialize};
+use oak_private_memory_database::DatabaseWithCache;
+use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
+use tonic::transport::Channel;
 
-/// The trusted sever configuration.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ApplicationConfig {
-    pub database_service_host: SocketAddr,
+use crate::MessageType;
+
+/// The state for each client connection.
+pub struct UserSessionContext {
+    pub dek: Vec<u8>,
+    pub uid: String,
+    pub message_type: MessageType,
+
+    pub database: DatabaseWithCache,
+    pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
 }
