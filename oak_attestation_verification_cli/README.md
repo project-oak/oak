@@ -21,6 +21,23 @@ Where:
 - `<PATH_TO_REFERENCE_VALUES>` is the path to a binary protobuf file containing
   `oak.attestation.v1.ReferenceValuesCollection`.
 
+## Examples
+
+### Certificate-Based Attestation
+
+An end-to-end example of certificate-based attestation is available in the
+[`examples/certificate_based`](./examples/certificate_based) directory.
+
+The example generates a `CollectedAttestation` and a `ReferenceValuesCollection`
+and then runs the verification tool on them.
+
+To run the example and see a sample verification report, execute the following
+script from the root of the repository:
+
+```sh
+./oak_attestation_verification_cli/examples/certificate_based/report.sh
+```
+
 ## Supported Attestation Types
 
 The tool currently supports the following attestation verification flows:
