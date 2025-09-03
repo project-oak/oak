@@ -1,0 +1,4 @@
+google-adk
+uvicorn
+litellm
+a2a-sdk[http-server]

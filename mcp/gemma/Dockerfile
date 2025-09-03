@@ -1,8 +1,8 @@
 # Stage 1: Load oak-proxy.
-FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:9def78165d90bb2bb5a7d5d05a4498611595a76c218255eaed6487372789fd15 as oak_proxy
+FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:b9fab154b5978fbb5149c5c9a98db6ceabdb965758a2078b66f8d6f1884ef922 as oak_proxy
 
 # Stage 2: Main image.
-FROM ollama/ollama:0.11.6
+FROM ollama/ollama:0.11.6@sha256:1868fd51253099b8f48b89b981e5d8ba23e4db161a501b86e29593071c1c069b
 
 # Reduce logging verbosity.
 ENV OLLAMA_DEBUG=false

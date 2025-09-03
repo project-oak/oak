@@ -16,39 +16,31 @@
 
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StreamableHTTPConnectionParams
-
-
-MCP_SERVER_URL = 'http://localhost:8080/mcp'
-
-def get_user_location() -> dict:
-    '''Retrieves the current user's location.
-
-    Returns:
-        dict: status and a dictionary with coordinates (latitude and longitude) or error message.
-    '''
-    return {
-        'status': 'success',
-        'coordinates': {
-            'latitude': 45.51,
-            'longitude': -122.68,
-        },
-    }
-
-root_agent = Agent(
-    name='weather_agent',
-    model=LiteLlm(model="ollama/gemma:2b"),
-    description=(
-        'Agent to answer questions about the weather at the current user location.'
-    ),
-    instruction=(
-        'You are a helpful agent who can provide current user location and also tell weather at this location.'
-    ),
-    tools=[
-        MCPToolset(
-            connection_params=StreamableHTTPConnectionParams(
-                url=MCP_SERVER_URL,
-                timeout=30.0,
-            ),
-        )],
+from google.adk.tools.mcp_tool.mcp_toolset import (
+    MCPToolset,
+    StreamableHTTPConnectionParams,
 )
+
+
+def create_agent(mcp_server_url: str) -> Agent:
+    """Creates an agent with a configurable MCP server URL."""
+    return Agent(
+        name="weather_agent",
+        model=LiteLlm(model="ollama/gemma:2b"),
+        description=(
+            "Agent to answer questions about the weather at the current user"
+            " location."
+        ),
+        instruction=(
+            "You are a helpful agent who can provide current user location and"
+            " also tell weather at this location."
+        ),
+        tools=[
+            MCPToolset(
+                connection_params=StreamableHTTPConnectionParams(
+                    url=mcp_server_url,
+                    timeout=30.0,
+                ),
+            )
+        ],
+    )

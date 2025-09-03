@@ -1,6 +1,9 @@
 #!/bin/bash
 
-set -e
+set -o xtrace
+set -o errexit
+set -o nounset
+set -o pipefail
 
 IMAGE_NAME="attested-mcp-server"
 PROJECT_ID="oak-examples-477357"

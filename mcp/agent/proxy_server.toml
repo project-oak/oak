@@ -1,0 +1,14 @@
+listen_address = "0.0.0.0:8080"
+backend_address = "127.0.0.1:8081"
+attestation_generators = []
+attestation_verifiers = []
+
+[backend_command]
+cmd = "/opt/venv/bin/python3"
+args = [
+    "main.py",
+    "--host=127.0.0.1",
+    "--port=8081",
+    "--mcp-server-url=http://127.0.0.1:8082/mcp",
+]
+restart_policy = "always"
