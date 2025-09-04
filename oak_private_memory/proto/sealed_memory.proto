@@ -251,6 +251,7 @@ message SearchMemoryRequest {
 
 message SearchMemoryResultItem {
   Memory memory = 1;
+  float score = 2;
 }
 
 message SearchMemoryResponse {

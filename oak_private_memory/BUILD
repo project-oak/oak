@@ -250,6 +250,19 @@ rust_test(
     ],
 )
 
+rust_test(
+    name = "embedding_search_test",
+    srcs = ["test/embedding_search_test.rs"],
+    deps = [
+        "//database",
+        "//proto:sealed_memory_rust_proto",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:tempfile",
+    ],
+)
+
 pkg_tar(
     name = "tar",
     srcs = [":private_memory_server"],

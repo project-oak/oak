@@ -130,7 +130,7 @@ impl DatabaseWithCache {
         let results = memories
             .into_iter()
             .zip(scores.into_iter())
-            .map(|(memory, _score)| SearchMemoryResultItem { memory: Some(memory) })
+            .map(|(memory, score)| SearchMemoryResultItem { memory: Some(memory), score })
             .collect();
         Ok((results, next_page_token))
     }
