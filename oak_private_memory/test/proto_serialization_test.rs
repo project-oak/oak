@@ -85,7 +85,8 @@ fn test_result_mask_serialization() {
 #[test]
 fn test_memory_value_serialization() {
     init_logging();
-    let memory_value = MemoryValue { value: Some(memory_value::Value::Int64Val(12345)) };
+    let memory_value =
+        MemoryValue { value: Some(memory_value::Value::Int64Val(12345)), ..Default::default() };
     let json_str6 = r#"{"int64Val":"12345"}"#;
     let memory_value_from_string_num = serde_json::from_str::<MemoryValue>(json_str6).unwrap();
     assert_eq!(memory_value.encode_to_vec(), memory_value_from_string_num.encode_to_vec());

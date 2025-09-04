@@ -78,17 +78,22 @@ async fn test_add_get_reset_memory_all_modes() {
             "text_data".to_string(),
             MemoryValue {
                 value: Some(memory_value::Value::BytesVal("this is a test".as_bytes().to_vec())),
+                ..Default::default()
             },
         );
         contents_map.insert(
             "string_data".to_string(),
             MemoryValue {
                 value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
+                ..Default::default()
             },
         );
         contents_map.insert(
             "int64_data".to_string(),
-            MemoryValue { value: Some(memory_value::Value::Int64Val(123456789)) },
+            MemoryValue {
+                value: Some(memory_value::Value::Int64Val(123456789)),
+                ..Default::default()
+            },
         );
         let memory_to_add = Memory {
             id: "".to_string(),

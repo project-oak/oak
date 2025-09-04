@@ -39,6 +39,7 @@ message MemoryValue {
     int64 int64_val = 2;
     string string_val = 3;
   }
+  string mime_type = 4;
 }
 
 message MemoryContent {
