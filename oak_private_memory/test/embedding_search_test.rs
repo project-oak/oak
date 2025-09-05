@@ -15,8 +15,12 @@
 use anyhow::Context;
 use googletest::prelude::*;
 use oak_private_memory_database::{icing::IcingMetaDatabase, PageToken};
+use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{search_memory_query, EmbeddingQuery, SearchMemoryQuery},
+    oak::private_memory::{
+        search_memory_query, EmbeddingQuery, MatchType, MemoryField, QueryClauses, QueryOperator,
+        SearchMemoryQuery, TextQuery,
+    },
     prelude::v1::*,
 };
 use tempfile::tempdir;
@@ -65,5 +69,71 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
     assert_that!(scores, each(predicate(|&x| x > 0.0)));
     assert_that!(scores[0], eq(15.0));
     assert_that!(scores[1], eq(6.0));
+    Ok(())
+}
+
+#[gtest]
+fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
+    let temp_dir = tempdir()?;
+    let mut icing_database =
+        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+
+    // Add memories with different embeddings and timestamps
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        embeddings: vec![Embedding {
+            identifier: "test_model".to_string(),
+            values: vec![1.0, 2.0, 3.0],
+        }],
+        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        embeddings: vec![Embedding {
+            identifier: "test_model".to_string(),
+            values: vec![1.1, 2.1, 3.1],
+        }],
+        event_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Query for memories with an embedding and a timestamp range.
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                identifier: "test_model".to_string(),
+                values: vec![1.0, 2.0, 3.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let timestamp_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Gte as i32,
+            field: MemoryField::EventTimestamp as i32,
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::text_query::Value::TimestampVal(
+                    Timestamp { seconds: 150, nanos: 0 },
+                ),
+            ),
+        })),
+    };
+
+    let hybrid_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![embedding_query, timestamp_query],
+        })),
+    };
+
+    let (blob_ids, _, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+    assert_that!(blob_ids.len(), eq(1));
+
     Ok(())
 }

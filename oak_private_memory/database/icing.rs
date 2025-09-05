@@ -479,18 +479,29 @@ impl IcingMetaDatabase {
 
         let mut sub_queries = Vec::new();
         let mut score_spec = icing::ScoringSpecProto::default();
+        let mut embedding_vectors = Vec::new();
+        let mut metric_type = None;
         for clause in &clauses.clauses {
             let (spec, sub_score_spec) = self.build_query_specs(clause)?;
             if let Some(sub_score_spec) = sub_score_spec {
                 score_spec = sub_score_spec;
             }
+            if spec.embedding_query_metric_type.is_some() {
+                metric_type = spec.embedding_query_metric_type;
+            }
             sub_queries.push(format!("({})", spec.query.context("no sub query")?));
+            embedding_vectors.extend(spec.embedding_query_vectors);
         }
 
         let query = sub_queries.join(&format!(" {} ", operator));
         let search_spec = icing::SearchSpecProto {
             query: Some(query),
-            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            embedding_query_vectors: embedding_vectors,
+            embedding_query_metric_type: metric_type,
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             ..Default::default()
         };
