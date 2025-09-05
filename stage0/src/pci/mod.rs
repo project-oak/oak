@@ -24,7 +24,7 @@ use crate::{
     fw_cfg::Firmware,
     pci::{
         config_access::{ConfigAccess, CAM},
-        device::PciBar,
+        device::{PciBar, PciClass, PciFunction, PciSubclass},
     },
     Platform, ZeroPage,
 };
@@ -51,47 +51,6 @@ pub const PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT: usize = 11;
 const PCI_CRS_ALLOWLIST_FILE_NAME: &CStr = c"etc/pci-crs-whitelist";
 const EXTRA_ROOTS_FILE_NAME: &CStr = c"etc/extra-pci-roots";
 
-/// PCI class codes.
-///
-/// We use a struct instead of enum because Rust enums are closed, but we will
-/// not give an exhaustive list of class codes.
-///
-/// See the PCI Code and ID Assignment Specification on pcisig.com for the
-/// authoritative source.
-#[derive(PartialEq, Eq)]
-#[repr(transparent)]
-struct PciClass(pub u8);
-
-impl PciClass {
-    pub const BRIDGE: PciClass = PciClass(0x06);
-}
-
-impl Display for PciClass {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:02x}", self.0)
-    }
-}
-/// Subclass types for PCI devices
-///
-/// Again, we only list a subset, so we use a struct instead of an enum.
-///
-/// See the PCI Code and ID Assignment Specification on pcisig.com for the
-/// authoritative source.
-#[derive(PartialEq, Eq)]
-#[repr(transparent)]
-struct PciSubclass(pub u8);
-impl PciSubclass {
-    #[allow(dead_code)]
-    pub const HOST_BRIDGE: PciSubclass = PciSubclass(0x00);
-    pub const PCI_TO_PCI_BRIDGE: PciSubclass = PciSubclass(0x04);
-}
-
-impl Display for PciSubclass {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:02x}", self.0)
-    }
-}
-
 #[derive(Debug, FromBytes, IntoBytes)]
 #[repr(C, packed)]
 #[allow(dead_code)]
@@ -100,44 +59,6 @@ struct PciBridgeBusRegister {
     pub subordinate_bus_number: u8,
     pub secondary_bus_number: u8,
     pub primary_bus_number: u8,
-}
-
-struct BarIter {
-    device: Bdf,
-    // Bridges have up to 2 BARs, normal devices 6.
-    max_bars: u8,
-    index: Option<u8>,
-    access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
-}
-
-impl Iterator for BarIter {
-    type Item = PciBar;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // Try to find a next BAR.
-        loop {
-            self.index = self.index.filter(|&index| index < self.max_bars);
-            let index = self.index?;
-
-            let bar = PciBar::new(self.device, index, self.access.lock().as_mut()).ok()?;
-            // We've consumed at least one entry.
-            let _ = self.index.insert(index + 1);
-            match bar {
-                None => {
-                    // Unimplemented BAR.
-                    continue;
-                }
-                Some(PciBar::Io { .. }) | Some(PciBar::Memory32 { .. }) => {
-                    return bar;
-                }
-                Some(PciBar::Memory64 { .. }) => {
-                    // 64-bit memory BARs take two slots.
-                    let _ = self.index.insert(index + 2);
-                    return bar;
-                }
-            }
-        }
-    }
 }
 
 /// PCI address.
@@ -188,18 +109,6 @@ impl PciAddress {
         self.header_type(access).map(|value| value & 0x80 != 0)
     }
 
-    fn iter_bars(
-        &self,
-        access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
-    ) -> Result<BarIter, &'static str> {
-        let (class, subclass) = self.class_code(access.lock().as_mut())?;
-        let max_bars = if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
-            2
-        } else {
-            6
-        };
-        Ok(BarIter { device: self.0, max_bars, index: Some(0), access })
-    }
     /// Checks if the device exists at all.
     fn exists(&self, access: &mut dyn ConfigAccess) -> Result<bool, &'static str> {
         let (vendor_id, _) = self.vendor_device_id(access)?;
@@ -328,6 +237,12 @@ impl PciBus {
                     "UNIMPLEMENTED: leaving PCI bridge unconfigured, file a bug if you see this!"
                 );
             }
+
+            let function = PciFunction::new(function.0, config_access.lock().as_mut())?;
+            if function.is_none() {
+                continue;
+            }
+            let function = function.unwrap();
 
             for mut bar in function.iter_bars(config_access.clone())? {
                 match bar {

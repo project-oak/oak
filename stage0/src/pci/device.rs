@@ -14,8 +14,10 @@
 // limitations under the License.
 //
 
+use alloc::{boxed::Box, rc::Rc};
 use core::fmt::Display;
 
+use spinning_top::Spinlock;
 use strum::FromRepr;
 
 use crate::pci::config_access::ConfigAccess;
@@ -107,6 +109,149 @@ impl TryFrom<(u8, u8, u8)> for Bdf {
 impl From<Bdf> for u16 {
     fn from(value: Bdf) -> Self {
         value.0
+    }
+}
+
+/// PCI class codes.
+///
+/// We use a struct instead of enum because Rust enums are closed, but we will
+/// not give an exhaustive list of class codes.
+///
+/// See the PCI Code and ID Assignment Specification on pcisig.com for the
+/// authoritative source.
+#[derive(PartialEq, Eq)]
+#[repr(transparent)]
+pub struct PciClass(pub u8);
+
+impl PciClass {
+    pub const BRIDGE: PciClass = PciClass(0x06);
+}
+
+impl Display for PciClass {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}", self.0)
+    }
+}
+/// Subclass types for PCI devices
+///
+/// Again, we only list a subset, so we use a struct instead of an enum.
+///
+/// See the PCI Code and ID Assignment Specification on pcisig.com for the
+/// authoritative source.
+#[derive(PartialEq, Eq)]
+#[repr(transparent)]
+pub struct PciSubclass(pub u8);
+impl PciSubclass {
+    #[allow(dead_code)]
+    pub const HOST_BRIDGE: PciSubclass = PciSubclass(0x00);
+    pub const PCI_TO_PCI_BRIDGE: PciSubclass = PciSubclass(0x04);
+}
+
+impl Display for PciSubclass {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}", self.0)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PciFunction {
+    bdf: Bdf,
+}
+
+impl PciFunction {
+    pub fn new(bdf: Bdf, access: &mut dyn ConfigAccess) -> Result<Option<Self>, &'static str> {
+        let func = Self { bdf };
+
+        if func.exists(access)? {
+            Ok(Some(func))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns the Vendor ID and Device ID for the address.
+    pub fn vendor_device_id(
+        &self,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<(u16, u16), &'static str> {
+        // Register 0x00: Device ID, Vendor ID (16b each)
+        let value = access.read(self.bdf, 0x00)?;
+        Ok(((value & 0xFFFF) as u16, (value >> 16) as u16))
+    }
+
+    pub fn class_code(
+        &self,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<(PciClass, PciSubclass), &'static str> {
+        // Register 0x02: Class Code, Subclass, Prog IF, Revision ID (8b each)
+        let value = access.read(self.bdf, 0x02)?;
+        Ok((PciClass((value >> 24) as u8), PciSubclass((value >> 16) as u8)))
+    }
+
+    fn exists(&self, access: &mut dyn ConfigAccess) -> Result<bool, &'static str> {
+        let (vendor_id, _) = self.vendor_device_id(access)?;
+        Ok(vendor_id != 0xFFFF && vendor_id != 0x0000)
+    }
+
+    pub fn iter_bars(
+        &self,
+        access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
+    ) -> Result<BarIter, &'static str> {
+        let (class, subclass) = self.class_code(access.lock().as_mut())?;
+        let max_bars = if class == PciClass::BRIDGE && subclass == PciSubclass::PCI_TO_PCI_BRIDGE {
+            2
+        } else {
+            6
+        };
+        Ok(BarIter { bdf: self.bdf, max_bars, index: Some(0), access })
+    }
+}
+
+pub struct BarIter {
+    bdf: Bdf,
+    // Bridges have up to 2 BARs, normal devices 6.
+    max_bars: u8,
+    index: Option<u8>,
+    access: Rc<Spinlock<Box<dyn ConfigAccess>>>,
+}
+
+impl core::fmt::Debug for BarIter {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BarIter")
+            .field("bdf", &self.bdf)
+            .field("max_bars", &self.max_bars)
+            .field("index", &self.index)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Iterator for BarIter {
+    type Item = PciBar;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Try to find a next BAR.
+        loop {
+            self.index = self.index.filter(|&index| index < self.max_bars);
+            let index = self.index?;
+
+            let bar = PciBar::new(self.bdf, index, self.access.lock().as_mut()).ok()?;
+            // We've consumed at least one entry.
+            let _ = self.index.insert(index + 1);
+            match bar {
+                None => {
+                    // Unimplemented BAR.
+                    continue;
+                }
+                Some(PciBar::Io { .. }) | Some(PciBar::Memory32 { .. }) => {
+                    return bar;
+                }
+                Some(PciBar::Memory64 { .. }) => {
+                    // 64-bit memory BARs take two slots.
+                    let _ = self.index.insert(index + 2);
+                    return bar;
+                }
+            }
+        }
     }
 }
 
@@ -467,5 +612,133 @@ mod tests {
             )
             .return_const(Ok(()));
         assert_that!(bar.set_address(0x1000, &mut access), ok(eq(())));
+    }
+
+    #[test]
+    fn test_pci_function_new() {
+        let mut access = MockConfigAccess::new();
+        access.expect_read().return_const(Ok(0x4242_1022));
+        assert_that!(PciFunction::new(Bdf::root(), &mut access), ok(some(anything())));
+    }
+
+    #[test]
+    fn test_pci_function_new_not_found() {
+        let mut access = MockConfigAccess::new();
+        access.expect_read().return_const(Ok(0xFFFF_FFFF));
+        assert_that!(PciFunction::new(Bdf::root(), &mut access), ok(none()));
+    }
+
+    #[test]
+    fn test_bar_iter_regular_device() {
+        let mut access = MockConfigAccess::new();
+        // Not a bridge device.
+        access.expect_read().with(mockall_eq(Bdf::root()), mockall_eq(2)).return_const(Ok(0));
+        let access = Rc::new(Spinlock::new(Box::new(access) as Box<dyn ConfigAccess>));
+        let func = PciFunction { bdf: Bdf::root() };
+
+        assert_that!(func.iter_bars(access.clone()), ok(anything()));
+        assert_that!(func.iter_bars(access).unwrap().max_bars, eq(6));
+    }
+
+    #[test]
+    fn test_bar_iter_bridge() {
+        let mut access = MockConfigAccess::new();
+        // PCI-to-PCI bridge.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(2))
+            .return_const(Ok(0x0604_0000));
+        let access = Rc::new(Spinlock::new(Box::new(access) as Box<dyn ConfigAccess>));
+        let func = PciFunction { bdf: Bdf::root() };
+
+        assert_that!(func.iter_bars(access.clone()), ok(anything()));
+        assert_that!(func.iter_bars(access).unwrap().max_bars, eq(2));
+    }
+
+    #[test]
+    fn test_bar_iteration() {
+        let mut access = MockConfigAccess::new();
+
+        // --- Expectations for PciFunction::new() ---
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x00))
+            .return_const(Ok(0x1234_5678));
+
+        // --- Expectations for iter_bars() ---
+        // Class code for a generic device, not a bridge.
+        access.expect_read().with(mockall_eq(Bdf::root()), mockall_eq(0x02)).return_const(Ok(0));
+
+        // --- Expectations for the iterator ---
+        // BAR 0: 32-bit memory BAR, 256 bytes
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x04), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x04))
+            .return_const(Ok(0xFFFF_FF00));
+
+        // BAR 1: 64-bit memory BAR, 65536 bytes (consumes BAR 2 as well)
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x05), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x05))
+            .return_const(Ok(0xFFFF_000C));
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x06), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x06))
+            .return_const(Ok(0xFFFF_FFFF));
+
+        // BAR 3: I/O BAR, 4 bytes
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x07), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x07))
+            .return_const(Ok(0xFFFF_FFFD));
+
+        // BAR 4: Unimplemented
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x08), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access.expect_read().with(mockall_eq(Bdf::root()), mockall_eq(0x08)).return_const(Ok(0));
+
+        // BAR 5: 32-bit memory BAR, 1024 bytes
+        access
+            .expect_write()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x09), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(0x09))
+            .return_const(Ok(0xFFFF_FC00));
+
+        // --- Execution ---
+        let func = PciFunction::new(Bdf::root(), &mut access).unwrap().unwrap();
+        let access_rc = Rc::new(Spinlock::new(Box::new(access) as Box<dyn ConfigAccess>));
+        let bars: Vec<PciBar> = func.iter_bars(access_rc).unwrap().collect();
+
+        // --- Assertions ---
+        assert_that!(
+            bars,
+            elements_are![
+                matches_pattern!(PciBar::Memory32 { offset: eq(&0), bar_size: eq(&256), .. }),
+                matches_pattern!(PciBar::Memory64 { offset: eq(&1), bar_size: eq(&65536), .. }),
+                matches_pattern!(PciBar::Io { offset: eq(&3), bar_size: eq(&4), .. }),
+                matches_pattern!(PciBar::Memory32 { offset: eq(&5), bar_size: eq(&1024), .. })
+            ]
+        );
     }
 }
