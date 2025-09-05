@@ -325,8 +325,8 @@ enum_converter!(
 
 enum_converter!(
     module_name = operator_converter,
-    enum_type = crate::oak::private_memory::Operator,
-    unspecified_variant = crate::oak::private_memory::Operator::default(),
+    enum_type = crate::oak::private_memory::QueryOperator,
+    unspecified_variant = crate::oak::private_memory::QueryOperator::default(),
     doc_string = "a string or an integer representing an Operator variant",
     valid_variants = &["OPERATOR_UNSPECIFIED", "OPERATOR_AND", "OPERATOR_OR"]
 );

@@ -39,6 +39,7 @@ message MemoryValue {
     int64 int64_val = 2;
     string string_val = 3;
   }
+
   string mime_type = 4;
 }
 
@@ -184,12 +185,12 @@ message EmbeddingQuery {
 }
 
 enum MatchType {
-  UNSPECIFIED = 0;
-  EQUAL = 1;
-  GTE = 2;
-  LTE = 3;
-  LT = 4;
-  GT = 5;
+  MATCH_TYPE_UNSPECIFIED = 0;
+  MATCH_TYPE_EQUAL = 1;
+  MATCH_TYPE_GTE = 2;
+  MATCH_TYPE_LTE = 3;
+  MATCH_TYPE_LT = 4;
+  MATCH_TYPE_GT = 5;
 }
 
 // Represents a single clause in a query.
@@ -205,22 +206,22 @@ message TextQuery {
 }
 
 // Logical operator for combining query clauses.
-enum Operator {
-  OPERATOR_UNSPECIFIED = 0;
-  OPERATOR_AND = 1;  // All clauses must match.
-  OPERATOR_OR = 2;   // Any clause can match.
+enum QueryOperator {
+  QUERY_OPERATOR_UNSPECIFIED = 0;
+  QUERY_OPERATOR_AND = 1;  // All clauses must match.
+  QUERY_OPERATOR_OR = 2;   // Any clause can match.
 }
 
 message SearchMemoryQuery {
   oneof clause {
     EmbeddingQuery embedding_query = 1;
     TextQuery text_query = 2;
-    QueryClauses operator = 3;
+    QueryClauses query_clauses = 3;
   }
 }
 
 message QueryClauses {
-  Operator operator = 1;
+  QueryOperator query_operator = 1;
   repeated SearchMemoryQuery clauses = 2;
 }
 

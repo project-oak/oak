@@ -18,7 +18,7 @@ use oak_private_memory_database::{icing::IcingMetaDatabase, PageToken};
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, text_query, MatchType, Operator, QueryClauses, SearchMemoryQuery,
+        search_memory_query, text_query, MatchType, QueryClauses, QueryOperator, SearchMemoryQuery,
         TextQuery,
     },
     prelude::v1::*,
@@ -161,8 +161,8 @@ fn test_query_clauses_and_operator() -> anyhow::Result<()> {
         })),
     };
     let and_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::Operator(QueryClauses {
-            operator: Operator::And as i32,
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
             clauses: vec![tag_query, timestamp_query],
         })),
     };
@@ -220,8 +220,8 @@ fn test_query_clauses_or_operator() -> anyhow::Result<()> {
         })),
     };
     let or_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::Operator(QueryClauses {
-            operator: Operator::Or as i32,
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::Or as i32,
             clauses: vec![tag_query, timestamp_query],
         })),
     };

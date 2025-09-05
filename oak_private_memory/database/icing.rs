@@ -21,7 +21,7 @@ use log::{debug, error};
 use prost::Message;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, text_query, EmbeddingQuery, MatchType, Operator, QueryClauses,
+        search_memory_query, text_query, EmbeddingQuery, MatchType, QueryClauses, QueryOperator,
         SearchMemoryQuery, TextQuery,
     },
     prelude::v1::*,
@@ -461,7 +461,7 @@ impl IcingMetaDatabase {
             search_memory_query::Clause::EmbeddingQuery(embedding_query) => {
                 self.build_embedding_query_specs(embedding_query)
             }
-            search_memory_query::Clause::Operator(clauses) => {
+            search_memory_query::Clause::QueryClauses(clauses) => {
                 self.build_clauses_query_specs(clauses)
             }
         }
@@ -471,9 +471,9 @@ impl IcingMetaDatabase {
         &self,
         clauses: &QueryClauses,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let operator = match clauses.operator() {
-            Operator::And => "AND",
-            Operator::Or => "OR",
+        let operator = match clauses.query_operator() {
+            QueryOperator::And => "AND",
+            QueryOperator::Or => "OR",
             _ => bail!("unsupported operator"),
         };
 
