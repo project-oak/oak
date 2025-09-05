@@ -120,7 +120,7 @@ impl PendingMetadata {
                 timestamp_to_i64(created_timestamp),
             );
         }
-        if let Some(ref event_timestamp) = memory.event_timestmap {
+        if let Some(ref event_timestamp) = memory.event_timestamp {
             document_builder.add_int64_property(
                 EVENT_TIMESTAMP_NAME.as_bytes(),
                 timestamp_to_i64(event_timestamp),

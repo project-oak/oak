@@ -57,7 +57,7 @@ message Memory {
   // The time when the event described by the data happens. Should be
   // set by the client. If not set, the `created_timestamp` will be
   // used.
-  google.protobuf.Timestamp event_timestmap = 7;
+  google.protobuf.Timestamp event_timestamp = 7;
 }
 
 enum MemoryField {

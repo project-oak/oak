@@ -136,7 +136,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
-        "oak.private_memory.Memory.event_timestmap",
+        "oak.private_memory.Memory.event_timestamp",
         "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
