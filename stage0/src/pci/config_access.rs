@@ -18,6 +18,7 @@ use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
 use crate::{hal::Port, pci::device::Bdf, Platform};
 
+#[cfg_attr(test, mockall::automock)]
 pub trait ConfigAccess {
     fn read(&mut self, address: Bdf, offset: u8) -> Result<u32, &'static str>;
     fn write(&mut self, address: Bdf, offset: u8, value: u32) -> Result<(), &'static str>;

@@ -16,6 +16,10 @@
 
 use core::fmt::Display;
 
+use strum::FromRepr;
+
+use crate::pci::config_access::ConfigAccess;
+
 /// Address of a PCI function, in the bus-device-function format.
 ///
 /// The BDF address is used to uniquely identify devices and functions on the
@@ -106,11 +110,124 @@ impl From<Bdf> for u16 {
     }
 }
 
+#[derive(FromRepr, Debug, PartialEq)]
+#[repr(u32)]
+enum PciMemoryBarSize {
+    Size32 = 0b000,
+    // 0b010 -- reserved
+    Size64 = 0b100,
+    // 0b110 -- unused
+}
+impl PciMemoryBarSize {
+    const MASK: u32 = 0b110;
+}
+
+#[derive(FromRepr, PartialEq)]
+#[repr(u32)]
+/// Values representing the two kinds of PCI BARs.
+enum PciBarKind {
+    Memory = 0b0,
+    Io = 0b1,
+}
+
+impl PciBarKind {
+    const MASK: u32 = 0b1;
+}
+
+#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
+pub enum PciBar {
+    Memory32 { bdf: Bdf, offset: u8, prefetchable: bool, bar_size: u32 },
+    Memory64 { bdf: Bdf, offset: u8, prefetchable: bool, bar_size: u64 },
+    Io { bdf: Bdf, offset: u8, bar_size: u32 },
+}
+
+impl PciBar {
+    const BAR_REGISTER_OFFSET: u8 = 0x4;
+
+    pub fn new(
+        bdf: Bdf,
+        offset: u8,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<Option<Self>, &'static str> {
+        // Proble the BAR by writing all-ones.
+
+        access.write(bdf, Self::BAR_REGISTER_OFFSET + offset, 0xFFFF_FFFF)?;
+        let value = access.read(bdf, Self::BAR_REGISTER_OFFSET + offset)?;
+
+        if value == 0 {
+            // Unimplemented BAR.
+            return Ok(None);
+        }
+
+        // We have a valid BAR. I/O and 32-bit memory BARs take one slot,
+        // 64-bit memory BARs two slots.
+        let bar_type = PciBarKind::from_repr(value & PciBarKind::MASK).ok_or("invalid BAR")?;
+
+        Ok(match bar_type {
+            PciBarKind::Memory => {
+                let size = PciMemoryBarSize::from_repr(value & PciMemoryBarSize::MASK)
+                    .ok_or("invalid BAR")?;
+                let prefetchable = value & 0b1000 != 0;
+                // Mask away all but the BAR size field.
+                let value = value & !0b1111;
+
+                if size == PciMemoryBarSize::Size64 {
+                    // For 64-bit BARs, we need to read the next register as well.
+                    access.write(bdf, Self::BAR_REGISTER_OFFSET + offset + 1, 0xFFFF_FFFF)?;
+                    let upper_half =
+                        access.read(bdf, Self::BAR_REGISTER_OFFSET + offset + 1)? as u64;
+
+                    Some(PciBar::Memory64 {
+                        bdf,
+                        offset,
+                        prefetchable,
+                        bar_size: !((upper_half << 32) + (value as u64)) + 1,
+                    })
+                } else {
+                    Some(PciBar::Memory32 { bdf, offset, prefetchable, bar_size: !value + 1 })
+                }
+            }
+            PciBarKind::Io => {
+                let value = value & !PciBarKind::MASK;
+                Some(PciBar::Io { bdf, offset, bar_size: !value + 1 })
+            }
+        })
+    }
+
+    pub fn set_address(
+        &mut self,
+        address: u64,
+        access: &mut dyn ConfigAccess,
+    ) -> Result<(), &'static str> {
+        match self {
+            PciBar::Memory32 { bdf, offset, .. } => {
+                let address: u32 = address.try_into().map_err(|_| "invalid address")?;
+                access.write(*bdf, Self::BAR_REGISTER_OFFSET + *offset, address & !0b1111)
+            }
+            PciBar::Memory64 { bdf, offset, .. } => {
+                access.write(
+                    *bdf,
+                    Self::BAR_REGISTER_OFFSET + *offset,
+                    (address & 0xFFFF_FFFF) as u32 & !0b1111,
+                )?;
+                access.write(*bdf, Self::BAR_REGISTER_OFFSET + *offset + 1, (address >> 32) as u32)
+            }
+            PciBar::Io { bdf, offset, .. } => {
+                let address: u32 = address.try_into().map_err(|_| "invalid address")?;
+                access.write(*bdf, Self::BAR_REGISTER_OFFSET + *offset, address & !0b11)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use googletest::{description::Description, matcher::MatcherResult, prelude::*};
+    use mockall::predicate::eq as mockall_eq;
 
     use super::*;
+    use crate::pci::config_access::MockConfigAccess;
 
     #[derive(MatcherBase)]
     struct BdfMatcher<BusMatcher, DeviceMatcher, FunctionMatcher> {
@@ -212,5 +329,143 @@ mod tests {
         assert_that!(Bdf::new(255, 31, 7).unwrap().next(), none());
         assert_that!(Bdf::new(255, 31, 0).unwrap().next_device(), none());
         assert_that!(Bdf::new(255, 31, 7).unwrap().next_device(), none());
+    }
+
+    #[test]
+    fn test_unimplemented_bar() {
+        let bdf = Bdf::new(1, 2, 3).unwrap();
+        let mut access = MockConfigAccess::new();
+        access
+            .expect_write()
+            .with(mockall_eq(bdf), mockall_eq(PciBar::BAR_REGISTER_OFFSET), mockall_eq(0xFFFF_FFFF))
+            .return_const(Ok(()));
+        access
+            .expect_read()
+            .with(mockall_eq(bdf), mockall_eq(PciBar::BAR_REGISTER_OFFSET))
+            .return_const(Ok(0));
+        assert_that!(PciBar::new(bdf, 0, &mut access), ok(none()));
+    }
+
+    #[test]
+    fn test_32bit_memory_bar() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // 32-bit, non-prefetchable, memory BAR of size 256 bytes.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET + 2))
+            .return_const(Ok(0xFFFF_FF00));
+        let bar = PciBar::new(Bdf::root(), 2, &mut access);
+
+        assert_that!(
+            bar,
+            ok(some(matches_pattern!(PciBar::Memory32 {
+                bdf: eq(&Bdf::root()),
+                offset: eq(&2),
+                prefetchable: eq(&false),
+                bar_size: eq(&256)
+            })))
+        );
+    }
+
+    #[test]
+    fn test_64bit_memory_bar() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // 64-bit, prefetchable, memory BAR of size 65536 bytes.
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET))
+            .return_const(Ok(0xFFFF_000C));
+        access
+            .expect_read()
+            .with(mockall_eq(Bdf::root()), mockall_eq(PciBar::BAR_REGISTER_OFFSET + 1))
+            .return_const(Ok(0xFFFF_FFFF));
+        let bar = PciBar::new(Bdf::root(), 0, &mut access);
+
+        assert_that!(
+            bar,
+            ok(some(matches_pattern!(PciBar::Memory64 {
+                bdf: eq(&Bdf::root()),
+                offset: eq(&0),
+                prefetchable: eq(&true),
+                bar_size: eq(&65536)
+            })))
+        );
+    }
+
+    #[test]
+    fn test_io_bar() {
+        let mut access = MockConfigAccess::new();
+        access.expect_write().return_const(Ok(()));
+        // I/O BAR of size 4 bytes.
+        access.expect_read().return_const(Ok(0xFFFF_FFFD));
+        let bar = PciBar::new(Bdf::root(), 0, &mut access);
+
+        assert_that!(
+            bar,
+            ok(some(matches_pattern!(PciBar::Io {
+                bdf: eq(&Bdf::root()),
+                offset: eq(&0),
+                bar_size: eq(&4)
+            })))
+        );
+    }
+
+    #[test]
+    fn test_set_address_32bit_memory_bar() {
+        let mut access = MockConfigAccess::new();
+        let mut bar =
+            PciBar::Memory32 { bdf: Bdf::root(), offset: 1, prefetchable: false, bar_size: 256 };
+        access
+            .expect_write()
+            .with(
+                mockall_eq(Bdf::root()),
+                mockall_eq(PciBar::BAR_REGISTER_OFFSET + 1),
+                mockall_eq(0x1000_0000),
+            )
+            .return_const(Ok(()));
+
+        assert_that!(bar.set_address(0x1000_0000, &mut access), ok(eq(())));
+    }
+
+    #[test]
+    fn test_set_address_64bit_memory_bar() {
+        let mut access = MockConfigAccess::new();
+        let mut bar =
+            PciBar::Memory64 { bdf: Bdf::root(), offset: 0, prefetchable: false, bar_size: 65536 };
+        access
+            .expect_write()
+            .with(
+                mockall_eq(Bdf::root()),
+                mockall_eq(PciBar::BAR_REGISTER_OFFSET),
+                mockall_eq(0x1000_0000),
+            )
+            .return_const(Ok(()));
+        access
+            .expect_write()
+            .with(
+                mockall_eq(Bdf::root()),
+                mockall_eq(PciBar::BAR_REGISTER_OFFSET + 1),
+                mockall_eq(0x2),
+            )
+            .return_const(Ok(()));
+
+        assert_that!(bar.set_address(0x2_1000_0000, &mut access), ok(eq(())));
+    }
+
+    #[test]
+    fn test_set_address_io_bar() {
+        let mut access = MockConfigAccess::new();
+        let mut bar = PciBar::Io { bdf: Bdf::root(), offset: 0, bar_size: 4 };
+        access
+            .expect_write()
+            .with(
+                mockall_eq(Bdf::root()),
+                mockall_eq(PciBar::BAR_REGISTER_OFFSET),
+                mockall_eq(0x1000),
+            )
+            .return_const(Ok(()));
+        assert_that!(bar.set_address(0x1000, &mut access), ok(eq(())));
     }
 }

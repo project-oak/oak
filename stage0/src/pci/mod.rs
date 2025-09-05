@@ -18,12 +18,14 @@ use alloc::{boxed::Box, rc::Rc};
 use core::{ffi::CStr, fmt::Display, ops::Range};
 
 use spinning_top::Spinlock;
-use strum::FromRepr;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 use crate::{
     fw_cfg::Firmware,
-    pci::config_access::{ConfigAccess, CAM},
+    pci::{
+        config_access::{ConfigAccess, CAM},
+        device::PciBar,
+    },
     Platform, ZeroPage,
 };
 
@@ -100,46 +102,6 @@ struct PciBridgeBusRegister {
     pub primary_bus_number: u8,
 }
 
-struct MemoryBar<T> {
-    offset: u8,
-    bar_size: T,
-}
-
-struct IoBar {
-    offset: u8,
-    bar_size: u32,
-}
-
-enum PciBar {
-    Memory32(Bdf, MemoryBar<u32>),
-    Memory64(Bdf, MemoryBar<u64>),
-    Io(Bdf, IoBar),
-}
-
-#[derive(FromRepr, PartialEq)]
-#[repr(u32)]
-/// Values representing the two kinds of PCI BARs.
-enum PciBarKind {
-    Memory = 0b0,
-    Io = 0b1,
-}
-
-impl PciBarKind {
-    const MASK: u32 = 0b1;
-}
-
-#[derive(FromRepr, Debug, PartialEq)]
-#[repr(u32)]
-enum PciMemoryBarSize {
-    Size32 = 0b000,
-    // 0b010 -- reserved
-    Size64 = 0b100,
-    // 0b110 -- unused
-}
-impl PciMemoryBarSize {
-    const MASK: u32 = 0b110;
-}
-
 struct BarIter {
     device: Bdf,
     // Bridges have up to 2 BARs, normal devices 6.
@@ -156,62 +118,22 @@ impl Iterator for BarIter {
         loop {
             self.index = self.index.filter(|&index| index < self.max_bars);
             let index = self.index?;
-            let offset = 0x4 + index;
 
-            // Proble the BAR by writing all-ones.
-            let value = {
-                let mut access = self.access.lock();
-                access.write(self.device, offset, 0xFFFF_FFFF).ok()?;
-                access.read(self.device, offset).ok()?
-            };
-
-            if value == 0 {
-                // Unimplemented BAR.
-                let _ = self.index.insert(index + 1);
-                continue;
-            }
-
-            // We have a valid BAR. I/O and 32-bit memory BARs take one slot,
-            // 64-bit memory BARs two slots.
-            let bar_type = PciBarKind::from_repr(value & PciBarKind::MASK)?;
-
-            match bar_type {
-                PciBarKind::Memory => {
-                    let size = PciMemoryBarSize::from_repr(value & PciMemoryBarSize::MASK)?;
-                    // Mask away all but the BAR size field.
-                    let value = value & !0b1111;
-
-                    if size == PciMemoryBarSize::Size64 {
-                        // For 64-bit BARs, we need to read the next register as well.
-                        let upper_half = {
-                            let mut access = self.access.lock();
-                            access.write(self.device, offset + 1, 0xFFFF_FFFF).ok()?;
-                            access.read(self.device, offset + 1).ok()? as u64
-                        };
-                        let _ = self.index.insert(index + 2);
-
-                        return Some(PciBar::Memory64(
-                            self.device,
-                            MemoryBar {
-                                offset: index,
-                                bar_size: !((upper_half << 32) + (value as u64)) + 1,
-                            },
-                        ));
-                    } else {
-                        let _ = self.index.insert(index + 1);
-                        return Some(PciBar::Memory32(
-                            self.device,
-                            MemoryBar { offset: index, bar_size: !value + 1 },
-                        ));
-                    }
+            let bar = PciBar::new(self.device, index, self.access.lock().as_mut()).ok()?;
+            // We've consumed at least one entry.
+            let _ = self.index.insert(index + 1);
+            match bar {
+                None => {
+                    // Unimplemented BAR.
+                    continue;
                 }
-                PciBarKind::Io => {
-                    let value = value & !0b1;
-                    let _ = self.index.insert(index + 1);
-                    return Some(PciBar::Io(
-                        self.device,
-                        IoBar { offset: index, bar_size: !value + 1 },
-                    ));
+                Some(PciBar::Io { .. }) | Some(PciBar::Memory32 { .. }) => {
+                    return bar;
+                }
+                Some(PciBar::Memory64 { .. }) => {
+                    // 64-bit memory BARs take two slots.
+                    let _ = self.index.insert(index + 2);
+                    return bar;
                 }
             }
         }
@@ -407,67 +329,47 @@ impl PciBus {
                 );
             }
 
-            for bar in function.iter_bars(config_access.clone())? {
+            for mut bar in function.iter_bars(config_access.clone())? {
                 match bar {
-                    PciBar::Memory32(address, bar) => {
-                        log::debug!("  BAR{}: memory, size {}", bar.offset, bar.bar_size);
+                    PciBar::Memory32 { offset, bar_size, .. } => {
+                        log::debug!("  BAR{}: memory, size {}", offset, bar_size);
                         let allocation = mem32_allocator
-                            .allocate(bar.bar_size)
+                            .allocate(bar_size)
                             .ok_or("out of memory for 32-bit memory BAR")?
                             .start;
                         log::debug!(
-                            "    assigning [{:08x}-{:08x})",
+                            "    assigning [0x{:08x}-0x{:08x})",
                             allocation,
-                            allocation + bar.bar_size
+                            allocation + bar_size
                         );
-                        config_access.lock().write(address, 0x4 + bar.offset, allocation)?;
+                        bar.set_address(allocation.into(), config_access.lock().as_mut())?;
                     }
-                    PciBar::Memory64(address, bar) => {
-                        log::debug!(
-                            "  BAR{}: memory, 64-bit pref, size {}",
-                            bar.offset,
-                            bar.bar_size
-                        );
+                    PciBar::Memory64 { offset, bar_size, .. } => {
+                        log::debug!("  BAR{}: memory, 64-bit pref, size {}", offset, bar_size);
                         let allocation = mem64_allocator
-                            .allocate(bar.bar_size)
+                            .allocate(bar_size)
                             .ok_or("out of memory for 64-bit memory BAR")?
                             .start;
                         log::debug!(
-                            "    assigning [{:016x}-{:016x})",
+                            "    assigning [0x{:016x}-0x{:016x})",
                             allocation,
-                            allocation + bar.bar_size
+                            allocation + bar_size
                         );
-                        {
-                            let mut access = config_access.lock();
-                            access.write(
-                                address,
-                                0x4 + bar.offset,
-                                (allocation & 0xFFFF_FFFF) as u32,
-                            )?;
-                            access.write(
-                                address,
-                                0x4 + bar.offset + 1,
-                                (allocation >> 32) as u32,
-                            )?;
-                        }
+                        bar.set_address(allocation, config_access.lock().as_mut())?;
                     }
-                    PciBar::Io(address, bar) => {
-                        log::debug!("  BAR{}: I/O, size {}", bar.offset, bar.bar_size);
-                        let bar_size = bar.bar_size.try_into().unwrap();
+                    PciBar::Io { offset, bar_size, .. } => {
+                        log::debug!("  BAR{}: I/O, size {}", offset, bar_size);
+                        let bar_size = bar_size.try_into().unwrap();
                         let allocation = io_allocator
                             .allocate(bar_size)
                             .ok_or("out of memory for 64-bit memory BAR")?
                             .start;
                         log::debug!(
-                            "    assigning [{:04x}-{:04x})",
+                            "    assigning [0x{:04x}-0x{:04x})",
                             allocation,
                             allocation + bar_size
                         );
-                        config_access.lock().write(
-                            address,
-                            0x4 + bar.offset,
-                            allocation as u32 & !0b11,
-                        )?;
+                        bar.set_address(allocation.into(), config_access.lock().as_mut())?;
                     }
                 }
             }
