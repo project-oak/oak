@@ -56,18 +56,19 @@ repository.
 ./ctf_sha2/deploy.sh
 ```
 
-### Inspect Logs
+### Inspect the Attestation Token
 
-Go to
+The `deploy.sh` script will automatically find the attestation token in the
+instance logs and print a direct link to <http://jwt.io> to inspect it.
+
+If you wish to inspect the logs manually, you can go to
 <https://console.cloud.google.com/compute/instancesDetail/zones/us-west1-b/instances/ctf-sha2-test?project=oak-examples-477357>
-and then click on "Logging".
-
-Find the entry that printed the attestation token, expand it and then click on
-"Copy Value".
+and then click on "Logging". Find the entry that printed the attestation token,
+expand it, and then click on "Copy Value".
 
 ![](./copy_value.png)
 
-Paste the token in <http://jwt.io> or
+You can then paste the token into <http://jwt.io> or
 [CyberChef](<https://gchq.github.io/CyberChef/#recipe=JWT_Decode()>) for
 debugging.
 

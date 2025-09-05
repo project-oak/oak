@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 
 fn assert_crypto_rng<T: CryptoRng>(_rng: &T) {}
@@ -40,8 +41,15 @@ fn main() {
 
     let flag_digest_string = format!("{flag_digest:x}");
 
-    eprintln!("flag_digest");
-    eprintln!("{flag_digest_string}");
+    // Unfortunately, this doesn't come out in Cloud Logging as a nice structured
+    // log in "jsonPayload", because Confidential Space wraps it in a string
+    // value (with the "MESSAGE" key).
+    eprintln!(
+        "{}",
+        json!({
+            "flag_digest": flag_digest_string
+        })
+    );
 
     eprintln!();
 
@@ -51,6 +59,10 @@ fn main() {
     )
     .expect("could not request attestation token");
 
-    eprintln!("attestation token");
-    eprintln!("{attestation_token}");
+    eprintln!(
+        "{}",
+        json!({
+            "attestation_token": attestation_token
+        })
+    );
 }

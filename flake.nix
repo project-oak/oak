@@ -67,6 +67,7 @@
                 cachix
                 envsubst
                 fd
+                google-cloud-sdk
                 just
                 ps
                 which

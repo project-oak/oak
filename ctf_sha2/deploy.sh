@@ -15,6 +15,10 @@ shopt -s inherit_errexit
 # You can set this here or pass it as the first argument to the script.
 GCP_PROJECT_ID="${1:-oak-examples-477357}"
 
+# The GCP zone where the instance will be deployed.
+# You can set this here or pass it as the second argument to the script.
+ZONE="${2:-us-west1-b}"
+
 # The directory containing the Terraform configuration.
 readonly TF_DIR="ctf_sha2"
 
@@ -39,6 +43,31 @@ echo "Running Terraform to deploy the instance..."
 # Terraform will prompt you to confirm the changes.
 terraform -chdir="${TF_DIR}" apply \
   -var="gcp_project_id=${GCP_PROJECT_ID}" \
-  -var="image_digest=${FULL_IMAGE_DIGEST}"
+  -var="image_digest=${FULL_IMAGE_DIGEST}" \
+  -var="zone=${ZONE}"
 
-echo "Done."
+INSTANCE_ID=$(gcloud compute instances describe ctf-sha2-test --project="${GCP_PROJECT_ID}" --zone="${ZONE}" --format='value(id)')
+echo "Instance ID: ${INSTANCE_ID}"
+
+# Fetch logs containing the attestation token. Repeat until the relevant log entry appears.
+while true; do
+    # Find the attestation token log entry.
+    LOG_ENTRIES=$(gcloud logging read "resource.type=\"gce_instance\" AND resource.labels.instance_id=\"${INSTANCE_ID}\" AND jsonPayload.MESSAGE:\"attestation_token\"" --project="${GCP_PROJECT_ID}" --format=json)
+    LOG_ENTRIES_LENGTH=$(echo "$LOG_ENTRIES" | jq 'length')
+    if [[ "$LOG_ENTRIES_LENGTH" -gt 0 ]]; then
+        # The token is in a JSON object which is itself string-encoded inside the JSON log entry.
+        ATTESTATION_TOKEN=$(echo "$LOG_ENTRIES" | jq -r '.[0].jsonPayload.MESSAGE' | jq -r '.attestation_token')
+        break
+    else
+        echo "⏳ Waiting for more logs..."
+        sleep 5
+    fi
+done
+
+terraform -chdir="${TF_DIR}" destroy \
+  -var="gcp_project_id=${GCP_PROJECT_ID}" \
+  -var="image_digest=${FULL_IMAGE_DIGEST}" \
+  -var="zone=${ZONE}"
+
+echo "Attestation token: ${ATTESTATION_TOKEN}"
+echo "View (decoded) at: https://jwt.io/#token=${ATTESTATION_TOKEN}"
