@@ -20,6 +20,7 @@
 // endorsements are created and signed on the fly. For other tests (in
 // particular negative ones) see verifier_tests.rs.
 
+use digest_util::raw_to_hex_digest;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
@@ -91,8 +92,9 @@ fn create_endorsement(
     digest: &RawDigest,
     claim_types: Vec<&str>,
 ) -> (TransparentReleaseEndorsement, p256::PublicKey) {
+    let hex_digest = raw_to_hex_digest(digest);
     let (signing_key, verifying_key) = new_random_signing_keypair();
-    let statement = fake_endorsement(digest, claim_types);
+    let statement = fake_endorsement(&hex_digest, claim_types);
     let (endorsement, signature) = serialize_and_sign_endorsement(&statement, signing_key);
     (
         TransparentReleaseEndorsement {

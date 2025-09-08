@@ -28,7 +28,6 @@ rust_binary(
     srcs = glob(["*.rs"]),
     deps = [
         "//oak_attestation_gcp",
-        "//oak_attestation_verification",
         "//oak_proto_rust",
         "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_time",

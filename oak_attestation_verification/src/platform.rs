@@ -19,6 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
+use digest_util::hash_sha2_256;
 use oak_proto_rust::oak::{
     attestation::v1::{
         tcb_version_expected_value, AmdAttestationReport, AmdSevExpectedValues,
@@ -35,10 +36,7 @@ use x509_cert::{
 };
 use zerocopy::FromBytes;
 
-use crate::{
-    amd::{get_product, verify_attestation_report_signature, verify_cert_signature},
-    util::hash_sha2_256,
-};
+use crate::amd::{get_product, verify_attestation_report_signature, verify_cert_signature};
 
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");

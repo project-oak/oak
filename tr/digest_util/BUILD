@@ -1,3 +1,4 @@
+#
 # Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
@@ -20,28 +22,19 @@ package(
 )
 
 rust_library(
-    name = "endorsement",
-    srcs = glob(["src/**/*.rs"]),
+    name = "digest_util",
+    srcs = [
+        "lib.rs",
+    ],
     deps = [
-        "//oak_time",
+        "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:chrono",
-        "@oak_crates_index//:oci-spec",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:serde",
-        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:sha2",
     ],
 )
 
 rust_test(
-    name = "unit_tests",
-    crate = ":endorsement",
-    data = [
-        "//trex/endorsement/testdata:endorsement.json",
-    ],
-    deps = [
-        "//oak_file_utils",
-        "@oak_crates_index//:googletest",
-        "@oak_crates_index//:prost-types",
-    ],
+    name = "digest_util_tests",
+    crate = ":digest_util",
 )

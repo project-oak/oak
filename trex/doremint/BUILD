@@ -25,7 +25,10 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     compile_data = ["//trex/doremint/data:rekor_public_key.pem"],
     deps = [
-        "//trex/endorsement",
+        "//oak_proto_rust",
+        "//oak_time",
+        "//tr/digest_util",
+        "//tr/intoto",
         "//trex/sigstore",
         "//trex/sigstore_client",
         "@oak_crates_index//:anyhow",

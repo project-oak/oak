@@ -24,13 +24,13 @@ use oak_proto_rust::oak::{
         KernelBinaryReferenceValue, KeyType, SkipVerification, VerifyingKey,
         VerifyingKeyReferenceValue, VerifyingKeySet,
     },
-    RawDigest,
+    HexDigest,
 };
 use oak_time::{make_instant, Instant};
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
 
 /// A simple fake endorsement for basic generic testing purposes.
-pub fn fake_endorsement(digest: &RawDigest, claim_types: Vec<&str>) -> DefaultStatement {
+pub fn fake_endorsement(digest: &HexDigest, claim_types: Vec<&str>) -> DefaultStatement {
     make_statement(
         "fake_subject_name",
         digest,

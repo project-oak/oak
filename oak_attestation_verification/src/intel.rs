@@ -19,6 +19,7 @@
 
 use anyhow::{anyhow, Context};
 use const_oid::db::rfc5912::ECDSA_WITH_SHA_256;
+use digest_util::hash_sha2_256;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use p256::{
     ecdsa::{signature::Verifier, Signature, VerifyingKey},
@@ -28,8 +29,6 @@ use x509_cert::{
     der::{referenced::OwnedToRef, DecodePem, Encode},
     Certificate,
 };
-
-use crate::util::hash_sha2_256;
 
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
 

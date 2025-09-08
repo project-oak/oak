@@ -23,11 +23,12 @@ use alloc::vec::Vec;
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use intoto::statement::{parse_statement, validate_statement, DefaultStatement};
+use intoto::statement::{parse_statement, DefaultStatement};
 use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
     VerifyingKeySet,
 };
+use oak_time::Instant;
 
 use crate::{
     rekor::{
@@ -79,9 +80,9 @@ pub(crate) fn verify_endorsement(
 
     let statement =
         parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
+    let current_time = Instant::from_unix_millis(now_utc_millis);
     let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
-    validate_statement(now_utc_millis, &claims, &statement)
-        .context("validating endorsement statement")?;
+    statement.validate(None, current_time, &claims).context("validating endorsement statement")?;
 
     let rekor_ref_value =
         ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
@@ -131,8 +132,8 @@ pub(crate) fn verify_binary_endorsement(
         .context("verifying signature")?;
 
     let statement = parse_statement(endorsement).context("parsing endorsement statement")?;
-    validate_statement(now_utc_millis, &[], &statement)
-        .context("verifying endorsement statement")?;
+    let current_time = Instant::from_unix_millis(now_utc_millis);
+    statement.validate(None, current_time, &[]).context("validating endorsement statement")?;
 
     if !rekor_public_key.is_empty() {
         if log_entry.is_empty() {

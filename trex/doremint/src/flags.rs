@@ -17,8 +17,12 @@ use std::{
     io::{self, Write},
 };
 
-use anyhow::Context;
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+use anyhow::{anyhow, Context};
+use chrono::Utc;
+use intoto::statement::{set_to_hex_digest, DigestSet};
+use oak_proto_rust::oak::HexDigest;
+use oak_time::{Duration, Instant};
+use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use serde::Deserialize;
 
@@ -68,23 +72,23 @@ pub(crate) fn parse_claims(path: &str) -> anyhow::Result<Claims> {
 pub(crate) fn parse_duration(valid_for: &str) -> anyhow::Result<Duration> {
     if let Some(hours) = valid_for.strip_suffix('h') {
         let hours = hours.parse::<i64>().context("could not parse number of hours")?;
-        Ok(Duration::hours(hours))
+        Ok(Duration::from_hours(hours))
     } else if let Some(days) = valid_for.strip_suffix('d') {
         let days = days.parse::<i64>().context("could not parse number of days")?;
-        Ok(Duration::days(days))
+        Ok(Duration::from_days(days))
     } else if let Some(weeks) = valid_for.strip_suffix('w') {
         let weeks = weeks.parse::<i64>().context("could not parse number of weeks")?;
-        Ok(Duration::weeks(weeks))
+        Ok(Duration::from_weeks(weeks))
     } else {
         anyhow::bail!("invalid duration format: must end with 'h', 'd', or 'w'");
     }
 }
 
-pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<DateTime<FixedOffset>> {
+pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<Instant> {
     if value.is_empty() {
-        Ok(Utc::now().fixed_offset())
+        Ok(Instant::from(Utc::now()))
     } else {
-        DateTime::parse_from_rfc3339(value).context("could not parse rfc3339 timestamp")
+        Instant::try_from(value).map_err(|msg| anyhow::anyhow!(msg))
     }
 }
 
@@ -92,4 +96,12 @@ pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<VerifyingKe
     let public_key_pem = fs::read_to_string(key_path)?;
     VerifyingKey::from_public_key_pem(&public_key_pem)
         .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))
+}
+
+// TODO: b/443012225 - Deduplicate multiple copies of this function.
+pub(crate) fn oci_ref_to_hex_digest(oci_ref: &Reference) -> anyhow::Result<HexDigest> {
+    let digest = oci_ref.digest().ok_or_else(|| anyhow!("missing digest in oci reference"))?;
+    let (alg, hash) = digest.split_once(':').context("invalid digest spec in oci reference")?;
+    let digest_set = DigestSet::from([(alg.to_string(), hash.to_string())]);
+    set_to_hex_digest(&digest_set)
 }

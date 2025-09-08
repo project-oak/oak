@@ -38,7 +38,7 @@ use oak_proto_rust::{
             Signature as ProtoSignature, SignedEndorsement,
         },
         session::v1::{EndorsedEvidence, SessionBinding},
-        RawDigest,
+        HexDigest,
     },
 };
 use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
@@ -257,7 +257,7 @@ fn generate_jwt_claims(now: Instant, nonce: String) -> Claims {
 fn generate_endorsement_statement(now: Instant) -> anyhow::Result<DefaultStatement> {
     let mut endorsement_statement = make_statement(
         "gcr.io/oak-ci/oak-containers-system-image",
-        &RawDigest { sha2_256: hex::decode(IMAGE_DIGEST)?, ..Default::default() },
+        &HexDigest { sha2_256: IMAGE_DIGEST.to_string(), ..Default::default() },
         now,
         now - Duration::from_hours(1),
         now + Duration::from_hours(1),

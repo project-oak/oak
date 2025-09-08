@@ -38,8 +38,10 @@ mod verifiers;
 mod test_util;
 
 use anyhow::Context;
+use digest_util::hex_to_raw_digest;
 pub use expect::get_expected_values;
 pub use extract::extract_evidence;
+use intoto::statement::get_hex_digest_from_statement;
 use oak_proto_rust::oak::attestation::v1::{
     EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
 };
@@ -61,10 +63,7 @@ pub use policy::{
     system::SystemPolicy,
 };
 pub use rekor::verify_rekor_log_entry;
-pub use util::{
-    convert_pem_to_raw, decode_event_proto, decode_protobuf_any, hex_to_raw_digest,
-    raw_to_hex_digest,
-};
+pub use util::{convert_pem_to_raw, decode_event_proto, decode_protobuf_any};
 pub use verifiers::{
     create_amd_verifier, create_insecure_verifier, AmdSevSnpDiceAttestationVerifier,
     EventLogVerifier, InsecureAttestationVerifier,
@@ -83,7 +82,7 @@ pub fn verify_endorsement(
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<EndorsementDetails> {
     let s = endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
-    let digest = hex_to_raw_digest(&intoto::statement::get_digest(&s)?)?;
+    let digest = hex_to_raw_digest(&get_hex_digest_from_statement(&s)?)?;
     let validity = s.predicate.validity.context("missing validity in statement")?;
 
     Ok(EndorsementDetails {

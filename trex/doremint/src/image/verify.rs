@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use anyhow::Context;
+use chrono::Utc;
 use clap::Parser;
-use endorsement::intoto::{EndorsementStatement, Subject};
+use intoto::statement::parse_statement;
+use oak_time::Instant;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
@@ -25,7 +27,7 @@ use sigstore::rekor::{
 };
 use sigstore_client::cosign;
 
-use crate::flags;
+use crate::{flags, flags::oci_ref_to_hex_digest};
 
 const REKOR_PUBLIC_KEY_PEM: &str = include_str!("../../data/rekor_public_key.pem");
 
@@ -60,25 +62,24 @@ impl VerifyCommand {
 
         let endorsement = endorsement
             .verify(&self.endorser_public_key)
-            .context("Failed to verify endorsement signature")?;
+            .context("verifying endorsement signature")?;
 
         let rekor = from_cosign_bundle(bundle)?;
-        let rekor = rekor.verify(&rekor_public_key).context("failed to verify rekor signature")?;
+        let rekor = rekor.verify(&rekor_public_key).context("verifying rekor signature")?;
         let rekor: RekorPayload = serde_json::from_slice(rekor.message())?;
         let hashed_rekord: HashedRekord<Unverified> = rekor.payload_body()?;
         hashed_rekord
             .verify(&self.endorser_public_key, endorsement.message())
-            .context("Failed to verify Rekor log entry")?;
+            .context("verifying Rekor log entry")?;
 
-        let statement: EndorsementStatement = serde_json::from_slice(endorsement.message())?;
-
-        let now = chrono::Utc::now();
-        let subject: Subject = (&self.image).try_into()?;
-
+        let statement = parse_statement(endorsement.message())?;
+        let now = Instant::from(Utc::now());
+        let digest = oci_ref_to_hex_digest(&self.image)?;
+        // Convert Vec<String> to Vec<&str>.
         let claims: Vec<&str> = self.claims.claims.iter().map(|s| s.as_str()).collect();
         statement
-            .validate(now.into(), &subject, &claims)
-            .context("failed to validate endorsement")?;
+            .validate(Some(digest), now, &claims)
+            .context("validating endorsement statement")?;
 
         println!("Endorsement verified successfully for image {}", self.image);
 

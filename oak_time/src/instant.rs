@@ -179,7 +179,7 @@ macro_rules! make_instant {
 
 impl core::fmt::Display for Instant {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let datetime: chrono::DateTime<chrono::Utc> = (*self).into();
+        let datetime: DateTime<Utc> = (*self).into();
         write!(f, "{}", datetime.to_rfc3339())
     }
 }

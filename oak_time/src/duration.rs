@@ -20,8 +20,6 @@ use core::ops::{Add, Div, Sub};
 
 const MILLIS_TO_NANOS: i128 = 1_000_000;
 const SECONDS_TO_NANOS: i128 = 1_000 * MILLIS_TO_NANOS;
-const MINUTES_TO_NANOS: i128 = 60 * SECONDS_TO_NANOS;
-const HOURS_TO_NANOS: i128 = 60 * MINUTES_TO_NANOS;
 
 /// Represents a signed time duration which is the result of e.g. the
 /// subtraction of two Instants.
@@ -37,13 +35,31 @@ pub struct Duration {
 }
 
 impl Duration {
+    /// Creates a new `Duration` from a signed number of weeks.
+    ///
+    /// # Arguments
+    ///
+    /// * `weeks`: The number of weeks.
+    pub const fn from_weeks(weeks: i64) -> Self {
+        Self::from_days(7 * weeks)
+    }
+
+    /// Creates a new `Duration` from a signed number of days.
+    ///
+    /// # Arguments
+    ///
+    /// * `days`: The number of days.
+    pub const fn from_days(days: i64) -> Self {
+        Self::from_hours(24 * days)
+    }
+
     /// Creates a new `Duration` from a signed number of hours.
     ///
     /// # Arguments
     ///
     /// * `hours`: The number of hours.
     pub const fn from_hours(hours: i64) -> Self {
-        Duration { nanoseconds: HOURS_TO_NANOS * hours as i128 }
+        Self::from_seconds(3600 * hours)
     }
 
     /// Creates a new `Duration` from a signed number of minutes.
@@ -52,7 +68,7 @@ impl Duration {
     ///
     /// * `minutes`: The number of minutes.
     pub const fn from_minutes(minutes: i64) -> Self {
-        Duration { nanoseconds: MINUTES_TO_NANOS * minutes as i128 }
+        Self::from_seconds(60 * minutes)
     }
 
     /// Creates a new `Duration` from a signed number of seconds.
@@ -61,7 +77,7 @@ impl Duration {
     ///
     /// * `seconds`: The number of seconds.
     pub const fn from_seconds(seconds: i64) -> Self {
-        Duration { nanoseconds: SECONDS_TO_NANOS * seconds as i128 }
+        Self::from_nanos(SECONDS_TO_NANOS * seconds as i128)
     }
 
     /// Creates a new `Duration` from a signed number of milliseconds.
@@ -70,7 +86,7 @@ impl Duration {
     ///
     /// * `millis`: The number of milliseconds.
     pub const fn from_millis(millis: i64) -> Self {
-        Duration { nanoseconds: MILLIS_TO_NANOS * millis as i128 }
+        Self::from_nanos(MILLIS_TO_NANOS * millis as i128)
     }
 
     /// Creates a new `Duration` from a signed number of nanoseconds.
@@ -227,8 +243,22 @@ mod tests {
     const MAX_VALUE_NANOS: i32 = 999_999_999;
 
     #[googletest::test]
+    fn test_weeks_example() {
+        const EXPECTED_WEEKS: i64 = -3;
+        let d = Duration::from_weeks(EXPECTED_WEEKS);
+        assert_eq!(EXPECTED_WEEKS * 7 * 24 * 60 * 60, d.into_seconds());
+    }
+
+    #[googletest::test]
+    fn test_days_example() {
+        const EXPECTED_DAYS: i64 = -987;
+        let d = Duration::from_days(EXPECTED_DAYS);
+        assert_eq!(EXPECTED_DAYS * 24 * 60 * 60, d.into_seconds());
+    }
+
+    #[googletest::test]
     fn test_hours_example() {
-        const EXPECTED_HOURS: i64 = -987_654;
+        const EXPECTED_HOURS: i64 = 987_654;
         let d = Duration::from_hours(EXPECTED_HOURS);
         assert_eq!(EXPECTED_HOURS * 60 * 60, d.into_seconds());
     }

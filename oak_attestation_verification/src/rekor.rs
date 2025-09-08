@@ -21,11 +21,12 @@ use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use digest_util::hash_sha2_256;
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
 
-use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_ecdsa, verify_timestamp};
+use crate::util::{convert_pem_to_raw, verify_signature_ecdsa, verify_timestamp};
 
 /// Struct representing a Rekor LogEntry. See
 /// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>

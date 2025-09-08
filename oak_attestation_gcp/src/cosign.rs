@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-use endorsement::intoto::EndorsementStatement;
-use oak_proto_rust::oak::attestation::v1::{
-    CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
-    VerifyingKey as ProtoVerifyingKey,
+use anyhow::{anyhow, Context};
+use intoto::statement::{parse_statement, set_to_hex_digest, DigestSet};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
+        VerifyingKey as ProtoVerifyingKey,
+    },
+    HexDigest,
 };
 use oak_proto_rust_lib::parse_p256_ecdsa_verifying_key;
 use oak_time::Instant;
@@ -42,8 +46,8 @@ pub enum CosignVerificationError {
     StatementVerificationError(sigstore::error::Error),
     #[error("endorsement validation error: {0}")]
     StatementValidationError(String),
-    #[error("Endorsement deserialization error: {0}")]
-    StatementParseError(serde_json::Error),
+    #[error("endorsement statement deserialization error: {0}")]
+    StatementParseError(String),
     #[error("invalid image reference: {0}")]
     ImageReferenceError(String),
     #[error("rekor error {0}: {1}")]
@@ -181,6 +185,14 @@ pub struct StatementReport {
     pub rekor_verification: Option<Result<(), CosignVerificationError>>,
 }
 
+// TODO: b/443012225 - Deduplicate multiple copies of this function.
+fn oci_ref_to_hex_digest(oci_ref: &Reference) -> anyhow::Result<HexDigest> {
+    let digest = oci_ref.digest().ok_or_else(|| anyhow!("missing digest in oci reference"))?;
+    let (alg, hash) = digest.split_once(':').context("invalid digest spec in oci reference")?;
+    let digest_set = DigestSet::from([(alg.to_string(), hash.to_string())]);
+    set_to_hex_digest(&digest_set)
+}
+
 pub fn report_endorsement(
     endorsement: CosignEndorsement,
     image_reference: &Reference,
@@ -192,15 +204,13 @@ pub fn report_endorsement(
             .verify(&ref_values.developer_public_key)
             .map_err(CosignVerificationError::StatementVerificationError)?;
         let statement_validation = try {
-            let parsed_statement: EndorsementStatement =
-                serde_json::from_slice(statement.message())
-                    .map_err(CosignVerificationError::StatementParseError)?;
-
-            let subject = image_reference.try_into().map_err(|err: anyhow::Error| {
+            let statement = parse_statement(statement.message())
+                .map_err(|err| CosignVerificationError::StatementParseError(err.to_string()))?;
+            let digest = oci_ref_to_hex_digest(image_reference).map_err(|err: anyhow::Error| {
                 CosignVerificationError::ImageReferenceError(err.to_string())
             })?;
-            parsed_statement
-                .validate(verification_time, &subject, &[])
+            statement
+                .validate(Some(digest), verification_time, &[])
                 .map_err(|err| CosignVerificationError::StatementValidationError(err.to_string()))?
         };
 

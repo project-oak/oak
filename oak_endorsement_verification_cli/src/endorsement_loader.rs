@@ -30,7 +30,7 @@ use std::{fs, path::PathBuf, sync::Arc};
 
 use anyhow::{Context, Result};
 use derive_builder::Builder;
-use intoto::statement::{get_digest, parse_statement};
+use intoto::statement::{get_hex_digest_from_statement, parse_statement};
 use oak_attestation_verification::convert_pem_to_raw;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
@@ -278,7 +278,7 @@ impl ContentAddressableEndorsementLoader {
         let contains_mpm_claim =
             statement.predicate.claims.iter().any(|c| c.r#type == MPM_CLAIM_TYPE);
         let subject = if contains_mpm_claim {
-            let hex_digest = get_digest(&statement)?;
+            let hex_digest = get_hex_digest_from_statement(&statement)?;
             self.storage.get_file(&format!("sha2-256:{}", &hex_digest.sha2_256))?
         } else {
             vec![]

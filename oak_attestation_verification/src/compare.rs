@@ -19,6 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
+use digest_util::is_raw_digest_match;
 use oak_proto_rust::oak::{
     attestation::v1::{
         expected_digests, expected_values, extracted_evidence::EvidenceValues,
@@ -35,12 +36,9 @@ use oak_proto_rust::oak::{
 #[cfg(feature = "regex")]
 use regex_lite::Regex;
 
-use crate::{
-    platform::{
-        convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
-        verify_insecure, verify_intel_tdx_attestation_report,
-    },
-    util::is_raw_digest_match,
+use crate::platform::{
+    convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
+    verify_insecure, verify_intel_tdx_attestation_report,
 };
 
 pub fn compare_expected_values(

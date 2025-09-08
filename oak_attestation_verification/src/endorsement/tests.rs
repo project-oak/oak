@@ -18,7 +18,7 @@ extern crate std;
 
 use alloc::vec::Vec;
 
-use intoto::statement::{parse_statement, validate_statement};
+use intoto::statement::parse_statement;
 use oak_time::Duration;
 use test_util::endorsement_data::EndorsementData;
 
@@ -29,7 +29,7 @@ fn test_validate_endorsement_statement_success() {
     let d = EndorsementData::load();
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
 
-    let result = validate_statement(d.make_valid_time().into_unix_millis(), &[], &statement);
+    let result = statement.validate(None, d.make_valid_time(), &[]);
 
     assert!(result.is_ok(), "{:?}", result);
 }
@@ -40,7 +40,8 @@ fn test_validate_endorsement_statement_fails_too_early() {
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
     let too_early = d.valid_not_before - Duration::from_seconds(24 * 3_600);
 
-    let result = validate_statement(too_early.into_unix_millis(), &[], &statement);
+    let result = statement.validate(None, too_early, &[]);
+
     assert!(result.is_err(), "{:?}", result);
 }
 
@@ -50,7 +51,7 @@ fn test_validate_statement_fails_too_late() {
     let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
     let too_late = d.valid_not_after + Duration::from_seconds(24 * 3_600);
 
-    let result = validate_statement(too_late.into_unix_millis(), &[], &statement);
+    let result = statement.validate(None, too_late, &[]);
 
     assert!(result.is_err(), "{:?}", result);
 }

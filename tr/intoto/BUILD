@@ -29,6 +29,7 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "//oak_time",
+        "//tr/digest_util",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost-types",

@@ -16,6 +16,9 @@
 
 use std::collections::BTreeMap;
 
+use digest_util::{
+    hex_digest_from_contents, hex_to_raw_digest, raw_digest_from_contents, raw_to_hex_digest,
+};
 use intoto::statement::Validity;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -29,13 +32,7 @@ use prost::Message;
 use crate::{
     endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE},
     test_util::{self, GetValidity},
-    util,
 };
-
-// Same as raw_digest_from_contents, but emits hex encoded digest formats.
-fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
-    util::raw_to_hex_digest(&util::raw_digest_from_contents(contents))
-}
 
 // Returns milliseconds UTC in the middle of the validity period.
 fn make_valid_now_utc_millis(validity: &Validity) -> i64 {
@@ -47,8 +44,8 @@ fn make_valid_now_utc_millis(validity: &Validity) -> i64 {
 fn test_get_expected_measurement_digest_validity() {
     // Create an endorsement of some arbitrary content.
     let measured_content = b"Just some abitrary content";
-    let content_digests = util::raw_digest_from_contents(measured_content);
-    let endorsement = test_util::fake_endorsement(&content_digests, vec![]);
+    let hex_digest = hex_digest_from_contents(measured_content);
+    let endorsement = test_util::fake_endorsement(&hex_digest, vec![]);
     let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
 
     // Now create the TR endorsement.
@@ -76,11 +73,12 @@ fn test_get_expected_measurement_digest_validity() {
 
     // Assert that the expected digests are those from the verified endorsement.
 
+    let raw_digest = hex_to_raw_digest(&hex_digest).expect("digest conversion failed");
     assert_eq!(
         expected_digests,
         ExpectedDigests {
             r#type: Some(expected_digests::Type::Digests(RawDigests {
-                digests: vec![content_digests],
+                digests: vec![raw_digest],
                 valid: Some(statement_validity.into()),
             })),
         }
@@ -94,16 +92,16 @@ fn test_get_stage0_expected_values_validity() {
     let mut configs = BTreeMap::<i32, HexDigest>::new();
     let original_content = b"Just some arbitrary content";
     let measured_content = b"Just some different arbitrary content";
-    let measured_digest = util::raw_digest_from_contents(measured_content);
+    let measured_digest = raw_digest_from_contents(measured_content);
     let num_cpus = 2;
-    configs.insert(num_cpus, util::raw_to_hex_digest(&measured_digest));
+    configs.insert(num_cpus, raw_to_hex_digest(&measured_digest));
     let subject =
         FirmwareAttachment { binary: Some(hex_digest_from_contents(original_content)), configs };
     let serialized_subject = subject.encode_to_vec();
 
     // Now create the endorsement, containing the subject. The *endorsement*
     // hash is the hash of the serialized firmware attachment.
-    let subject_digests = util::raw_digest_from_contents(&serialized_subject);
+    let subject_digests = hex_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, vec![FIRMWARE_CLAIM_TYPE]);
     let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
@@ -145,18 +143,18 @@ fn test_get_kernel_expected_values_validity() {
     let measured_image = b"Just some abitrary kernel image";
     let measured_setup = b"Just some abitrary kernel setup";
     let bz_image_digest = hex_digest_from_contents(bz_image);
-    let image_digest = util::raw_digest_from_contents(measured_image);
-    let setup_digest = util::raw_digest_from_contents(measured_setup);
+    let image_digest = raw_digest_from_contents(measured_image);
+    let setup_digest = raw_digest_from_contents(measured_setup);
     let subject = KernelAttachment {
         bz_image: Some(bz_image_digest),
-        image: Some(util::raw_to_hex_digest(&image_digest)),
-        setup_data: Some(util::raw_to_hex_digest(&setup_digest)),
+        image: Some(raw_to_hex_digest(&image_digest)),
+        setup_data: Some(raw_to_hex_digest(&setup_digest)),
     };
     let serialized_subject = subject.encode_to_vec();
 
     // Now create the endorsement, containing the subject. The *endorsement*
     // hash is the hash of the serialized kernel attachment.
-    let subject_digests = util::raw_digest_from_contents(&serialized_subject);
+    let subject_digests = hex_digest_from_contents(&serialized_subject);
     let (signing_key, public_key) = test_util::new_random_signing_keypair();
     let endorsement = test_util::fake_endorsement(&subject_digests, vec![KERNEL_CLAIM_TYPE]);
     let statement_validity = endorsement.predicate.validity.as_ref().expect("no validity");
