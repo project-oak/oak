@@ -33,6 +33,11 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "results_unit_tests",
+    crate = ":oak_attestation_verification_results",
+)
+
 rust_library(
     name = "oak_attestation_verification",
     srcs = glob(

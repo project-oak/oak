@@ -20,7 +20,7 @@
 use alloc::boxed::Box;
 
 use anyhow::{anyhow, Context, Error};
-use oak_attestation_verification_results::get_session_binding_public_key;
+use oak_attestation_verification_results::unique_session_binding_public_key;
 use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 use p256::ecdsa::VerifyingKey;
@@ -59,9 +59,8 @@ impl KeyExtractor for DefaultSigningKeyExtractor {
     }
 }
 
-/// Key extractor that takes the binding key from the artifacts contained in
-/// [`AttestationResults`] using a predefined artifact ID
-/// ([`SESSION_BINDING_PUBLIC_KEY_ID`]).
+/// Key extractor that retrieves the binding key from the artifacts contained
+/// in [`AttestationResults`].
 pub struct DefaultBindingKeyExtractor;
 
 impl KeyExtractor for DefaultBindingKeyExtractor {
@@ -69,8 +68,9 @@ impl KeyExtractor for DefaultBindingKeyExtractor {
         &self,
         attestation_results: &AttestationResults,
     ) -> Result<Box<dyn Verifier>, Error> {
-        let session_binding_public_key = get_session_binding_public_key(attestation_results)
-            .context("getting session binding public key")?;
+        let session_binding_public_key = unique_session_binding_public_key(attestation_results)
+            .map_err(|msg| anyhow::anyhow!(msg))
+            .context("getting unique session binding public key")?;
         Ok(Box::new(VerifyingKey::from_sec1_bytes(session_binding_public_key.as_slice()).map_err(|err| {
             anyhow!("couldn't create a verifying key from the session binding public key in the evidence: {}", err)
         })?))

@@ -16,10 +16,9 @@
 
 //! Provides verifiers based on verification policies.
 
-use alloc::{boxed::Box, string::String, sync::Arc, vec, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 
 use anyhow::Context;
-use hashbrown::HashSet;
 use itertools::izip;
 use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
@@ -115,8 +114,6 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
             )
             .context("verifying event log")?;
 
-            verify_event_artifacts_uniqueness(&results)
-                .context("verifying event artifact uniqueness")?;
             event_attestation_results.extend(results);
         }
 
@@ -180,8 +177,7 @@ impl AttestationVerifier for InsecureAttestationVerifier {
                 self.event_policies.as_slice(),
             )
             .context("verifying event log")?;
-            verify_event_artifacts_uniqueness(&results)
-                .context("verifying event artifact uniqueness")?;
+
             event_attestation_results.extend(results);
         }
 
@@ -230,9 +226,6 @@ impl AttestationVerifier for EventLogVerifier {
             self.event_policies.as_slice(),
         )
         .context("verifying event log")?;
-
-        verify_event_artifacts_uniqueness(&event_attestation_results)
-            .context("verify event artifact uniqueness")?;
 
         // TODO: b/366419879 - Combine per-event attestation results.
         Ok(AttestationResults {
@@ -390,23 +383,3 @@ fn verify_event_log(
         })
         .collect::<Result<Vec<EventAttestationResults>, anyhow::Error>>()
 }
-
-/// Verifies that artifacts in all events have unique IDs.
-fn verify_event_artifacts_uniqueness(
-    event_attestation_results: &[EventAttestationResults],
-) -> anyhow::Result<()> {
-    event_attestation_results.iter().try_fold(HashSet::new(), |id_set, event| {
-        let updated_id_set = event.artifacts.keys().try_fold(id_set, |mut global_id_set, id| {
-            if global_id_set.insert(id) {
-                Ok(global_id_set)
-            } else {
-                anyhow::bail!("artifact ID `{}` is duplicated in multiple events", id)
-            }
-        })?;
-        Ok::<HashSet<&String>, anyhow::Error>(updated_id_set)
-    })?;
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests;

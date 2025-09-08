@@ -240,7 +240,7 @@ mod tests {
     use oak_attestation_verification::{
         ContainerPolicy, InsecureAttestationVerifier, KernelPolicy, SystemPolicy,
     };
-    use oak_attestation_verification_results::get_signing_public_key;
+    use oak_attestation_verification_results::unique_signing_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::attestation::v1::{
         attestation_results, binary_reference_value, kernel_binary_reference_value,
@@ -311,6 +311,6 @@ mod tests {
             )
             .expect("attestation verification failed");
         assert_eq!(results.status, attestation_results::Status::Success as i32);
-        get_signing_public_key(&results).expect("missing signing public key");
+        unique_signing_public_key(&results).expect("missing signing public key");
     }
 }

@@ -150,7 +150,7 @@ mod tests {
     use alloc::sync::Arc;
     use core::assert_matches::assert_matches;
 
-    use oak_attestation_verification_results::get_session_binding_public_key;
+    use oak_attestation_verification_results::unique_session_binding_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::{
         attestation::v1::{
@@ -558,8 +558,8 @@ mod tests {
         // Check that the policy correctly extracts the public key.
         let results = result.unwrap();
         assert!(results.event_attestation_results.len() == 1);
-        let extracted_public_key = get_session_binding_public_key(&results);
-        assert!(extracted_public_key.is_some());
+        let extracted_public_key = unique_session_binding_public_key(&results);
+        assert!(extracted_public_key.is_ok());
         assert!(*extracted_public_key.unwrap() == TEST_PUBLIC_KEY);
     }
 
