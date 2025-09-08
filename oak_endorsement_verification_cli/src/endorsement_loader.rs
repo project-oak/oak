@@ -30,10 +30,8 @@ use std::{fs, path::PathBuf, sync::Arc};
 
 use anyhow::{Context, Result};
 use derive_builder::Builder;
-use oak_attestation_verification::{
-    convert_pem_to_raw,
-    statement::{get_digest, parse_statement},
-};
+use intoto::statement::{get_digest, parse_statement};
+use oak_attestation_verification::convert_pem_to_raw;
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,

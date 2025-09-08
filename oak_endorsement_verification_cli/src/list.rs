@@ -21,7 +21,8 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
-use oak_attestation_verification::{statement::Validity, verify_endorsement};
+use intoto::statement::Validity;
+use oak_attestation_verification::verify_endorsement;
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use prost::Message;
 use url::Url;

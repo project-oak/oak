@@ -16,6 +16,7 @@
 
 use std::collections::BTreeMap;
 
+use intoto::statement::Validity;
 use oak_proto_rust::oak::{
     attestation::v1::{
         expected_digests, ExpectedDigests, FirmwareAttachment, KernelAttachment, RawDigests,
@@ -27,7 +28,6 @@ use prost::Message;
 
 use crate::{
     endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE},
-    statement::Validity,
     test_util::{self, GetValidity},
     util,
 };

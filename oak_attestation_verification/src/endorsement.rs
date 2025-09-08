@@ -23,6 +23,7 @@ use alloc::vec::Vec;
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use intoto::statement::{parse_statement, validate_statement, DefaultStatement};
 use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
     VerifyingKeySet,
@@ -33,7 +34,6 @@ use crate::{
         parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry,
         verify_rekor_log_entry_ecdsa,
     },
-    statement::{parse_statement, validate_statement, DefaultStatement},
     util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
 };
 

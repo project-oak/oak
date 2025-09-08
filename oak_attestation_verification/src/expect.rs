@@ -20,6 +20,7 @@
 use alloc::{string::String, vec::Vec};
 
 use anyhow::{Context, Error};
+use intoto::statement::{get_digest, parse_statement, DefaultStatement, Validity};
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
@@ -51,7 +52,6 @@ use crate::{
     endorsement::{
         is_firmware_type, is_kernel_type, verify_binary_endorsement, verify_endorsement,
     },
-    statement::{get_digest, parse_statement, DefaultStatement, Validity},
     util::{hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest},
 };
 

@@ -1,4 +1,3 @@
-#
 # Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,29 +13,36 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-# TODO: b/427550226 - Make this work on Mac OS.
-rust_binary(
-    name = "endorscope",
-    srcs = glob(["src/**"]),
+rust_library(
+    name = "intoto",
+    srcs = [
+        "lib.rs",
+        "statement.rs",
+    ],
+    deps = [
+        "//oak_proto_rust",
+        "//oak_time",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "intoto_tests",
+    crate = ":intoto",
     data = ["//oak_attestation_verification/testdata:endorsement"],
     deps = [
-        "//oak_attestation_verification",
         "//oak_file_utils",
-        "//oak_proto_rust",
-        "//tr/intoto",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:derive_builder",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:ureq",
-        "@oak_crates_index//:url",
+        "@oak_crates_index//:prost-types",
     ],
 )

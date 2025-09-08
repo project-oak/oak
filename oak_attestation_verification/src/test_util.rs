@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+use intoto::statement::{
+    make_statement, serialize_statement, DefaultPredicate, DefaultStatement, Statement,
+};
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, kernel_binary_reference_value, verifying_key_reference_value,
@@ -25,10 +28,6 @@ use oak_proto_rust::oak::{
 };
 use oak_time::{make_instant, Instant};
 use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
-
-use crate::statement::{
-    self, make_statement, serialize_statement, DefaultPredicate, DefaultStatement, Statement,
-};
 
 /// A simple fake endorsement for basic generic testing purposes.
 pub fn fake_endorsement(digest: &RawDigest, claim_types: Vec<&str>) -> DefaultStatement {
@@ -107,11 +106,11 @@ fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceVal
 }
 
 pub trait GetValidity {
-    fn validity(&self) -> &statement::Validity;
+    fn validity(&self) -> &intoto::statement::Validity;
 }
 
 impl GetValidity for Statement<DefaultPredicate> {
-    fn validity(&self) -> &statement::Validity {
+    fn validity(&self) -> &intoto::statement::Validity {
         self.predicate.validity.as_ref().expect("missing validity")
     }
 }

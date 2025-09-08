@@ -19,18 +19,22 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, vec, vec::Vec};
+use alloc::{
+    borrow::ToOwned,
+    collections::BTreeMap,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 use anyhow::Context;
 use oak_proto_rust::oak::{HexDigest, RawDigest};
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
 
-use crate::alloc::{borrow::ToOwned, string::ToString};
-
 /// URI representing in-toto statements. We only use V1, earlier and later
 /// versions will be rejected.
-pub(crate) const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
+const STATEMENT_TYPE: &str = "https://in-toto.io/Statement/v1";
 
 /// Oldest predicate type for in-toto endorsement statements. References still
 /// exist, but fully removing it will be easy.
@@ -43,7 +47,7 @@ const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-rele
 
 /// Current predicate type of in-toto endorsement statements, which loses
 /// the `usage` field and adds claim types.
-pub(crate) const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
+const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
 
 // A map from algorithm name to lowercase hex-encoded value.
 pub type DigestSet = BTreeMap<String, String>;
@@ -161,7 +165,7 @@ pub fn make_statement(
 
 /// Checks that the given endorsement statement is valid, based on timestamp
 /// and required claims.
-pub(crate) fn validate_statement(
+pub fn validate_statement(
     now_utc_millis: i64,
     required_claims: &[&str],
     statement: &DefaultStatement,

@@ -18,13 +18,11 @@ extern crate std;
 
 use alloc::vec::Vec;
 
+use intoto::statement::{parse_statement, validate_statement};
 use oak_time::Duration;
 use test_util::endorsement_data::EndorsementData;
 
-use crate::{
-    endorsement::{verify_binary_endorsement, verify_endorser_public_key_ecdsa},
-    statement::{parse_statement, validate_statement},
-};
+use crate::endorsement::{verify_binary_endorsement, verify_endorser_public_key_ecdsa};
 
 #[test]
 fn test_validate_endorsement_statement_success() {
