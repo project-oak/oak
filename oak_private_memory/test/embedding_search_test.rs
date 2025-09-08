@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
 use googletest::prelude::*;
-use oak_private_memory_database::{icing::IcingMetaDatabase, PageToken};
+use oak_private_memory_database::{
+    icing::{IcingMetaDatabase, IcingTempDir},
+    PageToken,
+};
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
@@ -23,13 +25,10 @@ use sealed_memory_rust_proto::{
     },
     prelude::v1::*,
 };
-use tempfile::tempdir;
 
 #[gtest]
 fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
 
     // Add memories with different embeddings
     let memory1 = Memory {
@@ -74,9 +73,7 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
 
     // Add memories with different embeddings and timestamps
     let memory1 = Memory {

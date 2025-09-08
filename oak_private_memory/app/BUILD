@@ -54,7 +54,6 @@ rust_library(
         "@oak_crates_index//:rand",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",

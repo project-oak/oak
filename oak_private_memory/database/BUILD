@@ -45,7 +45,6 @@ rust_test(
     crate = ":oak_private_memory_database",
     deps = [
         "@oak_crates_index//:googletest",
-        "@oak_crates_index//:tempfile",
     ],
 )
 

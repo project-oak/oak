@@ -12,13 +12,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::path::Path;
-
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
-use log::{debug, error};
+use log::{debug, error, info};
 use prost::Message;
+use rand::Rng;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
         search_memory_query, text_query, EmbeddingQuery, MatchType, QueryClauses, QueryOperator,
@@ -33,6 +32,37 @@ fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
 }
 
+// A simple struct to manage the temporary location of the icing database.
+//
+// The directory will be deleted when the struct is dropped, if possible. If
+// deletion fails, an info message will be logged.
+pub struct IcingTempDir {
+    path: String,
+}
+
+impl IcingTempDir {
+    // Create a new icing temp directory in std::env::temp_dir()
+    pub fn new(prefix: &str) -> Self {
+        let mut tmp = std::env::temp_dir();
+        let random: u64 = rand::rng().random::<u64>();
+        tmp.push(format!("{prefix}{random}"));
+        Self { path: tmp.as_path().to_string_lossy().into() }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.path.as_str()
+    }
+}
+
+impl Drop for IcingTempDir {
+    fn drop(&mut self) {
+        match std::fs::remove_dir_all(&self.path) {
+            Ok(()) => debug!("Successfully removed the icing directory at {:?}.", self.path),
+            Err(e) => info!("Failed to remove the icing directory {:?}, {}", self.path, e),
+        }
+    }
+}
+
 /// The essential database that stores all the meta information
 /// except the raw document content of a user.
 ///
@@ -44,8 +74,10 @@ fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
 /// }
 /// Indexable fields are the ones that can be searched against.
 pub struct IcingMetaDatabase {
+    // Note: icing_search_engine must come before base_dir, so that it is
+    // dropped before the temp dir is dropped and deleted.
     icing_search_engine: cxx::UniquePtr<icing::IcingSearchEngine>,
-    base_dir: String,
+    base_dir: IcingTempDir,
     applied_operations: Vec<MutationOperation>,
 }
 
@@ -154,9 +186,6 @@ impl IcingMetaDatabase {
             paths: vec![path.to_string()],
         }
     }
-    pub fn base_dir(&self) -> String {
-        self.base_dir.clone()
-    }
 
     fn create_schema() -> icing::SchemaProto {
         let schema_type_builder = icing::create_schema_type_config_builder();
@@ -222,9 +251,9 @@ impl IcingMetaDatabase {
 
     /// Create a new icing database in `base_dir`. If there is already a icing
     /// db in `base_dir`, the old one will be deleted.
-    pub fn new(base_dir: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let base_dir_str = base_dir.as_ref().to_str().context("failed to convert path to str")?;
-        let icing_search_engine = Self::initialize_icing_database(base_dir_str)?;
+    pub fn new(base_dir: IcingTempDir) -> anyhow::Result<Self> {
+        debug!("Creating new icing database in {}", base_dir.as_str());
+        let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
         let schema = Self::create_schema();
         let result_proto = icing_search_engine.set_schema(&schema);
         ensure!(
@@ -233,24 +262,20 @@ impl IcingMetaDatabase {
         );
         Ok(Self {
             icing_search_engine,
-            base_dir: base_dir_str.to_string(),
+            base_dir,
             applied_operations: vec![MutationOperation::Create],
         })
     }
 
     /// Create a new icing database in `base_dir`. Using the provided import
     /// data.
-    pub fn import(base_dir: impl AsRef<Path>, data: impl bytes::Buf) -> anyhow::Result<Self> {
-        let base_dir_str = base_dir.as_ref().to_str().context("failed to convert path to str")?;
+    pub fn import(base_dir: IcingTempDir, data: impl bytes::Buf) -> anyhow::Result<Self> {
+        debug!("Importing icing database into {}", base_dir.as_str());
         let ground_truth = icing::IcingGroundTruthFiles::decode(data)?;
-        ground_truth.migrate(base_dir_str)?;
+        ground_truth.migrate(base_dir.as_str())?;
 
-        let icing_search_engine = Self::initialize_icing_database(base_dir_str)?;
-        Ok(Self {
-            icing_search_engine,
-            base_dir: base_dir_str.to_string(),
-            applied_operations: vec![],
-        })
+        let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
+        Ok(Self { icing_search_engine, base_dir, applied_operations: vec![] })
     }
 
     fn initialize_icing_database(
@@ -748,7 +773,7 @@ impl IcingMetaDatabase {
     // If there is a failure when applying the new operation, no error will be
     // returning, but the error message will be logged.
     pub fn import_with_changes(
-        new_base_dir: impl AsRef<Path>,
+        new_base_dir: IcingTempDir,
         new_base_blob: &[u8],
         apply_changes_from: &IcingMetaDatabase,
     ) -> anyhow::Result<Self> {
@@ -789,21 +814,7 @@ impl IcingMetaDatabase {
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
         );
-        icing::IcingGroundTruthFiles::new(&self.base_dir)
-    }
-}
-
-impl Drop for IcingMetaDatabase {
-    fn drop(&mut self) {
-        // The destructor of `icing_search_engine` will try to perform a
-        // `persist_to_disk`. If the directory is deleted, a few warnings and
-        // errors will be printed out. So we manually trigger its destructor
-        // first, and then delete the dir.
-        self.icing_search_engine = icing::icing_search_engine_null_helper();
-        match std::fs::remove_dir_all(&self.base_dir) {
-            Ok(()) => debug!("Successfully removed the icing directory."),
-            Err(e) => debug!("Failed to remove the icing directory, {}", e),
-        }
+        icing::IcingGroundTruthFiles::new(self.base_dir.as_str())
     }
 }
 
@@ -847,14 +858,16 @@ impl From<u64> for PageToken {
 #[cfg(test)]
 mod tests {
     use googletest::prelude::*;
-    use tempfile::tempdir;
 
     use super::*;
 
+    fn tempdir() -> IcingTempDir {
+        IcingTempDir::new("icing-test-")
+    }
+
     #[gtest]
     fn basic_icing_search_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir()?;
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
 
         let memory = Memory {
             id: "Thisisanid".to_string(),
@@ -878,8 +891,10 @@ mod tests {
 
     #[gtest]
     fn icing_import_export_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir()?;
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
+        // Save the path to check for deletion later.
+        let base_dir = tempdir();
+        let base_dir_string = base_dir.as_str().to_string();
+        let mut icing_database = IcingMetaDatabase::new(base_dir)?;
 
         let memory_id1 = "memory_id_export_1".to_string();
         let blob_id1 = 654321.to_string();
@@ -892,16 +907,12 @@ mod tests {
 
         // Export the database
         let exported_data = icing_database.export()?.encode_to_vec();
-        let base_dir_str = icing_database.base_dir();
-        let base_dir = std::path::Path::new(&base_dir_str);
         drop(icing_database); // Drop the original instance
-        expect_false!(base_dir.exists());
+        expect_false!(std::path::Path::new(base_dir_string.as_str()).exists());
 
         // Import into a new directory (or the same one after cleaning)
-        let import_temp_dir = tempdir()?;
-        let imported_database =
-            IcingMetaDatabase::import(import_temp_dir, exported_data.as_slice())
-                .expect("failed to import");
+        let imported_database = IcingMetaDatabase::import(tempdir(), exported_data.as_slice())
+            .expect("failed to import");
 
         // Verify data exists in the imported database
         expect_that!(
@@ -916,8 +927,7 @@ mod tests {
 
     #[gtest]
     fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir()?;
-        let mut icing_database = IcingMetaDatabase::new(temp_dir.path())?;
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
 
         let memory_id1 = "memory_id_1".to_string();
         let blob_id1 = 54321.to_string();
@@ -945,9 +955,7 @@ mod tests {
 
     #[gtest]
     fn icing_embedding_search_test() -> anyhow::Result<()> {
-        let temp_dir = tempdir()?;
-        let mut icing_database =
-            IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
 
         let memory_id1 = "memory_embed_1".to_string();
         let blob_id1 = 98765.to_string();
@@ -1004,8 +1012,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_add_memory() -> anyhow::Result<()> {
         // Original base db.
-        let tempdir1 = tempdir()?;
-        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let mut db1 = IcingMetaDatabase::new(tempdir())?;
         let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
         let (_mid_b, bid_b) = add_test_memory(&mut db1, "B");
 
@@ -1013,14 +1020,12 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer adds E and F
-        let tempdir2 = tempdir()?;
-        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         let (_mid_c, bid_c) = add_test_memory(&mut db2, "C");
         let (_mid_d, bid_d) = add_test_memory(&mut db2, "D");
 
         // First concurrent changer import and first changer adds G and H
-        let tempdir3 = tempdir()?;
-        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         let (_mid_e, bid_e) = add_test_memory(&mut db3, "E");
         let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
 
@@ -1029,9 +1034,8 @@ mod tests {
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let tempdir4 = tempdir()?;
         let db3_prime =
-            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+            IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         // Should contain all items.
         assert_that!(
@@ -1055,8 +1059,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_add_and_delete_memory() -> anyhow::Result<()> {
         // Original base db.
-        let tempdir1 = tempdir()?;
-        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let mut db1 = IcingMetaDatabase::new(tempdir())?;
         let (_mid_a, bid_a) = add_test_memory(&mut db1, "A");
         let (mid_b, _mid_b) = add_test_memory(&mut db1, "B");
         let (mid_c, _bid_c) = add_test_memory(&mut db1, "C");
@@ -1066,15 +1069,13 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer removes B, adds E
-        let tempdir2 = tempdir()?;
-        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         db2.delete_memories(&[mid_b.clone()])?;
         let (_mid_e, bid_e) = add_test_memory(&mut db2, "E");
 
         // Second concurrent changer import and first changer removes B and C, add F
         // The remove will be redundant, but should not cause error or failures.
-        let tempdir3 = tempdir()?;
-        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         db3.delete_memories(&[mid_b.clone(), mid_c.clone()])?;
         let (_mid_f, bid_f) = add_test_memory(&mut db3, "F");
 
@@ -1083,9 +1084,8 @@ mod tests {
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let tempdir4 = tempdir()?;
         let db3_prime =
-            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+            IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         assert_that!(
             db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),
@@ -1107,8 +1107,7 @@ mod tests {
     #[gtest]
     fn icing_import_with_changes_test_reset() -> anyhow::Result<()> {
         // Original base db.
-        let tempdir1 = tempdir()?;
-        let mut db1 = IcingMetaDatabase::new(tempdir1.path())?;
+        let mut db1 = IcingMetaDatabase::new(tempdir())?;
         let (_mid_a, _bid_a) = add_test_memory(&mut db1, "A");
         let (mid_b, _bid_b) = add_test_memory(&mut db1, "B");
         let (_mid_c, _bid_c) = add_test_memory(&mut db1, "C");
@@ -1117,8 +1116,7 @@ mod tests {
         let db1_exported = db1.export().expect("Failed to export db 1").encode_to_vec();
 
         // First concurrent changer import and first changer removes B, adds E
-        let tempdir2 = tempdir()?;
-        let mut db2 = IcingMetaDatabase::import(tempdir2.path(), db1_exported.as_slice())?;
+        let mut db2 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         db2.delete_memories(&[mid_b.clone()])?;
         let (_mid_e, _bid_e) = add_test_memory(&mut db2, "E");
 
@@ -1126,15 +1124,13 @@ mod tests {
         let db2_exported = db2.export().expect("Failed to export db 2").encode_to_vec();
 
         // Second concurrent changer import and reset.
-        let tempdir3 = tempdir()?;
-        let mut db3 = IcingMetaDatabase::import(tempdir3.path(), db1_exported.as_slice())?;
+        let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
         db3.reset();
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
-        let tempdir4 = tempdir()?;
         let db3_prime =
-            IcingMetaDatabase::import_with_changes(tempdir4.path(), db2_exported.as_slice(), &db3)?;
+            IcingMetaDatabase::import_with_changes(tempdir(), db2_exported.as_slice(), &db3)?;
 
         assert_that!(
             db3_prime.get_memories_by_tag("tag", 10, PageToken::Start),

@@ -21,7 +21,7 @@ mod memory_cache;
 
 pub use crate::{
     database_with_cache::DatabaseWithCache,
-    icing::{IcingMetaDatabase, PageToken},
+    icing::{IcingMetaDatabase, IcingTempDir, PageToken},
 };
 
 // The unique id for a memory, responding to `struct Memory`.

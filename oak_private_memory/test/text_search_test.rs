@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
 use googletest::prelude::*;
-use oak_private_memory_database::{icing::IcingMetaDatabase, PageToken};
+use oak_private_memory_database::{
+    icing::{IcingMetaDatabase, IcingTempDir},
+    PageToken,
+};
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
@@ -23,13 +25,10 @@ use sealed_memory_rust_proto::{
     },
     prelude::v1::*,
 };
-use tempfile::tempdir;
 
 #[gtest]
 fn test_text_search_timestamp_filtering() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
     // Add memories with different timestamps
     let memory1 = Memory {
@@ -76,9 +75,7 @@ fn test_text_search_timestamp_filtering() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_text_search_id_filtering() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
     // Add memories with different timestamps
     let memory1 = Memory {
@@ -116,9 +113,7 @@ fn test_text_search_id_filtering() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_query_clauses_and_operator() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
     // Add memories with different timestamps and tags
     let memory1 = Memory {
@@ -175,9 +170,7 @@ fn test_query_clauses_and_operator() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_query_clauses_or_operator() -> anyhow::Result<()> {
-    let temp_dir = tempdir()?;
-    let mut icing_database =
-        IcingMetaDatabase::new(temp_dir.path().to_str().context("invalid temp path")?)?;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
     // Add memories with different timestamps and tags
     let memory1 = Memory {
