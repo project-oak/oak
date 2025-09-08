@@ -47,6 +47,9 @@ common --@rules_rust//rust/settings:lto=manual
 # https://nixos.wiki/wiki/Rust#Building_Rust_crates_that_require_external_system_libraries
 # for more information.
 build --action_env=PKG_CONFIG_PATH
+# Also pass PKG_CONFIG_PATH to tools that are run during the build (e.g. in
+# genrules), as they are built in the "exec" configuration.
+build --host_action_env=PKG_CONFIG_PATH
 
 # Setup clippy aspect to run clippy automatically on all rust targets
 # See: https://bazelbuild.github.io/rules_rust/rust_clippy.html

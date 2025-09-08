@@ -93,7 +93,6 @@ impl VerificationReport {
             }
         }
 
-        let indent = indent + 1;
         match session_binding {
             None => print_indented!(writer, indent, "❌ No session binding found")?,
             Some(session_binding) => {

@@ -74,3 +74,36 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "signature-ffi",
+    testonly = True,
+    srcs = ["signature-ffi.cc"],
+    hdrs = ["signature-ffi.h"],
+    deps = [
+        ":signature_utils",
+        "//cc/ffi:bytes_view",
+        "//cc/ffi:cxx_string",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "signature_utils",
+    # Currently only supported for tests. If this is ever intended for non-test use,
+    # testcases should be added.
+    testonly = True,
+    srcs = ["signature_utils.cc"],
+    hdrs = ["signature_utils.h"],
+    deps = [
+        "//cc/utils/status",
+        "@com_github_tink_crypto_tink_cc//tink:keyset_handle",
+        "@com_github_tink_crypto_tink_cc//tink:proto_keyset_format",
+        "@com_github_tink_crypto_tink_cc//tink:public_key_sign",
+        "@com_github_tink_crypto_tink_cc//tink/config:global_registry",
+        "@com_github_tink_crypto_tink_cc//tink/signature:signature_config",
+        "@com_github_tink_crypto_tink_cc//tink/signature:signature_key_templates",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+    ],
+)

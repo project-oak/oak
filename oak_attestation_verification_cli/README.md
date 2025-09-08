@@ -23,6 +23,21 @@ Where:
 
 ## Examples
 
+### Confidential Space Attestation
+
+An end-to-end example of Confidential Space attestation is available in the
+[`examples/confidential_space`](./examples/confidential_space) directory.
+
+The example generates a `CollectedAttestation` and a `ReferenceValuesCollection`
+and then runs the verification tool on them.
+
+To run the example and see a sample verification report, execute the following
+command from the root of the repository:
+
+```sh
+bazel build //oak_attestation_verification_cli/examples/confidential_space:report && cat bazel-bin/oak_attestation_verification_cli/examples/confidential_space/report.txt
+```
+
 ### Certificate-Based Attestation
 
 An end-to-end example of certificate-based attestation is available in the
@@ -32,10 +47,10 @@ The example generates a `CollectedAttestation` and a `ReferenceValuesCollection`
 and then runs the verification tool on them.
 
 To run the example and see a sample verification report, execute the following
-script from the root of the repository:
+command from the root of the repository:
 
 ```sh
-./oak_attestation_verification_cli/examples/certificate_based/report.sh
+bazel build //oak_attestation_verification_cli/examples/certificate_based:report && cat bazel-bin/oak_attestation_verification_cli/examples/certificate_based/report.txt
 ```
 
 ## Supported Attestation Types

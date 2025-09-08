@@ -67,10 +67,13 @@ impl RekorPayload {
     }
 }
 
+pub const LOG_ENTRY_PAYLOAD_KEY: &str = "Payload";
+pub const LOG_ENTRY_SIGNATURE_KEY: &str = "SignedEntryTimestamp";
+
 pub fn from_cosign_bundle<T: AsRef<[u8]>>(bundle: T) -> Result<SignedMessage<Unverified>, Error> {
     let bundle: Value = serde_json::from_slice(bundle.as_ref())?;
 
-    let payload = bundle.get("Payload").ok_or(RekorError::MalformedBundle)?;
+    let payload = bundle.get(LOG_ENTRY_PAYLOAD_KEY).ok_or(RekorError::MalformedBundle)?;
 
     // As per the spec above, the signature of the payload is done over the
     // Canonicalized representation of its fields, which means:
@@ -80,7 +83,7 @@ pub fn from_cosign_bundle<T: AsRef<[u8]>>(bundle: T) -> Result<SignedMessage<Unv
     // object values.
     let message = serde_json::to_string(&payload)?;
 
-    let signature = bundle.get("SignedEntryTimestamp").ok_or(RekorError::MalformedBundle)?;
+    let signature = bundle.get(LOG_ENTRY_SIGNATURE_KEY).ok_or(RekorError::MalformedBundle)?;
     let signature: String = String::deserialize(signature)?;
     let signature: Vec<u8> = BASE64_STANDARD.decode(signature)?;
 
