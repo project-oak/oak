@@ -177,7 +177,7 @@ impl SealedMemorySessionHandler {
         let mut mutex_guard = self.session_context().await;
         let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
 
-        database.reset_memory().await;
+        database.reset_memory().await?;
         Ok(ResetMemoryResponse { success: true, ..Default::default() })
     }
 

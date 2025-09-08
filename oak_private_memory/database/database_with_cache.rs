@@ -108,9 +108,13 @@ impl DatabaseWithCache {
         }
     }
 
-    pub async fn reset_memory(&mut self) -> bool {
+    pub async fn reset_memory(&mut self) -> anyhow::Result<()> {
+        let all_memory_ids = self.meta_db().get_all_memory_ids()?;
+        if !all_memory_ids.is_empty() {
+            self.delete_memories(all_memory_ids).await?;
+        }
         self.meta_db().reset();
-        true
+        Ok(())
     }
 
     pub async fn search_memory(

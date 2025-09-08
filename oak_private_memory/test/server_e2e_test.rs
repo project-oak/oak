@@ -25,7 +25,11 @@ use sealed_memory_rust_proto::{
     oak::private_memory::{text_query, MatchType, TextQuery},
     prelude::v1::*,
 };
-use tokio::{net::TcpListener, sync::mpsc as tokio_mpsc};
+use tokio::{
+    net::TcpListener,
+    sync::mpsc as tokio_mpsc,
+    time::{sleep, Duration},
+};
 
 fn init_logging() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -138,6 +142,9 @@ async fn test_add_get_reset_memory_all_modes() {
         // GetMemoriesRequest again
         let get_memories_response_2 = client.get_memories("tag", 10, None, "").await.unwrap();
         assert_eq!(get_memories_response_2.memories.len(), 0);
+
+        // Wait for the database to be deleted.
+        sleep(Duration::from_secs(1)).await;
     }
 }
 

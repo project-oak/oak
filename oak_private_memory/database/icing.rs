@@ -388,6 +388,83 @@ impl IcingMetaDatabase {
             .cloned()
     }
 
+    fn extract_memory_id_from_doc(
+        doc_hit: &icing::search_result_proto::ResultProto,
+    ) -> Option<MemoryId> {
+        let memory_id_name = MEMORY_ID_NAME.to_string();
+        doc_hit
+            .document
+            .as_ref()?
+            .properties
+            .iter()
+            .find(|prop| prop.name.as_ref() == Some(&memory_id_name))?
+            .string_values
+            .first()
+            .cloned()
+    }
+
+    fn extract_memory_ids_from_search_result(
+        search_result: icing::SearchResultProto,
+    ) -> Vec<MemoryId> {
+        search_result
+            .results
+            .iter()
+            .filter_map(Self::extract_memory_id_from_doc)
+            .collect::<Vec<_>>()
+    }
+
+    fn create_memory_id_projection() -> icing::TypePropertyMask {
+        icing::TypePropertyMask {
+            schema_type: Some(SCHMA_NAME.to_string()),
+            paths: vec![MEMORY_ID_NAME.to_string()],
+        }
+    }
+
+    pub fn get_all_memory_ids(&self) -> anyhow::Result<Vec<MemoryId>> {
+        // Search for all memories.
+        let mut all_memory_ids = Vec::new();
+        let mut page_token = PageToken::Start;
+        loop {
+            let search_spec = icing::SearchSpecProto {
+                query: Some(format!("({} >= 0)", CREATED_TIMESTAMP_NAME)),
+                enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+                term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+                ..Default::default()
+            };
+            let result_spec = icing::ResultSpecProto {
+                num_per_page: Some(1000), // Max page size
+                type_property_masks: vec![Self::create_memory_id_projection()],
+                ..Default::default()
+            };
+            let search_result: icing::SearchResultProto = match page_token {
+                PageToken::Start => self.icing_search_engine.search(
+                    &search_spec,
+                    &icing::get_default_scoring_spec(),
+                    &result_spec,
+                ),
+                PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+                PageToken::Invalid => bail!("Invalid page token"),
+            };
+
+            if search_result.status.clone().context("no status")?.code
+                != Some(icing::status_proto::Code::Ok.into())
+            {
+                bail!("Icing search failed: {:?}", search_result.status);
+            }
+
+            let memory_ids = Self::extract_memory_ids_from_search_result(search_result.clone());
+            all_memory_ids.extend(memory_ids);
+
+            let next_page_token =
+                search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+            if next_page_token == PageToken::Start {
+                break;
+            }
+            page_token = next_page_token;
+        }
+        Ok(all_memory_ids)
+    }
+
     pub fn reset(&mut self) {
         self.icing_search_engine.reset();
         let schema = Self::create_schema();
