@@ -19,12 +19,12 @@ use std::sync::Arc;
 use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
 use oak_attestation_gcp::{
     attestation::request_attestation_token,
-    policy_generator::confidential_space_policy_from_reference_values,
-    CONFIDENTIAL_SPACE_ATTESTATION_ID, SESSION_AUDIENCE,
+    policy_generator::confidential_space_policy_from_reference_values, SESSION_AUDIENCE,
 };
 use oak_attestation_verification::EventLogVerifier;
-use oak_proto_rust::oak::attestation::v1::{
-    ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
+use oak_proto_rust::{
+    attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
+    oak::attestation::v1::{ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues},
 };
 use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,

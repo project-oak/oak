@@ -26,8 +26,6 @@ pub mod jwt;
 pub mod policy;
 pub mod policy_generator;
 
-pub const CONFIDENTIAL_SPACE_ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
-
 pub const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
     include_str!("../data/confidential_space_root.pem");
 
