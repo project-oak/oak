@@ -46,6 +46,8 @@ pub enum AttestationVerificationError {
     JWTValidityExpiration { exp: Instant, current_time: Instant },
     #[error("Empty X509 certificate chain")]
     EmptyX509Chain,
+    #[error("Invalid audience: want {want}, got {got}")]
+    InvalidAudience { want: String, got: String },
     #[error("Invalid debug status: want {want}, got {got}")]
     InvalidDebugStatus { want: &'static str, got: String },
     #[error("Invalid software name: want {want}, got {got}")]
@@ -80,15 +82,17 @@ pub fn verify_attestation_token(
     token: Token<Header, Claims, Unverified>,
     root: &Certificate,
     current_time: &oak_time::Instant,
+    expected_audience: String,
 ) -> Result<Token<Header, Claims, Verified>, AttestationVerificationError> {
-    report_attestation_token(token, root, current_time).into_checked_token()
+    report_attestation_token(token, root, current_time, expected_audience).into_checked_token()
 }
 
 /// Contains the results of (as complete as possible) verification of a JWT.
 pub struct AttestationTokenVerificationReport {
-    // Whether or not the token was produced using a production image.
-    // https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-images#types_of_images
-    pub production_image: Result<(), AttestationVerificationError>,
+    // Whether or not the token's claims have been checked. This includes:
+    // - that the token was produced using a production image: https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-images#types_of_images
+    // - that the token's audience is as expected
+    pub has_required_claims: Result<(), AttestationVerificationError>,
     /// Whether or not the token is valid (with respect to a timestamp).
     pub validity: Result<(), AttestationVerificationError>,
     /// The result of verifying the token (with respect to its signature
@@ -113,7 +117,7 @@ impl AttestationTokenVerificationReport {
     ) -> Result<Token<Header, Claims, Verified>, AttestationVerificationError> {
         match self {
             AttestationTokenVerificationReport {
-                production_image: Ok(()),
+                has_required_claims: Ok(()),
                 validity: Ok(()),
                 verification: Ok(verified_token),
                 issuer_report,
@@ -143,13 +147,13 @@ impl AttestationTokenVerificationReport {
                 }
             }
             AttestationTokenVerificationReport {
-                production_image,
+                has_required_claims,
                 validity,
                 verification,
                 issuer_report: _,
             } => {
                 // This matches any non-Ok cases.
-                production_image?;
+                has_required_claims?;
                 validity?;
                 verification?;
                 Err(AttestationVerificationError::UnknownError(
@@ -190,6 +194,7 @@ pub fn report_attestation_token(
     token: Token<Header, Claims, Unverified>,
     root: &Certificate,
     current_time: &oak_time::Instant,
+    expected_audience: String,
 ) -> AttestationTokenVerificationReport {
     // Construct a chain of certificate verification reports, going
     // through all certificates in the chain.
@@ -221,7 +226,7 @@ pub fn report_attestation_token(
     let issuer_report = issuer_report.unwrap_or(Err(AttestationVerificationError::EmptyX509Chain));
 
     AttestationTokenVerificationReport {
-        production_image: verify_production_image(token.claims()),
+        has_required_claims: enforce_required_claims(token.claims(), expected_audience),
         validity: verify_token_validity(&token, current_time),
         verification: try {
             // See https://cloud.google.com/confidential-computing/confidential-vm/docs/token-claims#token_items:
@@ -232,7 +237,16 @@ pub fn report_attestation_token(
     }
 }
 
-fn verify_production_image(claims: &Claims) -> Result<(), AttestationVerificationError> {
+fn enforce_required_claims(
+    claims: &Claims,
+    expected_audience: String,
+) -> Result<(), AttestationVerificationError> {
+    if claims.audience != expected_audience {
+        return Err(AttestationVerificationError::InvalidAudience {
+            want: expected_audience,
+            got: claims.audience.clone(),
+        });
+    }
     // See 'dbgstat' in
     // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#top-level_claims.
     if claims.debug_status != "disabled-since-boot" {
@@ -332,12 +346,16 @@ mod tests {
     use oak_time::{make_instant, Duration, Instant};
     use x509_cert::{der::DecodePem, Certificate};
 
-    use crate::jwt::{
-        verification::{
-            report_attestation_token, verify_attestation_token, AttestationTokenVerificationReport,
-            AttestationVerificationError, CertificateReport, IssuerReport,
+    use crate::{
+        jwt::{
+            verification::{
+                report_attestation_token, verify_attestation_token,
+                AttestationTokenVerificationReport, AttestationVerificationError,
+                CertificateReport, IssuerReport,
+            },
+            Claims, Header,
         },
-        Claims, Header,
+        SESSION_AUDIENCE,
     };
 
     // The time has been set inside the validity interval of the test token.
@@ -354,7 +372,12 @@ mod tests {
         let unverified_token: Token<Header, Claims, Unverified> =
             Token::parse_unverified(&token_str)?;
 
-        verify_attestation_token(unverified_token, &root, &current_time())?;
+        verify_attestation_token(
+            unverified_token,
+            &root,
+            &current_time(),
+            SESSION_AUDIENCE.to_string(),
+        )?;
 
         Ok(())
     }
@@ -369,9 +392,9 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time()),
+            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
-                production_image: Ok(()),
+                has_required_claims: Ok(()),
                 validity: Ok(()),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
@@ -400,8 +423,13 @@ mod tests {
 
         assert_matches!(
             unsafe {
-                verify_attestation_token(unverified_token, &root, &current_time())
-                    .unwrap_err_unchecked()
+                verify_attestation_token(
+                    unverified_token,
+                    &root,
+                    &current_time(),
+                    SESSION_AUDIENCE.to_string(),
+                )
+                .unwrap_err_unchecked()
             },
             AttestationVerificationError::JWTError(jwt::Error::InvalidSignature)
         );
@@ -419,9 +447,9 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time()),
+            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
-                production_image: Ok(()),
+                has_required_claims: Ok(()),
                 validity: Ok(()),
                 verification: Err(AttestationVerificationError::JWTError(
                     jwt::Error::InvalidSignature
@@ -450,7 +478,12 @@ mod tests {
         let unverified_token: Token<Header, Claims, Unverified> =
             Token::parse_unverified(&token_str)?;
 
-        let result = verify_attestation_token(unverified_token, &root, &current_time());
+        let result = verify_attestation_token(
+            unverified_token,
+            &root,
+            &current_time(),
+            SESSION_AUDIENCE.to_string(),
+        );
         let err = unsafe { result.unwrap_err_unchecked() };
         assert_matches!(err, AttestationVerificationError::JWTValidityExpiration { .. });
 
@@ -467,9 +500,9 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time()),
+            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
-                production_image: Ok(()),
+                has_required_claims: Ok(()),
                 validity: Err(AttestationVerificationError::JWTValidityExpiration { .. }),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
@@ -501,8 +534,13 @@ mod tests {
 
         assert_matches!(
             unsafe {
-                verify_attestation_token(unverified_token, &root, &expired_current_time)
-                    .unwrap_err_unchecked()
+                verify_attestation_token(
+                    unverified_token,
+                    &root,
+                    &expired_current_time,
+                    SESSION_AUDIENCE.to_string(),
+                )
+                .unwrap_err_unchecked()
             },
             AttestationVerificationError::X509ValidityNotAfter { .. }
         );
@@ -523,9 +561,9 @@ mod tests {
         let expired_current_time = current_time() + Duration::from_seconds(2 * 365 * 24 * 3600);
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &expired_current_time),
+            report_attestation_token(unverified_token, &root, &expired_current_time, SESSION_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
-                production_image: Ok(()),
+                has_required_claims: Ok(()),
                 validity: Ok(()),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {
@@ -552,7 +590,12 @@ mod tests {
         let unverified_token: Token<Header, Claims, Unverified> =
             Token::parse_unverified(&token_str)?;
 
-        let result = verify_attestation_token(unverified_token, &root, &current_time());
+        let result = verify_attestation_token(
+            unverified_token,
+            &root,
+            &current_time(),
+            SESSION_AUDIENCE.to_string(),
+        );
         let err = unsafe { result.unwrap_err_unchecked() };
         assert_matches!(err, AttestationVerificationError::InvalidDebugStatus { .. });
 
@@ -569,9 +612,60 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time()),
+            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
-                production_image: Err(AttestationVerificationError::InvalidDebugStatus { .. }),
+                has_required_claims: Err(AttestationVerificationError::InvalidDebugStatus { .. }),
+                validity: Ok(()),
+                verification: Ok(_),
+                issuer_report: Ok(CertificateReport {
+                    validity: Ok(()),
+                    verification: Ok(()),
+                    issuer_report: box IssuerReport::OtherCertificate(Ok(CertificateReport {
+                        validity: Ok(()),
+                        verification: Ok(()),
+                        issuer_report: box IssuerReport::Root
+                    }))
+                })
+            }
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_token_invalid_audience() -> Result<()> {
+        let token_str = read_testdata("valid_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        let result = verify_attestation_token(
+            unverified_token,
+            &root,
+            &current_time(),
+            "different_audience".to_string(),
+        );
+        let err = unsafe { result.unwrap_err_unchecked() };
+        assert_matches!(err, AttestationVerificationError::InvalidAudience { .. });
+
+        Ok(())
+    }
+
+    #[test]
+    fn report_token_invalid_audience() -> Result<()> {
+        let token_str = read_testdata("valid_token.jwt");
+        let root = Certificate::from_pem(read_testdata("root_ca_cert.pem"))
+            .expect("Failed to parse root certificate");
+
+        let unverified_token: Token<Header, Claims, Unverified> =
+            Token::parse_unverified(&token_str)?;
+
+        assert_matches!(
+            report_attestation_token(unverified_token, &root, &current_time(), "different_audience".to_string()),
+            AttestationTokenVerificationReport {
+                has_required_claims: Err(AttestationVerificationError::InvalidAudience { .. }),
                 validity: Ok(()),
                 verification: Ok(_),
                 issuer_report: Ok(CertificateReport {

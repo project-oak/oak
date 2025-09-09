@@ -25,7 +25,10 @@ use jwt::{
     token::Signed,
     SignWithKey, SigningAlgorithm, Token,
 };
-use oak_attestation_gcp::jwt::{Claims, Header};
+use oak_attestation_gcp::{
+    jwt::{Claims, Header},
+    SESSION_AUDIENCE,
+};
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{
@@ -230,7 +233,7 @@ fn issue_cert(
 
 fn generate_jwt_claims(now: Instant, nonce: String) -> Claims {
     Claims {
-        // TODO: b/443708558 - set 'audience' once it is enforced by JWT verification logic.
+        audience: SESSION_AUDIENCE.to_string(),
         eat_nonce: nonce,
         issued_at: now,
         not_before: now - Duration::from_hours(1),

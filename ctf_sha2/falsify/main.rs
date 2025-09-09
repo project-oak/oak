@@ -24,6 +24,9 @@ use prost::Message;
 use sha2::{Digest, Sha256};
 use x509_cert::{der::DecodePem, Certificate};
 
+// See ctf_sha2/src/main.rs.
+const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
+
 fn main() -> anyhow::Result<()> {
     let root_certificate =
         Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).map_err(anyhow::Error::msg)?;
@@ -35,9 +38,13 @@ fn main() -> anyhow::Result<()> {
                 // Here we trust the JWT issuance timestamp. This is a bit circular, but there
                 // is no obvious better alternative which results in deterministic behaviour.
                 let now = parsed_token.claims().issued_at;
-                if let Ok(verified_token) =
-                    report_attestation_token(parsed_token, &root_certificate, &now)
-                        .into_checked_token()
+                if let Ok(verified_token) = report_attestation_token(
+                    parsed_token,
+                    &root_certificate,
+                    &now,
+                    OAK_CTF_SHA2_AUDIENCE.to_string(),
+                )
+                .into_checked_token()
                 {
                     if let Ok(image_reference) = verified_token.claims().effective_reference() {
                         // Built at commit 74e81ae73c4a43d6cab10b3fb7c6ea43f0f2a3a5:

@@ -41,6 +41,7 @@ use crate::{
         },
         Claims, Header,
     },
+    SESSION_AUDIENCE,
 };
 
 #[derive(Debug)]
@@ -161,8 +162,12 @@ impl ConfidentialSpacePolicy {
                 }
             });
 
-        let token_report =
-            report_attestation_token(token, &self.root_certificate, &verification_time);
+        let token_report = report_attestation_token(
+            token,
+            &self.root_certificate,
+            &verification_time,
+            SESSION_AUDIENCE.to_string(),
+        );
 
         Ok(ConfidentialSpaceVerificationReport {
             session_binding_public_key: public_key_data.session_binding_public_key.clone(),
@@ -329,7 +334,7 @@ mod tests {
                 ref session_binding_public_key,
                 public_key_verification: Ok(()),
                 token_report: AttestationTokenVerificationReport {
-                    production_image: Ok(()),
+                    has_required_claims: Ok(()),
                     validity: Ok(()),
                     verification: Ok(_),
                     issuer_report: Ok(CertificateReport {
@@ -379,7 +384,7 @@ mod tests {
                 ref session_binding_public_key,
                 public_key_verification: Ok(()),
                 token_report: AttestationTokenVerificationReport {
-                    production_image: Ok(()),
+                    has_required_claims: Ok(()),
                     validity: Ok(()),
                     verification: Ok(_),
                     issuer_report: Ok(CertificateReport {
