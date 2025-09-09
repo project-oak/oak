@@ -19,15 +19,13 @@ use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::Utc;
 use clap::Parser;
+use intoto::statement::{make_statement, serialize_statement, DefaultStatement, Subject};
 use jwt::{
     algorithm::{openssl::PKeyWithDigest, AlgorithmType},
     token::Signed,
     SignWithKey, SigningAlgorithm, Token,
 };
 use oak_attestation_gcp::jwt::{Claims, Header};
-use oak_attestation_verification::statement::{
-    make_statement, serialize_statement, DefaultStatement, Subject,
-};
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{

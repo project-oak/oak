@@ -32,6 +32,7 @@ rust_binary(
         "//oak_proto_rust",
         "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_time",
+        "//tr/intoto",
         "//trex/sigstore",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
