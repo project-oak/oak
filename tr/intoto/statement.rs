@@ -21,14 +21,13 @@ extern crate alloc;
 
 use alloc::{
     borrow::ToOwned,
-    collections::BTreeMap,
     string::{String, ToString},
     vec,
     vec::Vec,
 };
 
 use anyhow::{ensure, Context};
-use digest_util::is_hex_digest_match;
+use digest_util::{hex_to_set_digest, is_hex_digest_match, set_to_hex_digest, DigestSet};
 use oak_proto_rust::oak::HexDigest;
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
@@ -49,9 +48,6 @@ const PREDICATE_TYPE_V2: &str = "https://github.com/project-oak/transparent-rele
 /// Current predicate type of in-toto endorsement statements, which loses
 /// the `usage` field and adds claim types.
 const PREDICATE_TYPE_V3: &str = "https://project-oak.github.io/oak/tr/endorsement/v1";
-
-// A map from algorithm name to lowercase hex-encoded value.
-pub type DigestSet = BTreeMap<String, String>;
 
 /// An artifact identified by its name and digest.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -241,116 +237,6 @@ impl DefaultPredicate {
 
         Ok(())
     }
-}
-
-fn set_digest_field_from_map_entry(
-    digest: &mut HexDigest,
-    key: &str,
-    value: &str,
-) -> anyhow::Result<()> {
-    match key {
-        "psha2" => {
-            if !digest.psha2.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.psha2.push_str(value);
-        }
-        "sha1" => {
-            if !digest.sha1.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha1.push_str(value);
-        }
-        "sha256" | "sha2_256" => {
-            if !digest.sha2_256.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_256.push_str(value);
-        }
-        "sha512" | "sha2_512" => {
-            if !digest.sha2_512.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_512.push_str(value);
-        }
-        "sha3_512" => {
-            if !digest.sha3_512.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_512.push_str(value);
-        }
-        "sha3_384" => {
-            if !digest.sha3_384.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_384.push_str(value);
-        }
-        "sha3_256" => {
-            if !digest.sha3_256.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_256.push_str(value);
-        }
-        "sha3_224" => {
-            if !digest.sha3_224.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha3_224.push_str(value);
-        }
-        "sha384" | "sha2_384" => {
-            if !digest.sha2_384.is_empty() {
-                anyhow::bail!("duplicate key {}", key);
-            }
-            digest.sha2_384.push_str(value);
-        }
-        _ => anyhow::bail!("unknown digest key {key}"),
-    }
-
-    Ok(())
-}
-
-/// Converts a JSON digest set to an equivalent protocol buffer.
-pub fn set_to_hex_digest(digest_set: &DigestSet) -> anyhow::Result<HexDigest> {
-    let mut digest = HexDigest::default();
-    digest_set.iter().try_fold(&mut digest, |acc, (key, value)| {
-        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
-        Ok::<&mut HexDigest, anyhow::Error>(acc)
-    })?;
-
-    Ok(digest)
-}
-
-/// Converts a hex-encoded digest to an equivalent JSON digest set.
-pub fn hex_to_set_digest(hex_digest: &HexDigest) -> DigestSet {
-    let mut digest_set = DigestSet::new();
-
-    macro_rules! insert_if_present {
-        ($field:ident) => {
-            if !hex_digest.$field.is_empty() {
-                digest_set.insert(stringify!($field).into(), hex_digest.$field.clone());
-            }
-        };
-    }
-
-    macro_rules! insert_if_present_with_custom_key {
-        ($field:ident, $key:literal) => {
-            if !hex_digest.$field.is_empty() {
-                digest_set.insert($key.into(), hex_digest.$field.clone());
-            }
-        };
-    }
-
-    insert_if_present!(psha2);
-    insert_if_present!(sha1);
-    insert_if_present_with_custom_key!(sha2_256, "sha256");
-    insert_if_present!(sha2_512);
-    insert_if_present!(sha3_512);
-    insert_if_present!(sha3_384);
-    insert_if_present!(sha3_256);
-    insert_if_present!(sha3_224);
-    insert_if_present!(sha2_384);
-
-    digest_set
 }
 
 /// Returns the digest of the statement's subject.

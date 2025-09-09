@@ -20,8 +20,18 @@
 
 extern crate alloc;
 
+use alloc::{
+    collections::BTreeMap,
+    string::{String, ToString},
+};
+
+use anyhow::Context;
 use oak_proto_rust::oak::{HexDigest, RawDigest};
 use sha2::{Digest, Sha256, Sha384, Sha512};
+
+/// A map from algorithm name to lowercase hex-encoded value which represents
+/// a `RawDigest` or `HexDigest` encoded as JSON.
+pub type DigestSet = BTreeMap<String, String>;
 
 pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
@@ -55,6 +65,125 @@ pub fn raw_digest_from_contents(contents: &[u8]) -> RawDigest {
 /// Analogous to raw_digest_from_contents, but emits hex encoded digest.
 pub fn hex_digest_from_contents(contents: &[u8]) -> HexDigest {
     raw_to_hex_digest(&raw_digest_from_contents(contents))
+}
+
+fn set_digest_field_from_map_entry(
+    digest: &mut HexDigest,
+    key: &str,
+    value: &str,
+) -> anyhow::Result<()> {
+    match key {
+        "psha2" => {
+            if !digest.psha2.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.psha2.push_str(value);
+        }
+        "sha1" => {
+            if !digest.sha1.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha1.push_str(value);
+        }
+        "sha256" | "sha2_256" => {
+            if !digest.sha2_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_256.push_str(value);
+        }
+        "sha512" | "sha2_512" => {
+            if !digest.sha2_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_512.push_str(value);
+        }
+        "sha3_512" => {
+            if !digest.sha3_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_512.push_str(value);
+        }
+        "sha3_384" => {
+            if !digest.sha3_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_384.push_str(value);
+        }
+        "sha3_256" => {
+            if !digest.sha3_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_256.push_str(value);
+        }
+        "sha3_224" => {
+            if !digest.sha3_224.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_224.push_str(value);
+        }
+        "sha384" | "sha2_384" => {
+            if !digest.sha2_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_384.push_str(value);
+        }
+        _ => anyhow::bail!("unknown digest key {key}"),
+    }
+
+    Ok(())
+}
+
+/// Converts a JSON digest set to an equivalent protocol buffer.
+pub fn set_to_hex_digest(digest_set: &DigestSet) -> anyhow::Result<HexDigest> {
+    let mut digest = HexDigest::default();
+    digest_set.iter().try_fold(&mut digest, |acc, (key, value)| {
+        set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+        Ok::<&mut HexDigest, anyhow::Error>(acc)
+    })?;
+
+    Ok(digest)
+}
+
+/// Converts a hex-encoded digest to an equivalent JSON digest set.
+pub fn hex_to_set_digest(hex_digest: &HexDigest) -> DigestSet {
+    let mut digest_set = DigestSet::new();
+
+    macro_rules! insert_if_present {
+        ($field:ident) => {
+            if !hex_digest.$field.is_empty() {
+                digest_set.insert(stringify!($field).into(), hex_digest.$field.clone());
+            }
+        };
+    }
+
+    macro_rules! insert_if_present_with_custom_key {
+        ($field:ident, $key:literal) => {
+            if !hex_digest.$field.is_empty() {
+                digest_set.insert($key.into(), hex_digest.$field.clone());
+            }
+        };
+    }
+
+    insert_if_present!(psha2);
+    insert_if_present!(sha1);
+    insert_if_present_with_custom_key!(sha2_256, "sha256");
+    insert_if_present_with_custom_key!(sha2_512, "sha512");
+    insert_if_present!(sha3_512);
+    insert_if_present!(sha3_384);
+    insert_if_present!(sha3_256);
+    insert_if_present!(sha3_224);
+    insert_if_present_with_custom_key!(sha2_384, "sha384");
+
+    digest_set
+}
+
+/// Creates a hex digest from a typed hash which is a string that looks like
+/// `sha2_256:e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7`.
+/// The resulting `HexDigest` has only a single populated field.
+pub fn hex_digest_from_typed_hash(typed_hash: &str) -> anyhow::Result<HexDigest> {
+    let (alg, hash) = typed_hash.split_once(':').context("invalid digest spec")?;
+    let digest_set = DigestSet::from([(alg.to_string(), hash.to_string())]);
+    set_to_hex_digest(&digest_set)
 }
 
 #[derive(PartialEq)]
@@ -199,6 +328,14 @@ mod tests {
         let expected = raw_digest_from_contents(b"whatever");
         let hex_digest = raw_to_hex_digest(&expected);
         let actual = hex_to_raw_digest(&hex_digest).expect("conversion failed");
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_hex_digest_from_typed_hash() {
+        let typed_hash = "sha2_256:".to_owned() + HASH1;
+        let expected = HexDigest { sha2_256: HASH1.to_owned(), ..Default::default() };
+        let actual = hex_digest_from_typed_hash(&typed_hash).expect("conversion failed");
         assert_eq!(actual, expected);
     }
 

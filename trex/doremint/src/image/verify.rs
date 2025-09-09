@@ -15,6 +15,7 @@
 use anyhow::Context;
 use chrono::Utc;
 use clap::Parser;
+use digest_util::hex_digest_from_typed_hash;
 use intoto::statement::parse_statement;
 use oak_time::Instant;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
@@ -27,7 +28,7 @@ use sigstore::rekor::{
 };
 use sigstore_client::cosign;
 
-use crate::{flags, flags::oci_ref_to_hex_digest};
+use crate::flags::{verifying_key_parser, Claims};
 
 const REKOR_PUBLIC_KEY_PEM: &str = include_str!("../../data/rekor_public_key.pem");
 
@@ -38,12 +39,12 @@ pub struct VerifyCommand {
     pub image: Reference,
 
     #[arg(from_global)]
-    pub claims: flags::Claims,
+    pub claims: Claims,
 
     #[arg(long, help = "Identity token for Cloud authentication")]
     pub access_token: Option<String>,
 
-    #[arg(long, value_parser = flags::verifying_key_parser, help = "Path to a file containing the PEM-encoded public key of the endorser")]
+    #[arg(long, value_parser = verifying_key_parser, help = "Path to a file containing the PEM-encoded public key of the endorser")]
     pub endorser_public_key: VerifyingKey,
 }
 
@@ -74,7 +75,8 @@ impl VerifyCommand {
 
         let statement = parse_statement(endorsement.message())?;
         let now = Instant::from(Utc::now());
-        let digest = oci_ref_to_hex_digest(&self.image)?;
+        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
+        let digest = hex_digest_from_typed_hash(typed_hash)?;
         // Convert Vec<String> to Vec<&str>.
         let claims: Vec<&str> = self.claims.claims.iter().map(|s| s.as_str()).collect();
         statement

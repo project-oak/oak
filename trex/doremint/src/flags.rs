@@ -17,12 +17,9 @@ use std::{
     io::{self, Write},
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use chrono::Utc;
-use intoto::statement::{set_to_hex_digest, DigestSet};
-use oak_proto_rust::oak::HexDigest;
 use oak_time::{Duration, Instant};
-use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use serde::Deserialize;
 
@@ -96,12 +93,4 @@ pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<VerifyingKe
     let public_key_pem = fs::read_to_string(key_path)?;
     VerifyingKey::from_public_key_pem(&public_key_pem)
         .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))
-}
-
-// TODO: b/443012225 - Deduplicate multiple copies of this function.
-pub(crate) fn oci_ref_to_hex_digest(oci_ref: &Reference) -> anyhow::Result<HexDigest> {
-    let digest = oci_ref.digest().ok_or_else(|| anyhow!("missing digest in oci reference"))?;
-    let (alg, hash) = digest.split_once(':').context("invalid digest spec in oci reference")?;
-    let digest_set = DigestSet::from([(alg.to_string(), hash.to_string())]);
-    set_to_hex_digest(&digest_set)
 }

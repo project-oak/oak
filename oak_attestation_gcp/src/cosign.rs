@@ -14,14 +14,11 @@
 // limitations under the License.
 //
 
-use anyhow::{anyhow, Context};
-use intoto::statement::{parse_statement, set_to_hex_digest, DigestSet};
-use oak_proto_rust::oak::{
-    attestation::v1::{
-        CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
-        VerifyingKey as ProtoVerifyingKey,
-    },
-    HexDigest,
+use digest_util::hex_digest_from_typed_hash;
+use intoto::statement::parse_statement;
+use oak_proto_rust::oak::attestation::v1::{
+    CosignReferenceValues as ProtoCosignReferenceValues, KeyType, SignedEndorsement,
+    VerifyingKey as ProtoVerifyingKey,
 };
 use oak_proto_rust_lib::parse_p256_ecdsa_verifying_key;
 use oak_time::Instant;
@@ -185,14 +182,6 @@ pub struct StatementReport {
     pub rekor_verification: Option<Result<(), CosignVerificationError>>,
 }
 
-// TODO: b/443012225 - Deduplicate multiple copies of this function.
-fn oci_ref_to_hex_digest(oci_ref: &Reference) -> anyhow::Result<HexDigest> {
-    let digest = oci_ref.digest().ok_or_else(|| anyhow!("missing digest in oci reference"))?;
-    let (alg, hash) = digest.split_once(':').context("invalid digest spec in oci reference")?;
-    let digest_set = DigestSet::from([(alg.to_string(), hash.to_string())]);
-    set_to_hex_digest(&digest_set)
-}
-
 pub fn report_endorsement(
     endorsement: CosignEndorsement,
     image_reference: &Reference,
@@ -206,7 +195,11 @@ pub fn report_endorsement(
         let statement_validation = try {
             let statement = parse_statement(statement.message())
                 .map_err(|err| CosignVerificationError::StatementParseError(err.to_string()))?;
-            let digest = oci_ref_to_hex_digest(image_reference).map_err(|err: anyhow::Error| {
+            let typed_hash =
+                image_reference.digest().ok_or(CosignVerificationError::ImageReferenceError(
+                    "missing digest in OCI reference".to_string(),
+                ))?;
+            let digest = hex_digest_from_typed_hash(typed_hash).map_err(|err: anyhow::Error| {
                 CosignVerificationError::ImageReferenceError(err.to_string())
             })?;
             statement

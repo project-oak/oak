@@ -14,11 +14,12 @@
 
 use anyhow::Context;
 use clap::Parser;
+use digest_util::hex_digest_from_typed_hash;
 use intoto::statement::make_statement;
 use oak_time::{Duration, Instant};
 use oci_spec::distribution::Reference;
 
-use crate::flags::{self, oci_ref_to_hex_digest, parse_current_time, parse_duration};
+use crate::flags::{self, parse_current_time, parse_duration};
 
 #[derive(Parser, Debug)]
 #[command(about = "Endorse a container image")]
@@ -49,7 +50,8 @@ impl EndorseCommand {
         let writer = self.output.open()?;
 
         let name = self.image.repository().to_string();
-        let digest = oci_ref_to_hex_digest(&self.image)?;
+        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
+        let digest = hex_digest_from_typed_hash(typed_hash)?;
         let claim_types = self.claims.claims.iter().map(|x| &**x).collect();
         let statement = make_statement(
             &name,
