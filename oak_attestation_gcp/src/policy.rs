@@ -41,7 +41,7 @@ use crate::{
         },
         Claims, Header,
     },
-    SESSION_AUDIENCE,
+    OAK_SESSION_NOISE_V1_AUDIENCE,
 };
 
 #[derive(Debug)]
@@ -166,7 +166,7 @@ impl ConfidentialSpacePolicy {
             token,
             &self.root_certificate,
             &verification_time,
-            SESSION_AUDIENCE.to_string(),
+            OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         );
 
         Ok(ConfidentialSpaceVerificationReport {

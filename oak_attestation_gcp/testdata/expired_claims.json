@@ -1,5 +1,5 @@
 {
-    "aud": "oak://session/attestation",
+    "aud": "d9b8d46d-6841-4825-9b5e-e77768638044",
     "exp": 1751391091,
     "iat": 1751387491,
     "iss": "https://confidentialcomputing.googleapis.com",

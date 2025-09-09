@@ -27,7 +27,7 @@ use jwt::{
 };
 use oak_attestation_gcp::{
     jwt::{Claims, Header},
-    SESSION_AUDIENCE,
+    OAK_SESSION_NOISE_V1_AUDIENCE,
 };
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
@@ -233,7 +233,7 @@ fn issue_cert(
 
 fn generate_jwt_claims(now: Instant, nonce: String) -> Claims {
     Claims {
-        audience: SESSION_AUDIENCE.to_string(),
+        audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         eat_nonce: nonce,
         issued_at: now,
         not_before: now - Duration::from_hours(1),

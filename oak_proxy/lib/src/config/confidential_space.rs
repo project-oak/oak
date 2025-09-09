@@ -19,7 +19,8 @@ use std::sync::Arc;
 use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
 use oak_attestation_gcp::{
     attestation::request_attestation_token,
-    policy_generator::confidential_space_policy_from_reference_values, SESSION_AUDIENCE,
+    policy_generator::confidential_space_policy_from_reference_values,
+    OAK_SESSION_NOISE_V1_AUDIENCE,
 };
 use oak_attestation_verification::EventLogVerifier;
 use oak_proto_rust::{
@@ -45,7 +46,8 @@ impl ConfidentialSpaceGeneratorParams {
         let public_key_hash = hex::encode(public_key_hash);
 
         println!("Requesting attestation token for {public_key_hash}...");
-        let jwt_token = request_attestation_token(SESSION_AUDIENCE, public_key_hash.as_str())?;
+        let jwt_token =
+            request_attestation_token(OAK_SESSION_NOISE_V1_AUDIENCE, public_key_hash.as_str())?;
 
         let public_key_attester = PublicKeyAttester::new(VerifyingKey::from(&binding_key));
         let public_key_endorser = PublicKeyEndorser::new(ConfidentialSpaceEndorsement {

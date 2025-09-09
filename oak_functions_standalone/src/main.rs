@@ -16,7 +16,7 @@
 use std::net::SocketAddr;
 
 use clap::{Parser, ValueEnum};
-use oak_attestation_gcp::{attestation::request_attestation_token, SESSION_AUDIENCE};
+use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_functions_standalone::{serve, AttestationArgs, OakFunctionsSessionArgs};
 use oak_proto_rust::oak::functions::{
@@ -107,7 +107,7 @@ fn create_attestation_args_for_gcp(
 
     println!("Requesting attestation token for {public_key_hash}...");
     let endorsement =
-        request_attestation_token(SESSION_AUDIENCE, public_key_hash.as_str()).unwrap();
+        request_attestation_token(OAK_SESSION_NOISE_V1_AUDIENCE, public_key_hash.as_str()).unwrap();
     AttestationArgs {
         attestation_type,
         binding_key: Some(binding_key),

@@ -29,4 +29,4 @@ pub mod policy_generator;
 pub const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
     include_str!("../data/confidential_space_root.pem");
 
-pub const SESSION_AUDIENCE: &str = "oak://session/attestation";
+pub const OAK_SESSION_NOISE_V1_AUDIENCE: &str = "d9b8d46d-6841-4825-9b5e-e77768638044";

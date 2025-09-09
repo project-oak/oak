@@ -355,7 +355,7 @@ mod tests {
             },
             Claims, Header,
         },
-        SESSION_AUDIENCE,
+        OAK_SESSION_NOISE_V1_AUDIENCE,
     };
 
     // The time has been set inside the validity interval of the test token.
@@ -376,7 +376,7 @@ mod tests {
             unverified_token,
             &root,
             &current_time(),
-            SESSION_AUDIENCE.to_string(),
+            OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         )?;
 
         Ok(())
@@ -392,7 +392,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &current_time(), OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Ok(()),
                 validity: Ok(()),
@@ -427,7 +427,7 @@ mod tests {
                     unverified_token,
                     &root,
                     &current_time(),
-                    SESSION_AUDIENCE.to_string(),
+                    OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
                 )
                 .unwrap_err_unchecked()
             },
@@ -447,7 +447,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &current_time(), OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Ok(()),
                 validity: Ok(()),
@@ -482,7 +482,7 @@ mod tests {
             unverified_token,
             &root,
             &current_time(),
-            SESSION_AUDIENCE.to_string(),
+            OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         );
         let err = unsafe { result.unwrap_err_unchecked() };
         assert_matches!(err, AttestationVerificationError::JWTValidityExpiration { .. });
@@ -500,7 +500,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &current_time(), OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Ok(()),
                 validity: Err(AttestationVerificationError::JWTValidityExpiration { .. }),
@@ -538,7 +538,7 @@ mod tests {
                     unverified_token,
                     &root,
                     &expired_current_time,
-                    SESSION_AUDIENCE.to_string(),
+                    OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
                 )
                 .unwrap_err_unchecked()
             },
@@ -561,7 +561,7 @@ mod tests {
         let expired_current_time = current_time() + Duration::from_seconds(2 * 365 * 24 * 3600);
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &expired_current_time, SESSION_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &expired_current_time, OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Ok(()),
                 validity: Ok(()),
@@ -594,7 +594,7 @@ mod tests {
             unverified_token,
             &root,
             &current_time(),
-            SESSION_AUDIENCE.to_string(),
+            OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
         );
         let err = unsafe { result.unwrap_err_unchecked() };
         assert_matches!(err, AttestationVerificationError::InvalidDebugStatus { .. });
@@ -612,7 +612,7 @@ mod tests {
             Token::parse_unverified(&token_str)?;
 
         assert_matches!(
-            report_attestation_token(unverified_token, &root, &current_time(), SESSION_AUDIENCE.to_string()),
+            report_attestation_token(unverified_token, &root, &current_time(), OAK_SESSION_NOISE_V1_AUDIENCE.to_string()),
             AttestationTokenVerificationReport {
                 has_required_claims: Err(AttestationVerificationError::InvalidDebugStatus { .. }),
                 validity: Ok(()),
