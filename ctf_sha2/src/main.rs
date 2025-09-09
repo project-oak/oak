@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fs::File, io::Write, thread, time::Duration};
+
+use base64::{engine::general_purpose::STANDARD, Engine};
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -23,7 +26,7 @@ fn assert_crypto_rng<T: CryptoRng>(_rng: &T) {}
 // printf "z%020lu\n" "0x$(openssl rand -hex 8)"
 const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize an empty byte array which will be filled with the secret flag.
     let mut flag = [0; 64];
 
@@ -34,6 +37,10 @@ fn main() {
     // accidentally replaced with a non-cryptographically secure RNG.
     assert_crypto_rng(&rng);
     rng.fill_bytes(&mut flag);
+
+    // Write out the secret flag to a file. Nobody should be able to read it!
+    let mut file = File::create("flag.txt")?;
+    file.write_all(STANDARD.encode(flag).as_bytes())?;
 
     let mut hasher = Sha256::new();
     hasher.update(flag);
@@ -65,4 +72,9 @@ fn main() {
             "attestation_token": attestation_token
         })
     );
+
+    // Sleep for a little while. I hope nobody pwns us during this time!
+    thread::sleep(Duration::from_secs(5 * 60));
+
+    Ok(())
 }

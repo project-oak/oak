@@ -28,6 +28,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         "//oak_attestation_gcp",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:rand",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
