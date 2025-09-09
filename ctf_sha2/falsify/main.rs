@@ -47,10 +47,10 @@ fn main() -> anyhow::Result<()> {
                 .into_checked_token()
                 {
                     if let Ok(image_reference) = verified_token.claims().effective_reference() {
-                        // Built at commit 74e81ae73c4a43d6cab10b3fb7c6ea43f0f2a3a5:
-                        // $ git checkout 74e81ae73c4a43d6cab10b3fb7c6ea43f0f2a3a5 && \
+                        // Built at commit c9c0b847ea9e349ab8c8b797bab5e03d1762cb89:
+                        // $ git checkout c9c0b847ea9e349ab8c8b797bab5e03d1762cb89 && \
                         //       bazel run ctf_sha2:image_push
-                        if image_reference.digest() == Some("sha256:2e51b5f8db1e222a1c79d406718723a0d6121246511889dd5cd4c39f62d948c8") {
+                        if image_reference.digest() == Some("sha256:692ab39ff6bd177481546e39179d40b961c2b5de7959f0ee388806050ac0244c") {
                             assert_ne!(compute_expected_flag_digest_string(&input.flag), verified_token.claims().eat_nonce);
                         }
                     }
