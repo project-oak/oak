@@ -41,6 +41,8 @@
   [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
 - `31543`
   [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
+- `19224`
+  [OCI container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md)
 - `52637`
   [Published binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md)
 - `75606`
