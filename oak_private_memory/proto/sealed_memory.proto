@@ -47,11 +47,22 @@ message MemoryContent {
   map<string, MemoryValue> contents = 1;
 }
 
+message LLMView {
+  string id = 1;
+  Embedding embedding = 2;
+  string content = 3;
+}
+
+message MemoryViews {
+  repeated LLMView llm_views = 1;
+}
+
 message Memory {
   string id = 1;
   reserved 2;
   repeated string tags = 3;
-  repeated Embedding embeddings = 4;
+  // Deprecated. Use `views` instead.
+  repeated Embedding embeddings = 4 [deprecated = true];
   MemoryContent content = 5;
   // The time when the memory is uploaded. Set by backend.
   google.protobuf.Timestamp created_timestamp = 6;
@@ -59,6 +70,8 @@ message Memory {
   // set by the client. If not set, the `created_timestamp` will be
   // used.
   google.protobuf.Timestamp event_timestamp = 7;
+
+  MemoryViews views = 8;
 }
 
 enum MemoryField {

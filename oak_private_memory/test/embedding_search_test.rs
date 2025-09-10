@@ -20,8 +20,8 @@ use oak_private_memory_database::{
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, EmbeddingQuery, MatchType, MemoryField, QueryClauses, QueryOperator,
-        SearchMemoryQuery, TextQuery,
+        search_memory_query, EmbeddingQuery, LlmView, MatchType, MemoryField, MemoryViews,
+        QueryClauses, QueryOperator, SearchMemoryQuery, TextQuery,
     },
     prelude::v1::*,
 };
@@ -33,20 +33,32 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
     // Add memories with different embeddings
     let memory1 = Memory {
         id: "memory1".to_string(),
-        embeddings: vec![Embedding {
-            identifier: "test_model".to_string(),
-            values: vec![1.0, 2.0, 3.0],
-        }],
+        views: Some(MemoryViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.0, 2.0, 3.0],
+                }),
+                ..Default::default()
+            }],
+        }),
         ..Default::default()
     };
     icing_database.add_memory(&memory1, "blob1".to_string())?;
 
     let memory2 = Memory {
         id: "memory2".to_string(),
-        embeddings: vec![Embedding {
-            identifier: "test_model".to_string(),
-            values: vec![4.0, 5.0, 6.0],
-        }],
+        views: Some(MemoryViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![4.0, 5.0, 6.0],
+                }),
+                ..Default::default()
+            }],
+        }),
         ..Default::default()
     };
     icing_database.add_memory(&memory2, "blob2".to_string())?;
@@ -62,12 +74,15 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
         })),
     };
 
-    let (blob_ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    println!("ids: {:?}", ids);
+    println!("scores: {:?}", scores);
     assert_that!(scores, not(is_empty()));
-    assert_that!(scores.len(), eq(blob_ids.len()));
+    assert_that!(scores.len(), eq(ids.len()));
     assert_that!(scores, each(predicate(|&x| x > 0.0)));
     assert_that!(scores[0], eq(15.0));
     assert_that!(scores[1], eq(6.0));
+    assert_that!(ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
@@ -78,10 +93,16 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
     // Add memories with different embeddings and timestamps
     let memory1 = Memory {
         id: "memory1".to_string(),
-        embeddings: vec![Embedding {
-            identifier: "test_model".to_string(),
-            values: vec![1.0, 2.0, 3.0],
-        }],
+        views: Some(MemoryViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.0, 2.0, 3.0],
+                }),
+                ..Default::default()
+            }],
+        }),
         event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
         ..Default::default()
     };
@@ -89,10 +110,16 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
 
     let memory2 = Memory {
         id: "memory2".to_string(),
-        embeddings: vec![Embedding {
-            identifier: "test_model".to_string(),
-            values: vec![1.1, 2.1, 3.1],
-        }],
+        views: Some(MemoryViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.1, 2.1, 3.1],
+                }),
+                ..Default::default()
+            }],
+        }),
         event_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
         ..Default::default()
     };
@@ -128,9 +155,50 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
         })),
     };
 
-    let (blob_ids, _, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
-    assert_that!(blob_ids.len(), eq(1));
+    let (ids, _, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
+    assert_that!(ids, unordered_elements_are![eq(&"blob2")]);
+    assert_that!(ids.len(), eq(1));
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_views() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+
+    // Add memories with different embeddings and timestamps
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(MemoryViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.0, 1.0, 1.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "memory1".to_string())?;
+    let memory2 = Memory { id: "memory2".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory2, "memory2".to_string())?;
+
+    // Query for memories with an embedding and a timestamp range.
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                identifier: "test_model".to_string(),
+                values: vec![1.0, 1.0, 1.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    assert_that!(ids, unordered_elements_are![eq("memory1")]);
+    assert_that!(scores, unordered_elements_are![eq(&3.0)]);
 
     Ok(())
 }

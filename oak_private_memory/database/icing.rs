@@ -20,8 +20,8 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, text_query, EmbeddingQuery, MatchType, QueryClauses, QueryOperator,
-        SearchMemoryQuery, TextQuery,
+        search_memory_query, text_query, EmbeddingQuery, LlmView, MatchType, QueryClauses,
+        QueryOperator, SearchMemoryQuery, TextQuery,
     },
     prelude::v1::*,
 };
@@ -96,6 +96,9 @@ const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
 
+const LLM_VIEW_SCHEMA_NAME: &str = "LLMView";
+const VIEW_ID_NAME: &str = "viewId";
+
 /// A representation of a mutation operation.
 /// These are used to track changes that have been applied to the local
 /// in-memory metadata database, but not yet committed to durable storage.
@@ -107,7 +110,8 @@ enum MutationOperation {
     // A new item was added. The content blob will have been written separately, this operation
     // contains only the metadata changes that need to be re-written to a new database version on
     // version conflicts.
-    Add(PendingMetadata),
+    AddMemory(PendingMetadata),
+    AddView(PendingLLMViewMetadata),
 
     // The item with the given ID was removed.
     // Note that exact operation timing is not maintained. So if another session
@@ -129,6 +133,7 @@ struct PendingMetadata {
 }
 
 impl PendingMetadata {
+    #[allow(deprecated)]
     pub fn new(memory: &Memory, blob_id: &BlobId) -> Self {
         let memory_id = &memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
@@ -167,11 +172,58 @@ impl PendingMetadata {
     }
 }
 
+/// The generated metadata for a memory.
+/// This contains the information needed to write the metadata to the icing
+/// database.
+#[derive(Debug, Clone)]
+struct PendingLLMViewMetadata {
+    icing_document: DocumentProto,
+}
+
+impl PendingLLMViewMetadata {
+    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> Option<Self> {
+        let memory_id = &memory.id;
+        let view_id = &view.id;
+        let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
+        let embedding = view.embedding.as_ref()?;
+        let embeddings =
+            vec![icing::create_vector_proto(embedding.identifier.as_str(), &embedding.values)];
+        let document_builder = icing::create_document_builder();
+        let document_builder = document_builder
+            .set_key(NAMESPACE_NAME.as_bytes(), view_id.as_bytes())
+            .set_schema(LLM_VIEW_SCHEMA_NAME.as_bytes())
+            .add_string_property(TAG_NAME.as_bytes(), &tags)
+            .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
+            .add_string_property(VIEW_ID_NAME.as_bytes(), &[view_id.as_bytes()])
+            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
+            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings);
+
+        if let Some(ref created_timestamp) = memory.created_timestamp {
+            document_builder.add_int64_property(
+                CREATED_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(created_timestamp),
+            );
+        }
+        if let Some(ref event_timestamp) = memory.event_timestamp {
+            document_builder.add_int64_property(
+                EVENT_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(event_timestamp),
+            );
+        }
+        let icing_document = document_builder.build();
+        Some(Self { icing_document })
+    }
+
+    pub fn document(&self) -> &DocumentProto {
+        &self.icing_document
+    }
+}
+
 impl IcingMetaDatabase {
     /// Creates a ResultSpecProto projection to retrieve only the blob ids.
-    fn create_blob_id_projection() -> icing::TypePropertyMask {
+    fn create_blob_id_projection(schema_name: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
-            schema_type: Some(SCHMA_NAME.to_string()),
+            schema_type: Some(schema_name.to_string()),
             paths: vec![BLOB_ID_NAME.to_string()],
         }
     }
@@ -180,9 +232,9 @@ impl IcingMetaDatabase {
         search_result.results.iter().filter_map(Self::extract_blob_id_from_doc).collect::<Vec<_>>()
     }
 
-    fn create_search_filter(path: &str) -> icing::TypePropertyMask {
+    fn create_search_filter(schema_name: &str, path: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
-            schema_type: Some(SCHMA_NAME.to_string()),
+            schema_type: Some(schema_name.to_string()),
             paths: vec![path.to_string()],
         }
     }
@@ -217,6 +269,7 @@ impl IcingMetaDatabase {
                 icing::create_property_config_builder()
                     .set_name(BLOB_ID_NAME.as_bytes())
                     // We don't need to index blob id
+                    // TODO: yongheng - Use String type instead of Int64.
                     .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -244,8 +297,77 @@ impl IcingMetaDatabase {
                     ),
             );
 
+        let llm_view_schema_type_builder = icing::create_schema_type_config_builder();
+        llm_view_schema_type_builder
+            .set_type(LLM_VIEW_SCHEMA_NAME.as_bytes())
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(TAG_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Repeated.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(MEMORY_ID_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(VIEW_ID_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(BLOB_ID_NAME.as_bytes())
+                    // We don't need to index blob id
+                    .set_data_type(icing::property_config_proto::data_type::Code::String.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(EMBEDDING_NAME.as_bytes())
+                    .set_data_type_vector(
+                        icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
+                    )
+                    .set_cardinality(icing::property_config_proto::cardinality::Code::Optional.into())
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            );
+
         let schema_builder = icing::create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
+        schema_builder.add_type(&llm_view_schema_type_builder);
         schema_builder.build()
     }
 
@@ -295,7 +417,35 @@ impl IcingMetaDatabase {
     // The generated metadta is returned so that it can be re-applied if needed.
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
         let pending_metadata = PendingMetadata::new(memory, &blob_id);
-        self.add_pending_metadata(pending_metadata)
+        self.add_pending_metadata(pending_metadata)?;
+        if let Some(views) = memory.views.as_ref() {
+            for view in &views.llm_views {
+                // TODO: yongheng - Generate view id if not provided.
+                if let Some(pending_view_metadata) =
+                    PendingLLMViewMetadata::new(memory, view, &blob_id)
+                {
+                    self.add_pending_llm_view_metadata(pending_view_metadata)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn add_pending_llm_view_metadata(
+        &mut self,
+        pending_metadata: PendingLLMViewMetadata,
+    ) -> anyhow::Result<()> {
+        let result = self.icing_search_engine.put(pending_metadata.document());
+        if result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            debug!("{:?}", result);
+        }
+        ensure!(
+            result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
+        );
+        self.applied_operations.push(MutationOperation::AddView(pending_metadata));
+        Ok(())
     }
 
     fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
@@ -308,7 +458,7 @@ impl IcingMetaDatabase {
         ensure!(
             result.status.context("no status")?.code == Some(icing::status_proto::Code::Ok.into())
         );
-        self.applied_operations.push(MutationOperation::Add(pending_metadata));
+        self.applied_operations.push(MutationOperation::AddMemory(pending_metadata));
         Ok(())
     }
 
@@ -326,7 +476,9 @@ impl IcingMetaDatabase {
             query: Some(tag.to_string()),
             // Match exactly as defined in the schema for tags.
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            type_property_filters: vec![Self::create_search_filter(TAG_NAME)],
+            // Match only Memory Schema.
+            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, TAG_NAME)],
             ..Default::default()
         };
 
@@ -339,7 +491,7 @@ impl IcingMetaDatabase {
             // Request a large number to get all results in one go for simplicity.
             // Consider pagination for very large datasets.
             num_per_page: Some(page_size),
-            type_property_masks: vec![Self::create_blob_id_projection()],
+            type_property_masks: vec![Self::create_blob_id_projection(SCHMA_NAME)],
             ..Default::default()
         };
 
@@ -372,13 +524,14 @@ impl IcingMetaDatabase {
         let search_spec = icing::SearchSpecProto {
             query: Some(memory_id.to_string()),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            type_property_filters: vec![Self::create_search_filter(MEMORY_ID_NAME)],
+            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, MEMORY_ID_NAME)],
             ..Default::default()
         };
 
         let result_spec = icing::ResultSpecProto {
             num_per_page: Some(1), // We expect at most one result
-            type_property_masks: vec![Self::create_blob_id_projection()],
+            type_property_masks: vec![Self::create_blob_id_projection(SCHMA_NAME)],
             ..Default::default()
         };
 
@@ -438,9 +591,9 @@ impl IcingMetaDatabase {
             .collect::<Vec<_>>()
     }
 
-    fn create_memory_id_projection() -> icing::TypePropertyMask {
+    fn create_memory_id_projection(schema_name: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
-            schema_type: Some(SCHMA_NAME.to_string()),
+            schema_type: Some(schema_name.to_string()),
             paths: vec![MEMORY_ID_NAME.to_string()],
         }
     }
@@ -458,7 +611,7 @@ impl IcingMetaDatabase {
             };
             let result_spec = icing::ResultSpecProto {
                 num_per_page: Some(1000), // Max page size
-                type_property_masks: vec![Self::create_memory_id_projection()],
+                type_property_masks: vec![Self::create_memory_id_projection(SCHMA_NAME)],
                 ..Default::default()
             };
             let search_result: icing::SearchResultProto = match page_token {
@@ -503,15 +656,15 @@ impl IcingMetaDatabase {
         scoring_spec: &icing::ScoringSpecProto,
         page_size: i32,
         page_token: PageToken,
-    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+        result_projection: icing::TypePropertyMask,
+    ) -> anyhow::Result<(icing::SearchResultProto, PageToken)> {
         const DEFAULT_LIMIT: i32 = 10;
         let limit = if page_size > 0 { page_size } else { DEFAULT_LIMIT };
 
         let mut result_spec =
             icing::ResultSpecProto { num_per_page: Some(limit), ..Default::default() };
 
-        // We only need the `BlobId`.
-        result_spec.type_property_masks.push(Self::create_blob_id_projection());
+        result_spec.type_property_masks.push(result_projection);
 
         let search_result = match page_token {
             PageToken::Start => {
@@ -527,19 +680,9 @@ impl IcingMetaDatabase {
             bail!("Icing search failed for {:?}", search_result.status);
         }
 
-        let scores: Vec<f32> = search_result
-            .results
-            .iter()
-            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
-            .collect();
         let next_page_token =
             search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
-        let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(blob_ids.len() == scores.len());
-        if blob_ids.is_empty() {
-            return Ok((blob_ids, scores, PageToken::Start));
-        }
-        Ok((blob_ids, scores, next_page_token))
+        Ok((search_result, next_page_token))
     }
 
     pub fn search(
@@ -548,23 +691,65 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let (search_spec, scoring_spec) = self.build_query_specs(query)?;
-        self.execute_search(&search_spec, &scoring_spec.unwrap_or_default(), page_size, page_token)
+        let search_views = Self::is_embedding_search(query);
+        let (schema_name, id_name) = if search_views {
+            (LLM_VIEW_SCHEMA_NAME, BLOB_ID_NAME)
+        } else {
+            (SCHMA_NAME, BLOB_ID_NAME)
+        };
+        let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
+
+        let projection = icing::TypePropertyMask {
+            schema_type: Some(schema_name.to_string()),
+            paths: vec![id_name.to_string()],
+        };
+
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &scoring_spec.unwrap_or_default(),
+            page_size,
+            page_token,
+            projection,
+        )?;
+
+        let scores: Vec<f32> = search_result
+            .results
+            .iter()
+            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
+            .collect();
+
+        let ids = Self::extract_blob_ids_from_search_result(search_result);
+        ensure!(ids.len() == scores.len());
+        if ids.is_empty() {
+            return Ok((ids, scores, PageToken::Start));
+        }
+        Ok((ids, scores, next_page_token))
+    }
+
+    fn is_embedding_search(query: &SearchMemoryQuery) -> bool {
+        match query.clause.as_ref() {
+            Some(search_memory_query::Clause::EmbeddingQuery(_)) => true,
+            Some(search_memory_query::Clause::QueryClauses(clauses)) => {
+                clauses.clauses.iter().any(Self::is_embedding_search)
+            }
+            _ => false,
+        }
     }
 
     fn build_query_specs(
         &self,
         query: &SearchMemoryQuery,
+        schema_name: &str,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
         match query.clause.as_ref().context("no clause")? {
             search_memory_query::Clause::TextQuery(text_query) => {
-                self.build_text_query_specs(text_query)
+                self.build_text_query_specs(text_query, schema_name)
             }
             search_memory_query::Clause::EmbeddingQuery(embedding_query) => {
-                self.build_embedding_query_specs(embedding_query)
+                self.build_embedding_query_specs(embedding_query, schema_name)
             }
             search_memory_query::Clause::QueryClauses(clauses) => {
-                self.build_clauses_query_specs(clauses)
+                self.build_clauses_query_specs(clauses, schema_name)
             }
         }
     }
@@ -572,6 +757,7 @@ impl IcingMetaDatabase {
     fn build_clauses_query_specs(
         &self,
         clauses: &QueryClauses,
+        schema_name: &str,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
         let operator = match clauses.query_operator() {
             QueryOperator::And => "AND",
@@ -584,7 +770,7 @@ impl IcingMetaDatabase {
         let mut embedding_vectors = Vec::new();
         let mut metric_type = None;
         for clause in &clauses.clauses {
-            let (spec, sub_score_spec) = self.build_query_specs(clause)?;
+            let (spec, sub_score_spec) = self.build_query_specs(clause, schema_name)?;
             if let Some(sub_score_spec) = sub_score_spec {
                 score_spec = sub_score_spec;
             }
@@ -596,7 +782,7 @@ impl IcingMetaDatabase {
         }
 
         let query = sub_queries.join(&format!(" {} ", operator));
-        let search_spec = icing::SearchSpecProto {
+        let mut search_spec = icing::SearchSpecProto {
             query: Some(query),
             embedding_query_vectors: embedding_vectors,
             embedding_query_metric_type: metric_type,
@@ -607,12 +793,16 @@ impl IcingMetaDatabase {
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             ..Default::default()
         };
+        if !schema_name.is_empty() {
+            search_spec.schema_type_filters.push(schema_name.to_string());
+        }
         Ok((search_spec, Some(score_spec)))
     }
 
     fn build_text_query_specs(
         &self,
         text_query: &TextQuery,
+        schema_name: &str,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
         let value =
             if let Some(text_query::Value::TimestampVal(timestamp)) = text_query.value.as_ref() {
@@ -646,12 +836,15 @@ impl IcingMetaDatabase {
             _ => bail!("unsupported match type for text search"),
         };
 
-        let search_spec = icing::SearchSpecProto {
+        let mut search_spec = icing::SearchSpecProto {
             query: Some(query),
             enabled_features: vec!["NUMERIC_SEARCH".to_string()],
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             ..Default::default()
         };
+        if !schema_name.is_empty() {
+            search_spec.schema_type_filters.push(schema_name.to_string());
+        }
         Ok((search_spec, None))
     }
 
@@ -670,6 +863,7 @@ impl IcingMetaDatabase {
     fn build_embedding_query_specs(
         &self,
         embedding_query: &EmbeddingQuery,
+        schema_name: &str,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
         let query_embeddings: &[Embedding] = &embedding_query.embedding;
         let score_op: Option<ScoreRange> = embedding_query.score_range;
@@ -684,7 +878,7 @@ impl IcingMetaDatabase {
             "semanticSearch(getEmbeddingParameter(0))".to_string()
         };
 
-        let search_spec = icing::SearchSpecProto {
+        let mut search_spec = icing::SearchSpecProto {
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             embedding_query_metric_type: Some(
                 icing::search_spec_proto::embedding_query_metric_type::Code::DotProduct.into(),
@@ -699,6 +893,9 @@ impl IcingMetaDatabase {
             enabled_features: vec![icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()],
             ..Default::default()
         };
+        if !schema_name.is_empty() {
+            search_spec.schema_type_filters.push(schema_name.to_string());
+        }
 
         Ok((search_spec, Some(self.build_scoring_spec())))
     }
@@ -720,9 +917,41 @@ impl IcingMetaDatabase {
         embedding_query: &EmbeddingQuery,
         page_size: i32,
         page_token: PageToken,
+        search_views: bool,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let (search_spec, scoring_spec) = self.build_embedding_query_specs(embedding_query)?;
-        self.execute_search(&search_spec, &scoring_spec.unwrap_or_default(), page_size, page_token)
+        let (schema_name, id_name) = if search_views {
+            (LLM_VIEW_SCHEMA_NAME, BLOB_ID_NAME)
+        } else {
+            (SCHMA_NAME, BLOB_ID_NAME)
+        };
+        let (search_spec, scoring_spec) =
+            self.build_embedding_query_specs(embedding_query, schema_name)?;
+
+        let projection = icing::TypePropertyMask {
+            schema_type: Some(schema_name.to_string()),
+            paths: vec![id_name.to_string()],
+        };
+
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &scoring_spec.unwrap_or_default(),
+            page_size,
+            page_token,
+            projection,
+        )?;
+
+        let scores: Vec<f32> = search_result
+            .results
+            .iter()
+            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
+            .collect();
+
+        let ids = Self::extract_blob_ids_from_search_result(search_result);
+        ensure!(ids.len() == scores.len());
+        if ids.is_empty() {
+            return Ok((ids, scores, PageToken::Start));
+        }
+        Ok((ids, scores, next_page_token))
     }
 
     pub fn text_search(
@@ -731,13 +960,26 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
-        let (search_spec, _) = self.build_text_query_specs(text_query)?;
-        self.execute_search(
+        let (search_spec, _) = self.build_text_query_specs(text_query, SCHMA_NAME)?;
+        let projection = Self::create_blob_id_projection(SCHMA_NAME);
+        let (search_result, next_page_token) = self.execute_search(
             &search_spec,
             &icing::ScoringSpecProto::default(),
             page_size,
             page_token,
-        )
+            projection,
+        )?;
+        let scores: Vec<f32> = search_result
+            .results
+            .iter()
+            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
+            .collect();
+        let ids = Self::extract_blob_ids_from_search_result(search_result);
+        ensure!(ids.len() == scores.len());
+        if ids.is_empty() {
+            return Ok((ids, scores, PageToken::Start));
+        }
+        Ok((ids, scores, next_page_token))
     }
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
@@ -788,8 +1030,11 @@ impl IcingMetaDatabase {
                     // No action, now the database is created.
                     Ok(())
                 }
-                MutationOperation::Add(pending_metadata) => {
+                MutationOperation::AddMemory(pending_metadata) => {
                     new_db.add_pending_metadata(pending_metadata.clone())
+                }
+                MutationOperation::AddView(pending_view_metadata) => {
+                    new_db.add_pending_llm_view_metadata(pending_view_metadata.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
                 MutationOperation::Reset => {
@@ -858,6 +1103,7 @@ impl From<u64> for PageToken {
 #[cfg(test)]
 mod tests {
     use googletest::prelude::*;
+    use sealed_memory_rust_proto::oak::private_memory::MemoryViews;
 
     use super::*;
 
@@ -966,7 +1212,13 @@ mod tests {
         let memory1 = Memory {
             id: memory_id1.clone(),
             tags: vec!["embed_tag".to_string()],
-            embeddings: vec![embedding1.clone()],
+            views: Some(MemoryViews {
+                llm_views: vec![LlmView {
+                    id: "view1".to_string(),
+                    embedding: Some(embedding1),
+                    ..Default::default()
+                }],
+            }),
             ..Default::default()
         };
         icing_database.add_memory(&memory1, blob_id1.clone())?;
@@ -980,30 +1232,36 @@ mod tests {
         let memory2 = Memory {
             id: memory_id2.clone(),
             tags: vec!["embed_tag".to_string()],
-            embeddings: vec![embedding2.clone()],
+            views: Some(MemoryViews {
+                llm_views: vec![LlmView {
+                    id: "view2".to_string(),
+                    embedding: Some(embedding2),
+                    ..Default::default()
+                }],
+            }),
             ..Default::default()
         };
         icing_database.add_memory(&memory2, blob_id2.clone())?;
 
-        let embedding_query = sealed_memory_rust_proto::oak::private_memory::EmbeddingQuery {
-            embedding: vec![Embedding {
-                identifier: "test_model".to_string(),
-                values: vec![0.9, 0.1, 0.0],
-            }],
-            ..Default::default()
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![0.9, 0.1, 0.0],
+                }],
+                ..Default::default()
+            })),
         };
         // Query embedding close to embedding1
-        let (blob_ids, scores, _) =
-            icing_database.embedding_search(&embedding_query, 10, PageToken::Start)?;
-        // Expect memory1 (blob_id1) to be the top result due to higher dot product
-        assert_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
+        let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        // Expect memory1 to be the top result due to higher dot product
+        assert_that!(ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
-        let (blob_ids, scores, _) =
-            icing_database.embedding_search(&embedding_query, 1, PageToken::Start)?;
-        // Expect memory1 (blob_id1) to be the top result due to higher dot product
-        assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
+        let (ids, scores, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+        // Expect memory1 to be the top result due to higher dot product
+        assert_that!(ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())

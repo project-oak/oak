@@ -1,4 +1,3 @@
-//
 // Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +97,7 @@ impl DatabaseWithCache {
         id: MemoryId,
         result_mask: &Option<ResultMask>,
     ) -> anyhow::Result<Option<Memory>> {
-        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id)? {
+        if let Some(blob_id) = self.meta_db().get_blob_id_by_memory_id(id.clone())? {
             self.cache.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
                 Self::apply_mask_to_memory(&mut m, result_mask);
                 Some(m)
@@ -121,14 +120,12 @@ impl DatabaseWithCache {
         &mut self,
         request: SearchMemoryRequest,
     ) -> anyhow::Result<(Vec<SearchMemoryResultItem>, PageToken)> {
+        let query = request.query.as_ref().context("the query must be non-empty")?;
         let page_token = PageToken::try_from(request.page_token)
             .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-        let (blob_ids, scores, next_page_token) = self.meta_db().search(
-            &request.query.context("the query must be non-empty")?,
-            request.page_size,
-            page_token,
-        )?;
-        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+        let (ids, scores, next_page_token) =
+            self.meta_db().search(query, request.page_size, page_token)?;
+        let mut memories = self.cache.get_memories_by_blob_ids(&ids).await?;
         Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 
         let results = memories
@@ -145,6 +142,7 @@ impl DatabaseWithCache {
         Ok(())
     }
 
+    #[allow(deprecated)]
     // Helper function to apply the result mask to a single Memory object.
     fn apply_mask_to_memory(memory: &mut Memory, mask: &Option<ResultMask>) {
         if let Some(mask) = mask {

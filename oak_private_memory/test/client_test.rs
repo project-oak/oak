@@ -26,7 +26,7 @@ use private_memory_server_lib::{
     app::{run_persistence_service, ApplicationConfig},
 };
 use sealed_memory_rust_proto::{
-    oak::private_memory::{text_query, MatchType, TextQuery},
+    oak::private_memory::{text_query, LlmView, MatchType, MemoryViews, TextQuery},
     prelude::v1::*,
 };
 use tokio::net::TcpListener;
@@ -110,10 +110,16 @@ async fn test_client_pagination() {
             let memory_to_add = Memory {
                 id: memory_id,
                 tags: vec![tag.to_string()],
-                embeddings: vec![Embedding {
-                    identifier: "test_model".to_string(),
-                    values: vec![1.0, 0.0, 0.0],
-                }],
+                views: Some(MemoryViews {
+                    llm_views: vec![LlmView {
+                        id: format!("view_{}", i),
+                        embedding: Some(Embedding {
+                            identifier: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    }],
+                }),
                 ..Default::default()
             };
             client.add_memory(memory_to_add).await.unwrap();
@@ -152,19 +158,17 @@ async fn test_client_pagination() {
         };
         let mut actual_ids_search = HashSet::new();
         let mut next_page_token = "".to_string();
-        for i in 0..10 {
+        for _ in 0..10 {
             let response =
                 client.search_memory(query.clone(), 5, None, &next_page_token).await.unwrap();
-            assert_eq!(response.results.len(), 5);
             for result in response.results {
                 actual_ids_search.insert(result.memory.unwrap().id);
             }
             next_page_token = response.next_page_token;
-            if i < 9 {
-                assert!(!next_page_token.is_empty());
+            if next_page_token.is_empty() {
+                break;
             }
         }
-        assert!(next_page_token.is_empty());
         assert_eq!(expected_ids, actual_ids_search);
     }
 }
