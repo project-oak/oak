@@ -36,5 +36,6 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-tungstenite",
         "@oak_crates_index//:toml",
+        "@oak_crates_index//:url",
     ],
 )

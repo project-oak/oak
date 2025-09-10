@@ -155,7 +155,7 @@ Now, run the server proxy in a separate terminal, pointing it to your
 configuration file:
 
 ```bash
-bazel run //oak_proxy/server -- --config server.toml
+bazel run //oak_proxy/server -- --config server.toml --listen-address "127.0.0.1:8081"
 ```
 
 You should see the output: `[Server] Listening on 127.0.0.1:8081`.
@@ -168,7 +168,7 @@ forwards it over the secure tunnel to the server proxy.
 Run the client proxy in a third terminal:
 
 ```bash
-bazel run //oak_proxy/client -- --config client.toml
+bazel run //oak_proxy/client -- --config client.toml --listen-address "127.0.0.1:9090" --server-proxy-url "ws://127.0.0.1:8081"
 ```
 
 You should see the output: `[Client] Listening on 127.0.0.1:9090`.

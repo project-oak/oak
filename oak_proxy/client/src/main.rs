@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use clap::Parser;
 use oak_proxy_lib::{
@@ -24,6 +24,7 @@ use oak_proxy_lib::{
 };
 use oak_session::{ClientSession, ProtocolEngine, Session};
 use tokio::net::{TcpListener, TcpStream};
+use url::Url;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -31,13 +32,31 @@ struct Args {
     /// Path to the TOML configuration file.
     #[arg(long, value_parser = crate::config::load_toml::<ClientConfig>)]
     config: ClientConfig,
+
+    /// The SocketAddr where the proxy should listen (e.g., "127.0.0.1:9090").
+    /// This will override the value in the config file.
+    #[arg(long, env = "OAK_PROXY_CLIENT_LISTEN_ADDRESS")]
+    listen_address: Option<SocketAddr>,
+
+    /// The WebSocket URL of the server proxy.
+    /// This will override the value in the config file.
+    #[arg(long, env = "OAK_PROXY_SERVER_URL")]
+    server_proxy_url: Option<Url>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { config } = Args::parse();
+    let Args { mut config, listen_address, server_proxy_url } = Args::parse();
+
+    // The command-line arguments override the values from the config file.
+    if let Some(listen_address) = listen_address {
+        config.listen_address = listen_address;
+    }
+    if let Some(server_proxy_url) = server_proxy_url {
+        config.server_proxy_url = server_proxy_url;
+    }
 
     let listener = TcpListener::bind(config.listen_address).await?;
     log::info!("[Client] Listening on {}", config.listen_address);

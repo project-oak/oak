@@ -67,11 +67,23 @@ async fn proxy_test() -> anyhow::Result<()> {
     std::fs::write("server.toml", toml::to_string(&server_config)?)?;
 
     let mut server_proxy = Command::new("oak_proxy/server/server")
-        .args(["--config", "server.toml"])
+        .args([
+            "--config",
+            "server.toml",
+            "--listen-address",
+            &server_config.listen_address.to_string(),
+        ])
         .env("RUST_LOG", "debug")
         .spawn()?;
     let mut client_proxy = Command::new("oak_proxy/client/client")
-        .args(["--config", "client.toml"])
+        .args([
+            "--config",
+            "client.toml",
+            "--listen-address",
+            &client_config.listen_address.to_string(),
+            "--server-proxy-url",
+            client_config.server_proxy_url.as_ref(),
+        ])
         .env("RUST_LOG", "debug")
         .spawn()?;
 

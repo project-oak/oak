@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use clap::Parser;
@@ -36,13 +36,32 @@ struct Args {
     /// Path to the TOML configuration file.
     #[arg(long, value_parser = crate::config::load_toml::<ServerConfig>)]
     config: ServerConfig,
+
+    /// The SocketAddr where the proxy should listen for client connections
+    /// (e.g., "0.0.0.0:8080"). This will override the value in the config
+    /// file.
+    #[arg(long, env = "OAK_PROXY_SERVER_LISTEN_ADDRESS")]
+    listen_address: Option<SocketAddr>,
+
+    /// Address of the backend application.
+    #[arg(long, env = "OAK_PROXY_SERVER_BACKEND_ADDRESS")]
+    backend_address: Option<SocketAddr>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { config } = Args::parse();
+    let Args { mut config, listen_address, backend_address } = Args::parse();
+
+    // The command-line arguments override the values from the config file.
+    if let Some(listen_address) = listen_address {
+        config.listen_address = listen_address;
+    }
+    if let Some(backend_address) = backend_address {
+        config.backend_address = backend_address;
+    }
+
     let config = Arc::new(config);
 
     if config.backend_command.is_some() {
