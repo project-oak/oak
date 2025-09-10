@@ -21,6 +21,12 @@ variable "machine_type" {
   default     = "c3-standard-4"
 }
 
+variable "use_debug_image" {
+  type        = bool
+  description = "Whether or not to use the Confidential Space image"
+  default     = false
+}
+
 variable "image_digest" {
   type        = string
   description = "The full digest of the container image to run, in the format 'IMAGE_URL@sha256:DIGEST'."

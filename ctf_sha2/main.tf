@@ -27,7 +27,11 @@ resource "google_compute_instance" "ctf_sha2_instance" {
   # The boot disk is configured to use the Confidential Space image.
   boot_disk {
     initialize_params {
-      image = "projects/confidential-space-images/global/images/family/confidential-space"
+      image = (
+        var.use_debug_image
+        ? "projects/confidential-space-images/global/images/family/confidential-space-debug"
+        : "projects/confidential-space-images/global/images/family/confidential-space"
+      )
     }
   }
 
