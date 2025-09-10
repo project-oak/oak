@@ -36,10 +36,9 @@ use oak_proto_rust::{
             Evidence, ReferenceValues, ReferenceValuesCollection, SessionBindingPublicKeyData,
             SessionBindingPublicKeyEndorsement,
         },
-        crypto::v1::{
-            Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo, Validity,
-        },
+        crypto::v1::{Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo},
         session::v1::{EndorsedEvidence, SessionBinding},
+        Validity,
     },
 };
 use oak_time::{Duration, Instant};
