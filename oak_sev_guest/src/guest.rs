@@ -35,12 +35,6 @@ pub const MAX_PAYLOAD_SIZE: usize = 4000;
 /// The currently supported header version number.
 pub const CURRENT_HEADER_VERSION: u8 = 1;
 
-/// The currently supported message version number.
-pub const CURRENT_MESSAGE_VERSION: u8 = 1;
-
-/// The currently supported attestation report version number.
-pub const CURRENT_ATTESTATION_VERSION: u8 = 2;
-
 /// An encrypted guest message.
 ///
 /// The same data structure is used for requests and responses.
@@ -142,7 +136,7 @@ impl GuestMessageHeader {
                 header_version: CURRENT_HEADER_VERSION,
                 header_size: size_of::<Self>() as u16,
                 message_type: MessageType::Invalid as u8,
-                message_version: CURRENT_MESSAGE_VERSION,
+                message_version: 0,
                 message_size: 0,
                 _reserved_1: 0,
                 message_vmpck: 0,
@@ -179,9 +173,6 @@ impl GuestMessageHeader {
         }
         if self.auth_header.header_version != CURRENT_HEADER_VERSION {
             return Err("invalid header version");
-        }
-        if self.auth_header.message_version != CURRENT_MESSAGE_VERSION {
-            return Err("invalid message version");
         }
         // For now we always assume we use VMPCK_0 to encrypt all messages.
         if self.auth_header.message_vmpck != 0 {
@@ -355,6 +346,10 @@ impl Message for KeyRequest {
     fn get_message_type() -> MessageType {
         MessageType::KeyRequest
     }
+
+    fn get_message_version() -> u8 {
+        1
+    }
 }
 
 /// Response containing the derived key.
@@ -379,6 +374,10 @@ static_assertions::assert_eq_size!(KeyResponse, [u8; 64]);
 impl Message for KeyResponse {
     fn get_message_type() -> MessageType {
         MessageType::KeyResponse
+    }
+
+    fn get_message_version() -> u8 {
+        1
     }
 }
 
@@ -490,6 +489,10 @@ impl Message for AttestationRequest {
     fn get_message_type() -> MessageType {
         MessageType::ReportRequest
     }
+
+    fn get_message_version() -> u8 {
+        1
+    }
 }
 
 /// Response containing the attestation report.
@@ -516,6 +519,10 @@ static_assertions::assert_eq_size!(AttestationResponse, [u8; 1216]);
 impl Message for AttestationResponse {
     fn get_message_type() -> MessageType {
         MessageType::ReportResponse
+    }
+
+    fn get_message_version() -> u8 {
+        1
     }
 }
 
@@ -585,6 +592,7 @@ pub enum EccCurve {
 
 pub trait Message {
     fn get_message_type() -> MessageType;
+    fn get_message_version() -> u8;
 }
 
 #[cfg(test)]
