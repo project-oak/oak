@@ -18,8 +18,8 @@ use oak_attestation::dice::DiceAttester;
 use oak_sev_guest::{
     crypto::GuestMessageEncryptor,
     guest::{
-        AttestationRequest, AttestationResponse, GuestFieldFlags, GuestMessage, KeyRequest,
-        KeyResponse, Message, ReportStatus,
+        v1::{AttestationRequest, AttestationResponse, KeyRequest, KeyResponse},
+        GuestFieldFlags, GuestMessage, Message, ReportStatus,
     },
     msr::SevStatus,
 };
