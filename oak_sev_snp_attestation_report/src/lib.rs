@@ -174,8 +174,13 @@ pub struct AttestationReportData {
     /// The value of the current TCB version when the guest was launched or
     /// imported.
     pub launch_tcb: RawTcbVersion,
+    /// The value of the verified mitigation vector when the guest was launched.
+    pub launch_mit_vector: u64,
+    /// The value of the current verified mitigation vector.
+    pub current_mit_vector: u64,
+
     /// Reserved.
-    _reserved_3: [u8; 168],
+    _reserved_3: [u8; 152],
 }
 
 static_assertions::assert_eq_size!(AttestationReportData, [u8; 672]);
