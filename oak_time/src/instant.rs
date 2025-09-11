@@ -179,8 +179,7 @@ macro_rules! make_instant {
 
 impl core::fmt::Display for Instant {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let datetime: DateTime<Utc> = (*self).into();
-        write!(f, "{}", datetime.to_rfc3339())
+        write!(f, "{}", rfc3339::serialize_instant(self))
     }
 }
 
@@ -314,9 +313,10 @@ impl From<prost_types::Timestamp> for Instant {
 /// [RFC3339 format]: https://tools.ietf.org/html/rfc3339#section-5.6
 /// [with]: https://serde.rs/field-attrs.html#with
 pub mod rfc3339 {
+    use alloc::string::String;
     use core::fmt;
 
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, SecondsFormat, Utc};
     use serde::{
         de::{self, Visitor},
         Deserializer, Serializer,
@@ -324,10 +324,14 @@ pub mod rfc3339 {
 
     use super::Instant;
 
+    pub fn serialize_instant(instant: &Instant) -> String {
+        let datetime: DateTime<Utc> = (*instant).into();
+        datetime.to_rfc3339_opts(SecondsFormat::Millis, true)
+    }
+
     /// Serializes an [`Instant`] to RFC3339 format.
     pub fn serialize<S: Serializer>(instant: &Instant, serializer: S) -> Result<S::Ok, S::Error> {
-        let utc: DateTime<Utc> = (*instant).into();
-        serializer.serialize_str(&utc.to_rfc3339())
+        serializer.serialize_str(&serialize_instant(instant))
     }
 
     /// Deserializes an [`Instant`] from its RFC3339 representation.
@@ -383,7 +387,6 @@ pub mod unix_timestamp {
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use chrono::{DateTime, Utc};
     use googletest::prelude::*;
 
     use super::*;
@@ -582,24 +585,21 @@ mod tests {
     }
 
     #[googletest::test]
-    fn test_instant_into_chrono_datetime() {
+    fn test_instant_to_rfc3339() {
         let instant = Instant::from_unix_millis(1735689600123);
-        let datetime: DateTime<Utc> = instant.into();
-        assert_that!(datetime.to_rfc3339(), eq("2025-01-01T00:00:00.123+00:00"));
+        assert_that!(rfc3339::serialize_instant(&instant), eq("2025-01-01T00:00:00.123Z"));
     }
 
     #[googletest::test]
-    fn test_instant_from_chrono_datetime() {
-        let datetime = DateTime::parse_from_rfc3339("2025-01-01T00:00:00.123+00:00")
-            .unwrap()
-            .with_timezone(&Utc);
-        let instant: Instant = datetime.into();
+    fn test_instant_from_rfc3339() {
+        let instant: Instant =
+            Instant::try_from("2025-01-01T00:00:00.123Z").expect("failed to parse date");
         assert_that!(instant, eq(Instant::from_unix_millis(1735689600123)));
     }
 
     #[googletest::test]
     fn test_instant_display() {
         let instant = Instant::from_unix_millis(1735689600123);
-        assert_that!(std::format!("{}", instant), eq("2025-01-01T00:00:00.123+00:00"));
+        assert_that!(std::format!("{}", instant), eq("2025-01-01T00:00:00.123Z"));
     }
 }
