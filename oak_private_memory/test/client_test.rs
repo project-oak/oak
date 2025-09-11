@@ -72,11 +72,21 @@ async fn test_client() {
             PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
                 .await
                 .unwrap();
-
+        let memory_view = MemoryViews {
+            llm_views: vec![LlmView {
+                id: "test_view_id".to_string(),
+                embedding: Some(Embedding {
+                    identifier: "test_model".to_string(),
+                    values: vec![1.0, 0.0, 0.0],
+                }),
+                ..Default::default()
+            }],
+        };
         let memory_id = "test_memory_id";
         let memory_to_add = Memory {
             id: memory_id.to_string(),
             tags: vec!["test_tag".to_string()],
+            views: Some(memory_view),
             ..Default::default()
         };
 
