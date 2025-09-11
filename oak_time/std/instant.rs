@@ -17,6 +17,11 @@ use std::time::SystemTime;
 
 use oak_time::{duration::Duration, instant::Instant};
 
+/// Returns the current time from the system.
+pub fn now() -> Instant {
+    from_system_time(SystemTime::now())
+}
+
 /// Converts a SystemTime to an Instant.
 pub fn from_system_time(instant: SystemTime) -> Instant {
     let duration_from_epoch = match instant.duration_since(SystemTime::UNIX_EPOCH) {

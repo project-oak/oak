@@ -13,11 +13,10 @@
 // limitations under the License.
 
 use anyhow::Context;
-use chrono::Utc;
 use clap::Parser;
 use digest_util::hex_digest_from_typed_hash;
 use intoto::statement::parse_statement;
-use oak_time::Instant;
+use oak_time_std::instant::now;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
@@ -74,13 +73,12 @@ impl VerifyCommand {
             .context("verifying Rekor log entry")?;
 
         let statement = parse_statement(endorsement.message())?;
-        let now = Instant::from(Utc::now());
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = hex_digest_from_typed_hash(typed_hash)?;
         // Convert Vec<String> to Vec<&str>.
         let claims: Vec<&str> = self.claims.claims.iter().map(|s| s.as_str()).collect();
         statement
-            .validate(Some(digest), now, &claims)
+            .validate(Some(digest), now(), &claims)
             .context("validating endorsement statement")?;
 
         println!("Endorsement verified successfully for image {}", self.image);

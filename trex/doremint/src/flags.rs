@@ -18,8 +18,8 @@ use std::{
 };
 
 use anyhow::Context;
-use chrono::Utc;
 use oak_time::{Duration, Instant};
+use oak_time_std::instant::now;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use serde::Deserialize;
 
@@ -83,7 +83,7 @@ pub(crate) fn parse_duration(valid_for: &str) -> anyhow::Result<Duration> {
 
 pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<Instant> {
     if value.is_empty() {
-        Ok(Instant::from(Utc::now()))
+        Ok(now())
     } else {
         Instant::try_from(value).map_err(|msg| anyhow::anyhow!(msg))
     }

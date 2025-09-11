@@ -21,7 +21,6 @@
 
 use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf};
 
-use chrono::Utc;
 use clap::Parser;
 use cxx_string::CxxString;
 use oak_ffi_bytes::BytesView;
@@ -41,7 +40,7 @@ use oak_proto_rust::{
         Validity,
     },
 };
-use oak_time::{Duration, Instant};
+use oak_time::Duration;
 use p256::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use prost::Message;
 
@@ -58,7 +57,7 @@ const HANDSHAKE: &str = "handshake!";
 fn main() -> anyhow::Result<()> {
     let Flags { collected_attestation_out, reference_values_out } = Flags::parse();
 
-    let now = Utc::now();
+    let now = oak_time_std::instant::now();
 
     // Generate session binding keypair.
     let signing_key = SigningKey::random(&mut rand_core::OsRng);
@@ -67,8 +66,8 @@ fn main() -> anyhow::Result<()> {
     // Create certificate payload containing the session binding public key.
     let certificate_payload = CertificatePayload {
         validity: Some(Validity {
-            not_before: Some((Instant::from(now) - Duration::from_seconds(60)).into_timestamp()),
-            not_after: Some((Instant::from(now) + Duration::from_seconds(60)).into_timestamp()),
+            not_before: Some((now - Duration::from_seconds(60)).into_timestamp()),
+            not_after: Some((now + Duration::from_seconds(60)).into_timestamp()),
         }),
         subject_public_key_info: Some(SubjectPublicKeyInfo {
             public_key: verifying_key.to_sec1_bytes().to_vec(),
@@ -91,7 +90,7 @@ fn main() -> anyhow::Result<()> {
     // Tie all of the above together into output protobufs.
     let collected_attestation = CollectedAttestation {
         request_metadata: Some(RequestMetadata {
-            request_time: Some(Instant::from(now).into_timestamp()),
+            request_time: Some(now.into_timestamp()),
             uri: "some://where".to_string(),
         }),
         endorsed_evidence: BTreeMap::from([(

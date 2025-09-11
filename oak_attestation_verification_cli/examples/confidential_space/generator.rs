@@ -17,7 +17,6 @@
 use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use chrono::Utc;
 use clap::Parser;
 use intoto::statement::{make_statement, serialize_statement, DefaultStatement, Subject};
 use jwt::{
@@ -79,7 +78,7 @@ const IMAGE_DIGEST: &str = "173e9531a1306d55c6a5a36f6e57d2291a5b5c4f8e3c8a45d3b8
 fn main() -> anyhow::Result<()> {
     let Flags { collected_attestation_out, reference_values_out } = Flags::parse();
 
-    let now = Instant::from(Utc::now());
+    let now = oak_time_std::instant::now();
 
     // Generate a 3-certificate chain. There is no documented specific length on the
     // actual Confidential Space certification chain, this is just here in order to
