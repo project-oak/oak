@@ -304,6 +304,10 @@ bitflags! {
         const GUEST_SVN = (1 << 4);
         /// The guest-provided TCB version will be mixed into the key.
         const TCB_VERSION = (1 << 5);
+        /// The launch mitigation vector will be mixed into the key.
+        ///
+        /// This is only valid when using version 2 of the key request guest message.
+        const LAUCNH_MIT_VECTOR = (1 << 6);
     }
 }
 
@@ -597,6 +601,48 @@ pub mod v1 {
                 return Err("invalid report size");
             }
             self.report.validate()
+        }
+    }
+}
+
+pub mod v2 {
+    use super::*;
+
+    /// Request for a derived key.
+    ///
+    /// See Table 18 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    #[repr(C)]
+    #[derive(Debug, IntoBytes, FromBytes)]
+    pub struct KeyRequest {
+        pub base_key_request: super::v1::KeyRequest,
+        /// The launch mitigation vector to mix into the key.
+        ///
+        /// The guest cannot set bits that were not originally set when the
+        /// guest was launched.
+        pub launch_mit_vector: u64,
+    }
+
+    static_assertions::assert_eq_size!(KeyRequest, [u8; 40]);
+
+    impl KeyRequest {
+        pub const fn new() -> Self {
+            Self { base_key_request: super::v1::KeyRequest::new(), launch_mit_vector: 0 }
+        }
+    }
+
+    impl Default for KeyRequest {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl Message for KeyRequest {
+        fn get_message_type() -> MessageType {
+            MessageType::KeyRequest
+        }
+
+        fn get_message_version() -> u8 {
+            2
         }
     }
 }
