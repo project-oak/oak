@@ -430,6 +430,16 @@ bitflags! {
         const DEBUG = (1 << 3);
         /// The guest can only be activated on a single socket.
         const SINGLE_SOCKET = (1 << 4);
+        /// CXL can be populated with devices or memory.
+        const CXL_ALLOW = (1 << 5);
+        /// AES 256 XTS is required for memory encryption.
+        const MEM_AES_256_XTS = (1 << 6);
+        /// Running Average Power Limit is disabled.
+        const RAPL_DIS = (1 << 7);
+        /// Ciphertext hiding for DRAM must be enabled.
+        const CIPHERTEXT_HIDING_DRAM = (1 << 8);
+        /// Disable Guest support for Page Swap and Page Move commands.
+        const PAGE_SWAP_DISABLE = (1 << 9);
     }
 }
 
