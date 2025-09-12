@@ -142,6 +142,17 @@ repository.
 ./ctf_sha2/deploy.sh
 ```
 
+As a one-off prerequisite, you will need to perform various gcloud
+authentication steps:
+
+```bash
+gcloud auth login
+gcloud auth application-default login
+
+# If using the default image registry (not required, just assumed by default)
+gcloud auth configure-docker europe-west1-docker.pkg.dev
+```
+
 ### Inspect the Attestation Token
 
 The `deploy.sh` script will automatically find the attestation token in the
