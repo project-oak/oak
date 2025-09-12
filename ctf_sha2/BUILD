@@ -49,7 +49,6 @@ oci_image(
     exposed_ports = [],
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
-        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE",
         "tee.launch_policy.log_redirect": "always",
     },
     tars = [":tar"],
