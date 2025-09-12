@@ -15,9 +15,9 @@
 
 //! AMD SEV-SNP data structures for attestation reports.
 //!
-//! This is based on revision 1.57 of <https://www.amd.com/system/files/TechDocs/56860.pdf>
+//! This is based on revision 1.58 of <https://www.amd.com/system/files/TechDocs/56860.pdf>
 //! Content-addressed link for the specific revision of the specification:
-//! <https://static.space/sha2-512:f2f8c5c8a41a682968944cc50000e28d189855cf0899205f41fa0073d9d0b4f2c0f83ebe8c7bf2614bfb66ced2ad24548696bf6b34be102d2959fcc11b500079>
+//! <https://static.space/sha2-512:56e501d2fca015ab1d13d2ec8934b16af989373437706d6a3d258c00fb170a833d76e264ae8fd5709bcdcf3d5fcb7a52faf47a6191c7fe1d0940a2f492183ba8>
 
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
@@ -331,6 +331,8 @@ bitflags! {
         /// Indicates that alias checking has completed since the last reboot.
         /// Mitigation for CVE-2024-21944.
         const ALIAS_CHECK_COMPLETE = (1 << 5);
+        /// Indicates whether SEV-TIO is enabled.
+        const TIO_EN = (1 << 7);
     }
 }
 
