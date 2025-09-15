@@ -1,5 +1,5 @@
 # Stage 1: Load oak-proxy.
-FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:b9fab154b5978fbb5149c5c9a98db6ceabdb965758a2078b66f8d6f1884ef922 as oak_proxy
+FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:93a132432120922b0199ddca84675e449aa12d8fd53f13c79da94113786d2a96 as oak_proxy
 
 # Stage 2: Main image.
 FROM ollama/ollama:0.11.6@sha256:1868fd51253099b8f48b89b981e5d8ba23e4db161a501b86e29593071c1c069b

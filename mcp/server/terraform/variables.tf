@@ -13,7 +13,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the GCE instance."
-  default     = "attested-mcp-server-test"
+  default     = "attested-mcp-server"
 }
 
 variable "machine_type" {
@@ -25,7 +25,6 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The full reference of the container image to run, e.g., 'IMAGE_URL:latest' or 'IMAGE_URL@sha256:DIGEST'."
-  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/attested-mcp-server/attested-mcp-server:latest"
 }
 
 variable "exposed_port" {

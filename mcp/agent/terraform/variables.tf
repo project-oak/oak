@@ -13,7 +13,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the GCE instance."
-  default     = "private-agent-test"
+  default     = "private-agent"
 }
 
 variable "machine_type" {
@@ -25,11 +25,20 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The full reference of the container image to run, e.g., 'IMAGE_URL:latest' or 'IMAGE_URL@sha256:DIGEST'."
-  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/private-agent/private-agent:latest"
 }
 
 variable "exposed_port" {
   type        = number
   description = "Port on which to expose incoming TCP traffic in the GCP firewall."
   default     = 8080
+}
+
+variable "gemma_server_ip" {
+  type        = string
+  description = "The internal IP address of the Gemma server."
+}
+
+variable "mcp_server_ip" {
+  type        = string
+  description = "The internal IP address of the MCP server."
 }

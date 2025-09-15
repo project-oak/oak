@@ -1,9 +1,4 @@
-provider "google" {
-  project = var.gcp_project_id
-  zone    = var.zone
-}
-
-resource "google_compute_instance" "private_agent" {
+resource "google_compute_instance" "attested_mcp_server" {
   name             = var.instance_name
   machine_type     = var.machine_type
   zone             = var.zone
@@ -53,21 +48,10 @@ resource "google_compute_instance" "private_agent" {
   }
 
   # Add a tag to create corresponding firewall rules for.
-  tags = ["private-agent"]
+  tags = ["attested-mcp-server"]
 
   # Allow Terraform to delete the instance.
   allow_stopping_for_update = true
 }
 
-resource "google_compute_firewall" "private_agent_firewall" {
-  name    = "private-agent-firewall"
-  network = "default"
 
-  allow {
-    protocol = "tcp"
-    ports    = [var.exposed_port]
-  }
-
-  target_tags   = ["private-agent"]
-  source_ranges = ["0.0.0.0/0"]
-}

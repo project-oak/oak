@@ -11,13 +11,16 @@ set -o nounset
 set -o pipefail
 
 # Start the proxy server in the background.
+echo "Running Oak Proxy server for the Agent"
 /bin/oak_proxy_server --config=/etc/proxy_server.toml &
 
-# Start the MCP proxy client in the background.
-/bin/oak_proxy_client --config=/etc/mcp_proxy_client.toml &
-
 # Start the Gemma proxy client in the background.
-/bin/oak_proxy_client --config=/etc/gemma_proxy_client.toml &
+echo "Running Oak Proxy client for Gemma: ${GEMMA_PROXY_URL}"
+/bin/oak_proxy_client --config=/etc/gemma_proxy_client.toml --server-proxy-url "${GEMMA_PROXY_URL}" &
+
+# Start the MCP proxy client in the background.
+echo "Running Oak Proxy client for MCP Server: ${MCP_PROXY_URL}"
+/bin/oak_proxy_client --config=/etc/mcp_proxy_client.toml --server-proxy-url "${MCP_PROXY_URL}" &
 
 # Wait for all background processes to exit.
 wait

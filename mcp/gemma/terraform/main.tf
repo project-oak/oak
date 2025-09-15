@@ -1,8 +1,3 @@
-provider "google" {
-  project = var.gcp_project_id
-  zone    = var.zone
-}
-
 resource "google_compute_instance" "attested_gemma" {
   name             = var.instance_name
   machine_type     = var.machine_type
@@ -59,15 +54,4 @@ resource "google_compute_instance" "attested_gemma" {
   allow_stopping_for_update = true
 }
 
-resource "google_compute_firewall" "attested_gemma_firewall" {
-  name    = "attested-gemma-firewall"
-  network = "default"
 
-  allow {
-    protocol = "tcp"
-    ports    = [var.exposed_port]
-  }
-
-  target_tags   = ["attested-gemma"]
-  source_ranges = ["0.0.0.0/0"]
-}
