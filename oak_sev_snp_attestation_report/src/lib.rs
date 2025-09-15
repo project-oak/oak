@@ -29,7 +29,7 @@ use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes, KnownLayout};
 
 /// A signed attestation report.
 ///
-/// See Table 22 of the specification.
+/// See Table 23 of the specification.
 #[repr(C)]
 #[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct AttestationReport {
@@ -67,7 +67,7 @@ impl AttestationReport {
 /// The number of bytes of custom data that can be included in the attestation
 /// report.
 ///
-/// See Table 22 of the specification.
+/// See Table 23 of the specification.
 pub const REPORT_DATA_SIZE: usize = 64;
 
 /// A byte array which is interpreted depending on the CPU model.
@@ -77,7 +77,7 @@ pub type RawTcbVersion = [u8; 8];
 
 /// The data contained in an attestation report.
 ///
-/// See Table 22 of the specification.
+/// See Table 23 of the specification.
 #[repr(C)]
 #[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct AttestationReportData {
@@ -338,7 +338,7 @@ bitflags! {
 
 /// The signing algorithm used for the report signature.
 ///
-/// See Table 133 of the specification.
+/// See Table 139 of the specification.
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningAlgorithm {
@@ -350,7 +350,7 @@ pub enum SigningAlgorithm {
 
 /// Key used to sign the attestation report.
 ///
-/// See Table 22 of the specification.
+/// See Table 23 of the specification.
 #[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum SigningKey {
@@ -445,7 +445,7 @@ bitflags! {
 
 /// An ECDSA signature.
 ///
-/// See Table 135 of the specification.
+/// See Table 141 of the specification.
 #[repr(C)]
 #[derive(Debug, IntoBytes, FromBytes, Immutable, KnownLayout)]
 pub struct EcdsaSignature {

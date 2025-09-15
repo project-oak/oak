@@ -81,7 +81,7 @@ static_assertions::assert_eq_size!(GuestReservedArea, [u8; 96]);
 
 /// Representation of the secrets page.
 ///
-/// See: Table 68 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
+/// See: Table 71 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
 #[repr(C, align(4096))]
 #[derive(Debug, FromBytes)]
 pub struct SecretsPage {

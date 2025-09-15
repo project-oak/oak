@@ -31,7 +31,7 @@ pub const CPUID_PAGE_SIZE: usize = 4096;
 
 /// The CPUID function result of an invocation for a specific leaf and subleaf.
 ///
-/// See: Table 14 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
+/// See: Table 16 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
 #[repr(C)]
 #[derive(Debug, FromBytes)]
 pub struct CpuidFunction {
@@ -103,7 +103,7 @@ impl From<CpuidOutput> for CpuidResult {
 
 /// Representation of the CPUID page.
 ///
-/// See: Table 69 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
+/// See: Table 72 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
 #[repr(C, align(4096))]
 #[derive(Debug, FromBytes)]
 pub struct CpuidPage {

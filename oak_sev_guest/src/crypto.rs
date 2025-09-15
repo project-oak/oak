@@ -90,8 +90,8 @@ impl GuestMessageEncryptor {
         destination: &mut GuestMessage,
     ) -> Result<(), &'static str> {
         let buffer = message.as_mut_bytes();
-        destination.header.auth_header.message_type = M::get_message_type() as u8;
-        destination.header.auth_header.message_version = M::get_message_version();
+        destination.header.auth_header.message_type = M::MESSAGE_TYPE as u8;
+        destination.header.auth_header.message_version = M::MESSAGE_VERSION;
         let message_size = buffer.len();
         destination.header.auth_header.message_size = message_size as u16;
         destination.header.sequence_number = self.sequence_number + 1;
@@ -122,10 +122,10 @@ impl GuestMessageEncryptor {
     ) -> Result<M, &'static str> {
         let mut result = M::new_zeroed();
         source.validate()?;
-        if M::get_message_type() as u8 != source.header.auth_header.message_type {
+        if M::MESSAGE_TYPE as u8 != source.header.auth_header.message_type {
             return Err("invalid message type");
         }
-        if M::get_message_version() != source.header.auth_header.message_version {
+        if M::MESSAGE_VERSION != source.header.auth_header.message_version {
             return Err("invalid message version");
         }
         let sequence_number = source.header.sequence_number;

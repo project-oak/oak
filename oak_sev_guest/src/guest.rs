@@ -70,7 +70,7 @@ impl Default for GuestMessage {
 /// The authenticated subsection of the header used for an encrypted guest
 /// request message.
 ///
-/// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 100 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct AuthenticatedHeader {
@@ -105,7 +105,7 @@ static_assertions::assert_eq_size!(AuthenticatedHeader, [u8; 48]);
 
 /// The header for an encrypted guest request message.
 ///
-/// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 100 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, IntoBytes, FromBytes, Immutable)]
 pub struct GuestMessageHeader {
@@ -195,7 +195,7 @@ impl Default for GuestMessageHeader {
 
 /// The AEAD algorithm used for encryption.
 ///
-/// See Table 100 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 101 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u8)]
 pub enum AeadAlgorithm {
@@ -207,7 +207,7 @@ pub enum AeadAlgorithm {
 
 /// The type of message represented by the payload.
 ///
-/// See Table 101 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 102 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u8)]
 pub enum MessageType {
@@ -323,7 +323,7 @@ pub enum ReportStatus {
 
 /// An ECDSA public key.
 ///
-/// See Table 120 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 142 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug)]
 pub struct EcdsaPublicKey {
@@ -343,7 +343,7 @@ static_assertions::assert_eq_size!(EcdsaPublicKey, [u8; 1028]);
 
 /// The elliptic curve used.
 ///
-/// See Table 118 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 140 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum EccCurve {
@@ -354,8 +354,8 @@ pub enum EccCurve {
 }
 
 pub trait Message {
-    fn get_message_type() -> MessageType;
-    fn get_message_version() -> u8;
+    const MESSAGE_TYPE: MessageType;
+    const MESSAGE_VERSION: u8;
 }
 
 pub mod v1 {
@@ -365,7 +365,7 @@ pub mod v1 {
 
     /// Request for a derived key.
     ///
-    /// See Table 18 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    /// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
     #[repr(C)]
     #[derive(Debug, IntoBytes, FromBytes)]
     pub struct KeyRequest {
@@ -454,18 +454,13 @@ pub mod v1 {
     }
 
     impl Message for KeyRequest {
-        fn get_message_type() -> MessageType {
-            MessageType::KeyRequest
-        }
-
-        fn get_message_version() -> u8 {
-            1
-        }
+        const MESSAGE_TYPE: MessageType = MessageType::KeyRequest;
+        const MESSAGE_VERSION: u8 = 1;
     }
 
     /// Response containing the derived key.
     ///
-    /// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
     #[repr(C)]
     #[derive(Debug, FromBytes, IntoBytes)]
     pub struct KeyResponse {
@@ -483,13 +478,8 @@ pub mod v1 {
     static_assertions::assert_eq_size!(KeyResponse, [u8; 64]);
 
     impl Message for KeyResponse {
-        fn get_message_type() -> MessageType {
-            MessageType::KeyResponse
-        }
-
-        fn get_message_version() -> u8 {
-            1
-        }
+        const MESSAGE_TYPE: MessageType = MessageType::KeyResponse;
+        const MESSAGE_VERSION: u8 = 1;
     }
 
     impl KeyResponse {
@@ -513,7 +503,7 @@ pub mod v1 {
 
     /// Request for an attestation report.
     ///
-    /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    /// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
     #[repr(C)]
     #[derive(Debug, IntoBytes, FromBytes)]
     pub struct AttestationRequest {
@@ -542,18 +532,13 @@ pub mod v1 {
     }
 
     impl Message for AttestationRequest {
-        fn get_message_type() -> MessageType {
-            MessageType::ReportRequest
-        }
-
-        fn get_message_version() -> u8 {
-            1
-        }
+        const MESSAGE_TYPE: MessageType = MessageType::ReportRequest;
+        const MESSAGE_VERSION: u8 = 1;
     }
 
     /// Response containing the attestation report.
     ///
-    /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    /// See Table 25 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
     #[repr(C)]
     #[derive(Debug, FromBytes, IntoBytes)]
     pub struct AttestationResponse {
@@ -573,13 +558,8 @@ pub mod v1 {
     static_assertions::assert_eq_size!(AttestationResponse, [u8; 1216]);
 
     impl Message for AttestationResponse {
-        fn get_message_type() -> MessageType {
-            MessageType::ReportResponse
-        }
-
-        fn get_message_version() -> u8 {
-            1
-        }
+        const MESSAGE_TYPE: MessageType = MessageType::ReportResponse;
+        const MESSAGE_VERSION: u8 = 1;
     }
 
     impl AttestationResponse {
@@ -610,7 +590,7 @@ pub mod v2 {
 
     /// Request for a derived key.
     ///
-    /// See Table 18 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+    /// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
     #[repr(C)]
     #[derive(Debug, IntoBytes, FromBytes)]
     pub struct KeyRequest {
@@ -637,13 +617,8 @@ pub mod v2 {
     }
 
     impl Message for KeyRequest {
-        fn get_message_type() -> MessageType {
-            MessageType::KeyRequest
-        }
-
-        fn get_message_version() -> u8 {
-            2
-        }
+        const MESSAGE_TYPE: MessageType = MessageType::KeyRequest;
+        const MESSAGE_VERSION: u8 = 2;
     }
 }
 
