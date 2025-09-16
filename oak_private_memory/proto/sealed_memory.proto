@@ -48,12 +48,15 @@ message MemoryContent {
 }
 
 message LLMView {
-  string id = 1;
-  Embedding embedding = 2;
-  string content = 3;
+  // Reserved a bunch of fields for later uses.
+  reserved 1 to 10;
+
+  Embedding embedding = 11;
+  // The textual representation of the part of the memory that we embed.
+  string text_view = 12;
 }
 
-message MemoryViews {
+message LLMViews {
   repeated LLMView llm_views = 1;
 }
 
@@ -71,7 +74,7 @@ message Memory {
   // used.
   google.protobuf.Timestamp event_timestamp = 7;
 
-  MemoryViews views = 8;
+  LLMViews views = 8;
 }
 
 enum MemoryField {

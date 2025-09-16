@@ -26,7 +26,7 @@ use private_memory_server_lib::{
     app::{run_persistence_service, ApplicationConfig},
 };
 use sealed_memory_rust_proto::{
-    oak::private_memory::{text_query, LlmView, MatchType, MemoryViews, TextQuery},
+    oak::private_memory::{text_query, LlmView, LlmViews, MatchType, TextQuery},
     prelude::v1::*,
 };
 use tokio::net::TcpListener;
@@ -72,9 +72,8 @@ async fn test_client() {
             PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
                 .await
                 .unwrap();
-        let memory_view = MemoryViews {
+        let llm_view = LlmViews {
             llm_views: vec![LlmView {
-                id: "test_view_id".to_string(),
                 embedding: Some(Embedding {
                     identifier: "test_model".to_string(),
                     values: vec![1.0, 0.0, 0.0],
@@ -86,7 +85,7 @@ async fn test_client() {
         let memory_to_add = Memory {
             id: memory_id.to_string(),
             tags: vec!["test_tag".to_string()],
-            views: Some(memory_view),
+            views: Some(llm_view),
             ..Default::default()
         };
 
@@ -120,9 +119,8 @@ async fn test_client_pagination() {
             let memory_to_add = Memory {
                 id: memory_id,
                 tags: vec![tag.to_string()],
-                views: Some(MemoryViews {
+                views: Some(LlmViews {
                     llm_views: vec![LlmView {
-                        id: format!("view_{}", i),
                         embedding: Some(Embedding {
                             identifier: "test_model".to_string(),
                             values: vec![1.0, 0.0, 0.0],

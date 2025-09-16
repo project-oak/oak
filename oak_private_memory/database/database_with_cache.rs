@@ -69,19 +69,8 @@ impl DatabaseWithCache {
         }
     }
 
-    fn add_view_ids(&mut self, memory: &mut Memory) {
-        if let Some(views) = memory.views.as_mut() {
-            for view in &mut views.llm_views {
-                if view.id.is_empty() {
-                    view.id = rand::rng().random::<u64>().to_string();
-                }
-            }
-        }
-    }
-
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
         self.add_memory_id(&mut memory);
-        self.add_view_ids(&mut memory);
         let blob_id = self.cache.add_memory(&memory).await?;
         self.meta_db().add_memory(&memory, blob_id)?;
         Ok(memory.id)

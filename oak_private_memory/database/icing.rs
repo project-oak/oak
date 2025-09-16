@@ -96,7 +96,7 @@ const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
 
-const LLM_VIEW_SCHEMA_NAME: &str = "LLMView";
+const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
 
 /// A representation of a mutation operation.
@@ -111,7 +111,7 @@ enum MutationOperation {
     // contains only the metadata changes that need to be re-written to a new database version on
     // version conflicts.
     AddMemory(PendingMetadata),
-    AddView(PendingLLMViewMetadata),
+    AddView(PendingLlmViewMetadata),
 
     // The item with the given ID was removed.
     // Note that exact operation timing is not maintained. So if another session
@@ -176,14 +176,14 @@ impl PendingMetadata {
 /// This contains the information needed to write the metadata to the icing
 /// database.
 #[derive(Debug, Clone)]
-struct PendingLLMViewMetadata {
+struct PendingLlmViewMetadata {
     icing_document: DocumentProto,
 }
 
-impl PendingLLMViewMetadata {
+impl PendingLlmViewMetadata {
     pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> Option<Self> {
         let memory_id = &memory.id;
-        let view_id = &view.id;
+        let view_id = rand::rng().random::<u64>().to_string();
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embedding = view.embedding.as_ref()?;
         let embeddings =
@@ -297,8 +297,8 @@ impl IcingMetaDatabase {
                     ),
             );
 
-        let llm_view_schema_type_builder = icing::create_schema_type_config_builder();
-        llm_view_schema_type_builder
+        let memory_view_schema_type_builder = icing::create_schema_type_config_builder();
+        memory_view_schema_type_builder
             .set_type(LLM_VIEW_SCHEMA_NAME.as_bytes())
             .add_property(
                 icing::create_property_config_builder()
@@ -367,7 +367,7 @@ impl IcingMetaDatabase {
 
         let schema_builder = icing::create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        schema_builder.add_type(&llm_view_schema_type_builder);
+        schema_builder.add_type(&memory_view_schema_type_builder);
         schema_builder.build()
     }
 
@@ -422,18 +422,18 @@ impl IcingMetaDatabase {
             for view in &views.llm_views {
                 // TODO: yongheng - Generate view id if not provided.
                 if let Some(pending_view_metadata) =
-                    PendingLLMViewMetadata::new(memory, view, &blob_id)
+                    PendingLlmViewMetadata::new(memory, view, &blob_id)
                 {
-                    self.add_pending_llm_view_metadata(pending_view_metadata)?;
+                    self.add_pending_memory_view_metadata(pending_view_metadata)?;
                 }
             }
         }
         Ok(())
     }
 
-    fn add_pending_llm_view_metadata(
+    fn add_pending_memory_view_metadata(
         &mut self,
-        pending_metadata: PendingLLMViewMetadata,
+        pending_metadata: PendingLlmViewMetadata,
     ) -> anyhow::Result<()> {
         let result = self.icing_search_engine.put(pending_metadata.document());
         if result.status.clone().context("no status")?.code
@@ -1034,7 +1034,7 @@ impl IcingMetaDatabase {
                     new_db.add_pending_metadata(pending_metadata.clone())
                 }
                 MutationOperation::AddView(pending_view_metadata) => {
-                    new_db.add_pending_llm_view_metadata(pending_view_metadata.clone())
+                    new_db.add_pending_memory_view_metadata(pending_view_metadata.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
                 MutationOperation::Reset => {
@@ -1103,7 +1103,7 @@ impl From<u64> for PageToken {
 #[cfg(test)]
 mod tests {
     use googletest::prelude::*;
-    use sealed_memory_rust_proto::oak::private_memory::MemoryViews;
+    use sealed_memory_rust_proto::oak::private_memory::LlmViews;
 
     use super::*;
 
@@ -1212,12 +1212,8 @@ mod tests {
         let memory1 = Memory {
             id: memory_id1.clone(),
             tags: vec!["embed_tag".to_string()],
-            views: Some(MemoryViews {
-                llm_views: vec![LlmView {
-                    id: "view1".to_string(),
-                    embedding: Some(embedding1),
-                    ..Default::default()
-                }],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView { embedding: Some(embedding1), ..Default::default() }],
             }),
             ..Default::default()
         };
@@ -1232,12 +1228,8 @@ mod tests {
         let memory2 = Memory {
             id: memory_id2.clone(),
             tags: vec!["embed_tag".to_string()],
-            views: Some(MemoryViews {
-                llm_views: vec![LlmView {
-                    id: "view2".to_string(),
-                    embedding: Some(embedding2),
-                    ..Default::default()
-                }],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView { embedding: Some(embedding2), ..Default::default() }],
             }),
             ..Default::default()
         };
