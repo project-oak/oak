@@ -28,11 +28,9 @@ use oak_proto_rust::oak::{
     HexDigest,
 };
 use prost::Message;
+use verify_endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE};
 
-use crate::{
-    endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE},
-    test_util::{self, GetValidity},
-};
+use crate::test_util::{self, GetValidity};
 
 // Returns milliseconds UTC in the middle of the validity period.
 fn make_valid_now_utc_millis(validity: &Validity) -> i64 {

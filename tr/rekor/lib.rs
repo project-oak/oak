@@ -14,11 +14,7 @@
 // limitations under the License.
 //
 
-//! Provides building and parsing of custom endorsement statements.
-
 #![no_std]
 
-pub mod statement;
-
-#[cfg(test)]
-mod tests;
+pub mod log_entry;
+mod util;

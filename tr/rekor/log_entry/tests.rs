@@ -13,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#[cfg(test)]
+
 extern crate std;
+use test_util::EndorsementData;
 
-use test_util::endorsement_data::EndorsementData;
-
-use crate::rekor::{parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature};
+use crate::log_entry::{
+    parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature,
+};
 
 #[test]
 fn test_verify_rekor_signature_success() {

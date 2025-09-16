@@ -18,43 +18,9 @@ extern crate std;
 
 use alloc::vec::Vec;
 
-use intoto::statement::parse_statement;
-use oak_time::Duration;
 use test_util::endorsement_data::EndorsementData;
 
 use crate::endorsement::{verify_binary_endorsement, verify_endorser_public_key_ecdsa};
-
-#[test]
-fn test_validate_endorsement_statement_success() {
-    let d = EndorsementData::load();
-    let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
-
-    let result = statement.validate(None, d.make_valid_time(), &[]);
-
-    assert!(result.is_ok(), "{:?}", result);
-}
-
-#[test]
-fn test_validate_endorsement_statement_fails_too_early() {
-    let d = EndorsementData::load();
-    let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
-    let too_early = d.valid_not_before - Duration::from_seconds(24 * 3_600);
-
-    let result = statement.validate(None, too_early, &[]);
-
-    assert!(result.is_err(), "{:?}", result);
-}
-
-#[test]
-fn test_validate_statement_fails_too_late() {
-    let d = EndorsementData::load();
-    let statement = parse_statement(&d.endorsement).expect("could not parse endorsement statement");
-    let too_late = d.valid_not_after + Duration::from_seconds(24 * 3_600);
-
-    let result = statement.validate(None, too_late, &[]);
-
-    assert!(result.is_err(), "{:?}", result);
-}
 
 #[test]
 fn test_verify_endorser_public_key_ecdsa_success() {

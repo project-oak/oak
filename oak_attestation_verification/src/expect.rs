@@ -52,10 +52,9 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use prost::Message;
+use verify_endorsement::{is_firmware_type, is_kernel_type, verify_endorsement};
 
-use crate::endorsement::{
-    is_firmware_type, is_kernel_type, verify_binary_endorsement, verify_endorsement,
-};
+use crate::endorsement::verify_binary_endorsement;
 
 // Create the set of [ExpectedValues] for the provided [endorsements] and
 // [reference_values]. These can be cached by the client for as long as the

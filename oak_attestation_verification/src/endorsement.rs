@@ -14,93 +14,16 @@
 // limitations under the License.
 //
 
-//! Contains endorsement verification. All public calls must happen through
-//! verify_endorsement() in lib.rs.
-
-extern crate alloc;
-
-use alloc::vec::Vec;
+//! TODO: b/379253152 - Entire module is deprecated and will be removed.
 
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use intoto::statement::{parse_statement, DefaultStatement};
-use oak_proto_rust::oak::attestation::v1::{
-    verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
-    VerifyingKeySet,
-};
+use intoto::statement::parse_statement;
+use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
 use oak_time::Instant;
-
-use crate::{
-    rekor::{
-        parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry,
-        verify_rekor_log_entry_ecdsa,
-    },
-    util::{convert_pem_to_raw, equal_keys, verify_signature, verify_signature_ecdsa},
+use rekor::log_entry::{
+    parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry_ecdsa,
 };
-
-/// No attempt will be made to decode the attachment of a firmware-type
-/// binary unless this claim is present in the endorsement.
-pub(crate) const FIRMWARE_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md";
-
-/// No attempt will be made to decode the attachment of a kernel-type
-/// binary unless this claim is present in the endorsement.
-pub(crate) const KERNEL_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
-
-/// Verifies a signed endorsement against a reference value.
-///
-/// Returns the parsed statement whenever the verification succeeds, or an error
-/// otherwise.
-///
-/// `now_utc_millis`: The current time in milliseconds UTC since Unix Epoch.
-/// `signed_endorsement`: The endorsement along with signature and (optional)
-///     Rekor log entry.
-/// `ref_value`: A reference value containing e.g. the public keys needed
-///     for the verification. The deprecated fields `endorser_public_key` and
-///     `rekor_public_key` will be ignored.
-pub(crate) fn verify_endorsement(
-    now_utc_millis: i64,
-    signed_endorsement: &SignedEndorsement,
-    ref_value: &EndorsementReferenceValue,
-) -> anyhow::Result<DefaultStatement> {
-    let endorsement =
-        signed_endorsement.endorsement.as_ref().context("no endorsement in signed endorsement")?;
-    let signature =
-        signed_endorsement.signature.as_ref().context("no signature in signed endorsement")?;
-    let endorser_key_set =
-        ref_value.endorser.as_ref().context("no endorser key set in signed endorsement")?;
-    let required_claims = ref_value.required_claims.as_ref().context("required claims missing")?;
-
-    // The signature verification is also part of log entry verification,
-    // so in some cases this check will be dispensable. We verify the
-    // signature nonetheless before parsing the endorsement.
-    verify_signature(signature, &endorsement.serialized, endorser_key_set)
-        .context("verifying signature")?;
-
-    let statement =
-        parse_statement(&endorsement.serialized).context("parsing endorsement statement")?;
-    let current_time = Instant::from_unix_millis(now_utc_millis);
-    let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
-    statement.validate(None, current_time, &claims).context("validating endorsement statement")?;
-
-    let rekor_ref_value =
-        ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
-    match rekor_ref_value.r#type.as_ref() {
-        Some(verifying_key_reference_value::Type::Skip(_)) => Ok(statement),
-        Some(verifying_key_reference_value::Type::Verify(key_set)) => {
-            let log_entry = &signed_endorsement.rekor_log_entry;
-            if log_entry.is_empty() {
-                anyhow::bail!("log entry unavailable but verification was requested");
-            }
-            verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized, now_utc_millis)
-                .context("verifying rekor log entry")?;
-            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)?;
-            Ok(statement)
-        }
-        None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
-    }
-}
 
 /// Verifies the binary endorsement against log entry and public keys.
 ///
@@ -148,22 +71,6 @@ pub(crate) fn verify_binary_endorsement(
     Ok(())
 }
 
-fn verify_endorser_public_key(
-    log_entry: &[u8],
-    signature_key_id: u32,
-    endorser_key_set: &VerifyingKeySet,
-) -> anyhow::Result<()> {
-    let key = endorser_key_set
-        .keys
-        .iter()
-        .find(|k| k.key_id == signature_key_id)
-        .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
-    match key.r#type() {
-        KeyType::Undefined => anyhow::bail!("Undefined key type"),
-        KeyType::EcdsaP256Sha256 => verify_endorser_public_key_ecdsa(log_entry, &key.raw),
-    }
-}
-
 /// Verifies that the endorser public key coincides with the one contained in
 /// the attestation.
 fn verify_endorser_public_key_ecdsa(
@@ -194,14 +101,6 @@ fn verify_endorser_public_key_ecdsa(
     }
 
     Ok(())
-}
-
-pub(crate) fn is_firmware_type(statement: &DefaultStatement) -> bool {
-    statement.predicate.claims.iter().any(|x| x.r#type == FIRMWARE_CLAIM_TYPE)
-}
-
-pub(crate) fn is_kernel_type(statement: &DefaultStatement) -> bool {
-    statement.predicate.claims.iter().any(|x| x.r#type == KERNEL_CLAIM_TYPE)
 }
 
 #[cfg(test)]

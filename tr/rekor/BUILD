@@ -1,3 +1,4 @@
+#
 # Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,31 +17,31 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
-    default_visibility = ["//:default_visibility"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
 rust_library(
-    name = "intoto",
+    name = "rekor",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//oak_proto_rust",
         "//oak_time",
         "//tr/digest_util",
+        "//tr/key_util",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:base64",
         "@oak_crates_index//:hex",
-        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
     ],
 )
 
 rust_test(
-    name = "intoto_tests",
-    crate = ":intoto",
+    name = "rekor_tests",
+    crate = ":rekor",
     deps = [
         "//oak_attestation_verification:test_util",
-        "//oak_file_utils",
         "@oak_crates_index//:prost-types",
     ],
 )
