@@ -150,3 +150,8 @@ justfile.local
 
 terraform.tfstate
 terraform.tfstate.backup
+
+# Forma proto schema.
+#
+# For more info see comments in justfile.
+/proto_schema_out
