@@ -25,6 +25,7 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The full reference of the container image to run, e.g., 'IMAGE_URL:latest' or 'IMAGE_URL@sha256:DIGEST'."
+  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/attested-gemma/attested-gemma:latest"
 }
 
 variable "exposed_port" {

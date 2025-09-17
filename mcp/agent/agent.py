@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+from typing import Optional
+
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import (
@@ -22,11 +24,26 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
 )
 
 
-def create_agent(mcp_server_url: str) -> Agent:
-    """Creates an agent with a configurable MCP server URL."""
+def create_agent(mcp_server_url: Optional[str] = None) -> Agent:
+    """Creates an agent with a configurable MCP server URL.
+
+    Args:
+        mcp_server_url: The URL of the MCP server. If None or empty, the agent
+          will be created without MCP tools.
+    """
+    tools = []
+    if mcp_server_url:
+        tools = [
+            MCPToolset(
+                connection_params=StreamableHTTPConnectionParams(
+                    url=mcp_server_url,
+                    timeout=30.0,
+                ),
+            )
+        ]
     return Agent(
         name="weather_agent",
-        model=LiteLlm(model="ollama/gemma:2b"),
+        model=LiteLlm(model="ollama/gemma3:4b"),
         description=(
             "Agent to answer questions about the weather at the current user"
             " location."
@@ -35,12 +52,8 @@ def create_agent(mcp_server_url: str) -> Agent:
             "You are a helpful agent who can provide current user location and"
             " also tell weather at this location."
         ),
-        tools=[
-            MCPToolset(
-                connection_params=StreamableHTTPConnectionParams(
-                    url=mcp_server_url,
-                    timeout=30.0,
-                ),
-            )
-        ],
+        tools=tools,
     )
+
+
+root_agent = create_agent()

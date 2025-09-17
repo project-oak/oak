@@ -14,10 +14,11 @@ ENV OLLAMA_KEEP_ALIVE=-1
 ENV OLLAMA_ORIGINS=*
 
 # Start a temporary Ollama server and save the model weights in /models.
-ARG MODEL=gemma:2b
+ARG MODEL=gemma3
+ARG MODEL_PARAMS=4b
 ARG MODELS_DIR=/models
 ENV OLLAMA_MODELS=${MODELS_DIR}
-RUN /bin/ollama serve & sleep 5 && ollama pull ${MODEL}
+RUN /bin/ollama serve & sleep 5 && ollama pull ${MODEL}:${MODEL_PARAMS}
 
 # The model digest can be extracted from the model card.
 #
@@ -29,17 +30,17 @@ RUN /bin/ollama serve & sleep 5 && ollama pull ${MODEL}
 # 2) Then run Python in a separate terminal and execute the following code:
 # ```python
 # import ollama
-# ollama.pull('gemma:2b') # This will take some time.
+# ollama.pull('gemma3:4b') # This will take some time.
 # models = ollama.list().models
 # print(models[0]['digest'])
 # ```
-ARG MODEL_SHA256SUM=b50d6c999e592ae4f79acae23b4feaefbdfceaa7cd366df2610e3072c052a160
+ARG MODEL_SHA256SUM=a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a
 
 # Verify the digest of the downloaded model.
 # Currently we are only verifying the digest of a model manifest, i.e. an Ollama
 # specific file that contains digests of all model related files stored in the
 # Ollama repository.
-RUN bash -o pipefail -c 'echo "${MODEL_SHA256SUM} ${MODELS_DIR}/manifests/registry.ollama.ai/library/gemma/2b" | sha256sum --check'
+RUN bash -o pipefail -c 'echo "${MODEL_SHA256SUM} ${MODELS_DIR}/manifests/registry.ollama.ai/library/${MODEL}/${MODEL_PARAMS}" | sha256sum --check'
 
 # Copy the Oak Proxy binary from the first stage and the config file from the
 # build context.
