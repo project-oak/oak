@@ -27,6 +27,10 @@ impl linter::LinterTool for HadolintTool {
     }
 
     fn check(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
-        super::linter_command("hadolint", &[], path)
+        // Ignore Invalid Label Keys (DL3048), which is currently triggered by
+        // underscored in Dockerfile labels. But underscores are specified in
+        // the Confidential Space [documentation](https://cloud.google.com/confidential-computing/confidential-space/docs/reference/launch-policies)
+        // and are also allowed in Docker format [recommendations](https://docs.docker.com/engine/manage-resources/labels/#key-format-recommendations).
+        super::linter_command("hadolint", &["--ignore", "DL3048"], path)
     }
 }
