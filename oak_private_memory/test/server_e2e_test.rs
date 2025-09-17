@@ -13,57 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    collections::HashMap,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-};
+use std::{collections::HashMap, time::Duration};
 
-use anyhow::Result;
 use client::{PrivateMemoryClient, SerializationFormat};
-use private_memory_server_lib::app::{self, run_persistence_service, ApplicationConfig};
+use private_memory_test_utils::start_server;
 use sealed_memory_rust_proto::{
-    oak::private_memory::{text_query, MatchType, TextQuery},
+    oak::private_memory::{memory_value, text_query, MatchType, TextQuery},
     prelude::v1::*,
 };
-use tokio::{
-    net::TcpListener,
-    sync::mpsc as tokio_mpsc,
-    time::{sleep, Duration},
-};
-
-fn init_logging() {
-    let _ = env_logger::builder().is_test(true).try_init();
-}
+use tokio::time::sleep;
 
 static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
-
-async fn start_server() -> Result<(
-    SocketAddr,
-    tokio::task::JoinHandle<Result<()>>,
-    tokio::task::JoinHandle<Result<()>>,
-    tokio::task::JoinHandle<()>,
-)> {
-    init_logging();
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let listener = TcpListener::bind(addr).await?;
-    let addr = listener.local_addr()?;
-
-    let db_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let db_listener = TcpListener::bind(db_addr).await?;
-    let db_addr = db_listener.local_addr()?;
-
-    let application_config = ApplicationConfig { database_service_host: db_addr };
-
-    let metrics = private_memory_server_lib::metrics::get_global_metrics();
-    let (persistence_tx, persistence_rx) = tokio_mpsc::unbounded_channel();
-    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
-    Ok((
-        addr,
-        tokio::spawn(app::service::create(listener, application_config, metrics, persistence_tx)),
-        tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
-        persistence_join_handle,
-    ))
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_get_reset_memory_all_modes() {

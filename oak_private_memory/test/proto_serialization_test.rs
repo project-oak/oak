@@ -13,18 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Once;
+
 use log::info;
 use prost::Message;
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::prelude::v1::*;
 
-fn init_logging() {
-    let _ = env_logger::builder().is_test(true).try_init();
+static INIT: Once = Once::new();
+
+fn setup() {
+    INIT.call_once(|| {
+        env_logger::builder().is_test(true).try_init().unwrap();
+    });
 }
 
 #[test]
 fn test_key_sync_request_serialization() {
-    init_logging();
+    setup();
     let request =
         KeySyncRequest { pm_uid: "12345678910".to_string(), key_encryption_key: vec![1, 2, 3] };
     info!("Serailization {:?}", serde_json::to_string(&request));
@@ -35,7 +41,7 @@ fn test_key_sync_request_serialization() {
 
 #[test]
 fn test_key_sync_response_serialization() {
-    init_logging();
+    setup();
     let key_sync_response = KeySyncResponse { status: key_sync_response::Status::Success as i32 };
     let json_str2 = r#"{"status":"SUCCESS"}"#;
     let key_sync_response_from_string_num =
@@ -55,7 +61,7 @@ fn test_key_sync_response_serialization() {
 
 #[test]
 fn test_user_registration_response_serialization() {
-    init_logging();
+    setup();
     let user_registration_response = UserRegistrationResponse {
         status: user_registration_response::Status::UserAlreadyExists as i32,
         ..Default::default()
@@ -71,7 +77,7 @@ fn test_user_registration_response_serialization() {
 
 #[test]
 fn test_result_mask_serialization() {
-    init_logging();
+    setup();
     let result_mask = ResultMask {
         include_fields: vec![MemoryField::Id as i32, MemoryField::Tags as i32],
         include_content_fields: vec!["content_key_str".to_string()],
@@ -84,7 +90,7 @@ fn test_result_mask_serialization() {
 
 #[test]
 fn test_memory_value_serialization() {
-    init_logging();
+    setup();
     let memory_value =
         MemoryValue { value: Some(memory_value::Value::Int64Val(12345)), ..Default::default() };
     let json_str6 = r#"{"int64Val":"12345"}"#;
@@ -94,7 +100,7 @@ fn test_memory_value_serialization() {
 
 #[test]
 fn test_memory_with_timestamp_serialization() {
-    init_logging();
+    setup();
     let timestamp = Timestamp { seconds: 1733152000, nanos: 0 };
     let memory = Memory { created_timestamp: Some(timestamp), ..Default::default() };
     let json_str7 = r#"{"createdTimestamp":"2024-12-02T15:06:40+00:00"}"#;

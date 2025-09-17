@@ -166,6 +166,18 @@ cc_test(
     ],
 )
 
+rust_library(
+    name = "private_memory_test_utils",
+    srcs = ["test/test_utils.rs"],
+    deps = [
+        ":private_memory_server_lib",
+        ":private_memory_test_database_server_lib",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:tokio",
+    ],
+)
+
 rust_test(
     name = "server_e2e_test",
     srcs = ["test/server_e2e_test.rs"],
@@ -174,6 +186,7 @@ rust_test(
         ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
+        ":private_memory_test_utils",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_client",
@@ -216,6 +229,7 @@ rust_test(
         ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
+        ":private_memory_test_utils",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_client",
@@ -238,21 +252,8 @@ rust_test(
 )
 
 rust_test(
-    name = "text_search_test",
-    srcs = ["test/text_search_test.rs"],
-    deps = [
-        "//database",
-        "//proto:sealed_memory_rust_proto",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:googletest",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tempfile",
-    ],
-)
-
-rust_test(
-    name = "embedding_search_test",
-    srcs = ["test/embedding_search_test.rs"],
+    name = "search_test",
+    srcs = ["test/search_test.rs"],
     deps = [
         "//database",
         "//proto:sealed_memory_rust_proto",

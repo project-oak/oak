@@ -14,51 +14,16 @@
 // limitations under the License.
 //
 
-use std::{
-    collections::HashSet,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-};
+use std::collections::HashSet;
 
-use anyhow::Result;
 use client::{PrivateMemoryClient, SerializationFormat};
-use private_memory_server_lib::{
-    app,
-    app::{run_persistence_service, ApplicationConfig},
-};
+use private_memory_test_utils::start_server;
 use sealed_memory_rust_proto::{
     oak::private_memory::{text_query, LlmView, LlmViews, MatchType, TextQuery},
     prelude::v1::*,
 };
-use tokio::net::TcpListener;
 
 static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
-
-async fn start_server() -> Result<(
-    SocketAddr,
-    tokio::task::JoinHandle<Result<()>>,
-    tokio::task::JoinHandle<Result<()>>,
-    tokio::task::JoinHandle<()>,
-)> {
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let listener = TcpListener::bind(addr).await?;
-    let addr = listener.local_addr()?;
-
-    let db_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let db_listener = TcpListener::bind(db_addr).await?;
-    let db_addr = db_listener.local_addr()?;
-
-    let application_config = ApplicationConfig { database_service_host: db_addr };
-
-    let metrics = private_memory_server_lib::metrics::get_global_metrics();
-    let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
-    let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
-    Ok((
-        addr,
-        tokio::spawn(app::service::create(listener, application_config, metrics, persistence_tx)),
-        tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
-        persistence_join_handle,
-    ))
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_client() {
