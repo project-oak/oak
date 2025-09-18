@@ -8,12 +8,15 @@ resource "google_compute_instance" "attested_gemma" {
   scheduling {
     automatic_restart   = false
     on_host_maintenance = "TERMINATE"
+    provisioning_model  = "SPOT"
+    preemptible         = true
   }
 
   # The boot disk is configured to use the Confidential Space image.
   boot_disk {
     initialize_params {
-      image = "projects/confidential-space-images/global/images/family/confidential-space"
+      image = "projects/confidential-space-images/global/images/family/confidential-space-preview-cgpu"
+      size  = 30
     }
   }
 
@@ -45,10 +48,16 @@ resource "google_compute_instance" "attested_gemma" {
   metadata = {
     tee-image-reference        = var.image_digest
     tee-container-log-redirect = "true"
+    tee-install-gpu-driver     = "true"
   }
 
   # Add a tag to create corresponding firewall rules for.
   tags = ["attested-gemma"]
+
+  guest_accelerator {
+    count = 1
+    type  = "nvidia-h100-80gb"
+  }
 
   # Allow Terraform to delete the instance.
   allow_stopping_for_update = true

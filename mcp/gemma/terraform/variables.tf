@@ -7,7 +7,7 @@ variable "gcp_project_id" {
 variable "zone" {
   type        = string
   description = "The GCP zone to deploy the resources in."
-  default     = "us-west1-b"
+  default     = "us-east5-a"
 }
 
 variable "instance_name" {
@@ -19,7 +19,7 @@ variable "instance_name" {
 variable "machine_type" {
   type        = string
   description = "The machine type for the GCE instance."
-  default     = "c3-standard-4"
+  default     = "a3-highgpu-1g"
 }
 
 variable "image_digest" {

@@ -21,7 +21,7 @@ module "gemma" {
   gcp_project_id = var.gcp_project_id
   zone           = var.zone
   instance_name  = "attested-gemma"
-  machine_type   = "c3-standard-4"
+  machine_type   = "a3-highgpu-1g"
   image_digest   = var.gemma_image_digest
   exposed_port   = 8080
 }
