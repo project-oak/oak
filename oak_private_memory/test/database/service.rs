@@ -21,10 +21,10 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, ReadDataBlobRequest, ReadDataBlobResponse, ReadUnencryptedDataBlobRequest,
-    ReadUnencryptedDataBlobResponse, ResetDatabaseRequest, ResetDatabaseResponse,
-    WriteBlobsRequest, WriteBlobsResponse, WriteDataBlobRequest, WriteDataBlobResponse,
-    WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
+    DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, ReadDataBlobRequest, ReadDataBlobResponse,
+    ReadUnencryptedDataBlobRequest, ReadUnencryptedDataBlobResponse, ResetDatabaseRequest,
+    ResetDatabaseResponse, WriteBlobsRequest, WriteBlobsResponse, WriteDataBlobRequest,
+    WriteDataBlobResponse, WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
 };
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
@@ -130,6 +130,18 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
             self.unencrypted_database.lock().await.insert(blob.id.clone(), blob);
         }
         Ok(tonic::Response::new(WriteBlobsResponse {}))
+    }
+
+    async fn delete_blobs(
+        &self,
+        request: tonic::Request<DeleteBlobsRequest>,
+    ) -> Result<tonic::Response<DeleteBlobsResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let mut db = self.database.lock().await;
+        for id in request.ids {
+            db.remove(&id);
+        }
+        Ok(tonic::Response::new(DeleteBlobsResponse {}))
     }
 }
 

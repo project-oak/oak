@@ -70,6 +70,12 @@ message WriteBlobsRequest {
 
 message WriteBlobsResponse {}
 
+message DeleteBlobsRequest {
+  repeated string ids = 1;
+}
+
+message DeleteBlobsResponse {}
+
 // The untrusted database service that the trusted application can connect to.
 service SealedMemoryDatabaseService {
   // Writes a data blob to the database.
@@ -90,4 +96,7 @@ service SealedMemoryDatabaseService {
   // batch. Backend implementation should guarantee that either all blobs are
   // written or none are written.
   rpc WriteBlobs(WriteBlobsRequest) returns (WriteBlobsResponse) {}
+
+  // Deletes multiple blobs from the database.
+  rpc DeleteBlobs(DeleteBlobsRequest) returns (DeleteBlobsResponse) {}
 }

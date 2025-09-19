@@ -137,7 +137,8 @@ impl MemoryCache {
         for blob_id in blob_ids {
             self.content_cache.remove(blob_id);
         }
-        // Todo: Delete from external DB
+        // Delete from external DB
+        DataBlobHandler::delete_blobs(&mut self.db_client, blob_ids).await?;
 
         Ok(())
     }

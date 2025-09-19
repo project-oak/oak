@@ -19,8 +19,9 @@ use log::info;
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, EncryptedDataBlob, ReadDataBlobRequest, ReadUnencryptedDataBlobRequest,
-    WriteBlobsRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
+    DataBlob, DeleteBlobsRequest, EncryptedDataBlob, ReadDataBlobRequest,
+    ReadUnencryptedDataBlobRequest, WriteBlobsRequest, WriteDataBlobRequest,
+    WriteUnencryptedDataBlobRequest,
 };
 use tonic::{transport::Channel, Code};
 
@@ -70,6 +71,8 @@ pub trait DataBlobHandler {
         encrypted_ids: Option<Vec<BlobId>>,
         unencrypted_blobs: Vec<DataBlob>,
     ) -> anyhow::Result<()>;
+
+    async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -239,6 +242,11 @@ impl DataBlobHandler for ExternalDbClient {
         self.write_blobs(request)
             .await
             .map_err(|e| anyhow::anyhow!("gRPC call to WriteBlobs failed: {:?}", e))?;
+        Ok(())
+    }
+
+    async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()> {
+        self.delete_blobs(DeleteBlobsRequest { ids: ids.to_vec() }).await?;
         Ok(())
     }
 }
