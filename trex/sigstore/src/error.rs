@@ -16,8 +16,6 @@
 
 //! General error type for the sigstore crate.
 
-use crate::rekor::{hashedrekord::HashedRekordError, RekorError};
-
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("JSON error: {0}")]
@@ -36,9 +34,4 @@ pub enum Error {
     PublicKeyBytes(#[from] core::str::Utf8Error),
     #[error("Error while decoding public key from PEM: {0:?}")]
     PublicKeyPem(p256::pkcs8::Error),
-
-    #[error(transparent)]
-    Rekor(#[from] RekorError),
-    #[error(transparent)]
-    HashedRekord(#[from] HashedRekordError),
 }

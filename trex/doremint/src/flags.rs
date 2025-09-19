@@ -18,9 +18,9 @@ use std::{
 };
 
 use anyhow::Context;
+use key_util::convert_pem_to_raw;
 use oak_time::{Duration, Instant};
 use oak_time_std::instant::now;
-use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use serde::Deserialize;
 
 #[derive(Clone, Debug)]
@@ -89,8 +89,7 @@ pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<Instant> {
     }
 }
 
-pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<VerifyingKey, anyhow::Error> {
+pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<Vec<u8>, anyhow::Error> {
     let public_key_pem = fs::read_to_string(key_path)?;
-    VerifyingKey::from_public_key_pem(&public_key_pem)
-        .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))
+    convert_pem_to_raw(&public_key_pem)
 }

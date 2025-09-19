@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "rekor",
     srcs = glob(["**/*.rs"]),
+    compile_data = ["//oak_attestation_verification/testdata:endorsement"],
     deps = [
         "//oak_proto_rust",
         "//oak_time",

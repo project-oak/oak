@@ -42,7 +42,7 @@ use oak_session::{
 };
 use oak_time::Clock;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
-use sigstore::rekor::REKOR_PUBLIC_KEY_PEM;
+use rekor::get_rekor_v1_public_key_raw;
 use tonic::transport::{Channel, Uri};
 
 const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
@@ -75,7 +75,7 @@ impl EchoClient {
 
         // We don't have a noise client impl yet, so we need to manage the session
         // manually.
-        let rekor_public_key = VerifyingKey::from_public_key_pem(REKOR_PUBLIC_KEY_PEM)
+        let rekor_public_key = VerifyingKey::from_public_key_der(&get_rekor_v1_public_key_raw())
             .map_err(|e| anyhow::anyhow!("failed to parse rekor public key: {}", e))?;
 
         let reference_values = ConfidentialSpaceReferenceValues {

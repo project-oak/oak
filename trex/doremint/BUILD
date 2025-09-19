@@ -23,13 +23,14 @@ package(
 rust_binary(
     name = "doremint",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = ["//trex/doremint/data:rekor_public_key.pem"],
     deps = [
         "//oak_proto_rust",
         "//oak_time",
         "//oak_time:oak_time_std",
         "//tr/digest_util",
         "//tr/intoto",
+        "//tr/key_util",
+        "//tr/rekor",
         "//trex/sigstore",
         "//trex/sigstore_client",
         "@oak_crates_index//:anyhow",

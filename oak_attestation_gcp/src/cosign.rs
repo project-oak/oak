@@ -24,13 +24,8 @@ use oak_proto_rust_lib::parse_p256_ecdsa_verifying_key;
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use p256::ecdsa::VerifyingKey;
-use sigstore::{
-    message::{SignedMessage, Unverified},
-    rekor::{
-        hashedrekord::{self, HashedRekord},
-        RekorPayload,
-    },
-};
+use rekor::log_entry::{verify_rekor_log_entry_ecdsa, LogEntry};
+use sigstore::message::{SignedMessage, Unverified};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -47,8 +42,8 @@ pub enum CosignVerificationError {
     StatementParseError(String),
     #[error("invalid image reference: {0}")]
     ImageReferenceError(String),
-    #[error("rekor error {0}: {1}")]
-    RekorError(&'static str, sigstore::error::Error),
+    #[error("rekor error {0}")]
+    RekorError(&'static str),
     #[error("rekor payload deserialization error: {0}")]
     RekorPayloadParseError(serde_json::Error),
     #[error("Invalid verifying key: {0}")]
@@ -61,32 +56,36 @@ pub enum CosignVerificationError {
 
 pub struct CosignEndorsement {
     statement: SignedMessage<Unverified>,
-    rekor: Option<SignedMessage<Unverified>>,
+
+    /// A serialized Rekor log entry.
+    serialized_log_entry: Option<String>,
 }
 
 impl CosignEndorsement {
     pub fn partial(statement: SignedMessage<Unverified>) -> Self {
-        Self { statement, rekor: None }
+        Self { statement, serialized_log_entry: None }
     }
 
-    pub fn full(statement: SignedMessage<Unverified>, rekor: SignedMessage<Unverified>) -> Self {
-        Self { statement, rekor: Some(rekor) }
+    pub fn full(statement: SignedMessage<Unverified>, serialized_log_entry: String) -> Self {
+        Self { statement, serialized_log_entry: Some(serialized_log_entry) }
     }
 
     pub fn from_bytes_partial(statement: Vec<u8>, signature: Vec<u8>) -> Self {
         let statement = SignedMessage::unverified(statement, signature);
-        Self { statement, rekor: None }
+        Self { statement, serialized_log_entry: None }
     }
 
     pub fn from_bytes_full(
         statement: Vec<u8>,
         signature: Vec<u8>,
-        rekor: Vec<u8>,
+        cosign_bundle: Vec<u8>,
     ) -> Result<Self, CosignVerificationError> {
         let statement = SignedMessage::unverified(statement, signature);
-        let rekor = sigstore::rekor::from_cosign_bundle(rekor)
-            .map_err(|err| CosignVerificationError::RekorError("parsing cosign bundle", err))?;
-        Ok(Self { statement, rekor: Some(rekor) })
+        let log_entry = LogEntry::from_cosign_bundle(&cosign_bundle)
+            .map_err(|_| CosignVerificationError::RekorError("failed to parse cosign bundle"))?;
+        let log_entry_serialized: String = serde_json::to_string(&log_entry)
+            .map_err(|_| CosignVerificationError::RekorError("failed to serialize log entry"))?;
+        Ok(Self { statement, serialized_log_entry: Some(log_entry_serialized) })
     }
 
     pub fn from_proto(proto: &SignedEndorsement) -> Result<Self, CosignVerificationError> {
@@ -182,6 +181,7 @@ pub struct StatementReport {
     pub rekor_verification: Option<Result<(), CosignVerificationError>>,
 }
 
+// TODO: b/445140472 - Call //tr/verify_endorsement instead.
 pub fn report_endorsement(
     endorsement: CosignEndorsement,
     image_reference: &Reference,
@@ -207,28 +207,31 @@ pub fn report_endorsement(
                 .map_err(|err| CosignVerificationError::StatementValidationError(err.to_string()))?
         };
 
-        let rekor_verification = ref_values.rekor_public_key.as_ref().map(|rekor_public_key| {
-            if let Some(rekor) = endorsement.rekor {
-                try {
-                    let rekor = rekor.verify(rekor_public_key).map_err(|err| {
-                        CosignVerificationError::RekorError("verifying rekor bundle", err)
-                    })?;
-                    let rekor: RekorPayload = serde_json::from_slice(rekor.message())
-                        .map_err(CosignVerificationError::RekorPayloadParseError)?;
-                    let hashed_rekord: HashedRekord<hashedrekord::Unverified> =
-                        rekor.payload_body().map_err(|err| {
-                            CosignVerificationError::RekorError("parsing hashedrekord payload", err)
+        let rekor_verification: Option<Result<(), CosignVerificationError>> =
+            ref_values.rekor_public_key.as_ref().map(|rekor_public_key| {
+                if let Some(serialized_log_entry) = endorsement.serialized_log_entry {
+                    try {
+                        let endorser_public_key_raw =
+                            ref_values.developer_public_key.to_sec1_bytes();
+                        let rekor_public_key_raw = rekor_public_key.to_sec1_bytes();
+                        let log_entry = verify_rekor_log_entry_ecdsa(
+                            serialized_log_entry.as_bytes(),
+                            &rekor_public_key_raw,
+                            statement.message(),
+                        )
+                        .map_err(|_| {
+                            CosignVerificationError::RekorError(
+                                "verification of Rekor log entry failed",
+                            )
                         })?;
-                    hashed_rekord
-                        .verify(&ref_values.developer_public_key, statement.message())
-                        .map_err(|err| {
-                            CosignVerificationError::RekorError("verifying rekor payload", err)
+                        log_entry.compare_public_key(&endorser_public_key_raw).map_err(|_| {
+                            CosignVerificationError::RekorError("endorser keys differ")
                         })?;
+                    }
+                } else {
+                    Err(CosignVerificationError::MissingEndorsement)
                 }
-            } else {
-                Err(CosignVerificationError::MissingEndorsement)
-            }
-        });
+            });
 
         StatementReport { statement_validation, rekor_verification }
     };

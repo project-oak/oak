@@ -14,12 +14,15 @@
 // limitations under the License.
 //
 
+extern crate alloc;
+
 use oak_proto_rust::oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet};
+use serde_json::json;
 use test_util::EndorsementData;
 
+use super::*;
 use crate::log_entry::{
-    parse_rekor_log_entry, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa,
-    verify_rekor_signature,
+    parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature, LogEntry,
 };
 
 /// Shorthand to create a reference value proto from ingredients.
@@ -71,4 +74,32 @@ fn test_verify_rekor_log_entry_ecdsa_success() {
     let result = verify_rekor_log_entry_ecdsa(&d.log_entry, &d.rekor_public_key, &d.endorsement);
 
     assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_from_cosign_bundle_missing_payload() {
+    let bundle = json!({
+        "SignedEntryTimestamp": "signature",
+    });
+    let bundle_str = serde_json::to_string(&bundle).unwrap();
+
+    let result = LogEntry::from_cosign_bundle(&bundle_str);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_from_cosign_bundle_invalid_signature_base64() {
+    let payload = json!({
+        "body": "c29tZSBib2R5",
+    });
+    let bundle = json!({
+        "Payload": payload,
+        "SignedEntryTimestamp": "invalid-base64",
+    });
+    let bundle_str = serde_json::to_string(&bundle).unwrap();
+
+    let result = LogEntry::from_cosign_bundle(&bundle_str);
+
+    assert!(result.is_err());
 }

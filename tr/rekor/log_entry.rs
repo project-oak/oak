@@ -18,29 +18,33 @@
 
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
-
 use anyhow::{ensure, Context};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use digest_util::hash_sha2_256;
-use key_util::{convert_pem_to_raw, verify_signature_ecdsa};
+use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-use crate::util::verify_timestamp;
+use crate::{
+    alloc::{collections::BTreeMap, format, string::String, vec::Vec},
+    util::verify_timestamp,
+};
+
+const LOG_ENTRY_PAYLOAD_KEY: &str = "Payload";
 
 /// Represents the Rekor log entry, or payload. See
 /// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>
-/// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+/// <https://github.com/sigstore/rekor/blob/d920fad17c98aff21d98036db6a4820542f7d18d/openapi.yaml#L446-L488>
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct LogEntry {
     /// The log entry body is base64-encoded in the actual log entry.
     #[serde(rename = "body")]
     pub body: String,
 
-    // The timestamp when this entry was added to the log. In seconds since
-    // Unix Epoch UTC.
+    /// The timestamp when this entry was added to the log. In seconds since the
+    /// Unix Epoch.
     #[serde(rename = "integratedTime")]
     pub integrated_time: usize,
 
@@ -61,6 +65,21 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
+    pub fn from_cosign_bundle<T: AsRef<[u8]>>(bundle: T) -> anyhow::Result<LogEntry> {
+        let bundle: Value = serde_json::from_slice(bundle.as_ref())?;
+        let payload =
+            bundle.get(LOG_ENTRY_PAYLOAD_KEY).ok_or(anyhow::anyhow!("malformed bundle"))?;
+
+        // As per the spec above, the signature of the payload is done over
+        // the canonicalized representation of its fields, which means:
+        //  * No whitespace
+        //  * JSON keys are sorted lexicographically
+        // Because serde_json's Value uses a BTreeMap, the sorting property
+        // holds for object values.
+        let serialized_log_entry = serde_json::to_string(&payload)?;
+        parse_rekor_log_entry(serialized_log_entry.as_bytes())
+    }
+
     /// Parses the base64-encoded log entry body into a struct.
     pub fn body(&self) -> anyhow::Result<Body> {
         let body_bytes: Vec<u8> = BASE64_STANDARD
@@ -71,7 +90,7 @@ impl LogEntry {
     }
 
     /// Returns the public key from the log entry.
-    pub fn get_public_key(self) -> anyhow::Result<Vec<u8>> {
+    pub fn get_public_key(&self) -> anyhow::Result<Vec<u8>> {
         let body = self.body()?;
         let c = body.spec.signature.public_key.content;
         let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
@@ -81,14 +100,36 @@ impl LogEntry {
             .map_err(|_| anyhow::anyhow!("failed to convert public key to string"))?;
         convert_pem_to_raw(public_key_pem)
     }
+
+    /// Compares the given endorser key with the one in the log entry.
+    ///
+    /// This check is not performed as part of verify_rekor_log_entry_*; it
+    /// needs to be done explicitly.
+    pub fn compare_public_key(&self, public_key: &[u8]) -> anyhow::Result<()> {
+        let self_public_key = self.get_public_key()?;
+        if !equal_keys(&self_public_key, public_key)? {
+            anyhow::bail!(
+                "endorser public key mismatch: expected {:?} found {:?}",
+                public_key,
+                &self_public_key,
+            )
+        }
+        Ok(())
+    }
 }
 
 /// Represents the body of a Rekor log entry.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Body {
+    /// The version as e.g. "0.0.1".
     #[serde(rename = "apiVersion")]
     pub api_version: String,
+
+    /// The Rekor type. For our purposes this is either "hashedrekord"
+    /// (preferred) or "rekord" (deprecated).
     pub kind: String,
+
+    /// Instance of the type following a JSON schema.
     pub spec: Spec,
 }
 
@@ -107,7 +148,7 @@ pub struct Data {
     pub hash: Hash,
 }
 
-/// Represents a hash digest. See
+/// Represents a hash obtained via a certain algorithm. See
 /// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Hash {
@@ -272,8 +313,8 @@ fn verify_rekor_signature(log_entry: &LogEntry, rekor_public_key: &[u8]) -> anyh
 }
 
 /// Parses a serialized Rekor log entry into a struct.
-pub fn parse_rekor_log_entry(log_entry: &[u8]) -> anyhow::Result<LogEntry> {
-    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry)
+pub fn parse_rekor_log_entry(serialized_log_entry: &[u8]) -> anyhow::Result<LogEntry> {
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(serialized_log_entry)
         .map_err(|error| anyhow::anyhow!("couldn't parse log entry bytes: {error}"))?;
     let log_entry = parsed.values().next().context("unexpected empty map")?;
     Ok((*log_entry).clone())

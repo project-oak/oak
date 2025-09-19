@@ -62,7 +62,6 @@ use p256::{
 use prost::Message;
 use serde_json::json;
 use sha2::Digest;
-use sigstore::rekor::{LOG_ENTRY_PAYLOAD_KEY, LOG_ENTRY_SIGNATURE_KEY};
 
 #[derive(Parser, Debug)]
 struct Flags {
@@ -150,8 +149,8 @@ fn main() -> anyhow::Result<()> {
         }),
         signature: Some(ProtoSignature { key_id: 0, raw: developer_signature.to_der().to_vec() }),
         rekor_log_entry: serde_json::to_vec(&json!({
-            LOG_ENTRY_PAYLOAD_KEY: rekor_payload,
-            LOG_ENTRY_SIGNATURE_KEY: STANDARD.encode(rekor_signature.to_der()),
+            "Payload": rekor_payload,
+            "SignedEntryTimestamp": STANDARD.encode(rekor_signature.to_der()),
         }))?,
     };
 

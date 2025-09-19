@@ -18,7 +18,7 @@
 
 use anyhow::Context;
 use intoto::statement::parse_statement;
-use key_util::{equal_keys, verify_signature_ecdsa};
+use key_util::verify_signature_ecdsa;
 use oak_time::Instant;
 use rekor::log_entry::verify_rekor_log_entry_ecdsa;
 
@@ -61,14 +61,7 @@ pub(crate) fn verify_binary_endorsement(
         }
         let log_entry = verify_rekor_log_entry_ecdsa(log_entry, rekor_public_key, endorsement)
             .context("verifying Rekor log entry")?;
-        let public_key = log_entry.get_public_key()?;
-        if !equal_keys(&public_key, endorser_public_key)? {
-            anyhow::bail!(
-                "endorser public key mismatch: expected {:?} found {:?}",
-                &public_key,
-                endorser_public_key,
-            )
-        }
+        log_entry.compare_public_key(endorser_public_key)?;
     }
 
     Ok(())

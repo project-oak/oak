@@ -16,5 +16,9 @@
 
 #![no_std]
 
+extern crate alloc;
+
 pub mod log_entry;
 mod util;
+
+pub use util::get_rekor_v1_public_key_raw;

@@ -25,13 +25,13 @@ use alloc::vec::Vec;
 
 use anyhow::Context;
 use intoto::statement::{parse_statement, DefaultStatement};
-use key_util::{equal_keys, verify_signature};
+use key_util::verify_signature;
 use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
     VerifyingKeySet,
 };
 use oak_time::Instant;
-use rekor::log_entry::verify_rekor_log_entry;
+use rekor::log_entry::{verify_rekor_log_entry, LogEntry};
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
@@ -91,8 +91,7 @@ pub fn verify_endorsement(
             let log_entry =
                 verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized, now_utc_millis)
                     .context("verifying Rekor log entry")?;
-            let public_key = log_entry.get_public_key()?;
-            compare_endorser_public_key(&public_key, signature.key_id, endorser_key_set)?;
+            compare_endorser_public_key(&log_entry, signature.key_id, endorser_key_set)?;
             Ok(statement)
         }
         None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
@@ -101,7 +100,7 @@ pub fn verify_endorsement(
 
 /// Compares `public_key` against a particular verifying key in the set.
 fn compare_endorser_public_key(
-    public_key: &[u8],
+    log_entry: &LogEntry,
     signature_key_id: u32,
     endorser_key_set: &VerifyingKeySet,
 ) -> anyhow::Result<()> {
@@ -112,16 +111,7 @@ fn compare_endorser_public_key(
         .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
     match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
-        KeyType::EcdsaP256Sha256 => {
-            if !equal_keys(public_key, &key.raw)? {
-                anyhow::bail!(
-                    "endorser public key mismatch: expected {:?} found {:?}",
-                    public_key,
-                    key.raw,
-                )
-            }
-            Ok(())
-        }
+        KeyType::EcdsaP256Sha256 => log_entry.compare_public_key(&key.raw),
     }
 }
 

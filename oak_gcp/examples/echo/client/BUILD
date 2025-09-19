@@ -38,7 +38,7 @@ rust_library(
         "//oak_proto_rust/oak_proto_rust_lib",
         "//oak_session",
         "//oak_time",
-        "//trex/sigstore",
+        "//tr/rekor",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:futures-util",

@@ -26,7 +26,6 @@ rust_library(
     srcs = glob(["src/**"]),
     compile_data = [
         "//oak_attestation_gcp:data/confidential_space_root.pem",
-        "//oak_attestation_gcp:data/rekor_public_key.pem",
     ],
     deps = [
         "//oak_attestation_verification",
@@ -36,6 +35,7 @@ rust_library(
         "//oak_time",
         "//tr/digest_util",
         "//tr/intoto",
+        "//tr/rekor",
         "//trex/sigstore",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
