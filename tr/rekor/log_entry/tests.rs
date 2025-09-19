@@ -14,12 +14,23 @@
 // limitations under the License.
 //
 
-extern crate std;
+use oak_proto_rust::oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet};
 use test_util::EndorsementData;
 
 use crate::log_entry::{
-    parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature,
+    parse_rekor_log_entry, verify_rekor_log_entry, verify_rekor_log_entry_ecdsa,
+    verify_rekor_signature,
 };
+
+/// Shorthand to create a reference value proto from ingredients.
+fn create_verifying_key_set(public_key: &[u8]) -> VerifyingKeySet {
+    let key = VerifyingKey {
+        r#type: KeyType::EcdsaP256Sha256.into(),
+        key_id: 1,
+        raw: public_key.to_vec(),
+    };
+    VerifyingKeySet { keys: [key].to_vec(), ..Default::default() }
+}
 
 #[test]
 fn test_verify_rekor_signature_success() {
@@ -33,6 +44,28 @@ fn test_verify_rekor_signature_success() {
 
 #[test]
 fn test_verify_rekor_log_entry_success() {
+    let d = EndorsementData::load();
+    let key_set = create_verifying_key_set(&d.rekor_public_key);
+
+    let result = verify_rekor_log_entry(&d.log_entry, &key_set, &d.endorsement, 0);
+
+    assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_rekor_log_entry_failure() {
+    // Deliberately invalidate the public key.
+    let mut d = EndorsementData::load();
+    d.rekor_public_key[0] += 1;
+    let key_set = create_verifying_key_set(&d.rekor_public_key);
+
+    let result = verify_rekor_log_entry(&d.log_entry, &key_set, &d.endorsement, 0);
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_verify_rekor_log_entry_ecdsa_success() {
     let d = EndorsementData::load();
 
     let result = verify_rekor_log_entry_ecdsa(&d.log_entry, &d.rekor_public_key, &d.endorsement);
