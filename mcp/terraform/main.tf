@@ -19,7 +19,7 @@ resource "google_compute_firewall" "private_agent_firewall" {
 module "gemma" {
   source         = "../gemma/terraform"
   gcp_project_id = var.gcp_project_id
-  zone           = var.zone
+  zone           = var.gpu_zone
   instance_name  = "attested-gemma"
   machine_type   = "a3-highgpu-1g"
   image_digest   = var.gemma_image_digest

@@ -7,6 +7,12 @@ variable "gcp_project_id" {
 variable "zone" {
   type        = string
   description = "The GCP zone to deploy the resources in."
+  default     = "us-west1-b"
+}
+
+variable "gpu_zone" {
+  type        = string
+  description = "The GCP zone with GPUs to deploy the resources in."
   default     = "us-east5-a"
 }
 

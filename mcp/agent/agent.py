@@ -43,7 +43,7 @@ def create_agent(mcp_server_url: Optional[str] = None) -> Agent:
         ]
     return Agent(
         name="weather_agent",
-        model=LiteLlm(model="ollama/gemma3:4b"),
+        model=LiteLlm(model="ollama/gemma3:4b", timeout=30.0),
         description=(
             "Agent to answer questions about the weather at the current user"
             " location."
