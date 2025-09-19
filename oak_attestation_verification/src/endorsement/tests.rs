@@ -20,15 +20,7 @@ use alloc::vec::Vec;
 
 use test_util::endorsement_data::EndorsementData;
 
-use crate::endorsement::{verify_binary_endorsement, verify_endorser_public_key_ecdsa};
-
-#[test]
-fn test_verify_endorser_public_key_ecdsa_success() {
-    let d = EndorsementData::load();
-
-    let result = verify_endorser_public_key_ecdsa(&d.log_entry, &d.endorser_public_key);
-    assert!(result.is_ok(), "{:?}", result);
-}
+use crate::endorsement::verify_binary_endorsement;
 
 #[test]
 fn test_verify_binary_endorsement_success() {

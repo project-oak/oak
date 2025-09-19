@@ -17,13 +17,10 @@
 //! TODO: b/379253152 - Entire module is deprecated and will be removed.
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use intoto::statement::parse_statement;
-use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
+use key_util::{equal_keys, verify_signature_ecdsa};
 use oak_time::Instant;
-use rekor::log_entry::{
-    parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry_ecdsa,
-};
+use rekor::log_entry::verify_rekor_log_entry_ecdsa;
 
 /// Verifies the binary endorsement against log entry and public keys.
 ///
@@ -62,42 +59,16 @@ pub(crate) fn verify_binary_endorsement(
         if log_entry.is_empty() {
             anyhow::bail!("log entry unavailable but verification was requested");
         }
-        verify_rekor_log_entry_ecdsa(log_entry, rekor_public_key, endorsement)
-            .context("verifying rekor log entry")?;
-        verify_endorser_public_key_ecdsa(log_entry, endorser_public_key)
-            .context("verifying endorser public key")?;
-    }
-
-    Ok(())
-}
-
-/// Verifies that the endorser public key coincides with the one contained in
-/// the attestation.
-fn verify_endorser_public_key_ecdsa(
-    serialized_log_entry: &[u8],
-    endorser_public_key: &[u8],
-) -> anyhow::Result<()> {
-    // TODO(#4231): Currently, we only check that the public keys are the same.
-    // Should be updated to support verifying rolling keys.
-    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
-    let body = parse_rekor_log_entry_body(&log_entry).context("getting rekor log entry body")?;
-
-    let actual_pem_vec =
-        BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
-            anyhow::anyhow!("couldn't base64-decode public key bytes from server: {}", error)
-        })?;
-    let actual_pem =
-        core::str::from_utf8(&actual_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
-    let actual = convert_pem_to_raw(actual_pem)
-        .map_err(|e| anyhow::anyhow!(e))
-        .context("converting public key from log entry body")?;
-
-    if !equal_keys(endorser_public_key, &actual)? {
-        anyhow::bail!(
-            "endorser public key mismatch: expected {:?} found {:?}",
-            endorser_public_key,
-            actual,
-        )
+        let log_entry = verify_rekor_log_entry_ecdsa(log_entry, rekor_public_key, endorsement)
+            .context("verifying Rekor log entry")?;
+        let public_key = log_entry.get_public_key()?;
+        if !equal_keys(&public_key, endorser_public_key)? {
+            anyhow::bail!(
+                "endorser public key mismatch: expected {:?} found {:?}",
+                &public_key,
+                endorser_public_key,
+            )
+        }
     }
 
     Ok(())

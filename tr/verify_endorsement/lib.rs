@@ -24,15 +24,14 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 use intoto::statement::{parse_statement, DefaultStatement};
-use key_util::{convert_pem_to_raw, equal_keys, verify_signature};
+use key_util::{equal_keys, verify_signature};
 use oak_proto_rust::oak::attestation::v1::{
     verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
     VerifyingKeySet,
 };
 use oak_time::Instant;
-use rekor::log_entry::{parse_rekor_log_entry, parse_rekor_log_entry_body, verify_rekor_log_entry};
+use rekor::log_entry::verify_rekor_log_entry;
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.
@@ -89,17 +88,20 @@ pub fn verify_endorsement(
             if log_entry.is_empty() {
                 anyhow::bail!("log entry unavailable but verification was requested");
             }
-            verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized, now_utc_millis)
-                .context("verifying rekor log entry")?;
-            verify_endorser_public_key(log_entry, signature.key_id, endorser_key_set)?;
+            let log_entry =
+                verify_rekor_log_entry(log_entry, key_set, &endorsement.serialized, now_utc_millis)
+                    .context("verifying Rekor log entry")?;
+            let public_key = log_entry.get_public_key()?;
+            compare_endorser_public_key(&public_key, signature.key_id, endorser_key_set)?;
             Ok(statement)
         }
         None => Err(anyhow::anyhow!("empty Rekor verifying key set reference value")),
     }
 }
 
-fn verify_endorser_public_key(
-    log_entry: &[u8],
+/// Compares `public_key` against a particular verifying key in the set.
+fn compare_endorser_public_key(
+    public_key: &[u8],
     signature_key_id: u32,
     endorser_key_set: &VerifyingKeySet,
 ) -> anyhow::Result<()> {
@@ -110,40 +112,17 @@ fn verify_endorser_public_key(
         .ok_or_else(|| anyhow::anyhow!("could not find key id in key set"))?;
     match key.r#type() {
         KeyType::Undefined => anyhow::bail!("Undefined key type"),
-        KeyType::EcdsaP256Sha256 => verify_endorser_public_key_ecdsa(log_entry, &key.raw),
+        KeyType::EcdsaP256Sha256 => {
+            if !equal_keys(public_key, &key.raw)? {
+                anyhow::bail!(
+                    "endorser public key mismatch: expected {:?} found {:?}",
+                    public_key,
+                    key.raw,
+                )
+            }
+            Ok(())
+        }
     }
-}
-
-/// Verifies that the endorser public key coincides with the one contained in
-/// the attestation.
-fn verify_endorser_public_key_ecdsa(
-    serialized_log_entry: &[u8],
-    endorser_public_key: &[u8],
-) -> anyhow::Result<()> {
-    // TODO(#4231): Currently, we only check that the public keys are the same.
-    // Should be updated to support verifying rolling keys.
-    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
-    let body = parse_rekor_log_entry_body(&log_entry).context("getting rekor log entry body")?;
-
-    let actual_pem_vec =
-        BASE64_STANDARD.decode(body.spec.signature.public_key.content).map_err(|error| {
-            anyhow::anyhow!("couldn't base64-decode public key bytes from server: {}", error)
-        })?;
-    let actual_pem =
-        core::str::from_utf8(&actual_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
-    let actual = convert_pem_to_raw(actual_pem)
-        .map_err(|e| anyhow::anyhow!(e))
-        .context("converting public key from log entry body")?;
-
-    if !equal_keys(endorser_public_key, &actual)? {
-        anyhow::bail!(
-            "endorser public key mismatch: expected {:?} found {:?}",
-            endorser_public_key,
-            actual,
-        )
-    }
-
-    Ok(())
 }
 
 pub fn is_firmware_type(statement: &DefaultStatement) -> bool {

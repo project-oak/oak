@@ -35,8 +35,7 @@ use crate::util::verify_timestamp;
 /// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct LogEntry {
-    /// We cannot directly use the type `Body` here, since body is
-    /// Base64-encoded.
+    /// The log entry body is base64-encoded in the actual log entry.
     #[serde(rename = "body")]
     pub body: String,
 
@@ -59,6 +58,29 @@ pub struct LogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "verification")]
     pub verification: Option<Verification>,
+}
+
+impl LogEntry {
+    /// Parses the base64-encoded log entry body into a struct.
+    pub fn body(&self) -> anyhow::Result<Body> {
+        let body_bytes: Vec<u8> = BASE64_STANDARD
+            .decode(&self.body)
+            .map_err(|_| anyhow::anyhow!("failed to decode log entry body"))?;
+        serde_json::from_slice(&body_bytes)
+            .map_err(|error| anyhow::anyhow!("couldn't parse log entry body: {error}"))
+    }
+
+    /// Returns the public key from the log entry.
+    pub fn get_public_key(self) -> anyhow::Result<Vec<u8>> {
+        let body = self.body()?;
+        let c = body.spec.signature.public_key.content;
+        let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
+            .decode(c)
+            .map_err(|_| anyhow::anyhow!("failed to base64-decode public key"))?;
+        let public_key_pem = core::str::from_utf8(&public_key_pem_vec)
+            .map_err(|_| anyhow::anyhow!("failed to convert public key to string"))?;
+        convert_pem_to_raw(public_key_pem)
+    }
 }
 
 /// Represents the body of a Rekor log entry.
@@ -140,12 +162,16 @@ pub struct Verification {
 ///   a serialized endorsement.
 /// * `now_utc_millis`: The current time in milliseconds since Unix Epoch, if
 ///   timestamp verification is requested in the reference value.
+///
+/// # Returns
+///
+/// The parsed log entry structure.
 pub fn verify_rekor_log_entry(
     serialized_log_entry: &[u8],
     key_set: &VerifyingKeySet,
     artifact_bytes: &[u8],
     now_utc_millis: i64,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<LogEntry> {
     let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
 
     if !key_set.keys.iter().any(|k| verify_rekor_signature(&log_entry, &k.raw).is_ok()) {
@@ -161,8 +187,9 @@ pub fn verify_rekor_log_entry(
             .context("verifying rekor integrate timestamp")?;
     }
 
-    let body = parse_rekor_log_entry_body(&log_entry)?;
-    verify_rekor_body(&body, artifact_bytes)
+    let body = log_entry.body()?;
+    verify_rekor_body(&body, artifact_bytes)?;
+    Ok(log_entry)
 }
 
 /// Verifies a Rekor log entry.
@@ -181,20 +208,29 @@ pub fn verify_rekor_log_entry(
 /// * `rekor_public_key`: Rekor's verifying key in raw format.
 /// * `artifact_bytes`: The artifact or subject this log entry is about. Likely
 ///   a serialized endorsement.
+///
+/// # Returns
+///
+/// The parsed log entry structure.
 pub fn verify_rekor_log_entry_ecdsa(
     serialized_log_entry: &[u8],
     rekor_public_key: &[u8],
     artifact_bytes: &[u8],
-) -> anyhow::Result<()> {
+) -> anyhow::Result<LogEntry> {
     let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
-
     verify_rekor_signature(&log_entry, rekor_public_key)?;
 
-    let body = parse_rekor_log_entry_body(&log_entry)?;
-    verify_rekor_body(&body, artifact_bytes)
+    let body = log_entry.body()?;
+    verify_rekor_body(&body, artifact_bytes)?;
+    Ok(log_entry)
 }
 
 /// Verifies the signature in the log entry body.
+///
+/// # Arguments
+///
+/// * `body`: The log entry body.
+/// * `artifact_bytes` The underlying artifact or endorsement.
 fn verify_rekor_body(body: &Body, artifact_bytes: &[u8]) -> anyhow::Result<()> {
     ensure!(
         body.spec.signature.format == "x509",
@@ -241,16 +277,6 @@ pub fn parse_rekor_log_entry(log_entry: &[u8]) -> anyhow::Result<LogEntry> {
         .map_err(|error| anyhow::anyhow!("couldn't parse log entry bytes: {error}"))?;
     let log_entry = parsed.values().next().context("unexpected empty map")?;
     Ok((*log_entry).clone())
-}
-
-/// Parses the base64-encoded entry body into a struct.
-pub fn parse_rekor_log_entry_body(log_entry: &LogEntry) -> anyhow::Result<Body> {
-    let body_bytes: Vec<u8> = BASE64_STANDARD
-        .decode(log_entry.body.clone())
-        .map_err(|error| anyhow::anyhow!("couldn't decode base64 signature: {error}"))?;
-
-    serde_json::from_slice(&body_bytes)
-        .map_err(|error| anyhow::anyhow!("couldn't parse log entry body: {error}"))
 }
 
 /// Creates a JSON representation, canonicalized based on RFC 8785, of a

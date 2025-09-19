@@ -32,7 +32,6 @@ rust_library(
         "//tr/key_util",
         "//tr/rekor",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:base64",
     ],
 )
 

@@ -57,6 +57,7 @@ fn main() -> anyhow::Result<()> {
     let rekor_public_key = convert_pem_to_raw(REKOR_PUBLIC_KEY_PEM).expect("could not convert key");
     let artifact = cli.artifact()?;
 
-    verify_rekor_log_entry_ecdsa(&log_entry, &rekor_public_key, &artifact)
-        .context("verifying log entry")
+    let _log_entry = verify_rekor_log_entry_ecdsa(&log_entry, &rekor_public_key, &artifact)
+        .context("verifying Rekor log entry")?;
+    Ok(())
 }
