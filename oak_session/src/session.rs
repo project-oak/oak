@@ -68,8 +68,8 @@ use core::mem;
 use anyhow::{anyhow, Context, Error, Ok};
 use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
 use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, EncryptedMessage, EndorsedEvidence,
-    PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+    session_request::Request, session_response::Response, Assertion, EncryptedMessage,
+    EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
 };
 
 use crate::{
@@ -130,12 +130,16 @@ impl SessionBindingToken {
 /// This evidence is used to verify the peer's identity and trustworthiness.
 #[derive(Debug, Default, PartialEq)]
 pub struct AttestationEvidence {
-    /// The evidence supplied by the peer.
+    /// The evidence supplied by the peer (in the legacy format).
     ///
     /// The key is the ID of the evidence, and the value is the evidence itself.
     pub evidence: BTreeMap<String, EndorsedEvidence>,
     /// The peer-provided bindings to the evidence.
     pub evidence_bindings: BTreeMap<String, SessionBinding>,
+    // The evidence provided by the peer as assertions.
+    pub assertions: BTreeMap<String, Assertion>,
+    /// The peer-provided assertion bindings.
+    pub assertion_bindings: BTreeMap<String, SessionBinding>,
     /// The hash of the handshake transcript.
     pub handshake_hash: Vec<u8>,
 }
@@ -864,6 +868,22 @@ impl AttestationEvidence {
                 })
                 .collect(),
             evidence_bindings: handshake_state.peer_session_bindings.clone(),
+            assertions: attestation_state
+                .peer_attestation_verdict
+                .get_assertion_verification_results()
+                .iter()
+                .filter_map(|(id, verifier_result)| match verifier_result {
+                    AssertionVerifierResult::Success { verified_assertion, .. } => {
+                        Some((id.clone(), verified_assertion.assertion().clone()))
+                    }
+                    AssertionVerifierResult::Failure { assertion, .. }
+                    | AssertionVerifierResult::Unverified { assertion } => {
+                        Some((id.clone(), assertion.clone()))
+                    }
+                    _ => None,
+                })
+                .collect(),
+            assertion_bindings: handshake_state.peer_assertion_bindings.clone(),
             handshake_hash: handshake_state.handshake_binding_token.clone(),
         }
     }

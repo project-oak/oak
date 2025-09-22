@@ -238,7 +238,9 @@ fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn AssertionGen
     generator.expect_generate().returning(move || {
         let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
         bindable_assertion.expect_assertion().return_const(assertion.clone());
-        bindable_assertion.expect_bind().returning(|_| Ok(SessionBinding::default()));
+        bindable_assertion
+            .expect_bind()
+            .returning(|_| Ok(SessionBinding { binding: "test assertion binding".into() }));
         Ok(bindable_assertion)
     });
     Box::new(generator)
@@ -366,6 +368,8 @@ fn pairwise_nn_unattested_self_succeeds() -> anyhow::Result<()> {
                 eq(&MATCHED_ATTESTER_ID1.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
+            assertions: is_empty(),
+            assertion_bindings: is_empty(),
             handshake_hash: not(is_empty()),
         }))
     );
@@ -408,7 +412,7 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
                 create_mock_key_extractor(),
             )
             .add_peer_assertion_verifier(
-                MATCHED_ATTESTER_ID1.to_string(),
+                MATCHED_ATTESTER_ID2.to_string(),
                 create_passing_mock_assertion_verifier(assertion.clone()),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
@@ -421,8 +425,8 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
             .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
-                MATCHED_ATTESTER_ID1.to_string(),
-                create_mock_assertion_generator(assertion),
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -448,6 +452,11 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
             )],
             evidence_bindings: elements_are![(
                 eq(&MATCHED_ATTESTER_ID1.to_string()),
+                field!(&SessionBinding.binding, ref not(is_empty()))
+            )],
+            assertions: elements_are![(&MATCHED_ATTESTER_ID2.to_string(), &assertion)],
+            assertion_bindings: elements_are![(
+                eq(&MATCHED_ATTESTER_ID2.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
             handshake_hash: not(is_empty()),
@@ -542,6 +551,8 @@ fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
                 eq(&MATCHED_ATTESTER_ID2.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
+            assertions: is_empty(),
+            assertion_bindings: is_empty(),
             handshake_hash: not(is_empty()),
         }))
     );
@@ -560,6 +571,8 @@ fn pairwise_nn_self_bidi() -> anyhow::Result<()> {
                 eq(&MATCHED_ATTESTER_ID1.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
+            assertions: is_empty(),
+            assertion_bindings: is_empty(),
             handshake_hash: not(is_empty()),
         }))
     );
@@ -670,6 +683,8 @@ fn get_peer_attestation_evidence() -> anyhow::Result<()> {
                 eq(&MATCHED_ATTESTER_ID1.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
+            assertions: is_empty(),
+            assertion_bindings: is_empty(),
             handshake_hash: not(is_empty()),
         }))
     );
@@ -679,6 +694,8 @@ fn get_peer_attestation_evidence() -> anyhow::Result<()> {
         ok(matches_pattern!(AttestationEvidence {
             evidence: is_empty(),
             evidence_bindings: is_empty(),
+            assertions: is_empty(),
+            assertion_bindings: is_empty(),
             handshake_hash: not(is_empty())
         }))
     );
