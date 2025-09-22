@@ -40,7 +40,7 @@ async fn test_client() {
         let llm_view = LlmViews {
             llm_views: vec![LlmView {
                 embedding: Some(Embedding {
-                    identifier: "test_model".to_string(),
+                    model_signature: "test_model".to_string(),
                     values: vec![1.0, 0.0, 0.0],
                 }),
                 ..Default::default()
@@ -87,7 +87,7 @@ async fn test_client_pagination() {
                 views: Some(LlmViews {
                     llm_views: vec![LlmView {
                         embedding: Some(Embedding {
-                            identifier: "test_model".to_string(),
+                            model_signature: "test_model".to_string(),
                             values: vec![1.0, 0.0, 0.0],
                         }),
                         ..Default::default()
@@ -121,7 +121,7 @@ async fn test_client_pagination() {
                 sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
                     EmbeddingQuery {
                         embedding: vec![Embedding {
-                            identifier: "test_model".to_string(),
+                            model_signature: "test_model".to_string(),
                             values: vec![1.0, 0.0, 0.0],
                         }],
                         ..Default::default()

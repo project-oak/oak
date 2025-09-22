@@ -25,10 +25,8 @@ import "google/protobuf/timestamp.proto";
 import "proto/session/session.proto";
 
 message Embedding {
-  // Identifier for the model that generated this embedding.
-  // During searching, only the embeddings with the same identifier will
-  // be used to calculate scores.
-  string identifier = 1;
+  // Search will only match embeddings that use the same model_signature.
+  string model_signature = 1;
   // The actual embedding values.
   repeated float values = 2;
 }

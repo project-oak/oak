@@ -140,7 +140,7 @@ impl PendingMetadata {
         let embeddings: Vec<_> = memory
             .embeddings
             .iter()
-            .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
+            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
             .collect();
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
@@ -187,7 +187,7 @@ impl PendingLlmViewMetadata {
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embedding = view.embedding.as_ref()?;
         let embeddings =
-            vec![icing::create_vector_proto(embedding.identifier.as_str(), &embedding.values)];
+            vec![icing::create_vector_proto(embedding.model_signature.as_str(), &embedding.values)];
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
             .set_key(NAMESPACE_NAME.as_bytes(), view_id.as_bytes())
@@ -886,7 +886,7 @@ impl IcingMetaDatabase {
 
             embedding_query_vectors: query_embeddings
                 .iter()
-                .map(|x| icing::create_vector_proto(x.identifier.as_str(), &x.values))
+                .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
                 .collect(),
 
             query: Some(query_string),
@@ -1206,7 +1206,7 @@ mod tests {
         let memory_id1 = "memory_embed_1".to_string();
         let blob_id1 = 98765.to_string();
         let embedding1 = Embedding {
-            identifier: "test_model".to_string(),
+            model_signature: "test_model".to_string(),
             values: vec![1.0, 0.0, 0.0], // Vector pointing along x-axis
         };
         let memory1 = Memory {
@@ -1222,7 +1222,7 @@ mod tests {
         let memory_id2 = "memory_embed_2".to_string();
         let blob_id2 = 98766.to_string();
         let embedding2 = Embedding {
-            identifier: "test_model".to_string(),
+            model_signature: "test_model".to_string(),
             values: vec![0.0, 1.0, 0.0], // Vector pointing along y-axis
         };
         let memory2 = Memory {
@@ -1238,7 +1238,7 @@ mod tests {
         let embedding_query = SearchMemoryQuery {
             clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
                 embedding: vec![Embedding {
-                    identifier: "test_model".to_string(),
+                    model_signature: "test_model".to_string(),
                     values: vec![0.9, 0.1, 0.0],
                 }],
                 ..Default::default()
