@@ -74,15 +74,15 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
         })),
     };
 
-    let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
-    println!("ids: {:?}", ids);
-    println!("scores: {:?}", scores);
+    let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
     assert_that!(scores, not(is_empty()));
-    assert_that!(scores.len(), eq(ids.blob_ids.len()));
+    assert_that!(scores.len(), eq(blob_ids.len()));
     assert_that!(scores, each(predicate(|&x| x > 0.0)));
     assert_that!(scores[0], eq(15.0));
     assert_that!(scores[1], eq(6.0));
-    assert_that!(ids.blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
@@ -155,9 +155,10 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
         })),
     };
 
-    let (ids, _, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
-    assert_that!(ids.blob_ids, unordered_elements_are![eq(&"blob2")]);
-    assert_that!(ids.blob_ids.len(), eq(1));
+    let (results, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob2")]);
+    assert_that!(blob_ids.len(), eq(1));
 
     Ok(())
 }
@@ -196,8 +197,10 @@ fn test_search_views() -> anyhow::Result<()> {
         })),
     };
 
-    let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
-    assert_that!(ids.blob_ids, unordered_elements_are![eq("memory1")]);
+    let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("memory1")]);
     assert_that!(scores, unordered_elements_are![eq(&3.0)]);
 
     Ok(())
@@ -235,7 +238,8 @@ fn test_text_search_timestamp_filtering() -> anyhow::Result<()> {
         match_type: MatchType::Gte as i32,
         value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 200, nanos: 0 })),
     };
-    let (blob_ids, _, _) = icing_database.text_search(&gte_query, 10, PageToken::Start)?;
+    let (results, _) = icing_database.text_search(&gte_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
     assert_that!(blob_ids, unordered_elements_are![eq("blob2"), eq("blob3")]);
 
     // Test case 2: Less than
@@ -244,7 +248,8 @@ fn test_text_search_timestamp_filtering() -> anyhow::Result<()> {
         match_type: MatchType::Lt as i32,
         value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 200, nanos: 0 })),
     };
-    let (blob_ids, _, _) = icing_database.text_search(&lt_query, 10, PageToken::Start)?;
+    let (results, _) = icing_database.text_search(&lt_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
     assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
 
     Ok(())
@@ -282,7 +287,8 @@ fn test_text_search_id_filtering() -> anyhow::Result<()> {
         match_type: MatchType::Equal as i32,
         value: Some(text_query::Value::StringVal("memory2".to_string())),
     };
-    let (blob_ids, _, _) = icing_database.text_search(&eq_query, 10, PageToken::Start)?;
+    let (results, _) = icing_database.text_search(&eq_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
     assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
 
     Ok(())
@@ -339,8 +345,9 @@ fn test_query_clauses_and_operator() -> anyhow::Result<()> {
         })),
     };
 
-    let (blob_ids, _, _) = icing_database.search(&and_query, 10, PageToken::Start)?;
-    assert_that!(blob_ids.blob_ids, unordered_elements_are![eq("blob2")]);
+    let (results, _) = icing_database.search(&and_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
 
     Ok(())
 }
@@ -396,8 +403,9 @@ fn test_query_clauses_or_operator() -> anyhow::Result<()> {
         })),
     };
 
-    let (blob_ids, _, _) = icing_database.search(&or_query, 10, PageToken::Start)?;
-    assert_that!(blob_ids.blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
+    let (results, _) = icing_database.search(&or_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
 
     Ok(())
 }
@@ -471,12 +479,14 @@ fn test_search_with_pagination_returns_correct_view() -> anyhow::Result<()> {
         })),
     };
 
-    let (results, scores, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
-    assert_that!(results.blob_ids.len(), eq(1));
-    let top_blob_id = results.blob_ids.first().unwrap();
+    let (results, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
+    assert_that!(blob_ids.len(), eq(1));
+    let top_blob_id = blob_ids.first().unwrap();
     assert_that!(top_blob_id, eq("blob2"));
     assert_that!(scores[0], eq(2.0));
-    let view_ids = results.view_ids.unwrap();
+    let view_ids = &results.items.first().unwrap().view_ids;
     assert_that!(view_ids.len(), eq(1));
     let top_view_id = view_ids.first().unwrap();
     assert_that!(top_view_id, eq("view2b"));

@@ -12,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+use std::collections::HashMap;
+
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
@@ -219,10 +221,16 @@ impl PendingLlmViewMetadata {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
+pub struct SearchResultId {
+    pub blob_id: BlobId,
+    pub view_ids: Vec<ViewId>,
+    pub score: f32,
+}
+
+#[derive(Debug, Default)]
 pub struct SearchResultIds {
-    pub blob_ids: Vec<BlobId>,
-    pub view_ids: Option<Vec<ViewId>>,
+    pub items: Vec<SearchResultId>,
 }
 
 impl IcingMetaDatabase {
@@ -711,7 +719,7 @@ impl IcingMetaDatabase {
         query: &SearchMemoryQuery,
         page_size: i32,
         page_token: PageToken,
-    ) -> anyhow::Result<(SearchResultIds, Vec<f32>, PageToken)> {
+    ) -> anyhow::Result<(SearchResultIds, PageToken)> {
         let search_views = Self::is_embedding_search(query);
         let (schema_name, projection) = if search_views {
             (
@@ -732,43 +740,68 @@ impl IcingMetaDatabase {
         };
 
         let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
+        let scoring_spec = scoring_spec.unwrap_or_default();
+        let mut page_token = page_token;
+        let mut id_maps: HashMap<BlobId, Vec<ViewId>> = HashMap::new();
+        let mut scores = HashMap::new();
+        // When embedding search is used, we are matching against views instead
+        // of memories. Therefore, we might match mulitple views of the same memory.
+        // We need to aggregate the results and scores by memory id.
+        // The tricky part is how we handle pagination. We want to return
+        // `page_size` results to the user, but we need to keep searching to
+        // find views for the same memory. We can't just search for `page_size`
+        // because we don't know which memories the user has already seen.
+        // Therefore, we keep search for one view until we find `page_size`
+        // distinct memories.
+        // Icing provides a new api called `get_next_page` that allows us to
+        // some items of a page instead of the whole page. But the OSS version
+        // does not have it yet.
+        // TODO: yongheng - Add support for Icing's new get_next_page api.
+        loop {
+            let item_to_search = if search_views { 1 } else { page_size };
+            let (search_result, next_page_token) = self.execute_search(
+                &search_spec,
+                &scoring_spec,
+                item_to_search,
+                page_token,
+                projection.clone(),
+            )?;
+            page_token = next_page_token;
 
-        let (search_result, next_page_token) = self.execute_search(
-            &search_spec,
-            &scoring_spec.unwrap_or_default(),
-            page_size,
-            page_token,
-            projection,
-        )?;
-
-        let scores: Vec<f32> = search_result
-            .results
-            .iter()
-            .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
-            .collect();
-
-        let result_ids = if search_views {
-            let mut blob_ids = Vec::new();
-            let mut view_ids = Vec::new();
-            for result in &search_result.results {
-                if let (Some(blob_id), Some(view_id)) =
-                    (Self::extract_blob_id_from_doc(result), Self::extract_view_id_from_doc(result))
-                {
-                    blob_ids.push(blob_id);
-                    view_ids.push(view_id);
+            if search_views {
+                for result in &search_result.results {
+                    if let (Some(blob_id), Some(view_id), score) = (
+                        Self::extract_blob_id_from_doc(result),
+                        Self::extract_view_id_from_doc(result),
+                        result.score.map(|s| s as f32).unwrap_or(0.0),
+                    ) {
+                        id_maps.entry(blob_id.clone()).or_default().push(view_id);
+                        *scores.entry(blob_id).or_default() += score;
+                    }
                 }
+                if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
+                    break;
+                }
+            } else {
+                let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+                for blob_id in blob_ids.into_iter() {
+                    id_maps.insert(blob_id, Vec::default());
+                }
+                break;
             }
-            SearchResultIds { blob_ids, view_ids: Some(view_ids) }
-        } else {
-            let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
-            SearchResultIds { blob_ids, view_ids: None }
-        };
-
-        ensure!(result_ids.blob_ids.len() == scores.len());
-        if result_ids.blob_ids.is_empty() {
-            return Ok((result_ids, scores, PageToken::Start));
         }
-        Ok((result_ids, scores, next_page_token))
+
+        let mut search_result_ids = SearchResultIds::default();
+
+        for (blob_id, view_ids) in id_maps.into_iter() {
+            let score = scores.get(&blob_id).unwrap_or(&0.0);
+            search_result_ids.items.push(SearchResultId { blob_id, view_ids, score: *score });
+        }
+        search_result_ids
+            .items
+            .sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Less));
+
+        Ok((search_result_ids, page_token))
     }
 
     fn is_embedding_search(query: &SearchMemoryQuery) -> bool {
@@ -1004,7 +1037,7 @@ impl IcingMetaDatabase {
         text_query: &TextQuery,
         page_size: i32,
         page_token: PageToken,
-    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+    ) -> anyhow::Result<(SearchResultIds, PageToken)> {
         let (search_spec, _) = self.build_text_query_specs(text_query, SCHMA_NAME)?;
         let projection = Self::create_blob_id_projection(SCHMA_NAME);
         let (search_result, next_page_token) = self.execute_search(
@@ -1022,9 +1055,15 @@ impl IcingMetaDatabase {
         let ids = Self::extract_blob_ids_from_search_result(search_result);
         ensure!(ids.len() == scores.len());
         if ids.is_empty() {
-            return Ok((ids, scores, PageToken::Start));
+            return Ok((SearchResultIds::default(), PageToken::Start));
         }
-        Ok((ids, scores, next_page_token))
+        let search_result_ids = SearchResultIds {
+            items: ids
+                .into_iter()
+                .map(|id| SearchResultId { blob_id: id, ..Default::default() })
+                .collect(),
+        };
+        Ok((search_result_ids, next_page_token))
     }
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
@@ -1298,15 +1337,19 @@ mod tests {
             })),
         };
         // Query embedding close to embedding1
-        let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
         // Expect memory1 to be the top result due to higher dot product
-        assert_that!(ids.blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
+        assert_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
-        let (ids, scores, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+        let (results, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
         // Expect memory1 to be the top result due to higher dot product
-        assert_that!(ids.blob_ids, elements_are![eq(&blob_id1)]);
+        assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
@@ -1451,5 +1494,65 @@ mod tests {
         )
         .expect("failed to add memory");
         (memory_id, blob_id)
+    }
+
+    #[gtest]
+    fn icing_deduplicate_search_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let model_signature = "test_model".to_string();
+        let mut memories = vec![];
+        for i in 0..5 {
+            let memory_id = format!("memory_embed_{}", i);
+            let blob_id = (1000 + i).to_string();
+            let mut views = vec![];
+            for j in 0..2 {
+                let view_id = format!("view_{}_{}", i, j);
+                let score = 1.0 - (i as f32 * 0.2 + j as f32 * 0.1);
+                let embedding = Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![score, 0.0, 0.0],
+                };
+                views.push(LlmView {
+                    id: view_id,
+                    embedding: Some(embedding),
+                    ..Default::default()
+                });
+            }
+            let memory = Memory {
+                id: memory_id,
+                tags: vec!["embed_tag".to_string()],
+                views: Some(LlmViews { llm_views: views }),
+                ..Default::default()
+            };
+            icing_database.add_memory(&memory, blob_id.clone())?;
+            memories.push((memory, blob_id));
+        }
+
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: model_signature.clone(),
+                    values: vec![1.0, 0.0, 0.0],
+                }],
+                ..Default::default()
+            })),
+        };
+
+        let (results, _) = icing_database.search(&embedding_query, 2, PageToken::Start)?;
+        assert_that!(results.items, len(eq(2)));
+
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+        let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
+
+        // The first two views have scores 1.0 and 0.9, so the score is 1.9. The
+        // second two views have scores 0.8 and 0.7. But the first two views belong to
+        // the first memory, so the final score is 1.9. The last two views
+        // belong to the second memory, we only match one more view.
+        // So we match three views to get two memories.
+        assert_that!(blob_ids, elements_are![eq(&memories[0].1), eq(&memories[1].1)]);
+        assert_that!(scores, elements_are![eq(&1.9), eq(&0.8)]);
+
+        Ok(())
     }
 }
