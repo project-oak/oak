@@ -351,15 +351,12 @@ pub enum ExtendRtmrError {
 ///
 /// See section 5.4.6 of the [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
 /// for more information.
-pub fn extend_rtmr<T: Into<ExtensionBuffer>>(
-    rtmr_index: RtmrIndex,
-    buf: T,
-) -> Result<(), ExtendRtmrError> {
+pub fn extend_rtmr(rtmr_index: RtmrIndex, buf: &ExtensionBuffer) -> Result<(), ExtendRtmrError> {
     // The TDCALL leaf for TDG.MR.RTMR.EXTEND.
     const LEAF: u64 = 2;
 
     let mut result: u64;
-    let buf_gpa = (buf.into().data).as_ptr() as usize as u64;
+    let buf_gpa = buf.data.as_ptr() as usize as u64;
     let rtmr_index = rtmr_index as u64;
 
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The

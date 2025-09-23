@@ -17,6 +17,8 @@
 //! Utilities for validating Intel provisioning certificates and attestation
 //! quotes.
 
+use core::convert::Into;
+
 use anyhow::{anyhow, Context};
 use const_oid::db::rfc5912::ECDSA_WITH_SHA_256;
 use digest_util::hash_sha2_256;
@@ -25,12 +27,15 @@ use p256::{
     ecdsa::{signature::Verifier, Signature, VerifyingKey},
     EncodedPoint,
 };
+use sha2::{Digest, Sha384};
 use x509_cert::{
     der::{referenced::OwnedToRef, DecodePem, Encode},
     Certificate,
 };
 
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
+/// The size in bytes of a SHA2-384 digest.
+const SHA2_384_DIGEST_SIZE: usize = 48;
 
 /// Verifies that the TDX Attestation Quote is correctly signed and that the
 /// entire chain of trust is valid all the way to the Provisioning Certification
@@ -142,6 +147,43 @@ fn extract_ecdsa_verifying_key(certificate: &Certificate) -> anyhow::Result<Veri
     let pubkey_info = certificate.tbs_certificate.subject_public_key_info.owned_to_ref();
     VerifyingKey::from_sec1_bytes(pubkey_info.subject_public_key.raw_bytes())
         .map_err(|_err| anyhow::anyhow!("could not parse ECDSA P256 public key"))
+}
+
+/// Software implementation of the RTMR logic that can be used to replay a
+/// sequence of `extend` operations.
+#[allow(unused)]
+pub struct RtmrEmulator {
+    state: [u8; SHA2_384_DIGEST_SIZE],
+}
+
+#[allow(unused)]
+impl RtmrEmulator {
+    pub const fn new() -> Self {
+        // The initial state of an RTMR is all 0.
+        Self { state: [0u8; SHA2_384_DIGEST_SIZE] }
+    }
+
+    /// Extends the RTMR with the new SHA2-384 digest.
+    pub fn extend(&mut self, digest: &[u8; SHA2_384_DIGEST_SIZE]) {
+        let mut current = self.state.to_vec();
+        // Extension is done by concatenating the current state and the new digest, and
+        // then calculating the SHA2-384 digest of that value. See section 5.4.6 of the
+        // [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
+        // for more information.
+        current.extend_from_slice(digest.as_slice());
+        self.state = Sha384::digest(&current).into();
+    }
+
+    /// Gets the current value of the RTMR.
+    pub fn get_state(&self) -> &[u8] {
+        &self.state
+    }
+}
+
+impl Default for RtmrEmulator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

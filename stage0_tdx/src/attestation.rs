@@ -48,7 +48,7 @@ impl Attester for RtmrAttester {
 
         let digest = Sha384::digest(encoded_event);
         // We always extend RTMR2 for all event log entries.
-        extend_rtmr(RtmrIndex::Rtmr2, ExtensionBuffer { data: digest.into() })
+        extend_rtmr(RtmrIndex::Rtmr2, &ExtensionBuffer { data: digest.into() })
             .map_err(anyhow::Error::msg)
     }
 
