@@ -35,6 +35,7 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
         id: "memory1".to_string(),
         views: Some(LlmViews {
             llm_views: vec![LlmView {
+                id: "view1".to_string(),
                 embedding: Some(Embedding {
                     model_signature: "test_model".to_string(),
                     values: vec![1.0, 2.0, 3.0],
@@ -50,6 +51,7 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
         id: "memory2".to_string(),
         views: Some(LlmViews {
             llm_views: vec![LlmView {
+                id: "view2".to_string(),
                 embedding: Some(Embedding {
                     model_signature: "test_model".to_string(),
                     values: vec![4.0, 5.0, 6.0],
@@ -93,6 +95,7 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
         id: "memory1".to_string(),
         views: Some(LlmViews {
             llm_views: vec![LlmView {
+                id: "view1".to_string(),
                 embedding: Some(Embedding {
                     model_signature: "test_model".to_string(),
                     values: vec![1.0, 2.0, 3.0],
@@ -109,6 +112,7 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
         id: "memory2".to_string(),
         views: Some(LlmViews {
             llm_views: vec![LlmView {
+                id: "view2".to_string(),
                 embedding: Some(Embedding {
                     model_signature: "test_model".to_string(),
                     values: vec![1.1, 2.1, 3.1],
@@ -167,6 +171,7 @@ fn test_search_views() -> anyhow::Result<()> {
         id: "memory1".to_string(),
         views: Some(LlmViews {
             llm_views: vec![LlmView {
+                id: "view1".to_string(),
                 embedding: Some(Embedding {
                     model_signature: "test_model".to_string(),
                     values: vec![1.0, 1.0, 1.0],

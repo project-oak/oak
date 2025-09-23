@@ -183,7 +183,7 @@ struct PendingLlmViewMetadata {
 impl PendingLlmViewMetadata {
     pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> Option<Self> {
         let memory_id = &memory.id;
-        let view_id = rand::rng().random::<u64>().to_string();
+        let view_id = &view.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embedding = view.embedding.as_ref()?;
         let embeddings =
@@ -1213,7 +1213,11 @@ mod tests {
             id: memory_id1.clone(),
             tags: vec!["embed_tag".to_string()],
             views: Some(LlmViews {
-                llm_views: vec![LlmView { embedding: Some(embedding1), ..Default::default() }],
+                llm_views: vec![LlmView {
+                    id: "view1".to_string(),
+                    embedding: Some(embedding1),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };
@@ -1229,7 +1233,11 @@ mod tests {
             id: memory_id2.clone(),
             tags: vec!["embed_tag".to_string()],
             views: Some(LlmViews {
-                llm_views: vec![LlmView { embedding: Some(embedding2), ..Default::default() }],
+                llm_views: vec![LlmView {
+                    id: "view2".to_string(),
+                    embedding: Some(embedding2),
+                    ..Default::default()
+                }],
             }),
             ..Default::default()
         };

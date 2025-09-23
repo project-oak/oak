@@ -52,6 +52,9 @@ message LLMView {
   Embedding embedding = 11;
   // The textual representation of the part of the memory that we embed.
   string text_view = 12;
+
+  // The unique identifier of the view.
+  string id = 20;
 }
 
 message LLMViews {
