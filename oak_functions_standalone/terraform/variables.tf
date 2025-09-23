@@ -1,7 +1,7 @@
 variable "gcp_project_id" {
   type        = string
   description = "The GCP project ID to deploy the resources in."
-  default     = "oak-functions-standalone"
+  default     = "oak-functions"
 }
 
 variable "zone" {
@@ -13,7 +13,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the VM instance."
-  default     = "oak-functions-standalone"
+  default     = "oak-functions"
 }
 
 variable "machine_type" {
@@ -24,7 +24,7 @@ variable "machine_type" {
 
 variable "image_digest" {
   type        = string
-  description = "The image digest for the Oak Functions Standalone container."
+  description = "The image digest for the Oak Functions container."
   default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-standalone-containers/oak_functions_standalone:latest"
 }
 

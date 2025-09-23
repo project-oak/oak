@@ -84,7 +84,14 @@ oci_image(
     },
     exposed_ports = ["8080/tcp"],
     labels = {
-        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE",
+        # Confidential Space launch policy that allows specific environment variables to
+        # be provided at runtime:
+        # - `CONTAINER_IMAGE`: self-referrence for the TEE workload which it can use to fetch endorsements.
+        # - `OAK_FUNCTIONS_URL` known at runtime because they are dynamically assigned by gCloud to
+        #   corresponding services.
+        #
+        # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
+        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE,OAK_FUNCTIONS_URL",
         "tee.launch_policy.log_redirect": "always",
     },
     tars = [

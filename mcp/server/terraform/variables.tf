@@ -12,23 +12,29 @@ variable "zone" {
 
 variable "instance_name" {
   type        = string
-  description = "The name of the GCE instance."
+  description = "The name of the VM instance."
   default     = "attested-mcp-server"
 }
 
 variable "machine_type" {
   type        = string
-  description = "The machine type for the GCE instance."
+  description = "The machine type for the VM."
   default     = "c3-standard-4"
 }
 
 variable "image_digest" {
   type        = string
-  description = "The full reference of the container image to run, e.g., 'IMAGE_URL:latest' or 'IMAGE_URL@sha256:DIGEST'."
+  description = "The image digest for the MCP server container."
 }
 
 variable "exposed_port" {
   type        = number
   description = "Port on which to expose incoming TCP traffic in the GCP firewall."
   default     = 8080
+}
+
+variable "oak_functions_ip" {
+  type        = string
+  description = "The internal IP of the Oak Functions server."
+  default     = ""
 }

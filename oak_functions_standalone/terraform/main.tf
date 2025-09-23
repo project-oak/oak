@@ -1,4 +1,4 @@
-resource "google_compute_instance" "oak_functions_standalone" {
+resource "google_compute_instance" "oak_functions" {
   name             = var.instance_name
   machine_type     = var.machine_type
   zone             = var.zone
@@ -41,7 +41,7 @@ resource "google_compute_instance" "oak_functions_standalone" {
     tee-cmd                    = "[\"--wasm-uri=${var.wasm_url}\",\"--lookup-data-uri=${var.lookup_data_url}\",\"--attestation-type=self-unidirectional\",\"--listen-address=0.0.0.0:${var.exposed_port}\"]"
   }
 
-  tags = ["oak-functions-standalone"]
+  tags = ["oak-functions"]
 
   allow_stopping_for_update = true
 }

@@ -89,7 +89,7 @@ async def main():
     print("Type 'exit' or 'quit' to end the chat.")
     print("-" * 20)
 
-    async with httpx.AsyncClient(timeout=60.0) as httpx_client:
+    async with httpx.AsyncClient(timeout=300.0) as httpx_client:
         try:
             # Fetch agent card.
             base_url = httpx.URL(args.agent_url)

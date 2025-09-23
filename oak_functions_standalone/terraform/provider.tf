@@ -3,8 +3,8 @@ provider "google" {
   zone    = var.zone
 }
 
-resource "google_compute_firewall" "oak_functions_standalone_firewall" {
-  name    = "allow-oak-functions-standalone"
+resource "google_compute_firewall" "oak_functions_firewall" {
+  name    = "allow-oak-functions"
   network = "default"
 
   allow {
@@ -12,6 +12,6 @@ resource "google_compute_firewall" "oak_functions_standalone_firewall" {
     ports    = [var.exposed_port]
   }
 
-  target_tags   = ["oak-functions-standalone"]
+  target_tags   = ["oak-functions"]
   source_ranges = ["0.0.0.0/0"]
 }

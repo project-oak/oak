@@ -47,7 +47,7 @@ use tokio::net::TcpListener;
 pub struct Args {
     #[arg(short, long, default_value = "0.0.0.0:8081")]
     listen_address: String,
-    #[arg(short, long)]
+    #[arg(short, long, env = "OAK_FUNCTIONS_URL")]
     tool_url: String,
     #[arg(long, default_value_t = false)]
     insecure_attestation: bool,

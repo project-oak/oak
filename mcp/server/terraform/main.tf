@@ -45,6 +45,7 @@ resource "google_compute_instance" "attested_mcp_server" {
   metadata = {
     tee-image-reference        = var.image_digest
     tee-container-log-redirect = "true"
+    tee-env-OAK_FUNCTIONS_URL  = "http://${var.oak_functions_ip}:${var.exposed_port}"
   }
 
   # Add a tag to create corresponding firewall rules for.
@@ -53,5 +54,3 @@ resource "google_compute_instance" "attested_mcp_server" {
   # Allow Terraform to delete the instance.
   allow_stopping_for_update = true
 }
-
-

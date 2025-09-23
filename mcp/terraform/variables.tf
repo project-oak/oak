@@ -39,3 +39,9 @@ variable "agent_image_digest" {
   description = "The image digest for the agent container."
   default     = "europe-west1-docker.pkg.dev/oak-examples-477357/private-agent/private-agent:latest"
 }
+
+variable "oak_functions_image_digest" {
+  type        = string
+  description = "The image digest for the Oak Functions Standalone container."
+  default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-standalone-containers/oak_functions_standalone:latest"
+}
