@@ -21,14 +21,15 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 use anyhow::Context;
 use intoto::statement::{parse_statement, DefaultStatement};
-use key_util::verify_signature;
+use key_util::{convert_pem_to_raw, verify_signature};
 use oak_proto_rust::oak::attestation::v1::{
-    verifying_key_reference_value, EndorsementReferenceValue, KeyType, SignedEndorsement,
-    VerifyingKeySet,
+    endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
+    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
+    VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
 };
 use oak_time::Instant;
 use rekor::log_entry::{verify_rekor_log_entry, LogEntry};
@@ -42,6 +43,77 @@ pub const FIRMWARE_CLAIM_TYPE: &str =
 /// binary unless this claim is present in the endorsement.
 pub const KERNEL_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
+
+/// Creates a `SignedEndorsement` from ingredients.
+pub fn create_signed_endorsement(
+    serialized_endorsement: &[u8],
+    serialized_signature: &[u8],
+    key_id: u32,
+) -> SignedEndorsement {
+    let endorsement = Endorsement {
+        format: Format::EndorsementFormatJsonIntoto.into(),
+        serialized: serialized_endorsement.to_vec(),
+        ..Default::default()
+    };
+    SignedEndorsement {
+        endorsement: Some(endorsement),
+        signature: Some(Signature { key_id, raw: serialized_signature.to_vec() }),
+        ..Default::default()
+    }
+}
+
+/// Creates an `EndorsementReferenceValue` from ingredients.
+pub fn create_endorsement_reference_value(
+    endorser_key: VerifyingKey,
+    rekor_key: Option<VerifyingKey>,
+) -> EndorsementReferenceValue {
+    let rekor_key_set =
+        rekor_key.map(|v| VerifyingKeySet { keys: [v].to_vec(), ..Default::default() });
+    let rekor = create_verifying_key_reference_value(rekor_key_set);
+
+    EndorsementReferenceValue {
+        endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
+        required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+        rekor: Some(rekor),
+        ..Default::default()
+    }
+}
+
+/// Creates a `VerifyingKey` instance from a PEM key.
+pub fn create_verifying_key_from_pem(public_key_pem: &str, key_id: u32) -> VerifyingKey {
+    let public_key_raw = convert_pem_to_raw(public_key_pem).expect("failed to convert key");
+    VerifyingKey { r#type: KeyType::EcdsaP256Sha256.into(), key_id, raw: public_key_raw }
+}
+
+/// Creates a `VerifyingKey` instance from a raw key.
+pub fn create_verifying_key_from_raw(public_key_raw: &[u8], key_id: u32) -> VerifyingKey {
+    VerifyingKey { r#type: KeyType::EcdsaP256Sha256.into(), key_id, raw: public_key_raw.to_vec() }
+}
+
+/// Creates a `VerifyingKeyReferenceValue` instance from a key set.
+pub fn create_verifying_key_reference_value(
+    key_set: Option<VerifyingKeySet>,
+) -> VerifyingKeyReferenceValue {
+    VerifyingKeyReferenceValue {
+        r#type: {
+            match key_set {
+                Some(ks) => Some(verifying_key_reference_value::Type::Verify(ks)),
+                None => Some(verifying_key_reference_value::Type::Skip(SkipVerification {})),
+            }
+        },
+    }
+}
+
+/// Creates an `EndorsementReferenceValue` instance from ingredients.
+pub fn create_endorsement_reference_value_from_raw(
+    endorser_public_key: &[u8],
+    key_id: u32,
+    rekor_public_key: &[u8],
+) -> EndorsementReferenceValue {
+    let endorser_key = create_verifying_key_from_raw(endorser_public_key, key_id);
+    let rekor_key = create_verifying_key_from_raw(rekor_public_key, 1);
+    create_endorsement_reference_value(endorser_key, Some(rekor_key))
+}
 
 /// Verifies a signed endorsement against a reference value.
 ///

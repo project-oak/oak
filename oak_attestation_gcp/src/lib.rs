@@ -21,7 +21,6 @@
 extern crate alloc;
 
 pub mod attestation;
-pub mod cosign;
 pub mod jwt;
 pub mod policy;
 pub mod policy_generator;

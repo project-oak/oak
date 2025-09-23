@@ -159,7 +159,8 @@ pub fn make_statement(
 
 /// Checks that the given endorsement statement is valid, based on timestamp
 impl DefaultStatement {
-    fn validate_subject(&self, digest: &HexDigest) -> anyhow::Result<()> {
+    /// Verifies that the given digest is mentioned in the subject.
+    pub fn validate_subject(&self, digest: &HexDigest) -> anyhow::Result<()> {
         let actual = get_hex_digest_from_statement(self)?;
         is_hex_digest_match(digest, &actual).context("comparing subject digests")
     }

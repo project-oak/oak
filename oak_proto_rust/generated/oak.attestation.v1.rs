@@ -682,6 +682,7 @@ pub struct ApplicationKeysReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub signing_public_key: ::core::option::Option<PublicKeyReferenceValue>,
 }
+/// Deprecated: Use EndorsementReferenceValue instead.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CosignReferenceValues {
     #[prost(message, optional, tag = "1")]

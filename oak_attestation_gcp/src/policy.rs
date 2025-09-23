@@ -16,24 +16,24 @@
 
 use alloc::{string::String, vec::Vec};
 
+use digest_util::hex_digest_from_typed_hash;
 use jwt::Token;
 use oak_attestation_verification::{decode_event_proto, results::set_session_binding_public_key};
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        ConfidentialSpaceEndorsement, EventAttestationResults, SessionBindingPublicKeyData,
+        ConfidentialSpaceEndorsement, EndorsementReferenceValue, EventAttestationResults,
+        SessionBindingPublicKeyData, SignedEndorsement,
     },
     Variant,
 };
 use oak_time::Instant;
+use oci_spec::distribution::Reference as OciReference;
 use sha2::{Digest, Sha256};
+use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
 use crate::{
-    cosign::{
-        self, CosignEndorsement, CosignReferenceValues, CosignVerificationError,
-        CosignVerificationReport,
-    },
     jwt::{
         verification::{
             report_attestation_token, AttestationTokenVerificationReport,
@@ -48,8 +48,7 @@ use crate::{
 pub struct ConfidentialSpaceVerificationReport {
     pub session_binding_public_key: Vec<u8>,
     pub public_key_verification: Result<(), ConfidentialSpaceVerificationError>,
-    pub workload_endorsement_verification:
-        Option<Result<CosignVerificationReport, CosignVerificationError>>,
+    pub workload_endorsement_verification: Option<Result<(), ConfidentialSpaceVerificationError>>,
     pub token_report: AttestationTokenVerificationReport,
 }
 
@@ -65,7 +64,7 @@ impl ConfidentialSpaceVerificationReport {
                 token_report,
             } => {
                 if let Some(workload_endorsement_verification) = workload_endorsement_verification {
-                    workload_endorsement_verification?.into_checked()?;
+                    workload_endorsement_verification?;
                 }
                 Ok(token_report.into_checked_token().map(|_| session_binding_public_key)?)
             }
@@ -83,6 +82,8 @@ impl ConfidentialSpaceVerificationReport {
 pub enum ConfidentialSpaceVerificationError {
     #[error("Missing field: {0}")]
     MissingField(&'static str),
+    #[error("Invalid field: {0}")]
+    InvalidField(&'static str),
     #[error("Failed to decode proto: {0}")]
     ProtoDecodeError(#[from] anyhow::Error),
     #[error("Failed to decode Variant: {0}")]
@@ -97,19 +98,38 @@ pub enum ConfidentialSpaceVerificationError {
     TokenVerificationError(#[from] AttestationVerificationError),
     #[error("missing workload endorsement")]
     MissingWorkloadEndorsementError,
-    #[error("Sigstore Error: {0}")]
-    SigstoreError(#[from] sigstore::error::Error),
     #[error("Failed to parse OCI reference: {0}")]
     ParseError(#[from] oci_spec::distribution::ParseError),
-    #[error("Failed to verify Cosign endorsement: {0}")]
-    CosignVerificationError(#[from] CosignVerificationError),
+    #[error("Failed to verify endorsement: {0}")]
+    EndorsementVerificationError(String),
+}
+
+fn verify_endorsement_wrapper(
+    verification_time: Instant,
+    image_reference: &OciReference,
+    signed_endorsement: &SignedEndorsement,
+    ref_value: &EndorsementReferenceValue,
+) -> Result<(), ConfidentialSpaceVerificationError> {
+    use ConfidentialSpaceVerificationError::{
+        EndorsementVerificationError as EVError, InvalidField as IFError,
+    };
+
+    let statement =
+        verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, ref_value)
+            .map_err(|err| EVError(err.to_string()))?;
+    let typed_hash = image_reference.digest().ok_or(
+        ConfidentialSpaceVerificationError::MissingField("Missing digest in OCI reference"),
+    )?;
+    let digest = hex_digest_from_typed_hash(typed_hash)
+        .map_err(|_| IFError("Malformed digest in OCI reference"))?;
+    statement.validate_subject(&digest).map_err(|err| EVError(err.to_string()))
 }
 
 /// Attstation policy that verifies evidence for a container workload running in
 /// Google Cloud Confidential Space.
 pub struct ConfidentialSpacePolicy {
     root_certificate: Certificate,
-    workload_reference_values: Option<CosignReferenceValues>,
+    workload_reference_values: Option<EndorsementReferenceValue>,
 }
 
 impl ConfidentialSpacePolicy {
@@ -117,7 +137,7 @@ impl ConfidentialSpacePolicy {
     /// workload.
     pub(crate) fn new(
         root_certificate: Certificate,
-        workload_reference_values: CosignReferenceValues,
+        workload_reference_values: EndorsementReferenceValue,
     ) -> Self {
         Self { root_certificate, workload_reference_values: Some(workload_reference_values) }
     }
@@ -150,15 +170,17 @@ impl ConfidentialSpacePolicy {
 
         let image_reference = token.claims().effective_reference()?;
         let workload_endorsement_verification =
-            self.workload_reference_values.as_ref().map(|ref_values| {
+            self.workload_reference_values.as_ref().map(|ref_value| {
                 match &endorsement.workload_endorsement {
-                    Some(workload_endorsement) => Ok(cosign::report_endorsement(
-                        CosignEndorsement::from_proto(workload_endorsement)?,
-                        &image_reference,
-                        ref_values,
+                    Some(workload_endorsement) => verify_endorsement_wrapper(
                         verification_time,
-                    )),
-                    None => Err(CosignVerificationError::MissingEndorsement),
+                        &image_reference,
+                        workload_endorsement,
+                        ref_value,
+                    ),
+                    None => {
+                        Err(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)
+                    }
                 }
             });
 
@@ -215,22 +237,17 @@ mod tests {
 
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, CosignReferenceValues as CosignReferenceValuesProto, Endorsement,
-        Event, Signature, SignedEndorsement,
+        endorsement::Format, Endorsement, Event, Signature, SignedEndorsement,
     };
-    use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
     use oak_time::make_instant;
-    use p256::pkcs8::DecodePublicKey;
     use prost::Message;
+    use verify_endorsement::{create_endorsement_reference_value, create_verifying_key_from_pem};
     use x509_cert::der::DecodePem;
 
     use super::*;
-    use crate::{
-        cosign::{CosignReferenceValues, StatementReport},
-        jwt::verification::{CertificateReport, IssuerReport},
-    };
+    use crate::jwt::verification::{CertificateReport, IssuerReport};
 
-    // Note that this is strategically chosen to match (after hashing / base 64
+    // Note that this is strategically chosen to match (after hashing / base64
     // encoding) the "eat_nonce" values in testdata claims JSON files (or at
     // least those with valid "eat_nonce" values).
     const BINDING_KEY_BYTES: [u8; 32] = [
@@ -239,10 +256,72 @@ mod tests {
         0x64, 0x66,
     ];
 
+    fn create_signed_endorsement(
+        endorsement_filename: &str,
+        signature_filename: &str,
+        key_id: u32,
+    ) -> SignedEndorsement {
+        let serialized_endorsement = read_testdata!(endorsement_filename);
+        let serialized_signature = read_testdata!(signature_filename);
+        verify_endorsement::create_signed_endorsement(
+            &serialized_endorsement,
+            &serialized_signature,
+            key_id,
+        )
+    }
+
+    fn create_reference_value(key_id: u32) -> EndorsementReferenceValue {
+        let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
+        let developer_public_key = create_verifying_key_from_pem(&developer_public_key_pem, key_id);
+        create_endorsement_reference_value(developer_public_key, None)
+    }
+
+    #[test]
+    fn verify_endorsement_wrapper_success() {
+        let verification_time = Instant::from_unix_seconds(1740000000);
+        let image_reference: OciReference =
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app@sha256:313b8a83d3c8bfc9abcffee4f538424473e2705383a7e46f16d159faf0e5ef34"
+                .try_into()
+                .unwrap();
+        let signed_endorsement =
+            create_signed_endorsement("endorsement.json", "endorsement_signature.sig", 1);
+        let ref_value = create_reference_value(1);
+
+        let result = verify_endorsement_wrapper(
+            verification_time,
+            &image_reference,
+            &signed_endorsement,
+            &ref_value,
+        );
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn verify_endorsement_wrapper_invalid_signature_failure() {
+        let verification_time = Instant::from_unix_seconds(1740000000);
+        let image_reference: OciReference =
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app@sha256:313b8a83d3c8bfc9abcffee4f538424473e2705383a7e46f16d159faf0e5ef34"
+                .try_into()
+                .unwrap();
+        let signed_endorsement =
+            create_signed_endorsement("endorsement.json", "other_endorsement_signature.sig", 1);
+        let ref_value = create_reference_value(1);
+
+        let result = verify_endorsement_wrapper(
+            verification_time,
+            &image_reference,
+            &signed_endorsement,
+            &ref_value,
+        );
+
+        assert!(result.is_err(), "Expected failure but got success");
+    }
+
     #[test]
     fn confidential_space_policy_verify_succeeds() {
-        // The time has been set inside the validity interval of the test token and the
-        // root certificate.
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
         let event = create_public_key_event(&BINDING_KEY_BYTES);
@@ -253,7 +332,8 @@ mod tests {
                 serialized: read_testdata!("endorsement.json"),
                 ..Default::default()
             }),
-            // The signature proto has a key ID which we do not use at the moment.
+            // The signature proto has a key ID which we do not use at the
+            // moment.
             signature: Some(Signature {
                 raw: read_testdata!("endorsement_signature.sig"),
                 ..Default::default()
@@ -266,19 +346,9 @@ mod tests {
         };
 
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
-        let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
-        let developer_public_key =
-            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
-
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
-        let cosign_reference_values_proto = CosignReferenceValuesProto {
-            developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(&developer_public_key)),
-            ..Default::default()
-        };
-        let cosign_reference_values =
-            CosignReferenceValues::from_proto(&cosign_reference_values_proto).unwrap();
-
-        let policy = ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values);
+        let ref_value = create_reference_value(0);
+        let policy = ConfidentialSpacePolicy::new(root_certificate, ref_value);
 
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
@@ -287,44 +357,24 @@ mod tests {
 
     #[test]
     fn confidential_space_policy_report_succeeds() {
-        // The time has been set inside the validity interval of the test token and the
-        // root certificate.
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
         let current_time = make_instant!("2025-07-01T17:31:32Z");
 
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
-        let workload_endorsement = Some(SignedEndorsement {
-            endorsement: Some(Endorsement {
-                format: Format::EndorsementFormatJsonIntoto.into(),
-                serialized: read_testdata!("endorsement.json"),
-                ..Default::default()
-            }),
-            // The signature proto has a key ID which we do not use at the moment.
-            signature: Some(Signature {
-                raw: read_testdata!("endorsement_signature.sig"),
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
+        let signed_endorsement =
+            create_signed_endorsement("endorsement.json", "endorsement_signature.sig", 0);
+        let workload_endorsement = Some(signed_endorsement);
         let endorsement = ConfidentialSpaceEndorsement {
             jwt_token: read_testdata_string!("valid_token.jwt"),
             workload_endorsement,
         };
 
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
-        let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
-        let developer_public_key =
-            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
-
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
-        let cosign_reference_values_proto = CosignReferenceValuesProto {
-            developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(&developer_public_key)),
-            ..Default::default()
-        };
-        let cosign_reference_values =
-            CosignReferenceValues::from_proto(&cosign_reference_values_proto).unwrap();
-
-        let policy = ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values);
+        let ref_value = create_reference_value(0);
+        let policy = ConfidentialSpacePolicy::new(root_certificate, ref_value);
 
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
 
@@ -347,12 +397,7 @@ mod tests {
                         })),
                     }),
                 },
-                workload_endorsement_verification: Some(Ok(CosignVerificationReport {
-                    statement_verification: Ok(StatementReport {
-                        statement_validation: Ok(()),
-                        rekor_verification: None
-                    })
-                })),
+                workload_endorsement_verification: Some(Ok(())),
             }) if *session_binding_public_key == BINDING_KEY_BYTES
         );
     }
@@ -371,9 +416,7 @@ mod tests {
         };
 
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
-
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
-
         let policy = ConfidentialSpacePolicy::new_unendorsed(root_certificate);
 
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());

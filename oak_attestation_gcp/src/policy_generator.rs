@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 use oak_proto_rust::oak::attestation::v1::{
     confidential_space_reference_values, ConfidentialSpaceReferenceValues,
 };
+use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{der::DecodePem, Certificate};
 
-use crate::{cosign::CosignReferenceValues, policy::ConfidentialSpacePolicy};
+use crate::policy::ConfidentialSpacePolicy;
 
 // Allways generates a policy that verifies whether the workload is running on
 // Confidential Space. By extension, `root_certificate_pem` must always be
@@ -33,10 +35,14 @@ pub fn confidential_space_policy_from_reference_values(
         Some(confidential_space_reference_values::ContainerImage::CosignReferenceValues(
             cosign_reference_values,
         )) => {
-            let cosign_reference_values =
-                CosignReferenceValues::from_proto(cosign_reference_values)
-                    .map_err(anyhow::Error::msg)?;
-            Ok(ConfidentialSpacePolicy::new(root_certificate, cosign_reference_values))
+            let endorser_key = cosign_reference_values
+                .developer_public_key
+                .as_ref()
+                .ok_or(anyhow::anyhow!("endorser public key missing"))?
+                .clone();
+            let rekor_key = cosign_reference_values.rekor_public_key.clone();
+            let ref_value = create_endorsement_reference_value(endorser_key, rekor_key);
+            Ok(ConfidentialSpacePolicy::new(root_certificate, ref_value))
         }
         Some(confidential_space_reference_values::ContainerImage::ContainerImageReference(
             _container_image_reference,
@@ -55,8 +61,7 @@ mod tests {
         confidential_space_reference_values, ConfidentialSpaceReferenceValues,
         CosignReferenceValues as CosignReferenceValuesProto,
     };
-    use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
-    use p256::pkcs8::DecodePublicKey;
+    use verify_endorsement::create_verifying_key_from_pem;
 
     use super::*;
 
@@ -64,17 +69,14 @@ mod tests {
     fn confidential_space_complete_policy_generated() {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
-        let developer_public_key =
-            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
+        let developer_key = create_verifying_key_from_pem(&developer_public_key_pem, 0);
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem,
             r#container_image: Some(
                 confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                     CosignReferenceValuesProto {
-                        developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                            &developer_public_key,
-                        )),
+                        developer_public_key: Some(developer_key),
                         ..Default::default()
                     },
                 ),
@@ -100,17 +102,14 @@ mod tests {
     #[test]
     fn confidential_space_policy_no_root_certificate() {
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
-        let developer_public_key =
-            p256::ecdsa::VerifyingKey::from_public_key_pem(&developer_public_key_pem).unwrap();
+        let developer_key = create_verifying_key_from_pem(&developer_public_key_pem, 0);
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: "".to_string(),
             r#container_image: Some(
                 confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                     CosignReferenceValuesProto {
-                        developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                            &developer_public_key,
-                        )),
+                        developer_public_key: Some(developer_key),
                         ..Default::default()
                     },
                 ),

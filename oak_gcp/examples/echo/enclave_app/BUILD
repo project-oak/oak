@@ -60,7 +60,6 @@ rust_binary(
         ":oak_gcp_examples_echo_enclave_app",
         "//oak_attestation_gcp",
         "//oak_proto_rust",
-        "//trex/sigstore",
         "//trex/sigstore_client",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:hex",

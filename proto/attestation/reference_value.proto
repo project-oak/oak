@@ -349,7 +349,10 @@ message ApplicationKeysReferenceValues {
   PublicKeyReferenceValue signing_public_key = 3;
 }
 
+// Deprecated: Use EndorsementReferenceValue instead.
 message CosignReferenceValues {
+  option deprecated = true;
+
   VerifyingKey developer_public_key = 1;
   VerifyingKey rekor_public_key = 2;
 }
