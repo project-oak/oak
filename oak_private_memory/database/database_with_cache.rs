@@ -138,17 +138,45 @@ impl DatabaseWithCache {
         let query = request.query.as_ref().context("the query must be non-empty")?;
         let page_token = PageToken::try_from(request.page_token)
             .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
-        let (ids, scores, next_page_token) =
+        let (search_results, scores, next_page_token) =
             self.meta_db().search(query, request.page_size, page_token)?;
-        let mut memories = self.cache.get_memories_by_blob_ids(&ids).await?;
-        Self::apply_mask_to_memories(&mut memories, &request.result_mask);
 
-        let results = memories
-            .into_iter()
-            .zip(scores.into_iter())
-            .map(|(memory, score)| SearchMemoryResultItem { memory: Some(memory), score })
-            .collect();
-        Ok((results, next_page_token))
+        if search_results.blob_ids.is_empty() {
+            return Ok((Vec::new(), next_page_token));
+        }
+
+        if let Some(view_ids) = search_results.view_ids {
+            // Embedding search
+            let mut memories =
+                self.cache.get_memories_by_blob_ids(&search_results.blob_ids).await?;
+            Self::apply_mask_to_memories(&mut memories, &request.result_mask);
+
+            let results = memories
+                .into_iter()
+                .zip(scores.into_iter())
+                .zip(view_ids.into_iter())
+                .map(|((mut memory, score), view_id)| {
+                    if let Some(views) = memory.views.as_mut() {
+                        views.llm_views.retain(|v| v.id == view_id);
+                    }
+                    SearchMemoryResultItem { memory: Some(memory), score }
+                })
+                .collect();
+
+            Ok((results, next_page_token))
+        } else {
+            // Text search
+            let mut memories =
+                self.cache.get_memories_by_blob_ids(&search_results.blob_ids).await?;
+            Self::apply_mask_to_memories(&mut memories, &request.result_mask);
+
+            let results = memories
+                .into_iter()
+                .zip(scores.into_iter())
+                .map(|(memory, score)| SearchMemoryResultItem { memory: Some(memory), score })
+                .collect();
+            Ok((results, next_page_token))
+        }
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {

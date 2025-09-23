@@ -78,11 +78,11 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
     println!("ids: {:?}", ids);
     println!("scores: {:?}", scores);
     assert_that!(scores, not(is_empty()));
-    assert_that!(scores.len(), eq(ids.len()));
+    assert_that!(scores.len(), eq(ids.blob_ids.len()));
     assert_that!(scores, each(predicate(|&x| x > 0.0)));
     assert_that!(scores[0], eq(15.0));
     assert_that!(scores[1], eq(6.0));
-    assert_that!(ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    assert_that!(ids.blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
@@ -156,8 +156,8 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
     };
 
     let (ids, _, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
-    assert_that!(ids, unordered_elements_are![eq(&"blob2")]);
-    assert_that!(ids.len(), eq(1));
+    assert_that!(ids.blob_ids, unordered_elements_are![eq(&"blob2")]);
+    assert_that!(ids.blob_ids.len(), eq(1));
 
     Ok(())
 }
@@ -197,7 +197,7 @@ fn test_search_views() -> anyhow::Result<()> {
     };
 
     let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
-    assert_that!(ids, unordered_elements_are![eq("memory1")]);
+    assert_that!(ids.blob_ids, unordered_elements_are![eq("memory1")]);
     assert_that!(scores, unordered_elements_are![eq(&3.0)]);
 
     Ok(())
@@ -340,7 +340,7 @@ fn test_query_clauses_and_operator() -> anyhow::Result<()> {
     };
 
     let (blob_ids, _, _) = icing_database.search(&and_query, 10, PageToken::Start)?;
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+    assert_that!(blob_ids.blob_ids, unordered_elements_are![eq("blob2")]);
 
     Ok(())
 }
@@ -397,7 +397,89 @@ fn test_query_clauses_or_operator() -> anyhow::Result<()> {
     };
 
     let (blob_ids, _, _) = icing_database.search(&or_query, 10, PageToken::Start)?;
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
+    assert_that!(blob_ids.blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_with_pagination_returns_correct_view() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+
+    // Add memory 1 with two views.
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view1a".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 0.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view1b".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 1.0, 0.0],
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // Add memory 2 with two views.
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![
+                LlmView {
+                    id: "view2a".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 0.0, 1.0],
+                    }),
+                    ..Default::default()
+                },
+                LlmView {
+                    id: "view2b".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![1.0, 1.0, 0.0], // This view will have the highest score.
+                    }),
+                    ..Default::default()
+                },
+            ],
+        }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Query for memories with an embedding that is closer to memory2's view2b.
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 1.0, 0.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let (results, scores, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+    assert_that!(results.blob_ids.len(), eq(1));
+    let top_blob_id = results.blob_ids.first().unwrap();
+    assert_that!(top_blob_id, eq("blob2"));
+    assert_that!(scores[0], eq(2.0));
+    let view_ids = results.view_ids.unwrap();
+    assert_that!(view_ids.len(), eq(1));
+    let top_view_id = view_ids.first().unwrap();
+    assert_that!(top_view_id, eq("view2b"));
 
     Ok(())
 }

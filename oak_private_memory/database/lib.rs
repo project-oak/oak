@@ -32,3 +32,4 @@ pub use crate::{
 // at `add_memory` requests. Clients then can use this id to get the
 // memory.
 pub type MemoryId = String;
+pub type ViewId = String;

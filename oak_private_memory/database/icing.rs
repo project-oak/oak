@@ -26,7 +26,7 @@ use sealed_memory_rust_proto::{
     prelude::v1::*,
 };
 
-use crate::MemoryId;
+use crate::{MemoryId, ViewId};
 
 fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
@@ -217,6 +217,12 @@ impl PendingLlmViewMetadata {
     pub fn document(&self) -> &DocumentProto {
         &self.icing_document
     }
+}
+
+#[derive(Debug)]
+pub struct SearchResultIds {
+    pub blob_ids: Vec<BlobId>,
+    pub view_ids: Option<Vec<ViewId>>,
 }
 
 impl IcingMetaDatabase {
@@ -566,6 +572,21 @@ impl IcingMetaDatabase {
             .cloned()
     }
 
+    fn extract_view_id_from_doc(
+        doc_hit: &icing::search_result_proto::ResultProto,
+    ) -> Option<ViewId> {
+        let view_id_name = VIEW_ID_NAME.to_string();
+        doc_hit
+            .document
+            .as_ref()?
+            .properties
+            .iter()
+            .find(|prop| prop.name.as_ref() == Some(&view_id_name))?
+            .string_values
+            .first()
+            .cloned()
+    }
+
     fn extract_memory_id_from_doc(
         doc_hit: &icing::search_result_proto::ResultProto,
     ) -> Option<MemoryId> {
@@ -690,19 +711,27 @@ impl IcingMetaDatabase {
         query: &SearchMemoryQuery,
         page_size: i32,
         page_token: PageToken,
-    ) -> anyhow::Result<(Vec<BlobId>, Vec<f32>, PageToken)> {
+    ) -> anyhow::Result<(SearchResultIds, Vec<f32>, PageToken)> {
         let search_views = Self::is_embedding_search(query);
-        let (schema_name, id_name) = if search_views {
-            (LLM_VIEW_SCHEMA_NAME, BLOB_ID_NAME)
+        let (schema_name, projection) = if search_views {
+            (
+                LLM_VIEW_SCHEMA_NAME,
+                icing::TypePropertyMask {
+                    schema_type: Some(LLM_VIEW_SCHEMA_NAME.to_string()),
+                    paths: vec![BLOB_ID_NAME.to_string(), VIEW_ID_NAME.to_string()],
+                },
+            )
         } else {
-            (SCHMA_NAME, BLOB_ID_NAME)
+            (
+                SCHMA_NAME,
+                icing::TypePropertyMask {
+                    schema_type: Some(SCHMA_NAME.to_string()),
+                    paths: vec![BLOB_ID_NAME.to_string()],
+                },
+            )
         };
-        let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
 
-        let projection = icing::TypePropertyMask {
-            schema_type: Some(schema_name.to_string()),
-            paths: vec![id_name.to_string()],
-        };
+        let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
 
         let (search_result, next_page_token) = self.execute_search(
             &search_spec,
@@ -718,12 +747,28 @@ impl IcingMetaDatabase {
             .map(|x| x.score.map(|s| s as f32).unwrap_or(0.0))
             .collect();
 
-        let ids = Self::extract_blob_ids_from_search_result(search_result);
-        ensure!(ids.len() == scores.len());
-        if ids.is_empty() {
-            return Ok((ids, scores, PageToken::Start));
+        let result_ids = if search_views {
+            let mut blob_ids = Vec::new();
+            let mut view_ids = Vec::new();
+            for result in &search_result.results {
+                if let (Some(blob_id), Some(view_id)) =
+                    (Self::extract_blob_id_from_doc(result), Self::extract_view_id_from_doc(result))
+                {
+                    blob_ids.push(blob_id);
+                    view_ids.push(view_id);
+                }
+            }
+            SearchResultIds { blob_ids, view_ids: Some(view_ids) }
+        } else {
+            let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
+            SearchResultIds { blob_ids, view_ids: None }
+        };
+
+        ensure!(result_ids.blob_ids.len() == scores.len());
+        if result_ids.blob_ids.is_empty() {
+            return Ok((result_ids, scores, PageToken::Start));
         }
-        Ok((ids, scores, next_page_token))
+        Ok((result_ids, scores, next_page_token))
     }
 
     fn is_embedding_search(query: &SearchMemoryQuery) -> bool {
@@ -1255,13 +1300,13 @@ mod tests {
         // Query embedding close to embedding1
         let (ids, scores, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
         // Expect memory1 to be the top result due to higher dot product
-        assert_that!(ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
+        assert_that!(ids.blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
         let (ids, scores, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
         // Expect memory1 to be the top result due to higher dot product
-        assert_that!(ids, elements_are![eq(&blob_id1)]);
+        assert_that!(ids.blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
