@@ -21,8 +21,8 @@ use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info};
 use metrics::{get_global_metrics, RequestMetricName};
 use oak_private_memory_database::{
-    encryption::{decrypt_database, encrypt_database},
-    DatabaseWithCache, IcingMetaDatabase, IcingTempDir, MemoryId, PageToken,
+    encryption::decrypt_database, DatabaseWithCache, IcingMetaDatabase, IcingTempDir, MemoryId,
+    PageToken,
 };
 use prost::Message;
 use rand::Rng;
@@ -261,16 +261,11 @@ impl SealedMemorySessionHandler {
             key_derivation_info: Some(boot_strap_info.clone()),
             wrapped_dek: Some(WrappedDataEncryptionKey { wrapped_key: Some(wrapped_key) }),
         };
-        let initial_encrypted_info = EncryptedUserInfo { icing_db: None };
-
-        let encrypted_db_blob = encrypt_database(&initial_encrypted_info, &dek)
-            .context("Failed to encrypt initial user info")?;
 
         db_client
-            .add_mixed_blobs(
-                vec![encrypted_db_blob],
-                Some(vec![uid.clone()]),
-                vec![DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() }],
+            .add_unencrypted_blob(
+                DataBlob { id: uid.clone(), blob: new_plain_text_info.encode_to_vec() },
+                None,
             )
             .await
             .context("Failed to write blobs")?;

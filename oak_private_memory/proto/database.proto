@@ -63,13 +63,6 @@ message ResetDatabaseRequest {}
 
 message ResetDatabaseResponse {}
 
-message WriteBlobsRequest {
-  repeated DataBlob encrypted_blobs = 1;
-  repeated DataBlob unencrypted_blobs = 2;
-}
-
-message WriteBlobsResponse {}
-
 message DeleteBlobsRequest {
   repeated string ids = 1;
 }
@@ -91,11 +84,6 @@ service SealedMemoryDatabaseService {
 
   // Resets the database. This is mainly used for testing.
   rpc ResetDatabase(ResetDatabaseRequest) returns (ResetDatabaseResponse) {}
-
-  // Writes multiple blobs (encrypted or unencrypted) to the database in a
-  // batch. Backend implementation should guarantee that either all blobs are
-  // written or none are written.
-  rpc WriteBlobs(WriteBlobsRequest) returns (WriteBlobsResponse) {}
 
   // Deletes multiple blobs from the database.
   rpc DeleteBlobs(DeleteBlobsRequest) returns (DeleteBlobsResponse) {}

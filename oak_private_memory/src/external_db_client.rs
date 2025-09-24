@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{ensure, Context};
+use anyhow::Context;
 use async_trait::async_trait;
 use log::info;
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, ReadDataBlobRequest,
-    ReadUnencryptedDataBlobRequest, WriteBlobsRequest, WriteDataBlobRequest,
-    WriteUnencryptedDataBlobRequest,
+    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
 };
 use tonic::{transport::Channel, Code};
 
@@ -62,15 +61,6 @@ pub trait DataBlobHandler {
         id: &BlobId,
         strong_read: bool,
     ) -> anyhow::Result<Option<DataBlob>>;
-
-    /// Writes a mix of encrypted and unencrypted blobs to the database in a
-    /// batch.
-    async fn add_mixed_blobs(
-        &mut self,
-        encrypted_contents: Vec<EncryptedDataBlob>,
-        encrypted_ids: Option<Vec<BlobId>>,
-        unencrypted_blobs: Vec<DataBlob>,
-    ) -> anyhow::Result<()>;
 
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()>;
 }
@@ -206,43 +196,6 @@ impl DataBlobHandler for ExternalDbClient {
                 }
             }
         }
-    }
-
-    async fn add_mixed_blobs(
-        &mut self,
-        encrypted_contents: Vec<EncryptedDataBlob>,
-        encrypted_ids: Option<Vec<BlobId>>,
-        unencrypted_blobs: Vec<DataBlob>,
-    ) -> anyhow::Result<()> {
-        let pbuf_encrypted_blobs: Vec<DataBlob> = match encrypted_ids {
-            Some(ids) => {
-                ensure!(
-                    encrypted_contents.len() == ids.len(),
-                    "If encrypted_ids is provided, its length must match encrypted_contents. Got {} contents and {} IDs.",
-                    encrypted_contents.len(),
-                    ids.len()
-                );
-                ids.into_iter()
-                    .zip(encrypted_contents.into_iter())
-                    .map(|(id, content)| DataBlob { id, blob: content.encode_to_vec() })
-                    .collect()
-            }
-            None => encrypted_contents
-                .into_iter()
-                .map(|content| {
-                    let id: BlobId = rand::random::<u128>().to_string(); // Generate random ID
-                    DataBlob { id, blob: content.encode_to_vec() }
-                })
-                .collect(),
-        };
-
-        let request =
-            WriteBlobsRequest { encrypted_blobs: pbuf_encrypted_blobs, unencrypted_blobs };
-
-        self.write_blobs(request)
-            .await
-            .map_err(|e| anyhow::anyhow!("gRPC call to WriteBlobs failed: {:?}", e))?;
-        Ok(())
     }
 
     async fn delete_blobs(&mut self, ids: &[BlobId]) -> anyhow::Result<()> {
