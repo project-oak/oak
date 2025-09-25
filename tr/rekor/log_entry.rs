@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-//! Provides structs and functions for parsing and verifying Rekor log entries.
+//! Provides structs and functions for parsing and verifying Rekor log entries,
+//! supporting the `hashedrekord` type. See
+//! <https://docs.rs/sigstore/latest/src/sigstore/rekor/models/hashedrekord.rs.html>
 
 extern crate alloc;
 
@@ -133,49 +135,41 @@ pub struct Body {
     pub spec: Spec,
 }
 
-/// Represents the `spec` in the body of a Rekor log entry. See
-/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
+/// Represents the `spec` in the body of a Rekor log entry.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Spec {
     pub data: Data,
     pub signature: GenericSignature,
 }
 
-/// Represents the hashed data in the body of a Rekor log entry. See
-/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
+/// Represents the hashed data in the body of a Rekor log entry.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Data {
     pub hash: Hash,
 }
 
-/// Represents a hash obtained via a certain algorithm. See
-/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
+/// Represents a hash obtained via a certain algorithm.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Hash {
-    /// The algorithm used for this hash. Example: `sha256`.
+    /// The algorithm used for this hash. Example: "sha256".
     pub algorithm: String,
 
     /// The hex-encoded value of the hash specified via the `algorithm` field.
     pub value: String,
 }
 
-/// Represents a signature in the body of a Rekor log entry. See
-/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
+/// Represents a signature in the body of a Rekor log entry.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct GenericSignature {
     /// Base64-encoded content that is signed.
     pub content: String,
-
-    /// The format of the signature. Example: `x509`.
-    pub format: String,
 
     /// The public key to verify the signature.
     #[serde(rename = "publicKey")]
     pub public_key: PublicKey,
 }
 
-/// Represents a public key in the Rekor log entry body. See
-/// <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
+/// Represents a public key in the Rekor log entry body.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PublicKey {
     /// Base64-encoded public key.
@@ -273,10 +267,11 @@ pub fn verify_rekor_log_entry_ecdsa(
 /// * `body`: The log entry body.
 /// * `artifact_bytes` The underlying artifact or endorsement.
 fn verify_rekor_body(body: &Body, artifact_bytes: &[u8]) -> anyhow::Result<()> {
+    // TODO: b/445876203 - Reject type "rekord" at some point in the future.
     ensure!(
-        body.spec.signature.format == "x509",
-        "unsupported signature format: {}",
-        body.spec.signature.format
+        body.kind == "rekord" || body.kind == "hashedrekord",
+        "unsupported Rekor type: {}",
+        body.kind
     );
     ensure!(
         body.spec.data.hash.algorithm == "sha256",
