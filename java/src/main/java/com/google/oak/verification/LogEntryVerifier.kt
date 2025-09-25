@@ -106,10 +106,8 @@ object LogEntryVerifier {
    * @return empty if the verification succeeds, or a failure otherwise
    */
   fun verifyRekorBody(body: RekorLogEntry.Body, contentBytes: ByteArray): Optional<Failure> {
-    if (body.spec.signature.format != "x509") {
-      return failure(
-        "unsupported signature format: ${body.spec.signature.format} only x509 is supported"
-      )
+    if (body.kind != "rekord" && body.kind != "hashedrekord") {
+      return failure("unsupported Rekor type: ${body.kind}")
     }
 
     // For now, we only support `sha256` as the hashing algorithm.

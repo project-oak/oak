@@ -31,7 +31,6 @@ class RekorLogEntryTest {
     assertEquals(132193865, r.logEntry.logIndex)
     assertEquals("rekord", r.logEntry.bodyObject?.kind)
     assertEquals("sha256", r.logEntry.bodyObject?.spec?.data?.hash?.algorithm)
-    assertEquals("x509", r.logEntry.bodyObject?.spec?.signature?.format)
   }
 
   companion object {

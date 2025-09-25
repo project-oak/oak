@@ -23,8 +23,8 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 /**
- * Represents a Rekor LogEntry as defined in
- * https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89
+ * Provides structs for parsing Rekor log entries of `hashedrekord` type. See
+ * <https://docs.rs/sigstore/latest/src/sigstore/rekor/models/hashedrekord.rs.html>
  */
 data class RekorLogEntry(
   // package-private for testing
@@ -61,62 +61,28 @@ data class RekorLogEntry(
     internal var verification: LogEntryVerification? = null
   }
 
-  /**
-   * Represents the body in a Rekor LogEntry.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/fc913fe7800ea5faed1c4900d8a6ffe11eb7be32/pkg/generated/models/rekord.go#L38>.
-   * Note that `kind` is a derived field.
-   */
+  /** Represents the body in a Rekor LogEntry. */
   data class Body(val apiVersion: String, val kind: String, val spec: Spec)
 
-  /**
-   * Represents the `spec` in the body of a Rekor LogEntry.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
-   */
+  /** Represents the `spec` in the body of a Rekor LogEntry. */
   data class Spec(val data: Data, val signature: GenericSignature)
 
-  /**
-   * Represents the hashed data in the body of a Rekor LogEntry.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
-   */
+  /** Represents the hashed data in the body of a Rekor LogEntry. */
   data class Data(val hash: Hash)
 
-  /**
-   * Represents a hash digest.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
-   */
+  /** Represents a hash digest. */
   data class Hash(val algorithm: String, val value: String)
 
-  /**
-   * Represents a signature in the body of a Rekor LogEntry.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
-   */
+  /** Represents a signature in the body of a Rekor LogEntry. */
   data class GenericSignature(
     /** Base64 content that is signed. */
     val content: String,
-
-    /** Signature format, e.g., x509. */
-    val format: String,
 
     /** Public key associated with the signing key that generated this signature. */
     val publicKey: PublicKey,
   )
 
-  /**
-   * Represents a public key included in the body of a Rekor LogEntry.
-   *
-   * Based on
-   * <https:></https:>//github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
-   */
+  /** Represents a public key included in the body of a Rekor LogEntry. */
   data class PublicKey(
     /** Base64 content of a public key. */
     val content: String
