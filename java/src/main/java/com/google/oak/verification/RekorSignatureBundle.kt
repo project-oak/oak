@@ -15,8 +15,6 @@
 //
 package com.google.oak.verification
 
-import com.google.gson.GsonBuilder
-
 /**
  * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.
  *
@@ -33,15 +31,14 @@ data class RekorSignatureBundle(
   /** Base64-encoded signature over the canonicalized JSON document. */
   val base64Signature: String,
 ) {
-
   companion object {
+    const val TEMPLATE = "{\"body\":\"%s\",\"integratedTime\":%d,\"logID\":\"%s\",\"logIndex\":%d}"
+
     /** Creates a bundle from the given log entry. */
-    fun create(entry: RekorLogEntry): RekorSignatureBundle {
-      // This clears any non-constructor fields.
-      val entrySubset = entry.logEntry.copy()
-      val gson = GsonBuilder().create()
-      val canonicalized = gson.toJson(entrySubset)
-      return RekorSignatureBundle(canonicalized, entry.logEntry.verification!!.signedEntryTimestamp)
+    fun create(logEntry: RekorLogEntry): RekorSignatureBundle {
+      val e = logEntry.logEntry
+      val canonicalized = TEMPLATE.format(e.body, e.integratedTime, e.logID, e.logIndex)
+      return RekorSignatureBundle(canonicalized, e.verification!!.signedEntryTimestamp)
     }
   }
 }
