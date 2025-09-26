@@ -139,4 +139,8 @@ pub mod oak {
             include_proto!("oak.session.v1");
         }
     }
+
+    pub mod verity {
+        include_proto!("oak.verity");
+    }
 }
