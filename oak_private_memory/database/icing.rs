@@ -636,6 +636,7 @@ impl IcingMetaDatabase {
                 query: Some(format!("({} >= 0)", CREATED_TIMESTAMP_NAME)),
                 enabled_features: vec!["NUMERIC_SEARCH".to_string()],
                 term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+                schema_type_filters: vec![SCHMA_NAME.to_string()],
                 ..Default::default()
             };
             let result_spec = icing::ResultSpecProto {
@@ -1068,6 +1069,7 @@ impl IcingMetaDatabase {
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
         for memory_id in memory_ids {
+            // TODO: b/447637766 - Delete the views associated with the memory.
             let result =
                 self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
             if result.status.clone().context("no status")?.code
