@@ -24,6 +24,9 @@ use x86_64::structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB};
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;
 
+/// The size of a Runtime Measurement Register (RTMR).
+const RTMR_SIZE: usize = 48;
+
 bitflags! {
     /// Attributes of a TD.
     ///
@@ -327,7 +330,7 @@ pub enum RtmrIndex {
 /// It must be 64-byte aligned and have a length of 48 bytes.
 #[repr(C, align(64))]
 pub struct ExtensionBuffer {
-    pub data: [u8; 48],
+    pub data: [u8; RTMR_SIZE],
 }
 
 /// Error when extending an RTMR.
@@ -382,6 +385,113 @@ pub fn extend_rtmr(rtmr_index: RtmrIndex, buf: &ExtensionBuffer) -> Result<(), E
         // that we ignore for now.
         return Err(ExtendRtmrError::from_repr(result & 0xFFFFFFFF00000000)
             .expect("TDCALL[TDG.MR.RTMR.EXTEND] returned an invalid result"));
+    }
+
+    Ok(())
+}
+
+/// A buffer for fetching a TD Report which contains the measurements and
+/// configuration of a guest TD.
+#[repr(C, align(1024))]
+#[derive(Debug)]
+pub struct TdReportBuffer {
+    data: [u8; 1024],
+}
+
+impl TdReportBuffer {
+    pub const fn new() -> Self {
+        TdReportBuffer { data: [0u8; 1024] }
+    }
+
+    /// Gets a slice that represents the measurement in a Runtime Measurement
+    /// Register (RTMR).
+    pub fn get_rtmr(&self, index: RtmrIndex) -> &[u8] {
+        // The offset to the start of the TD_INFO struct.
+        const TD_INFO_OFFSET: usize = 512;
+        // The offset to the start of the first RTMR field inside the TD_INFO struct.
+        const RTMR_OFFSET: usize = 208;
+
+        let index = index as u64 as usize;
+        let start = TD_INFO_OFFSET + RTMR_OFFSET + RTMR_SIZE * index;
+        &self.data[start..start + RTMR_SIZE]
+    }
+}
+
+impl Default for TdReportBuffer {
+    fn default() -> Self {
+        TdReportBuffer::new()
+    }
+}
+
+/// Error when requesting an attestation report.
+///
+/// These values are derived from the TDX Function Completion status structure.
+/// See section 3.1.1 of the [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
+/// for more information.
+#[derive(Debug, Display, FromRepr)]
+#[repr(u64)]
+pub enum GetReportError {
+    /// The supplied operand is invalid.
+    InvalidOperand = 0xC000010000000000,
+    /// Operation encountered a busy operand, indicated by the lower 32 bits of
+    /// the status. In many cases, this can be resolved by retrying the
+    /// operation.
+    OperandBusy = 0x8000020000000000,
+}
+
+/// A buffer that can be used as extra data when requesting a report.
+///
+/// It must be 64-byte aligned and have a length of 64 bytes.
+#[repr(C, align(64))]
+pub struct ExtraDataBuffer {
+    pub data: [u8; 64],
+}
+
+/// Loads an attestation report into the provided buffer.
+///
+/// See section 5.4.5 of the [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
+/// for more information.
+pub fn get_report(
+    extra_data: &ExtraDataBuffer,
+    report_buffer: &mut TdReportBuffer,
+) -> Result<(), GetReportError> {
+    // The TDCALL leaf for TDG.MR.REPORT.
+    const LEAF: u64 = 4;
+    // We only support sub-type 0 of the report.
+    const REPORT_SUBTYPE: u64 = 0;
+
+    let mut result: u64;
+    // We use an identity mapping so the guest-physical addresses are the same as
+    // the virtual addresses.
+    let buf_gpa = report_buffer.data.as_ptr() as usize as u64;
+    let extra_data_gpa = extra_data.data.as_ptr() as usize as u64;
+
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The
+    // 1024-byte aligned guest-physical address of the newly report buffer goes
+    // into RCX. The 64-byte aligned guest-physical address of the extra data goes
+    // into RDX. The report sub-type goes into R8.
+    //
+    // Safety: calling TDCALL here is safe since it will only alter the report
+    // memory which points to a mutable reference to a report buffer of the correct
+    // size, and all the affected registers are specified so no unspecified
+    // registers will be clobbered.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") LEAF => result,
+            in("rcx") buf_gpa,
+            in("rdx") extra_data_gpa,
+            in("r8") REPORT_SUBTYPE,
+            options(nostack),
+        );
+    }
+
+    if result > 0 {
+        // According to the spec the result will either be 0 (Success) or one of the
+        // defined error values. The lower 32 bits can contain additional information
+        // that we ignore for now.
+        return Err(GetReportError::from_repr(result & 0xFFFFFFFF00000000)
+            .expect("TDCALL[TDG.MR.REPORT] returned an invalid result"));
     }
 
     Ok(())

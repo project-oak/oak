@@ -21,7 +21,9 @@ use oak_attestation_types::{
     util::{encode_length_delimited_proto, Serializable},
 };
 use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
-use oak_tdx_guest::tdcall::{extend_rtmr, ExtensionBuffer, RtmrIndex};
+use oak_tdx_guest::tdcall::{
+    extend_rtmr, get_report, ExtensionBuffer, ExtraDataBuffer, RtmrIndex, TdReportBuffer,
+};
 use sha2::{Digest, Sha384};
 
 pub struct RtmrAttester {
@@ -47,9 +49,16 @@ impl Attester for RtmrAttester {
             .push(encoded_event.to_vec());
 
         let digest = Sha384::digest(encoded_event);
+        log::debug!("Event digest: sha2-384:{}", hex::encode(digest.as_slice()));
         // We always extend RTMR2 for all event log entries.
         extend_rtmr(RtmrIndex::Rtmr2, &ExtensionBuffer { data: digest.into() })
-            .map_err(anyhow::Error::msg)
+            .map_err(anyhow::Error::msg)?;
+
+        let mut report_buffer = TdReportBuffer::new();
+        let extra_data = ExtraDataBuffer { data: [0u8; 64] };
+        get_report(&extra_data, &mut report_buffer).map_err(anyhow::Error::msg)?;
+        log::debug!("RTMR 2: {}", hex::encode(report_buffer.get_rtmr(RtmrIndex::Rtmr2)));
+        Ok(())
     }
 
     fn quote(&self) -> anyhow::Result<Evidence> {
