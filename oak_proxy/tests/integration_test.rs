@@ -47,16 +47,16 @@ async fn proxy_test() -> anyhow::Result<()> {
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     let client_config = ClientConfig {
-        listen_address: format!("127.0.0.1:{}", client_port).parse()?,
-        server_proxy_url: format!("ws://127.0.0.1:{}", server_proxy_port).parse()?,
+        listen_address: Some(format!("127.0.0.1:{}", client_port).parse()?),
+        server_proxy_url: Some(format!("ws://127.0.0.1:{}", server_proxy_port).parse()?),
         attestation_generators: Vec::new(),
         attestation_verifiers: Vec::new(),
         keep_alive_interval: Duration::from_secs(10),
     };
 
     let server_config = ServerConfig {
-        listen_address: format!("127.0.0.1:{}", server_proxy_port).parse()?,
-        backend_address: format!("127.0.0.1:{}", backend_port).parse()?,
+        listen_address: Some(format!("127.0.0.1:{}", server_proxy_port).parse()?),
+        backend_address: Some(format!("127.0.0.1:{}", backend_port).parse()?),
         attestation_generators: Vec::new(),
         attestation_verifiers: Vec::new(),
         keep_alive_interval: Duration::from_secs(10),
@@ -71,7 +71,7 @@ async fn proxy_test() -> anyhow::Result<()> {
             "--config",
             "server.toml",
             "--listen-address",
-            &server_config.listen_address.to_string(),
+            &server_config.listen_address.unwrap().to_string(),
         ])
         .env("RUST_LOG", "debug")
         .spawn()?;
@@ -80,9 +80,9 @@ async fn proxy_test() -> anyhow::Result<()> {
             "--config",
             "client.toml",
             "--listen-address",
-            &client_config.listen_address.to_string(),
+            &client_config.listen_address.unwrap().to_string(),
             "--server-proxy-url",
-            client_config.server_proxy_url.as_ref(),
+            client_config.server_proxy_url.unwrap().as_ref(),
         ])
         .env("RUST_LOG", "debug")
         .spawn()?;

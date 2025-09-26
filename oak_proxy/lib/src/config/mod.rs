@@ -43,18 +43,24 @@ where
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ClientConfig {
-    pub listen_address: SocketAddr,
-    pub server_proxy_url: Url,
+    #[serde(default)]
+    pub listen_address: Option<SocketAddr>,
+    #[serde(default)]
+    pub server_proxy_url: Option<Url>,
     #[serde(with = "humantime_serde", default = "default_keep_alive_interval")]
     pub keep_alive_interval: Duration,
+    #[serde(default)]
     pub attestation_generators: Vec<GeneratorConfig>,
+    #[serde(default)]
     pub attestation_verifiers: Vec<VerifierConfig>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ServerConfig {
-    pub listen_address: SocketAddr,
-    pub backend_address: SocketAddr,
+    #[serde(default)]
+    pub listen_address: Option<SocketAddr>,
+    #[serde(default)]
+    pub backend_address: Option<SocketAddr>,
     #[serde(with = "humantime_serde", default = "default_keep_alive_interval")]
     pub keep_alive_interval: Duration,
     #[serde(default)]

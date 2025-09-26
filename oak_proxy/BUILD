@@ -29,6 +29,7 @@ rust_test_suite(
     data = [
         "//oak_proxy/client",
         "//oak_proxy/server",
+        "//oak_proxy/testdata",
     ],
     deps = [
         "//oak_proxy/lib:oak_proxy_lib",

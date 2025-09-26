@@ -14,8 +14,18 @@
 // limitations under the License.
 //
 
-pub mod config;
-pub mod proxy;
-#[cfg(test)]
-pub mod tests;
-pub mod websocket;
+use oak_proxy_lib::config::{ClientConfig, ServerConfig};
+
+#[test]
+fn read_config_test() {
+    let client_config_str = std::fs::read_to_string("oak_proxy/testdata/client.toml")
+        .expect("could not read client config");
+    let server_config_str = std::fs::read_to_string("oak_proxy/testdata/server.toml")
+        .expect("could not read server config");
+
+    let client_config: Result<ClientConfig, _> = toml::from_str(&client_config_str);
+    let server_config: Result<ServerConfig, _> = toml::from_str(&server_config_str);
+
+    assert!(client_config.is_ok());
+    assert!(server_config.is_ok());
+}

@@ -56,10 +56,10 @@ async fn main() -> anyhow::Result<()> {
 
     // The command-line arguments override the values from the config file.
     if let Some(listen_address) = listen_address {
-        config.listen_address = listen_address;
+        config.listen_address = Some(listen_address);
     }
     if let Some(backend_address) = backend_address {
-        config.backend_address = backend_address;
+        config.backend_address = Some(backend_address);
     }
 
     let config = Arc::new(config);
@@ -68,8 +68,12 @@ async fn main() -> anyhow::Result<()> {
         tokio::spawn(backend_task(config.clone()));
     }
 
-    let listener = TcpListener::bind(config.listen_address).await?;
-    log::info!("[Server] Listening on {}", config.listen_address);
+    let listen_address = config
+        .listen_address
+        .context("listen_address must be specified in the config file or via an argument")?;
+    anyhow::ensure!(config.backend_address.is_some());
+    let listener = TcpListener::bind(listen_address).await?;
+    log::info!("[Server] Listening on {}", listen_address);
 
     loop {
         let (stream, peer_address) = listener.accept().await?;
@@ -105,10 +109,11 @@ async fn handle_connection(
 
     log::info!("[Server] Oak Session established with client proxy.");
 
-    let backend_stream = TcpStream::connect(config.backend_address)
+    let backend_address = config.backend_address.context("backend_address wasn't set")?;
+    let backend_stream = TcpStream::connect(backend_address)
         .await
-        .context(format!("error connecting to backend {}", config.backend_address))?;
-    log::info!("[Server] Connected to backend server at {}", config.backend_address);
+        .context(format!("error connecting to backend {}", backend_address))?;
+    log::info!("[Server] Connected to backend server at {}", backend_address);
 
     proxy::<
         ServerSession,

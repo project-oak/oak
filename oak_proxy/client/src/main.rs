@@ -16,6 +16,7 @@
 
 use std::{net::SocketAddr, sync::Arc};
 
+use anyhow::Context;
 use clap::Parser;
 use oak_proxy_lib::{
     config::{self, ClientConfig},
@@ -52,14 +53,18 @@ async fn main() -> anyhow::Result<()> {
 
     // The command-line arguments override the values from the config file.
     if let Some(listen_address) = listen_address {
-        config.listen_address = listen_address;
+        config.listen_address = Some(listen_address);
     }
     if let Some(server_proxy_url) = server_proxy_url {
-        config.server_proxy_url = server_proxy_url;
+        config.server_proxy_url = Some(server_proxy_url);
     }
 
-    let listener = TcpListener::bind(config.listen_address).await?;
-    log::info!("[Client] Listening on {}", config.listen_address);
+    let listen_address = config
+        .listen_address
+        .context("listen_address must be specified in the config file or via an argument")?;
+    anyhow::ensure!(config.server_proxy_url.is_some());
+    let listener = TcpListener::bind(listen_address).await?;
+    log::info!("[Client] Listening on {}", listen_address);
 
     let config = Arc::new(config);
     loop {
@@ -75,9 +80,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
-    let (mut server_proxy_stream, _) =
-        tokio_tungstenite::connect_async(&config.server_proxy_url).await?;
-    log::info!("[Client] Connected to server proxy at {}", config.server_proxy_url);
+    let server_proxy_url =
+        config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
+    let (mut server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
+    log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
     let client_config = config::build_session_config(
         &config.attestation_generators,
