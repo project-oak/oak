@@ -565,6 +565,46 @@ impl IcingMetaDatabase {
         Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
     }
 
+    fn extract_view_ids_from_search_result(search_result: icing::SearchResultProto) -> Vec<ViewId> {
+        search_result.results.iter().filter_map(Self::extract_view_id_from_doc).collect::<Vec<_>>()
+    }
+
+    fn create_view_id_projection(schema_name: &str) -> icing::TypePropertyMask {
+        icing::TypePropertyMask {
+            schema_type: Some(schema_name.to_string()),
+            paths: vec![VIEW_ID_NAME.to_string()],
+        }
+    }
+
+    fn get_view_ids_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Vec<ViewId>> {
+        let search_spec = icing::SearchSpecProto {
+            query: Some(memory_id.clone()),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![LLM_VIEW_SCHEMA_NAME.to_string()],
+            type_property_filters: vec![Self::create_search_filter(
+                LLM_VIEW_SCHEMA_NAME,
+                MEMORY_ID_NAME,
+            )],
+            ..Default::default()
+        };
+        let result_spec = icing::ResultSpecProto {
+            num_per_page: Some(1000), // Max page size
+            type_property_masks: vec![Self::create_view_id_projection(LLM_VIEW_SCHEMA_NAME)],
+            ..Default::default()
+        };
+        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
+            &search_spec,
+            &icing::get_default_scoring_spec(),
+            &result_spec,
+        );
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed for memory_id {}: {:?}", memory_id, search_result.status);
+        }
+        Ok(Self::extract_view_ids_from_search_result(search_result))
+    }
+
     fn extract_blob_id_from_doc(
         doc_hit: &icing::search_result_proto::ResultProto,
     ) -> Option<BlobId> {
@@ -1069,7 +1109,16 @@ impl IcingMetaDatabase {
 
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
         for memory_id in memory_ids {
-            // TODO: b/447637766 - Delete the views associated with the memory.
+            let view_ids = self.get_view_ids_by_memory_id(memory_id.clone())?;
+            for view_id in view_ids {
+                let result =
+                    self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), view_id.as_bytes());
+                if result.status.clone().context("no status")?.code
+                    != Some(icing::status_proto::Code::Ok.into())
+                {
+                    bail!("Failed to delete view with id {}: {:?}", view_id, result.status);
+                }
+            }
             let result =
                 self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
             if result.status.clone().context("no status")?.code
@@ -1555,6 +1604,45 @@ mod tests {
         assert_that!(blob_ids, elements_are![eq(&memories[0].1), eq(&memories[1].1)]);
         assert_that!(scores, elements_are![eq(&1.9), eq(&0.8)]);
 
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_delete_memory_also_deletes_views_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let memory_id = "memory_id".to_string();
+        let blob_id = 12345.to_string();
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+        let view_ids = icing_database.get_view_ids_by_memory_id(memory_id.clone());
+        assert_that!(view_ids, ok(unordered_elements_are![eq(&"view1"), eq(&"view2")]));
+        icing_database.delete_memories(&[memory_id.clone()])?;
+        let view_ids = icing_database.get_view_ids_by_memory_id(memory_id);
+        assert_that!(view_ids, ok(is_empty()));
         Ok(())
     }
 }
