@@ -59,6 +59,31 @@ message ReadUnencryptedDataBlobResponse {
   DataBlob data_blob = 1;
 }
 
+// A metadata blob containing a version.
+message MetadataBlob {
+  // The data blob containing the metadata info.
+  DataBlob data_blob = 1;
+
+  // An opaque version string representing the version of this metadata blob.
+  // The string should not be parsed or interpreted by the client. It should
+  // only be saved to pass back verbatim to calls to WriteMetadataBlob.
+  string version = 2;
+}
+
+message ReadMetadataBlobRequest {
+  string id = 1;
+}
+
+message ReadMetadataBlobResponse {
+  MetadataBlob metadata_blob = 1;
+}
+
+message WriteMetadataBlobRequest {
+  MetadataBlob metadata_blob = 1;
+}
+
+message WriteMetadataBlobResponse {}
+
 message ResetDatabaseRequest {}
 
 message ResetDatabaseResponse {}
@@ -75,6 +100,21 @@ service SealedMemoryDatabaseService {
   rpc WriteDataBlob(WriteDataBlobRequest) returns (WriteDataBlobResponse) {}
   // Reads a data blob from the database.
   rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
+
+  // Write a metadata blob to the database.
+  // If the current version of the stored metadata blob does not match the
+  // version provided in the request, the write will fail.
+  rpc WriteMetadataBlob(WriteMetadataBlobRequest)
+      returns (WriteMetadataBlobResponse) {}
+
+  // Read a metadatablob from the database.
+  //
+  // The returned metadatablob will include a version string; this version
+  // string should be provided verbatim in the call to WriteMetadataBlob if
+  // changes are to be committed.
+  rpc ReadMetadataBlob(ReadMetadataBlobRequest)
+      returns (ReadMetadataBlobResponse) {}
+
   // Writes an unencrypted data blob to the database.
   rpc WriteUnencryptedDataBlob(WriteUnencryptedDataBlobRequest)
       returns (WriteUnencryptedDataBlobResponse) {}

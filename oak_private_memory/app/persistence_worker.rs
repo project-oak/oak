@@ -18,6 +18,7 @@ use external_db_client::DataBlobHandler;
 use log::info;
 use metrics::get_global_metrics;
 use oak_private_memory_database::encryption::encrypt_database;
+use sealed_memory_rust_proto::oak::private_memory::EncryptedMetadataBlob;
 use tokio::{sync::mpsc, time::Instant};
 
 use crate::context::UserSessionContext;
@@ -35,8 +36,20 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
     info!("Saving db size: {}", db_size);
     get_global_metrics().record_db_size(db_size);
 
+    // TODO: b/443329966 - implement the opportunistic concurrency logic here: if
+    // the write fails due to a version mis-match, re-apply changes.
     let now = Instant::now();
-    user_context.database_service_client.add_blob(database, Some(user_context.uid.clone())).await?;
+    user_context
+        .database_service_client
+        .add_metadata_blob(
+            &user_context.uid,
+            EncryptedMetadataBlob {
+                encrypted_data_blob: Some(database),
+                version: user_context.database_version.clone(),
+            },
+        )
+        .await?;
+
     let elapsed = now.elapsed();
     get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
 

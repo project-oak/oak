@@ -188,7 +188,7 @@ impl SealedMemorySessionHandler {
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         is_json: bool,
     ) -> anyhow::Result<()> {
-        let database = get_or_create_db(&mut db_client, &uid, &dek).await?;
+        let (database, database_version) = get_or_create_db(&mut db_client, &uid, &dek).await?;
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
@@ -200,6 +200,7 @@ impl SealedMemorySessionHandler {
             uid,
             message_type,
             database_service_client: db_client,
+            database_version,
             database,
         });
         Ok(())
@@ -427,10 +428,12 @@ async fn get_or_create_db(
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
-) -> anyhow::Result<IcingMetaDatabase> {
-    if let Some(data_blob) = db_client.get_blob(uid, true).await? {
-        info!("Loaded database from blob: Length: {}", data_blob.data.len());
-        let encrypted_info = decrypt_database(data_blob, dek)?;
+) -> anyhow::Result<(IcingMetaDatabase, String)> {
+    if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
+        db_client.get_metadata_blob(uid).await?
+    {
+        info!("Loaded database from blob: Length: {}", encrypted_data_blob.data.len());
+        let encrypted_info = decrypt_database(encrypted_data_blob, dek)?;
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
             info!("Loaded database successfully!!");
@@ -440,14 +443,16 @@ async fn get_or_create_db(
             )?;
             let elapsed = now.elapsed();
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
-            return Ok(db);
+            return Ok((db, version));
         }
     } else {
         debug!("no blob for {}", uid);
     }
 
-    // This case can happen if the user is just registered, but the initial database
-    // has not been created, or if the blob exists but is empty.
+    // This case can happen if the user is just registered, or the metadata database
+    // somehow did not exist.
+    // The version is empty, indicating that we can unconditionally write the
+    // database.
     let db = IcingMetaDatabase::new(IcingTempDir::new("sm-server-icing-"))?;
-    Ok(db)
+    Ok((db, String::new()))
 }

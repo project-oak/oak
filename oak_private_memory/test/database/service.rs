@@ -21,16 +21,18 @@ use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_servic
     SealedMemoryDatabaseService, SealedMemoryDatabaseServiceServer,
 };
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, ReadDataBlobRequest, ReadDataBlobResponse,
+    DataBlob, DeleteBlobsRequest, DeleteBlobsResponse, MetadataBlob, ReadDataBlobRequest,
+    ReadDataBlobResponse, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
     ReadUnencryptedDataBlobRequest, ReadUnencryptedDataBlobResponse, ResetDatabaseRequest,
-    ResetDatabaseResponse, WriteDataBlobRequest, WriteDataBlobResponse,
-    WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
+    ResetDatabaseResponse, WriteDataBlobRequest, WriteDataBlobResponse, WriteMetadataBlobRequest,
+    WriteMetadataBlobResponse, WriteUnencryptedDataBlobRequest, WriteUnencryptedDataBlobResponse,
 };
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_stream::wrappers::TcpListenerStream;
 
 pub struct SealedMemoryDatabaseServiceTestImpl {
     pub database: Mutex<HashMap<String, DataBlob>>,
+    pub metadata_database: Mutex<HashMap<String, MetadataBlob>>,
     pub unencrypted_database: Mutex<HashMap<String, DataBlob>>,
 }
 
@@ -38,6 +40,7 @@ impl Default for SealedMemoryDatabaseServiceTestImpl {
     fn default() -> Self {
         Self {
             database: Mutex::new(HashMap::new()),
+            metadata_database: Mutex::new(HashMap::new()),
             unencrypted_database: Mutex::new(HashMap::new()),
         }
     }
@@ -47,8 +50,14 @@ impl SealedMemoryDatabaseServiceTestImpl {
     pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
         self.database.lock().await.insert(id, blob);
     }
+    pub async fn add_metadata_blob_inner(&self, id: String, blob: MetadataBlob) {
+        self.metadata_database.lock().await.insert(id, blob);
+    }
     pub async fn get_blob_inner(&self, id: &str) -> Option<DataBlob> {
         self.database.lock().await.get(id).cloned()
+    }
+    pub async fn get_metdata_blob_inner(&self, id: &str) -> Option<MetadataBlob> {
+        self.metadata_database.lock().await.get(id).cloned()
     }
 }
 
@@ -77,6 +86,37 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
 
         if let Some(blob) = blob {
             Ok(tonic::Response::new(ReadDataBlobResponse { data_blob: Some(blob) }))
+        } else {
+            Err(tonic::Status::not_found("Blob not found"))
+        }
+    }
+
+    async fn write_metadata_blob(
+        &self,
+        request: tonic::Request<WriteMetadataBlobRequest>,
+    ) -> Result<tonic::Response<WriteMetadataBlobResponse>, tonic::Status> {
+        // TODO: b/443329966 - implement a fake opportunistic concurrency check here,
+        // matching the expected semantics (returning a failure if the provided version
+        // does not match the existing stored one)
+        let request = request.into_inner();
+        self.add_metadata_blob_inner(
+            request.metadata_blob.as_ref().unwrap().data_blob.as_ref().unwrap().id.clone(),
+            request.metadata_blob.unwrap(),
+        )
+        .await;
+        Ok(tonic::Response::new(WriteMetadataBlobResponse {}))
+    }
+
+    async fn read_metadata_blob(
+        &self,
+        request: tonic::Request<ReadMetadataBlobRequest>,
+    ) -> Result<tonic::Response<ReadMetadataBlobResponse>, tonic::Status> {
+        let request = request.into_inner();
+        let blob = self.get_metdata_blob_inner(&request.id).await;
+        debug!("Read {:?}, blob {:?}", request, blob);
+
+        if let Some(blob) = blob {
+            Ok(tonic::Response::new(ReadMetadataBlobResponse { metadata_blob: Some(blob) }))
         } else {
             Err(tonic::Status::not_found("Blob not found"))
         }

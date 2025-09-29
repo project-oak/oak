@@ -27,5 +27,9 @@ pub struct UserSessionContext {
     pub message_type: MessageType,
 
     pub database: DatabaseWithCache,
+    // This is the opaque version string received when reading in the current database.
+    // It should be provided to calls that will write the database back, so that the version can be
+    // checked, to prevent data loss due to concurrent database write-back.
+    pub database_version: String,
     pub database_service_client: SealedMemoryDatabaseServiceClient<Channel>,
 }

@@ -39,6 +39,11 @@ message EncryptedDataBlob {
   bytes data = 2;
 }
 
+message EncryptedMetadataBlob {
+  EncryptedDataBlob encrypted_data_blob = 1;
+  string version = 2;
+}
+
 message WrappedDataEncryptionKey {
   EncryptedDataBlob wrapped_key = 1;
 }

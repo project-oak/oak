@@ -19,8 +19,10 @@ use log::info;
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
-    DataBlob, DeleteBlobsRequest, EncryptedDataBlob, ReadDataBlobRequest,
-    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteUnencryptedDataBlobRequest,
+    DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
+    ReadDataBlobRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
+    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteMetadataBlobRequest,
+    WriteUnencryptedDataBlobRequest,
 };
 use tonic::{transport::Channel, Code};
 
@@ -46,6 +48,15 @@ pub trait DataBlobHandler {
         id: &BlobId,
         strong_read: bool,
     ) -> anyhow::Result<Option<EncryptedDataBlob>>;
+    async fn add_metadata_blob(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: EncryptedMetadataBlob,
+    ) -> anyhow::Result<()>;
+    async fn get_metadata_blob(
+        &mut self,
+        id: &BlobId,
+    ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
     async fn get_blobs(
         &mut self,
         ids: &[BlobId],
@@ -85,6 +96,32 @@ impl DataBlobHandler for ExternalDbClient {
         let speed = blob_size / 1024 / elapsed_time;
         metrics::get_global_metrics().record_db_save_speed(speed);
         Ok(id)
+    }
+
+    async fn add_metadata_blob(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: EncryptedMetadataBlob,
+    ) -> anyhow::Result<()> {
+        let blob =
+            metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
+        let blob_size = blob.len() as u64;
+        let data_blob = DataBlob { id: id.clone(), blob };
+        let start_time = tokio::time::Instant::now();
+        self.write_metadata_blob(WriteMetadataBlobRequest {
+            metadata_blob: Some(MetadataBlob {
+                data_blob: Some(data_blob),
+                version: metadata_blob.version,
+            }),
+        })
+        .await?;
+        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+        if elapsed_time == 0 {
+            elapsed_time = 1;
+        }
+        let speed = blob_size / 1024 / elapsed_time;
+        metrics::get_global_metrics().record_db_save_speed(speed);
+        Ok(())
     }
 
     async fn add_blobs(
@@ -127,6 +164,47 @@ impl DataBlobHandler for ExternalDbClient {
                     let speed = blob_size / 1024 / elapsed_time;
                     metrics::get_global_metrics().record_db_load_speed(speed);
                     return Ok(Some(data_blob));
+                }
+                Ok(None)
+            }
+            Err(status) => {
+                if status.code() == Code::NotFound {
+                    Ok(None)
+                } else {
+                    Err(status.into())
+                }
+            }
+        }
+    }
+
+    async fn get_metadata_blob(
+        &mut self,
+        id: &BlobId,
+    ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
+        let start_time = tokio::time::Instant::now();
+        match self.read_metadata_blob(ReadMetadataBlobRequest { id: id.clone() }).await {
+            Ok(response) => {
+                let db_response = response.into_inner();
+                if let ReadMetadataBlobResponse {
+                    metadata_blob: Some(MetadataBlob { data_blob: Some(data_blob), version }),
+                } = db_response
+                {
+                    let blob_size = data_blob.blob.len() as u64;
+                    let metadata_blob = EncryptedMetadataBlob {
+                        encrypted_data_blob: Some(
+                            EncryptedDataBlob::decode(&*data_blob.blob)
+                                .context("Failed to decode EncryptedMetadataBlob")?,
+                        ),
+                        version,
+                    };
+
+                    let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+                    if elapsed_time == 0 {
+                        elapsed_time = 1;
+                    }
+                    let speed = blob_size / 1024 / elapsed_time;
+                    metrics::get_global_metrics().record_db_load_speed(speed);
+                    return Ok(Some(metadata_blob));
                 }
                 Ok(None)
             }
