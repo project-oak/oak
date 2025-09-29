@@ -1,5 +1,5 @@
 # Stage 1: Load oak-proxy.
-FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:93a132432120922b0199ddca84675e449aa12d8fd53f13c79da94113786d2a96 as oak_proxy
+FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:64ea4a7e868fb91b537e257cc4c746ef98b141ef941a35ba5b7f9424dfaa4e73 as oak_proxy
 
 # Stage 2: Builder.
 # Digest can be accessed with the following command:

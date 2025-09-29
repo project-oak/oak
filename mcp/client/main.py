@@ -23,10 +23,13 @@ from a2a.client import ClientConfig
 from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH
 from a2a.types import (
     AgentCard,
+    DataPart,
+    FilePart,
     Message,
     Part,
     Role,
     Task,
+    TaskArtifactUpdateEvent,
     TextPart,
     TransportProtocol,
 )
@@ -74,16 +77,22 @@ async def main():
     )
     parser.add_argument(
         "--agent-url",
-        default="http://127.0.0.1:8081/a2a/weather_agent",
+        default="http://127.0.0.1:8080",
         help=(
             "The URL of the agent's A2A endpoint (e.g.,"
             " http://host:port/a2a/agent_name)."
         ),
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     args = parser.parse_args()
 
     # Generate a unique context_id for this entire chat session.
     chat_session_id = str(uuid.uuid4())
+    chat_session_id = "f18c9ac6-ccef-4faa-a1e0-77c2bc10b390"
     print(f"Starting new chat session: {chat_session_id}")
     print(f"Connecting to agent at: {args.agent_url}")
     print("Type 'exit' or 'quit' to end the chat.")
@@ -98,6 +107,13 @@ async def main():
             agent_card_response.raise_for_status()
             agent_card_data = agent_card_response.json()
             agent_card = AgentCard(**agent_card_data)
+            print(f"Received the agent card: {agent_card}")
+
+            # The agent card contains the internal URL. We must rewrite it to use
+            # the public-facing proxy URL while preserving the path.
+            internal_agent_url = httpx.URL(agent_card.url)
+            proxy_url = httpx.URL(args.agent_url)
+            agent_card.url = str(proxy_url.copy_with(path=internal_agent_url.path))
 
             # Create agent client.
             config = ClientConfig(
@@ -109,6 +125,8 @@ async def main():
             )
             factory = A2AClientFactory(config)
             client = factory.create(agent_card)
+            if args.debug:
+                print(f"client type: {type(client)}")
             print(f"Connected to agent: {agent_card.name}")
 
             # Start the continuous chat loop.
@@ -132,6 +150,24 @@ async def main():
                 async for event in client.send_message(message):
                     if isinstance(event, Task) and event.status:
                         print(f"Agent status: {event.status.state.value}...")
+                    elif args.debug and isinstance(event, Message) and event.parts:
+                        # Print partial messages as they arrive
+                        for part in event.parts:
+                            if isinstance(part.root, TextPart):
+                                print(f"Agent (partial): {part.root.text}")
+                            elif isinstance(part.root, DataPart):
+                                print(f"Agent (partial data): {part.root.data}")
+                            elif isinstance(part.root, FilePart):
+                                print(f"Agent (partial file): {part.root.file.name} ({part.root.file.mime_type})")
+                    elif args.debug and isinstance(event, TaskArtifactUpdateEvent) and event.artifact and event.artifact.parts:
+                        # Print artifact updates as they arrive
+                        for part in event.artifact.parts:
+                            if isinstance(part.root, TextPart):
+                                print(f"Agent (artifact update): {part.root.text}")
+                            elif isinstance(part.root, DataPart):
+                                print(f"Agent (artifact data update): {part.root.data}")
+                            elif isinstance(part.root, FilePart):
+                                print(f"Agent (artifact file update): {part.root.file.name} ({part.root.file.mime_type})")
                     final_response = event
 
                 # Print the agent's final response.
@@ -145,7 +181,7 @@ async def main():
                 f" {e.response.text}"
             )
         except httpx.ConnectError as e:
-            print(f"Connection error: Could not connect to {args.agent_url}. Is the agent running?")
+            print(f"Connection error: Could not connect to {args.agent_url}")
         except Exception as e:
             print(f"Unexpected error occurred: {e} (type: {type(e)})")
 

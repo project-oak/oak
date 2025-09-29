@@ -41,13 +41,13 @@ def create_agent(mcp_server_url: Optional[str] = None) -> Agent:
             MCPToolset(
                 connection_params=StreamableHTTPConnectionParams(
                     url=mcp_server_url,
-                    timeout=30.0,
+                    timeout=300.0,
                 ),
             )
         ]
     return Agent(
         name="weather_agent",
-        model=LiteLlm(model=MODEL, api_base=OLLAMA_API_BASE, timeout=30.0),
+        model=LiteLlm(model=MODEL, api_base=OLLAMA_API_BASE, timeout=300.0),
         description=(
             "Agent to answer questions about the weather at the current user"
             " location."
