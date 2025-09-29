@@ -20,7 +20,7 @@ use oak_proto_rust::oak::attestation::v1::{
 use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{der::DecodePem, Certificate};
 
-use crate::policy::ConfidentialSpacePolicy;
+use crate::policy::{ConfidentialSpacePolicy, WorkloadReferenceValues};
 
 // Allways generates a policy that verifies whether the workload is running on
 // Confidential Space. By extension, `root_certificate_pem` must always be
@@ -42,13 +42,18 @@ pub fn confidential_space_policy_from_reference_values(
                 .clone();
             let rekor_key = cosign_reference_values.rekor_public_key.clone();
             let ref_value = create_endorsement_reference_value(endorser_key, rekor_key);
-            Ok(ConfidentialSpacePolicy::new(root_certificate, ref_value))
+            let workload_ref_values = WorkloadReferenceValues::EndorsementReferenceValue(ref_value);
+            Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
-        Some(confidential_space_reference_values::ContainerImage::ContainerImageReference(
-            _container_image_reference,
-        )) => {
-            // TODO: b/439861326 - Generate policy based on container image reference.
-            Err(anyhow::Error::msg("Container image reference not yet supported"))
+        Some(
+            confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix(
+                container_image_reference_prefix,
+            ),
+        ) => {
+            let workload_ref_values = WorkloadReferenceValues::ContainerImageReferencePrefix(
+                container_image_reference_prefix.clone(),
+            );
+            Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
         None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),
     }
@@ -66,7 +71,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn confidential_space_complete_policy_generated() {
+    fn confidential_space_policy_generated_with_cosign_succeeds() {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
         let developer_key = create_verifying_key_from_pem(&developer_public_key_pem, 0);
@@ -89,7 +94,27 @@ mod tests {
     }
 
     #[test]
-    fn confidential_space_policy_no_cosign_reference_values() {
+    fn confidential_space_policy_generated_with_container_image_reference_succeeds() {
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let container_image_reference_prefix =
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app";
+
+        let reference_values = ConfidentialSpaceReferenceValues {
+            root_certificate_pem,
+            r#container_image: Some(
+                confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix(
+                    container_image_reference_prefix.to_string(),
+                ),
+            ),
+        };
+
+        let policy = confidential_space_policy_from_reference_values(&reference_values);
+
+        assert!(policy.is_ok(), "Failed: {:?}", policy.err().unwrap());
+    }
+
+    #[test]
+    fn confidential_space_policy_no_workload_reference_values_succeeds() {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
 
         let reference_values =
@@ -100,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn confidential_space_policy_no_root_certificate() {
+    fn confidential_space_policy_no_root_certificate_fails() {
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
         let developer_key = create_verifying_key_from_pem(&developer_public_key_pem, 0);
 

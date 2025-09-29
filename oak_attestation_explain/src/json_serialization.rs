@@ -795,10 +795,11 @@ pub fn serialize_confidential_space_reference_values(
                 result["cosign_reference_values"] =
                     serialize_cosign_reference_values(cosign_reference_values);
             }
-            confidential_space_reference_values::ContainerImage::ContainerImageReference(
-                container_image_reference,
+            confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix(
+                container_image_reference_prefix,
             ) => {
-                result["container_image_reference"] = json!(container_image_reference);
+                result["container_image_reference_prefix"] =
+                    json!(container_image_reference_prefix);
             }
         }
     }

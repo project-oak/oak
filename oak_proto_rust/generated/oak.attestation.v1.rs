@@ -749,7 +749,7 @@ pub mod confidential_space_reference_values {
         /// TODO: b/439861326 - Remove this field and introduce new endorsement field
         /// that relies on Oak Transparent release.
         #[prost(string, tag = "3")]
-        ContainerImageReference(::prost::alloc::string::String),
+        ContainerImageReferencePrefix(::prost::alloc::string::String),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -102,6 +102,8 @@ pub enum ConfidentialSpaceVerificationError {
     ParseError(#[from] oci_spec::distribution::ParseError),
     #[error("Failed to verify endorsement: {0}")]
     EndorsementVerificationError(String),
+    #[error("Failed to verify container image reference; {actual} is not prefixed by {prefix}")]
+    EndorsementContainerImageVerifyError { actual: String, prefix: String },
 }
 
 fn verify_endorsement_wrapper(
@@ -125,11 +127,21 @@ fn verify_endorsement_wrapper(
     statement.validate_subject(&digest).map_err(|err| EVError(err.to_string()))
 }
 
+// Workload reference values can either be `EndorsementReferenceValue` protos or
+// a string pointing to the referenced container image.
+pub enum WorkloadReferenceValues {
+    EndorsementReferenceValue(EndorsementReferenceValue),
+    // See https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims
+    // TODO: b/439861326 - Remove this field once endorsements are supported with Oak Transparent
+    // release.
+    ContainerImageReferencePrefix(String),
+}
+
 /// Attstation policy that verifies evidence for a container workload running in
 /// Google Cloud Confidential Space.
 pub struct ConfidentialSpacePolicy {
     root_certificate: Certificate,
-    workload_reference_values: Option<EndorsementReferenceValue>,
+    workload_reference_values: Option<WorkloadReferenceValues>,
 }
 
 impl ConfidentialSpacePolicy {
@@ -137,7 +149,7 @@ impl ConfidentialSpacePolicy {
     /// workload.
     pub(crate) fn new(
         root_certificate: Certificate,
-        workload_reference_values: EndorsementReferenceValue,
+        workload_reference_values: WorkloadReferenceValues,
     ) -> Self {
         Self { root_certificate, workload_reference_values: Some(workload_reference_values) }
     }
@@ -170,16 +182,28 @@ impl ConfidentialSpacePolicy {
 
         let image_reference = token.claims().effective_reference()?;
         let workload_endorsement_verification =
-            self.workload_reference_values.as_ref().map(|ref_value| {
-                match &endorsement.workload_endorsement {
-                    Some(workload_endorsement) => verify_endorsement_wrapper(
-                        verification_time,
-                        &image_reference,
-                        workload_endorsement,
-                        ref_value,
-                    ),
-                    None => {
-                        Err(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)
+            self.workload_reference_values.as_ref().map(|ref_value| match ref_value {
+                WorkloadReferenceValues::EndorsementReferenceValue(ref_value) => {
+                    match &endorsement.workload_endorsement {
+                        Some(workload_endorsement) => verify_endorsement_wrapper(
+                            verification_time,
+                            &image_reference,
+                            workload_endorsement,
+                            ref_value,
+                        ),
+                        None => {
+                            Err(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)
+                        }
+                    }
+                }
+                WorkloadReferenceValues::ContainerImageReferencePrefix(container_image_reference_prefix) => {
+                    if image_reference.whole().starts_with(container_image_reference_prefix) {
+                      Ok(())
+                    } else {
+                        Err(ConfidentialSpaceVerificationError::EndorsementContainerImageVerifyError{
+                          actual: image_reference.whole(),
+                          prefix: container_image_reference_prefix.clone(),
+                        })
                     }
                 }
             });
@@ -348,7 +372,8 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let policy = ConfidentialSpacePolicy::new(root_certificate, ref_value);
+        let workload_ref_value = WorkloadReferenceValues::EndorsementReferenceValue(ref_value);
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
 
@@ -374,7 +399,8 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let policy = ConfidentialSpacePolicy::new(root_certificate, ref_value);
+        let workload_ref_value = WorkloadReferenceValues::EndorsementReferenceValue(ref_value);
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
 
@@ -457,5 +483,126 @@ mod tests {
                 .encode_to_vec(),
             }),
         }
+    }
+
+    #[test]
+    fn confidential_space_policy_verify_with_container_image_reference_succeeds() {
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
+
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement: None,
+        };
+
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let container_image_reference_prefix =
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app";
+        let workload_ref_value = WorkloadReferenceValues::ContainerImageReferencePrefix(
+            container_image_reference_prefix.to_string(),
+        );
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
+
+        let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn confidential_space_policy_verify_with_container_image_reference_fails() {
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
+
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement: None,
+        };
+
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let container_image_reference_prefix =
+            "europe-west2-docker.pkg.dev/oak-functions-standalone/oak-functions-containers";
+        let workload_ref_value = WorkloadReferenceValues::ContainerImageReferencePrefix(
+            container_image_reference_prefix.to_string(),
+        );
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
+
+        let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert!(result.is_err(), "Expected failure but got success");
+    }
+
+    #[test]
+    fn confidential_space_policy_report_with_container_image_reference_succeeds() {
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
+
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement: None,
+        };
+
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let container_image_reference_prefix =
+            "europe-west2-docker.pkg.dev/oak-ci/example-enclave-apps/echo_enclave_app";
+        let workload_ref_value = WorkloadReferenceValues::ContainerImageReferencePrefix(
+            container_image_reference_prefix.to_string(),
+        );
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
+
+        let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert_matches!(
+            result,
+            Ok(ConfidentialSpaceVerificationReport {
+                workload_endorsement_verification: Some(Ok(())),
+                ..
+            })
+        );
+    }
+
+    #[test]
+    fn confidential_space_policy_report_with_container_image_reference_fails() {
+        // The time has been set inside the validity interval of the test
+        // token and the root certificate.
+        let current_time = make_instant!("2025-07-01T17:31:32Z");
+
+        let event = create_public_key_event(&BINDING_KEY_BYTES);
+
+        let endorsement = ConfidentialSpaceEndorsement {
+            jwt_token: read_testdata_string!("valid_token.jwt"),
+            workload_endorsement: None,
+        };
+
+        let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
+        let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
+        let container_image_reference_prefix = "some/other/image";
+        let workload_ref_value = WorkloadReferenceValues::ContainerImageReferencePrefix(
+            container_image_reference_prefix.to_string(),
+        );
+        let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
+
+        let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
+
+        assert_matches!(
+            result,
+            Ok(ConfidentialSpaceVerificationReport {
+                workload_endorsement_verification: Some(Err(
+                    ConfidentialSpaceVerificationError::EndorsementContainerImageVerifyError { .. }
+                )),
+                ..
+            })
+        );
     }
 }
