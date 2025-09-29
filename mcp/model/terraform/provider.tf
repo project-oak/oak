@@ -3,8 +3,8 @@ provider "google" {
   zone    = var.zone
 }
 
-resource "google_compute_firewall" "gemma_firewall" {
-  name    = "allow-attested-gemma"
+resource "google_compute_firewall" "model_firewall" {
+  name    = "allow-attested-model"
   network = "default"
 
   allow {
@@ -12,6 +12,6 @@ resource "google_compute_firewall" "gemma_firewall" {
     ports    = [var.exposed_port]
   }
 
-  target_tags   = ["attested-gemma"]
+  target_tags   = ["attested-model"]
   source_ranges = ["0.0.0.0/0"]
 }

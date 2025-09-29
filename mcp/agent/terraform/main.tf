@@ -45,7 +45,7 @@ resource "google_compute_instance" "private_agent" {
   metadata = {
     tee-image-reference        = var.image_digest
     tee-container-log-redirect = "true"
-    tee-env-GEMMA_PROXY_URL    = "ws://${var.gemma_server_ip}:8080"
+    tee-env-MODEL_PROXY_URL    = "ws://${var.model_server_ip}:8080"
     tee-env-MCP_PROXY_URL      = "ws://${var.mcp_server_ip}:8080"
   }
 

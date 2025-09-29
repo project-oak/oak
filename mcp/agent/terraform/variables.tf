@@ -33,9 +33,9 @@ variable "exposed_port" {
   default     = 8080
 }
 
-variable "gemma_server_ip" {
+variable "model_server_ip" {
   type        = string
-  description = "The internal IP address of the Gemma server."
+  description = "The internal IP address of the Model server."
 }
 
 variable "mcp_server_ip" {

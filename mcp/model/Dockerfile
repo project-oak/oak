@@ -1,5 +1,5 @@
 # Stage 1: Load oak-proxy.
-FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:64ea4a7e868fb91b537e257cc4c746ef98b141ef941a35ba5b7f9424dfaa4e73 as oak_proxy
+FROM us-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:9543d12e9653e39cd642ab48dbb7cf0488cb5696c678bf8ee2528c523638bb1b as oak_proxy
 
 # Stage 2: Main image.
 FROM ollama/ollama:0.11.6@sha256:1868fd51253099b8f48b89b981e5d8ba23e4db161a501b86e29593071c1c069b
@@ -14,8 +14,10 @@ ENV OLLAMA_KEEP_ALIVE=-1
 ENV OLLAMA_ORIGINS=*
 
 # Start a temporary Ollama server and save the model weights in /models.
-ARG MODEL=gemma3
-ARG MODEL_PARAMS=4b
+# This Docker image uses Ollama to run GPT-OSS model.
+# <https://huggingface.co/openai/gpt-oss-20b>
+ARG MODEL=gpt-oss
+ARG MODEL_PARAMS=20b
 ARG MODELS_DIR=/models
 ENV OLLAMA_MODELS=${MODELS_DIR}
 RUN /bin/ollama serve & sleep 5 && ollama pull ${MODEL}:${MODEL_PARAMS}
@@ -30,11 +32,11 @@ RUN /bin/ollama serve & sleep 5 && ollama pull ${MODEL}:${MODEL_PARAMS}
 # 2) Then run Python in a separate terminal and execute the following code:
 # ```python
 # import ollama
-# ollama.pull('gemma3:4b') # This will take some time.
+# ollama.pull('gpt-oss:20b') # This will take some time.
 # models = ollama.list().models
 # print(models[0]['digest'])
 # ```
-ARG MODEL_SHA256SUM=a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a
+ARG MODEL_SHA256SUM=aa4295ac10c3afb60e6d711289fc6896f5aef82258997b9efdaed6d0cc4cd8b8
 
 # Verify the digest of the downloaded model.
 # Currently we are only verifying the digest of a model manifest, i.e. an Ollama

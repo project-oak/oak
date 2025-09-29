@@ -22,22 +22,22 @@ variable "exposed_port" {
   default     = 8080
 }
 
-variable "gemma_image_digest" {
+variable "model_image_digest" {
   type        = string
-  description = "The image digest for the Gemma container."
-  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/attested-gemma/attested-gemma:latest"
+  description = "The image digest for the Model container."
+  default     = "us-east5-docker.pkg.dev/oak-examples-477357/attested-model/attested-model:latest"
 }
 
 variable "mcp_server_image_digest" {
   type        = string
   description = "The image digest for the MCP server container."
-  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/attested-mcp-server/attested-mcp-server:latest"
+  default     = "us-west1-docker.pkg.dev/oak-examples-477357/attested-mcp-server/attested-mcp-server:latest"
 }
 
 variable "agent_image_digest" {
   type        = string
   description = "The image digest for the agent container."
-  default     = "europe-west1-docker.pkg.dev/oak-examples-477357/private-agent/private-agent:latest"
+  default     = "us-west1-docker.pkg.dev/oak-examples-477357/private-agent/private-agent:latest"
 }
 
 variable "oak_functions_image_digest" {

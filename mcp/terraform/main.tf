@@ -12,17 +12,17 @@ resource "google_compute_firewall" "private_agent_firewall" {
     ports    = [var.exposed_port]
   }
 
-  target_tags   = ["private-agent", "attested-gemma", "attested-mcp-server", "oak-functions"]
+  target_tags   = ["private-agent", "attested-model", "attested-mcp-server", "oak-functions"]
   source_ranges = ["0.0.0.0/0"]
 }
 
-module "gemma" {
-  source         = "../gemma/terraform"
+module "model" {
+  source         = "../model/terraform"
   gcp_project_id = var.gcp_project_id
   zone           = var.gpu_zone
-  instance_name  = "attested-gemma"
+  instance_name  = "attested-model"
   machine_type   = "a3-highgpu-1g"
-  image_digest   = var.gemma_image_digest
+  image_digest   = var.model_image_digest
   exposed_port   = var.exposed_port
 }
 
@@ -55,6 +55,6 @@ module "agent" {
   machine_type    = "c3-standard-4"
   image_digest    = var.agent_image_digest
   exposed_port    = var.exposed_port
-  gemma_server_ip = module.gemma.internal_ip
+  model_server_ip = module.model.internal_ip
   mcp_server_ip   = module.mcp_server.internal_ip
 }

@@ -1,4 +1,4 @@
-resource "google_compute_instance" "attested_gemma" {
+resource "google_compute_instance" "attested_model" {
   name             = var.instance_name
   machine_type     = var.machine_type
   zone             = var.zone
@@ -16,7 +16,7 @@ resource "google_compute_instance" "attested_gemma" {
   boot_disk {
     initialize_params {
       image = "projects/confidential-space-images/global/images/family/confidential-space-preview-cgpu"
-      size  = 30
+      size  = 50
     }
   }
 
@@ -52,7 +52,7 @@ resource "google_compute_instance" "attested_gemma" {
   }
 
   # Add a tag to create corresponding firewall rules for.
-  tags = ["attested-gemma"]
+  tags = ["attested-model"]
 
   guest_accelerator {
     count = 1

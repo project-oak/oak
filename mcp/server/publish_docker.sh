@@ -8,7 +8,7 @@ set -o pipefail
 IMAGE_NAME="attested-mcp-server"
 PROJECT_ID="oak-examples-477357"
 REPOSITORY_NAME="attested-mcp-server"
-IMAGE_URL="europe-west1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
+IMAGE_URL="us-west1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
 
 # Build Docker image.
 bazel build //mcp/server:mcp_server_load_image

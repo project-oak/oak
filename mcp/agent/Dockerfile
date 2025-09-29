@@ -1,5 +1,5 @@
 # Stage 1: Load oak-proxy.
-FROM europe-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:64ea4a7e868fb91b537e257cc4c746ef98b141ef941a35ba5b7f9424dfaa4e73 as oak_proxy
+FROM us-west1-docker.pkg.dev/oak-examples-477357/oak-proxy/oak-proxy@sha256:9543d12e9653e39cd642ab48dbb7cf0488cb5696c678bf8ee2528c523638bb1b as oak_proxy
 
 # Stage 2: Builder.
 # Digest can be accessed with the following command:
@@ -46,7 +46,7 @@ COPY --chown=user:user --from=oak_proxy /bin/client /bin/oak_proxy_client
 
 # Copy Oak Proxy config files.
 COPY --chown=user:user config/proxy_server.toml /etc/proxy_server.toml
-COPY --chown=user:user config/gemma_proxy_client.toml /etc/gemma_proxy_client.toml
+COPY --chown=user:user config/model_proxy_client.toml /etc/model_proxy_client.toml
 COPY --chown=user:user config/mcp_proxy_client.toml /etc/mcp_proxy_client.toml
 
 # Copy the agent bash script.
@@ -63,11 +63,11 @@ EXPOSE 8080
 # Confidential Space launch policy that allows specific environment variables to
 # be provided at runtime:
 # - `CONTAINER_IMAGE`: self-referrence for the TEE workload which it can use to fetch endorsements.
-# - `GEMMA_PROXY_URL` and `MCP_PROXY_URL` are known at runtime because they are dynamically assigned
+# - `MODEL_PROXY_URL` and `MCP_PROXY_URL` are known at runtime because they are dynamically assigned
 #    by gCloud to corresponding services.
 #
 # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
-LABEL "tee.launch_policy.allow_env_override"="CONTAINER_IMAGE,GEMMA_PROXY_URL,MCP_PROXY_URL"
+LABEL "tee.launch_policy.allow_env_override"="CONTAINER_IMAGE,MODEL_PROXY_URL,MCP_PROXY_URL"
 LABEL "tee.launch_policy.log_redirect"="always"
 
 # Run the agent.

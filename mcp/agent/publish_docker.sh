@@ -8,10 +8,10 @@ set -o pipefail
 IMAGE_NAME="private-agent"
 PROJECT_ID="oak-examples-477357"
 REPOSITORY_NAME="private-agent"
-IMAGE_URL="europe-west1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
+IMAGE_URL="us-west1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_NAME}/${IMAGE_NAME}:latest"
 
 # Pin Python dependencies.
-pip-compile requirements.in --generate-hashes -o requirements.txt
+# pip-compile requirements.in --generate-hashes -o requirements.txt
 
 # Build Docker image.
 docker build --tag=${IMAGE_URL} .

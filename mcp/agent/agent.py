@@ -23,7 +23,7 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
     StreamableHTTPConnectionParams,
 )
 
-MODEL = "ollama/gemma3:4b"
+MODEL = "ollama/gpt-oss:20b"
 # Default URL on which Ollama serves the model.
 OLLAMA_API_BASE = "http://localhost:11434"
 
