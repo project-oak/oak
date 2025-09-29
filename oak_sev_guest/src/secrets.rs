@@ -149,7 +149,7 @@ impl SecretsPage {
     /// Checks that version is the expected value, `SecretsPage::imi_en` has a
     /// valid value, and that the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if SECRETS_PAGE_MIN_VERSION >= self.version {
+        if SECRETS_PAGE_MIN_VERSION > self.version {
             return Err("invalid version");
         }
         if self.get_imi_en().is_none() {
