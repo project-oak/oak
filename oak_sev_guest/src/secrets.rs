@@ -27,9 +27,6 @@ pub const SECRETS_PAGE_SIZE: usize = 4096;
 /// The minimum version of the secrets pages that we expect to receive.
 pub const SECRETS_PAGE_MIN_VERSION: u32 = 2;
 
-/// The mmaximum version of the secrets pages that we expect to receive.
-pub const SECRETS_PAGE_MAX_VERSION: u32 = 3;
-
 /// Representation of the Secrets Page Guest Reserved Area.
 ///
 /// See Table 4 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>
@@ -96,8 +93,8 @@ pub struct SecretsPage {
     /// The family, model and stepping of the CPU as reported in CPUID
     /// Fn0000_0001_EAX. See <https://en.wikipedia.org/wiki/CPUID#EAX=1:_Processor_Info_and_Feature_Bits>.
     pub fms: u32,
-    /// Reserved. Must be 0.
-    _reserved: u32,
+    /// Reserved.
+    _reserved_0: u32,
     /// Guest-OS-visible workarounds provided by the hypervisor during
     /// SNP_LAUNCH_START. The format is hypervisor-defined.
     pub gosv: [u8; 16],
@@ -123,6 +120,10 @@ pub struct SecretsPage {
     pub guest_area_1: [u8; 32],
     /// Scaling factor that can be used for calculating the real CPU frequency.
     pub tsc_factor: u32,
+    /// Reserved.
+    _reserved_1: u32,
+    /// Set to the current mitigation vector when the VM was launched.
+    pub launch_mit_vector: u64,
 }
 
 impl SecretsPage {
@@ -148,14 +149,11 @@ impl SecretsPage {
     /// Checks that version is the expected value, `SecretsPage::imi_en` has a
     /// valid value, and that the reserved bytes are all zero.
     pub fn validate(&self) -> Result<(), &'static str> {
-        if !(SECRETS_PAGE_MIN_VERSION..=SECRETS_PAGE_MAX_VERSION).contains(&self.version) {
+        if SECRETS_PAGE_MIN_VERSION >= self.version {
             return Err("invalid version");
         }
         if self.get_imi_en().is_none() {
             return Err("invalid value for imi_en");
-        }
-        if self._reserved != 0 {
-            return Err("nonzero value in _reserved");
         }
         Ok(())
     }
