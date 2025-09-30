@@ -65,6 +65,7 @@ jobs:
       # which are irrelevant for building. Sources:
       # https://github.com/jens-maus/RaspberryMatic/blob/ea6b8ce0dd2d53ea88b2766ba8d7f8e1d667281f/.github/workflows/ci.yml#L34-L40
       # https://github.com/actions/runner-images/issues/2875
+      # https://github.com/actions/runner-images/issues/10386
       - name: Free disk space
         run: |
           set -o errexit
@@ -72,13 +73,20 @@ jobs:
           df --human-readable
           sudo apt-get remove --yes \
               '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
-              google-chrome-stable firefox powershell
+              google-chrome-stable firefox microsoft-edge-stable \
+              powershell
           df --human-readable
           sudo apt-get autoremove --yes
           df --human-readable
           sudo apt clean
           df --human-readable
           rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
+          df --human-readable
+          rm --recursive --force /usr/local/.ghcup
+          df --human-readable
+          rm --recursive --force /opt/ghc
+          df --human-readable
+          rm --recursive --force /usr/share/dotnet
           df --human-readable
 
       # Keeps two versions of SUBJECT_PATHS, with space resp. comma as
