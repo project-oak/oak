@@ -72,22 +72,24 @@ jobs:
           set -o xtrace
           df --human-readable
           sudo apt-get remove --yes \
-              '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli \
+              '^dotnet-.*' '^llvm-.*' 'php.*' \
+              '^haskell-.*' '^ghc-.*' '^cabal-.*' \
               google-chrome-stable firefox microsoft-edge-stable \
-              powershell
+              azure-cli powershell
           df --human-readable
           sudo apt-get autoremove --yes
           df --human-readable
           sudo apt clean
           df --human-readable
-          rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
+          sudo rm --recursive --force "${AGENT_TOOLSDIRECTORY}"
           df --human-readable
-          rm --recursive --force /usr/local/.ghcup
+          sudo rm --recursive --force /usr/local/.ghcup
           df --human-readable
-          rm --recursive --force /opt/ghc
+          sudo rm --recursive --force /opt/ghc
           df --human-readable
-          rm --recursive --force /usr/share/dotnet
+          sudo rm --recursive --force /usr/share/dotnet
           df --human-readable
+          dpkg --list
 
       # Keeps two versions of SUBJECT_PATHS, with space resp. comma as
       # path separator. Both are needed in later steps.
