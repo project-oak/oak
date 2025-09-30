@@ -43,6 +43,8 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_functions_standalone_client_lib",
+        "//oak_attestation_gcp",
+        "//oak_proto_rust",
         "//oak_session",
         "//oak_time",
         "//oak_time:oak_time_std",

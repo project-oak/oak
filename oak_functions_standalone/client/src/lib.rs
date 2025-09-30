@@ -28,8 +28,8 @@ use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{
         attestation::v1::{
-            collected_attestation::RequestMetadata, CollectedAttestation,
-            ConfidentialSpaceReferenceValues,
+            collected_attestation::RequestMetadata, confidential_space_reference_values,
+            CollectedAttestation, ConfidentialSpaceReferenceValues,
         },
         functions::standalone::{OakSessionRequest, OakSessionResponse},
     },
@@ -45,6 +45,26 @@ use oak_session::{
 use oak_time::Clock;
 use tonic::transport::{Channel, Uri};
 
+// Container image package location for Oak Functions Standalone applications.
+// The container images in this package are authored by the Oak team.
+const OAK_FUNCTIONS_CONTAINER_IMAGE_PREFIX: &str = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-standalone-containers/oak_functions_standalone";
+
+// Generates the default set of Oak Functions Standalone reference values that,
+// when supplied to the policy generator in
+// `confidential_space_policy_from_reference_values`, create a policy that
+// checks whether Oak Functions Standlone is running on Confidential Space and
+// is created and endorsed by the Oak team.
+pub fn default_oak_functions_standalone_reference_values() -> ConfidentialSpaceReferenceValues {
+    ConfidentialSpaceReferenceValues {
+        root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
+        r#container_image: Some(
+            confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix(
+                OAK_FUNCTIONS_CONTAINER_IMAGE_PREFIX.to_string(),
+            ),
+        ),
+    }
+}
+
 /// A client for streaming requests to the Oak Functions Standalone server over
 /// an E2EE Noise Protocol session.
 pub struct OakFunctionsClient {
@@ -54,10 +74,13 @@ pub struct OakFunctionsClient {
 }
 
 impl OakFunctionsClient {
+    // Reference values must be provided in order to verify server-side
+    // attestations.
     pub async fn create<T: AsRef<str>>(
         url: T,
         attestation_type: AttestationType,
         clock: Arc<dyn Clock>,
+        ref_values: Option<&ConfidentialSpaceReferenceValues>,
     ) -> Result<OakFunctionsClient> {
         let url = url.as_ref().to_owned();
         let uri = Uri::from_maybe_shared(url).context("invalid URI")?;
@@ -83,11 +106,11 @@ impl OakFunctionsClient {
 
             AttestationType::PeerUnidirectional => {
                 println!("creating peer unidirectional client session");
-                let reference_values = ConfidentialSpaceReferenceValues {
-                    root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
-                    r#container_image: None,
-                };
-                let policy = confidential_space_policy_from_reference_values(&reference_values)?;
+                let confidential_space_reference_values =
+                    ref_values.context("no reference values provided")?;
+                let policy = confidential_space_policy_from_reference_values(
+                    confidential_space_reference_values,
+                )?;
                 let attestation_verifier =
                     EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
 

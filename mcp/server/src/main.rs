@@ -21,7 +21,10 @@ use axum::Router;
 use clap::Parser;
 use futures::Future;
 use log::{info, warn};
-use oak_functions_standalone_client_lib::OakFunctionsClient;
+use oak_functions_standalone_client_lib::{
+    default_oak_functions_standalone_reference_values, OakFunctionsClient,
+};
+use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceReferenceValues;
 use oak_session::attestation::AttestationType;
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
@@ -82,6 +85,9 @@ impl WeatherService {
 
         let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
+        let ref_values: ConfidentialSpaceReferenceValues =
+            default_oak_functions_standalone_reference_values();
+
         let mut client = OakFunctionsClient::create(
             &self.tool_url,
             if self.insecure_attestation {
@@ -90,6 +96,7 @@ impl WeatherService {
                 AttestationType::PeerUnidirectional
             },
             clock.clone(),
+            Some(&ref_values),
         )
         .await
         .context("couldn't connect to server")?;

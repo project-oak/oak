@@ -20,7 +20,10 @@ use std::{fs, sync::Arc};
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use oak_functions_standalone_client_lib::OakFunctionsClient;
+use oak_functions_standalone_client_lib::{
+    default_oak_functions_standalone_reference_values, OakFunctionsClient,
+};
+use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceReferenceValues;
 use oak_session::attestation::AttestationType;
 use oak_time::Clock;
 use oak_time_std::clock::FrozenSystemTimeClock;
@@ -69,9 +72,12 @@ async fn main() -> anyhow::Result<()> {
 
     let clock: Arc<dyn Clock> = Arc::new(FrozenSystemTimeClock::default());
 
-    let mut client = OakFunctionsClient::create(&opt.uri, attestation_type, clock.clone())
-        .await
-        .context("couldn't connect to server")?;
+    let ref_values: ConfidentialSpaceReferenceValues =
+        default_oak_functions_standalone_reference_values();
+    let mut client =
+        OakFunctionsClient::create(&opt.uri, attestation_type, clock.clone(), Some(&ref_values))
+            .await
+            .context("couldn't connect to server")?;
 
     if let Some(path) = opt.attestation_evidence_path {
         let attestation =
