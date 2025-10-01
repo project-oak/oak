@@ -15,6 +15,7 @@
 //
 
 use const_oid::db::rfc5912::{ECDSA_WITH_SHA_256, ID_RSASSA_PSS};
+use oak_time::Instant;
 use p256::ecdsa::{Signature as P256Signature, VerifyingKey as P256VerifyingKey};
 use rsa::{pss::Signature as RsaSignature, signature::Verifier, RsaPublicKey};
 use sha2::Sha384;
@@ -63,4 +64,24 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
             signee.signature_algorithm
         )),
     }
+}
+
+/// Checks whether a certificate is considered valid at the specified time.
+pub fn check_certificate_validity(
+    verification_time: Instant,
+    cert: &Certificate,
+) -> anyhow::Result<()> {
+    let start_time = Instant::from_unix_nanos(
+        cert.tbs_certificate.validity.not_before.to_unix_duration().as_nanos() as i128,
+    );
+    let end_time = Instant::from_unix_nanos(
+        cert.tbs_certificate.validity.not_after.to_unix_duration().as_nanos() as i128,
+    );
+    if verification_time < start_time {
+        anyhow::bail!("certificate is not yet valid");
+    }
+    if verification_time > end_time {
+        anyhow::bail!("certificate is expired");
+    }
+    Ok(())
 }

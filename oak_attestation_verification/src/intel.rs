@@ -22,6 +22,7 @@ use core::convert::Into;
 use anyhow::{anyhow, Context};
 use digest_util::hash_sha2_256;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
+use oak_time::Instant;
 use p256::{
     ecdsa::{signature::Verifier, Signature, VerifyingKey},
     EncodedPoint,
@@ -32,7 +33,7 @@ use x509_cert::{
     Certificate,
 };
 
-use crate::x509::verify_cert_signature;
+use crate::x509::{check_certificate_validity, verify_cert_signature};
 
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
 /// The size in bytes of a SHA2-384 digest.
@@ -42,7 +43,10 @@ const SHA2_384_DIGEST_SIZE: usize = 48;
 /// entire chain of trust is valid all the way to the Provisioning Certification
 /// Key (PCK) root certificate.
 #[allow(unused)]
-pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Result<()> {
+pub fn verify_intel_tdx_quote_validity(
+    verification_time: Instant,
+    quote: &TdxQuoteWrapper,
+) -> anyhow::Result<()> {
     let signature_data = quote.parse_signature_data().context("parsing signature data")?;
 
     let report_certification = match signature_data.certification_data {
@@ -53,9 +57,11 @@ pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Resul
     }?;
 
     // Verify that the PCK certificate chain is valid.
-    let pck_leaf =
-        verify_quote_cert_chain_and_extract_leaf(&report_certification.certification_data)
-            .context("verifying quote cert chain")?;
+    let pck_leaf = verify_quote_cert_chain_and_extract_leaf(
+        verification_time,
+        &report_certification.certification_data,
+    )
+    .context("verifying quote cert chain")?;
 
     // Verify that the Quoting Enclave report is signed using the PCK leaf
     // certificate.
@@ -101,6 +107,7 @@ pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Resul
 }
 
 pub fn verify_quote_cert_chain_and_extract_leaf(
+    verification_time: Instant,
     certification_data: &QeCertificationData,
 ) -> anyhow::Result<Certificate> {
     let mut certificates = if let &QeCertificationData::PckCertChain(chain) = certification_data {
@@ -121,8 +128,12 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
     let mut chain = certificates.iter();
     let mut signee = chain.next().ok_or_else(|| anyhow!("certificate chain is empty"))?;
     let leaf = signee.clone();
-    // Each certificate must be signed by the next one in the chain.
+    // Make sure the leaf certificate is valid.
+    check_certificate_validity(verification_time, &leaf)?;
+    // Each certificate must be signed by the next one in the chain and the signer
+    // must be valid.
     for signer in chain {
+        check_certificate_validity(verification_time, signer)?;
         verify_cert_signature(signer, signee).context("verifying cert signature")?;
         signee = signer;
     }

@@ -19,9 +19,10 @@ extern crate std;
 use core::assert_eq;
 
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
+use oak_time::{Duration, Instant};
 use sha2::{Digest, Sha384};
 use test_util::AttestationData;
-use x509_cert::der::DecodePem;
+use x509_cert::{der::DecodePem, Certificate};
 
 use super::{
     verify_intel_tdx_quote_validity, verify_quote_cert_chain_and_extract_leaf, RtmrEmulator,
@@ -32,6 +33,51 @@ use crate::x509::verify_cert_signature;
 fn get_evidence_quote_bytes() -> Vec<u8> {
     let d = AttestationData::load_tdx_oc();
     d.evidence.root_layer.expect("no root layer").remote_attestation_report
+}
+
+fn get_leaf_cert_not_before_and_not_after() -> (Instant, Instant) {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let signature_data = wrapper.parse_signature_data().expect("signature data parsing failed");
+    let report_certification =
+        if let QeCertificationData::QeReportCertificationData(report_certification) =
+            signature_data.certification_data
+        {
+            report_certification
+        } else {
+            panic!("signature data contains the wrong type of certification data");
+        };
+    let certificates = if let &QeCertificationData::PckCertChain(chain) =
+        &report_certification.certification_data
+    {
+        Certificate::load_pem_chain(chain).expect("error parsing certificate chain")
+    } else {
+        panic!("certification data is not a PCK certificate chain");
+    };
+
+    let leaf = &certificates[0];
+    let not_before = Instant::from_unix_nanos(
+        leaf.tbs_certificate.validity.not_before.to_unix_duration().as_nanos() as i128,
+    );
+    let not_after = Instant::from_unix_nanos(
+        leaf.tbs_certificate.validity.not_after.to_unix_duration().as_nanos() as i128,
+    );
+    (not_before, not_after)
+}
+
+fn get_valid_time() -> Instant {
+    let (not_before, not_after) = get_leaf_cert_not_before_and_not_after();
+    not_before + (not_after - not_before) / 2
+}
+
+fn get_early_time() -> Instant {
+    let (not_before, _) = get_leaf_cert_not_before_and_not_after();
+    not_before - Duration::from_days(1)
+}
+
+fn get_late_time() -> Instant {
+    let (_, not_after) = get_leaf_cert_not_before_and_not_after();
+    not_after + Duration::from_days(1)
 }
 
 #[test]
@@ -56,8 +102,11 @@ fn pck_chain_validation_passes() {
             panic!("signature data contains the wrong type of certification data");
         };
 
-    let leaf = verify_quote_cert_chain_and_extract_leaf(&report_certification.certification_data)
-        .expect("invalid certificate chain");
+    let leaf = verify_quote_cert_chain_and_extract_leaf(
+        get_valid_time(),
+        &report_certification.certification_data,
+    )
+    .expect("invalid certificate chain");
     assert_eq!(
         leaf.tbs_certificate.subject.to_string(),
         "C=US,ST=CA,L=Santa Clara,O=Intel Corporation,CN=Intel SGX PCK Certificate"
@@ -68,7 +117,21 @@ fn pck_chain_validation_passes() {
 fn valid_tdx_quote_validation_passes() {
     let quote_buffer = get_evidence_quote_bytes();
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
-    assert!(verify_intel_tdx_quote_validity(&wrapper).is_ok());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_ok());
+}
+
+#[test]
+fn valid_tdx_quote_validation_fails_for_too_early_date() {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(get_early_time(), &wrapper).is_err());
+}
+
+#[test]
+fn valid_tdx_quote_validation_fails_for_too_late_date() {
+    let quote_buffer = get_evidence_quote_bytes();
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    assert!(verify_intel_tdx_quote_validity(get_late_time(), &wrapper).is_err());
 }
 
 #[test]
@@ -79,7 +142,7 @@ fn tdx_quote_with_invalid_pck_chain_fails() {
     // parsed from bytes 1258..4939 of the evidence).
     quote_buffer[1299] = b'v';
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
-    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
 }
 
 #[test]
@@ -90,7 +153,7 @@ fn tdx_quote_with_invalid_qe_report_signature_fails() {
     // parsed from bytes 1154..1218 of the evidence).
     quote_buffer[1210] = 0;
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
-    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
 }
 
 #[test]
@@ -102,7 +165,7 @@ fn tdx_quote_with_invalid_attestation_key_fails() {
 
     quote_buffer[701] = 0;
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
-    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
 }
 
 #[test]
@@ -113,7 +176,7 @@ fn tdx_quote_with_invalid_attestation_signature_fails() {
     // from bytes 636..700 of the evidence).
     quote_buffer[637] = 0;
     let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
-    assert!(verify_intel_tdx_quote_validity(&wrapper).is_err());
+    assert!(verify_intel_tdx_quote_validity(get_valid_time(), &wrapper).is_err());
 }
 
 #[test]
