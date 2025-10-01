@@ -31,16 +31,16 @@ use std::{fs, path::PathBuf, sync::Arc};
 use anyhow::{Context, Result};
 use derive_builder::Builder;
 use intoto::statement::{get_hex_digest_from_statement, parse_statement};
-use oak_attestation_verification::convert_pem_to_raw;
-use oak_file_utils::data_path;
+use key_util::convert_pem_to_raw;
 use oak_proto_rust::oak::attestation::v1::{
     endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
     EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, VerifyingKey,
     VerifyingKeyReferenceValue, VerifyingKeySet,
 };
+use rekor::get_rekor_v1_public_key_raw;
 use url::Url;
 
-use crate::list::MPM_CLAIM_TYPE;
+const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
 
 // The key ID for the endorser key is used because the reference values could
 // contain multiple keys. However, is meaningless in this setting, as we are
@@ -48,12 +48,10 @@ use crate::list::MPM_CLAIM_TYPE;
 // number in signed endorsement and reference values.
 const KEY_ID: u32 = 1;
 
-const REKOR_PUBLIC_KEY_PATH: &str = "oak_attestation_verification/testdata/rekor_public_key.pem";
-
 // FileEndorsement is a struct that contains the paths to the files needed to
 // load and verify an endorsement.
 #[derive(Builder)]
-pub(crate) struct FileEndorsement {
+pub struct FileEndorsement {
     // The path to the endorsement.json to verify.
     endorsement_path: PathBuf,
     // The path to the signature of the endorsement.
@@ -70,7 +68,7 @@ pub(crate) struct FileEndorsement {
 
 // FileEndorsementLoader is a struct that loads endorsement and reference
 // values from local files.
-pub(crate) struct FileEndorsementLoader {}
+pub struct FileEndorsementLoader {}
 
 impl FileEndorsementLoader {
     // Loads an endorsement and its reference values.
@@ -135,7 +133,7 @@ impl FileEndorsementLoader {
         let rekor_key = VerifyingKey {
             r#type: KeyType::EcdsaP256Sha256.into(),
             key_id: KEY_ID,
-            raw: get_rekor_public_key_raw(),
+            raw: get_rekor_v1_public_key_raw(),
         };
 
         let ref_value = EndorsementReferenceValue {
@@ -164,7 +162,7 @@ impl FileEndorsementLoader {
 //
 // See go/oak-search-index-structure for details on the definition of this
 // structure.
-pub(crate) trait ContentAddressableStorage {
+pub trait ContentAddressableStorage {
     // Returns the content of the file in fbucket_name with the given.
     fn get_file(&self, content_hash: &str) -> Result<Vec<u8>>;
 
@@ -187,7 +185,7 @@ pub(crate) trait ContentAddressableStorage {
 //
 // The details of the storage layer are defined by the trait
 // [`ContentAddressableStorage`], so one can define a number of storage layers.
-pub(crate) struct ContentAddressableEndorsementLoader {
+pub struct ContentAddressableEndorsementLoader {
     storage: Arc<dyn ContentAddressableStorage>,
 }
 
@@ -206,7 +204,7 @@ impl ContentAddressableEndorsementLoader {
     //
     // Params:
     // - storage: the content addressable storage layer to load from.
-    pub(crate) fn new_with_storage(storage: Arc<dyn ContentAddressableStorage>) -> Self {
+    pub fn new_with_storage(storage: Arc<dyn ContentAddressableStorage>) -> Self {
         ContentAddressableEndorsementLoader { storage }
     }
 
@@ -214,7 +212,7 @@ impl ContentAddressableEndorsementLoader {
     //
     // Returns:
     // - The list of endorser keys.
-    pub(crate) fn list_endorser_keys(&self, endorser_keyset_hash: &str) -> Result<Vec<String>> {
+    pub fn list_endorser_keys(&self, endorser_keyset_hash: &str) -> Result<Vec<String>> {
         let endorser_keys = self
             .storage
             .get_link(endorser_keyset_hash, ENDORSER_KEYS_LIST_LINK)
@@ -234,7 +232,7 @@ impl ContentAddressableEndorsementLoader {
     //
     // Returns:
     // - The list of endorsement hashes.
-    pub(crate) fn list_endorsements(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
+    pub fn list_endorsements(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
         let endorsements = self
             .storage
             .get_link(endorser_key_hash, ENDORSEMENT_LIST_LINK)
@@ -254,7 +252,7 @@ impl ContentAddressableEndorsementLoader {
     //
     // Returns:
     // - The endorsement and reference values.
-    pub(crate) fn load_endorsement(
+    pub fn load_endorsement(
         &self,
         endorsement_hash: &str,
     ) -> Result<(SignedEndorsement, EndorsementReferenceValue)> {
@@ -333,7 +331,7 @@ impl ContentAddressableEndorsementLoader {
         let rekor_key = VerifyingKey {
             r#type: KeyType::EcdsaP256Sha256.into(),
             key_id: KEY_ID,
-            raw: get_rekor_public_key_raw(),
+            raw: get_rekor_v1_public_key_raw(),
         };
 
         let ref_value = EndorsementReferenceValue {
@@ -355,7 +353,7 @@ impl ContentAddressableEndorsementLoader {
 // HTTPContentAddressableStorage is a struct that implements the
 // ContentAddressableStorage trait based on the HTTP protocol.
 #[derive(Builder)]
-pub(crate) struct HTTPContentAddressableStorage {
+pub struct HTTPContentAddressableStorage {
     // The prefix of the URL to the content addressable storage.
     url_prefix: Url,
     // The name of the bucket containing the files.
@@ -398,10 +396,4 @@ fn fetch(url: &Url) -> Result<Vec<u8>> {
         .read_to_end(&mut buffer)
         .with_context(|| format!("reading response bytes from URL {url}"))?;
     Ok(buffer)
-}
-
-fn get_rekor_public_key_raw() -> Vec<u8> {
-    let pem = fs::read_to_string(data_path(REKOR_PUBLIC_KEY_PATH))
-        .expect("couldn't read Rekor public key");
-    convert_pem_to_raw(&pem).expect("failed to convert Rekor key")
 }

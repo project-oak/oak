@@ -36,11 +36,8 @@ mod verifiers;
 #[cfg(test)]
 mod test_util;
 
-use anyhow::Context;
-use digest_util::hex_to_raw_digest;
 pub use expect::get_expected_values;
 pub use extract::extract_evidence;
-use intoto::statement::get_hex_digest_from_statement;
 pub use key_util::convert_pem_to_raw;
 use oak_proto_rust::oak::attestation::v1::{
     EndorsementDetails, EndorsementReferenceValue, SignedEndorsement,
@@ -82,12 +79,5 @@ pub fn verify_endorsement(
     ref_value: &EndorsementReferenceValue,
 ) -> anyhow::Result<EndorsementDetails> {
     let s = verify_endorsement::verify_endorsement(now_utc_millis, signed_endorsement, ref_value)?;
-    let digest = hex_to_raw_digest(&get_hex_digest_from_statement(&s)?)?;
-    let validity = s.predicate.validity.context("missing validity in statement")?;
-
-    Ok(EndorsementDetails {
-        subject_digest: Some(digest),
-        valid: Some(oak_proto_rust::oak::Validity::from(&validity)),
-        claim_types: s.predicate.claims.into_iter().map(|x| x.r#type).collect(),
-    })
+    s.get_details()
 }

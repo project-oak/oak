@@ -14,27 +14,23 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-# TODO: b/427550226 - Make this work on Mac OS.
-rust_binary(
+rust_library(
     name = "endorscope",
-    srcs = glob(["src/**"]),
-    data = ["//oak_attestation_verification/testdata:endorsement"],
+    srcs = glob(["*.rs"]),
     deps = [
-        "//oak_attestation_verification",
-        "//oak_file_utils",
         "//oak_proto_rust",
         "//tr/intoto",
+        "//tr/key_util",
+        "//tr/rekor",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
         "@oak_crates_index//:derive_builder",
-        "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",
         "@oak_crates_index//:url",

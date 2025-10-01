@@ -25,11 +25,13 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use clap::{Args, Subcommand};
-use oak_attestation_verification::verify_endorsement;
+use endorscope::{
+    ContentAddressableEndorsementLoader, FileEndorsementBuilder, FileEndorsementLoader,
+    HTTPContentAddressableStorageBuilder,
+};
 use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
 use url::Url;
-
-use crate::endorsement_loader;
+use verify_endorsement::verify_endorsement;
 
 // Subcommands for the verify command.
 #[derive(Subcommand)]
@@ -146,9 +148,9 @@ pub(crate) fn parse_typed_hash(arg: &str) -> Result<String, anyhow::Error> {
 
 // Verifies an endorsement from a local file.
 pub(crate) fn verify_file(p: VerifyFileArgs, now_utc_millis: i64) {
-    let loader = endorsement_loader::FileEndorsementLoader {};
+    let loader = FileEndorsementLoader {};
 
-    let params = endorsement_loader::FileEndorsementBuilder::default()
+    let params = FileEndorsementBuilder::default()
         .endorsement_path(p.endorsement)
         .signature_path(p.signature)
         .endorser_public_key_path(p.endorser_public_key)
@@ -165,16 +167,14 @@ pub(crate) fn verify_file(p: VerifyFileArgs, now_utc_millis: i64) {
 
 // Verifies an endorsement from a remote content addressable storage.
 pub(crate) fn verify_remote(p: VerifyRemoteArgs, now_utc_millis: i64) {
-    let storage = endorsement_loader::HTTPContentAddressableStorageBuilder::default()
+    let storage = HTTPContentAddressableStorageBuilder::default()
         .url_prefix(p.url_prefix)
         .fbucket(p.fbucket)
         .ibucket(p.ibucket)
         .build()
         .expect("Failed to build storage");
 
-    let loader = endorsement_loader::ContentAddressableEndorsementLoader::new_with_storage(
-        Arc::new(storage),
-    );
+    let loader = ContentAddressableEndorsementLoader::new_with_storage(Arc::new(storage));
 
     let (endorsement, reference_values) =
         loader.load_endorsement(p.endorsement_hash.as_str()).expect("Failed to load endorsement");

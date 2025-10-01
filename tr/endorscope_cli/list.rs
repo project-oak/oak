@@ -21,16 +21,14 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
+use endorscope::{ContentAddressableEndorsementLoader, HTTPContentAddressableStorageBuilder};
 use intoto::statement::Validity;
-use oak_attestation_verification::verify_endorsement;
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use prost::Message;
 use url::Url;
+use verify_endorsement::verify_endorsement;
 
-use crate::{
-    endorsement_loader,
-    verify::{parse_bucket_name, parse_typed_hash, parse_url},
-};
+use crate::verify::{parse_bucket_name, parse_typed_hash, parse_url};
 
 // Subcommand for listing all endorsements for a given endorser key.
 //
@@ -81,16 +79,14 @@ pub(crate) struct ListArgs {
 
 // Lists all endorsements for a given endorser key.
 pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
-    let storage = endorsement_loader::HTTPContentAddressableStorageBuilder::default()
+    let storage = HTTPContentAddressableStorageBuilder::default()
         .url_prefix(p.url_prefix)
         .fbucket(p.fbucket)
         .ibucket(p.ibucket)
         .build()
         .expect("Failed to build storage");
 
-    let loader = endorsement_loader::ContentAddressableEndorsementLoader::new_with_storage(
-        Arc::new(storage),
-    );
+    let loader = ContentAddressableEndorsementLoader::new_with_storage(Arc::new(storage));
 
     let endorser_key_hashes;
     if p.endorser_key_hash.is_some() {
@@ -107,7 +103,7 @@ pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
 }
 
 fn list_endorser_keys(
-    loader: &endorsement_loader::ContentAddressableEndorsementLoader,
+    loader: &ContentAddressableEndorsementLoader,
     endorser_keyset_hash: &str,
 ) -> Vec<String> {
     let endorser_keys = loader.list_endorser_keys(endorser_keyset_hash);
@@ -126,8 +122,7 @@ fn list_endorser_keys(
     endorser_keys
 }
 
-pub(crate) const MPM_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
+const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
 const PUBLISHED_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
 const RUNNABLE_CLAIM_TYPE: &str =
@@ -149,7 +144,7 @@ fn prettify_claim(claim: &str) -> String {
 }
 
 fn list_endorsements(
-    loader: &endorsement_loader::ContentAddressableEndorsementLoader,
+    loader: &endorscope::ContentAddressableEndorsementLoader,
     endorser_key_hash: &str,
     now_utc_millis: i64,
 ) {
@@ -187,7 +182,8 @@ fn list_endorsements(
                 println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
             } else {
                 println!("    ✅  {endorsement_hash}");
-                let details = result.unwrap();
+                let details =
+                    result.unwrap().get_details().expect("failed to get endorsement details");
                 match &details.subject_digest {
                     Some(digest) => {
                         println!("        Subject:     sha2-256:{}", hex::encode(&digest.sha2_256));

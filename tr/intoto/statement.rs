@@ -27,8 +27,10 @@ use alloc::{
 };
 
 use anyhow::{ensure, Context};
-use digest_util::{hex_to_set_digest, is_hex_digest_match, set_to_hex_digest, DigestSet};
-use oak_proto_rust::oak::HexDigest;
+use digest_util::{
+    hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, set_to_hex_digest, DigestSet,
+};
+use oak_proto_rust::oak::{attestation::v1::EndorsementDetails, HexDigest};
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
 
@@ -186,6 +188,19 @@ impl DefaultStatement {
             self.validate_subject(&d)?;
         }
         self.predicate.validate(verification_time, required_claims)
+    }
+
+    /// Returns a curated view of essential data in the endorsement statement.
+    pub fn get_details(&self) -> anyhow::Result<EndorsementDetails> {
+        let digest = hex_to_raw_digest(&get_hex_digest_from_statement(self)?)?;
+        let validity = self.predicate.validity.as_ref().context("missing validity in statement")?;
+        let claims = &self.predicate.claims;
+
+        Ok(EndorsementDetails {
+            subject_digest: Some(digest),
+            valid: Some(oak_proto_rust::oak::Validity::from(validity)),
+            claim_types: claims.iter().map(|x| x.r#type.clone()).collect(),
+        })
     }
 }
 

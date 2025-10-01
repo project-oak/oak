@@ -21,7 +21,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Context;
 use clap::{Parser, Subcommand};
 
-mod endorsement_loader;
 mod list;
 mod verify;
 
