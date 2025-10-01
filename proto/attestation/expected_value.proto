@@ -72,7 +72,7 @@ message KernelExpectedValues {
   ExpectedDigests setup_data = 2;
 }
 
-// NEXT_ID: 7
+// NEXT_ID: 8
 message AmdSevExpectedValues {
   ExpectedDigests stage0_expected = 1;
 
@@ -91,6 +91,10 @@ message AmdSevExpectedValues {
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
+
+  // Whether the current time should be used when checking the validity of the
+  // Versioned Chip Endorsement Key (VCEK) certificate.
+  bool check_vcek_cert_expiry = 7;
 }
 
 message IntelTdxExpectedValues {}

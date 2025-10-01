@@ -995,7 +995,7 @@ pub mod tcb_version_reference_value {
     }
 }
 /// Collection of reference values for an AMD SEV-SNP hardware root.
-/// NEXT_ID: 9
+/// NEXT_ID: 10
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevReferenceValues {
     /// Deprecated: Minimum accepted versions of all TCB components.
@@ -1028,6 +1028,10 @@ pub struct AmdSevReferenceValues {
     /// Verifies the stage0 binary implicitly contained in the root layer.
     #[prost(message, optional, tag = "4")]
     pub stage0: ::core::option::Option<BinaryReferenceValue>,
+    /// Whether the current time should be used when checking the validity of the
+    /// Versioned Chip Endorsement Key (VCEK) certificate.
+    #[prost(bool, tag = "9")]
+    pub check_vcek_cert_expiry: bool,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct IntelTdxReferenceValues {}
@@ -1296,7 +1300,7 @@ pub struct KernelExpectedValues {
     #[prost(message, optional, tag = "2")]
     pub setup_data: ::core::option::Option<ExpectedDigests>,
 }
-/// NEXT_ID: 7
+/// NEXT_ID: 8
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AmdSevExpectedValues {
     #[prost(message, optional, tag = "1")]
@@ -1318,6 +1322,10 @@ pub struct AmdSevExpectedValues {
     /// If true, will skip the check that the TEE is not in debug mode.
     #[prost(bool, tag = "3")]
     pub allow_debug: bool,
+    /// Whether the current time should be used when checking the validity of the
+    /// Versioned Chip Endorsement Key (VCEK) certificate.
+    #[prost(bool, tag = "7")]
+    pub check_vcek_cert_expiry: bool,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct IntelTdxExpectedValues {}

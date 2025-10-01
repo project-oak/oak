@@ -49,10 +49,10 @@ use crate::{
     verifier::{to_attestation_results, verify, Status},
 };
 
-// Pretend the tests run at this time: 1 Nov 2024, 12:00 UTC. This date
+// Pretend the tests run at this time: 2025-10-01, 08:00 UTC. This date
 // must be valid with respect to the period hardwired in
 // test_util::fake_endorsement().
-const NOW_UTC_MILLIS: i64 = 1730462400000;
+const NOW_UTC_MILLIS: i64 = 1_759_305_600_000;
 
 #[test]
 fn test_milan_oc_staging_success() {
@@ -196,6 +196,7 @@ fn create_oc_endorsements_reference_values(
                         genoa: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
                         turin: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
                         allow_debug: false,
+                        check_vcek_cert_expiry: true,
                         stage0: Some(skip.clone()),
                     }),
                     ..Default::default()
@@ -316,6 +317,7 @@ fn create_rk_endorsements_reference_values(
                                 )),
                             }),
                             allow_debug: false,
+                            check_vcek_cert_expiry: true,
                             stage0: Some(skip.clone()),
                         }),
                         ..Default::default()

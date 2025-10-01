@@ -19,6 +19,7 @@ extern crate std;
 use std::eprintln;
 
 use oak_sev_snp_attestation_report::AttestationReport;
+use oak_time::{make_instant, Instant};
 use test_util::attestation_data::AttestationData;
 use x509_cert::{
     certificate::{CertificateInner, Version},
@@ -29,7 +30,7 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{get_product, AmdProduct},
-    x509::verify_cert_signature,
+    x509::{check_certificate_validity, verify_cert_signature},
 };
 
 const ARK_MILAN_CERT_PEM: &str = include_str!("../../data/ark_milan.pem");
@@ -38,6 +39,11 @@ const ARK_TURIN_CERT_PEM: &str = include_str!("../../data/ark_turin.pem");
 const ASK_MILAN_CERT_PEM: &str = include_str!("../../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../../data/ask_genoa.pem");
 const ASK_TURIN_CERT_PEM: &str = include_str!("../../data/ask_turin.pem");
+
+fn current_time() -> Instant {
+    // Valid time for checking certificate validity.
+    make_instant!("2025-10-01T08:00:00Z")
+}
 
 fn vcek_from_data(data: &AttestationData) -> CertificateInner {
     let cert = data.get_tee_certificate().expect("failed to load VCEK cert");
@@ -61,9 +67,15 @@ fn load_vcek_turin() -> CertificateInner {
 // Validate at least a subset of Appendix B.3 of
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
 // Ideally, we'd check everything listed there.
-fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::Result<()> {
+fn validate_ark_ask_certs(
+    verification_time: Instant,
+    ark: &Certificate,
+    ask: &Certificate,
+) -> anyhow::Result<()> {
     anyhow::ensure!(ark.tbs_certificate.version == Version::V3, "unexpected version of ARK cert");
     anyhow::ensure!(ask.tbs_certificate.version == Version::V3, "unexpected version of ASK cert");
+    check_certificate_validity(verification_time, ark)?;
+    check_certificate_validity(verification_time, ask)?;
 
     verify_cert_signature(ark, ask)?;
     verify_cert_signature(ark, ark)
@@ -113,6 +125,7 @@ fn milan_ark_signs_ask() {
 fn milan_ask_signs_vcek() {
     let ask = load_cert(ASK_MILAN_CERT_PEM);
     let vcek = load_vcek_milan();
+    assert!(check_certificate_validity(current_time(), &vcek).is_ok());
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
@@ -120,6 +133,7 @@ fn milan_ask_signs_vcek() {
 fn genoa_ask_signs_vcek() {
     let ask = load_cert(ASK_GENOA_CERT_PEM);
     let vcek = load_vcek_genoa();
+    assert!(check_certificate_validity(current_time(), &vcek).is_ok());
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
@@ -127,6 +141,7 @@ fn genoa_ask_signs_vcek() {
 fn turin_ask_signs_vcek() {
     let ask = load_cert(ASK_TURIN_CERT_PEM);
     let vcek = load_vcek_turin();
+    assert!(check_certificate_validity(current_time(), &vcek).is_ok());
     assert!(verify_cert_signature(&ask, &vcek).is_ok());
 }
 
@@ -185,21 +200,21 @@ fn ark_does_not_sign_ask() {
 fn validate_milan() {
     let ark = load_cert(ARK_MILAN_CERT_PEM);
     let ask = load_cert(ASK_MILAN_CERT_PEM);
-    assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
+    assert!(validate_ark_ask_certs(current_time(), &ark, &ask).is_ok());
 }
 
 #[test]
 fn validate_genoa() {
     let ark = load_cert(ARK_GENOA_CERT_PEM);
     let ask = load_cert(ASK_GENOA_CERT_PEM);
-    assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
+    assert!(validate_ark_ask_certs(current_time(), &ark, &ask).is_ok());
 }
 
 #[test]
 fn validate_turin() {
     let ark = load_cert(ARK_TURIN_CERT_PEM);
     let ask = load_cert(ASK_TURIN_CERT_PEM);
-    assert!(validate_ark_ask_certs(&ark, &ask).is_ok());
+    assert!(validate_ark_ask_certs(current_time(), &ark, &ask).is_ok());
 }
 
 fn get_product_from_report(d: &AttestationData) -> AmdProduct {

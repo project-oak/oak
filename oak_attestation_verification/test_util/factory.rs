@@ -108,6 +108,7 @@ pub fn create_oc_reference_values() -> ReferenceValues {
         genoa: Some(tcb_version_ref_value),
         turin: Some(tcb_version_ref_value),
         allow_debug: false,
+        check_vcek_cert_expiry: true,
         stage0: Some(skip.clone()),
     };
 
@@ -161,6 +162,7 @@ pub fn create_rk_reference_values() -> ReferenceValues {
         genoa: Some(tcb_version_ref_value),
         turin: Some(tcb_version_ref_value),
         allow_debug: false,
+        check_vcek_cert_expiry: true,
         stage0: Some(skip.clone()),
     };
 
@@ -307,6 +309,7 @@ fn root_layer_reference_values_from_evidence(
                     })),
                 }),
                 allow_debug: r.debug,
+                check_vcek_cert_expiry: true,
             })
         }
         _ => None,

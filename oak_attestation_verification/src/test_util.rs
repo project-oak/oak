@@ -34,9 +34,9 @@ pub fn fake_endorsement(digest: &HexDigest, claim_types: Vec<&str>) -> DefaultSt
     make_statement(
         "fake_subject_name",
         digest,
-        make_instant!("2024-10-01T12:08:00Z"),
-        make_instant!("2024-09-01T12:00:00Z"),
-        make_instant!("2024-12-01T12:00:00Z"),
+        make_instant!("2025-10-01T12:08:00Z"),
+        make_instant!("2025-09-01T12:00:00Z"),
+        make_instant!("2025-12-01T12:00:00Z"),
         claim_types,
     )
 }

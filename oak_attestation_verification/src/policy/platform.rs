@@ -72,6 +72,7 @@ impl AmdSevSnpPolicy {
             allow_debug: report
                 .has_debug_flag()
                 .map_err(|err| anyhow::anyhow!("failed to get debug flag: {}", err))?,
+            check_vcek_cert_expiry: false,
             stage0: None,
         };
         let tcb_version = report.data.get_reported_tcb_version();
@@ -124,7 +125,8 @@ impl Policy<RootLayerEvidence> for AmdSevSnpPolicy {
         let endorsement: AmdSevSnpEndorsement =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
         verify_root_attestation_signature(
-            verification_time.into_unix_millis(),
+            verification_time,
+            self.reference_values.check_vcek_cert_expiry,
             evidence,
             &endorsement.tee_certificate,
         )?;
@@ -165,7 +167,8 @@ impl Policy<RootLayerEvidence> for InsecurePolicy {
         let endorsement: AmdSevSnpEndorsement =
             endorsement.try_into().map_err(anyhow::Error::msg)?;
         verify_root_attestation_signature(
-            verification_time.into_unix_millis(),
+            verification_time,
+            false,
             evidence,
             &endorsement.tee_certificate,
         )?;
@@ -235,6 +238,7 @@ mod tests {
                         genoa: None,
                         turin: None,
                         allow_debug: false,
+                        check_vcek_cert_expiry: false,
                         stage0: None,
                         ..
                     }

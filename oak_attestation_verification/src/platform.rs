@@ -38,7 +38,7 @@ use zerocopy::FromBytes;
 
 use crate::{
     amd::{get_product, verify_attestation_report_signature},
-    x509::verify_cert_signature,
+    x509::{check_certificate_validity, verify_cert_signature},
 };
 
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
@@ -65,7 +65,8 @@ pub fn verify_dice_root_eca_key(
 /// Verifies the signature chain for the attestation report included in the
 /// root.
 pub fn verify_root_attestation_signature(
-    _now_utc_millis: i64,
+    current_time: Instant,
+    check_cert_expiry: bool,
     root_layer: &RootLayerEvidence,
     tee_certificate: &[u8],
 ) -> anyhow::Result<()> {
@@ -83,12 +84,12 @@ pub fn verify_root_attestation_signature(
             // Ensure the Attestation report is properly signed by the platform and the
             // corresponding certificate is signed by AMD.
             verify_amd_sev_snp_attestation_report_validity(
-                Instant::from_unix_millis(_now_utc_millis),
+                current_time,
+                check_cert_expiry,
                 attestation_report,
                 &vcek_cert,
             )
             .context("verifying AMD SEV-SNP attestation report validity")?;
-
             verify_dice_root_eca_key(attestation_report, &root_layer.eca_public_key)
         }
         TeePlatform::IntelTdx => anyhow::bail!("not supported"),
@@ -105,9 +106,9 @@ pub fn verify_root_attestation_signature(
     }
 }
 
-// TODO(#4747): use current date as part of VCEK verification.
 pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
-    _current_time: Instant,
+    current_time: Instant,
+    check_cert_expiry: bool,
     attestation_report: &AttestationReport,
     vcek_cert: &Certificate,
 ) -> anyhow::Result<()> {
@@ -121,8 +122,13 @@ pub(crate) fn verify_amd_sev_snp_attestation_report_validity(
     let ask = Certificate::from_pem(ask_cert_pem)
         .map_err(|_err| anyhow::anyhow!("couldn't parse ASK certificate for {:?}", product))?;
 
+    if check_cert_expiry {
+        check_certificate_validity(current_time, vcek_cert)
+            .context("checking VCEK cert validity")?;
+    }
+
     // We demand that the product-specific ASK signs the VCEK.
-    verify_cert_signature(&ask, vcek_cert).context("verifying cert signature")?;
+    verify_cert_signature(&ask, vcek_cert).context("verifying VCEK cert signature")?;
 
     // Validate attestation report signature format.
     attestation_report.validate().map_err(|msg| anyhow::anyhow!(msg))?;

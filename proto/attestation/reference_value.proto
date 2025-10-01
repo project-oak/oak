@@ -250,7 +250,7 @@ message TcbVersionReferenceValue {
 }
 
 // Collection of reference values for an AMD SEV-SNP hardware root.
-// NEXT_ID: 9
+// NEXT_ID: 10
 message AmdSevReferenceValues {
   reserved 1, 2;
 
@@ -282,6 +282,10 @@ message AmdSevReferenceValues {
 
   // Verifies the stage0 binary implicitly contained in the root layer.
   BinaryReferenceValue stage0 = 4;
+
+  // Whether the current time should be used when checking the validity of the
+  // Versioned Chip Endorsement Key (VCEK) certificate.
+  bool check_vcek_cert_expiry = 9;
 }
 
 message IntelTdxReferenceValues {}

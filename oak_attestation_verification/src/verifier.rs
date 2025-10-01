@@ -24,10 +24,10 @@ use ecdsa::{signature::Verifier, Signature};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, AttestationResults, Endorsements, EventLog,
-    Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
+    attestation_results::Status, endorsements, expected_values, AttestationResults, Endorsements,
+    EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
 };
-use oak_time::Clock;
+use oak_time::{Clock, Instant};
 use p256::ecdsa::VerifyingKey;
 
 use crate::{
@@ -212,9 +212,37 @@ pub fn verify_with_expected_values(
                     .tee_certificate
                     .as_ref(),
             };
+        let amd_expected_values =
+            match expected_values.r#type.as_ref().context("no expected values")? {
+                expected_values::Type::OakRestrictedKernel(expected_values) => expected_values
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer expected values")?
+                    .amd_sev
+                    .as_ref(),
+                expected_values::Type::OakContainers(expected_values) => expected_values
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer expected values")?
+                    .amd_sev
+                    .as_ref(),
+                expected_values::Type::Cb(expected_values) => expected_values
+                    .root_layer
+                    .as_ref()
+                    .context("no root layer expected values")?
+                    .amd_sev
+                    .as_ref(),
+            };
+        let check_vcek_cert_expiry =
+            amd_expected_values.map(|value| value.check_vcek_cert_expiry).unwrap_or(false);
         let root_layer = evidence.root_layer.as_ref().context("no root layer evidence")?;
-        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)
-            .context("verifying root signature")?;
+        verify_root_attestation_signature(
+            Instant::from_unix_millis(now_utc_millis),
+            check_vcek_cert_expiry,
+            root_layer,
+            tee_certificate,
+        )
+        .context("verifying root signature")?;
     };
 
     // Ensure the DICE chain signatures are valid and extract the measurements,

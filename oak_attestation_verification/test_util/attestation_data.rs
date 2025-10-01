@@ -150,9 +150,9 @@ impl AttestationData {
     // Containers.
     pub fn load_genoa_oc() -> AttestationData {
         AttestationData {
-            // Validity is not used since there are no endorsements.
-            valid_not_before: make_instant!("2024-01-01T00:00:00.000000Z"),
-            valid_not_after: make_instant!("2024-12-31 23:00:00.000000Z"),
+            // Validity is used to check VCEK certificate.
+            valid_not_before: make_instant!("2025-07-29T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
             evidence: load_evidence(GENOA_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(GENOA_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(GENOA_OC_REFERENCE_VALUES_PATH),
@@ -163,9 +163,9 @@ impl AttestationData {
     // Containers.
     pub fn load_turin_oc() -> AttestationData {
         AttestationData {
-            // Validity is not used since there are no endorsements.
-            valid_not_before: make_instant!("2025-01-01T00:00:00.000000Z"),
-            valid_not_after: make_instant!("2025-12-31T23:00:00.000000Z"),
+            // Validity is used to check VCEK certificate.
+            valid_not_before: make_instant!("2025-07-29T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
             evidence: load_evidence(TURIN_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(TURIN_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(TURIN_OC_REFERENCE_VALUES_PATH),
@@ -175,10 +175,9 @@ impl AttestationData {
     /// Loads an attestation example for CB.
     pub fn load_cb() -> AttestationData {
         AttestationData {
-            // Not clear what the correct validity dates are (at least not obvious
-            // from the text form). Probably irrelevant.
-            valid_not_before: make_instant!("2025-01-01 00:00:00.000000Z"),
-            valid_not_after: make_instant!("2025-12-31T00:00:00.000000Z"),
+            // Validity is used to check VCEK certificate.
+            valid_not_before: make_instant!("2025-07-29T00:00:00.000000Z"),
+            valid_not_after: make_instant!("2025-10-27T00:00:00.000000Z"),
             evidence: load_evidence(CB_EVIDENCE_PATH),
             endorsements: load_endorsements(CB_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(CB_REFERENCE_VALUES_PATH),
@@ -200,9 +199,9 @@ impl AttestationData {
     // Loads an attestation example involving Oak Containers on Intel TDX.
     pub fn load_tdx_oc() -> AttestationData {
         AttestationData {
-            // Validity is not used since there are no endorsements.
-            valid_not_before: make_instant!("2025-01-01T00:00:00.000000Z"),
-            valid_not_after: make_instant!("2025-12-31T00:00:00.000000Z"),
+            // Validity is used to check VCEK certificate.
+            valid_not_before: make_instant!("2025-08-03T02:23:14.000000Z"),
+            valid_not_after: make_instant!("2025-11-01T02:23:13.000000Z"),
             evidence: load_evidence(TDX_OC_EVIDENCE_PATH),
             endorsements: load_endorsements(TDX_OC_ENDORSEMENTS_PATH),
             reference_values: load_reference_values(TDX_OC_REFERENCE_VALUES_PATH),

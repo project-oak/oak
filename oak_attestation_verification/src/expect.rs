@@ -245,6 +245,7 @@ pub(crate) fn get_root_layer_expected_values(
             genoa: tcb_version_rv_to_ev(rvs.genoa),
             turin: tcb_version_rv_to_ev(rvs.turin),
             allow_debug: rvs.allow_debug,
+            check_vcek_cert_expiry: rvs.check_vcek_cert_expiry,
         })
     } else {
         None
@@ -270,6 +271,7 @@ pub(crate) fn get_amd_sev_snp_expected_values(
         genoa: tcb_version_rv_to_ev(reference_values.genoa),
         turin: tcb_version_rv_to_ev(reference_values.turin),
         allow_debug: reference_values.allow_debug,
+        check_vcek_cert_expiry: reference_values.check_vcek_cert_expiry,
     })
 }
 

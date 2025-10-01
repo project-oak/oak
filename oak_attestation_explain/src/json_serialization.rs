@@ -629,14 +629,22 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
     #[allow(deprecated)]
-    let AmdSevReferenceValues { min_tcb_version, milan, genoa, turin, allow_debug, stage0 } =
-        instance;
+    let AmdSevReferenceValues {
+        min_tcb_version,
+        milan,
+        genoa,
+        turin,
+        allow_debug,
+        stage0,
+        check_vcek_cert_expiry,
+    } = instance;
     json!({
         "min_tcb_version": min_tcb_version.as_ref().map(serialize_tcb_version),
         "milan": milan.as_ref().map(serialize_tcb_version_reference_value),
         "genoa": genoa.as_ref().map(serialize_tcb_version_reference_value),
         "turin": turin.as_ref().map(serialize_tcb_version_reference_value),
         "allow_debug": allow_debug,
+        "check_vcek_cert_expiry": check_vcek_cert_expiry,
         "stage0": stage0.as_ref().map(serialize_binary_reference_value),
     })
 }

@@ -131,6 +131,7 @@ The reference values describing this layer are printed below.
 
 amd_sev:
   allow_debug: false
+  check_vcek_cert_expiry: true
   genoa:
     minimum:
       boot_loader: 4
