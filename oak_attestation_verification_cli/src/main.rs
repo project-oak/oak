@@ -70,7 +70,12 @@ fn main() -> std::fmt::Result {
     let indent = 0;
 
     let attestation_timestamp = get_timestamp(&attestation);
-    print_timestamp_report(&mut buffer, indent, &attestation_timestamp)?;
+    print_report_header(
+        &mut buffer,
+        indent,
+        &attestation.request_metadata.unwrap_or_default().uri,
+        &attestation_timestamp,
+    )?;
     let attestation_timestamp = attestation_timestamp.unwrap_or(Instant::UNIX_EPOCH);
 
     let handshake_hash = attestation.handshake_hash.clone();
@@ -154,12 +159,14 @@ fn get_timestamp(attestation: &CollectedAttestation) -> anyhow::Result<Instant> 
     Ok(Instant::from_unix_millis(duration_since_epoch.as_millis().try_into()?))
 }
 
-/// Prints out a report for the provided timestamp
-fn print_timestamp_report(
+/// Prints out the report header.
+fn print_report_header(
     writer: &mut impl Write,
     indent: usize,
+    uri: &String,
     timestamp: &anyhow::Result<Instant>,
 ) -> std::fmt::Result {
+    print_indented!(writer, indent, "🔗 {}", uri)?;
     print_indented!(writer, indent, "🕠 Recorded timestamp:")?;
     match timestamp {
         Err(err) => {
