@@ -511,6 +511,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "signature",
  "snafu",
  "spinning_top 0.3.0",
  "static_assertions",

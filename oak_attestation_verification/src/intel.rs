@@ -20,7 +20,6 @@
 use core::convert::Into;
 
 use anyhow::{anyhow, Context};
-use const_oid::db::rfc5912::ECDSA_WITH_SHA_256;
 use digest_util::hash_sha2_256;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use p256::{
@@ -29,9 +28,11 @@ use p256::{
 };
 use sha2::{Digest, Sha384};
 use x509_cert::{
-    der::{referenced::OwnedToRef, DecodePem, Encode},
+    der::{referenced::OwnedToRef, DecodePem},
     Certificate,
 };
+
+use crate::x509::verify_cert_signature;
 
 const PCK_ROOT: &str = include_str!("../data/Intel_SGX_Provisioning_Certification_RootCA.pem");
 /// The size in bytes of a SHA2-384 digest.
@@ -58,7 +59,13 @@ pub fn verify_intel_tdx_quote_validity(quote: &TdxQuoteWrapper) -> anyhow::Resul
 
     // Verify that the Quoting Enclave report is signed using the PCK leaf
     // certificate.
-    let pck_verifying_key = extract_ecdsa_verifying_key(&pck_leaf)?;
+    let pck_verifying_key: VerifyingKey = pck_leaf
+        .tbs_certificate
+        .subject_public_key_info
+        .owned_to_ref()
+        .try_into()
+        .map_err(|_err| anyhow::anyhow!("could not extract ECDSA P-384 public key"))?;
+
     let qe_signature = Signature::from_bytes(report_certification.signature.into())
         .map_err(|_err| anyhow::anyhow!("couldn't parse QE Report signature"))?;
     pck_verifying_key
@@ -116,37 +123,10 @@ pub fn verify_quote_cert_chain_and_extract_leaf(
     let leaf = signee.clone();
     // Each certificate must be signed by the next one in the chain.
     for signer in chain {
-        verify_ecdsa_cert_signature(signer, signee).context("verifying cert signature")?;
+        verify_cert_signature(signer, signee).context("verifying cert signature")?;
         signee = signer;
     }
     Ok(leaf)
-}
-
-fn verify_ecdsa_cert_signature(signer: &Certificate, signee: &Certificate) -> anyhow::Result<()> {
-    anyhow::ensure!(
-        signee.signature_algorithm.oid == ECDSA_WITH_SHA_256,
-        "unsupported signature algorithm: {:?}",
-        signee.signature_algorithm
-    );
-
-    let verifying_key = extract_ecdsa_verifying_key(signer)?;
-
-    let message = signee
-        .tbs_certificate
-        .to_der()
-        .map_err(|_err| anyhow::anyhow!("could not extract message to verify signature"))?;
-    let signature = Signature::from_der(signee.signature.raw_bytes())
-        .map_err(|_err| anyhow::anyhow!("could not extract signature"))?;
-
-    verifying_key
-        .verify(&message, &signature)
-        .map_err(|_err| anyhow::anyhow!("signature verification failed"))
-}
-
-fn extract_ecdsa_verifying_key(certificate: &Certificate) -> anyhow::Result<VerifyingKey> {
-    let pubkey_info = certificate.tbs_certificate.subject_public_key_info.owned_to_ref();
-    VerifyingKey::from_sec1_bytes(pubkey_info.subject_public_key.raw_bytes())
-        .map_err(|_err| anyhow::anyhow!("could not parse ECDSA P256 public key"))
 }
 
 /// Software implementation of the RTMR logic that can be used to replay a

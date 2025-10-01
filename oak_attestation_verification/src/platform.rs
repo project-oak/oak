@@ -36,7 +36,10 @@ use x509_cert::{
 };
 use zerocopy::FromBytes;
 
-use crate::amd::{get_product, verify_attestation_report_signature, verify_cert_signature};
+use crate::{
+    amd::{get_product, verify_attestation_report_signature},
+    x509::verify_cert_signature,
+};
 
 const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");

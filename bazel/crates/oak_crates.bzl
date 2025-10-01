@@ -241,6 +241,7 @@ def _common_crates(std):
             default_features = False,
             version = "0.10.8",
         ),
+        "signature": crate.spec(version = "2.2.0"),
         "snafu": crate.spec(
             default_features = False,
             version = "0.8.0",

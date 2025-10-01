@@ -24,9 +24,10 @@ use test_util::AttestationData;
 use x509_cert::der::DecodePem;
 
 use super::{
-    verify_ecdsa_cert_signature, verify_intel_tdx_quote_validity,
-    verify_quote_cert_chain_and_extract_leaf, RtmrEmulator, PCK_ROOT,
+    verify_intel_tdx_quote_validity, verify_quote_cert_chain_and_extract_leaf, RtmrEmulator,
+    PCK_ROOT,
 };
+use crate::x509::verify_cert_signature;
 
 fn get_evidence_quote_bytes() -> Vec<u8> {
     let d = AttestationData::load_tdx_oc();
@@ -36,7 +37,7 @@ fn get_evidence_quote_bytes() -> Vec<u8> {
 #[test]
 fn pck_root_signs_itself() {
     let pck_root = x509_cert::Certificate::from_pem(PCK_ROOT).expect("could not parse cert");
-    let result = verify_ecdsa_cert_signature(&pck_root, &pck_root);
+    let result = verify_cert_signature(&pck_root, &pck_root);
     assert!(result.is_ok());
 }
 

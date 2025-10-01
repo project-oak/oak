@@ -1,5 +1,5 @@
 {
-  "checksum": "f392ebd1a369e9ec60864844e3a5da99379d92a1e503fa6d1c6fd9655a8b7fae",
+  "checksum": "9c39be83349f5c9eb06bd2f9b1f21601e8f68756b23e8c6c7d966463902e4b1b",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7826,6 +7826,10 @@
             {
               "id": "signal-hook-tokio 0.3.1",
               "target": "signal_hook_tokio"
+            },
+            {
+              "id": "signature 2.2.0",
+              "target": "signature"
             },
             {
               "id": "snafu 0.8.6",
@@ -42558,6 +42562,7 @@
     "sha2 0.10.9",
     "signal-hook 0.3.18",
     "signal-hook-tokio 0.3.1",
+    "signature 2.2.0",
     "snafu 0.8.6",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",

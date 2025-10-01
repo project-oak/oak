@@ -1,5 +1,5 @@
 {
-  "checksum": "697d0f05c3e7595a44a123676291d702bb5ff45ba31d40eef14b136e1f83a34d",
+  "checksum": "af9c1c2b7a9d44d4e42fb5e888df038d91310f2b2182128fea7c6467ced4c367",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3068,6 +3068,10 @@
             {
               "id": "sha2 0.10.9",
               "target": "sha2"
+            },
+            {
+              "id": "signature 2.2.0",
+              "target": "signature"
             },
             {
               "id": "snafu 0.8.6",
@@ -11375,6 +11379,7 @@
     "serde 1.0.219",
     "serde_json 1.0.140",
     "sha2 0.10.9",
+    "signature 2.2.0",
     "snafu 0.8.6",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",

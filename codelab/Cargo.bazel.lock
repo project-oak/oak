@@ -1329,6 +1329,7 @@ dependencies = [
  "sha2",
  "signal-hook",
  "signal-hook-tokio",
+ "signature",
  "snafu",
  "spinning_top 0.3.0",
  "static_assertions",

@@ -32,6 +32,7 @@ pub mod results;
 mod util;
 pub mod verifier;
 mod verifiers;
+mod x509;
 
 #[cfg(test)]
 mod test_util;

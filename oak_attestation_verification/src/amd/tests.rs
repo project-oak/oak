@@ -27,7 +27,10 @@ use x509_cert::{
 };
 use zerocopy::FromBytes;
 
-use crate::amd::{get_product, verify_cert_signature, AmdProduct};
+use crate::{
+    amd::{get_product, AmdProduct},
+    x509::verify_cert_signature,
+};
 
 const ARK_MILAN_CERT_PEM: &str = include_str!("../../data/ark_milan.pem");
 const ARK_GENOA_CERT_PEM: &str = include_str!("../../data/ark_genoa.pem");
