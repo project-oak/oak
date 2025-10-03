@@ -106,7 +106,7 @@ pub enum ConfidentialSpaceVerificationError {
     EndorsementContainerImageVerifyError { actual: String, prefix: String },
 }
 
-fn verify_endorsement_wrapper(
+pub(crate) fn verify_endorsement_wrapper(
     verification_time: Instant,
     image_reference: &OciReference,
     signed_endorsement: &SignedEndorsement,

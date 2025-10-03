@@ -27,5 +27,7 @@ rust_library(
         "//oak_proto_rust",
         "//oak_time",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:strum",
+        "@oak_crates_index//:thiserror",
     ],
 )

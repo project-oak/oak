@@ -41,12 +41,12 @@ use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
-    generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
+    generator::{BindableAssertion, BindableAssertionGenerator, BindableAssertionGeneratorError},
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
     session::{AttestationEvidence, AttestationPublisher},
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
-    verifier::{AssertionVerificationError, AssertionVerifier, VerifiedAssertion},
+    verifier::{BoundAssertionVerificationError, BoundAssertionVerifier, VerifiedBoundAssertion},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 
@@ -143,32 +143,32 @@ impl AttestationPublisher for TestAttestationPublisher {
 }
 
 mock! {
-    TestAssertionVerifier {}
-    impl AssertionVerifier for TestAssertionVerifier {
+    TestBoundAssertionVerifier {}
+    impl BoundAssertionVerifier for TestBoundAssertionVerifier {
         fn verify_assertion(
             &self,
             assertion: &Assertion,
-        ) -> core::result::Result<Box<dyn VerifiedAssertion>, AssertionVerificationError>;
+        ) -> core::result::Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError>;
     }
 }
 
 mock! {
     #[derive(Debug)]
-    TestVerifiedAssertion {}
-    impl VerifiedAssertion for TestVerifiedAssertion {
+    TestVerifiedBoundAssertion {}
+    impl VerifiedBoundAssertion for TestVerifiedBoundAssertion {
         fn assertion(&self) -> &Assertion;
         fn verify_binding(
             &self,
             bound_data: &[u8],
             binding: &SessionBinding,
-        ) -> core::result::Result<(), AssertionVerificationError>;
+        ) -> core::result::Result<(), BoundAssertionVerificationError>;
     }
 }
 
 mock! {
-    TestAssertionGenerator {}
-    impl AssertionGenerator for TestAssertionGenerator {
-        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, AssertionGenerationError>;
+    TestBindableAssertionGenerator {}
+    impl BindableAssertionGenerator for TestBindableAssertionGenerator {
+        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError>;
     }
 }
 
@@ -176,7 +176,7 @@ mock! {
     TestBindableAssertion {}
     impl BindableAssertion for TestBindableAssertion {
         fn assertion(&self) -> &Assertion;
-        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, AssertionGenerationError>;
+        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, BindableAssertionGeneratorError>;
     }
 }
 
@@ -233,8 +233,8 @@ fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVeri
     Box::new(session_binding_verifier_provider)
 }
 
-fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn AssertionGenerator> {
-    let mut generator = MockTestAssertionGenerator::new();
+fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn BindableAssertionGenerator> {
+    let mut generator = MockTestBindableAssertionGenerator::new();
     generator.expect_generate().returning(move || {
         let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
         bindable_assertion.expect_assertion().return_const(assertion.clone());
@@ -246,13 +246,13 @@ fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn AssertionGen
     Box::new(generator)
 }
 
-fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Box<dyn AssertionVerifier> {
-    let mut verifier = MockTestAssertionVerifier::new();
+fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Box<dyn BoundAssertionVerifier> {
+    let mut verifier = MockTestBoundAssertionVerifier::new();
     verifier.expect_verify_assertion().returning(move |_| {
-        let mut verified_assertion = Box::new(MockTestVerifiedAssertion::new());
-        verified_assertion.expect_assertion().return_const(assertion.clone());
-        verified_assertion.expect_verify_binding().returning(|_, _| Ok(()));
-        Ok(verified_assertion)
+        let mut verified_bound_assertion = Box::new(MockTestVerifiedBoundAssertion::new());
+        verified_bound_assertion.expect_assertion().return_const(assertion.clone());
+        verified_bound_assertion.expect_verify_binding().returning(|_, _| Ok(()));
+        Ok(verified_bound_assertion)
     });
     Box::new(verifier)
 }

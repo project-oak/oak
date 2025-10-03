@@ -33,7 +33,7 @@ use oak_sdk_common::{StaticAttester, StaticEndorser};
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
-    generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
+    generator::{BindableAssertion, BindableAssertionGenerator, BindableAssertionGeneratorError},
     handshake::HandshakeType,
     session::AttestationPublisher,
     session_binding::SessionBinder,
@@ -68,15 +68,15 @@ impl BindableAssertion for FakeBindableAssertion {
         &self.assertion
     }
 
-    fn bind(&self, _: &[u8]) -> Result<SessionBinding, AssertionGenerationError> {
+    fn bind(&self, _: &[u8]) -> Result<SessionBinding, BindableAssertionGeneratorError> {
         Ok(SessionBinding { binding: vec![] })
     }
 }
 
-struct FakeAssertionGenerator {}
+struct FakeBindableAssertionGenerator {}
 
-impl AssertionGenerator for FakeAssertionGenerator {
-    fn generate(&self) -> Result<Box<dyn BindableAssertion>, AssertionGenerationError> {
+impl BindableAssertionGenerator for FakeBindableAssertionGenerator {
+    fn generate(&self) -> Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError> {
         Ok(Box::new(FakeBindableAssertion::new()))
     }
 }
@@ -105,7 +105,7 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
 
     let endorsements =
         Endorsements { r#type: None, events: vec![endorsement], initial: None, platform: None };
-    let assertion_generator = FakeAssertionGenerator {};
+    let assertion_generator = FakeBindableAssertionGenerator {};
 
     new_java_session_config_builder(
         &mut env,

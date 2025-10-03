@@ -36,10 +36,11 @@ use oak_session::{
         ServerAttestationHandler, VerifierResult,
     },
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
-    generator::{AssertionGenerationError, AssertionGenerator, BindableAssertion},
+    generator::{BindableAssertion, BindableAssertionGenerator, BindableAssertionGeneratorError},
     session_binding::{SessionBindingVerifier, SessionBindingVerifierProvider},
     verifier::{
-        AssertionVerificationError, AssertionVerifier, AssertionVerifierResult, VerifiedAssertion,
+        BoundAssertionVerificationError, BoundAssertionVerifier, BoundAssertionVerifierResult,
+        VerifiedBoundAssertion,
     },
     ProtocolEngine,
 };
@@ -75,25 +76,25 @@ mock! {
 }
 
 mock! {
-    TestAssertionVerifier {}
-    impl AssertionVerifier for TestAssertionVerifier {
+    TestBoundAssertionVerifier {}
+    impl BoundAssertionVerifier for TestBoundAssertionVerifier {
         fn verify_assertion(
             &self,
             assertion: &Assertion,
-        ) -> core::result::Result<Box<dyn VerifiedAssertion>, AssertionVerificationError>;
+        ) -> core::result::Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError>;
     }
 }
 
 mock! {
     #[derive(Debug)]
-    TestVerifiedAssertion {}
-    impl VerifiedAssertion for TestVerifiedAssertion {
+    TestVerifiedBoundAssertion {}
+    impl VerifiedBoundAssertion for TestVerifiedBoundAssertion {
         fn assertion(&self) -> &Assertion;
         fn verify_binding(
             &self,
             bound_data: &[u8],
             binding: &SessionBinding,
-        ) -> core::result::Result<(), AssertionVerificationError>;
+        ) -> core::result::Result<(), BoundAssertionVerificationError>;
     }
 }
 
@@ -115,9 +116,9 @@ mock! {
 }
 
 mock! {
-    TestAssertionGenerator {}
-    impl AssertionGenerator for TestAssertionGenerator {
-        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, AssertionGenerationError>;
+    TestBindableAssertionGenerator {}
+    impl BindableAssertionGenerator for TestBindableAssertionGenerator {
+        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError>;
     }
 }
 
@@ -125,7 +126,7 @@ mock! {
     TestBindableAssertion {}
     impl BindableAssertion for TestBindableAssertion {
         fn assertion(&self) -> &Assertion;
-        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, AssertionGenerationError>;
+        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, BindableAssertionGeneratorError>;
     }
 }
 
@@ -164,20 +165,22 @@ fn create_failing_mock_verifier() -> Arc<dyn AttestationVerifier> {
     Arc::new(verifier)
 }
 
-fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Arc<dyn AssertionVerifier> {
-    let mut verifier = MockTestAssertionVerifier::new();
+fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Arc<dyn BoundAssertionVerifier> {
+    let mut verifier = MockTestBoundAssertionVerifier::new();
     verifier.expect_verify_assertion().returning(move |_| {
-        let mut verified_assertion = Box::new(MockTestVerifiedAssertion::new());
-        verified_assertion.expect_assertion().return_const(assertion.clone());
-        Ok(verified_assertion)
+        let mut verified_bound_assertion = Box::new(MockTestVerifiedBoundAssertion::new());
+        verified_bound_assertion.expect_assertion().return_const(assertion.clone());
+        Ok(verified_bound_assertion)
     });
     Arc::new(verifier)
 }
 
-fn create_failing_mock_assertion_verifier() -> Arc<dyn AssertionVerifier> {
-    let mut verifier = MockTestAssertionVerifier::new();
+fn create_failing_mock_assertion_verifier() -> Arc<dyn BoundAssertionVerifier> {
+    let mut verifier = MockTestBoundAssertionVerifier::new();
     verifier.expect_verify_assertion().returning(|_| {
-        Err(AssertionVerificationError::GenericFailure { error_msg: "Mock failure".to_string() })
+        Err(BoundAssertionVerificationError::GenericFailure {
+            error_msg: "Mock failure".to_string(),
+        })
     });
     Arc::new(verifier)
 }
@@ -190,8 +193,8 @@ fn create_mock_session_binding_verifier_provider() -> Arc<dyn SessionBindingVeri
     Arc::new(session_binding_verifier_provider)
 }
 
-fn create_mock_assertion_generator(assertion: Assertion) -> Arc<dyn AssertionGenerator> {
-    let mut generator = MockTestAssertionGenerator::new();
+fn create_mock_assertion_generator(assertion: Assertion) -> Arc<dyn BindableAssertionGenerator> {
+    let mut generator = MockTestBindableAssertionGenerator::new();
     generator.expect_generate().returning(move || {
         let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
         bindable_assertion.expect_assertion().return_const(assertion.clone());
@@ -743,7 +746,7 @@ fn client_failed_evidence_verification_fails() -> anyhow::Result<()> {
             )),
             assertion_verification_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Success { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Success { .. })
             )),
         }),
         "Attestation should fail due to evidence verification failure"
@@ -797,7 +800,7 @@ fn client_failed_assertion_verification_fails() -> anyhow::Result<()> {
             )),
             assertion_verification_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Failure { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
             )),
         }),
         "Attestation should fail due to assertion verification failure"
@@ -851,7 +854,7 @@ fn server_failed_evidence_verification_fails() -> anyhow::Result<()> {
             )),
             assertion_verification_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Success { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Success { .. })
             )),
         }),
         "Attestation should fail due to evidence verification failure"
@@ -905,7 +908,7 @@ fn server_failed_assertion_verification_fails() -> anyhow::Result<()> {
             )),
             assertion_verification_results: elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Failure { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
             )),
         }),
         "Attestation should fail due to assertion verification failure"
@@ -1007,11 +1010,11 @@ fn client_aggregated_attestation_succeeds() -> anyhow::Result<()> {
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 )
             ),
         }),
@@ -1114,11 +1117,11 @@ fn server_aggregated_attestation_succeeds() -> anyhow::Result<()> {
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 )
             ),
         }),
@@ -1216,13 +1219,16 @@ fn client_one_failed_evidence_verifier_aggregated_attestation_fails() -> anyhow:
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
-                (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(AssertionVerifierResult::Missing))
+                (
+                    eq(UNMATCHED_VERIFIER_ID),
+                    matches_pattern!(BoundAssertionVerifierResult::Missing)
+                )
             ),
         }),
         "Attestation should fail due to evidence verification failure"
@@ -1316,13 +1322,16 @@ fn client_one_failed_assertion_verifier_aggregated_attestation_fails() -> anyhow
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Failure { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
                 ),
-                (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(AssertionVerifierResult::Missing))
+                (
+                    eq(UNMATCHED_VERIFIER_ID),
+                    matches_pattern!(BoundAssertionVerifierResult::Missing)
+                )
             ),
         }),
         "Attestation should fail due to assertion verification failure"
@@ -1419,13 +1428,16 @@ fn server_one_failed_evidence_verifier_aggregated_attestation_fails() -> anyhow:
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
-                (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(AssertionVerifierResult::Missing))
+                (
+                    eq(UNMATCHED_VERIFIER_ID),
+                    matches_pattern!(BoundAssertionVerifierResult::Missing)
+                )
             ),
         }),
         "Attestation should fail due to evidence verification failure"
@@ -1519,13 +1531,16 @@ fn server_one_failed_assertion_verifier_aggregated_attestation_fails() -> anyhow
             assertion_verification_results: unordered_elements_are!(
                 (
                     eq(MATCHED_ATTESTER_ID1),
-                    matches_pattern!(AssertionVerifierResult::Success { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Success { .. })
                 ),
                 (
                     eq(MATCHED_ATTESTER_ID2),
-                    matches_pattern!(AssertionVerifierResult::Failure { .. })
+                    matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
                 ),
-                (eq(UNMATCHED_VERIFIER_ID), matches_pattern!(AssertionVerifierResult::Missing))
+                (
+                    eq(UNMATCHED_VERIFIER_ID),
+                    matches_pattern!(BoundAssertionVerifierResult::Missing)
+                )
             ),
         }),
         "Attestation should fail due to assertion verification failure"
@@ -1614,7 +1629,7 @@ fn client_unmatched_assertion_verifier_attestation_fails() -> anyhow::Result<()>
     assert_that!(
         client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Assertion verification failed: NoMatchedAssertionVerifier",
+            reason: "Assertion verification failed: NoMatchedBoundAssertionVerifier",
             ..
         }),
         "Attestation should fail with an unmatched assertion verifier"
@@ -1641,7 +1656,7 @@ fn server_unmatched_assertion_verifier_attestation_fails() -> anyhow::Result<()>
     assert_that!(
         server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Assertion verification failed: NoMatchedAssertionVerifier",
+            reason: "Assertion verification failed: NoMatchedBoundAssertionVerifier",
             ..
         }),
         "Attestation should fail with an unmatched assertion verifier"
@@ -1982,7 +1997,7 @@ fn pairwise_bidirectional_attestation_fails_on_evidence() -> anyhow::Result<()> 
             )),
             assertion_verification_results: unordered_elements_are!((
                 eq(MATCHED_ATTESTER_ID2),
-                matches_pattern!(AssertionVerifierResult::Success { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Success { .. })
             )),
             ..
         })
@@ -1996,7 +2011,7 @@ fn pairwise_bidirectional_attestation_fails_on_evidence() -> anyhow::Result<()> 
             )),
             assertion_verification_results: unordered_elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Success { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Success { .. })
             )),
             ..
         })
@@ -2075,7 +2090,7 @@ fn pairwise_bidirectional_attestation_fails_on_assertion() -> anyhow::Result<()>
             )),
             assertion_verification_results: unordered_elements_are!((
                 eq(MATCHED_ATTESTER_ID2),
-                matches_pattern!(AssertionVerifierResult::Failure { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
             )),
             ..
         })
@@ -2089,7 +2104,7 @@ fn pairwise_bidirectional_attestation_fails_on_assertion() -> anyhow::Result<()>
             )),
             assertion_verification_results: unordered_elements_are!((
                 eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(AssertionVerifierResult::Failure { .. })
+                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
             )),
             ..
         })

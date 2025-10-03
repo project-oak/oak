@@ -801,6 +801,12 @@ pub fn serialize_confidential_space_reference_values(
                 result["container_image_reference_prefix"] =
                     json!(container_image_reference_prefix);
             }
+            confidential_space_reference_values::ContainerImage::EndorsementReferenceValues(
+                endorsement_reference_values,
+            ) => {
+                result["endorsement_reference_values"] =
+                    serialize_endorsement_reference_value(endorsement_reference_values);
+            }
         }
     }
     result

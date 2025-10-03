@@ -106,7 +106,7 @@ use crate::{
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
     generator::BindableAssertion,
     session_binding::SessionBindingVerifier,
-    verifier::{AssertionVerifier, AssertionVerifierResult},
+    verifier::{BoundAssertionVerifier, BoundAssertionVerifierResult},
     ProtocolEngine,
 };
 
@@ -126,7 +126,7 @@ pub enum PeerAttestationVerdict {
     /// binding.
     AttestationPassed {
         legacy_verification_results: BTreeMap<String, VerifierResult>,
-        assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+        assertion_verification_results: BTreeMap<String, BoundAssertionVerifierResult>,
     },
 
     /// Indicates that the attestation process failed.
@@ -136,7 +136,7 @@ pub enum PeerAttestationVerdict {
     AttestationFailed {
         reason: String,
         legacy_verification_results: BTreeMap<String, VerifierResult>,
-        assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+        assertion_verification_results: BTreeMap<String, BoundAssertionVerifierResult>,
     },
 }
 
@@ -158,7 +158,9 @@ impl PeerAttestationVerdict {
     /// Retrieves the underlying individual assertion verification results from
     /// the attestation verdict. Results can be retrieved whether the
     /// overall attestation verdict is pass or fail.
-    pub fn get_assertion_verification_results(&self) -> &BTreeMap<String, AssertionVerifierResult> {
+    pub fn get_assertion_verification_results(
+        &self,
+    ) -> &BTreeMap<String, BoundAssertionVerifierResult> {
         match self {
             PeerAttestationVerdict::AttestationPassed {
                 assertion_verification_results, ..
@@ -176,10 +178,10 @@ impl PeerAttestationVerdict {
     /// state, which implies that some form of attestation was attempted.
     pub fn needs_session_bindings(&self) -> bool {
         self.get_assertion_verification_results().iter().any(|(_, v)| match v {
-            AssertionVerifierResult::Success { .. }
-            | AssertionVerifierResult::Failure { .. }
-            | AssertionVerifierResult::Unverified { .. } => true,
-            AssertionVerifierResult::Missing => false,
+            BoundAssertionVerifierResult::Success { .. }
+            | BoundAssertionVerifierResult::Failure { .. }
+            | BoundAssertionVerifierResult::Unverified { .. } => true,
+            BoundAssertionVerifierResult::Missing => false,
         }) | self.get_legacy_verification_results().iter().any(|(_, v)| match v {
             VerifierResult::Success { .. }
             | VerifierResult::Failure { .. }
@@ -646,33 +648,34 @@ fn combine_attestation_results(
 /// ID) and the set of received endorsed evidence (also keyed by
 /// ID). For each matching pair, it invokes the `verify` method of
 /// the `AsertionVerifier`. For unmatched verifiers or evidence it creates a
-/// `AssertionVerifierResult::Missing` or `AssertionVerifierResult::Unverified`
-/// result respectively.`
+/// `BoundAssertionVerifierResult::Missing` or
+/// `BoundAssertionVerifierResult::Unverified` result respectively.`
 ///
-/// Returns a map of `AssertionVerifierResult` keyed by ID for all
+/// Returns a map of `BoundAssertionVerifierResult` keyed by ID for all
 /// successfully processed (though not necessarily successfully verified)
 /// evidence.
 fn combine_assertion_results(
-    assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+    assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     assertions: BTreeMap<String, Assertion>,
-) -> BTreeMap<String, AssertionVerifierResult> {
+) -> BTreeMap<String, BoundAssertionVerifierResult> {
     assertion_verifiers
         .iter()
         .merge_join_by(assertions, |(id1, _), (id2, _)| Ord::cmp(id1, &id2))
         .map(|v| match v {
             EitherOrBoth::Both((_, verifier), (id, assertion)) => {
                 match verifier.verify_assertion(&assertion) {
-                    Ok(verified_assertion) => {
-                        (id.clone(), AssertionVerifierResult::Success { verified_assertion })
-                    }
+                    Ok(verified_bound_assertion) => (
+                        id.clone(),
+                        BoundAssertionVerifierResult::Success { verified_bound_assertion },
+                    ),
                     Err(error) => {
-                        (id.clone(), AssertionVerifierResult::Failure { assertion, error })
+                        (id.clone(), BoundAssertionVerifierResult::Failure { assertion, error })
                     }
                 }
             }
-            EitherOrBoth::Left((id, _)) => (id.clone(), AssertionVerifierResult::Missing),
+            EitherOrBoth::Left((id, _)) => (id.clone(), BoundAssertionVerifierResult::Missing),
             EitherOrBoth::Right((id, assertion)) => {
-                (id.clone(), AssertionVerifierResult::Unverified { assertion })
+                (id.clone(), BoundAssertionVerifierResult::Unverified { assertion })
             }
         })
         .collect()
@@ -689,7 +692,7 @@ fn combine_legacy_and_assertion_aggregated_verification(
     legacy_result: Result<(), AggregatedVerificationError>,
     assertion_result: Result<(), AggregatedVerificationError>,
     legacy_verification_results: BTreeMap<String, VerifierResult>,
-    assertion_verification_results: BTreeMap<String, AssertionVerifierResult>,
+    assertion_verification_results: BTreeMap<String, BoundAssertionVerifierResult>,
 ) -> PeerAttestationVerdict {
     match (legacy_result, assertion_result) {
         (Ok(()), Ok(())) => PeerAttestationVerdict::AttestationPassed {

@@ -21,6 +21,8 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "proto/attestation/endorsement.proto";
+
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
@@ -35,4 +37,12 @@ message Assertion {
   // be a serialized proto, JWT or any other data that the peer can use to make
   // the pass/fail decision about the assertion.
   bytes content = 1;
+}
+
+message ConfidentialSpaceAssertion {
+  // GCP attestation token for the container image.
+  bytes jwt_token = 1;
+  // An optional endorsement for the endorsement that can be sent to the client
+  // by the Cloud application to support the measurements in the JWT token.
+  ConfidentialSpaceEndorsement container_image_endorsement = 2;
 }

@@ -28,6 +28,7 @@ rust_library(
         "//oak_attestation_gcp:data/confidential_space_root.pem",
     ],
     deps = [
+        "//oak_attestation_types",
         "//oak_attestation_verification",
         "//oak_attestation_verification_types",
         "//oak_proto_rust",
@@ -44,6 +45,8 @@ rust_library(
         "@oak_crates_index//:http",
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:oci-spec",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",
@@ -73,8 +76,10 @@ rust_test(
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:googletest",
+        "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
     ],
 )

@@ -87,7 +87,7 @@ use crate::{
         ServerHandshakeHandlerBuilder,
     },
     session_binding::{create_session_binding_token, SessionBindingVerifier},
-    verifier::AssertionVerifierResult,
+    verifier::BoundAssertionVerifierResult,
     ProtocolEngine,
 };
 
@@ -816,9 +816,10 @@ fn verify_session_binding(
 }
 
 /// Verifies the received session `assertion_bindings` against the provided
-/// `verified_assertions`.
+/// `verified_bound_assertions`.
 ///
-/// For each `VerifiedAssertion` in `verified_assertions`, this function:
+/// For each `VerifiedBoundAssertion` in `verified_bound_assertions`, this
+/// function:
 /// 1. Retrieves the corresponding `SessionBinding` from the
 ///    `assertion_bindings` map.
 /// 2. Calls `verify_binding` on the assertion with the session binding token
@@ -831,15 +832,17 @@ fn verify_session_binding(
 /// valid. An error is returned if any verification fails, or if
 /// providers/bindings are missing.
 fn verify_assertion_session_binding(
-    verified_assertions: &BTreeMap<String, AssertionVerifierResult>,
+    verified_bound_assertions: &BTreeMap<String, BoundAssertionVerifierResult>,
     assertion_bindings: &BTreeMap<String, SessionBinding>,
     attestation_binding_token: &[u8],
     handshake_hash: &[u8],
 ) -> Result<(), Error> {
     let assertion_bound_data =
         create_session_binding_token(attestation_binding_token, handshake_hash);
-    for (id, result) in verified_assertions {
-        if let AssertionVerifierResult::Success { verified_assertion: assertion } = result {
+    for (id, result) in verified_bound_assertions {
+        if let BoundAssertionVerifierResult::Success { verified_bound_assertion: assertion } =
+            result
+        {
             let binding = assertion_bindings
                 .get(id)
                 .ok_or(anyhow!("peer hasn't sent an assertion binding for ID {id}"))?;
@@ -876,11 +879,11 @@ impl AttestationEvidence {
                 .get_assertion_verification_results()
                 .iter()
                 .filter_map(|(id, verifier_result)| match verifier_result {
-                    AssertionVerifierResult::Success { verified_assertion, .. } => {
-                        Some((id.clone(), verified_assertion.assertion().clone()))
+                    BoundAssertionVerifierResult::Success { verified_bound_assertion, .. } => {
+                        Some((id.clone(), verified_bound_assertion.assertion().clone()))
                     }
-                    AssertionVerifierResult::Failure { assertion, .. }
-                    | AssertionVerifierResult::Unverified { assertion } => {
+                    BoundAssertionVerifierResult::Failure { assertion, .. }
+                    | BoundAssertionVerifierResult::Unverified { assertion } => {
                         Some((id.clone(), assertion.clone()))
                     }
                     _ => None,

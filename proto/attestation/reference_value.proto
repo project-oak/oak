@@ -387,13 +387,17 @@ message ConfidentialSpaceReferenceValues {
 
   // Reference values specific to the workload container.
   oneof container_image {
-    CosignReferenceValues cosign_reference_values = 2;
+    // Deprecated.
+    CosignReferenceValues cosign_reference_values = 2 [deprecated = true];
 
     // Image reference from the Confidential Space attestation. See
     // https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims
     // TODO: b/439861326 - Remove this field and introduce new endorsement field
     // that relies on Oak Transparent release.
     string container_image_reference_prefix = 3;
+
+    // Transparent release endorsement for the container image.
+    EndorsementReferenceValue endorsement_reference_values = 4;
   }
 }
 

@@ -54,14 +54,14 @@ use crate::{
     },
     attestation::AttestationType,
     encryptors::OrderedChannelEncryptor,
-    generator::AssertionGenerator,
+    generator::BindableAssertionGenerator,
     handshake::HandshakeType,
     key_extractor::{DefaultSigningKeyExtractor, KeyExtractor},
     session::AttestationPublisher,
     session_binding::{
         SessionBinder, SessionBindingVerifierProvider, SignatureBindingVerifierProvider,
     },
-    verifier::AssertionVerifier,
+    verifier::BoundAssertionVerifier,
 };
 
 /// Top-level configuration for a secure session.
@@ -232,14 +232,15 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an [`AssertionGenerator`] that generates an [`Assertion`] for this
-    /// party (self). The `assertion_id` is a string identifier that is sent
-    /// alongside the [`Assertion`]. The peer uses this ID to select the
-    /// corresponding [`AssertionVerifier`] for verification.
+    /// Add an [`BindableAssertionGenerator`] that generates a
+    /// [`BindableAssertion`] for this party (self). The `assertion_id` is a
+    /// string identifier that is sent over the wire alongside the
+    /// assertion. The peer uses this ID to select the corresponding
+    /// [`BoundAssertionVerifier`] for verification.
     pub fn add_self_assertion_generator(
         mut self,
         assertion_id: String,
-        generator: Box<dyn AssertionGenerator>,
+        generator: Box<dyn BindableAssertionGenerator>,
     ) -> Self {
         assert!(
             matches!(
@@ -256,13 +257,13 @@ impl SessionConfigBuilder {
         self
     }
 
-    /// Add an [`AssertionGenerator`] by reference, retaining ownership of the
-    /// generator object. See [`add_self_assertion_generator`] for more details
-    /// on `assertion_id`.
+    /// Add an [`BindableAssertionGenerator`] by reference, retaining ownership
+    /// of the generator object. See [`add_self_assertion_generator`] for
+    /// more details on `assertion_id`.
     pub fn add_self_assertion_generator_ref(
         mut self,
         assertion_id: String,
-        generator: &Arc<dyn AssertionGenerator>,
+        generator: &Arc<dyn BindableAssertionGenerator>,
     ) -> Self {
         assert!(
             matches!(
@@ -465,7 +466,7 @@ impl SessionConfigBuilder {
     pub fn add_peer_assertion_verifier(
         mut self,
         assertion_id: String,
-        verifier: Box<dyn AssertionVerifier>,
+        verifier: Box<dyn BoundAssertionVerifier>,
     ) -> Self {
         assert!(
             matches!(
@@ -485,7 +486,7 @@ impl SessionConfigBuilder {
     pub fn add_peer_assertion_verifier_ref(
         mut self,
         assertion_id: String,
-        verifier: &Arc<dyn AssertionVerifier>,
+        verifier: &Arc<dyn BoundAssertionVerifier>,
     ) -> Self {
         assert!(
             matches!(
@@ -649,9 +650,9 @@ pub struct AttestationHandlerConfig {
     /// A map of attesters (keyed by `attestation_id`) used by this party to
     /// generate its own attestation [`Evidence`].
     pub self_attesters: BTreeMap<String, Arc<dyn Attester>>,
-    /// A map of [`AssertionGenerator`]s (keyed by `assertion_id`) used by this
-    /// party to generate its own [`Assertion`]. Not yet used.
-    pub self_assertion_generators: BTreeMap<String, Arc<dyn AssertionGenerator>>,
+    /// A map of [`BindableAssertionGenerator`]s (keyed by `assertion_id`) used
+    /// by this party to generate its own [`Assertion`]. Not yet used.
+    pub self_assertion_generators: BTreeMap<String, Arc<dyn BindableAssertionGenerator>>,
     /// A map of endorsers (keyed by `attestation_id`) used by this party to
     /// generate [`Endorsements`] for its own [`Evidence`]. The key must match
     /// the `attestation_id` of the evidence being endorsed.
@@ -661,9 +662,9 @@ pub struct AttestationHandlerConfig {
     /// used to select the correct verifier based on the `attestation_id`
     /// provided with the peer's evidence.
     pub peer_verifiers: BTreeMap<String, PeerAttestationVerifier>,
-    /// A map of [`AssertionVerifier`]s (keyed by `assertion_id`) used to
+    /// A map of [`BoundAssertionVerifier`]s (keyed by `assertion_id`) used to
     /// verify an [`Assertion`] received from the peer. Not yet used,
-    pub peer_assertion_verifiers: BTreeMap<String, Arc<dyn AssertionVerifier>>,
+    pub peer_assertion_verifiers: BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     /// Logic to combine multiple attestation verification results in the legacy
     /// format (if the peer provides evidence from different attesters) into
     /// a single overall [`AttestationVerdict`]. Both

@@ -22,7 +22,7 @@ use thiserror::Error;
 
 /// Errors that can occur during assertion verification.
 #[derive(Clone, Error, Debug, Display)]
-pub enum AssertionVerificationError {
+pub enum BoundAssertionVerificationError {
     //  #[error("Generic verification error")]
     GenericFailure { error_msg: String },
     //  #[error("Generic verification error")]
@@ -36,7 +36,7 @@ pub enum AssertionVerificationError {
 /// This trait provides a common interface for interacting with verified
 /// assertions, allowing access to the original assertion data and enabling
 /// further verification steps, namely, session binding.
-pub trait VerifiedAssertion: Send + Sync + Debug {
+pub trait VerifiedBoundAssertion: Send + Sync + Debug {
     fn assertion(&self) -> &Assertion;
 
     /// Verifies the session binding associated with an assertion,
@@ -52,7 +52,7 @@ pub trait VerifiedAssertion: Send + Sync + Debug {
         &self,
         bound_data: &[u8],
         binding: &SessionBinding,
-    ) -> Result<(), AssertionVerificationError>;
+    ) -> Result<(), BoundAssertionVerificationError>;
 }
 
 /// Represents the outcome of an assertion verification attempt. In addition to
@@ -60,16 +60,16 @@ pub trait VerifiedAssertion: Send + Sync + Debug {
 /// enum it includes `Missing` and `Unverified` cases which can be treated
 /// differently by the results aggregator.
 #[derive(Debug)]
-pub enum AssertionVerifierResult {
+pub enum BoundAssertionVerifierResult {
     /// Verifier yielded a success result.
     ///
     /// Contains the original `Assertion`` and its extracted `Payload``.
-    Success { verified_assertion: Box<dyn VerifiedAssertion> },
+    Success { verified_bound_assertion: Box<dyn VerifiedBoundAssertion> },
     /// Verifier returned a failure.
     ///
     /// Contains the original `Assertion` and the `VerificationError` detailing
     /// the reason for the failure.
-    Failure { assertion: Assertion, error: AssertionVerificationError },
+    Failure { assertion: Assertion, error: BoundAssertionVerificationError },
     /// No assertion has been supplied for the verifier.
     Missing,
     /// The assertion has been presented but no verifier is configured.
@@ -80,15 +80,15 @@ pub enum AssertionVerifierResult {
 }
 
 /// Defines the behavior for verifying assertions and their session bindings.
-/// Instances of `AssertionVerifier` are provided by the API client and used by
-/// the session to determine the outcome of the attestation step and to verify
-/// the session binding after the handshake.
+/// Instances of `BoundAssertionVerifier` are provided by the API client and
+/// used by the session to determine the outcome of the attestation step and to
+/// verify the session binding after the handshake.
 ///
 /// Implementors of this trait are responsible for validating the authenticity
 /// and integrity of received [`Assertion`]s, extracting any relevant payload,
 /// and then verifying that the assertion is correctly bound to the session.
 #[cfg_attr(test, automock)]
-pub trait AssertionVerifier: Send + Sync {
+pub trait BoundAssertionVerifier: Send + Sync {
     /// Verifies the provided assertion.
     ///
     /// This method checks the validity of the `assertion` based on its type
@@ -100,5 +100,5 @@ pub trait AssertionVerifier: Send + Sync {
     fn verify_assertion(
         &self,
         assertion: &Assertion,
-    ) -> Result<Box<dyn VerifiedAssertion>, AssertionVerificationError>;
+    ) -> Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError>;
 }

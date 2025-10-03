@@ -22,16 +22,18 @@ use thiserror::Error;
 
 use crate::{
     attestation::VerifierResult,
-    verifier::{AssertionVerificationError, AssertionVerifier, AssertionVerifierResult},
+    verifier::{
+        BoundAssertionVerificationError, BoundAssertionVerifier, BoundAssertionVerifierResult,
+    },
 };
 
 /// Represents verification errors.
 #[derive(Error, Debug, Display)]
 pub enum AggregatedVerificationError {
     LegacyVerificationFailure { failures: BTreeMap<String, String> },
-    AssertionVerificationFailure { failures: BTreeMap<String, AssertionVerificationError> },
+    AssertionVerificationFailure { failures: BTreeMap<String, BoundAssertionVerificationError> },
     NoMatchedLegacyVerifier,
-    NoMatchedAssertionVerifier,
+    NoMatchedBoundAssertionVerifier,
     ConfigurationError,
 }
 
@@ -115,7 +117,7 @@ pub trait AssertionResultsAggregator: Send {
     /// aggregated result.
     fn process_assertion_results(
         &self,
-        assertion_results: &BTreeMap<String, AssertionVerifierResult>,
+        assertion_results: &BTreeMap<String, BoundAssertionVerifierResult>,
     ) -> Result<(), AggregatedVerificationError>;
 
     /// Checks whether the aggregator is compatible with the configured
@@ -124,7 +126,7 @@ pub trait AssertionResultsAggregator: Send {
     /// the particular attestation IDs.
     fn is_compatible_with_configuration(
         &self,
-        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     ) -> bool;
 }
 
@@ -139,21 +141,22 @@ pub struct Any {}
 impl AssertionResultsAggregator for Any {
     fn process_assertion_results(
         &self,
-        assertion_results: &BTreeMap<String, AssertionVerifierResult>,
+        assertion_results: &BTreeMap<String, BoundAssertionVerifierResult>,
     ) -> Result<(), AggregatedVerificationError> {
-        let mut failures: BTreeMap<String, AssertionVerificationError> = BTreeMap::new();
+        let mut failures: BTreeMap<String, BoundAssertionVerificationError> = BTreeMap::new();
         for (id, result) in assertion_results {
             match result {
-                AssertionVerifierResult::Success { .. } => return Ok(()),
-                AssertionVerifierResult::Failure { error, .. } => {
+                BoundAssertionVerifierResult::Success { .. } => return Ok(()),
+                BoundAssertionVerifierResult::Failure { error, .. } => {
                     failures.insert(id.clone(), error.clone());
                 }
-                AssertionVerifierResult::Missing | AssertionVerifierResult::Unverified { .. } => {}
+                BoundAssertionVerifierResult::Missing
+                | BoundAssertionVerifierResult::Unverified { .. } => {}
             }
         }
 
         if failures.is_empty() {
-            Err(AggregatedVerificationError::NoMatchedAssertionVerifier)
+            Err(AggregatedVerificationError::NoMatchedBoundAssertionVerifier)
         } else {
             Err(AggregatedVerificationError::AssertionVerificationFailure { failures })
         }
@@ -161,7 +164,7 @@ impl AssertionResultsAggregator for Any {
 
     fn is_compatible_with_configuration(
         &self,
-        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     ) -> bool {
         !peer_assertion_verifiers.is_empty()
     }
@@ -178,19 +181,20 @@ pub struct All {}
 impl AssertionResultsAggregator for All {
     fn process_assertion_results(
         &self,
-        assertion_results: &BTreeMap<String, AssertionVerifierResult>,
+        assertion_results: &BTreeMap<String, BoundAssertionVerifierResult>,
     ) -> Result<(), AggregatedVerificationError> {
-        let mut failures: BTreeMap<String, AssertionVerificationError> = BTreeMap::new();
+        let mut failures: BTreeMap<String, BoundAssertionVerificationError> = BTreeMap::new();
         for (id, result) in assertion_results {
             match result {
-                AssertionVerifierResult::Success { .. } => {}
-                AssertionVerifierResult::Failure { error, .. } => {
+                BoundAssertionVerifierResult::Success { .. } => {}
+                BoundAssertionVerifierResult::Failure { error, .. } => {
                     failures.insert(id.clone(), error.clone());
                 }
-                AssertionVerifierResult::Missing => {
-                    failures.insert(id.clone(), AssertionVerificationError::PeerAssertionMissing);
+                BoundAssertionVerifierResult::Missing => {
+                    failures
+                        .insert(id.clone(), BoundAssertionVerificationError::PeerAssertionMissing);
                 }
-                AssertionVerifierResult::Unverified { .. } => {}
+                BoundAssertionVerifierResult::Unverified { .. } => {}
             }
         }
 
@@ -203,7 +207,7 @@ impl AssertionResultsAggregator for All {
 
     fn is_compatible_with_configuration(
         &self,
-        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     ) -> bool {
         !peer_assertion_verifiers.is_empty()
     }
@@ -222,31 +226,31 @@ pub struct PassThrough {}
 impl AssertionResultsAggregator for PassThrough {
     fn process_assertion_results(
         &self,
-        assertion_results: &BTreeMap<String, AssertionVerifierResult>,
+        assertion_results: &BTreeMap<String, BoundAssertionVerifierResult>,
     ) -> Result<(), AggregatedVerificationError> {
         // Pass through verifier only works if exactly one assertion verifier is
         // configured.
         match assertion_results
             .iter()
             .filter_map(|(id, result)| match result {
-                AssertionVerifierResult::Success { .. }
-                | AssertionVerifierResult::Failure { .. }
-                | AssertionVerifierResult::Missing => Some((id, result)),
-                AssertionVerifierResult::Unverified { .. } => None,
+                BoundAssertionVerifierResult::Success { .. }
+                | BoundAssertionVerifierResult::Failure { .. }
+                | BoundAssertionVerifierResult::Missing => Some((id, result)),
+                BoundAssertionVerifierResult::Unverified { .. } => None,
             })
             .exactly_one()
         {
             Ok((id, result)) => match result {
-                AssertionVerifierResult::Success { .. } => Ok(()),
-                AssertionVerifierResult::Failure { error, .. } => {
+                BoundAssertionVerifierResult::Success { .. } => Ok(()),
+                BoundAssertionVerifierResult::Failure { error, .. } => {
                     Err(AggregatedVerificationError::AssertionVerificationFailure {
                         failures: BTreeMap::from([(id.clone(), error.clone())]),
                     })
                 }
-                AssertionVerifierResult::Missing => {
-                    Err(AggregatedVerificationError::NoMatchedAssertionVerifier)
+                BoundAssertionVerifierResult::Missing => {
+                    Err(AggregatedVerificationError::NoMatchedBoundAssertionVerifier)
                 }
-                AssertionVerifierResult::Unverified { .. } => {
+                BoundAssertionVerifierResult::Unverified { .. } => {
                     Err(AggregatedVerificationError::ConfigurationError)
                 }
             },
@@ -256,7 +260,7 @@ impl AssertionResultsAggregator for PassThrough {
 
     fn is_compatible_with_configuration(
         &self,
-        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     ) -> bool {
         !peer_assertion_verifiers.is_empty()
     }
@@ -274,18 +278,18 @@ pub struct Empty {}
 impl AssertionResultsAggregator for Empty {
     fn process_assertion_results(
         &self,
-        assertion_results: &BTreeMap<String, AssertionVerifierResult>,
+        assertion_results: &BTreeMap<String, BoundAssertionVerifierResult>,
     ) -> Result<(), AggregatedVerificationError> {
         assertion_results
             .iter()
-            .all(|(_, result)| matches!(result, AssertionVerifierResult::Unverified { .. }))
+            .all(|(_, result)| matches!(result, BoundAssertionVerifierResult::Unverified { .. }))
             .then_some(())
             .ok_or(AggregatedVerificationError::ConfigurationError)
     }
 
     fn is_compatible_with_configuration(
         &self,
-        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn AssertionVerifier>>,
+        peer_assertion_verifiers: &BTreeMap<String, Arc<dyn BoundAssertionVerifier>>,
     ) -> bool {
         peer_assertion_verifiers.is_empty()
     }

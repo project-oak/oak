@@ -32,7 +32,7 @@ use oak_session::{
     attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,
     encryptors::OrderedChannelEncryptor,
-    generator::{AssertionGenerationError, BindableAssertion},
+    generator::{BindableAssertion, BindableAssertionGeneratorError},
     handshake::{ClientHandshakeHandler, HandshakeHandler, HandshakeType, ServerHandshakeHandler},
     ProtocolEngine,
 };
@@ -219,7 +219,7 @@ impl BindableAssertion for TestBindableAssertion {
     fn bind(
         &self,
         bound_data: &[u8],
-    ) -> core::result::Result<SessionBinding, AssertionGenerationError> {
+    ) -> core::result::Result<SessionBinding, BindableAssertionGeneratorError> {
         let mut binding = b"bound:".to_vec();
         binding.extend_from_slice(&self.assertion.content);
         binding.extend_from_slice(b":");

@@ -14,19 +14,20 @@
 // limitations under the License.
 //
 
-#![feature(assert_matches)]
-#![feature(box_patterns)]
-#![feature(try_blocks)]
+use oak_proto_rust::oak::attestation::v1::Assertion;
+use thiserror::Error;
 
-extern crate alloc;
+#[derive(Debug, Error)]
+#[error("AssertionGenerator error: {from:?}")]
+pub struct AssertionGeneratorError {
+    #[from]
+    pub from: anyhow::Error,
+}
 
-pub mod assertions;
-pub mod attestation;
-pub mod jwt;
-pub mod policy;
-pub mod policy_generator;
-
-pub const CONFIDENTIAL_SPACE_ROOT_CERT_PEM: &str =
-    include_str!("../data/confidential_space_root.pem");
-
-pub const OAK_SESSION_NOISE_V1_AUDIENCE: &str = "d9b8d46d-6841-4825-9b5e-e77768638044";
+/// Trait that provides the functionality for checking that the assertion is
+/// correct for the supplied data
+#[cfg_attr(test, automock)]
+pub trait AssertionGenerator: Send + Sync {
+    /// Produces an assertion for the provided data.
+    fn generate(&self, data: &[u8]) -> Result<Assertion, AssertionGeneratorError>;
+}

@@ -55,6 +55,13 @@ pub fn confidential_space_policy_from_reference_values(
             );
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
+        Some(confidential_space_reference_values::ContainerImage::EndorsementReferenceValues(
+            ref_value,
+        )) => {
+            let workload_ref_values =
+                WorkloadReferenceValues::EndorsementReferenceValue(ref_value.clone());
+            Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
+        }
         None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),
     }
 }

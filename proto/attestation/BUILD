@@ -28,6 +28,7 @@ package(
 proto_library(
     name = "assertion_proto",
     srcs = ["assertion.proto"],
+    deps = [":endorsement_proto"],
 )
 
 java_proto_library(

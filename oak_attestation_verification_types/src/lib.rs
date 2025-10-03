@@ -19,6 +19,7 @@
 
 extern crate alloc;
 
+pub mod assertion_verifier;
 pub mod policy;
 pub mod util;
 pub mod verifier;
