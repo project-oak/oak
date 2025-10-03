@@ -265,7 +265,10 @@ mod tests {
     };
     use oak_time::make_instant;
     use prost::Message;
-    use verify_endorsement::{create_endorsement_reference_value, create_verifying_key_from_pem};
+    use verify_endorsement::{
+        create_endorsement_reference_value, create_signed_endorsement,
+        create_verifying_key_from_pem,
+    };
     use x509_cert::der::DecodePem;
 
     use super::*;
@@ -280,18 +283,14 @@ mod tests {
         0x64, 0x66,
     ];
 
-    fn create_signed_endorsement(
+    fn make_signed_endorsement(
         endorsement_filename: &str,
         signature_filename: &str,
         key_id: u32,
     ) -> SignedEndorsement {
         let serialized_endorsement = read_testdata!(endorsement_filename);
-        let serialized_signature = read_testdata!(signature_filename);
-        verify_endorsement::create_signed_endorsement(
-            &serialized_endorsement,
-            &serialized_signature,
-            key_id,
-        )
+        let signature = read_testdata!(signature_filename);
+        create_signed_endorsement(&serialized_endorsement, &signature, key_id, &[], &[])
     }
 
     fn create_reference_value(key_id: u32) -> EndorsementReferenceValue {
@@ -308,7 +307,7 @@ mod tests {
                 .try_into()
                 .unwrap();
         let signed_endorsement =
-            create_signed_endorsement("endorsement.json", "endorsement_signature.sig", 1);
+            make_signed_endorsement("endorsement.json", "endorsement_signature.sig", 1);
         let ref_value = create_reference_value(1);
 
         let result = verify_endorsement_wrapper(
@@ -329,7 +328,7 @@ mod tests {
                 .try_into()
                 .unwrap();
         let signed_endorsement =
-            create_signed_endorsement("endorsement.json", "other_endorsement_signature.sig", 1);
+            make_signed_endorsement("endorsement.json", "other_endorsement_signature.sig", 1);
         let ref_value = create_reference_value(1);
 
         let result = verify_endorsement_wrapper(
@@ -389,7 +388,7 @@ mod tests {
         let event = create_public_key_event(&BINDING_KEY_BYTES);
 
         let signed_endorsement =
-            create_signed_endorsement("endorsement.json", "endorsement_signature.sig", 0);
+            make_signed_endorsement("endorsement.json", "endorsement_signature.sig", 0);
         let workload_endorsement = Some(signed_endorsement);
         let endorsement = ConfidentialSpaceEndorsement {
             jwt_token: read_testdata_string!("valid_token.jwt"),

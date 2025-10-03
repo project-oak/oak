@@ -28,6 +28,8 @@ rust_binary(
     deps = [
         "//oak_file_utils",
         "//oak_proto_rust",
+        "//oak_time",
+        "//oak_time:oak_time_std",
         "//tr/endorscope",
         "//tr/intoto",
         "//tr/rekor",

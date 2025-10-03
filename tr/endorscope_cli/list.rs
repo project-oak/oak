@@ -17,13 +17,12 @@
 //! This module implements the `list` command. It lists all endorsements for a
 //! given endorser key.
 
-use std::sync::Arc;
-
 use anyhow::Context;
 use clap::Args;
-use endorscope::{ContentAddressableEndorsementLoader, HTTPContentAddressableStorageBuilder};
+use endorscope::storage::{CaStorage, EndorsementLoader};
 use intoto::statement::Validity;
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
+use oak_time::Instant;
 use prost::Message;
 use url::Url;
 use verify_endorsement::verify_endorsement;
@@ -78,15 +77,9 @@ pub(crate) struct ListArgs {
 }
 
 // Lists all endorsements for a given endorser key.
-pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
-    let storage = HTTPContentAddressableStorageBuilder::default()
-        .url_prefix(p.url_prefix)
-        .fbucket(p.fbucket)
-        .ibucket(p.ibucket)
-        .build()
-        .expect("Failed to build storage");
-
-    let loader = ContentAddressableEndorsementLoader::new_with_storage(Arc::new(storage));
+pub(crate) fn list(current_time: Instant, p: ListArgs) {
+    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
+    let loader = EndorsementLoader::new(Box::new(storage));
 
     let endorser_key_hashes;
     if p.endorser_key_hash.is_some() {
@@ -98,14 +91,11 @@ pub(crate) fn list(p: ListArgs, now_utc_millis: i64) {
     }
 
     for endorser_key_hash in endorser_key_hashes {
-        list_endorsements(&loader, endorser_key_hash.as_str(), now_utc_millis);
+        list_endorsements(current_time, &loader, endorser_key_hash.as_str());
     }
 }
 
-fn list_endorser_keys(
-    loader: &ContentAddressableEndorsementLoader,
-    endorser_keyset_hash: &str,
-) -> Vec<String> {
+fn list_endorser_keys(loader: &EndorsementLoader, endorser_keyset_hash: &str) -> Vec<String> {
     let endorser_keys = loader.list_endorser_keys(endorser_keyset_hash);
     if endorser_keys.is_err() {
         panic!("❌  Failed to list endorser keys: {:?}", endorser_keys.err().unwrap());
@@ -143,11 +133,7 @@ fn prettify_claim(claim: &str) -> String {
     }
 }
 
-fn list_endorsements(
-    loader: &endorscope::ContentAddressableEndorsementLoader,
-    endorser_key_hash: &str,
-    now_utc_millis: i64,
-) {
+fn list_endorsements(current_time: Instant, loader: &EndorsementLoader, endorser_key_hash: &str) {
     let endorsement_hashes = loader.list_endorsements(endorser_key_hash);
     if endorsement_hashes.is_err() {
         println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
@@ -165,7 +151,7 @@ fn list_endorsements(
     // endorsements first.
     for endorsement_hash in endorsement_hashes.iter().rev() {
         let result = loader
-            .load_endorsement(endorsement_hash.as_str())
+            .load(endorsement_hash.as_str())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
 
         if result.is_err() {
@@ -175,9 +161,16 @@ fn list_endorsements(
                 result.err().unwrap()
             );
         } else {
-            let (signed_endorsement, reference_values) = result.unwrap();
-            let result = verify_endorsement(now_utc_millis, &signed_endorsement, &reference_values)
-                .context("verifying endorsement");
+            let package = result.unwrap();
+            let signed_endorsement =
+                package.get_signed_endorsement().expect("failed to get signed endorsement");
+            let reference_value = package.get_reference_value();
+            let result = verify_endorsement(
+                current_time.into_unix_millis(),
+                &signed_endorsement,
+                &reference_value,
+            )
+            .context("verifying endorsement");
             if result.is_err() {
                 println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
             } else {

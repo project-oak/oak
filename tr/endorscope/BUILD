@@ -27,10 +27,9 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "//tr/intoto",
-        "//tr/key_util",
         "//tr/rekor",
+        "//tr/verify_endorsement",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:derive_builder",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",
         "@oak_crates_index//:url",

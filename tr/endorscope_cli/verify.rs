@@ -21,19 +21,19 @@
 //! - local: a local file
 //! - remote: A remote content addressable storage
 
-use std::{path::PathBuf, sync::Arc};
+use std::{fs, path::PathBuf};
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use endorscope::{
-    ContentAddressableEndorsementLoader, FileEndorsementBuilder, FileEndorsementLoader,
-    HTTPContentAddressableStorageBuilder,
+    package::Package,
+    storage::{CaStorage, EndorsementLoader},
 };
-use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
+use oak_time::Instant;
+use rekor::get_rekor_v1_public_key_pem;
 use url::Url;
-use verify_endorsement::verify_endorsement;
 
-// Subcommands for the verify command.
+/// Subcommands for the verify command.
 #[derive(Subcommand)]
 pub(crate) enum VerifyCommands {
     #[command(subcommand = "file", about = "Verify an endorsement from a local file.")]
@@ -46,17 +46,18 @@ pub(crate) enum VerifyCommands {
     Remote(VerifyRemoteArgs),
 }
 
-// Subcommand for verifying an endorsement from a local filesystem.
-//
-// Example:
-//   verify file --endorsement=endorsement.json --signature=endorsement.json.sig
-// --endorser_public_key=endorser_public_key.pem
+/// Subcommand for verifying an endorsement from a local filesystem.
+///
+/// Example:
+///   verify file --endorsement=endorsement.json
+///               --signature=endorsement.json.sig
+///               --endorser_public_key=endorser_public_key.pem
 #[derive(Args)]
 pub(crate) struct VerifyFileArgs {
     #[arg(long, help = "Path to the endorsement.json to verify.")]
     endorsement: PathBuf,
 
-    #[arg(long, help = "Path to the endorsement.json.sig to verify.")]
+    #[arg(long, help = "Path to the signature file to verify.")]
     signature: PathBuf,
 
     #[arg(long, help = "Path to the public key to verify.")]
@@ -65,16 +66,20 @@ pub(crate) struct VerifyFileArgs {
     #[arg(long, help = "Path to the subject if needed for the verification.")]
     subject: Option<PathBuf>,
 
-    #[arg(long, help = "Path to the logentry.json to verify, if available.")]
+    #[arg(
+        long,
+        help = "Path to the log entry, if the endorsement signature has been committed to a transparency log."
+    )]
     log_entry: Option<PathBuf>,
 }
 
 // Subcommand for verifying an endorsement from a remote content addressable
 // storage.
 //
-// The fbucket_name and ibucket_name are used to determine the storage location
-// of the content addressable files and the link index file. The url_prefix can
-// be used to override the default storage location (Google Cloud Storage).
+// The `fbucket` and `ibucket` names are used to determine the storage location
+// of the content addressable files and the link index file. The `url_prefix`
+// can be used to override the default storage location, wich is Google Cloud
+// Storage (GCS).
 //
 // Example:
 //   verify remote --endorsement_hash=${hash} --fbucket=12345 --ibucket=67890
@@ -146,50 +151,58 @@ pub(crate) fn parse_typed_hash(arg: &str) -> Result<String, anyhow::Error> {
     Ok(arg.to_string())
 }
 
-// Verifies an endorsement from a local file.
-pub(crate) fn verify_file(p: VerifyFileArgs, now_utc_millis: i64) {
-    let loader = FileEndorsementLoader {};
+impl VerifyFileArgs {
+    /// Loads endorsement package from disk into memory.
+    pub fn load(&self) -> Result<Package> {
+        let endorsement = fs::read(&self.endorsement)
+            .with_context(|| format!("reading endorsement from {}", &self.endorsement.display()))?;
+        let signature = fs::read(&self.signature)
+            .with_context(|| format!("reading signature from {}", &self.signature.display()))?;
+        let log_entry = match &self.log_entry {
+            None => None,
+            Some(path) => Some(
+                fs::read(path)
+                    .with_context(|| format!("reading log_entry from {}", path.display()))?,
+            ),
+        };
+        let subject = match &self.subject {
+            None => None,
+            Some(path) => {
+                Some(fs::read(path).context(format!("reading subject from {}", path.display()))?)
+            }
+        };
+        let endorser_public_key =
+            fs::read_to_string(&self.endorser_public_key).with_context(|| {
+                format!("reading endorser public key from {}", self.endorser_public_key.display())
+            })?;
 
-    let params = FileEndorsementBuilder::default()
-        .endorsement_path(p.endorsement)
-        .signature_path(p.signature)
-        .endorser_public_key_path(p.endorser_public_key)
-        .log_entry_path(p.log_entry)
-        .subject_path(p.subject)
-        .build()
-        .expect("Failed to build endorsement loader");
-
-    let (endorsement, reference_values) =
-        loader.load_endorsement(params).expect("Failed to load endorsement");
-
-    verify(endorsement, reference_values, now_utc_millis);
+        Ok(Package {
+            endorsement,
+            signature,
+            log_entry,
+            subject,
+            endorser_public_key,
+            rekor_public_key: Some(get_rekor_v1_public_key_pem()),
+        })
+    }
 }
 
-// Verifies an endorsement from a remote content addressable storage.
-pub(crate) fn verify_remote(p: VerifyRemoteArgs, now_utc_millis: i64) {
-    let storage = HTTPContentAddressableStorageBuilder::default()
-        .url_prefix(p.url_prefix)
-        .fbucket(p.fbucket)
-        .ibucket(p.ibucket)
-        .build()
-        .expect("Failed to build storage");
-
-    let loader = ContentAddressableEndorsementLoader::new_with_storage(Arc::new(storage));
-
-    let (endorsement, reference_values) =
-        loader.load_endorsement(p.endorsement_hash.as_str()).expect("Failed to load endorsement");
-
-    verify(endorsement, reference_values, now_utc_millis);
+/// Verifies an endorsement package from local files.
+pub(crate) fn verify_file(current_time: Instant, p: VerifyFileArgs) {
+    let package = p.load().expect("Failed to load endorsement");
+    display_verify_result(package.verify(current_time.into_unix_millis()));
 }
 
-// Verifies an endorsement from a given endorsement loader.
-pub(crate) fn verify(
-    signed_endorsement: SignedEndorsement,
-    ref_values: EndorsementReferenceValue,
-    now_utc_millis: i64,
-) {
-    let result = verify_endorsement(now_utc_millis, &signed_endorsement, &ref_values)
-        .context("verifying endorsement");
+/// Verifies an endorsement package from a remote content addressable storage.
+pub(crate) fn verify_remote(current_time: Instant, p: VerifyRemoteArgs) {
+    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
+    let loader = EndorsementLoader::new(Box::new(storage));
+    let package = loader.load(p.endorsement_hash.as_str()).expect("Failed to load endorsement");
+    display_verify_result(package.verify(current_time.into_unix_millis()));
+}
+
+/// Verifies an endorsement from a given endorsement loader.
+fn display_verify_result(result: Result<()>) {
     if result.is_err() {
         panic!("❌ Verification failed: {:?}", result.err().unwrap());
     }

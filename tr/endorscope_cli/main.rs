@@ -14,12 +14,11 @@
 // limitations under the License.
 //
 
-// Endorscope tool: lists and verifies endorsements on static storage.
+//! Endorscope tool: lists and verifies endorsements on static storage.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use anyhow::Context;
 use clap::{Parser, Subcommand};
+use oak_time::Instant;
+use oak_time_std::instant::now;
 
 mod list;
 mod verify;
@@ -47,20 +46,13 @@ enum Commands {
 
 fn main() {
     let p = Params::parse();
-
-    let now_utc_millis: i64 = p.now_utc_millis.unwrap_or_else(|| {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .with_context(|| "Reading UNIX_EPOCH from SystemTime::now()")
-            .and_then(|d| d.as_millis().try_into().with_context(|| "Downcasting duration to i64"))
-            .expect("Failed to convert time to milliseconds")
-    });
+    let current_time = p.now_utc_millis.map(Instant::from_unix_millis).unwrap_or_else(now);
 
     match p.command {
         Commands::Verify { command } => match command {
-            verify::VerifyCommands::File(args) => verify::verify_file(args, now_utc_millis),
-            verify::VerifyCommands::Remote(args) => verify::verify_remote(args, now_utc_millis),
+            verify::VerifyCommands::File(args) => verify::verify_file(current_time, args),
+            verify::VerifyCommands::Remote(args) => verify::verify_remote(current_time, args),
         },
-        Commands::List(args) => list::list(args, now_utc_millis),
+        Commands::List(args) => list::list(current_time, args),
     }
 }

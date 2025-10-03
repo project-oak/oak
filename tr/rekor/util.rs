@@ -25,10 +25,12 @@ use oak_time::{Duration, Instant};
 const REKOR_V1_PUBLIC_KEY_PEM: &str =
     include_str!("../../oak_attestation_verification/testdata/rekor_public_key.pem");
 
-fn get_rekor_v1_public_key_pem() -> String {
+/// Returns the verifying key from rekor.sigstore.dev as PEM.
+pub fn get_rekor_v1_public_key_pem() -> String {
     REKOR_V1_PUBLIC_KEY_PEM.to_owned()
 }
 
+/// Returns the verifying key from rekor.sigstore.dev as raw.
 pub fn get_rekor_v1_public_key_raw() -> Vec<u8> {
     convert_pem_to_raw(&get_rekor_v1_public_key_pem()).unwrap()
 }

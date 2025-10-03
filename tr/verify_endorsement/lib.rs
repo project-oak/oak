@@ -45,20 +45,31 @@ pub const KERNEL_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md";
 
 /// Creates a `SignedEndorsement` from ingredients.
+///
+/// Arguments:
+/// - serialized_endorsement: The actual endorsement as JSON.
+/// - signature: The raw signature over the endorsement.
+/// - key_id: The key ID for identifying the verifying key among several.
+/// - subject: The endorsed subject, if needed for the verification. Optional
+///   and empty in most cases.
+/// - rekor_log_entry: The serialized Rekor log entry as JSON. Leave empty if
+///   unavailable.
 pub fn create_signed_endorsement(
     serialized_endorsement: &[u8],
-    serialized_signature: &[u8],
+    signature: &[u8],
     key_id: u32,
+    subject: &[u8],
+    log_entry: &[u8],
 ) -> SignedEndorsement {
     let endorsement = Endorsement {
         format: Format::EndorsementFormatJsonIntoto.into(),
         serialized: serialized_endorsement.to_vec(),
-        ..Default::default()
+        subject: subject.to_vec(),
     };
     SignedEndorsement {
         endorsement: Some(endorsement),
-        signature: Some(Signature { key_id, raw: serialized_signature.to_vec() }),
-        ..Default::default()
+        signature: Some(Signature { key_id, raw: signature.to_vec() }),
+        rekor_log_entry: log_entry.to_vec(),
     }
 }
 
