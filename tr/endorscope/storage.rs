@@ -22,6 +22,18 @@
 //!   [`ContentAddressable`].
 //! - [`CaStorage`]: A concrete implementation of [`ContentAddressable`] which
 //!   is based on the HTTP protocol.
+//!
+//! First create a loader:
+//!
+//! let storage = CaStorage { url_prefix, fbucket, ibucket };
+//! let loader = EndorsementLoader::new(Box::new(storage));
+//!
+//! Then use it e.g. to load and verify the most recent endorsement package
+//! signed by a particular verifying key:
+//!
+//! let hashes = loader.list_endorsements_by_key(key_hash)?;
+//! let package = loader.load(hashes[hashes.len() - 1], rekor_public_key)?;
+//! package.verify(now).context("verifying endorsement")?;
 
 use alloc::{
     boxed::Box,
@@ -32,7 +44,6 @@ use alloc::{
 
 use anyhow::{Context, Result};
 use intoto::statement::{get_hex_digest_from_statement, parse_statement};
-use rekor::get_rekor_v1_public_key_pem;
 use url::Url;
 
 use crate::package::Package;
@@ -41,13 +52,15 @@ const INLINE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/77149.md";
 const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
 
-// The link types used to organize the content-addressable storage.
-// See go/oak-search-index-structure for details.
-const SIGNATURE_LINK: &str = "14";
-const REKOR_LOG_ENTRY_LINK: &str = "15";
-const PUBLIC_KEY_LINK: &str = "16";
-const ENDORSEMENT_LIST_LINK: &str = "21";
-const ENDORSER_KEYS_LIST_LINK: &str = "22";
+// Link types establish certain relationships between items in the
+// content-addressable storage, similar to database indices. Details can be
+// found at go/oak-search-index-structure.
+const ENDORSEMENT_FOR_SUBJECT_LINK: &str = "13";
+const SIGNATURE_FOR_ENDORSEMENT_LINK: &str = "14";
+const LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
+const PUBLIC_KEY_FOR_SIGNATURE_LINK: &str = "16";
+const ENDORSEMENTS_FOR_KEY_LINK: &str = "21";
+const KEYS_FOR_KEYSET_LINK: &str = "22";
 
 /// ContentAddressable is a trait that defines the interface for a
 /// content-addressable storage layer.
@@ -111,17 +124,15 @@ impl EndorsementLoader {
         EndorsementLoader { storage }
     }
 
-    // Lists all endorser keys for the given endorser keyset hash.
-    //
-    // Returns:
-    // - The list of endorser keys.
-    pub fn list_endorser_keys(&self, endorser_keyset_hash: &str) -> Result<Vec<String>> {
+    /// Lists all endorser keys for the given endorser keyset hash.
+    ///
+    /// Returns:
+    /// - The list of endorser key hashes.
+    pub fn list_keys_by_keyset(&self, endorser_keyset_hash: &str) -> Result<Vec<String>> {
         let endorser_keys = self
             .storage
-            .get_link(endorser_keyset_hash, ENDORSER_KEYS_LIST_LINK)
-            .with_context(|| {
-                format!("reading endorser keys list for endorser keyset {}", endorser_keyset_hash)
-            })
+            .get_link(endorser_keyset_hash, KEYS_FOR_KEYSET_LINK)
+            .with_context(|| format!("reading endorser keys for keyset {}", endorser_keyset_hash))
             .or_else(|err| match err.downcast_ref::<ureq::Error>() {
                 // If the link file for the endorser keyset is not found in
                 // the index, we treat it as if the endorser keyset is empty.
@@ -132,15 +143,18 @@ impl EndorsementLoader {
         Ok(endorser_keys.split_terminator("\n").map(|s| s.to_string()).collect())
     }
 
-    // Lists all endorsement hashes for the given endorser key hash.
-    //
-    // Returns:
-    // - The list of endorsement hashes.
-    pub fn list_endorsements(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
+    /// Lists all endorsement hashes for the given endorser key hash.
+    ///
+    /// The endorsement hashes are sorted by date of issuance (`issuedOn`)
+    /// such that the most recent endorsement comes last.
+    ///
+    /// Returns:
+    /// - The list of endorsement hashes.
+    pub fn list_endorsements_by_key(&self, endorser_key_hash: &str) -> Result<Vec<String>> {
         let endorsements = self
             .storage
-            .get_link(endorser_key_hash, ENDORSEMENT_LIST_LINK)
-            .with_context(|| format!("reading endorsement list for endorser {}", endorser_key_hash))
+            .get_link(endorser_key_hash, ENDORSEMENTS_FOR_KEY_LINK)
+            .with_context(|| format!("reading endorsements by key {}", endorser_key_hash))
             .or_else(|err| match err.downcast_ref::<ureq::Error>() {
                 // If the link file for the endorsement list is not found
                 // in the index, we assume the endorser has not signed any
@@ -152,19 +166,57 @@ impl EndorsementLoader {
         Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
     }
 
+    /// Lists all endorsement hashes for the given subject hash.
+    ///
+    /// The endorsement hashes are sorted by date of issuance (`issuedOn`)
+    /// such that the most recent endorsement comes last.
+    ///
+    /// Returns:
+    /// - The list of endorsement hashes.
+    pub fn list_endorsements_by_subject(&self, subject_hash: &str) -> Result<Vec<String>> {
+        let endorsements = self
+            .storage
+            .get_link(subject_hash, ENDORSEMENT_FOR_SUBJECT_LINK)
+            .with_context(|| format!("reading endorsements by subject {}", subject_hash))
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the endorsement list is not found in
+                // the index, we assume the subject has never been endorsed.
+                // So we return an empty list.
+                Some(ureq::Error::Status(404, _)) => Ok(String::new()),
+                _ => Err(err),
+            })?;
+
+        Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
+    }
+
     /// Loads an endorsement package from remote content-addressable storage.
-    pub fn load(&self, endorsement_hash: &str) -> Result<Package> {
+    ///
+    /// Params:
+    /// - endorsement_hash: The hash of the endorsement which identifies the
+    ///   endorsement package.
+    /// - rekor_public_key: Rekor's verifying key if a log entry is expected and
+    ///   should be verified. If it is not expected, pass `None`.
+    ///
+    /// Returns:
+    /// - The endorsement package.
+    pub fn load(
+        &self,
+        endorsement_hash: &str,
+        rekor_public_key: Option<String>,
+    ) -> Result<Package> {
         let endorsement = self
             .storage
             .get_file(endorsement_hash)
             .with_context(|| format!("reading endorsement for endorsement {}", endorsement_hash))?;
-        let signature =
-            self.storage.get_linked_file(endorsement_hash, SIGNATURE_LINK).with_context(|| {
+        let signature = self
+            .storage
+            .get_linked_file(endorsement_hash, SIGNATURE_FOR_ENDORSEMENT_LINK)
+            .with_context(|| {
                 format!("reading signature file for endorsement {}", endorsement_hash)
             })?;
         let log_entry = self
             .storage
-            .get_linked_file(endorsement_hash, REKOR_LOG_ENTRY_LINK)
+            .get_linked_file(endorsement_hash, LOG_ENTRY_FOR_ENDORSEMENT_LINK)
             .with_context(|| {
                 format!("reading rekor log entry for endorsement {}", endorsement_hash)
             })
@@ -190,12 +242,12 @@ impl EndorsementLoader {
         }
 
         let signature_hash =
-            self.storage.get_link(endorsement_hash, SIGNATURE_LINK).with_context(|| {
-                format!("reading signature link for endorsement {}", endorsement_hash)
-            })?;
+            self.storage.get_link(endorsement_hash, SIGNATURE_FOR_ENDORSEMENT_LINK).with_context(
+                || format!("reading signature link for endorsement {}", endorsement_hash),
+            )?;
         let endorser_public_key = self
             .storage
-            .get_linked_file(signature_hash.as_str(), PUBLIC_KEY_LINK)
+            .get_linked_file(signature_hash.as_str(), PUBLIC_KEY_FOR_SIGNATURE_LINK)
             .with_context(|| {
                 format!("reading endorser public key for endorsement {}", endorsement_hash)
             })
@@ -207,7 +259,7 @@ impl EndorsementLoader {
             log_entry,
             subject,
             endorser_public_key,
-            rekor_public_key: Some(get_rekor_v1_public_key_pem()),
+            rekor_public_key,
         })
     }
 }

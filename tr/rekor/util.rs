@@ -16,7 +16,7 @@
 
 //! Provides utilities around Rekor log entry verification.
 
-use alloc::{borrow::ToOwned, string::String, vec::Vec};
+use alloc::vec::Vec;
 
 use key_util::convert_pem_to_raw;
 use oak_proto_rust::oak::attestation::v1::TimestampReferenceValue;
@@ -26,13 +26,13 @@ const REKOR_V1_PUBLIC_KEY_PEM: &str =
     include_str!("../../oak_attestation_verification/testdata/rekor_public_key.pem");
 
 /// Returns the verifying key from rekor.sigstore.dev as PEM.
-pub fn get_rekor_v1_public_key_pem() -> String {
-    REKOR_V1_PUBLIC_KEY_PEM.to_owned()
+pub const fn get_rekor_v1_public_key_pem() -> &'static str {
+    REKOR_V1_PUBLIC_KEY_PEM
 }
 
 /// Returns the verifying key from rekor.sigstore.dev as raw.
 pub fn get_rekor_v1_public_key_raw() -> Vec<u8> {
-    convert_pem_to_raw(&get_rekor_v1_public_key_pem()).unwrap()
+    convert_pem_to_raw(get_rekor_v1_public_key_pem()).unwrap()
 }
 
 /// Verifies the given timestamp is valid based on the current time and the

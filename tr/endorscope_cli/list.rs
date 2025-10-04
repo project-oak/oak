@@ -19,15 +19,40 @@
 
 use anyhow::Context;
 use clap::Args;
-use endorscope::storage::{CaStorage, EndorsementLoader};
+use endorscope::{
+    package::Package,
+    storage::{CaStorage, EndorsementLoader},
+};
 use intoto::statement::Validity;
 use oak_proto_rust::oak::attestation::v1::MpmAttachment;
 use oak_time::Instant;
 use prost::Message;
+use rekor::get_rekor_v1_public_key_pem;
 use url::Url;
 use verify_endorsement::verify_endorsement;
 
-use crate::verify::{parse_bucket_name, parse_typed_hash, parse_url};
+use crate::verify::{parse_bucket_name, parse_typed_hash, parse_url, string_to_option_string};
+
+const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
+const PUBLISHED_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
+const RUNNABLE_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md";
+const OPEN_SOURCE_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
+
+const EXPECTED_CLAIMS: &[&str] =
+    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE];
+
+fn prettify_claim(claim: &str) -> String {
+    match claim {
+        MPM_CLAIM_TYPE => format!("{claim} (Distributed as MPM)"),
+        OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
+        RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
+        PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
+        _ => claim.to_string(),
+    }
+}
 
 // Subcommand for listing all endorsements for a given endorser key.
 //
@@ -36,9 +61,16 @@ use crate::verify::{parse_bucket_name, parse_typed_hash, parse_url};
 // be used to override the default storage location (Google Cloud Storage).
 //
 // Example:
-//   list --endorser_key_hash=sha2-256:12345 --fbucket=12345 --ibucket=67890
+//   list --endorser-key-hash=sha2-256:12345 --fbucket=12345 --ibucket=67890
 #[derive(Args)]
 pub(crate) struct ListArgs {
+    #[arg(
+        long,
+        help = "Typed hash of the endorsed subject. Takes precedence over listing by key set or key.",
+        value_parser = parse_typed_hash,
+    )]
+    subject_hash: Option<String>,
+
     #[arg(
         long,
         help = "Typed hash of the verifying key used to sign endorsements.",
@@ -52,6 +84,13 @@ pub(crate) struct ListArgs {
         value_parser = parse_typed_hash,
     )]
     endorser_keyset_hash: Option<String>,
+
+    #[arg(
+        long,
+        help = "Public key to verify Rekor log entries, as PEM. Unset to disable verification, e.g. when log entries are not available by design.",
+        default_value = get_rekor_v1_public_key_pem(),
+    )]
+    rekor_public_key: String,
 
     #[arg(
         long,
@@ -76,27 +115,68 @@ pub(crate) struct ListArgs {
     ibucket: String,
 }
 
-// Lists all endorsements for a given endorser key.
+/// Lists endorsements depending on arguments.
 pub(crate) fn list(current_time: Instant, p: ListArgs) {
     let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
     let loader = EndorsementLoader::new(Box::new(storage));
 
-    let endorser_key_hashes;
-    if p.endorser_key_hash.is_some() {
-        endorser_key_hashes = vec![p.endorser_key_hash.unwrap()];
-    } else if p.endorser_keyset_hash.is_some() {
-        endorser_key_hashes = list_endorser_keys(&loader, p.endorser_keyset_hash.unwrap().as_str());
+    if p.subject_hash.is_some() {
+        list_endorsements_by_subject(
+            current_time,
+            &loader,
+            p.subject_hash.unwrap().as_str(),
+            string_to_option_string(p.rekor_public_key),
+        );
     } else {
-        panic!("Either --endorser_key_hash or --endorser_keyset_hash must be specified.");
-    }
+        let endorser_key_hashes;
+        if p.endorser_key_hash.is_some() {
+            endorser_key_hashes = vec![p.endorser_key_hash.unwrap()];
+        } else if p.endorser_keyset_hash.is_some() {
+            endorser_key_hashes =
+                list_keys_by_keyset(&loader, p.endorser_keyset_hash.unwrap().as_str());
+        } else {
+            panic!("One of --subject-hash, --endorser-key-hash, or --endorser-keyset-hash must be specified.");
+        }
 
-    for endorser_key_hash in endorser_key_hashes {
-        list_endorsements(current_time, &loader, endorser_key_hash.as_str());
+        for endorser_key_hash in endorser_key_hashes {
+            list_endorsements_by_key(
+                current_time,
+                &loader,
+                endorser_key_hash.as_str(),
+                string_to_option_string(p.rekor_public_key.clone()),
+            );
+        }
     }
 }
 
-fn list_endorser_keys(loader: &EndorsementLoader, endorser_keyset_hash: &str) -> Vec<String> {
-    let endorser_keys = loader.list_endorser_keys(endorser_keyset_hash);
+fn list_endorsements_by_subject(
+    current_time: Instant,
+    loader: &EndorsementLoader,
+    subject_hash: &str,
+    rekor_public_key: Option<String>,
+) {
+    let endorsement_hashes = loader.list_endorsements_by_subject(subject_hash);
+    if endorsement_hashes.is_err() {
+        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
+        return;
+    }
+    let endorsement_hashes = endorsement_hashes.unwrap();
+
+    // The index is append-only so we iterate backwards to show the most recent
+    // endorsements first.
+    for endorsement_hash in endorsement_hashes.iter().rev() {
+        let result = loader
+            .load(endorsement_hash, rekor_public_key.clone())
+            .with_context(|| format!("loading endorsement {endorsement_hash}"));
+        match result {
+            Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
+            Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
+        }
+    }
+}
+
+fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -> Vec<String> {
+    let endorser_keys = loader.list_keys_by_keyset(endorser_keyset_hash);
     if endorser_keys.is_err() {
         panic!("❌  Failed to list endorser keys: {:?}", endorser_keys.err().unwrap());
     }
@@ -112,29 +192,13 @@ fn list_endorser_keys(loader: &EndorsementLoader, endorser_keyset_hash: &str) ->
     endorser_keys
 }
 
-const MPM_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md";
-const PUBLISHED_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md";
-const RUNNABLE_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md";
-const OPEN_SOURCE_CLAIM_TYPE: &str =
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
-
-const EXPECTED_CLAIMS: &[&str] =
-    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE];
-
-fn prettify_claim(claim: &str) -> String {
-    match claim {
-        MPM_CLAIM_TYPE => format!("{claim} (Distributed as MPM)"),
-        OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
-        RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
-        PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
-        _ => claim.to_string(),
-    }
-}
-
-fn list_endorsements(current_time: Instant, loader: &EndorsementLoader, endorser_key_hash: &str) {
-    let endorsement_hashes = loader.list_endorsements(endorser_key_hash);
+fn list_endorsements_by_key(
+    current_time: Instant,
+    loader: &EndorsementLoader,
+    endorser_key_hash: &str,
+    rekor_public_key: Option<String>,
+) {
+    let endorsement_hashes = loader.list_endorsements_by_key(endorser_key_hash);
     if endorsement_hashes.is_err() {
         println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
         return;
@@ -151,69 +215,66 @@ fn list_endorsements(current_time: Instant, loader: &EndorsementLoader, endorser
     // endorsements first.
     for endorsement_hash in endorsement_hashes.iter().rev() {
         let result = loader
-            .load(endorsement_hash.as_str())
+            .load(endorsement_hash, rekor_public_key.clone())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
+        match result {
+            Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
+            Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
+        }
+    }
+}
 
-        if result.is_err() {
-            println!(
-                "❌  Loading endorsement {} failed: {:?}",
-                endorsement_hash,
-                result.err().unwrap()
-            );
-        } else {
-            let package = result.unwrap();
-            let signed_endorsement =
-                package.get_signed_endorsement().expect("failed to get signed endorsement");
-            let reference_value = package.get_reference_value();
-            let result = verify_endorsement(
-                current_time.into_unix_millis(),
-                &signed_endorsement,
-                &reference_value,
-            )
-            .context("verifying endorsement");
-            if result.is_err() {
-                println!("    ❌  {endorsement_hash}: {:?}", result.err().unwrap());
-            } else {
-                println!("    ✅  {endorsement_hash}");
-                let details =
-                    result.unwrap().get_details().expect("failed to get endorsement details");
-                match &details.subject_digest {
-                    Some(digest) => {
-                        println!("        Subject:     sha2-256:{}", hex::encode(&digest.sha2_256));
-                    }
-                    None => {
-                        println!("        Subject:     missing");
-                    }
+/// Verifies an endorsement package and pretty-prints it to stdout.
+fn verify_print_package(current_time: Instant, package: &Package, endorsement_hash: &str) {
+    let signed_endorsement =
+        package.get_signed_endorsement().expect("failed to get signed endorsement");
+    let result = verify_endorsement(
+        current_time.into_unix_millis(),
+        &signed_endorsement,
+        &package.get_reference_value(),
+    )
+    .context("verifying endorsement");
+    match result {
+        Ok(statement) => {
+            println!("    ✅  {endorsement_hash}");
+            let details = statement.get_details().expect("failed to get endorsement details");
+            match &details.subject_digest {
+                Some(digest) => {
+                    println!("        Subject:     sha2-256:{}", hex::encode(&digest.sha2_256));
                 }
-                match &details.valid {
-                    Some(v) => {
-                        let vstruct = Validity::try_from(v).expect("failed to convert validity");
-                        println!("        Not before:  {}", vstruct.not_before);
-                        println!("        Not after:   {}", vstruct.not_after);
-                    }
-                    None => {
-                        println!("        Validity:    missing");
-                    }
+                None => {
+                    println!("        Subject:     missing");
                 }
-                if details.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
-                    let subject = &signed_endorsement.endorsement.as_ref().unwrap().subject;
-                    let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
-                    println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
+            }
+            match &details.valid {
+                Some(v) => {
+                    let vstruct = Validity::try_from(v).expect("failed to convert validity");
+                    println!("        Not before:  {}", vstruct.not_before);
+                    println!("        Not after:   {}", vstruct.not_after);
                 }
-                for e in EXPECTED_CLAIMS {
-                    let claim = details.claim_types.iter().find(|c| c.as_str() == *e);
-                    if claim.is_none() {
-                        println!("        ❌  {}", prettify_claim(e));
-                    } else {
-                        println!("        🛄  {}", prettify_claim(e));
-                    }
+                None => {
+                    println!("        Validity:    missing");
                 }
-                for c in details.claim_types {
-                    if !EXPECTED_CLAIMS.contains(&c.as_str()) {
-                        println!("        🛄  {}", prettify_claim(&c));
-                    }
+            }
+            if details.claim_types.iter().any(|c| c.as_str() == MPM_CLAIM_TYPE) {
+                let subject = &signed_endorsement.endorsement.as_ref().unwrap().subject;
+                let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
+                println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
+            }
+            for e in EXPECTED_CLAIMS {
+                let claim = details.claim_types.iter().find(|c| c.as_str() == *e);
+                if claim.is_none() {
+                    println!("        ❌  {}", prettify_claim(e));
+                } else {
+                    println!("        🛄  {}", prettify_claim(e));
+                }
+            }
+            for c in details.claim_types {
+                if !EXPECTED_CLAIMS.contains(&c.as_str()) {
+                    println!("        🛄  {}", prettify_claim(&c));
                 }
             }
         }
+        Err(err) => println!("    ❌  {endorsement_hash}: {:?}", err),
     }
 }

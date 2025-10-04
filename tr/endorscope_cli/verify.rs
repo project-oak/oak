@@ -51,7 +51,7 @@ pub(crate) enum VerifyCommands {
 /// Example:
 ///   verify file --endorsement=endorsement.json
 ///               --signature=endorsement.json.sig
-///               --endorser_public_key=endorser_public_key.pem
+///               --endorser-public-key=endorser_public_key.pem
 #[derive(Args)]
 pub(crate) struct VerifyFileArgs {
     #[arg(long, help = "Path to the endorsement.json to verify.")]
@@ -73,16 +73,16 @@ pub(crate) struct VerifyFileArgs {
     log_entry: Option<PathBuf>,
 }
 
-// Subcommand for verifying an endorsement from a remote content addressable
-// storage.
-//
-// The `fbucket` and `ibucket` names are used to determine the storage location
-// of the content addressable files and the link index file. The `url_prefix`
-// can be used to override the default storage location, wich is Google Cloud
-// Storage (GCS).
-//
-// Example:
-//   verify remote --endorsement_hash=${hash} --fbucket=12345 --ibucket=67890
+/// Subcommand for verifying an endorsement from a remote content addressable
+/// storage.
+///
+/// The `fbucket` and `ibucket` names are used to determine the storage location
+/// of the content addressable files and the link index file. The `url_prefix`
+/// can be used to override the default storage location, wich is Google Cloud
+/// Storage (GCS).
+///
+/// Example:
+///   verify remote --endorsement-hash=${hash} --fbucket=12345 --ibucket=67890
 #[derive(Args)]
 pub(crate) struct VerifyRemoteArgs {
     #[arg(
@@ -91,6 +91,13 @@ pub(crate) struct VerifyRemoteArgs {
         value_parser = parse_typed_hash,
     )]
     endorsement_hash: String,
+
+    #[arg(
+        long,
+        help = "Public key to verify Rekor log entries, as PEM. Set empty to disable verification, e.g. when log entries are not available by design.",
+        default_value = get_rekor_v1_public_key_pem(),
+    )]
+    rekor_public_key: String,
 
     #[arg(
         long,
@@ -127,6 +134,14 @@ pub(crate) fn parse_bucket_name(arg: &str) -> Result<String, anyhow::Error> {
         anyhow::bail!("invalid character in bucket name");
     }
     Ok(arg.to_string())
+}
+
+pub(crate) fn string_to_option_string(s: String) -> Option<String> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
 }
 
 // Parses command line arguments that represent URLs.
@@ -175,6 +190,8 @@ impl VerifyFileArgs {
             fs::read_to_string(&self.endorser_public_key).with_context(|| {
                 format!("reading endorser public key from {}", self.endorser_public_key.display())
             })?;
+        let rekor_public_key =
+            log_entry.as_ref().map(|_| get_rekor_v1_public_key_pem().to_string());
 
         Ok(Package {
             endorsement,
@@ -182,7 +199,7 @@ impl VerifyFileArgs {
             log_entry,
             subject,
             endorser_public_key,
-            rekor_public_key: Some(get_rekor_v1_public_key_pem()),
+            rekor_public_key,
         })
     }
 }
@@ -197,7 +214,9 @@ pub(crate) fn verify_file(current_time: Instant, p: VerifyFileArgs) {
 pub(crate) fn verify_remote(current_time: Instant, p: VerifyRemoteArgs) {
     let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
     let loader = EndorsementLoader::new(Box::new(storage));
-    let package = loader.load(p.endorsement_hash.as_str()).expect("Failed to load endorsement");
+    let package = loader
+        .load(p.endorsement_hash.as_str(), string_to_option_string(p.rekor_public_key))
+        .expect("Failed to load endorsement");
     display_verify_result(package.verify(current_time.into_unix_millis()));
 }
 
