@@ -49,19 +49,19 @@ pub struct GuestReservedArea {
     pub ap_jump_table_pa: u64,
 
     /// (Rev 2.01+) VMPL0 Current Guest Message Sequence Number \[63:32\]
-    /// Otherwise: Reseved, MBZ
+    /// Otherwise: Reserved, MBZ
     pub vmpl0_guest_seq_high: u32,
 
     /// (Rev 2.01+) VMPL1 Current Guest Message Sequence Number \[63:32\]
-    /// Otherwise: Reseved, MBZ
+    /// Otherwise: Reserved, MBZ
     pub vmpl1_guest_seq_high: u32,
 
     /// (Rev 2.01+) VMPL2 Current Guest Message Sequence Number \[63:32\]
-    /// Otherwise: Reseved, MBZ
+    /// Otherwise: Reserved, MBZ
     pub vmpl2_guest_seq_high: u32,
 
     /// (Rev 2.01+) VMPL3 Current Guest Message Sequence Number \[63:32\]
-    /// Otherwise: Reseved, MBZ
+    /// Otherwise: Reserved, MBZ
     pub vmpl3_guest_seq_high: u32,
 
     /// Reserved: MBZ

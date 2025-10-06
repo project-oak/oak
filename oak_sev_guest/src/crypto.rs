@@ -130,7 +130,7 @@ impl GuestMessageEncryptor {
         }
         let sequence_number = source.header.sequence_number;
         if sequence_number != self.sequence_number + 1 {
-            return Err("unexpected sequence numer");
+            return Err("unexpected sequence number");
         }
         let mut iv_bytes = [0u8; IV_SIZE];
         iv_bytes[0..size_of::<u64>()].copy_from_slice(sequence_number.as_bytes());

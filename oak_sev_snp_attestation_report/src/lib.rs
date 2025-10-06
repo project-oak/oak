@@ -322,7 +322,7 @@ bitflags! {
         const SMT_EN = (1 << 0);
         /// Indicates that transparent secure memory encryption (TSME) is enabled.
         const TSME_EN = (1 << 1);
-        /// Indicates that the plaform is using error correcting codes for memory.
+        /// Indicates that the platform is using error correcting codes for memory.
         const ECC_EN = (1 << 2);
         /// Indicates that the RAPL feature is disabled.
         const RAPL_DIS = (1 << 3);

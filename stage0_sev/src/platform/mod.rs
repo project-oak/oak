@@ -133,11 +133,11 @@ pub(crate) fn encrypted() -> u64 {
     unsafe { ENCRYPTED }
 }
 
-trait IntoMsrPageAssigment {
+trait IntoMsrPageAssignment {
     fn into_msr(self) -> oak_sev_guest::msr::PageAssignment;
 }
 
-impl IntoMsrPageAssigment for PageAssignment {
+impl IntoMsrPageAssignment for PageAssignment {
     fn into_msr(self) -> oak_sev_guest::msr::PageAssignment {
         match self {
             PageAssignment::Shared => oak_sev_guest::msr::PageAssignment::Shared,

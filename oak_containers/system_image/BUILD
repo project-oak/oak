@@ -98,7 +98,7 @@ pkg_tar(
 xz_compress(
     name = "oak_containers_system_image",
     out = "oak_containers_system_image.tar.xz",
-    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This rule will fail unless you run: just oak_containers_system_image_binaries
     # This restriction will be removed once everything is bazelified.
     target = ":oak_containers_system_image_tar",
 )
@@ -130,7 +130,7 @@ pkg_tar(
 xz_compress(
     name = "oak_containers_nvidia_system_image",
     out = "oak_containers_nvidia_system_image.tar.xz",
-    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
+    # This rule will fail unless you run: just oak_containers_system_image_binaries
     # This restriction will be removed once everything is bazelified.
     target = ":oak_containers_nvidia_system_image_tar",
 )

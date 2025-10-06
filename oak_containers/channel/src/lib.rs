@@ -25,7 +25,7 @@ pub async fn create_channel(addr: tonic::transport::Uri) -> anyhow::Result<Chann
     if addr.scheme_str() == Some("vsock") {
         let vsock_addr = get_vsock_addr(addr)?;
         // The C++ gRPC implementations are more particular about the URI scheme; in
-        // particular, they may get confused by the "vsock" scheme. Therfore, create a
+        // particular, they may get confused by the "vsock" scheme. Therefore, create a
         // fake URI with the "http" scheme to placate the libraries; the actual
         // connection is made in `connect_with_connector` and that uses the correct URI.
         let connector = service_fn(move |_| async move {

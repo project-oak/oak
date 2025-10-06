@@ -135,7 +135,7 @@ pub struct Ghcb {
     pub cpl: u8,
     /// Reserved. Must be 0.
     _reserved_1: [u8; 116],
-    /// The value of the IA32_XSS model-specific reqister.
+    /// The value of the IA32_XSS model-specific register.
     pub xss: u64,
     /// Reserved. Must be 0.
     _reserved_2: [u8; 24],

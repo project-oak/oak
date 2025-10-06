@@ -44,7 +44,7 @@ def _load_patched_prost_types():
     We pull in prost so that we can enable the prost_derive feature without
     telling the crate_universe about it.
 
-    This works for us because `aliasing_crates_respository` that we use to
+    This works for us because `aliasing_crates_repository` that we use to
     automate selection between std/nostd crates also provides for a complete
     target override. Note that if we pulled another crate into the no_std crate
     universe that depends on `prost`, it would *not* get this dependency, so we
