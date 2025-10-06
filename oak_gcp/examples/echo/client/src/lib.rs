@@ -81,10 +81,14 @@ impl EchoClient {
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
             r#container_image: Some(ContainerImage::CosignReferenceValues(CosignReferenceValues {
-                developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                    &developer_public_key,
-                )),
-                rekor_public_key: Some(p256_ecdsa_verifying_key_to_proto(&rekor_public_key)),
+                developer_public_key: Some(
+                    p256_ecdsa_verifying_key_to_proto(&developer_public_key)
+                        .map_err(anyhow::Error::msg)?,
+                ),
+                rekor_public_key: Some(
+                    p256_ecdsa_verifying_key_to_proto(&rekor_public_key)
+                        .map_err(anyhow::Error::msg)?,
+                ),
             })),
         };
         let policy = confidential_space_policy_from_reference_values(&reference_values)?;

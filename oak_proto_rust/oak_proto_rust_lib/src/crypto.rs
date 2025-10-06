@@ -15,23 +15,38 @@
 //
 
 use oak_proto_rust::oak::attestation::v1::{KeyType, VerifyingKey as ProtoVerifyingKey};
-use p256::ecdsa::{Error, VerifyingKey};
+use p256::{
+    ecdsa::VerifyingKey,
+    pkcs8::{DecodePublicKey, EncodePublicKey},
+};
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Unable to parse public key: {0}")]
+    ParseError(p256::pkcs8::spki::Error),
+    #[error("Unable to convert to public key DER: {0}")]
+    ConversionToPublicKeyDerError(p256::pkcs8::spki::Error),
+    #[error("Unsupported key type: {0:?}")]
+    UnsupportedKeyType(KeyType),
+}
 
 // Key must be SHA-256 based.
 pub fn parse_p256_ecdsa_verifying_key(proto: ProtoVerifyingKey) -> Result<VerifyingKey, Error> {
     match proto.r#type() {
-        KeyType::EcdsaP256Sha256 => VerifyingKey::from_sec1_bytes(&proto.raw),
-        _ => Err(Error::new()),
+        KeyType::EcdsaP256Sha256 => {
+            Ok(VerifyingKey::from_public_key_der(&proto.raw).map_err(Error::ParseError)?)
+        }
+        _ => Err(Error::UnsupportedKeyType(proto.r#type())),
     }
 }
 
 // Key must be SHA-256 based.
-pub fn p256_ecdsa_verifying_key_to_proto(key: &VerifyingKey) -> ProtoVerifyingKey {
-    ProtoVerifyingKey {
+pub fn p256_ecdsa_verifying_key_to_proto(key: &VerifyingKey) -> Result<ProtoVerifyingKey, Error> {
+    Ok(ProtoVerifyingKey {
         r#type: KeyType::EcdsaP256Sha256 as i32,
         key_id: 0,
-        raw: key.to_sec1_bytes().to_vec(),
-    }
+        raw: key.to_public_key_der().map_err(Error::ConversionToPublicKeyDerError)?.to_vec(),
+    })
 }
 
 #[cfg(test)]
@@ -47,7 +62,7 @@ mod tests {
             VerifyingKey::from_public_key_pem(&read_testdata_string!("developer_key.pub.pem"))
                 .unwrap();
 
-        let proto = p256_ecdsa_verifying_key_to_proto(&developer_public_key);
+        let proto = p256_ecdsa_verifying_key_to_proto(&developer_public_key).unwrap();
         let converted_key = parse_p256_ecdsa_verifying_key(proto).unwrap();
 
         assert_eq!(developer_public_key, converted_key);

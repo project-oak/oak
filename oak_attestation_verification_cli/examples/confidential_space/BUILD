@@ -33,6 +33,8 @@ rust_binary(
         "//oak_time",
         "//oak_time:oak_time_std",
         "//tr/intoto",
+        "//tr/rekor",
+        "//tr/verify_endorsement",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:clap",

@@ -33,11 +33,10 @@ use oak_proto_rust::{
     oak::{
         attestation::v1::{
             collected_attestation::RequestMetadata,
-            confidential_space_reference_values::ContainerImage, endorsement, reference_values,
+            confidential_space_reference_values::ContainerImage, reference_values,
             CollectedAttestation, ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
-            CosignReferenceValues, Endorsement, Endorsements, Event, EventLog, Evidence,
-            ReferenceValues, ReferenceValuesCollection, SessionBindingPublicKeyData,
-            Signature as ProtoSignature, SignedEndorsement,
+            CosignReferenceValues, Endorsements, Event, EventLog, Evidence, ReferenceValues,
+            ReferenceValuesCollection, SessionBindingPublicKeyData, SignedEndorsement,
         },
         session::v1::{EndorsedEvidence, SessionBinding},
         HexDigest,
@@ -60,8 +59,12 @@ use p256::{
     pkcs8::EncodePublicKey,
 };
 use prost::Message;
+use rekor::log_entry::{
+    Body, Data, GenericSignature, Hash, LogEntry, PublicKey, Spec, Verification,
+};
 use serde_json::json;
 use sha2::Digest;
+use verify_endorsement::create_signed_endorsement;
 
 #[derive(Parser, Debug)]
 struct Flags {
@@ -133,26 +136,22 @@ fn main() -> anyhow::Result<()> {
     let serialized_endorsement = serialize_statement(&generate_endorsement_statement(now)?)?;
     let developer_signature: Signature = developer_key.sign(&serialized_endorsement);
 
-    let rekor_payload = generate_rekor_payload(
-        now,
-        sha2::Sha256::digest(&serialized_endorsement).to_vec(),
-        developer_key.verifying_key(),
-        &developer_signature,
-    )?;
-    let rekor_signature: Signature = rekor_key.sign(&serde_json::to_vec(&rekor_payload)?);
-
-    let workload_endorsement = SignedEndorsement {
-        endorsement: Some(Endorsement {
-            format: endorsement::Format::EndorsementFormatJsonIntoto.into(),
-            serialized: serialized_endorsement.clone(),
-            ..Default::default()
-        }),
-        signature: Some(ProtoSignature { key_id: 0, raw: developer_signature.to_der().to_vec() }),
-        rekor_log_entry: serde_json::to_vec(&json!({
-            "Payload": rekor_payload,
-            "SignedEntryTimestamp": STANDARD.encode(rekor_signature.to_der()),
-        }))?,
-    };
+    let workload_endorsement = create_signed_endorsement(
+        serialized_endorsement.as_slice(),
+        developer_signature.to_der().to_vec().as_slice(),
+        0,
+        &[],
+        serde_json::to_vec(&json!({
+            "sha256:".to_owned() + IMAGE_DIGEST: generate_log_entry(
+                now,
+                sha2::Sha256::digest(&serialized_endorsement).to_vec(),
+                developer_key.verifying_key(),
+                &developer_signature,
+                &rekor_key,
+            )?
+        }))?
+        .as_slice(),
+    );
 
     // Create final protobufs.
     let collected_attestation = CollectedAttestation {
@@ -183,12 +182,16 @@ fn main() -> anyhow::Result<()> {
                         root_certificate_pem: String::from_utf8(root_cert.to_pem()?)?,
                         container_image: Some(ContainerImage::CosignReferenceValues(
                             CosignReferenceValues {
-                                developer_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                                    developer_key.verifying_key(),
-                                )),
-                                rekor_public_key: Some(p256_ecdsa_verifying_key_to_proto(
-                                    rekor_key.verifying_key(),
-                                )),
+                                developer_public_key: Some(
+                                    p256_ecdsa_verifying_key_to_proto(
+                                        developer_key.verifying_key(),
+                                    )
+                                    .map_err(anyhow::Error::msg)?,
+                                ),
+                                rekor_public_key: Some(
+                                    p256_ecdsa_verifying_key_to_proto(rekor_key.verifying_key())
+                                        .map_err(anyhow::Error::msg)?,
+                                ),
                             },
                         )),
                     },
@@ -273,39 +276,42 @@ fn generate_endorsement_statement(now: Instant) -> anyhow::Result<DefaultStateme
     Ok(endorsement_statement)
 }
 
-fn generate_rekor_payload(
+fn generate_log_entry(
     now: Instant,
     digest: Vec<u8>,
     public_key: &VerifyingKey,
     signature: &Signature,
-) -> anyhow::Result<serde_json::Value> {
-    Ok(json!({
-        "body": STANDARD.encode(serde_json::to_vec(&json!({
-            // See https://github.com/sigstore/rekor/blob/main/pkg/types/hashedrekord/v0.0.1/hashedrekord_v0_0_1_schema.json for schema.
-            "apiVersion": "0.0.1",
-            "kind": "hashedrekord",
-            "spec": {
-                "data": {
-                    "hash": {
-                        "algorithm": "sha256",
-                        "value": hex::encode(digest)
-                    }
+    rekor_key: &SigningKey,
+) -> anyhow::Result<LogEntry> {
+    let mut log_entry = LogEntry {
+        body: STANDARD.encode(serde_json::to_vec(&Body {
+            api_version: "0.0.1".to_string(),
+            kind: "hashedrekord".to_string(),
+            spec: Spec {
+                data: Data {
+                    hash: Hash { algorithm: "sha256".to_string(), value: hex::encode(digest) },
                 },
-                "signature": {
-                    "content": STANDARD.encode(signature.to_der()),
-                    "publicKey": {
-                        "content": STANDARD.encode(
+                signature: GenericSignature {
+                    content: STANDARD.encode(signature.to_der()),
+                    public_key: PublicKey {
+                        content: STANDARD.encode(
                             public_key
-                                .to_public_key_pem(Default::default()).map_err(anyhow::Error::msg)?
-                        )
-                    }
-                }
-            }
-        }))?),
-        "integratedTime": now.into_unix_seconds(),
-        "logID": "log_id",
-        "logIndex": 456,
-    }))
+                                .to_public_key_pem(Default::default())
+                                .map_err(anyhow::Error::msg)?,
+                        ),
+                    },
+                },
+            },
+        })?),
+        integrated_time: now.into_unix_seconds() as usize,
+        log_id: "log_id".to_string(),
+        log_index: 456,
+        verification: None,
+    };
+    let rekor_signature: Signature = rekor_key.sign(&serde_json::to_vec(&log_entry)?);
+    log_entry.verification =
+        Some(Verification { signed_entry_timestamp: STANDARD.encode(rekor_signature.to_der()) });
+    Ok(log_entry)
 }
 
 fn generate_evidence(session_binding_public_key: &VerifyingKey) -> Evidence {

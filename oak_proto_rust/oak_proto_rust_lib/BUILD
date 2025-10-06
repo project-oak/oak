@@ -27,6 +27,7 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:p256",
+        "@oak_crates_index//:thiserror",
     ],
 )
 
