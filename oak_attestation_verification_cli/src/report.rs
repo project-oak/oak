@@ -110,6 +110,17 @@ impl VerificationReport {
         Ok(())
     }
 
+    pub fn check(self) -> anyhow::Result<()> {
+        match self {
+            VerificationReport::ConfidentialSpace(report) => {
+                Ok(report.into_session_binding_public_key().map(|_| ())?)
+            }
+            VerificationReport::CertificateBased(report) => {
+                Ok(report.into_session_binding_public_key().map(|_| ())?)
+            }
+        }
+    }
+
     fn session_binding_public_key(&self) -> Vec<u8> {
         match self {
             VerificationReport::ConfidentialSpace(report) => {

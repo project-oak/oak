@@ -62,7 +62,7 @@ fn proto_decoder<T: Message + std::default::Default>(path: &str) -> anyhow::Resu
     Ok(T::decode(fs::read(path)?.as_slice())?)
 }
 
-fn main() -> std::fmt::Result {
+fn main() -> anyhow::Result<()> {
     let Flags { attestation, reference_values: ReferenceValuesCollection { reference_values } } =
         Flags::parse();
 
@@ -70,6 +70,7 @@ fn main() -> std::fmt::Result {
     let indent = 0;
 
     let attestation_timestamp = get_timestamp(&attestation);
+    let mut all_ok = attestation_timestamp.as_ref().map(|_| ()).map_err(|e| anyhow!(e.to_string()));
     print_report_header(
         &mut buffer,
         indent,
@@ -88,26 +89,28 @@ fn main() -> std::fmt::Result {
             attestation_timestamp,
             reference_values.get(attestation_type_id),
         ) {
-            Ok(ref report) => {
+            Ok(report) => {
                 report.print(
                     &mut buffer,
                     indent,
                     &handshake_hash,
                     attestation.session_bindings.get(attestation_type_id),
                 )?;
+                all_ok = all_ok.and(report.check());
             }
-            Err(ref err) => {
+            Err(err) => {
                 print_indented!(
                     &mut buffer,
                     indent,
                     "❌ Provided attestation is invalid: {}",
                     err
                 )?;
+                all_ok = all_ok.and(Err(err));
             }
         }
     }
     println!("{}", buffer);
-    Ok(())
+    all_ok
 }
 
 // TODO: b/419209669 - add tests for process_attestation (or perhaps more

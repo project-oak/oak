@@ -44,7 +44,7 @@ pub struct SessionBindingPublicKeyVerificationReport {
 }
 
 impl SessionBindingPublicKeyVerificationReport {
-    fn into_session_binding_public_key(
+    pub fn into_session_binding_public_key(
         self,
     ) -> Result<Vec<u8>, SessionBindingPublicKeyVerificationError> {
         match self {
