@@ -20,7 +20,7 @@
 use alloc::boxed::Box;
 
 use anyhow::{anyhow, Context, Error};
-use oak_attestation_verification::results::get_session_binding_public_key;
+use oak_attestation_verification_results::get_session_binding_public_key;
 use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::attestation::v1::AttestationResults;
 use p256::ecdsa::VerifyingKey;

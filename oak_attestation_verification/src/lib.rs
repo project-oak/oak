@@ -28,7 +28,9 @@ mod extract;
 mod intel;
 mod platform;
 mod policy;
-pub mod results;
+pub mod results {
+    pub use oak_attestation_verification_results::*;
+}
 mod util;
 pub mod verifier;
 mod verifiers;

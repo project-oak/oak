@@ -150,6 +150,7 @@ mod tests {
     use alloc::sync::Arc;
     use core::assert_matches::assert_matches;
 
+    use oak_attestation_verification_results::get_session_binding_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::{
         attestation::v1::{
@@ -163,7 +164,7 @@ mod tests {
     use prost_types::Timestamp;
 
     use super::*;
-    use crate::{results::get_session_binding_public_key, EventLogVerifier};
+    use crate::EventLogVerifier;
 
     const TEST_PUBLIC_KEY: [u8; 4] = [0, 1, 2, 3];
     const TEST_WRONG_PUBLIC_KEY: [u8; 4] = [4, 5, 6, 7];

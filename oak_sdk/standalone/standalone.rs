@@ -238,9 +238,9 @@ mod tests {
     use std::sync::Arc;
 
     use oak_attestation_verification::{
-        results::get_signing_public_key, ContainerPolicy, InsecureAttestationVerifier,
-        KernelPolicy, SystemPolicy,
+        ContainerPolicy, InsecureAttestationVerifier, KernelPolicy, SystemPolicy,
     };
+    use oak_attestation_verification_results::get_signing_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::attestation::v1::{
         attestation_results, binary_reference_value, kernel_binary_reference_value,

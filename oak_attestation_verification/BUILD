@@ -21,14 +21,30 @@ package(
     licenses = ["notice"],
 )
 
+RESULT_SRC = ["src/results.rs"]
+
+# The target only for parsing attestation verification results, to provide a
+# minimal set of dependencies for oak_session.
+rust_library(
+    name = "oak_attestation_verification_results",
+    srcs = RESULT_SRC,
+    deps = [
+        "//oak_proto_rust",
+    ],
+)
+
 rust_library(
     name = "oak_attestation_verification",
-    srcs = glob(["src/**"]),
+    srcs = glob(
+        ["src/**"],
+        exclude = RESULT_SRC,
+    ),
     compile_data = [
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/data:intel_pck_root",
     ],
     deps = [
+        ":oak_attestation_verification_results",
         "//oak_attestation_verification_types",
         "//oak_crypto",
         "//oak_dice",
@@ -118,6 +134,7 @@ rust_library(
     ],
     crate_features = ["regex"],
     deps = [
+        ":oak_attestation_verification_results",
         "//oak_attestation_verification_types",
         "//oak_crypto",
         "//oak_dice",

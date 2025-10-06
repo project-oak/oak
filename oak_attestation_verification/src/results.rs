@@ -16,6 +16,10 @@
 
 //! Provides utilities to process the attestation results.
 
+#![no_std]
+
+extern crate alloc;
+
 use alloc::{string::ToString, vec::Vec};
 
 use oak_proto_rust::oak::attestation::v1::{AttestationResults, EventAttestationResults};

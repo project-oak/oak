@@ -29,6 +29,7 @@ rust_library(
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
+        "//oak_attestation_verification:oak_attestation_verification_results",
         "//oak_containers/attestation",
         "//oak_crypto",
         "//oak_dice",

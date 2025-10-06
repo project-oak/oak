@@ -176,11 +176,12 @@ impl Policy<RootLayerEvidence> for InsecurePolicy {
 
 #[cfg(test)]
 mod tests {
+    use oak_attestation_verification_results::get_initial_measurement;
     use oak_proto_rust::oak::attestation::v1::endorsements;
     use test_util::{get_oc_reference_values, AttestationData};
 
     use super::*;
-    use crate::{results::get_initial_measurement, FirmwarePolicy};
+    use crate::FirmwarePolicy;
 
     #[test]
     fn verify_oc_succeeds() {
