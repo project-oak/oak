@@ -30,10 +30,10 @@ use oak_crypto::{
     verifier::Verifier,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{attestation_results, Assertion, AttestationResults, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, Assertion, EndorsedEvidence,
-        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response, EndorsedEvidence, PlaintextMessage,
+        SessionBinding, SessionRequest, SessionResponse,
     },
 };
 use oak_session::{

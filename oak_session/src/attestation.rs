@@ -96,8 +96,8 @@ use alloc::{
 use anyhow::{anyhow, Error};
 use itertools::{EitherOrBoth, Itertools};
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults},
-    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence},
+    attestation::v1::{attestation_results, Assertion, AttestationResults},
+    session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 use prost::Message;
 

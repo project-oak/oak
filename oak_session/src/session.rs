@@ -67,9 +67,12 @@ use core::mem;
 
 use anyhow::{anyhow, Context, Error, Ok};
 use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
-use oak_proto_rust::oak::session::v1::{
-    session_request::Request, session_response::Response, Assertion, EncryptedMessage,
-    EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+use oak_proto_rust::oak::{
+    attestation::v1::Assertion,
+    session::v1::{
+        session_request::Request, session_response::Response, EncryptedMessage, EndorsedEvidence,
+        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+    },
 };
 
 use crate::{

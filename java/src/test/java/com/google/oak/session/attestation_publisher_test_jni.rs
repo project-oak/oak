@@ -25,8 +25,8 @@ use jni::{
 };
 use oak_jni_attestation_publisher::JNIAttestationPublisher;
 use oak_proto_rust::oak::{
-    attestation::v1::{Endorsements, EventLog, Evidence},
-    session::v1::{Assertion, SessionBinding},
+    attestation::v1::{Assertion, Endorsements, EventLog, Evidence},
+    session::v1::SessionBinding,
     Variant,
 };
 use oak_sdk_common::{StaticAttester, StaticEndorser};

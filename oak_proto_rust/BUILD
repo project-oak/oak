@@ -61,6 +61,7 @@ cargo_build_script(
         "//proto:digest.proto",
         "//proto:validity.proto",
         "//proto:variant.proto",
+        "//proto/attestation:assertion.proto",
         "//proto/attestation:attachment.proto",
         "//proto/attestation:dice.proto",
         "//proto/attestation:endorsement.proto",

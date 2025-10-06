@@ -26,8 +26,8 @@ use mockall::mock;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
-    session::v1::{Assertion, AttestRequest, AttestResponse, EndorsedEvidence, SessionBinding},
+    attestation::v1::{attestation_results, Assertion, AttestationResults, Endorsements, Evidence},
+    session::v1::{AttestRequest, AttestResponse, EndorsedEvidence, SessionBinding},
 };
 use oak_session::{
     aggregators::{All, PassThrough},

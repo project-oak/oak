@@ -26,6 +26,16 @@ package(
 )
 
 proto_library(
+    name = "assertion_proto",
+    srcs = ["assertion.proto"],
+)
+
+java_proto_library(
+    name = "assertion_java_proto",
+    deps = [":assertion_proto"],
+)
+
+proto_library(
     name = "attachment_proto",
     srcs = ["attachment.proto"],
     deps = ["//proto:digest_proto"],

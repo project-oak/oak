@@ -24,7 +24,10 @@ use oak_crypto::{
     encryptor::Encryptor,
     identity_key::{IdentityKey, IdentityKeyHandle},
 };
-use oak_proto_rust::oak::session::v1::{Assertion, PlaintextMessage, SessionBinding};
+use oak_proto_rust::oak::{
+    attestation::v1::Assertion,
+    session::v1::{PlaintextMessage, SessionBinding},
+};
 use oak_session::{
     attestation::{AttestationState, PeerAttestationVerdict},
     config::HandshakeHandlerConfig,

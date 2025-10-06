@@ -38,23 +38,6 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
-/// Assertion that an attesting party is making to the verifying peer. Assertion
-/// represents a claim that the attesting party is making to the verifying party,
-/// which the verifying party can use to make a decision on whether to proceed
-/// with establishing a secure session. and must contain all evidence needed to
-/// verify the assertion.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Assertion {
-    /// Bytes of the assertion. We make no assumption about the format used: it can
-    /// be a serialized proto, JWT or any other data that the peer can use to make
-    /// the pass/fail decision about the assertion.
-    #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
-    pub content: ::prost::alloc::vec::Vec<u8>,
-}
 /// Request message for the remote attestation.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -75,7 +58,7 @@ pub struct AttestRequest {
     #[prost(btree_map = "string, message", tag = "2")]
     pub assertions: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
-        Assertion,
+        super::super::attestation::v1::Assertion,
     >,
 }
 /// Response message for the remote attestation.
@@ -98,7 +81,7 @@ pub struct AttestResponse {
     #[prost(btree_map = "string, message", tag = "2")]
     pub assertions: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
-        Assertion,
+        super::super::attestation::v1::Assertion,
     >,
 }
 /// Noise handshake message containing fields for all handshake patterns.

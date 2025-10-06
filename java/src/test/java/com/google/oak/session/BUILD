@@ -70,6 +70,7 @@ kt_jvm_library(
         "//java/src/main/java/com/google/oak/session:server_session",
         "//java/src/main/java/com/google/oak/session:session_config_builder",
         "//proto:variant_java_proto",
+        "//proto/attestation:assertion_java_proto",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:eventlog_java_proto",
         "//proto/attestation:evidence_java_proto",

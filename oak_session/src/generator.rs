@@ -17,7 +17,7 @@ use alloc::{boxed::Box, string::String};
 
 #[cfg(test)]
 use mockall::automock;
-use oak_proto_rust::oak::session::v1::{Assertion, SessionBinding};
+use oak_proto_rust::oak::{attestation::v1::Assertion, session::v1::SessionBinding};
 use strum::Display;
 use thiserror::Error;
 

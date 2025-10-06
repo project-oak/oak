@@ -18,10 +18,10 @@ package com.google.oak.session
 
 import com.google.common.truth.Truth.assertThat
 import com.google.oak.Variant
+import com.google.oak.attestation.v1.Assertion
 import com.google.oak.attestation.v1.Endorsements
 import com.google.oak.attestation.v1.EventLog
 import com.google.oak.attestation.v1.Evidence
-import com.google.oak.session.v1.Assertion
 import com.google.oak.session.v1.EndorsedEvidence
 import com.google.oak.session.v1.SessionBinding
 import com.google.protobuf.ByteString

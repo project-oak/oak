@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let included_protos = oak_proto_build_utils::get_common_proto_path("..");
 
     let proto_paths = [
+        "../proto/attestation/assertion.proto",
         "../proto/attestation/attachment.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/reference_value.proto",
@@ -56,7 +57,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut needed_types = HashSet::new();
     for t in [
-        "oak.session.v1.Assertion",
         "oak.session.v1.AttestRequest",
         "oak.session.v1.AttestResponse",
         "oak.session.v1.NoiseHandshakeMessage",
@@ -69,6 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.session.v1.SessionRequestWithSessionId",
         "oak.session.v1.SessionResponse",
         "oak.session.v1.EndorsedEvidence",
+        "oak.attestation.v1.Assertion",
         "oak.attestation.v1.Evidence",
         "oak.attestation.v1.Endorsements",
         "oak.attestation.v1.ApplicationKeys",

@@ -40,6 +40,7 @@ cargo_build_script(
         "@oak//proto:digest.proto",
         "@oak//proto:validity.proto",
         "@oak//proto:variant.proto",
+        "@oak//proto/attestation:assertion.proto",
         "@oak//proto/attestation:endorsement.proto",
         "@oak//proto/attestation:eventlog.proto",
         "@oak//proto/attestation:evidence.proto",

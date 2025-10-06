@@ -119,7 +119,10 @@ java_grpc_library(
 proto_library(
     name = "session_proto",
     srcs = ["session.proto"],
-    deps = [":messages_proto"],
+    deps = [
+        ":messages_proto",
+        "//proto/attestation:assertion_proto",
+    ],
 )
 
 cc_proto_library(
