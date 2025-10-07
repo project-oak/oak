@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -39,5 +40,20 @@ rust_binary(
         "@oak_crates_index//:hex",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:url",
+    ],
+)
+
+sh_test(
+    name = "tests",
+    srcs = ["tests.sh"],
+    data = [
+        ":endorscope_cli",
+        "//oak_attestation_verification/testdata:endorsement",
+    ],
+    env = {"CLI": "$(location :endorscope_cli)"},
+    # Test requires internet access - invoke manually only.
+    tags = [
+        "manual",
+        "notap",
     ],
 )

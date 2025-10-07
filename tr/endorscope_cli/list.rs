@@ -113,6 +113,9 @@ pub(crate) struct ListArgs {
         value_parser = parse_bucket_name,
     )]
     ibucket: String,
+
+    #[arg(long, help = "List at most that many items. No limit if zero.", default_value = "0")]
+    limit: usize,
 }
 
 /// Lists endorsements depending on arguments.
@@ -126,6 +129,7 @@ pub(crate) fn list(current_time: Instant, p: ListArgs) {
             &loader,
             p.subject_hash.unwrap().as_str(),
             string_to_option_string(p.rekor_public_key),
+            p.limit,
         );
     } else {
         let endorser_key_hashes;
@@ -144,6 +148,7 @@ pub(crate) fn list(current_time: Instant, p: ListArgs) {
                 &loader,
                 endorser_key_hash.as_str(),
                 string_to_option_string(p.rekor_public_key.clone()),
+                p.limit,
             );
         }
     }
@@ -154,6 +159,7 @@ fn list_endorsements_by_subject(
     loader: &EndorsementLoader,
     subject_hash: &str,
     rekor_public_key: Option<String>,
+    limit: usize,
 ) {
     let endorsement_hashes = loader.list_endorsements_by_subject(subject_hash);
     if endorsement_hashes.is_err() {
@@ -164,13 +170,16 @@ fn list_endorsements_by_subject(
 
     // The index is append-only so we iterate backwards to show the most recent
     // endorsements first.
-    for endorsement_hash in endorsement_hashes.iter().rev() {
+    for (index, endorsement_hash) in endorsement_hashes.iter().rev().enumerate() {
         let result = loader
             .load(endorsement_hash, rekor_public_key.clone())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
             Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
             Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
+        }
+        if limit > 0 && index >= limit - 1 {
+            break;
         }
     }
 }
@@ -197,6 +206,7 @@ fn list_endorsements_by_key(
     loader: &EndorsementLoader,
     endorser_key_hash: &str,
     rekor_public_key: Option<String>,
+    limit: usize,
 ) {
     let endorsement_hashes = loader.list_endorsements_by_key(endorser_key_hash);
     if endorsement_hashes.is_err() {
@@ -213,13 +223,16 @@ fn list_endorsements_by_key(
 
     // The index is append-only so we iterate backwards to show the most recent
     // endorsements first.
-    for endorsement_hash in endorsement_hashes.iter().rev() {
+    for (index, endorsement_hash) in endorsement_hashes.iter().rev().enumerate() {
         let result = loader
             .load(endorsement_hash, rekor_public_key.clone())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
             Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
             Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
+        }
+        if limit > 0 && index >= limit - 1 {
+            break;
         }
     }
 }
