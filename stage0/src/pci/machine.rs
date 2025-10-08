@@ -54,9 +54,11 @@ pub trait Machine {
     ) -> Result<Range<u64>, &'static str>;
 }
 
-// How much memory to reserve for the 64-bit PCI hole. This is a fairly
-// conservative 32 GiB.
-const MMIO64_HOLE_SIZE: usize = 0x8_0000_0000;
+// How much memory to reserve for the 64-bit PCI hole. When GPUs come into play,
+// they want fairly large BARs -- 128 GB -- so we go for a whopping 512 GB for
+// the hole. In the future we may want to make it dynamic and start the MMIO
+// hole just past the end of physical memory.
+const MMIO64_HOLE_SIZE: usize = 0x80_0000_0000;
 
 pub struct I440fx {}
 
@@ -175,13 +177,11 @@ impl Machine for I440fx {
         // Oops.
         //
         // We'll have to come back to this and figure out how to see through the VMM's
-        // lies, but for now, let's lie and say 40 bits. This will break if the VM has
-        // more than ~800 GiB of memory.
-        let addr_size = 40;
+        // lies, but for now, let's lie and say 41 bits. As 40 bits is 1 TiB, we can fit
+        // a fairly large MMIO range in the upper TiB.
+        let addr_size = 41;
         //let addr_size = P::guest_phys_addr_size();
         let top_of_memory: u64 = 1 << addr_size;
-        // We'll also be relatively conservative and try to get away with just reserving
-        // 32 GiB for the hole.
 
         // The hole should be aligned to 1G addresses. With enough bits, that should be
         // vacuously true, but just in case let's ensure that the top_of_memory is a
@@ -333,7 +333,7 @@ mod tests {
 
     #[googletest::test]
     fn mmio64_hole() {
-        let gpa_bits = 40;
+        let gpa_bits = 41;
 
         // This sets global state for MockPlatform, so beware! However, I don't think
         // we'll ever need different values in other tests.
