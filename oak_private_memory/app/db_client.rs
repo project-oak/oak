@@ -23,7 +23,7 @@ use tokio::sync::RwLock;
 use tonic::transport::{Channel, Endpoint};
 const MAX_CONNECT_RETRIES: usize = 5;
 const INITIAL_BACKOFF_MS: u64 = 100;
-const MAX_DECODE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+pub const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
 
 pub struct SharedDbClient {
     database_service_host: SocketAddr,

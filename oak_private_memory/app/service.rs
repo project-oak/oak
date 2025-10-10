@@ -245,7 +245,7 @@ pub async fn create(
                 metrics,
                 persistence_tx,
             ))
-            .max_decoding_message_size(20 * 1024 * 1024), /* 20MB */
+            .max_decoding_message_size(crate::db_client::MAX_DECODE_SIZE),
         )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
