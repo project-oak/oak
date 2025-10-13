@@ -24,6 +24,16 @@ import "proto/session/messages.proto";
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
+// Assertion that wraps an assertion of a different type that signs a public key
+// used to bind this assertion to the session. Allows the use of arbitrary
+// assertion generators and verifiers for attestation within the session.
+message SessionBindingKeyWrapperAssertion {
+  // Public component of the P256 ECDSA binding key signing the attested data.
+  bytes public_binding_key = 1;
+  // Inner assertion over the public binding key.
+  oak.attestation.v1.Assertion inner_assertion = 2;
+}
+
 // Request message for the remote attestation.
 message AttestRequest {
   // Maps unique IDs of attestation type to the corresponding evidence,

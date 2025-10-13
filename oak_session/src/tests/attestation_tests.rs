@@ -402,10 +402,7 @@ fn client_with_assertion_generator_provides_request_with_assertion() -> anyhow::
     assert_that!(
         client_attestation_provider.get_outgoing_message(),
         ok(some(matches_pattern!(AttestRequest {
-            assertions: eq(&BTreeMap::from([(
-                MATCHED_ATTESTER_ID1.to_string(),
-                assertion.clone()
-            )])),
+            assertions: eq(&BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion,)])),
             ..
         })))
     );
@@ -433,7 +430,7 @@ fn server_with_assertion_generator_provides_response_with_assertion() -> anyhow:
     assert_that!(
         server_attestation_provider.get_outgoing_message(),
         ok(some(matches_pattern!(AttestResponse {
-            assertions: eq(&BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)])),
+            assertions: eq(&BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion,)])),
             ..
         })))
     );
@@ -478,7 +475,7 @@ fn peer_attested_client_provides_request_accepts_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -518,7 +515,7 @@ fn peer_attested_server_accepts_request_provides_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
@@ -586,7 +583,7 @@ fn bidirectional_client_provides_request_accepts_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
 
@@ -636,7 +633,7 @@ fn bidirectional_server_accepts_request_provides_response() -> anyhow::Result<()
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
@@ -730,7 +727,7 @@ fn client_failed_evidence_verification_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -784,7 +781,7 @@ fn client_failed_assertion_verification_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(client_attestation_provider.put_incoming_message(attest_response), ok(some(())));
     assert_that!(
@@ -838,7 +835,7 @@ fn server_failed_evidence_verification_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -892,7 +889,7 @@ fn server_failed_assertion_verification_fails() -> anyhow::Result<()> {
                 endorsements: Some(Endorsements { ..Default::default() }),
             },
         )]),
-        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion.clone())]),
+        assertions: BTreeMap::from([(MATCHED_ATTESTER_ID1.to_string(), assertion)]),
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
     assert_that!(
@@ -1837,7 +1834,8 @@ fn server_receives_additional_attestations() -> anyhow::Result<()> {
     };
     assert_that!(server_attestation_provider.put_incoming_message(attest_request), ok(some(())));
 
-    // A second request should be ignored if the previous result has not been taken.
+    // A second request should be ignored if the previous result has not been
+    // taken.
     let ignored_request =
         AttestRequest { endorsed_evidence: BTreeMap::from([]), ..Default::default() };
     assert_that!(server_attestation_provider.put_incoming_message(ignored_request), ok(none()));
@@ -2013,194 +2011,6 @@ fn pairwise_bidirectional_attestation_fails_on_evidence() -> anyhow::Result<()> 
                 eq(MATCHED_ATTESTER_ID1),
                 matches_pattern!(BoundAssertionVerifierResult::Success { .. })
             )),
-            ..
-        })
-    );
-
-    Ok(())
-}
-
-#[googletest::test]
-fn pairwise_bidirectional_attestation_fails_on_assertion() -> anyhow::Result<()> {
-    let client_assertion: Assertion = Assertion { content: "client_test".as_bytes().to_vec() };
-    let server_assertion: Assertion = Assertion { content: "server_test".as_bytes().to_vec() };
-    let client_config = AttestationHandlerConfig {
-        self_attesters: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_attester(),
-        )]),
-        self_endorsers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_endorser(),
-        )]),
-        self_assertion_generators: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_assertion_generator(client_assertion.clone()),
-        )]),
-
-        peer_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            PeerAttestationVerifier {
-                verifier: create_passing_mock_verifier(),
-                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
-            },
-        )]),
-        peer_assertion_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_failing_mock_assertion_verifier(),
-        )]),
-        ..Default::default()
-    };
-    let server_config = AttestationHandlerConfig {
-        self_attesters: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_mock_attester(),
-        )]),
-        self_endorsers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_mock_endorser(),
-        )]),
-        self_assertion_generators: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_mock_assertion_generator(server_assertion.clone()),
-        )]),
-
-        peer_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            PeerAttestationVerifier {
-                verifier: create_passing_mock_verifier(),
-                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
-            },
-        )]),
-        peer_assertion_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_failing_mock_assertion_verifier(),
-        )]),
-        ..Default::default()
-    };
-
-    let results = do_attestation_exchange(client_config, server_config)?;
-
-    assert_that!(
-        results.client,
-        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            legacy_verification_results: unordered_elements_are!((
-                eq(MATCHED_ATTESTER_ID2),
-                matches_pattern!(VerifierResult::Success { .. })
-            )),
-            assertion_verification_results: unordered_elements_are!((
-                eq(MATCHED_ATTESTER_ID2),
-                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
-            )),
-            ..
-        })
-    );
-    assert_that!(
-        results.server,
-        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            legacy_verification_results: unordered_elements_are!((
-                eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(VerifierResult::Success { .. })
-            )),
-            assertion_verification_results: unordered_elements_are!((
-                eq(MATCHED_ATTESTER_ID1),
-                matches_pattern!(BoundAssertionVerifierResult::Failure { .. })
-            )),
-            ..
-        })
-    );
-
-    Ok(())
-}
-
-#[googletest::test]
-fn pairwise_compatible_attestation_types_verification_succeeds() -> anyhow::Result<()> {
-    let client_config = AttestationHandlerConfig {
-        self_attesters: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_attester(),
-        )]),
-        self_endorsers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_endorser(),
-        )]),
-        peer_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            PeerAttestationVerifier {
-                verifier: create_passing_mock_verifier(),
-                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
-            },
-        )]),
-        ..Default::default()
-    };
-    let server_config = AttestationHandlerConfig {
-        self_attesters: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_mock_attester(),
-        )]),
-        self_endorsers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID2.to_string(),
-            create_mock_endorser(),
-        )]),
-        ..Default::default()
-    };
-
-    let results = do_attestation_exchange(client_config, server_config)?;
-
-    assert_that!(
-        results.client,
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
-    );
-    assert_that!(
-        results.server,
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
-    );
-
-    Ok(())
-}
-
-#[googletest::test]
-fn pairwise_incompatible_attestation_types_verification_fails() -> anyhow::Result<()> {
-    let client_config = AttestationHandlerConfig {
-        peer_verifiers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            PeerAttestationVerifier {
-                verifier: create_passing_mock_verifier(),
-                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
-            },
-        )]),
-        ..Default::default()
-    };
-    let server_config = AttestationHandlerConfig {
-        self_attesters: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_attester(),
-        )]),
-        self_endorsers: BTreeMap::from([(
-            MATCHED_ATTESTER_ID1.to_string(),
-            create_mock_endorser(),
-        )]),
-
-        peer_verifiers: BTreeMap::from([(
-            UNMATCHED_VERIFIER_ID.to_string(),
-            PeerAttestationVerifier {
-                verifier: create_passing_mock_verifier(),
-                binding_verifier_provider: create_mock_session_binding_verifier_provider(),
-            },
-        )]),
-        ..Default::default()
-    };
-
-    let results = do_attestation_exchange(client_config, server_config)?;
-
-    assert_that!(
-        results.client,
-        matches_pattern!(PeerAttestationVerdict::AttestationPassed { .. })
-    );
-    assert_that!(
-        results.server,
-        matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Legacy verification failed: NoMatchedLegacyVerifier",
             ..
         })
     );

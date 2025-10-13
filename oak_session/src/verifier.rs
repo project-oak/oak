@@ -11,24 +11,41 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use alloc::{boxed::Box, string::String};
+use alloc::{boxed::Box, format, string::String, sync::Arc};
 use core::fmt::Debug;
 
-#[cfg(test)]
-use mockall::automock;
-use oak_proto_rust::oak::{attestation::v1::Assertion, session::v1::SessionBinding};
-use strum::Display;
+use oak_attestation_verification_types::assertion_verifier::AssertionVerifier;
+use oak_proto_rust::oak::{
+    attestation::v1::Assertion,
+    session::v1::{SessionBinding, SessionBindingKeyWrapperAssertion},
+};
+use oak_time::Clock;
+use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
+use prost::{DecodeError, Message};
 use thiserror::Error;
 
 /// Errors that can occur during assertion verification.
-#[derive(Clone, Error, Debug, Display)]
+#[derive(Clone, Error, Debug)]
 pub enum BoundAssertionVerificationError {
-    //  #[error("Generic verification error")]
+    #[error("Generic verification error")]
     GenericFailure { error_msg: String },
-    //  #[error("Generic verification error")]
+    #[error("Binding verification error: {error_msg}")]
     BindingVerificationFailure { error_msg: String },
-    //  #[error("Peer assertion missing")]
+    #[error("Peer assertion missing")]
     PeerAssertionMissing,
+    #[error("Assertion parsing error: {0:?}")]
+    AssertionParsingError(DecodeError),
+    #[error("Assertion missing expected fields")]
+    AssertionMissingExpectedFields,
+}
+
+// Needs to be explicitly defined because we can't use the #[from] macro. Due to
+// our patching prost is std at compile time, and so DecodeError ends up being
+// incompatible with the std version of thiserror.
+impl From<DecodeError> for BoundAssertionVerificationError {
+    fn from(value: DecodeError) -> Self {
+        Self::AssertionParsingError(value)
+    }
 }
 
 /// Represents an assertion that has been successfully verified.
@@ -36,6 +53,9 @@ pub enum BoundAssertionVerificationError {
 /// This trait provides a common interface for interacting with verified
 /// assertions, allowing access to the original assertion data and enabling
 /// further verification steps, namely, session binding.
+///
+/// The assumption  is that the underlying assertion includes enough information
+/// to verify the binding (e.g., a public binding key).
 pub trait VerifiedBoundAssertion: Send + Sync + Debug {
     fn assertion(&self) -> &Assertion;
 
@@ -87,7 +107,6 @@ pub enum BoundAssertionVerifierResult {
 /// Implementors of this trait are responsible for validating the authenticity
 /// and integrity of received [`Assertion`]s, extracting any relevant payload,
 /// and then verifying that the assertion is correctly bound to the session.
-#[cfg_attr(test, automock)]
 pub trait BoundAssertionVerifier: Send + Sync {
     /// Verifies the provided assertion.
     ///
@@ -101,4 +120,79 @@ pub trait BoundAssertionVerifier: Send + Sync {
         &self,
         assertion: &Assertion,
     ) -> Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError>;
+}
+
+/// An implementation of [`VerifiedBoundAssertion`] that uses a [`VerifyingKey`]
+/// to verify the signature over the bound data.
+#[derive(Debug)]
+struct SessionKeyVerifiedBoundAssertion {
+    assertion: Assertion,
+    binding_verifying_key: VerifyingKey,
+}
+
+impl VerifiedBoundAssertion for SessionKeyVerifiedBoundAssertion {
+    fn assertion(&self) -> &Assertion {
+        &self.assertion
+    }
+
+    fn verify_binding(
+        &self,
+        bound_data: &[u8],
+        binding: &SessionBinding,
+    ) -> Result<(), BoundAssertionVerificationError> {
+        let signature = Signature::from_slice(&binding.binding).map_err(|err| {
+            BoundAssertionVerificationError::BindingVerificationFailure {
+                error_msg: format!("session binding is not a valid signature: {:?}", err),
+            }
+        })?;
+
+        self.binding_verifying_key.verify(bound_data, &signature).map_err(|err| {
+            BoundAssertionVerificationError::BindingVerificationFailure {
+                error_msg: format!("failed to verify session binding signature: {:?}", err),
+            }
+        })
+    }
+}
+
+/// An implementation of [`BoundAssertionVerifier`] that uses a dynamic
+/// [`AssertionVerifier`] to verify an assertion about a public key that is used
+/// for verifying the assertion binding.
+pub struct SessionKeyBoundAssertionVerifier {
+    pub assertion_verifier: Arc<dyn AssertionVerifier>,
+    pub clock: Arc<dyn Clock>,
+}
+
+impl BoundAssertionVerifier for SessionKeyBoundAssertionVerifier {
+    fn verify_assertion(
+        &self,
+        assertion: &Assertion,
+    ) -> Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError> {
+        let binding_key_assertion =
+            SessionBindingKeyWrapperAssertion::decode(assertion.content.as_slice())?;
+        let public_key = binding_key_assertion.public_binding_key.as_slice();
+        self.assertion_verifier
+            .verify(
+                &binding_key_assertion
+                    .inner_assertion
+                    .ok_or(BoundAssertionVerificationError::AssertionMissingExpectedFields)?,
+                public_key,
+                self.clock.get_time(),
+            )
+            .map_err(|err| BoundAssertionVerificationError::GenericFailure {
+                error_msg: format!("failed to verify assertion: {:?}", err),
+            })?;
+
+        let binding_verifying_key = VerifyingKey::from_sec1_bytes(public_key).map_err(|err| {
+            BoundAssertionVerificationError::GenericFailure {
+                error_msg: format!("failed to create verifier from public key: {:?}", err),
+            }
+        })?;
+
+        let verified_assertion = SessionKeyVerifiedBoundAssertion {
+            assertion: assertion.clone(),
+            binding_verifying_key,
+        };
+
+        Ok(Box::new(verified_assertion))
+    }
 }

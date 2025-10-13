@@ -23,8 +23,15 @@ use std::{
 use anyhow::Context;
 use googletest::prelude::*;
 use mockall::mock;
-use oak_attestation_types::{attester::Attester, endorser::Endorser};
-use oak_attestation_verification_types::verifier::AttestationVerifier;
+use oak_attestation_types::{
+    assertion_generator::{AssertionGenerator, AssertionGeneratorError},
+    attester::Attester,
+    endorser::Endorser,
+};
+use oak_attestation_verification_types::{
+    assertion_verifier::{AssertionVerifier, AssertionVerifierError},
+    verifier::AttestationVerifier,
+};
 use oak_crypto::{
     identity_key::{IdentityKey, IdentityKeyHandle},
     verifier::Verifier,
@@ -41,14 +48,17 @@ use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
-    generator::{BindableAssertion, BindableAssertionGenerator, BindableAssertionGeneratorError},
+    generator::{BindableAssertionGenerator, SessionKeyBindableAssertionGenerator},
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
     session::{AttestationEvidence, AttestationPublisher},
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
-    verifier::{BoundAssertionVerificationError, BoundAssertionVerifier, VerifiedBoundAssertion},
+    verifier::{BoundAssertionVerifier, SessionKeyBoundAssertionVerifier},
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
+use oak_time::{clock::FixedClock, instant::Instant, make_instant};
+use p256::ecdsa::SigningKey;
+use rand_core::OsRng;
 
 // Since [`Attester`], [`Endorser`] and [`AttestationVerifier`] are external
 // traits, we have to use `mock!` instead of `[automock]` and define a test
@@ -143,40 +153,21 @@ impl AttestationPublisher for TestAttestationPublisher {
 }
 
 mock! {
-    TestBoundAssertionVerifier {}
-    impl BoundAssertionVerifier for TestBoundAssertionVerifier {
-        fn verify_assertion(
+    TestAssertionVerifier {}
+    impl AssertionVerifier for TestAssertionVerifier {
+        fn verify(
             &self,
             assertion: &Assertion,
-        ) -> core::result::Result<Box<dyn VerifiedBoundAssertion>, BoundAssertionVerificationError>;
+            asserted_data: &[u8],
+            verification_time: Instant,
+        ) -> core::result::Result<(), AssertionVerifierError>;
     }
 }
 
 mock! {
-    #[derive(Debug)]
-    TestVerifiedBoundAssertion {}
-    impl VerifiedBoundAssertion for TestVerifiedBoundAssertion {
-        fn assertion(&self) -> &Assertion;
-        fn verify_binding(
-            &self,
-            bound_data: &[u8],
-            binding: &SessionBinding,
-        ) -> core::result::Result<(), BoundAssertionVerificationError>;
-    }
-}
-
-mock! {
-    TestBindableAssertionGenerator {}
-    impl BindableAssertionGenerator for TestBindableAssertionGenerator {
-        fn generate(&self) -> core::result::Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError>;
-    }
-}
-
-mock! {
-    TestBindableAssertion {}
-    impl BindableAssertion for TestBindableAssertion {
-        fn assertion(&self) -> &Assertion;
-        fn bind(&self, bound_data: &[u8]) -> core::result::Result<SessionBinding, BindableAssertionGeneratorError>;
+    TestAssertionGenerator {}
+    impl AssertionGenerator for TestAssertionGenerator {
+        fn generate(&self, asserted_data: &[u8]) -> core::result::Result<Assertion, AssertionGeneratorError>;
     }
 }
 
@@ -234,27 +225,21 @@ fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVeri
 }
 
 fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn BindableAssertionGenerator> {
-    let mut generator = MockTestBindableAssertionGenerator::new();
-    generator.expect_generate().returning(move || {
-        let mut bindable_assertion = Box::new(MockTestBindableAssertion::new());
-        bindable_assertion.expect_assertion().return_const(assertion.clone());
-        bindable_assertion
-            .expect_bind()
-            .returning(|_| Ok(SessionBinding { binding: "test assertion binding".into() }));
-        Ok(bindable_assertion)
-    });
-    Box::new(generator)
+    let mut generator = MockTestAssertionGenerator::new();
+    generator.expect_generate().returning(move |_| Ok(assertion.clone()));
+    Box::new(SessionKeyBindableAssertionGenerator {
+        assertion_generator: Arc::new(generator),
+        binding_signer: Arc::new(SigningKey::random(&mut OsRng)),
+    })
 }
 
-fn create_passing_mock_assertion_verifier(assertion: Assertion) -> Box<dyn BoundAssertionVerifier> {
-    let mut verifier = MockTestBoundAssertionVerifier::new();
-    verifier.expect_verify_assertion().returning(move |_| {
-        let mut verified_bound_assertion = Box::new(MockTestVerifiedBoundAssertion::new());
-        verified_bound_assertion.expect_assertion().return_const(assertion.clone());
-        verified_bound_assertion.expect_verify_binding().returning(|_, _| Ok(()));
-        Ok(verified_bound_assertion)
-    });
-    Box::new(verifier)
+fn create_passing_mock_assertion_verifier() -> Box<dyn BoundAssertionVerifier> {
+    let mut verifier = MockTestAssertionVerifier::new();
+    verifier.expect_verify().returning(|_, _, _| Ok(()));
+    Box::new(SessionKeyBoundAssertionVerifier {
+        assertion_verifier: Arc::new(verifier),
+        clock: Arc::new(FixedClock::at_instant(make_instant!("2025-10-14T17:31:32Z"))),
+    })
 }
 
 #[derive(Debug, PartialEq)]
@@ -413,7 +398,7 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(assertion.clone()),
+                create_passing_mock_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -454,7 +439,7 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
                 eq(&MATCHED_ATTESTER_ID1.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))
             )],
-            assertions: elements_are![(&MATCHED_ATTESTER_ID2.to_string(), &assertion)],
+            assertions: anything(),
             assertion_bindings: elements_are![(
                 eq(&MATCHED_ATTESTER_ID2.to_string()),
                 field!(&SessionBinding.binding, ref not(is_empty()))

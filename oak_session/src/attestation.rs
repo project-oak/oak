@@ -370,7 +370,8 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
     /// the client sends only one attestation message.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestRequest>> {
         self.attestation_binding_token.extend(serialize_assertions(
-            self.bindable_assertions
+            &self
+                .bindable_assertions
                 .iter()
                 .map(|(id, bindable_assertion)| {
                     (id.clone(), bindable_assertion.assertion().clone())
@@ -396,8 +397,7 @@ impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler 
         &mut self,
         incoming_message: AttestResponse,
     ) -> anyhow::Result<Option<()>> {
-        self.attestation_binding_token
-            .extend(serialize_assertions(incoming_message.assertions.clone()));
+        self.attestation_binding_token.extend(serialize_assertions(&incoming_message.assertions));
 
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
@@ -535,7 +535,8 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
     /// once, after which it will return `Ok(None)`.
     fn get_outgoing_message(&mut self) -> anyhow::Result<Option<AttestResponse>> {
         self.attestation_binding_token.extend(serialize_assertions(
-            self.bindable_assertions
+            &self
+                .bindable_assertions
                 .iter()
                 .map(|(id, bindable_assertion)| {
                     (id.clone(), bindable_assertion.assertion().clone())
@@ -560,8 +561,7 @@ impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler 
         &mut self,
         incoming_message: AttestRequest,
     ) -> anyhow::Result<Option<()>> {
-        self.attestation_binding_token
-            .extend(serialize_assertions(incoming_message.assertions.clone()));
+        self.attestation_binding_token.extend(serialize_assertions(&incoming_message.assertions));
         if self.attestation_result.is_some() {
             // Attestation result is already obtained - no new messages expected.
             return Ok(None);
@@ -642,12 +642,13 @@ fn combine_attestation_results(
         .collect::<Result<BTreeMap<String, VerifierResult>, Error>>()
 }
 
-/// Combines received `assertions` with configured `assertion_verifiers`.
+/// Combines received `assertions` with configured
+/// `assertion_verifiers`.
 ///
 /// This function performs a merge-join between the set of verifiers (keyed by
-/// ID) and the set of received endorsed evidence (also keyed by
-/// ID). For each matching pair, it invokes the `verify` method of
-/// the `AsertionVerifier`. For unmatched verifiers or evidence it creates a
+/// ID) and the set of received assertions (also keyed by ID). For
+/// each matching pair, it invokes the `verify` method of the
+/// `AsertionVerifier`. For unmatched verifiers or evidence it creates a
 /// `BoundAssertionVerifierResult::Missing` or
 /// `BoundAssertionVerifierResult::Unverified` result respectively.`
 ///
@@ -662,7 +663,7 @@ fn combine_assertion_results(
         .iter()
         .merge_join_by(assertions, |(id1, _), (id2, _)| Ord::cmp(id1, &id2))
         .map(|v| match v {
-            EitherOrBoth::Both((_, verifier), (id, assertion)) => {
+            EitherOrBoth::Both((id, verifier), (_, assertion)) => {
                 match verifier.verify_assertion(&assertion) {
                     Ok(verified_bound_assertion) => (
                         id.clone(),
@@ -724,13 +725,13 @@ fn combine_legacy_and_assertion_aggregated_verification(
 /// The serialization format is `id:content|id:content|...`, where `id` is the
 /// assertion ID string, encoded as a protobuf message. This is used to create a
 /// stable input for the attestation binding token.
-fn serialize_assertions(assertions: BTreeMap<String, Assertion>) -> Vec<u8> {
-    assertions
-        .into_iter()
+fn serialize_assertions(attestations: &BTreeMap<String, Assertion>) -> Vec<u8> {
+    attestations
+        .iter()
         .map(|(id, assertion)| {
             let mut result = id.encode_to_vec();
             result.push(b':');
-            result.extend(assertion.content);
+            result.extend(assertion.content.clone());
             result.push(b'|');
             result
         })

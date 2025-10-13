@@ -34,9 +34,6 @@ pub mod session;
 pub mod session_binding;
 pub mod verifier;
 
-#[cfg(test)]
-mod tests;
-
 pub use session::{ClientSession, ServerSession, Session};
 
 /// Trait that represents a state-machine for protocol message generation.

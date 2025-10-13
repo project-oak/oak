@@ -38,6 +38,20 @@ pub struct InvokeResponse {
         super::super::crypto::v1::EncryptedResponse,
     >,
 }
+/// Assertion that wraps an assertion of a different type that signs a public key
+/// used to bind this assertion to the session. Allows the use of arbitrary
+/// assertion generators and verifiers for attestation within the session.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SessionBindingKeyWrapperAssertion {
+    /// Public component of the P256 ECDSA binding key signing the attested data.
+    #[prost(bytes = "vec", tag = "1")]
+    pub public_binding_key: ::prost::alloc::vec::Vec<u8>,
+    /// Inner assertion over the public binding key.
+    #[prost(message, optional, tag = "2")]
+    pub inner_assertion: ::core::option::Option<
+        super::super::attestation::v1::Assertion,
+    >,
+}
 /// Request message for the remote attestation.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

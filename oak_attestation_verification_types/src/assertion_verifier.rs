@@ -31,11 +31,11 @@ pub enum AssertionVerifierError {
 }
 
 /// Trait that provides the functionality for checking that the assertion is
-/// valid for the given asserted data
+/// valid for the given data
 #[cfg_attr(test, automock)]
 pub trait AssertionVerifier: Send + Sync {
-    /// Checks that an assertion is valid for the asserted data at the specified
-    /// time instant.
+    /// Checks that an assertion is valid for the data at the specified time
+    /// instant.
     fn verify(
         &self,
         assertion: &Assertion,

@@ -24,8 +24,8 @@ pub struct AssertionGeneratorError {
     pub from: anyhow::Error,
 }
 
-/// Trait that provides the functionality for checking that the assertion is
-/// correct for the supplied data
+/// Trait that provides the functionality for generating an assertion for the
+/// supplied data.
 #[cfg_attr(test, automock)]
 pub trait AssertionGenerator: Send + Sync {
     /// Produces an assertion for the provided data.
