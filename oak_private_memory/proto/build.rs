@@ -64,6 +64,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.QueryClauses",
         "oak.private_memory.LLMViews",
         "oak.private_memory.LLMView",
+        "oak.private_memory.LLMViewContent",
+        "oak.private_memory.LLMViewValue",
+        "oak.private_memory.ParamValue",
     ];
 
     let oneof_field_names = [
@@ -72,6 +75,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.SearchMemoryQuery.clause",
         "oak.private_memory.MemoryValue.value",
         "oak.private_memory.TextQuery.value",
+        "oak.private_memory.LLMView.view",
+        "oak.private_memory.LLMViewValue.value",
+        "oak.private_memory.ParamValue.value",
     ];
     for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
         config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");

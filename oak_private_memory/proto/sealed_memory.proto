@@ -45,16 +45,60 @@ message MemoryContent {
   map<string, MemoryValue> contents = 1;
 }
 
+message ParamValue {
+  oneof value {
+    int64 int64_val = 1;
+    string string_val = 2;
+    float float_val = 3;
+    bool bool_val = 4;
+  }
+}
+
+message LLMViewValue {
+  string mime_type = 1;
+  oneof value {
+    // The processed, flattened text
+    // derived from the Memory (e.g., a paragraph, a transcript segment, or a
+    // summary).
+    string text_value = 2;
+    // Multimodal Support. Specific non-text elements
+    // that the LLM can process directly (e.g., images associated with the
+    // text_value).
+    bytes media_value = 3;
+  }
+}
+
+// A collection of LLMViewValues for a single LLMView.
+// When used for inference, the order of the values is preserved. However, when
+// generating the embedding, the content will be embedded as a whole in an
+// unordered way.
+message LLMViewContent {
+  repeated LLMViewValue values = 1;
+}
+
 message LLMView {
-  // Reserved a bunch of fields for later uses.
-  reserved 1 to 10;
+  // Optional client-provided view type, used to differentiate categories.
+  // e.g. for a chat: 'summary', 'conversation_slice', 'participants'
+  string type = 1;
+
+  // Optional client-provided parameters, used to differentiate this view from
+  // other views of the same type, or for view regeneration.
+  // e.g. start_index = 100, end_index = 200
+  map<string, ParamValue> params = 2;
 
   Embedding embedding = 11;
-  // The textual representation of the part of the memory that we embed.
-  string text_view = 12;
+
+  // The content for generating the embedding.
+  oneof view {
+    string text_view = 12;
+    LLMViewContent multimodal_view = 13;
+  }
 
   // The unique identifier of the view.
   string id = 20;
+
+  // Reserved fields for future use.
+  reserved 3 to 10;
 }
 
 message LLMViews {
