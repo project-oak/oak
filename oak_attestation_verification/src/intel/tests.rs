@@ -248,3 +248,64 @@ fn test_extend_rtmr_three_times() {
         "the calculated value for RTMR2 does not match the value from the quote"
     );
 }
+
+#[test]
+fn event_log_matches_rtmr_evidence() {
+    let attestation_data = AttestationData::load_tdx_oc();
+    let quote_buffer =
+        attestation_data.evidence.root_layer.expect("no root layer").remote_attestation_report;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let expected = wrapper.parse_quote().expect("invalid quote").body.rtmr_2;
+
+    let mut rtmr_2 = RtmrEmulator::new();
+    for entry in attestation_data
+        .evidence
+        .event_log
+        .as_ref()
+        .expect("no event log")
+        .encoded_events
+        .as_slice()
+        .iter()
+    {
+        rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+    }
+
+    assert_eq!(
+        rtmr_2.get_state(),
+        expected,
+        "RTMR2 in quote does not match the value calculated from the event log"
+    );
+}
+
+#[test]
+fn tampered_event_log_doesnt_match_rtmr_evidence() {
+    let attestation_data = AttestationData::load_tdx_oc();
+    let quote_buffer =
+        attestation_data.evidence.root_layer.expect("no root layer").remote_attestation_report;
+    let wrapper = TdxQuoteWrapper::new(quote_buffer.as_slice());
+    let expected = wrapper.parse_quote().expect("invalid quote").body.rtmr_2;
+
+    let mut rtmr_2 = RtmrEmulator::new();
+    for (index, entry) in attestation_data
+        .evidence
+        .event_log
+        .as_ref()
+        .expect("no event log")
+        .encoded_events
+        .as_slice()
+        .iter()
+        .enumerate()
+    {
+        let mut entry = entry.clone();
+        if index == 0 {
+            entry[0] = 0;
+        }
+        rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+    }
+
+    assert_ne!(
+        rtmr_2.get_state(),
+        expected,
+        "RTMR2 in quote matches the value calculated from the tampered event log"
+    );
+}
