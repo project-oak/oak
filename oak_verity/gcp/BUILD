@@ -14,18 +14,24 @@
 # limitations under the License.
 #
 
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-proto_library(
-    name = "oak_verity_proto",
-    srcs = ["oak_verity.proto"],
+rust_binary(
+    name = "oak_verity_gcp",
+    srcs = ["main.rs"],
     deps = [
-        "//proto:digest_proto",
-        "//proto/attestation:assertion_proto",
+        "//oak_attestation_gcp",
+        "//oak_attestation_types",
+        "//oak_proto_rust/grpc",
+        "//oak_verity/grpc:oak_verity_grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:maplit",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )

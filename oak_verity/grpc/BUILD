@@ -14,42 +14,55 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
 rust_library(
-    name = "oak_verity",
-    srcs = glob(["src/**/*.rs"]),
+    name = "oak_verity_grpc",
+    srcs = ["src/lib.rs"],
     deps = [
         "//oak_attestation_types",
-        "//oak_functions_abi",
-        "//oak_functions_service:lib_unrestricted",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "//oak_verity",
         "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_binary(
+    name = "server",
+    srcs = ["src/main.rs"],
+    deps = [
+        ":oak_verity_grpc",
+        "//oak_proto_rust/grpc",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )
 
 rust_test(
-    name = "oak_verity_test",
-    crate = ":oak_verity",
-    data = ["//oak_functions/examples/echo"],
-)
-
-rust_test(
-    name = "oak_verity_integration_test",
+    name = "oak_verity_grpc_integration_test",
     srcs = ["tests/integration_test.rs"],
-    data = ["//oak_functions/examples/echo"],
+    data = [
+        ":oak_verity_grpc",
+        "//oak_functions/examples/echo",
+    ],
     deps = [
-        ":oak_verity",
+        ":oak_verity_grpc",
+        "//oak_file_utils",
         "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:portpicker",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )

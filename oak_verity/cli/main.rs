@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+//! A CLI binary that executes Oak Verity as a one-shot, using the provided Wasm
+//! module and the provided input data. Useful to debug Wasm modules quickly.
+
 use std::{fs, path::Path};
 
 use anyhow::{Context, Result};

@@ -64,6 +64,7 @@ cargo_build_script(
         "//proto/oak_debug/service:oak_debug.proto",
         "//proto/oak_functions/service:oak_functions.proto",
         "//proto/oak_functions/standalone:oak_functions_session.proto",
+        "//proto/oak_verity:oak_verity.proto",
         "//proto/session:messages.proto",
         "//proto/session:service_streaming.proto",
         "//proto/session:session.proto",

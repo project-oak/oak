@@ -39,9 +39,15 @@ use crate::{
 };
 
 #[allow(dead_code)]
-struct GcpAssertionGenerator {
+pub struct GcpAssertionGenerator {
     pub audience: String,
     pub endorsement: Option<ConfidentialSpaceEndorsement>,
+}
+
+impl GcpAssertionGenerator {
+    pub fn new(audience: String, endorsement: Option<ConfidentialSpaceEndorsement>) -> Self {
+        Self { audience, endorsement }
+    }
 }
 
 impl AssertionGenerator for GcpAssertionGenerator {

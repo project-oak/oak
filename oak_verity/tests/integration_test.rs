@@ -17,8 +17,9 @@
 //! Integration tests for Oak Verity using real Wasm modules.
 
 use anyhow::Result;
-use oak_proto_rust::oak::verity::ExecuteRequest;
+use oak_proto_rust::oak::verity::{ExecuteRequest, ExecutionManifest};
 use oak_verity::OakVerity;
+use prost::Message;
 
 /// Test Oak Verity with the echo Wasm module.
 #[test]
@@ -50,7 +51,7 @@ fn test_oak_verity_with_echo_wasm() -> Result<()> {
     );
 
     // Verify manifest was generated.
-    let manifest = response.manifest.expect("Manifest must be present");
+    let manifest = ExecutionManifest::decode(response.serialized_manifest.as_slice())?;
 
     // Verify all digests are present.
     assert!(manifest.input_data_digest.is_some(), "Input data digest must be present");
@@ -72,11 +73,9 @@ fn test_oak_verity_with_echo_wasm() -> Result<()> {
         "Input and output digests must be identical for echo module"
     );
 
-    // Input and Wasm digests must be different.
-    assert_ne!(
-        input_digest.sha2_256, wasm_digest.sha2_256,
-        "Input and Wasm module must have different digests"
-    );
+    // No assertion generators are configured, so the assertions map must be
+    // empty.
+    assert!(response.assertions.is_empty());
 
     Ok(())
 }
@@ -115,8 +114,8 @@ fn test_oak_verity_echo_different_inputs() -> Result<()> {
         );
 
         // Verify manifest
-        let manifest =
-            response.manifest.unwrap_or_else(|| panic!("Test case {i}: Manifest must exist"));
+        let manifest = ExecutionManifest::decode(response.serialized_manifest.as_slice())
+            .unwrap_or_else(|_| panic!("Test case {i}: Manifest must be deserializable"));
         let input_digest = manifest
             .input_data_digest
             .unwrap_or_else(|| panic!("Test case {i}: Input digest must exist"));
@@ -126,9 +125,12 @@ fn test_oak_verity_echo_different_inputs() -> Result<()> {
 
         assert_eq!(
             input_digest.sha2_256, output_digest.sha2_256,
-            "Test case {}: Input and output digests must match for echo",
-            i
+            "Test case {i}: Input and output digests must match for echo",
         );
+
+        // No assertion generators are configured, so the assertions map must be
+        // empty.
+        assert!(response.assertions.is_empty());
     }
 
     Ok(())

@@ -46,4 +46,8 @@ pub mod oak {
     pub mod debug {
         tonic::include_proto!("oak.debug");
     }
+    pub mod verity {
+        #![allow(clippy::return_self_not_must_use)]
+        tonic::include_proto!("oak.verity");
+    }
 }

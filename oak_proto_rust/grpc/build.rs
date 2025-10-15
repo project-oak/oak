@@ -28,6 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../../proto/oak_debug/service/oak_debug.proto",
             "../../proto/oak_functions/service/oak_functions.proto",
             "../../proto/oak_functions/standalone/oak_functions_session.proto",
+            "../../proto/oak_verity/oak_verity.proto",
             "../../third_party/google/profile.proto",
         ],
         &included_protos,

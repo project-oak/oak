@@ -99,12 +99,7 @@ output_data: "hello\n"
 ## WebAssembly Compatibility
 
 Oak Verity is compatible with any WebAssembly module that follows the Oak
-Functions ABI:
-
-- **Entry point**: `main()` function
-- **Memory management**: `alloc(size: i32) -> ptr` function
-- **Host interface**: `oak_functions::invoke()` for I/O
-- **Memory export**: `memory` export for host communication
+Functions ABI.
 
 ### Example Wasm Module (Rust)
 

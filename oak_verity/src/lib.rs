@@ -22,7 +22,10 @@
 //! manifests containing digests of inputs and outputs for verification
 //! purposes.
 
+use std::collections::BTreeMap;
+
 use anyhow::{Context, Result};
+use oak_attestation_types::assertion_generator::AssertionGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     wasm::{WasmConfig, WasmHandler},
@@ -32,15 +35,18 @@ use oak_proto_rust::oak::{
     verity::{ExecuteRequest, ExecuteResponse, ExecutionManifest},
     RawDigest,
 };
+use prost::Message;
 use sha2::{Digest, Sha256};
 
 /// Main entry point for Oak Verity execution.
-pub struct OakVerity;
+pub struct OakVerity {
+    pub assertion_generators: BTreeMap<String, Box<dyn AssertionGenerator>>,
+}
 
 impl OakVerity {
     /// Create a new Oak Verity instance.
     pub fn new() -> Result<Self> {
-        Ok(Self)
+        Ok(Self { assertion_generators: BTreeMap::new() })
     }
 
     /// Execute a Wasm module with the given request and return the response
@@ -60,7 +66,15 @@ impl OakVerity {
             output_data_digest: Some(output_digest),
         };
 
-        Ok(ExecuteResponse { manifest: Some(manifest), output_data })
+        let serialized_manifest = manifest.encode_to_vec();
+
+        let mut assertions = BTreeMap::new();
+        for (id, generator) in &self.assertion_generators {
+            let assertion = generator.generate(&serialized_manifest)?;
+            assertions.insert(id.clone(), assertion);
+        }
+
+        Ok(ExecuteResponse { serialized_manifest, assertions, output_data })
     }
 
     /// Execute a Wasm module with the given input data.
@@ -105,12 +119,14 @@ pub fn compute_sha256_digest(data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+    use oak_proto_rust::oak::attestation::v1::Assertion;
+
     use super::*;
 
     #[test]
     fn test_oak_verity_creation() {
-        let oak_verity = OakVerity::new();
-        assert!(oak_verity.is_ok());
+        let oak_verity = OakVerity::new().unwrap();
+        assert!(oak_verity.assertion_generators.is_empty());
     }
 
     #[test]
@@ -132,14 +148,35 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_request_response_structure() {
-        let request = ExecuteRequest {
-            input_data: b"test input".to_vec(),
-            wasm_module: b"fake wasm module".to_vec(),
-        };
+    fn test_execute_with_assertions() {
+        use oak_attestation_types::assertion_generator::AssertionGeneratorError;
 
-        assert_eq!(request.input_data, b"test input");
-        assert_eq!(request.wasm_module, b"fake wasm module");
+        const MOCK_ASSERTION_ID: &str = "z11762005613252036790";
+
+        /// A Mock Assertion Generator that always returns a fixed value for the
+        /// assertion, regardless of the data that is passed in.
+        struct MockAssertionGenerator;
+        impl AssertionGenerator for MockAssertionGenerator {
+            fn generate(&self, _data: &[u8]) -> Result<Assertion, AssertionGeneratorError> {
+                Ok(Assertion { content: "ok".to_string().into_bytes() })
+            }
+        }
+
+        let mut oak_verity = OakVerity::new().unwrap();
+        oak_verity
+            .assertion_generators
+            .insert(MOCK_ASSERTION_ID.to_string(), Box::new(MockAssertionGenerator));
+
+        let wasm_module = std::fs::read("oak_functions/examples/echo/echo.wasm").unwrap();
+
+        let request = ExecuteRequest { input_data: b"test input".to_vec(), wasm_module };
+
+        let response = oak_verity.execute(request).unwrap();
+
+        assert!(!response.serialized_manifest.is_empty());
+        assert_eq!(response.assertions.len(), 1);
+        let assertion = response.assertions.get(MOCK_ASSERTION_ID).unwrap();
+        assert_eq!(assertion.content, "ok".to_string().into_bytes());
     }
 
     // Note: Full integration tests with actual Wasm modules would require
