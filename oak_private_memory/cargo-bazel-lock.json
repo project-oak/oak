@@ -1,5 +1,5 @@
 {
-  "checksum": "c2a780df13556158f42f71e44d11c6f88a61931075259e1fb270cf52e21c4d63",
+  "checksum": "94bbac4ad28a8b9ab5d02cb6d1be9dbc0cea405bf4d07d8ff16b39fa88e2f899",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -8223,7 +8223,7 @@
               "target": "rlsf"
             },
             {
-              "id": "rmcp 0.6.0",
+              "id": "rmcp 0.8.1",
               "target": "rmcp"
             },
             {
@@ -8453,7 +8453,7 @@
               "target": "prost_derive"
             },
             {
-              "id": "rmcp-macros 0.6.0",
+              "id": "rmcp-macros 0.8.1",
               "target": "rmcp_macros"
             },
             {
@@ -25802,14 +25802,14 @@
       ],
       "license_file": null
     },
-    "rmcp 0.6.0": {
+    "rmcp 0.8.1": {
       "name": "rmcp",
-      "version": "0.6.0",
+      "version": "0.8.1",
       "package_url": "https://github.com/modelcontextprotocol/rust-sdk/",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rmcp/0.6.0/download",
-          "sha256": "bb21cd3555f1059f27e4813827338dec44429a08ecd0011acc41d9907b160c00"
+          "url": "https://static.crates.io/crates/rmcp/0.8.1/download",
+          "sha256": "6f35acda8f89fca5fd8c96cae3c6d5b4c38ea0072df4c8030915f3b5ff469c1c"
         }
       },
       "targets": [
@@ -25948,29 +25948,28 @@
               "target": "paste"
             },
             {
-              "id": "rmcp-macros 0.6.0",
+              "id": "rmcp-macros 0.8.1",
               "target": "rmcp_macros"
             }
           ],
           "selects": {}
         },
-        "version": "0.6.0"
+        "version": "0.8.1"
       },
-      "license": "MIT/Apache-2.0",
+      "license": "MIT",
       "license_ids": [
-        "Apache-2.0",
         "MIT"
       ],
       "license_file": null
     },
-    "rmcp-macros 0.6.0": {
+    "rmcp-macros 0.8.1": {
       "name": "rmcp-macros",
-      "version": "0.6.0",
+      "version": "0.8.1",
       "package_url": "https://github.com/modelcontextprotocol/rust-sdk/",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rmcp-macros/0.6.0/download",
-          "sha256": "ab5d16ae1ff3ce2c5fd86c37047b2869b75bec795d53a4b1d8257b15415a2354"
+          "url": "https://static.crates.io/crates/rmcp-macros/0.8.1/download",
+          "sha256": "c9f1d5220aaa23b79c3d02e18f7a554403b3ccea544bbb6c69d6bcb3e854a274"
         }
       },
       "targets": [
@@ -26018,11 +26017,10 @@
           "selects": {}
         },
         "edition": "2024",
-        "version": "0.6.0"
+        "version": "0.8.1"
       },
-      "license": "MIT/Apache-2.0",
+      "license": "MIT",
       "license_ids": [
-        "Apache-2.0",
         "MIT"
       ],
       "license_file": null
@@ -43340,8 +43338,8 @@
     "reqwest 0.12.22",
     "ring 0.17.14",
     "rlsf 0.2.1",
-    "rmcp 0.6.0",
-    "rmcp-macros 0.6.0",
+    "rmcp 0.8.1",
+    "rmcp-macros 0.8.1",
     "rpassword 7.4.0",
     "rsa 0.9.8",
     "rtnetlink 0.14.1",

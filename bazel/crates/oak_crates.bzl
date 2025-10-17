@@ -533,11 +533,11 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "transport-streamable-http-server",
             "transport-worker",
         ],
-        version = "0.6.0",
+        version = "0.8.1",
     ),
     "rmcp-macros": crate.spec(
         default_features = False,
-        version = "0.6.0",
+        version = "0.8.1",
     ),
     "rtnetlink": crate.spec(version = "0.14.1"),
     "serde_yaml": crate.spec(version = "0.9.30"),

@@ -16,20 +16,23 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "mcp_server",
-    srcs = glob([
-        "src/*.rs",
-    ]),
+rust_library(
+    name = "mcp_server_lib",
+    srcs = [
+        "src/lib.rs",
+        "src/service.rs",
+        "src/tools.rs",
+    ],
     proc_macro_deps = [
         "@oak_std_crates_index//:rmcp-macros",
+        "@oak_std_crates_index//:async-trait",
     ],
     deps = [
         "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
@@ -47,6 +50,37 @@ rust_binary(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:rmcp",
         "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_binary(
+    name = "mcp_server",
+    srcs = ["src/main.rs"],
+    proc_macro_deps = [
+        "@oak_std_crates_index//:rmcp-macros",
+        "@oak_std_crates_index//:async-trait",
+    ],
+    deps = [
+        ":mcp_server_lib",
+        "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
+        "//oak_proto_rust",
+        "//oak_proto_rust/grpc",
+        "//oak_session",
+        "//oak_time",
+        "//oak_time:oak_time_std",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:axum",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rmcp",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],

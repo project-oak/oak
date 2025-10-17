@@ -7,6 +7,6 @@ attestation_verifiers = []
 cmd = "/bin/mcp_server"
 args = [
     "--listen-address=127.0.0.1:8081",
-    "--insecure-attestation",
+    "--attestation",
 ]
 restart_policy = "always"
