@@ -2,6 +2,8 @@
 
 ## Binaries
 
+- `35705`
+  [ctf_sha2](https://github.com/project-oak/oak/blob/main/docs/tr/claim/35705.md)
 - `22790`
   [oak_containers_kernel](https://github.com/project-oak/oak/blob/main/docs/tr/claim/22790.md)
 - `48633`
