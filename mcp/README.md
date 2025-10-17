@@ -1,116 +1,195 @@
-# MCP Experiment
+# Private Attested Agent with MCP
 
-## Agent Development Kit
+This document describes how to set up and run a private, attested AI agent. The
+agent uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+to securely interact with tools and is secured by
+[Oak Proxy](../../oak_proxy/README.md) for end-to-end encrypted communication.
 
-### Install Agent Development Kit
+The project consists of several key components:
 
-Instructions taken from:
-https://google.github.io/adk-docs/get-started/quickstart/
+- **Python Agent (`./agent`):** An agent built with the
+  [Agent Development Kit (ADK)](https://google.github.io/adk-docs/get-started/quickstart/)
+  that can answer questions about weather by using external tools.
+- **Oak Proxy (`../../oak_proxy`):** A dual-proxy system that provides a
+  transparent, end-to-end encrypted, and attested tunnel for communication.
+- **Rust MCP Server (`./server`):** A server that exposes tools to the agent via
+  the Model Context Protocol.
+- **Oak Functions Tool (`../../oak_functions_standalone`):** A Wasm application
+  that serves as a simple weather lookup tool.
+- **Terraform Configuration (`./terraform`):** Infrastructure-as-code scripts to
+  deploy the entire stack to Google Cloud.
+- **Python Client (`./client`):** A command-line application for interacting
+  with the agent.
 
-Create & Activate Virtual Environment:
+## Running Locally
+
+This setup allows you to run all components on your local machine for
+development and testing.
+
+### Prerequisites
+
+- Python 3.12+ and `venv`
+- [Nix](https://nixos.org/download.html)
+- [Bazel](https://bazel.build/install)
+
+### 1. Install Dependencies
+
+Create and activate a Python virtual environment, then install the required
+packages.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+pip install -r ./agent/requirements.txt
 ```
 
-Install ADK:
+### 2. Start the Oak Functions Weather Tool
 
-```bash
-pip install google-adk litellm
-```
-
-Get an API key from
-[Google AI Studio](https://aistudio-preprod.corp.google.com/apikey).
-
-```bash
-export GOOGLE_GENAI_USE_VERTEXAI=FALSE
-export GOOGLE_API_KEY=YOUR_API_KEY_HERE
-```
-
-### Run the Agent
-
-To start an agent in an interactive environment run:
-
-```bash
-adk run mcp/agent
-```
-
-Example output:
-
-```txt
-Running agent weather_agent, type exit to exit.
-[user]: What's the weather at my current location?
-[weather_agent]: The weather is sunny with a temperature of 30 degrees Celsius.
-```
-
-### Run the Tool
-
-The weather tool is implemented as an
-[Oak Functions](../oak_functions_standalone/README.md) Wasm application. The
-Rust MCP server uses [Oak Session](../oak_session/README.md) to connect to the
-tool with an attested end-to-end encrypted channel. In order to start the tool,
-run the following command:
+This tool acts as a simple database, mapping locations to weather data. The MCP
+server will connect to it.
 
 ```bash
 nix develop
 bazel run //oak_functions_standalone:oak_functions_standalone
 ```
 
-By default, the application provides a lookup from location (lat, long) to
-temperature in Celsius. To lookup the temperature in any of those locations, the
-location must be specified as `(<lat>,<long>)` where `<lat>` and `<long>` must
-have two decimals of precision and (if necessary) include a leading 0.
+This will start the server, typically on port `8080`.
 
-For example, for London has latitude 51.51 degrees North and longitude .13
-degrees West. To lookup the weather there, we pass the key `"(51.51,-0.13)"`.
+### 3. Start the Rust MCP Server
 
-A full list of the data can be viewed on the
-[Oak Functions standalone testdata page](../oak_functions_standalone/testdata/README.md).
-
-+### Run the Server
-
-MCP Server is implemented using Rust MCP SDK:
-https://github.com/modelcontextprotocol/rust-sdk
-
-The agent already automatically starts the server, but you can also run it
-manually for inspecting. To build the server run:
+In a new terminal, start the MCP server. This server connects to the Oak
+Functions tool and exposes it to the agent.
 
 ```bash
 nix develop
-bazel build //mcp/server:mcp_server
+bazel run //mcp/server:mcp_server -- --oak-functions-url http://localhost:8080
 ```
 
-You can also inspect the server using the
-[MCP Inspector tool](https://github.com/modelcontextprotocol/inspector), which
-requires installing NPX:
+This will start the MCP server, typically on port `8082`.
+
+### 4. Start the Python Agent
+
+In a new terminal, start the agent. It will connect to the MCP server to use its
+tools.
 
 ```bash
-sudo apt install nodejs npm
+python mcp/agent/main.py --mcp-server-url http://127.0.0.1:8082/mcp
 ```
 
-To interact with the server run the MCP Inspector tool from the same directory:
+This will start the agent's A2A server on its default port, `8081`.
+
+### 5. Run the Client
+
+Finally, in another terminal, run the client to interact with the agent.
 
 ```bash
-npx @modelcontextprotocol/inspector nix develop --command sh -c 'cd .. && bazel run //mcp/server:mcp_server'
+python mcp/client/main.py --agent-url http://127.0.0.1:8081
 ```
 
-## Gemini CLI
+You can now chat with the agent. For example:
 
-- [demo](https://asciinema.googleplex.com/5682939312472064)
-- [docs](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md)
+```bash
+User: What's the weather at my current location?
+```
 
-- Install Gemini CLI.
-- Create a `.gemini/settings.json` config pointing to the locally built server.
-  - see the [one](./.gemini/settings.json) in this repository
-- Build the server
+## Deploying to Google Cloud with Terraform
 
-  ```console
-  bazel build mcp/server:mcp_server
-  ```
+The Terraform configuration automates the deployment of the entire agent stack,
+including all necessary infrastructure and services, to a Google Cloud project.
 
-- There is no need to manually run the server, it will be run by gemini itself
-- Run `gemini` from the command line
-  - It should say "Using 1 MCP server" when it starts
-  - Press `ctrl+t` to see the current status of the server, it should show a
-    green circle next to its name
+### Terraform Configuration Overview
+
+The main configuration is defined in `mcp/terraform/main.tf`. It deploys the
+following modules:
+
+- **`google_compute_firewall`**: Creates a firewall rule named
+  `allow-private-agent-infra` to allow TCP traffic on the `exposed_port`
+  (default `8080`) for all deployed instances.
+- **`module "model"`**: Deploys a Confidential VM running the Model, which will
+  be used by the agent.
+- **`module "oak_functions"`**: Deploys the Oak Functions weather tool.
+- **`module "mcp_server"`**: Deploys the Rust MCP server. It is configured with
+  the internal IP of the Oak Functions instance.
+- **`module "agent"`**: Deploys the main Python agent. It is configured with the
+  internal IPs of the Model and MCP server instances, ensuring private and
+  secure communication within the GCP network.
+
+All configuration variables are defined in `mcp/terraform/variables.tf` with
+sensible defaults. You can override these as needed.
+
+### Deployment Steps
+
+1. **Initialize Terraform:** Navigate to the Terraform directory and initialize
+   the backend.
+
+   ```bash
+   cd mcp/terraform
+   terraform init
+   ```
+
+2. **Apply the Configuration:** Deploy the resources to your GCP project. You
+   may need to provide your GCP Project ID if it differs from the default.
+
+   ```bash
+   # Recommended: Specify your project ID
+   terraform apply -var="gcp_project_id=your-gcp-project-id"
+
+   # Or, if you have gcloud configured, it will use the default project
+   terraform apply
+   ```
+
+3. **Get the Public IP:** After the deployment is complete, Terraform will
+   output the public IP address of the agent instance. You will need this for
+   the next step.
+
+   ```bash
+   Outputs:
+
+   agent_public_ip = "136.117.59.5"
+   ```
+
+### Running the Client against the Cloud Deployment
+
+To interact with your deployed agent, you must run the `oak_proxy_client`
+locally. This client creates a secure, end-to-end encrypted tunnel to the
+`oak_proxy_server` running on your GCP instance.
+
+1. **Build the Oak Proxy Client:** If you haven't already, build the client
+   binary from the root of the `oak` repository.
+
+   ```bash
+   nix develop
+   bazel build //oak_proxy/client
+   ```
+
+   The binary will be located at `bazel-bin/oak_proxy/client/client`.
+
+2. **Configure the Local Proxy Client:** Create a configuration file named
+   `agent_client.toml` with the following content, replacing `<AGENT_PUBLIC_IP>`
+   with the IP address from the Terraform output.
+
+   ```toml
+   # agent_client.toml
+   listen_address = "127.0.0.1:8080"
+   server_proxy_url = "ws://<AGENT_PUBLIC_IP>:8080"
+   attestation_generators = []
+   attestation_verifiers = []
+   ```
+
+3. **Run the Local Proxy Client:** Start the local proxy in a terminal.
+
+   ```bash
+   RUST_LOG=info ./bazel-bin/oak_proxy/client/client --config agent_client.toml
+   ```
+
+   You should see the output: `[Client] Listening on 127.0.0.1:8080`.
+
+4. **Run the Python A2A Client:** In a new terminal, run the Python client,
+   ensuring it points to your **local proxy's address**.
+
+   ```bash
+   python mcp/client/main.py --agent-url http://127.0.0.1:8080
+   ```
+
+You can now interact with your secure, cloud-deployed agent through the
+encrypted local proxy.
