@@ -35,6 +35,8 @@
   [AMD SEV-SNP-Firmware-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/10271.md)
 - `92939`
   [Binary built from open source](https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md)
+- `26208`
+  [Binary reproducibly buildable](https://github.com/project-oak/oak/blob/main/docs/tr/claim/26208.md)
 - `68317`
   [Binary runnable by user](https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md)
 - `77149`
