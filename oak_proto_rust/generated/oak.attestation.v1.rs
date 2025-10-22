@@ -718,6 +718,43 @@ pub struct TcbVersion {
     #[prost(uint32, tag = "5")]
     pub fmc: u32,
 }
+/// The security version numbers of the components in the Intel TDX Trusted
+/// Compute Base (TCB).
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TdxTcbSvn {
+    #[prost(uint32, tag = "1")]
+    pub svn_0: u32,
+    #[prost(uint32, tag = "2")]
+    pub svn_1: u32,
+    #[prost(uint32, tag = "3")]
+    pub svn_2: u32,
+    #[prost(uint32, tag = "4")]
+    pub svn_3: u32,
+    #[prost(uint32, tag = "5")]
+    pub svn_4: u32,
+    #[prost(uint32, tag = "6")]
+    pub svn_5: u32,
+    #[prost(uint32, tag = "7")]
+    pub svn_6: u32,
+    #[prost(uint32, tag = "8")]
+    pub svn_7: u32,
+    #[prost(uint32, tag = "9")]
+    pub svn_8: u32,
+    #[prost(uint32, tag = "10")]
+    pub svn_9: u32,
+    #[prost(uint32, tag = "11")]
+    pub svn_10: u32,
+    #[prost(uint32, tag = "12")]
+    pub svn_11: u32,
+    #[prost(uint32, tag = "13")]
+    pub svn_12: u32,
+    #[prost(uint32, tag = "14")]
+    pub svn_13: u32,
+    #[prost(uint32, tag = "15")]
+    pub svn_14: u32,
+    #[prost(uint32, tag = "16")]
+    pub svn_15: u32,
+}
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct SkipVerification {}
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -969,7 +1006,7 @@ pub struct RootLayerReferenceValues {
     #[prost(message, optional, tag = "3")]
     pub insecure: ::core::option::Option<InsecureReferenceValues>,
 }
-/// Reference value that matches a TCB version.
+/// Reference value that matches a TCB version for AMD SEV-SNP.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct TcbVersionReferenceValue {
     #[prost(oneof = "tcb_version_reference_value::Type", tags = "1, 2")]
@@ -992,6 +1029,32 @@ pub mod tcb_version_reference_value {
         /// always pass verification since version numbers are unsigned.
         #[prost(message, tag = "2")]
         Minimum(super::TcbVersion),
+    }
+}
+/// Reference value that matches TCB Security Version Numbers (SVNs) for Intel
+/// TDX.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TdxTcbSvnReferenceValue {
+    #[prost(oneof = "tdx_tcb_svn_reference_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<tdx_tcb_svn_reference_value::Type>,
+}
+/// Nested message and enum types in `TdxTcbSvnReferenceValue`.
+pub mod tdx_tcb_svn_reference_value {
+    #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        /// Skips this check. As elsewhere, an empty `type` oneof makes verification
+        /// fail.
+        ///
+        /// Caveat: `skip {}` happens to behave identically to `minimum {}`. It is
+        /// recommended to avoid using `minimum {}`, but this is not enforced.
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        /// Requires minimum TCB SVNs reported in the attestation. Verification
+        /// checks that, separately for each field, the actual value is >= the
+        /// reference value. Leaving any field unpopulated (and hence == 0) will
+        /// always pass verification since version numbers are unsigned.
+        #[prost(message, tag = "2")]
+        Minimum(super::TdxTcbSvn),
     }
 }
 /// Collection of reference values for an AMD SEV-SNP hardware root.
@@ -1033,8 +1096,16 @@ pub struct AmdSevReferenceValues {
     #[prost(bool, tag = "9")]
     pub check_vcek_cert_expiry: bool,
 }
+/// Collection of reference values for an Intel TDX Attestation Quote.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct IntelTdxReferenceValues {}
+pub struct IntelTdxReferenceValues {
+    /// Minimum acceptable SVNs for the TEE TCB.
+    #[prost(message, optional, tag = "1")]
+    pub tee_tcb_svn: ::core::option::Option<TdxTcbSvnReferenceValue>,
+    /// If true, will skip the check that the TEE is not in debug mode.
+    #[prost(bool, tag = "2")]
+    pub allow_debug: bool,
+}
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InsecureReferenceValues {}
 /// Verifies that the field contains at least one of the given digests.
@@ -1271,7 +1342,7 @@ pub mod expected_digests {
         Digests(super::RawDigests),
     }
 }
-/// The expected values for the mimumum TCB version.
+/// The expected values for the minimum TCB version for AMD SEV-SNP.
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct TcbVersionExpectedValue {
     #[prost(oneof = "tcb_version_expected_value::Type", tags = "1, 2")]
@@ -1287,6 +1358,24 @@ pub mod tcb_version_expected_value {
         /// Provides minimum values for versions of TCB components.
         #[prost(message, tag = "2")]
         Minimum(super::TcbVersion),
+    }
+}
+/// The expected values for the minimum TCB SVNs for Intel TDX.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct TdxTcbSvnExpectedValue {
+    #[prost(oneof = "tdx_tcb_svn_expected_value::Type", tags = "1, 2")]
+    pub r#type: ::core::option::Option<tdx_tcb_svn_expected_value::Type>,
+}
+/// Nested message and enum types in `TdxTcbSvnExpectedValue`.
+pub mod tdx_tcb_svn_expected_value {
+    #[derive(Clone, Copy, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        /// Indicates that verification should be skipped.
+        #[prost(message, tag = "1")]
+        Skipped(super::VerificationSkipped),
+        /// Provides minimum values for SVNs of TCB components.
+        #[prost(message, tag = "2")]
+        Minimum(super::TdxTcbSvn),
     }
 }
 /// The expected values for kernel image and setup data, computed from previously
@@ -1328,7 +1417,14 @@ pub struct AmdSevExpectedValues {
     pub check_vcek_cert_expiry: bool,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct IntelTdxExpectedValues {}
+pub struct IntelTdxExpectedValues {
+    /// Minimum acceptable SVNs for the TEE TCB.
+    #[prost(message, optional, tag = "1")]
+    pub tee_tcb_svn: ::core::option::Option<TdxTcbSvnExpectedValue>,
+    /// If true, will skip the check that the TEE is not in debug mode.
+    #[prost(bool, tag = "2")]
+    pub allow_debug: bool,
+}
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InsecureExpectedValues {}
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1668,11 +1764,23 @@ pub struct AmdAttestationReport {
     pub vmpl: u32,
 }
 /// Values extracted from an Intel TDX attestation report.
+/// NEXT_ID: 5
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IntelTdxAttestationReport {
     /// The custom bytes that were passed to the report when it was requested.
     #[prost(bytes = "vec", tag = "1")]
     pub report_data: ::prost::alloc::vec::Vec<u8>,
+    /// The Security Version Numbers of the TCB components.
+    #[prost(message, optional, tag = "2")]
+    pub tee_tcb_svn: ::core::option::Option<TdxTcbSvn>,
+    /// Whether the VM was booted in debug mode.
+    #[prost(bool, tag = "3")]
+    pub debug: bool,
+    /// The measurement of the initial memory and CPU state of the VM before
+    /// startup. This implicitly includes the measurement of the Stage 0 firmware
+    /// binary.
+    #[prost(bytes = "vec", tag = "4")]
+    pub mr_td: ::prost::alloc::vec::Vec<u8>,
 }
 /// Values extracted from a fake attestation report when not running in a TEE.
 #[derive(Clone, PartialEq, ::prost::Message)]

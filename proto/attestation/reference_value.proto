@@ -231,7 +231,7 @@ message RootLayerReferenceValues {
   InsecureReferenceValues insecure = 3;
 }
 
-// Reference value that matches a TCB version.
+// Reference value that matches a TCB version for AMD SEV-SNP.
 message TcbVersionReferenceValue {
   oneof type {
     // Skips this check. As elsewhere, an empty `type` oneof makes verification
@@ -246,6 +246,25 @@ message TcbVersionReferenceValue {
     // reference value. Leaving any field unpopulated (and hence == 0) will
     // always pass verification since version numbers are unsigned.
     TcbVersion minimum = 2;
+  }
+}
+
+// Reference value that matches TCB Security Version Numbers (SVNs) for Intel
+// TDX.
+message TdxTcbSvnReferenceValue {
+  oneof type {
+    // Skips this check. As elsewhere, an empty `type` oneof makes verification
+    // fail.
+    //
+    // Caveat: `skip {}` happens to behave identically to `minimum {}`. It is
+    // recommended to avoid using `minimum {}`, but this is not enforced.
+    SkipVerification skip = 1;
+
+    // Requires minimum TCB SVNs reported in the attestation. Verification
+    // checks that, separately for each field, the actual value is >= the
+    // reference value. Leaving any field unpopulated (and hence == 0) will
+    // always pass verification since version numbers are unsigned.
+    TdxTcbSvn minimum = 2;
   }
 }
 
@@ -288,7 +307,13 @@ message AmdSevReferenceValues {
   bool check_vcek_cert_expiry = 9;
 }
 
-message IntelTdxReferenceValues {}
+// Collection of reference values for an Intel TDX Attestation Quote.
+message IntelTdxReferenceValues {
+  // Minimum acceptable SVNs for the TEE TCB.
+  TdxTcbSvnReferenceValue tee_tcb_svn = 1;
+  // If true, will skip the check that the TEE is not in debug mode.
+  bool allow_debug = 2;
+}
 
 message InsecureReferenceValues {}
 

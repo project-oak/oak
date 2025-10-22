@@ -51,7 +51,7 @@ message ExpectedDigests {
   }
 }
 
-// The expected values for the mimumum TCB version.
+// The expected values for the minimum TCB version for AMD SEV-SNP.
 message TcbVersionExpectedValue {
   oneof type {
     // Indicates that verification should be skipped.
@@ -59,6 +59,17 @@ message TcbVersionExpectedValue {
 
     // Provides minimum values for versions of TCB components.
     TcbVersion minimum = 2;
+  }
+}
+
+// The expected values for the minimum TCB SVNs for Intel TDX.
+message TdxTcbSvnExpectedValue {
+  oneof type {
+    // Indicates that verification should be skipped.
+    VerificationSkipped skipped = 1;
+
+    // Provides minimum values for SVNs of TCB components.
+    TdxTcbSvn minimum = 2;
   }
 }
 
@@ -97,7 +108,13 @@ message AmdSevExpectedValues {
   bool check_vcek_cert_expiry = 7;
 }
 
-message IntelTdxExpectedValues {}
+message IntelTdxExpectedValues {
+  // Minimum acceptable SVNs for the TEE TCB.
+  TdxTcbSvnExpectedValue tee_tcb_svn = 1;
+
+  // If true, will skip the check that the TEE is not in debug mode.
+  bool allow_debug = 2;
+}
 
 message InsecureExpectedValues {}
 

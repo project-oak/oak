@@ -173,9 +173,21 @@ message AmdAttestationReport {
 }
 
 // Values extracted from an Intel TDX attestation report.
+// NEXT_ID: 5
 message IntelTdxAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
+
+  // The Security Version Numbers of the TCB components.
+  TdxTcbSvn tee_tcb_svn = 2;
+
+  // Whether the VM was booted in debug mode.
+  bool debug = 3;
+
+  // The measurement of the initial memory and CPU state of the VM before
+  // startup. This implicitly includes the measurement of the Stage 0 firmware
+  // binary.
+  bytes mr_td = 4;
 }
 
 // Values extracted from a fake attestation report when not running in a TEE.

@@ -251,7 +251,10 @@ pub(crate) fn get_root_layer_expected_values(
         None
     };
 
-    let intel_tdx = reference_values.intel_tdx.as_ref().map(|_| IntelTdxExpectedValues {});
+    let intel_tdx = reference_values
+        .intel_tdx
+        .as_ref()
+        .map(|_| IntelTdxExpectedValues { tee_tcb_svn: None, allow_debug: false });
     let insecure = reference_values.insecure.as_ref().map(|_| InsecureExpectedValues {});
 
     Ok(RootLayerExpectedValues { amd_sev, intel_tdx, insecure })

@@ -116,10 +116,13 @@ pub fn serialize_intel_tdx_attestation_report(
     // all fields. If a new field is added to the struct, this code won't
     // compile unless this destructuring operation is updated, thereby reminding us
     // to keep the serialization in sync manually.
-    let IntelTdxAttestationReport { report_data } = instance;
+    let IntelTdxAttestationReport { report_data, tee_tcb_svn, debug, mr_td } = instance;
 
     json!({
         "report_data": hex::encode(report_data),
+        "tee_tcb_svn": tee_tcb_svn.as_ref().map(serialize_tdx_tcb_svn),
+        "debug": debug,
+        "mr_td": hex::encode(mr_td),
     })
 }
 
@@ -308,6 +311,49 @@ pub fn serialize_tcb_version(instance: &TcbVersion) -> serde_json::Value {
         "snp": snp,
         "microcode": microcode,
         "fmc": fmc,
+    })
+}
+
+pub fn serialize_tdx_tcb_svn(instance: &TdxTcbSvn) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let TdxTcbSvn {
+        svn_0,
+        svn_1,
+        svn_2,
+        svn_3,
+        svn_4,
+        svn_5,
+        svn_6,
+        svn_7,
+        svn_8,
+        svn_9,
+        svn_10,
+        svn_11,
+        svn_12,
+        svn_13,
+        svn_14,
+        svn_15,
+    } = instance;
+    json!({
+        "svn_0": svn_0,
+        "svn_1": svn_1,
+        "svn_2": svn_2,
+        "svn_3": svn_3,
+        "svn_4": svn_4,
+        "svn_5": svn_5,
+        "svn_6": svn_6,
+        "svn_7": svn_7,
+        "svn_8": svn_8,
+        "svn_9": svn_9,
+        "svn_10": svn_10,
+        "svn_11": svn_11,
+        "svn_12": svn_12,
+        "svn_13": svn_13,
+        "svn_14": svn_14,
+        "svn_15": svn_15,
     })
 }
 
@@ -608,6 +654,25 @@ pub fn serialize_tcb_version_reference_value(
     }
 }
 
+pub fn serialize_tdx_tcb_svn_reference_value(
+    instance: &TdxTcbSvnReferenceValue,
+) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let TdxTcbSvnReferenceValue { r#type } = instance;
+    match r#type {
+        Some(tdx_tcb_svn_reference_value::Type::Skip(instance)) => {
+            json!({ "skip": serialize_skip_verification(instance) })
+        }
+        Some(tdx_tcb_svn_reference_value::Type::Minimum(instance)) => {
+            json!({ "minimum": serialize_tdx_tcb_svn(instance) })
+        }
+        None => json!(null),
+    }
+}
+
 pub fn serialize_root_layer_reference_values(
     instance: &RootLayerReferenceValues,
 ) -> serde_json::Value {
@@ -652,8 +717,11 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
 pub fn serialize_intel_tdx_reference_values(
     instance: &IntelTdxReferenceValues,
 ) -> serde_json::Value {
-    let IntelTdxReferenceValues {} = instance;
-    json!({})
+    let IntelTdxReferenceValues { tee_tcb_svn, allow_debug } = instance;
+    json!({
+        "tee_tcb_svn": tee_tcb_svn.as_ref().map(serialize_tdx_tcb_svn_reference_value),
+        "allow_debug": allow_debug,
+    })
 }
 
 pub fn serialize_insecure_reference_values(
