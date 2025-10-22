@@ -22,13 +22,14 @@ use anyhow::Context;
 use digest_util::hash_sha2_256;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        tcb_version_expected_value, AmdAttestationReport, AmdSevExpectedValues,
-        InsecureExpectedValues, IntelTdxAttestationReport, IntelTdxExpectedValues,
-        RootLayerEvidence, TcbVersion, TeePlatform,
+        tcb_version_expected_value, tdx_tcb_svn_expected_value, AmdAttestationReport,
+        AmdSevExpectedValues, InsecureExpectedValues, IntelTdxAttestationReport,
+        IntelTdxExpectedValues, RootLayerEvidence, TcbVersion, TdxTcbSvn, TeePlatform,
     },
     RawDigest,
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
+use oak_tdx_quote::{ParsedTdxQuote, TdAttributes};
 use oak_time::Instant;
 use x509_cert::{
     der::{Decode, DecodePem},
@@ -256,12 +257,76 @@ pub fn convert_amd_sev_snp_initial_measurement(initial_measurement: &[u8]) -> Ra
     RawDigest { sha2_384: initial_measurement.to_vec(), ..Default::default() }
 }
 
-/// Verifies the Intel TDX attestation report.
-pub fn verify_intel_tdx_attestation_report(
-    _attestation_report_values: &IntelTdxAttestationReport,
-    _expected_values: &IntelTdxExpectedValues,
+pub fn convert_intel_tdx_attestation_quote(quote: &ParsedTdxQuote) -> IntelTdxAttestationReport {
+    IntelTdxAttestationReport {
+        report_data: quote.body.report_data.to_vec(),
+        tee_tcb_svn: Some(new_tdx_tcb_svn(quote.body.tee_tcb_svn)),
+        debug: quote.body.td_attributes.contains(TdAttributes::DEBUG),
+        mr_td: quote.body.mr_td.to_vec(),
+    }
+}
+
+pub fn new_tdx_tcb_svn(tee_tcb_svn: &[u8; 16]) -> TdxTcbSvn {
+    TdxTcbSvn {
+        svn_0: tee_tcb_svn[0] as u32,
+        svn_1: tee_tcb_svn[1] as u32,
+        svn_2: tee_tcb_svn[2] as u32,
+        svn_3: tee_tcb_svn[3] as u32,
+        svn_4: tee_tcb_svn[4] as u32,
+        svn_5: tee_tcb_svn[5] as u32,
+        svn_6: tee_tcb_svn[6] as u32,
+        svn_7: tee_tcb_svn[7] as u32,
+        svn_8: tee_tcb_svn[8] as u32,
+        svn_9: tee_tcb_svn[9] as u32,
+        svn_10: tee_tcb_svn[10] as u32,
+        svn_11: tee_tcb_svn[11] as u32,
+        svn_12: tee_tcb_svn[12] as u32,
+        svn_13: tee_tcb_svn[13] as u32,
+        svn_14: tee_tcb_svn[14] as u32,
+        svn_15: tee_tcb_svn[15] as u32,
+    }
+}
+
+/// Verifies the Intel TDX attestation quote.
+pub fn verify_intel_tdx_attestation_quote(
+    attestation_quote_values: &IntelTdxAttestationReport,
+    expected_values: &IntelTdxExpectedValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("needs implementation")
+    if !expected_values.allow_debug && attestation_quote_values.debug {
+        anyhow::bail!("debug mode not allowed");
+    }
+
+    if let Some(expected_tee_tcb_svn) = expected_values.tee_tcb_svn.as_ref() {
+        match (expected_tee_tcb_svn.r#type.as_ref(), attestation_quote_values.tee_tcb_svn.as_ref())
+        {
+            (Some(tdx_tcb_svn_expected_value::Type::Skipped(_)), _) => Ok(()),
+            (Some(tdx_tcb_svn_expected_value::Type::Minimum(min_tcb_svn)), Some(tcb_svn)) => {
+                anyhow::ensure!(tcb_svn.svn_0 >= min_tcb_svn.svn_0, "invalid TCB SVN 0");
+                anyhow::ensure!(tcb_svn.svn_1 >= min_tcb_svn.svn_1, "invalid TCB SVN 1");
+                anyhow::ensure!(tcb_svn.svn_2 >= min_tcb_svn.svn_2, "invalid TCB SVN 2");
+                anyhow::ensure!(tcb_svn.svn_3 >= min_tcb_svn.svn_3, "invalid TCB SVN 3");
+                anyhow::ensure!(tcb_svn.svn_4 >= min_tcb_svn.svn_4, "invalid TCB SVN 4");
+                anyhow::ensure!(tcb_svn.svn_5 >= min_tcb_svn.svn_5, "invalid TCB SVN 5");
+                anyhow::ensure!(tcb_svn.svn_6 >= min_tcb_svn.svn_6, "invalid TCB SVN 6");
+                anyhow::ensure!(tcb_svn.svn_7 >= min_tcb_svn.svn_7, "invalid TCB SVN 7");
+                anyhow::ensure!(tcb_svn.svn_8 >= min_tcb_svn.svn_8, "invalid TCB SVN 8");
+                anyhow::ensure!(tcb_svn.svn_9 >= min_tcb_svn.svn_9, "invalid TCB SVN 9");
+                anyhow::ensure!(tcb_svn.svn_10 >= min_tcb_svn.svn_10, "invalid TCB SVN 10");
+                anyhow::ensure!(tcb_svn.svn_11 >= min_tcb_svn.svn_11, "invalid TCB SVN 11");
+                anyhow::ensure!(tcb_svn.svn_12 >= min_tcb_svn.svn_12, "invalid TCB SVN 12");
+                anyhow::ensure!(tcb_svn.svn_13 >= min_tcb_svn.svn_13, "invalid TCB SVN 13");
+                anyhow::ensure!(tcb_svn.svn_14 >= min_tcb_svn.svn_14, "invalid TCB SVN 14");
+                anyhow::ensure!(tcb_svn.svn_15 >= min_tcb_svn.svn_15, "invalid TCB SVN 15");
+                Ok(())
+            }
+            (Some(tdx_tcb_svn_expected_value::Type::Minimum(_)), None) => {
+                anyhow::bail!("no TCB SVNs in the attestation quote")
+            }
+            (None, _) => anyhow::bail!("no TCB SVN expected values"),
+        }
+    } else {
+        anyhow::bail!("no TCB SVN expected values")
+    }
 }
 
 /// Verifies insecure attestation.

@@ -38,7 +38,7 @@ use regex_lite::Regex;
 
 use crate::platform::{
     convert_amd_sev_snp_initial_measurement, verify_amd_sev_attestation_report_values,
-    verify_insecure, verify_intel_tdx_attestation_report,
+    verify_insecure, verify_intel_tdx_attestation_quote,
 };
 
 pub fn compare_expected_values(
@@ -173,8 +173,8 @@ fn compare_root_layer_measurement_digests(
             .context("comparing firmware layer digests")?;
             verify_amd_sev_attestation_report_values(report_values, amd_sev_values)
         }
-        (Some(Report::Tdx(report_values)), _, Some(intel_tdx_values), _) => {
-            verify_intel_tdx_attestation_report(report_values, intel_tdx_values)
+        (Some(Report::Tdx(quote_values)), _, Some(intel_tdx_values), _) => {
+            verify_intel_tdx_attestation_quote(quote_values, intel_tdx_values)
         }
         (_, _, _, Some(insecure_values)) => {
             verify_insecure(insecure_values).context("verifying insecure")

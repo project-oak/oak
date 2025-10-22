@@ -30,23 +30,25 @@ use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, endorsement::Format, endorsements, expected_digests,
         expected_values, kernel_binary_reference_value, reference_values,
-        tcb_version_expected_value, tcb_version_reference_value, text_expected_value,
-        text_reference_value, AmdSevExpectedValues, AmdSevReferenceValues, ApplicationEndorsement,
+        tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
+        tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
+        AmdSevExpectedValues, AmdSevReferenceValues, ApplicationEndorsement,
         ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
         CbReferenceValues, ContainerEndorsement, ContainerLayerEndorsements,
         ContainerLayerExpectedValues, ContainerLayerReferenceValues, Endorsement,
         EndorsementReferenceValue, Endorsements, EventExpectedValues, EventReferenceValues,
         ExpectedDigests, ExpectedRegex, ExpectedStringLiterals, ExpectedValues, FirmwareAttachment,
-        FirmwareEndorsement, InsecureExpectedValues, IntelTdxExpectedValues, KernelAttachment,
-        KernelBinaryReferenceValue, KernelEndorsement, KernelExpectedValues,
-        KernelLayerEndorsements, KernelLayerExpectedValues, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersExpectedValues, OakContainersReferenceValues,
-        OakRestrictedKernelEndorsements, OakRestrictedKernelExpectedValues,
-        OakRestrictedKernelReferenceValues, RawDigests, ReferenceValues, RootLayerEndorsements,
-        RootLayerExpectedValues, RootLayerReferenceValues, Signature, SignedEndorsement,
-        SystemEndorsement, SystemLayerEndorsements, SystemLayerExpectedValues,
-        SystemLayerReferenceValues, TcbVersionExpectedValue, TcbVersionReferenceValue,
+        FirmwareEndorsement, InsecureExpectedValues, IntelTdxExpectedValues,
+        IntelTdxReferenceValues, KernelAttachment, KernelBinaryReferenceValue, KernelEndorsement,
+        KernelExpectedValues, KernelLayerEndorsements, KernelLayerExpectedValues,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersExpectedValues,
+        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+        OakRestrictedKernelExpectedValues, OakRestrictedKernelReferenceValues, RawDigests,
+        ReferenceValues, RootLayerEndorsements, RootLayerExpectedValues, RootLayerReferenceValues,
+        Signature, SignedEndorsement, SystemEndorsement, SystemLayerEndorsements,
+        SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersionExpectedValue,
+        TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
         TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
     },
     RawDigest,
@@ -222,6 +224,25 @@ fn tcb_version_rv_to_ev(
     }
 }
 
+// Transcribes TdxTcbSvnReferenceValue to analogous TdxTcbSvnExpectedValue.
+fn tdx_tcb_svn_rv_to_ev(
+    ref_value: Option<TdxTcbSvnReferenceValue>,
+) -> Option<TdxTcbSvnExpectedValue> {
+    if let Some(rv) = ref_value.as_ref() {
+        match rv.r#type.as_ref() {
+            Some(tdx_tcb_svn_reference_value::Type::Skip(_)) => Some(TdxTcbSvnExpectedValue {
+                r#type: Some(tdx_tcb_svn_expected_value::Type::Skipped(VerificationSkipped {})),
+            }),
+            Some(tdx_tcb_svn_reference_value::Type::Minimum(m)) => Some(TdxTcbSvnExpectedValue {
+                r#type: Some(tdx_tcb_svn_expected_value::Type::Minimum(*m)),
+            }),
+            None => Some(TdxTcbSvnExpectedValue { ..Default::default() }),
+        }
+    } else {
+        None
+    }
+}
+
 pub(crate) fn get_root_layer_expected_values(
     now_utc_millis: i64,
     endorsements: Option<&RootLayerEndorsements>,
@@ -275,6 +296,15 @@ pub(crate) fn get_amd_sev_snp_expected_values(
         turin: tcb_version_rv_to_ev(reference_values.turin),
         allow_debug: reference_values.allow_debug,
         check_vcek_cert_expiry: reference_values.check_vcek_cert_expiry,
+    })
+}
+
+pub(crate) fn get_intel_tdx_expected_values(
+    reference_values: &IntelTdxReferenceValues,
+) -> anyhow::Result<IntelTdxExpectedValues> {
+    Ok(IntelTdxExpectedValues {
+        tee_tcb_svn: tdx_tcb_svn_rv_to_ev(reference_values.tee_tcb_svn),
+        allow_debug: reference_values.allow_debug,
     })
 }
 

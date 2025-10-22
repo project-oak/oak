@@ -21,21 +21,25 @@ use oak_attestation_verification_types::policy::Policy;
 use oak_dice::evidence::TeePlatform;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        binary_reference_value, tcb_version_reference_value, AmdSevReferenceValues,
-        AmdSevSnpEndorsement, BinaryReferenceValue, Digests, EventAttestationResults,
-        RootLayerEvidence, TcbVersion, TcbVersionReferenceValue,
+        binary_reference_value, tcb_version_reference_value, tdx_tcb_svn_reference_value,
+        AmdSevReferenceValues, AmdSevSnpEndorsement, BinaryReferenceValue, Digests,
+        EventAttestationResults, IntelTdxReferenceValues, RootLayerEvidence, TcbVersion,
+        TcbVersionReferenceValue, TdxTcbSvnReferenceValue,
     },
     RawDigest, Variant,
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
+use oak_tdx_quote::{TdAttributes, TdxQuoteWrapper};
 use oak_time::Instant;
 use zerocopy::FromBytes;
 
 use crate::{
-    expect::get_amd_sev_snp_expected_values,
+    expect::{get_amd_sev_snp_expected_values, get_intel_tdx_expected_values},
+    intel,
     platform::{
-        convert_amd_sev_snp_attestation_report, verify_amd_sev_attestation_report_values,
-        verify_root_attestation_signature,
+        convert_amd_sev_snp_attestation_report, convert_intel_tdx_attestation_quote,
+        new_tdx_tcb_svn, verify_amd_sev_attestation_report_values,
+        verify_intel_tdx_attestation_quote, verify_root_attestation_signature,
     },
     results::set_initial_measurement,
 };
@@ -146,6 +150,91 @@ impl Policy<RootLayerEvidence> for AmdSevSnpPolicy {
     }
 }
 
+pub struct IntelTdxPolicy {
+    reference_values: IntelTdxReferenceValues,
+}
+
+impl IntelTdxPolicy {
+    pub fn new(reference_values: &IntelTdxReferenceValues) -> Self {
+        Self { reference_values: *reference_values }
+    }
+
+    /// Returns IntelTdxReferenceValues and firmware reference values
+    /// (BinaryReferenceValue) that accept only the version in the evidence.
+    ///
+    /// The evidence should contain the same information that would be passed to
+    /// `verify`.
+    pub fn evidence_to_reference_values(
+        evidence: &RootLayerEvidence,
+    ) -> anyhow::Result<(IntelTdxReferenceValues, BinaryReferenceValue)> {
+        if evidence.platform != TeePlatform::IntelTdx as i32 {
+            anyhow::bail!("unsupported TEE platform value");
+        }
+
+        let wrapper = TdxQuoteWrapper::new(evidence.remote_attestation_report.as_slice());
+
+        let quote = wrapper
+            .parse_quote()
+            .map_err(|err| anyhow::anyhow!("invalid Intel TDX attestation quote: {}", err))?;
+
+        let allow_debug = quote.body.td_attributes.contains(TdAttributes::DEBUG);
+
+        let tee_tcb_svn = Some(TdxTcbSvnReferenceValue {
+            r#type: Some(tdx_tcb_svn_reference_value::Type::Minimum(new_tdx_tcb_svn(
+                quote.body.tee_tcb_svn,
+            ))),
+        });
+        let rv = IntelTdxReferenceValues { tee_tcb_svn, allow_debug };
+
+        let firmware_rv = BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                digests: vec![RawDigest {
+                    sha2_384: quote.body.mr_td.to_vec(),
+                    ..Default::default()
+                }],
+            })),
+        };
+        Ok((rv, firmware_rv))
+    }
+}
+
+// Policy which verifies the AMD SEV-SNP hardware root.
+//
+// On success, returns the (unverified) initial measurement which will be
+// verified by the firmware policy.
+impl Policy<RootLayerEvidence> for IntelTdxPolicy {
+    fn verify(
+        &self,
+        verification_time: Instant,
+        evidence: &RootLayerEvidence,
+        _endorsement: &Variant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        if evidence.platform != TeePlatform::IntelTdx as i32 {
+            anyhow::bail!("unsupported TEE platform value");
+        }
+        let wrapper = TdxQuoteWrapper::new(evidence.remote_attestation_report.as_slice());
+
+        // Verify validity of the quote.
+        intel::verify_intel_tdx_quote_validity(verification_time, &wrapper)
+            .context("verifying TDX quote validity")?;
+
+        let quote = wrapper
+            .parse_quote()
+            .map_err(|err| anyhow::anyhow!("invalid Intel TDX attestation quote: {}", err))?;
+
+        // Verify attestation quote values.
+        let quote_values = convert_intel_tdx_attestation_quote(&quote);
+        let expected_values = get_intel_tdx_expected_values(&self.reference_values)
+            .context("getting Intel TDX expected values")?;
+        verify_intel_tdx_attestation_quote(&quote_values, &expected_values)
+            .context("verifying Intel TDX attestation quote values")?;
+
+        let mut results = EventAttestationResults { ..Default::default() };
+        set_initial_measurement(&mut results, quote.body.mr_td.as_slice());
+        Ok(results)
+    }
+}
+
 pub struct InsecurePolicy {}
 
 impl InsecurePolicy {
@@ -179,6 +268,8 @@ impl Policy<RootLayerEvidence> for InsecurePolicy {
 
 #[cfg(test)]
 mod tests {
+    use core::default::Default;
+
     use oak_attestation_verification_results::get_initial_measurement;
     use oak_proto_rust::oak::attestation::v1::endorsements;
     use test_util::{get_oc_reference_values, AttestationData};
@@ -187,7 +278,7 @@ mod tests {
     use crate::FirmwarePolicy;
 
     #[test]
-    fn verify_oc_succeeds() {
+    fn verify_milan_oc_succeeds() {
         let d = AttestationData::load_milan_oc_release();
         let endorsement = AmdSevSnpEndorsement {
             tee_certificate: match d.endorsements.r#type.as_ref() {
@@ -211,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn evidence_to_reference_values_succeeds() {
+    fn milan_oc_evidence_to_reference_values_succeeds() {
         let d = AttestationData::load_milan_oc_release();
         let event = d.evidence.root_layer.as_ref().unwrap();
         let endorsement = AmdSevSnpEndorsement {
@@ -258,6 +349,66 @@ mod tests {
 
         let result =
             AmdSevSnpPolicy::new(&rv).verify(d.make_valid_time(), event, &endorsement.into());
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+
+        let measurement = get_initial_measurement(result.as_ref().unwrap()).unwrap();
+        let result = FirmwarePolicy::new(&firmware_rv).verify(
+            d.make_valid_time(),
+            measurement,
+            &Variant::default(),
+        );
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn verify_tdx_oc_succeeds() {
+        let d = AttestationData::load_tdx_oc();
+        let endorsement = Variant::default();
+        let ref_values = get_oc_reference_values(&d.reference_values);
+        let platform_ref_values =
+            ref_values.root_layer.as_ref().unwrap().intel_tdx.as_ref().unwrap();
+        let policy = IntelTdxPolicy::new(platform_ref_values);
+
+        let result = policy.verify(
+            d.make_valid_time(),
+            d.evidence.root_layer.as_ref().unwrap(),
+            &endorsement,
+        );
+
+        assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    }
+
+    #[test]
+    fn tdx_oc_evidence_to_reference_values_succeeds() {
+        let d = AttestationData::load_tdx_oc();
+        let event = d.evidence.root_layer.as_ref().unwrap();
+        let endorsement = Variant::default();
+
+        let (rv, firmware_rv) = IntelTdxPolicy::evidence_to_reference_values(event)
+            .expect("evidence_to_reference_values failed");
+        assert!(
+            matches!(
+                rv,
+                IntelTdxReferenceValues {
+                    tee_tcb_svn: Some(TdxTcbSvnReferenceValue {
+                        r#type: Some(tdx_tcb_svn_reference_value::Type::Minimum(..))
+                    }),
+                    allow_debug: false,
+                }
+            ),
+            "reference values missing fields: {:?}",
+            rv
+        );
+        assert!(
+            matches!(
+                firmware_rv,
+                BinaryReferenceValue { r#type: Some(binary_reference_value::Type::Digests(..)) }
+            ),
+            "firmware reference values missing fields: {:?}",
+            firmware_rv
+        );
+
+        let result = IntelTdxPolicy::new(&rv).verify(d.make_valid_time(), event, &endorsement);
         assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 
         let measurement = get_initial_measurement(result.as_ref().unwrap()).unwrap();

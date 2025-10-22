@@ -55,7 +55,7 @@ pub use policy::{
     container::ContainerPolicy,
     firmware::FirmwarePolicy,
     kernel::KernelPolicy,
-    platform::AmdSevSnpPolicy,
+    platform::{AmdSevSnpPolicy, IntelTdxPolicy},
     session_binding_public_key::{
         SessionBindingPublicKeyPolicy, SessionBindingPublicKeyVerificationError,
         SessionBindingPublicKeyVerificationReport,

@@ -375,7 +375,10 @@ pub fn get_oc_reference_values(reference_values: &ReferenceValues) -> OakContain
         _ => panic!("no Oak Containers reference values"),
     };
     assert!(oc_reference_values.root_layer.is_some());
-    assert!(oc_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some());
+    assert!(
+        oc_reference_values.root_layer.as_ref().unwrap().amd_sev.is_some()
+            || oc_reference_values.root_layer.as_ref().unwrap().intel_tdx.is_some()
+    );
     assert!(oc_reference_values.kernel_layer.is_some());
     assert!(oc_reference_values.system_layer.is_some());
     assert!(oc_reference_values.container_layer.is_some());

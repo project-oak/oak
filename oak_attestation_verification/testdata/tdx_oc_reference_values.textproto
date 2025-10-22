@@ -6,10 +6,11 @@
 #
 oak_containers {
   root_layer {
-    # TODO: b/440236844 - Should not be needed for the insecure verifier.
-    amd_sev {
-    }
     intel_tdx {
+      tee_tcb_svn {
+        minimum {
+        }
+      }
     }
   }
   kernel_layer {
