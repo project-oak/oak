@@ -14,48 +14,24 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//micro_rpc_build:build_defs.bzl", "micro_rpc_service")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-rust_library(
+micro_rpc_service(
     name = "service",
-    srcs = ["service.rs"],
-    proc_macro_deps = [
-        "@oak_crates_index//:prost-derive",
-    ],
-    deps = [
-        ":build",
-        "//micro_rpc",
-        "//oak_proto_rust",
-        "@oak_crates_index//:prost",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = ["build.rs"],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
+    srcs = [":service.proto"],
+    extern_paths = {
+        ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
     },
-    data = [
-        ":service.proto",
+    proto_package_name = "oak.ctf_sha2.enclave",
+    deps = [
         "//proto:digest.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//micro_rpc_build",
-        "//oak_proto_build_utils",
     ],
 )
