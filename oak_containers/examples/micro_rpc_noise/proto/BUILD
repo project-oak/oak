@@ -14,35 +14,21 @@
 # limitations under the License.
 #
 
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("//micro_rpc_build:build_defs.bzl", "extern", "micro_rpc_service")
 
 package(
     default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-proto_library(
-    name = "micro_rpc_noise_proto",
-    srcs = ["micro_rpc_noise.proto"],
+micro_rpc_service(
+    name = "micro_rpc_noise_rust_proto",
+    srcs = [":micro_rpc_noise.proto"],
+    externs = [
+        extern(".oak", "oak_proto_rust::oak", "//oak_proto_rust"),
+    ],
+    proto_package_name = "oak.containers.example",
     deps = [
-        "//proto/micro_rpc:options_proto",
-        "//proto/session:session_proto",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    data = [
-        "//oak_containers/examples/micro_rpc_noise/proto:micro_rpc_noise.proto",
         "//proto:digest.proto",
         "//proto:validity.proto",
         "//proto:variant.proto",
@@ -55,29 +41,6 @@ cargo_build_script(
         "//proto/micro_rpc:options.proto",
         "//proto/session:messages.proto",
         "//proto/session:session.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//micro_rpc_build",
-        "//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
-    ],
-)
-
-rust_library(
-    name = "micro_rpc_noise_rust_proto",
-    srcs = ["lib.rs"],
-    deps = [
-        "build",
-        "//micro_rpc",
-        "//micro_rpc_build",
-        "//oak_proto_rust",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tonic",
     ],
 )
