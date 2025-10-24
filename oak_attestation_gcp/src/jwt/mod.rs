@@ -115,6 +115,7 @@ pub struct Submods {
 pub struct ConfidentialSpaceClaims {
     /// Confidential Space image support attributes:
     /// https://cloud.google.com/confidential-computing/confidential-space/docs/confidential-space-images#image-lifecycle
+    #[serde(default)]
     pub support_attributes: Vec<String>,
 }
 
