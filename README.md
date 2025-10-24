@@ -128,7 +128,7 @@ Applications may be deployed:
   of this approach is that the size of the entire trusted code base running in
   the TEE is significantly larger, as it is not feasible for a single human
   reviewer to review the code for the entire Linux kernel and Linux
-  distribution. The trust model for his approach relies on the security of the
+  distribution. The trust model for this approach relies on the security of the
   broader Linux ecosystem. The additional features and flexibility that the
   Linux kernel provides to the application also makes it more difficult to
   reason about the behavior of an application, which in turn makes the review
