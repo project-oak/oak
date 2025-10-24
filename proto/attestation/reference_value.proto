@@ -313,6 +313,8 @@ message IntelTdxReferenceValues {
   TdxTcbSvnReferenceValue tee_tcb_svn = 1;
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 2;
+  // Verifies the stage0 binary implicitly contained in the root layer.
+  BinaryReferenceValue stage0 = 3;
 }
 
 message InsecureReferenceValues {}

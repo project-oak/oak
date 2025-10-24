@@ -3,10 +3,5 @@
 #
 # Endorsements for an Oak Containers chain on Intel TDX.
 #
-oak_containers {
-  root_layer {
-    stage0 {}
-  }
-  kernel_layer {}
-  system_layer {}
-}
+initial {}
+platform {}

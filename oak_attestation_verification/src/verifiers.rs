@@ -31,9 +31,12 @@ use oak_proto_rust::oak::{
     },
     Variant,
 };
+use oak_tdx_quote::TdxQuoteWrapper;
 use oak_time::{Clock, Instant};
+use sha2::{Digest, Sha384};
 
 use crate::{
+    intel::RtmrEmulator,
     policy::{
         application::ApplicationPolicy,
         container::ContainerPolicy,
@@ -44,6 +47,7 @@ use crate::{
     },
     results::get_initial_measurement,
     verifier::verify_dice_chain,
+    IntelTdxPolicy,
 };
 
 /// Attestation verifier that verifies an attestation rooted in AMD SEV-SNP.
@@ -102,6 +106,93 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // Verify event log and event endorsements with corresponding policies.
         let event_log =
             evidence.event_log.as_ref().ok_or_else(|| anyhow::anyhow!("no event log"))?;
+        let mut event_attestation_results = Vec::new();
+        event_attestation_results.push(platform_results);
+        event_attestation_results.push(firmware_results);
+        if !endorsements.events.is_empty() {
+            let results = verify_event_log(
+                verification_time,
+                event_log,
+                &endorsements.events,
+                self.event_policies.as_slice(),
+            )
+            .context("verifying event log")?;
+
+            event_attestation_results.extend(results);
+        }
+
+        // TODO: b/366419879 - Combine per-event attestation results.
+        Ok(AttestationResults {
+            status: Status::Success.into(),
+            extracted_evidence: None,
+            event_attestation_results,
+            ..Default::default()
+        })
+    }
+}
+
+/// Attestation verifier that verifies an attestation rooted in Intel TDX.
+pub struct IntelTdxAttestationVerifier {
+    platform_policy: IntelTdxPolicy,
+    firmware_policy: Box<dyn EventPolicy>,
+    event_policies: Vec<Box<dyn EventPolicy>>,
+    clock: Arc<dyn Clock>,
+}
+
+impl IntelTdxAttestationVerifier {
+    pub fn new(
+        platform_policy: IntelTdxPolicy,
+        firmware_policy: Box<dyn EventPolicy>,
+        event_policies: Vec<Box<dyn EventPolicy>>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        Self { platform_policy, firmware_policy, event_policies, clock }
+    }
+}
+
+/// Verifies an attestation rooted in Intel TDX. Verification fails if any
+/// of the event verifiers fails.
+impl AttestationVerifier for IntelTdxAttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        let verification_time = self.clock.get_time();
+
+        // Verify Intel TDX platform authenticity and configuration.
+        let root_layer = evidence.root_layer.as_ref().context("no root layer in evidence")?;
+        let platform_endorsement =
+            endorsements.platform.as_ref().context("no platform endorsement")?;
+        let platform_results = self
+            .platform_policy
+            .verify(verification_time, root_layer, platform_endorsement)
+            .context("verifying platform policy")?;
+
+        // Verify firmware measurement.
+        let firmware_endorsement =
+            &endorsements.initial.as_ref().context("no firmware endorsement")?;
+        let measurement = get_initial_measurement(&platform_results)
+            .ok_or(anyhow::anyhow!("no initial measurement"))?;
+        let firmware_results = self
+            .firmware_policy
+            .verify(verification_time, measurement, firmware_endorsement)
+            .context("verifying firmware policy")?;
+
+        let wrapper = TdxQuoteWrapper::new(root_layer.remote_attestation_report.as_slice());
+        let expected = wrapper.parse_quote().expect("invalid quote").body.rtmr_2;
+
+        let event_log =
+            evidence.event_log.as_ref().ok_or_else(|| anyhow::anyhow!("no event log"))?;
+
+        // Verify integrity of the event log.
+        let mut rtmr_2 = RtmrEmulator::new();
+        for entry in event_log.encoded_events.as_slice().iter() {
+            rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+        }
+        anyhow::ensure!(rtmr_2.get_state() == expected, "event log integrity check failed");
+
+        // Verify event log and event endorsements with corresponding policies.
         let mut event_attestation_results = Vec::new();
         event_attestation_results.push(platform_results);
         event_attestation_results.push(firmware_results);
@@ -292,6 +383,45 @@ pub fn create_amd_verifier<T: Clock + 'static>(
             ))
         }
         _ => anyhow::bail!("malformed reference values"),
+    }
+}
+
+// Creates an Intel TDX verifier from reference values.
+pub fn create_intel_tdx_verifier<T: Clock + 'static>(
+    clock: T,
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<IntelTdxAttestationVerifier> {
+    match reference_values.r#type.as_ref() {
+        Some(reference_values::Type::OakContainers(rvs)) => {
+            let root_rvs = rvs.root_layer.as_ref().context("no root layer reference values")?;
+            let intel_rvs = root_rvs.intel_tdx.as_ref().context("no Intel TDX reference values")?;
+            let platform_policy = IntelTdxPolicy::new(intel_rvs);
+            let firmware_policy = FirmwarePolicy::new(
+                intel_rvs.stage0.as_ref().context("no stage0 reference value")?,
+            );
+            let kernel_policy = KernelPolicy::new(
+                rvs.kernel_layer.as_ref().context("no kernel layer reference values")?,
+            );
+            let system_policy = SystemPolicy::new(
+                rvs.system_layer.as_ref().context("no system layer reference values")?,
+            );
+            let container_policy = ContainerPolicy::new(
+                rvs.container_layer.as_ref().context("no container layer reference values")?,
+            );
+            let event_policies: Vec<Box<dyn Policy<[u8]>>> =
+                vec![Box::new(kernel_policy), Box::new(system_policy), Box::new(container_policy)];
+
+            Ok(IntelTdxAttestationVerifier::new(
+                platform_policy,
+                Box::new(firmware_policy),
+                event_policies,
+                Arc::new(clock),
+            ))
+        }
+        Some(reference_values::Type::OakRestrictedKernel(_)) => {
+            anyhow::bail!("Restricted Kernel verification on Intel TDX is not yet supported")
+        }
+        _ => anyhow::bail!("unsupported reference values"),
     }
 }
 

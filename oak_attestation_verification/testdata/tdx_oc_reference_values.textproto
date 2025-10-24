@@ -11,6 +11,10 @@ oak_containers {
         minimum {
         }
       }
+      stage0 {
+        skip {
+        }
+      }
     }
   }
   kernel_layer {

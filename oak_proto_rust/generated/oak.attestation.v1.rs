@@ -1097,7 +1097,7 @@ pub struct AmdSevReferenceValues {
     pub check_vcek_cert_expiry: bool,
 }
 /// Collection of reference values for an Intel TDX Attestation Quote.
-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IntelTdxReferenceValues {
     /// Minimum acceptable SVNs for the TEE TCB.
     #[prost(message, optional, tag = "1")]
@@ -1105,6 +1105,9 @@ pub struct IntelTdxReferenceValues {
     /// If true, will skip the check that the TEE is not in debug mode.
     #[prost(bool, tag = "2")]
     pub allow_debug: bool,
+    /// Verifies the stage0 binary implicitly contained in the root layer.
+    #[prost(message, optional, tag = "3")]
+    pub stage0: ::core::option::Option<BinaryReferenceValue>,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
 pub struct InsecureReferenceValues {}

@@ -717,10 +717,11 @@ pub fn serialize_amd_sev_reference_values(instance: &AmdSevReferenceValues) -> s
 pub fn serialize_intel_tdx_reference_values(
     instance: &IntelTdxReferenceValues,
 ) -> serde_json::Value {
-    let IntelTdxReferenceValues { tee_tcb_svn, allow_debug } = instance;
+    let IntelTdxReferenceValues { tee_tcb_svn, allow_debug, stage0 } = instance;
     json!({
         "tee_tcb_svn": tee_tcb_svn.as_ref().map(serialize_tdx_tcb_svn_reference_value),
         "allow_debug": allow_debug,
+        "stage0": stage0.as_ref().map(serialize_binary_reference_value),
     })
 }
 

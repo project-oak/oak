@@ -16,12 +16,14 @@
 
 //! Tests for policy-based attestation verification.
 
+use core::iter::Iterator;
 use std::{fs, sync::Arc};
 
 use oak_attestation_verification::{
-    create_amd_verifier, create_insecure_verifier,
+    create_amd_verifier, create_insecure_verifier, create_intel_tdx_verifier,
     verifier::{verify_dice_chain_and_extract_evidence, SoftwareRootedDiceAttestationVerifier},
-    AmdSevSnpDiceAttestationVerifier, AmdSevSnpPolicy, FirmwarePolicy,
+    AmdSevSnpDiceAttestationVerifier, AmdSevSnpPolicy, ContainerPolicy, FirmwarePolicy,
+    IntelTdxAttestationVerifier, IntelTdxPolicy, KernelPolicy, SystemPolicy,
 };
 use oak_attestation_verification_types::{policy::EventPolicy, verifier::AttestationVerifier};
 use oak_file_utils::data_path;
@@ -143,6 +145,50 @@ fn cb_dice_verify_succeeds() {
     );
 
     let result = verifier.verify(&d.evidence, &endorsements);
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
+fn tdx_oc_verify_succeeds() {
+    let d = AttestationData::load_tdx_oc();
+    let clock: FixedClock = FixedClock::at_instant(d.make_valid_time());
+    let verifier = create_intel_tdx_verifier(clock, &d.reference_values).expect("no verifier");
+    let result = verifier.verify(&d.evidence, &d.endorsements);
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+}
+
+#[test]
+fn tdx_oc_generated_reference_values_verify_succeeds() {
+    let d = AttestationData::load_tdx_oc();
+    let clock = Arc::new(FixedClock::at_instant(d.make_valid_time()));
+    let evidence = d.evidence;
+
+    let (platform_rv, firmware_rv) = IntelTdxPolicy::evidence_to_reference_values(
+        evidence.root_layer.as_ref().expect("no root layer evidence"),
+    )
+    .expect("invalid root layer evidence");
+    let platform_policy = IntelTdxPolicy::new(&platform_rv);
+    let firmware_policy = Box::new(FirmwarePolicy::new(&firmware_rv));
+
+    let mut events =
+        evidence.event_log.as_ref().expect("no event log").encoded_events.as_slice().iter();
+    let kernel_policy = Box::new(KernelPolicy::new(
+        &KernelPolicy::evidence_to_reference_values(events.next().expect("no kernel event"))
+            .expect("invalid kernel event"),
+    ));
+    let system_policy = Box::new(SystemPolicy::new(
+        &SystemPolicy::evidence_to_reference_values(events.next().expect("no system event"))
+            .expect("invalid system event"),
+    ));
+    let container_policy = Box::new(ContainerPolicy::new(
+        &ContainerPolicy::evidence_to_reference_values(events.next().expect("no container event"))
+            .expect("invalid container event"),
+    ));
+    let event_policies: Vec<Box<dyn EventPolicy>> =
+        vec![kernel_policy, system_policy, container_policy];
+    let verifier =
+        IntelTdxAttestationVerifier::new(platform_policy, firmware_policy, event_policies, clock);
+    let result = verifier.verify(&evidence, &d.endorsements);
     assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
 

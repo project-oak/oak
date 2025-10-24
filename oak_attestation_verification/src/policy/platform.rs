@@ -156,7 +156,7 @@ pub struct IntelTdxPolicy {
 
 impl IntelTdxPolicy {
     pub fn new(reference_values: &IntelTdxReferenceValues) -> Self {
-        Self { reference_values: *reference_values }
+        Self { reference_values: reference_values.clone() }
     }
 
     /// Returns IntelTdxReferenceValues and firmware reference values
@@ -184,7 +184,8 @@ impl IntelTdxPolicy {
                 quote.body.tee_tcb_svn,
             ))),
         });
-        let rv = IntelTdxReferenceValues { tee_tcb_svn, allow_debug };
+
+        let rv = IntelTdxReferenceValues { tee_tcb_svn, allow_debug, stage0: None };
 
         let firmware_rv = BinaryReferenceValue {
             r#type: Some(binary_reference_value::Type::Digests(Digests {
@@ -394,6 +395,7 @@ mod tests {
                         r#type: Some(tdx_tcb_svn_reference_value::Type::Minimum(..))
                     }),
                     allow_debug: false,
+                    stage0: None,
                 }
             ),
             "reference values missing fields: {:?}",
