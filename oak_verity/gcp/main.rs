@@ -43,6 +43,7 @@ async fn main() -> Result<()> {
 
     let service = OakVerityService::new(assertion_generators);
     let addr = "[::]:8080".parse::<std::net::SocketAddr>()?;
+    eprintln!("listening on address {addr}");
     Server::builder()
         .add_service(oak_grpc::oak::verity::oak_verity_service_server::OakVerityServiceServer::new(
             service,

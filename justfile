@@ -38,7 +38,7 @@ oak-functions-containers-launcher-artifacts: \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
     (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
     (copy-binary "oak_functions_containers_app/bundle.tar" "oak_functions_containers_bundle") \
-    (copy-binary "oak_functions_containers_launcher" "oak_functions_containers_launcher") \
+    (copy-binary "oak_functions_containers_launcher" "oak_functions_containers_launcher") 
 
 run-oak-functions-containers-launcher wasm_target port lookup_data_path communication_channel virtio_guest_cid:
     # Note: for speed, most dependencies are not automatically rebuilt."
@@ -382,3 +382,9 @@ github-stage0_bin: \
 gen-proto-schema:
     mkdir proto_schema_out
     protoc --include_imports --descriptor_set_out=./proto_schema_out/evidence.binpb ./proto/attestation/evidence.proto
+
+run-ctf-sha2-deploy:
+    ./ctf_sha2/deploy.sh
+
+run-oak-verity-deploy:
+    ./oak_verity/deploy.sh
