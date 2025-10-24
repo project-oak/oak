@@ -17,14 +17,14 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use anyhow::Context;
 use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
 use oak_gcp_examples_echo_enclave_app::{app, app_service, gcp};
-use oak_proto_rust::oak::attestation::v1::{
-    endorsement::Format, ConfidentialSpaceEndorsement, Endorsement, Signature, SignedEndorsement,
-};
+use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client, Reference};
 use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
+use rekor::log_entry::LogEntry;
 use sha2::Digest;
-use sigstore_client::cosign;
+use sigstore_client::cosign::pull_payload;
 use tokio::net::TcpListener;
+use verify_endorsement::create_signed_endorsement;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
@@ -64,30 +64,27 @@ async fn main() -> anyhow::Result<()> {
     println!("Getting bearer token...");
     let token = gcp::get_bearer_token().await?;
 
-    println!("Fetching image endorsement for {image_reference}...");
+    println!("Fetching endorsement for {image_reference}...");
     let client = Client::new(ClientConfig::default());
     let auth = RegistryAuth::Bearer(token);
-    let (statement, rekor) = cosign::pull_payload(&client, &auth, &image_reference).await?;
+    let (statement, rekor_bundle) = pull_payload(&client, &auth, &image_reference).await?;
+    println!("Received statement: {statement:?}");
+    println!("Received Rekor bundle: {rekor_bundle:?}");
 
-    println!("Received signature: {statement:?}");
-    println!("Received Rekor inclusion data: {rekor:?}");
+    let log_entry: LogEntry = LogEntry::from_cosign_bundle(rekor_bundle.raw_data())?;
+    let serialized_log_entry: Vec<u8> = serde_json::to_vec(&log_entry)?;
+    println!("Converted Rekor log entry: {serialized_log_entry:?}");
 
-    // The JWT evidence, container signature and the Rekor inclusion data are left
-    // unverified. Normally you would want to verify them to avoid any
-    // unexpected failures if something has gone wrong when producing hte
-    // endorsement.
-    let workload_endorsement = Some(SignedEndorsement {
-        endorsement: Some(Endorsement {
-            format: Format::EndorsementFormatJsonIntoto.into(),
-            serialized: statement.unverified_message().to_vec(),
-            ..Default::default()
-        }),
-        // The signature proto has a key ID which we do not use at the moment.
-        signature: Some(Signature { raw: statement.signature().to_vec(), ..Default::default() }),
-        rekor_log_entry: rekor.raw_data().to_vec(),
-    });
-
-    let endorsement = ConfidentialSpaceEndorsement { jwt_token, workload_endorsement };
+    let endorsement = ConfidentialSpaceEndorsement {
+        jwt_token,
+        workload_endorsement: Some(create_signed_endorsement(
+            statement.unverified_message(),
+            statement.signature(),
+            0,   // The key ID is not used here.
+            &[], // The subject is not needed for verification.
+            &serialized_log_entry,
+        )),
+    };
 
     println!("Starting enclave echo app...");
     let join_handle =
