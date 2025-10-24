@@ -135,6 +135,7 @@ pub struct HandshakeResult {
 }
 
 /// Contains the state of a completed handshake.
+#[derive(Default)]
 pub struct HandshakeState {
     /// A cryptographic hash of the entire transcript of messages exchanged
     /// during the handshake. This hash is crucial for binding the

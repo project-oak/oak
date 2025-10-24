@@ -242,6 +242,37 @@ fn create_passing_mock_assertion_verifier() -> Box<dyn BoundAssertionVerifier> {
     })
 }
 
+fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
+    let mut verifier = MockTestAttestationVerifier::new();
+    verifier.expect_verify().returning(move |_, _| {
+        Ok(AttestationResults {
+            status: attestation_results::Status::GenericFailure.into(),
+            reason: "mock attestation failure".to_string(),
+            ..Default::default()
+        })
+    });
+    Box::new(verifier)
+}
+
+fn create_failing_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVerifierProvider>
+{
+    let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
+    session_binding_verifier
+        .expect_verify_binding()
+        .returning(|_, _| Err(anyhow::anyhow!("mock session binding verification failure")));
+    let mut session_binding_verifier_provider = MockTestSessionBindingVerifierProvider::new();
+    session_binding_verifier_provider.expect_create_session_binding_verifier().returning(
+        move |_| {
+            let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
+            session_binding_verifier.expect_verify_binding().returning(|_, _| {
+                Err(anyhow::anyhow!("mock session binding verification failure"))
+            });
+            Ok(Box::new(session_binding_verifier))
+        },
+    );
+    Box::new(session_binding_verifier_provider)
+}
+
 #[derive(Debug, PartialEq)]
 pub(super) enum HandshakeFollowup {
     Expected,
@@ -250,6 +281,8 @@ pub(super) enum HandshakeFollowup {
 
 const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
 const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
+const MATCHED_ATTESTER_ID3: &str = "MATCHED_ATTESTER_ID3";
+const MATCHED_ATTESTER_ID4: &str = "MATCHED_ATTESTER_ID4";
 
 #[googletest::test]
 fn pairwise_nn_unattested_succeeds() -> anyhow::Result<()> {
@@ -689,6 +722,360 @@ fn get_peer_attestation_evidence() -> anyhow::Result<()> {
 }
 
 #[googletest::test]
+fn successful_session_publishes_evidence() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+    let server_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
+    let server_assertion = Assertion { content: "test".as_bytes().to_vec() };
+    let client_assertion = Assertion { content: "client test".as_bytes().to_vec() };
+    let client_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .add_self_attester(MATCHED_ATTESTER_ID3.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID3.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID4.to_string(),
+                create_mock_assertion_generator(client_assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID3.to_string(), create_mock_binder())
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Bidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(server_assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID3.to_string(),
+                create_passing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID4.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(server_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::Expected)?;
+
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        }))
+    );
+    assert_that!(
+        client_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        })
+    );
+    assert_that!(
+        server_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        }))
+    );
+    assert_that!(
+        server_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        })
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn handshake_failure_client_publishes_evidence() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
+    let assertion = Assertion { content: "test".as_bytes().to_vec() };
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_failing_mock_session_binding_verifier_provider(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    assert_that!(
+        do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected),
+        err(anything())
+    );
+
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        }))
+    );
+    assert_that!(
+        client_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        })
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn attestation_failure_client_publishes_evidence() -> anyhow::Result<()> {
+    let client_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
+    let assertion = Assertion { content: "test".as_bytes().to_vec() };
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_failing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(client_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    assert_that!(do_attest(&mut client_session, &mut server_session), err(anything()));
+
+    assert_that!(
+        client_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: is_empty(),
+            assertions: not(is_empty()),
+            assertion_bindings: is_empty(),
+            handshake_hash: is_empty(),
+        }))
+    );
+    assert_that!(
+        client_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: is_empty(),
+            assertions: not(is_empty()),
+            assertion_bindings: is_empty(),
+            handshake_hash: is_empty(),
+        })
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn handshake_failure_server_publishes_evidence() -> anyhow::Result<()> {
+    let server_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
+    let assertion = Assertion { content: "test".as_bytes().to_vec() };
+    let client_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_passing_mock_verifier(),
+                create_failing_mock_session_binding_verifier_provider(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(server_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    // The handshake should now return an error due to the failing binder.
+    assert_that!(
+        do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::Expected),
+        err(anything())
+    );
+
+    assert_that!(
+        server_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        }))
+    );
+    assert_that!(
+        server_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: not(is_empty()),
+            assertions: not(is_empty()),
+            assertion_bindings: not(is_empty()),
+            handshake_hash: not(is_empty()),
+        })
+    );
+    Ok(())
+}
+
+#[googletest::test]
+fn attestation_failure_server_publishes_evidence() -> anyhow::Result<()> {
+    let server_attestation_publisher = Arc::new(TestAttestationPublisher::new());
+
+    let assertion = Assertion { content: "test".as_bytes().to_vec() };
+    let client_config =
+        SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
+            .add_self_attester(MATCHED_ATTESTER_ID1.to_string(), create_mock_attester())
+            .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
+            .add_self_assertion_generator(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_mock_assertion_generator(assertion.clone()),
+            )
+            .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
+            .build();
+    let server_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_key_extractor(
+                MATCHED_ATTESTER_ID1.to_string(),
+                create_failing_mock_verifier(),
+                create_mock_key_extractor(),
+            )
+            .add_peer_assertion_verifier(
+                MATCHED_ATTESTER_ID2.to_string(),
+                create_passing_mock_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .add_attestation_publisher(
+                &(server_attestation_publisher.clone() as Arc<dyn AttestationPublisher>),
+            )
+            .build();
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    let attestation_result = do_attest(&mut client_session, &mut server_session);
+    assert_that!(attestation_result, err(anything()));
+
+    assert_that!(
+        server_attestation_publisher.take(),
+        some(matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: is_empty(),
+            assertions: not(is_empty()),
+            assertion_bindings: is_empty(),
+            handshake_hash: is_empty(),
+        }))
+    );
+    assert_that!(
+        server_session.get_peer_attestation_evidence()?,
+        matches_pattern!(AttestationEvidence {
+            evidence: not(is_empty()),
+            evidence_bindings: is_empty(),
+            assertions: not(is_empty()),
+            assertion_bindings: is_empty(),
+            handshake_hash: is_empty(),
+        })
+    );
+    Ok(())
+}
+
+#[googletest::test]
 fn test_session_sendable() -> anyhow::Result<()> {
     fn foo<T: Send>(_: T) {}
 
@@ -700,7 +1087,7 @@ fn test_session_sendable() -> anyhow::Result<()> {
     let server_config = SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNK)
         .set_self_static_private_key(identity_key)
         .build();
-    let server_session = ServerSession::create(server_config).unwrap();
+    let server_session = ServerSession::create(server_config)?;
     test(server_session);
     Ok(())
 }
@@ -711,8 +1098,8 @@ pub(super) fn do_attest(
 ) -> anyhow::Result<()> {
     let attest_request = client_session
         .get_outgoing_message()
-        .expect("An error occurred while getting the client outgoing message")
-        .expect("No client outgoing message was produced");
+        .context("An error occurred while getting the client outgoing message")?
+        .context("No client outgoing message was produced")?;
     assert_that!(
         attest_request,
         matches_pattern!(SessionRequest {
@@ -720,12 +1107,12 @@ pub(super) fn do_attest(
         }),
         "The first message sent by the client is an attestation request"
     );
-    assert_that!(server_session.put_incoming_message(attest_request), ok(some(())));
+    server_session.put_incoming_message(attest_request)?;
 
     let attest_response = server_session
         .get_outgoing_message()
-        .expect("An error occurred while getting the server outgoing message")
-        .expect("No server outgoing message was produced");
+        .context("An error occurred while getting the server outgoing message")?
+        .context("No server outgoing message was produced")?;
     assert_that!(
         attest_response,
         matches_pattern!(SessionResponse {
@@ -733,7 +1120,7 @@ pub(super) fn do_attest(
         }),
         "The first message sent by the server is an attestation response"
     );
-    assert_that!(client_session.put_incoming_message(attest_response), ok(some(())));
+    client_session.put_incoming_message(attest_response)?;
     Ok(())
 }
 
@@ -744,8 +1131,8 @@ pub(super) fn do_handshake(
 ) -> anyhow::Result<()> {
     let handshake_request = client_session
         .get_outgoing_message()
-        .expect("An error occurred while getting the client outgoing message")
-        .expect("No client outgoing message was produced");
+        .context("An error occurred while getting the client outgoing message")?
+        .context("No client outgoing message was produced")?;
     assert_that!(
         handshake_request,
         matches_pattern!(SessionRequest {
@@ -753,11 +1140,11 @@ pub(super) fn do_handshake(
         }),
         "The message sent by the client is a handshake request"
     );
-    assert_that!(server_session.put_incoming_message(handshake_request), ok(some(())));
+    server_session.put_incoming_message(handshake_request)?;
     let handshake_response = server_session
         .get_outgoing_message()
-        .expect("An error occurred while getting the server outgoing message")
-        .expect("No server outgoing message was produced");
+        .context("An error occurred while getting the server outgoing message")?
+        .context("No server outgoing message was produced")?;
     assert_that!(
         handshake_response,
         matches_pattern!(SessionResponse {
@@ -765,13 +1152,13 @@ pub(super) fn do_handshake(
         }),
         "The message sent by the server is a handshake response"
     );
-    assert_that!(client_session.put_incoming_message(handshake_response), ok(some(())));
+    assert_that!(client_session.put_incoming_message(handshake_response)?, some(()));
 
     if handshake_followup == HandshakeFollowup::Expected {
         let handshake_followup = client_session
             .get_outgoing_message()
-            .expect("An error occurred while getting the client followup message")
-            .expect("No client followup message was produced");
+            .context("An error occurred while getting the client followup message")?
+            .context("No client followup message was produced")?;
         assert_that!(
             handshake_followup,
             matches_pattern!(SessionRequest {
@@ -779,19 +1166,19 @@ pub(super) fn do_handshake(
             }),
             "The message sent by the client is a handshake request"
         );
-        assert_that!(server_session.put_incoming_message(handshake_followup), ok(some(())));
-        assert_that!(server_session.get_outgoing_message(), ok(none()));
+        assert_that!(server_session.put_incoming_message(handshake_followup)?, some(()));
+        assert_that!(server_session.get_outgoing_message()?, none());
     }
 
     assert_that!(client_session.is_open(), eq(true));
     assert_that!(server_session.is_open(), eq(true));
     assert_that!(
-        server_session.get_session_binding_token(b"info").unwrap().as_slice(),
-        eq(client_session.get_session_binding_token(b"info").unwrap().as_slice())
+        server_session.get_session_binding_token(b"info")?.as_slice(),
+        eq(client_session.get_session_binding_token(b"info")?.as_slice())
     );
     assert_that!(
-        server_session.get_session_binding_token(b"info").unwrap().as_slice(),
-        not(eq(client_session.get_session_binding_token(b"wrong info").unwrap().as_slice()))
+        server_session.get_session_binding_token(b"info")?.as_slice(),
+        not(eq(client_session.get_session_binding_token(b"wrong info")?.as_slice()))
     );
     assert_that!(
         client_session.get_peer_attestation_evidence()?,

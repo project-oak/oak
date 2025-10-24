@@ -272,6 +272,10 @@ enum Step<AP: AttestationHandler, H: HandshakeHandler> {
         attestation_state: AttestationState,
         handshake_state: HandshakeState,
     },
+    Error {
+        attestation_state: Option<AttestationState>,
+        handshake_state: Option<HandshakeState>,
+    },
     /// A temporary state indicating that the session is currently transitioning
     /// between valid steps. Operations on a session in this state will fail.
     Invalid,
@@ -303,11 +307,28 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 encryptor_provider,
                 attestation_publisher,
             } => {
-                let attestation_state = attester.take_attestation_state()?;
+                let attestation_state = match attester.take_attestation_state() {
+                    core::result::Result::Ok(attestation_state) => attestation_state,
+                    core::result::Result::Err(err) => {
+                        *self = Step::Error { attestation_state: None, handshake_state: None };
+                        return Err(err.context("retrieving attestation state failed"));
+                    }
+                };
                 if let PeerAttestationVerdict::AttestationFailed { reason, .. } =
-                    attestation_state.peer_attestation_verdict
+                    &attestation_state.peer_attestation_verdict
                 {
-                    return Err(anyhow!("attestation failed: {:?}", reason));
+                    if let Some(publisher) = attestation_publisher {
+                        publisher.publish(AttestationEvidence::new_from_state(
+                            &attestation_state,
+                            &HandshakeState::default(),
+                        ));
+                    }
+                    let attestation_failure_reason = reason.clone();
+                    *self = Step::Error {
+                        attestation_state: Some(attestation_state),
+                        handshake_state: None,
+                    };
+                    return Err(anyhow!("attestation failed: {:?}", attestation_failure_reason));
                 }
 
                 // The peer bindings are expected whenever the peer provides evidence that can
@@ -316,26 +337,63 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 // supplies.
                 let expect_peer_bindings =
                     attestation_state.peer_attestation_verdict.needs_session_bindings();
-                *self = Step::Handshake {
-                    encryptor_provider,
-                    attestation_publisher,
-                    handshaker: handshake_handler_provider
-                        .build(expect_peer_bindings, attestation_state)?,
+                let handshaker = match handshake_handler_provider
+                    .build(expect_peer_bindings, attestation_state)
+                {
+                    core::result::Result::Ok(handshaker) => handshaker,
+                    core::result::Result::Err(err) => {
+                        *self = Step::Error { attestation_state: None, handshake_state: None };
+                        return Err(err);
+                    }
                 };
+                *self = Step::Handshake { encryptor_provider, attestation_publisher, handshaker };
             }
             Step::Handshake { handshaker, encryptor_provider, attestation_publisher } => {
-                let (handshake_result, attestation_state) = handshaker.take_handshake_result()?;
-                verify_session_binding(
+                let (handshake_result, attestation_state) = match handshaker.take_handshake_result()
+                {
+                    core::result::Result::Ok((handshake_result, attestation_state)) => {
+                        (handshake_result, attestation_state)
+                    }
+                    core::result::Result::Err(err) => {
+                        *self = Step::Error { attestation_state: None, handshake_state: None };
+                        return Err(err);
+                    }
+                };
+                if let Err(err) = verify_session_binding(
                     &attestation_state.peer_session_binding_verifiers,
                     &handshake_result.handshake_state.peer_session_bindings,
                     handshake_result.handshake_state.handshake_binding_token.as_slice(),
-                )?;
-                verify_assertion_session_binding(
+                ) {
+                    if let Some(publisher) = attestation_publisher {
+                        publisher.publish(AttestationEvidence::new_from_state(
+                            &attestation_state,
+                            &handshake_result.handshake_state,
+                        ));
+                    }
+                    *self = Step::Error {
+                        attestation_state: Some(attestation_state),
+                        handshake_state: Some(handshake_result.handshake_state),
+                    };
+                    return Err(err);
+                }
+                if let Err(err) = verify_assertion_session_binding(
                     attestation_state.peer_attestation_verdict.get_assertion_verification_results(),
                     &handshake_result.handshake_state.peer_assertion_bindings,
                     attestation_state.attestation_binding_token.as_slice(),
                     handshake_result.handshake_state.handshake_binding_token.as_slice(),
-                )?;
+                ) {
+                    if let Some(publisher) = attestation_publisher {
+                        publisher.publish(AttestationEvidence::new_from_state(
+                            &attestation_state,
+                            &handshake_result.handshake_state,
+                        ));
+                    }
+                    *self = Step::Error {
+                        attestation_state: Some(attestation_state),
+                        handshake_state: Some(handshake_result.handshake_state),
+                    };
+                    return Err(err);
+                }
                 if let Some(publisher) = attestation_publisher {
                     publisher.publish(AttestationEvidence::new_from_state(
                         &attestation_state,
@@ -352,6 +410,7 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 return Err(anyhow!("there is no next step when the session is open"))
             }
             Step::Invalid => return Err(anyhow!("session is currently in an invalid state")),
+            Step::Error { .. } => return Err(anyhow!("session initialization already failed")),
         };
         Ok(())
     }
@@ -377,6 +436,14 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
         match &self {
             Step::Open { attestation_state, handshake_state, .. } => {
                 Ok(AttestationEvidence::new_from_state(attestation_state, handshake_state))
+            }
+            Step::Error { attestation_state, handshake_state } => {
+                Ok(AttestationEvidence::new_from_state(
+                    attestation_state.as_ref().ok_or(anyhow!(
+                        "session initialization failed, and no attestation evidence is available"
+                    ))?,
+                    handshake_state.as_ref().unwrap_or(&HandshakeState::default()),
+                ))
             }
             _ => Err(anyhow!("the session is not open")),
         }
@@ -523,7 +590,9 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 }
             }
             Step::Open { .. } => {}
-            Step::Invalid => return Err(anyhow!("session is in an invalid state")),
+            Step::Invalid | Step::Error { .. } => {
+                return Err(anyhow!("session is in an invalid state"))
+            }
         }
 
         Ok(self.outgoing_requests.pop_front())
@@ -728,7 +797,7 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 }
             }
             Step::Open { .. } => Ok(self.outgoing_responses.pop_front()),
-            Step::Invalid => Err(anyhow!("session is in an invalid state")),
+            Step::Invalid | Step::Error { .. } => Err(anyhow!("session is in an invalid state")),
         }
     }
 
