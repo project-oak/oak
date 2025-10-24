@@ -1,6 +1,6 @@
 load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_test")
+load("//micro_rpc_build:build_defs.bzl", "micro_rpc_service")
 
 package(
     default_visibility = ["//:internal"],
@@ -16,7 +16,7 @@ rust_test(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        ":build",
+        ":service_build",
         "//micro_rpc",
         "//micro_rpc_build",
         "@oak_crates_index//:maplit",
@@ -27,27 +27,13 @@ rust_test(
     ],
 )
 
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    data = [
-        "//micro_rpc_tests/proto:test_schema.proto",
-        "//proto/micro_rpc:options.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
+micro_rpc_service(
+    name = "service",
+    srcs = ["//micro_rpc_tests:proto/test_schema.proto"],
+    proto_package_name = "micro_rpc.tests",
     deps = [
-        "//micro_rpc_build",
-        "//oak_proto_build_utils",
+        "//proto/micro_rpc:options.proto",
+        "@com_google_protobuf//:well_known_type_protos",
     ],
 )
 
@@ -57,6 +43,6 @@ cargo_build_script(
 write_source_files(
     name = "write_test_schema",
     files = {
-        "generated": "//micro_rpc_tests:build",
+        "generated": ":service_build",
     },
 )

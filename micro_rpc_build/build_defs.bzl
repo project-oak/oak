@@ -72,6 +72,7 @@ def _generate_service_impl(ctx):
     package_parts = ctx.attr.proto_package_name.split(".")
 
     mod_content = """
+#[allow(clippy::let_unit_value)]
 pub mod {mod} {{
     use prost::Message;
     include!(concat!(env!("OUT_DIR"), "/{filename}"));
@@ -114,12 +115,29 @@ _generate_service = rule(
     },
 )
 
+def extern(proto_package, rust_module, dep):
+    """Constructs 'extern' definitions to be used in micro_rpc_service rules.
+
+    Also see Also see https://docs.rs/prost-build/latest/prost_build/struct.Config.html#method.extern_path.
+
+    Args:
+        proto_package: The fully-qualified proto package name, e.g. ".oak.attestation.v1".
+        rust_module: The rust module containing the external Rust types, e.g. "oak_proto_rust::oak::attestation::v1".
+        dep: The bazel dependency which provides 'rust_module'.
+    """
+
+    return struct(
+        proto_package = proto_package,
+        rust_module = rust_module,
+        dep = dep,
+    )
+
 def micro_rpc_service(
         name,
         srcs = [],
         deps = [],
         proto_package_name = None,
-        extern_paths = {}):
+        externs = []):
     """A macro that generates a rust_library for micro RPC protos.
 
     Args:
@@ -127,11 +145,13 @@ def micro_rpc_service(
         srcs: Proto files to generate Rust code from.
         deps: Dependencies on other proto files.
         proto_package_name: The (proto) package name for files in 'srcs'.
-        extern_paths: A mapping of (fully-qualified) proto package names to external crate paths.
-            Also see https://docs.rs/prost-build/latest/prost_build/struct.Config.html#method.extern_path.
+        externs: A collection of external crate dependencies, each created using the "extern" function.
     """
 
     # Generate the cargo-build "build.rs" script.
+    extern_paths = {}
+    for extern in externs:
+        extern_paths[extern.proto_package] = extern.rust_module
     build_rs_gen_name = name + "_codegen"
     _generate_cargo_build(
         name = build_rs_gen_name,
@@ -168,16 +188,19 @@ def micro_rpc_service(
     )
 
     # Compile the "service.rs" file.
+    rust_deps = {}
+    for extern in externs:
+        rust_deps[extern.dep] = True
     rust_library(
         name = name,
         srcs = [":" + service_rs_gen_name],
         proc_macro_deps = [
             "@oak_crates_index//:prost-derive",
         ],
-        deps = [
+        deps = rust_deps.keys() + [
             ":" + cargo_build_name,
             "//micro_rpc",
-            "//oak_proto_rust",
             "@oak_crates_index//:prost",
+            "@oak_crates_index//:prost-types",
         ],
     )

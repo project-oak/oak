@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("//micro_rpc_build:build_defs.bzl", "micro_rpc_service")
+load("//micro_rpc_build:build_defs.bzl", "extern", "micro_rpc_service")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -24,9 +24,9 @@ package(
 micro_rpc_service(
     name = "service",
     srcs = [":service.proto"],
-    extern_paths = {
-        ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
-    },
+    externs = [
+        extern(".oak.attestation.v1", "oak_proto_rust::oak::attestation::v1", "//oak_proto_rust"),
+    ],
     proto_package_name = "oak.ctf_sha2.enclave",
     deps = [
         "//proto:digest.proto",
