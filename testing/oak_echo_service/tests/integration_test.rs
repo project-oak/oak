@@ -20,10 +20,8 @@
 
 extern crate alloc;
 
-use oak_echo_service::{
-    proto::oak::echo::{EchoClient, EchoRequest, EchoServer},
-    EchoService,
-};
+use oak_echo_service::EchoService;
+use service::oak::echo::{EchoClient, EchoRequest, EchoServer};
 
 const TEST_DATA: &[u8] = b"test_data";
 

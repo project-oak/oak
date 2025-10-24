@@ -1,4 +1,5 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//micro_rpc_build:build_defs.bzl", "rust_micro_rpc_service")
 
 package(
     default_visibility = ["//:internal"],
@@ -18,5 +19,16 @@ proto_library(
         "@com_google_protobuf//:duration_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+rust_micro_rpc_service(
+    name = "service",
+    srcs = [":proto"],
+    extern_paths = {
+        ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
+    },
+    deps = [
+        "//oak_proto_rust",
     ],
 )

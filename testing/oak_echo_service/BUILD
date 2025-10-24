@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test", "rust_test_suite")
 load("//bazel:defs.bzl", "any_platform")
 
@@ -34,10 +33,10 @@ rust_library(
         "//:x86_64-none-setting",
     ]),
     deps = [
-        ":build",
         "//micro_rpc",
         "//oak_proto_rust",
         "//oak_restricted_kernel_sdk",
+        "//testing/oak_echo_service/proto:service",
         "@oak_crates_index//:hashbrown",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
@@ -57,33 +56,6 @@ rust_test_suite(
     deps = [
         ":oak_echo_service",
         "//oak_restricted_kernel_sdk",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = ["build.rs"],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    data = [
-        "//proto:digest.proto",
-        "//proto/attestation:eventlog.proto",
-        "//proto/attestation:evidence.proto",
-        "//proto/micro_rpc:options.proto",
-        "//proto/session:messages.proto",
-        "//proto/session:service_streaming.proto",
-        "//testing/oak_echo_service/proto:oak_echo.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//micro_rpc_build",
-        "//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
+        "//testing/oak_echo_service/proto:service",
     ],
 )

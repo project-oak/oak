@@ -32,6 +32,7 @@ rust_binary(
         "//micro_rpc",
         "//oak_restricted_kernel_sdk",
         "//testing/oak_echo_service",
+        "//testing/oak_echo_service/proto:service",
         "@oak_crates_index//:log",
     ],
 )

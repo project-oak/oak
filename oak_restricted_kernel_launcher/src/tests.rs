@@ -15,9 +15,9 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_echo_service::proto::oak::echo;
 use oak_file_utils::data_path;
 use oak_launcher_utils::launcher;
+use service::oak::echo;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_echo_enclave_app_launch_v0() {

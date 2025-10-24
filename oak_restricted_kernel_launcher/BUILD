@@ -60,6 +60,7 @@ rust_test(
         "//oak_launcher_utils",
         "//oak_proto_rust/micro_rpc",
         "//testing/oak_echo_service",
+        "//testing/oak_echo_service/proto:service",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:ubyte",

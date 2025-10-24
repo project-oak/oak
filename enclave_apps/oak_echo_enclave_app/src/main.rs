@@ -37,7 +37,7 @@ fn start_echo_server() -> ! {
     let attester = InstanceAttester::create().expect("couldn't create attester");
 
     let service = oak_echo_service::EchoService { attester };
-    let server = oak_echo_service::proto::oak::echo::EchoServer::new(service);
+    let server = service::oak::echo::EchoServer::new(service);
     start_blocking_server(Box::<FileDescriptorChannel>::default(), server, &mut invocation_stats)
         .expect("server encountered an unrecoverable error");
 }
