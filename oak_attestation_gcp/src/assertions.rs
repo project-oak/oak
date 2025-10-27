@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{str, string::String};
+use alloc::string::String;
 
 use anyhow::{anyhow, Context};
 use jwt::Token;
@@ -50,13 +50,16 @@ impl GcpAssertionGenerator {
     }
 }
 
+fn generate_nonce_from_asserted_data(data: &[u8]) -> String {
+    let digest = sha2::Sha256::digest(data);
+    hex::encode(digest)
+}
+
 impl AssertionGenerator for GcpAssertionGenerator {
     fn generate(&self, data: &[u8]) -> Result<Assertion, AssertionGeneratorError> {
-        let token = crate::attestation::request_attestation_token(
-            &self.audience,
-            str::from_utf8(data).context("converting GCP attestation to UTF-8 string")?,
-        )
-        .context("requesting the attestation token")?;
+        let nonce = generate_nonce_from_asserted_data(data);
+        let token = crate::attestation::request_attestation_token(&self.audience, &nonce)
+            .context("requesting attestation token")?;
         let assertion = ConfidentialSpaceAssertion {
             jwt_token: token.encode_to_vec(),
             container_image_endorsement: self.endorsement.clone(),
@@ -164,7 +167,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
             }
         }
 
-        let expected_asserted_data_hash = hex::encode(sha2::Sha256::digest(asserted_data));
+        let expected_nonce = generate_nonce_from_asserted_data(asserted_data);
         let eat_nonce = token.claims().eat_nonce.clone();
         let token_report = report_attestation_token(
             token,
@@ -177,9 +180,9 @@ impl AssertionVerifier for GcpAssertionVerifier {
         token_report.verification.context("checking the GCP JWT token verification status")?;
         token_report.issuer_report.context("checking the GCP JWT token issuer root signature")?;
 
-        if eat_nonce != expected_asserted_data_hash {
+        if eat_nonce != expected_nonce {
             return Err(AssertionVerifierError::AssertedDataMismatch {
-                expected: expected_asserted_data_hash.into(),
+                expected: expected_nonce.into(),
                 actual: eat_nonce.into(),
             });
         }

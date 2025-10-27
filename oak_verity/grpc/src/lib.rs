@@ -43,10 +43,11 @@ impl OakVerityServiceTrait for OakVerityService {
         request: Request<ExecuteRequest>,
     ) -> Result<Response<ExecuteResponse>, Status> {
         let request = request.into_inner();
+        eprintln!("received request");
         let response = self
             .oak_verity
             .execute(request)
-            .map_err(|err| Status::internal(format!("failed to execute wasm module: {}", err)))?;
+            .map_err(|err| Status::internal(format!("failed to execute Wasm module: {}", err)))?;
         Ok(Response::new(response))
     }
 }

@@ -39,7 +39,7 @@ terraform -chdir="${TF_DIR}" init
 echo "Running Terraform to deploy the instance..."
 # We pass the variables directly on the command line.
 # Terraform will prompt you to confirm the changes.
-terraform -chdir="${TF_DIR}" apply -auto-approve \
+terraform -chdir="${TF_DIR}" apply \
   -var="gcp_project_id=${GCP_PROJECT_ID}" \
   -var="image_digest=${FULL_IMAGE_DIGEST}" \
   -var="zone=${ZONE}"

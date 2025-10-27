@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-//! A CLI binary that executes Oak Verity as a one-shot, using the provided Wasm
-//! module and the provided input data. Useful to debug Wasm modules quickly.
+//! A gRPC client that calls out to an Oak Verity service.
 
 use std::{
     convert::Infallible,
@@ -25,16 +24,17 @@ use std::{
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use oak_grpc::oak::verity::oak_verity_service_client::OakVerityServiceClient;
 use oak_proto_rust::oak::verity::ExecuteRequest;
-use oak_verity::OakVerity;
 use prost::Message;
 
 #[derive(Parser, Debug)]
-#[command(
-    name = "oak_verity_cli",
-    about = "Execute WebAssembly modules with Oak Verity and produce verifiable manifests"
-)]
+#[command(name = "oak_verity_grpc_client", about = "gRPC client for Oak Verity")]
 struct Flags {
+    /// Server address.
+    #[arg(long, value_name = "ADDRESS")]
+    server_address: String,
+
     /// Path to the input data file.
     #[arg(long, value_parser = path_parser, value_name = "FILE")]
     input_data: PathBuf,
@@ -58,7 +58,8 @@ fn path_parser(arg_value: &str) -> Result<PathBuf, Infallible> {
     Ok(Path::new(&std::env::var("BUILD_WORKING_DIRECTORY").unwrap_or_default()).join(arg_value))
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let flags = Flags::parse();
 
     // Support relative paths by resolving against BUILD_WORKING_DIRECTORY
@@ -76,17 +77,11 @@ fn main() -> Result<()> {
     let wasm_module = fs::read(&wasm_path)
         .with_context(|| format!("Failed to read Wasm module from {:?}", wasm_path))?;
 
-    // Create Oak Verity instance which handles Wasm execution and manifest
-    // generation.
-    let oak_verity = OakVerity::new().context("Failed to create Oak Verity instance")?;
-
     // Create the execution request with input data and Wasm module.
     let request = ExecuteRequest { input_data, wasm_module };
 
-    // Execute the Wasm module with Oak Verity.
-    // This runs the Wasm module and generates a manifest with SHA-256 digests.
-    let response =
-        oak_verity.execute(request).context("Failed to execute Wasm module with Oak Verity")?;
+    let mut client = OakVerityServiceClient::connect(flags.server_address).await?;
+    let response = client.execute(request).await?.into_inner();
 
     println!("✅ Execution successful!");
 
