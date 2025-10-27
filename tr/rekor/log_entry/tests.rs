@@ -103,3 +103,15 @@ fn test_from_cosign_bundle_invalid_signature_base64() {
 
     assert!(result.is_err());
 }
+
+// An actual bundle returned from pull_payload().
+const REKOR_BUNDLE: &str = r###"{"SignedEntryTimestamp":"MEUCIFj09/fxhnbsGKn2y7wtnZFk3gOmcVVQeXcZWYxYnnvjAiEA6j+pNc1j5DdfKLFjb6u3yBU8IOzO3vD7DcobUiL1X/o=","Payload":{"body":"eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiI5NWM4YzE2MGM5ZDYxNzA4ZWRkYzkwNzg4MmQxYmE1OGNjNDg3YWZmNDViOWM1ODQ3OGQ5MmM0ZTA4MjAxOGNjIn19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FVUNJUUM0NjVGQUJZNUwxUWREV3lJajJNTlJPRjMzN2E0YUhpUFFoRDdRS1NaMG1BSWdVcmJDYUh4NkMvUDE0bUsxYlkwMm9yL0tIYXdKdzRVSW00cUQwaU1UeC8wPSIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCUVZVSk1TVU1nUzBWWkxTMHRMUzBLVFVacmQwVjNXVWhMYjFwSmVtb3dRMEZSV1VsTGIxcEplbW93UkVGUlkwUlJaMEZGWjFaWE5FSnVkMDFZU0RGbFZDc3haMEpyUXl0RWNrZE9iMVZSWmdwWlpXTlBWeXRhS3pWUlZFSnFabGRqUVhCU01rNTVOVzlSVFZkVk5sWTJiRlJ6UmxKRFdXUlBNVlpJWkVGdmVHNWpVelZZVlROeWNucFJQVDBLTFMwdExTMUZUa1FnVUZWQ1RFbERJRXRGV1MwdExTMHRDZz09In19fX0=","integratedTime":1761334477,"logIndex":637763709,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}"###;
+
+#[test]
+fn test_from_cosign_bundle_parse_round_trip() {
+    let expected = LogEntry::from_cosign_bundle(REKOR_BUNDLE).expect("failed to parse bundle");
+    let serialized_expected = serialize_rekor_log_entry(&expected).expect("failed to serialize");
+    let actual = parse_rekor_log_entry(&serialized_expected).expect("failed to reparse");
+    let serialized_actual = serialize_rekor_log_entry(&actual).expect("failed to reserialize");
+    assert_eq!(serialized_actual, serialized_expected);
+}

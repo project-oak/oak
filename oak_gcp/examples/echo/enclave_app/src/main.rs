@@ -20,7 +20,7 @@ use oak_gcp_examples_echo_enclave_app::{app, app_service, gcp};
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client, Reference};
 use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
-use rekor::log_entry::LogEntry;
+use rekor::log_entry::{serialize_rekor_log_entry, LogEntry};
 use sha2::Digest;
 use sigstore_client::cosign::pull_payload;
 use tokio::net::TcpListener;
@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Received Rekor bundle: {rekor_bundle:?}");
 
     let log_entry: LogEntry = LogEntry::from_cosign_bundle(rekor_bundle.raw_data())?;
-    let serialized_log_entry: Vec<u8> = serde_json::to_vec(&log_entry)?;
+    let serialized_log_entry: Vec<u8> = serialize_rekor_log_entry(&log_entry)?;
     println!("Converted Rekor log entry: {serialized_log_entry:?}");
 
     let endorsement = ConfidentialSpaceEndorsement {

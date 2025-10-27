@@ -20,6 +20,8 @@
 
 extern crate alloc;
 
+use alloc::borrow::ToOwned;
+
 use anyhow::{ensure, Context};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use digest_util::hash_sha2_256;
@@ -79,7 +81,7 @@ impl LogEntry {
         // Because serde_json's Value uses a BTreeMap, the sorting property
         // holds for object values.
         let serialized_log_entry = serde_json::to_string(&payload)?;
-        parse_rekor_log_entry(serialized_log_entry.as_bytes())
+        parse_single_rekor_log_entry(serialized_log_entry.as_bytes())
     }
 
     /// Parses the base64-encoded log entry body into a struct.
@@ -307,12 +309,29 @@ fn verify_rekor_signature(log_entry: &LogEntry, rekor_public_key: &[u8]) -> anyh
     verify_signature_ecdsa(&signature, &json, rekor_public_key).context("verifying rekor signature")
 }
 
-/// Parses a serialized Rekor log entry into a struct.
+/// Parses a map of ID to serialized Rekor log entries and returns the
+/// first value (which is expected to be the only one). The entry UUIDs
+/// appearing as map keys are dropped.
 pub fn parse_rekor_log_entry(serialized_log_entry: &[u8]) -> anyhow::Result<LogEntry> {
     let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(serialized_log_entry)
-        .map_err(|error| anyhow::anyhow!("couldn't parse log entry bytes: {error}"))?;
+        .map_err(|error| anyhow::anyhow!("couldn't parse log entry map: {error}"))?;
     let log_entry = parsed.values().next().context("unexpected empty map")?;
     Ok((*log_entry).clone())
+}
+
+/// Parses a single serialized Rekor log entry into a struct.
+fn parse_single_rekor_log_entry(serialized_log_entry: &[u8]) -> anyhow::Result<LogEntry> {
+    let parsed: LogEntry = serde_json::from_slice(serialized_log_entry)
+        .map_err(|error| anyhow::anyhow!("couldn't parse log entry bytes: {error}"))?;
+    Ok(parsed)
+}
+
+/// Serializes the log entry into bytes which can be parsed again.
+/// Note that the UUID is lost on first parsing.
+pub fn serialize_rekor_log_entry(log_entry: &LogEntry) -> anyhow::Result<Vec<u8>> {
+    let map: BTreeMap<String, LogEntry> =
+        BTreeMap::from([("unknown_uuid".to_owned(), log_entry.clone())]);
+    Ok(serde_json::to_vec(&map)?)
 }
 
 /// Creates a JSON representation, canonicalized based on RFC 8785, of a

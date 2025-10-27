@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Mode which verifies an endorsement.
+/**
+Sample call:
+
+bazel run trex/doremint image verify -- \
+  --image example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
+  --claims $(pwd)/trex/doremint/testdata/claims.toml
+*/
 use anyhow::Context;
 use clap::Parser;
 use digest_util::hex_digest_from_typed_hash;
@@ -19,12 +27,15 @@ use intoto::statement::parse_statement;
 use oak_time_std::instant::now;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
-use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};
 use rekor::{
     get_rekor_v1_public_key_raw,
-    log_entry::{verify_rekor_log_entry_ecdsa, LogEntry},
+    log_entry::{serialize_rekor_log_entry, LogEntry},
 };
 use sigstore_client::cosign;
+use verify_endorsement::{
+    create_endorsement_reference_value, create_signed_endorsement, create_verifying_key_from_raw,
+    verify_endorsement,
+};
 
 use crate::flags::{verifying_key_parser, Claims};
 
@@ -52,29 +63,30 @@ impl VerifyCommand {
         };
         let client = Client::new(ClientConfig::default());
 
-        // TODO: b/445140472 - Turn this all into a call to //tr/verify_endorsement.
-        let (endorsement, bundle) = cosign::pull_payload(&client, &auth, &self.image).await?;
+        let (statement, rekor_bundle) = cosign::pull_payload(&client, &auth, &self.image).await?;
 
-        let endorser_verifying_key =
-            VerifyingKey::from_public_key_der(&self.endorser_public_key)
-                .map_err(|e| anyhow::anyhow!("failed to parse public key: {}", e))?;
-        let endorsement = endorsement
-            .verify(&endorser_verifying_key)
-            .context("verifying endorsement signature")?;
+        let log_entry = LogEntry::from_cosign_bundle(rekor_bundle.raw_data())?;
+        let serialized_log_entry = serialize_rekor_log_entry(&log_entry)?;
+        println!("Converted Rekor log entry: {serialized_log_entry:?}");
 
-        // Verify the Rekor log entry.
-        let log_entry = LogEntry::from_cosign_bundle(bundle)?;
-        let serialized_log_entry = serde_json::to_vec(&log_entry)?;
-        let parsed_log_entry = verify_rekor_log_entry_ecdsa(
+        let signed_endorsement = create_signed_endorsement(
+            statement.unverified_message(),
+            statement.signature(),
+            0,   // The key ID is not used here.
+            &[], // The subject is not needed for verification.
             &serialized_log_entry,
-            &get_rekor_v1_public_key_raw(),
-            endorsement.message(),
-        )
-        .context("verifying Rekor log entry")?;
-        parsed_log_entry.compare_public_key(&self.endorser_public_key)?;
+        );
 
-        // Verify the endorsement statement.
-        let statement = parse_statement(endorsement.message())?;
+        let endorser_key = create_verifying_key_from_raw(&self.endorser_public_key, 0);
+        let rekor_key = create_verifying_key_from_raw(&get_rekor_v1_public_key_raw(), 0);
+        let ref_value = create_endorsement_reference_value(endorser_key, Some(rekor_key));
+
+        let _ = verify_endorsement(now().into_unix_millis(), &signed_endorsement, &ref_value)?;
+
+        // Need to verify the endorsement subject and the claims as well.
+        // With minor additional work, this could also happen as part of the
+        // call above.
+        let statement = parse_statement(statement.unverified_message())?;
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = hex_digest_from_typed_hash(typed_hash)?;
         // Convert Vec<String> to Vec<&str>.
