@@ -153,8 +153,7 @@ fn tdx_oc_verify_succeeds() {
     let d = AttestationData::load_tdx_oc();
     let clock: FixedClock = FixedClock::at_instant(d.make_valid_time());
     let verifier = create_intel_tdx_verifier(clock, &d.reference_values).expect("no verifier");
-    let result = verifier.verify(&d.evidence, &d.endorsements);
-    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    assert_success(verifier.verify(&d.evidence, &d.endorsements));
 }
 
 #[test]
@@ -188,8 +187,7 @@ fn tdx_oc_generated_reference_values_verify_succeeds() {
         vec![kernel_policy, system_policy, container_policy];
     let verifier =
         IntelTdxAttestationVerifier::new(platform_policy, firmware_policy, event_policies, clock);
-    let result = verifier.verify(&evidence, &d.endorsements);
-    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
+    assert_success(verifier.verify(&evidence, &d.endorsements));
 }
 
 fn verify_amd(
