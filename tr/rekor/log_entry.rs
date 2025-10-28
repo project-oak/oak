@@ -36,6 +36,7 @@ use crate::{
     util::verify_timestamp,
 };
 
+const SIGNED_ENTRY_TIMESTAMP_KEY: &str = "SignedEntryTimestamp";
 const LOG_ENTRY_PAYLOAD_KEY: &str = "Payload";
 
 /// Represents the Rekor log entry, or payload. See
@@ -73,6 +74,11 @@ impl LogEntry {
         let bundle: Value = serde_json::from_slice(bundle.as_ref())?;
         let payload =
             bundle.get(LOG_ENTRY_PAYLOAD_KEY).ok_or(anyhow::anyhow!("malformed bundle"))?;
+        let signed =
+            bundle.get(SIGNED_ENTRY_TIMESTAMP_KEY).ok_or(anyhow::anyhow!("malformed bundle"))?;
+
+        let signed: String = String::deserialize(signed)?;
+        let verification = Verification { signed_entry_timestamp: signed.to_owned() };
 
         // As per the spec above, the signature of the payload is done over
         // the canonicalized representation of its fields, which means:
@@ -81,7 +87,9 @@ impl LogEntry {
         // Because serde_json's Value uses a BTreeMap, the sorting property
         // holds for object values.
         let serialized_log_entry = serde_json::to_string(&payload)?;
-        parse_single_rekor_log_entry(serialized_log_entry.as_bytes())
+        let mut reparsed = parse_single_rekor_log_entry(serialized_log_entry.as_bytes())?;
+        reparsed.verification = Some(verification);
+        Ok(reparsed)
     }
 
     /// Parses the base64-encoded log entry body into a struct.
@@ -209,7 +217,8 @@ pub fn verify_rekor_log_entry(
     artifact_bytes: &[u8],
     now_utc_millis: i64,
 ) -> anyhow::Result<LogEntry> {
-    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
+    let log_entry =
+        parse_rekor_log_entry(serialized_log_entry).context("parsing Rekor log entry")?;
 
     if !key_set.keys.iter().any(|k| verify_rekor_signature(&log_entry, &k.raw).is_ok()) {
         anyhow::bail!("could not verify rekor signature");
@@ -225,7 +234,7 @@ pub fn verify_rekor_log_entry(
     }
 
     let body = log_entry.body()?;
-    verify_rekor_body(&body, artifact_bytes)?;
+    verify_rekor_body(&body, artifact_bytes).context("verifying Rekor body")?;
     Ok(log_entry)
 }
 
@@ -254,11 +263,12 @@ pub fn verify_rekor_log_entry_ecdsa(
     rekor_public_key: &[u8],
     artifact_bytes: &[u8],
 ) -> anyhow::Result<LogEntry> {
-    let log_entry = parse_rekor_log_entry(serialized_log_entry)?;
-    verify_rekor_signature(&log_entry, rekor_public_key)?;
+    let log_entry =
+        parse_rekor_log_entry(serialized_log_entry).context("parsing Rekor log entry")?;
+    verify_rekor_signature(&log_entry, rekor_public_key).context("verifying Rekor signature")?;
 
     let body = log_entry.body()?;
-    verify_rekor_body(&body, artifact_bytes)?;
+    verify_rekor_body(&body, artifact_bytes).context("verifying Rekor body")?;
     Ok(log_entry)
 }
 

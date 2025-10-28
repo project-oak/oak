@@ -17,6 +17,7 @@
 extern crate alloc;
 
 use oak_proto_rust::oak::attestation::v1::{KeyType, VerifyingKey, VerifyingKeySet};
+use oak_time::make_instant;
 use serde_json::json;
 use test_util::EndorsementData;
 
@@ -104,7 +105,39 @@ fn test_from_cosign_bundle_invalid_signature_base64() {
     assert!(result.is_err());
 }
 
-// An actual bundle returned from pull_payload().
+// An actual Rekor bundle returned from cosign::pull_payload(), along with all
+// additional pieces: statement, signature over it, and developer key.
+const STATEMENT: &str = r###"{
+  "_type": "https://in-toto.io/Statement/v1",
+  "predicateType": "https://project-oak.github.io/oak/tr/endorsement/v1",
+  "subject": [
+    {
+      "name": "oak-examples-477357/echo-enclave-repo-test/echo_enclave_app",
+      "digest": {
+        "sha256": "6ef1a760efdac690b6475fdb12b9c287161bc3b63ed5d8ed100d9b5d6f79ca69"
+      }
+    }
+  ],
+  "predicate": {
+    "issuedOn": "2025-10-24T19:34:34.676Z",
+    "validity": {
+      "notBefore": "2025-10-24T19:34:34.676Z",
+      "notAfter": "2025-11-23T19:34:34.676Z"
+    },
+    "claims": []
+  }
+}"###;
+const _SIGNATURE: [u8; 71] = [
+    48, 69, 2, 33, 0, 184, 235, 145, 64, 5, 142, 75, 213, 7, 67, 91, 34, 35, 216, 195, 81, 56, 93,
+    247, 237, 174, 26, 30, 35, 208, 132, 62, 208, 41, 38, 116, 152, 2, 32, 82, 182, 194, 104, 124,
+    122, 11, 243, 245, 226, 98, 181, 109, 141, 54, 162, 191, 202, 29, 172, 9, 195, 133, 8, 155,
+    138, 131, 210, 35, 19, 199, 253,
+];
+const _DEVELOPER_KEY: &str = r###"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgVW4BnwMXH1eT+1gBkC+DrGNoUQf
+YecOW+Z+5QTBjfWcApR2Ny5oQMWU6V6lTsFRCYdO1VHdAoxncS5XU3rrzQ==
+-----END PUBLIC KEY-----
+"###;
 const REKOR_BUNDLE: &str = r###"{"SignedEntryTimestamp":"MEUCIFj09/fxhnbsGKn2y7wtnZFk3gOmcVVQeXcZWYxYnnvjAiEA6j+pNc1j5DdfKLFjb6u3yBU8IOzO3vD7DcobUiL1X/o=","Payload":{"body":"eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiI5NWM4YzE2MGM5ZDYxNzA4ZWRkYzkwNzg4MmQxYmE1OGNjNDg3YWZmNDViOWM1ODQ3OGQ5MmM0ZTA4MjAxOGNjIn19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FVUNJUUM0NjVGQUJZNUwxUWREV3lJajJNTlJPRjMzN2E0YUhpUFFoRDdRS1NaMG1BSWdVcmJDYUh4NkMvUDE0bUsxYlkwMm9yL0tIYXdKdzRVSW00cUQwaU1UeC8wPSIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCUVZVSk1TVU1nUzBWWkxTMHRMUzBLVFVacmQwVjNXVWhMYjFwSmVtb3dRMEZSV1VsTGIxcEplbW93UkVGUlkwUlJaMEZGWjFaWE5FSnVkMDFZU0RGbFZDc3haMEpyUXl0RWNrZE9iMVZSWmdwWlpXTlBWeXRhS3pWUlZFSnFabGRqUVhCU01rNTVOVzlSVFZkVk5sWTJiRlJ6UmxKRFdXUlBNVlpJWkVGdmVHNWpVelZZVlROeWNucFJQVDBLTFMwdExTMUZUa1FnVUZWQ1RFbERJRXRGV1MwdExTMHRDZz09In19fX0=","integratedTime":1761334477,"logIndex":637763709,"logID":"c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"}}"###;
 
 #[test]
@@ -114,4 +147,21 @@ fn test_from_cosign_bundle_parse_round_trip() {
     let actual = parse_rekor_log_entry(&serialized_expected).expect("failed to reparse");
     let serialized_actual = serialize_rekor_log_entry(&actual).expect("failed to reserialize");
     assert_eq!(serialized_actual, serialized_expected);
+}
+
+#[test]
+fn test_from_cosign_bundle_verify_rekor() {
+    let d = EndorsementData::load();
+    let rekor_key_set = create_verifying_key_set(&d.rekor_public_key);
+    let verification_time = make_instant!("2025-10-31T00:00:00Z");
+
+    let bundle = LogEntry::from_cosign_bundle(REKOR_BUNDLE).expect("failed to parse bundle");
+    let serialized_log_entry = serialize_rekor_log_entry(&bundle).expect("failed to serialize");
+    let result = verify_rekor_log_entry(
+        &serialized_log_entry,
+        &rekor_key_set,
+        STATEMENT.as_bytes(),
+        verification_time.into_unix_millis(),
+    );
+    assert!(result.is_ok(), "Failed: {:?}", result.err().unwrap());
 }
