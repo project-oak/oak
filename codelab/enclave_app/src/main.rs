@@ -34,7 +34,7 @@ fn start_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let attester = InstanceAttester::create().expect("couldn't create attester");
     let service = service::EchoService { attester };
-    let server = service::proto::oak::echo::EnclaveServiceServer::new(service);
+    let server = echo_service::sealed::codelabs::enclave::EnclaveServiceServer::new(service);
     start_blocking_server(Box::<FileDescriptorChannel>::default(), server, &mut invocation_stats)
         .expect("server encountered an unrecoverable error");
 }

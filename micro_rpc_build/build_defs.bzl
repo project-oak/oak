@@ -93,12 +93,12 @@ def rust_micro_rpc_service(
         name = name,
         srcs = [":" + generate_service_lib_name],
         proc_macro_deps = [
-            "@oak_crates_index//:prost-derive",
+            Label("@oak_crates_index//:prost-derive"),
         ],
         deps = [
-            "//micro_rpc",
-            "@oak_crates_index//:prost",
-            "@oak_crates_index//:prost-types",
+            Label("//micro_rpc"),
+            Label("@oak_crates_index//:prost"),
+            Label("@oak_crates_index//:prost-types"),
         ] + deps,
         **kwargs
     )

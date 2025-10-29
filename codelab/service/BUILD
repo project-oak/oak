@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
@@ -29,7 +28,7 @@ rust_library(
         "@oak_crates_index//:prost-derive",
     ],
     deps = [
-        ":build",
+        "//service/proto:echo_service",
         "@oak//micro_rpc",
         "@oak//oak_proto_rust",
         "@oak//oak_restricted_kernel_sdk",
@@ -37,30 +36,5 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-    ],
-)
-
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    data = [
-        "//service/proto:evidence.proto",
-        "//service/proto:service.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "@oak//micro_rpc_build",
-        "@oak//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
     ],
 )

@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-import "service/proto/evidence.proto";
+import "proto/attestation/evidence.proto";
 
 package sealed.codelabs.enclave;
 

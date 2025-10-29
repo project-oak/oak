@@ -30,6 +30,7 @@ rust_binary(
     ],
     deps = [
         "//service",
+        "//service/proto:echo_service",
         "@oak//micro_rpc",
         "@oak//oak_restricted_kernel_sdk",
         "@oak_crates_index//:serde",

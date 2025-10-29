@@ -24,52 +24,38 @@ use alloc::format;
 use log::info;
 use oak_restricted_kernel_sdk::Attester;
 
-pub mod proto {
-    pub mod oak {
-        pub mod attestation {
-            pub mod v1 {
-                pub use oak_proto_rust::oak::attestation::v1::Evidence;
-            }
-        }
-
-        pub mod echo {
-            #![allow(dead_code)]
-            #![allow(clippy::let_unit_value)]
-            use prost::Message;
-            include!(concat!(env!("OUT_DIR"), "/sealed.codelabs.enclave.rs"));
-        }
-    }
-}
-
 pub struct EchoService<A: Attester> {
     pub attester: A,
 }
 
-impl<A> proto::oak::echo::EnclaveService for EchoService<A>
+impl<A> echo_service::sealed::codelabs::enclave::EnclaveService for EchoService<A>
 where
     A: Attester,
 {
     fn echo(
         &mut self,
-        request: proto::oak::echo::EchoRequest,
-    ) -> Result<proto::oak::echo::EchoResponse, micro_rpc::Status> {
+        request: echo_service::sealed::codelabs::enclave::EchoRequest,
+    ) -> Result<echo_service::sealed::codelabs::enclave::EchoResponse, micro_rpc::Status> {
         let request_body = request.msg;
         info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;
 
-        Ok(proto::oak::echo::EchoResponse { msg: response_body })
+        Ok(echo_service::sealed::codelabs::enclave::EchoResponse { msg: response_body })
     }
 
     fn get_evidence(
         &mut self,
-        _request: crate::proto::oak::echo::GetEvidenceRequest,
-    ) -> Result<proto::oak::echo::GetEvidenceResponse, micro_rpc::Status> {
+        _request: echo_service::sealed::codelabs::enclave::GetEvidenceRequest,
+    ) -> Result<echo_service::sealed::codelabs::enclave::GetEvidenceResponse, micro_rpc::Status>
+    {
         let evidence = self.attester.quote().map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 format!("failed to get evidence: {err}"),
             )
         })?;
-        Ok(proto::oak::echo::GetEvidenceResponse { evidence: Some(evidence) })
+        Ok(echo_service::sealed::codelabs::enclave::GetEvidenceResponse {
+            evidence: Some(evidence),
+        })
     }
 }
