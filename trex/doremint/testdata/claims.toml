@@ -1,3 +1,5 @@
 claims = [
-    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md",
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md", # published
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md", # open source
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md", # container image
 ]

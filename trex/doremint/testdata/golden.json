@@ -18,6 +18,12 @@
     "claims": [
       {
         "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md"
+      },
+      {
+        "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md"
+      },
+      {
+        "type": "https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md"
       }
     ]
   }

@@ -16,14 +16,16 @@
 /**
 Sample call:
 
+export IMAGE_REF=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 bazel run trex/doremint image verify -- \
-  --image example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff \
-  --claims $(pwd)/trex/doremint/testdata/claims.toml
+  --image "$IMAGE_REF" \
+  --claims $(pwd)/trex/doremint/testdata/claims.toml \
+  --access-token "$(gcloud auth print-access-token)" \
+  --endorser-public-key "$HOME/cosign.pub"
 */
 use anyhow::Context;
 use clap::Parser;
 use digest_util::hex_digest_from_typed_hash;
-use intoto::statement::parse_statement;
 use oak_time_std::instant::now;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
@@ -33,11 +35,11 @@ use rekor::{
 };
 use sigstore_client::cosign;
 use verify_endorsement::{
-    create_endorsement_reference_value, create_signed_endorsement, create_verifying_key_from_raw,
-    verify_endorsement,
+    create_endorsement_reference_value, create_signed_endorsement, create_verifying_key_from_pem,
+    create_verifying_key_from_raw, verify_endorsement,
 };
 
-use crate::flags::{verifying_key_parser, Claims};
+use crate::flags::{read_pem_file, Claims};
 
 #[derive(Parser, Debug)]
 #[command(about = "Verify an endorsement for a container image")]
@@ -51,8 +53,8 @@ pub struct VerifyCommand {
     #[arg(long, help = "Identity token for Cloud authentication")]
     pub access_token: Option<String>,
 
-    #[arg(long, value_parser = verifying_key_parser, help = "Path to a file containing the PEM-encoded public key of the endorser")]
-    pub endorser_public_key: Vec<u8>,
+    #[arg(long, value_parser = read_pem_file, help = "Path to a file containing the PEM-encoded public key of the endorser")]
+    pub endorser_public_key: String,
 }
 
 impl VerifyCommand {
@@ -77,16 +79,14 @@ impl VerifyCommand {
             &serialized_log_entry,
         );
 
-        let endorser_key = create_verifying_key_from_raw(&self.endorser_public_key, 0);
+        let endorser_key = create_verifying_key_from_pem(&self.endorser_public_key, 0);
         let rekor_key = create_verifying_key_from_raw(&get_rekor_v1_public_key_raw(), 0);
         let ref_value = create_endorsement_reference_value(endorser_key, Some(rekor_key));
 
-        let _ = verify_endorsement(now().into_unix_millis(), &signed_endorsement, &ref_value)?;
+        let statement =
+            verify_endorsement(now().into_unix_millis(), &signed_endorsement, &ref_value)?;
 
         // Need to verify the endorsement subject and the claims as well.
-        // With minor additional work, this could also happen as part of the
-        // call above.
-        let statement = parse_statement(statement.unverified_message())?;
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = hex_digest_from_typed_hash(typed_hash)?;
         // Convert Vec<String> to Vec<&str>.

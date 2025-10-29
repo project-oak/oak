@@ -18,7 +18,6 @@ use std::{
 };
 
 use anyhow::Context;
-use key_util::convert_pem_to_raw;
 use oak_time::{Duration, Instant};
 use oak_time_std::instant::now;
 use serde::Deserialize;
@@ -89,7 +88,6 @@ pub(crate) fn parse_current_time(value: &str) -> anyhow::Result<Instant> {
     }
 }
 
-pub(crate) fn verifying_key_parser(key_path: &str) -> anyhow::Result<Vec<u8>, anyhow::Error> {
-    let public_key_pem = fs::read_to_string(key_path)?;
-    convert_pem_to_raw(&public_key_pem)
+pub(crate) fn read_pem_file(key_path: &str) -> anyhow::Result<String, anyhow::Error> {
+    Ok(fs::read_to_string(key_path)?)
 }
