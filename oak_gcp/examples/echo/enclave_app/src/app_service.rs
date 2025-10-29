@@ -18,11 +18,10 @@
 /// Oak doesn't provide full service implementation conveniences in the SDK,
 /// since typically, Oak-enabled methods will be part of a larger service that
 /// may need to be configured in specific ways.
-use std::{pin::Pin, sync::Arc};
+use std::{collections::BTreeMap, pin::Pin, sync::Arc};
 
 use anyhow::anyhow;
-use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
-use oak_attestation_types::{attester::Attester, endorser::Endorser};
+use oak_attestation_gcp::{assertions::GcpAssertionGenerator, OAK_SESSION_NOISE_V1_AUDIENCE};
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
 };
@@ -34,11 +33,11 @@ use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
+    generator::{BindableAssertionGenerator, SessionKeyBindableAssertionGenerator},
     handshake::HandshakeType,
-    session_binding::{SessionBinder, SignatureBinder},
     ServerSession, Session,
 };
-use p256::ecdsa::{SigningKey, VerifyingKey};
+use p256::ecdsa::SigningKey;
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
@@ -49,9 +48,7 @@ const ATTESTATION_ID: &str = "c0bbb3a6-2256-4390-a342-507b6aecb7e1";
 /// Holds the gRPC EnclaveApplication implementation.
 pub struct EnclaveApplicationImplementation {
     application_handler: Arc<EchoHandler>,
-    attester: Arc<dyn Attester>,
-    endorser: Arc<dyn Endorser>,
-    session_binder: Arc<dyn SessionBinder>,
+    assertion_generators: BTreeMap<String, Arc<dyn BindableAssertionGenerator>>,
 }
 
 impl EnclaveApplicationImplementation {
@@ -60,11 +57,20 @@ impl EnclaveApplicationImplementation {
         binding_key: SigningKey,
         endorsement: ConfidentialSpaceEndorsement,
     ) -> Self {
+        let gcp_assertion_generator: Arc<dyn BindableAssertionGenerator> =
+            Arc::new(SessionKeyBindableAssertionGenerator {
+                assertion_generator: Arc::new(GcpAssertionGenerator {
+                    audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
+                    endorsement: Some(endorsement),
+                }),
+                binding_signer: Arc::new(binding_key),
+            });
         Self {
             application_handler: Arc::new(application_handler),
-            attester: Arc::new(PublicKeyAttester::new(VerifyingKey::from(&binding_key))),
-            endorser: Arc::new(PublicKeyEndorser::new(endorsement)),
-            session_binder: Arc::new(SignatureBinder::new(Box::new(binding_key))),
+            assertion_generators: BTreeMap::from([(
+                ATTESTATION_ID.to_string(),
+                gcp_assertion_generator,
+            )]),
         }
     }
 }
@@ -89,14 +95,16 @@ impl EnclaveApplication for EnclaveApplicationImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::OakSessionStream>, tonic::Status> {
-        let mut server_session = ServerSession::create(
-            SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
-                .add_self_attester_ref(ATTESTATION_ID.to_owned(), &self.attester)
-                .add_self_endorser_ref(ATTESTATION_ID.to_owned(), &self.endorser)
-                .add_session_binder_ref(ATTESTATION_ID.to_owned(), &self.session_binder)
-                .build(),
-        )
-        .map_err(|e| tonic::Status::internal(format!("could not create server session: {e:?}")))?;
+        let mut session_config_builder =
+            SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN);
+        for (id, assertion_generator) in &self.assertion_generators {
+            session_config_builder = session_config_builder
+                .add_self_assertion_generator_ref(id.clone(), assertion_generator);
+        }
+        let mut server_session =
+            ServerSession::create(session_config_builder.build()).map_err(|e| {
+                tonic::Status::internal(format!("could not create server session: {e:#?}"))
+            })?;
 
         let application_handler = self.application_handler.clone();
 

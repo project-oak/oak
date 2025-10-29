@@ -1568,7 +1568,7 @@ fn client_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(
         client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Legacy verification failed: NoMatchedLegacyVerifier",
+            reason: "Legacy verification failed: no matched legacy verifier found",
             ..
         }),
         "Attestation should fail with an unmatched verifier"
@@ -1599,7 +1599,7 @@ fn server_unmatched_verifier_attestation_fails() -> anyhow::Result<()> {
     assert_that!(
         server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Legacy verification failed: NoMatchedLegacyVerifier",
+            reason: "Legacy verification failed: no matched legacy verifier found",
             ..
         }),
         "Attestation should fail with an unmatched verifier"
@@ -1626,7 +1626,7 @@ fn client_unmatched_assertion_verifier_attestation_fails() -> anyhow::Result<()>
     assert_that!(
         client_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Assertion verification failed: NoMatchedBoundAssertionVerifier",
+            reason: "Assertion verification failed: no matched bound assertion verifier found",
             ..
         }),
         "Attestation should fail with an unmatched assertion verifier"
@@ -1653,7 +1653,7 @@ fn server_unmatched_assertion_verifier_attestation_fails() -> anyhow::Result<()>
     assert_that!(
         server_attestation_provider.take_attestation_state()?.peer_attestation_verdict,
         matches_pattern!(PeerAttestationVerdict::AttestationFailed {
-            reason: "Assertion verification failed: NoMatchedBoundAssertionVerifier",
+            reason: "Assertion verification failed: no matched bound assertion verifier found",
             ..
         }),
         "Attestation should fail with an unmatched assertion verifier"

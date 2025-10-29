@@ -34,6 +34,7 @@ rust_library(
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         "//oak_attestation",
+        "//oak_attestation_gcp",
         "//oak_attestation_types",
         "//oak_crypto",
         "//oak_gcp/examples/echo/proto:echo_rust_proto",
@@ -85,7 +86,10 @@ oci_image(
     base = "@distroless_cc_debian12",
     entrypoint = ["/usr/local/bin/oak_gcp_examples_echo_enclave_app"],
     exposed_ports = ["8080/tcp"],
-    labels = {"tee.launch_policy.allow_env_override": "CONTAINER_IMAGE"},
+    labels = {
+        "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE",
+        "tee-container-log-redirect": "true",
+    },
     tars = [":tar"],
 )
 

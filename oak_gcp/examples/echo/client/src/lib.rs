@@ -18,10 +18,9 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
-    policy_generator::confidential_space_policy_from_reference_values,
-    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+    assertions::GcpAssertionVerifier, CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+    OAK_SESSION_NOISE_V1_AUDIENCE,
 };
-use oak_attestation_verification::EventLogVerifier;
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -32,12 +31,13 @@ use oak_proto_rust::oak::{
 };
 use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
 use oak_session::{
+    aggregators::PassThrough,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    key_extractor::DefaultBindingKeyExtractor,
-    session::AttestationEvidence,
+    session::{AttestationEvidence, AttestationPublisher},
+    verifier::SessionKeyBoundAssertionVerifier,
     ClientSession, Session,
 };
 use oak_time::Clock;
@@ -60,6 +60,7 @@ impl EchoClient {
         url: T,
         clock: Arc<dyn Clock>,
         developer_public_key: VerifyingKey,
+        publisher: Option<Arc<dyn AttestationPublisher>>,
     ) -> Result<EchoClient> {
         let url = url.as_ref().to_owned();
         let uri = Uri::from_maybe_shared(url).context("invalid URI")?;
@@ -91,19 +92,24 @@ impl EchoClient {
                 ),
             })),
         };
-        let policy = confidential_space_policy_from_reference_values(&reference_values)?;
-        let attestation_verifier = EventLogVerifier::new(vec![Box::new(policy)], clock.clone());
+        let assertion_verifier = Box::new(SessionKeyBoundAssertionVerifier {
+            assertion_verifier: Arc::new(GcpAssertionVerifier {
+                audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
+                reference_values,
+            }),
+            clock: clock.clone(),
+        });
 
-        let client_config: SessionConfig =
+        let mut client_config_builder =
             SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
-                .add_peer_verifier_with_key_extractor(
-                    ATTESTATION_ID.to_string(),
-                    Box::new(attestation_verifier),
-                    Box::new(DefaultBindingKeyExtractor {}),
-                )
-                .build();
-        let mut client_session =
-            ClientSession::create(client_config).expect("Failed to create client session");
+                .add_peer_assertion_verifier(ATTESTATION_ID.to_string(), assertion_verifier)
+                .set_assertion_attestation_aggregator(Box::new(PassThrough {}));
+        if let Some(publisher) = publisher {
+            client_config_builder = client_config_builder.add_attestation_publisher(&publisher);
+        }
+
+        let mut client_session = ClientSession::create(client_config_builder.build())
+            .context("Failed to create client session")?;
 
         while !client_session.is_open() {
             let request = client_session.next_init_message().expect("expected client init message");
@@ -112,11 +118,11 @@ impl EchoClient {
                 let response = response_stream
                     .message()
                     .await
-                    .expect("expected a response")
-                    .expect("response was failure");
+                    .context("expected a response")?
+                    .context("response was failure")?;
                 client_session
                     .handle_init_message(response)
-                    .expect("failed to handle init response");
+                    .context("failed to handle init response")?;
             }
         }
 

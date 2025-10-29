@@ -17,7 +17,6 @@
 use alloc::{collections::BTreeMap, string::String, sync::Arc};
 
 use itertools::Itertools;
-use strum::Display;
 use thiserror::Error;
 
 use crate::{
@@ -28,12 +27,17 @@ use crate::{
 };
 
 /// Represents verification errors.
-#[derive(Error, Debug, Display)]
+#[derive(Error, Debug)]
 pub enum AggregatedVerificationError {
+    #[error("legacy attestation verification failed, failures: {failures:?}")]
     LegacyVerificationFailure { failures: BTreeMap<String, String> },
+    #[error("assertion verification failed, failures: {failures:?}")]
     AssertionVerificationFailure { failures: BTreeMap<String, BoundAssertionVerificationError> },
+    #[error("no matched legacy verifier found")]
     NoMatchedLegacyVerifier,
+    #[error("no matched bound assertion verifier found")]
     NoMatchedBoundAssertionVerifier,
+    #[error("aggregator configuration error")]
     ConfigurationError,
 }
 

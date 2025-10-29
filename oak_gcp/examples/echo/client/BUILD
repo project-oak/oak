@@ -55,6 +55,7 @@ rust_binary(
     deps = [
         ":oak_gcp_examples_echo_client",
         "//oak_proto_rust",
+        "//oak_session",
         "//oak_time",
         "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",

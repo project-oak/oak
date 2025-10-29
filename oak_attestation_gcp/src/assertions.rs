@@ -61,7 +61,7 @@ impl AssertionGenerator for GcpAssertionGenerator {
         let token = crate::attestation::request_attestation_token(&self.audience, &nonce)
             .context("requesting attestation token")?;
         let assertion = ConfidentialSpaceAssertion {
-            jwt_token: token.encode_to_vec(),
+            jwt_token: token.into(),
             container_image_endorsement: self.endorsement.clone(),
         };
 
@@ -70,9 +70,9 @@ impl AssertionGenerator for GcpAssertionGenerator {
 }
 
 #[allow(dead_code)]
-struct GcpAssertionVerifier {
-    audience: String,
-    reference_values: ConfidentialSpaceReferenceValues,
+pub struct GcpAssertionVerifier {
+    pub audience: String,
+    pub reference_values: ConfidentialSpaceReferenceValues,
 }
 
 impl GcpAssertionVerifier {
@@ -116,7 +116,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
         let cs_assertion = ConfidentialSpaceAssertion::decode(assertion.content.as_slice())
             .context("parsing ConfidentialSpaceAssertion")?;
         let jwt = String::from_utf8(cs_assertion.jwt_token.clone())
-            .context("decoding assertion as UTF-8 string")?;
+            .context("decoding JWT token as UTF-8 string")?;
         let token: Token<Header, Claims, _> =
             Token::parse_unverified(&jwt).context("parsing the JWT token")?;
 

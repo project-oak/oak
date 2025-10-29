@@ -118,13 +118,13 @@ pub(crate) fn verify_endorsement_wrapper(
 
     let statement =
         verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, ref_value)
-            .map_err(|err| EVError(err.to_string()))?;
+            .map_err(|err| EVError(format!("{err:#}")))?;
     let typed_hash = image_reference.digest().ok_or(
         ConfidentialSpaceVerificationError::MissingField("Missing digest in OCI reference"),
     )?;
     let digest = hex_digest_from_typed_hash(typed_hash)
         .map_err(|_| IFError("Malformed digest in OCI reference"))?;
-    statement.validate_subject(&digest).map_err(|err| EVError(err.to_string()))
+    statement.validate_subject(&digest).map_err(|err| EVError(format!("{err:#}")))
 }
 
 // Workload reference values can either be `EndorsementReferenceValue` protos or
