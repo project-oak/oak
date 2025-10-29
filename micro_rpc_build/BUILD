@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -27,5 +27,16 @@ rust_library(
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost-build",
+    ],
+)
+
+rust_binary(
+    name = "generator",
+    srcs = glob(["*.rs"]),
+    deps = [
+        "//micro_rpc_build",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:serde_json",
     ],
 )

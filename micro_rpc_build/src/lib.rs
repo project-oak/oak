@@ -15,6 +15,8 @@
 //
 
 #![feature(iter_intersperse)]
+use std::path::PathBuf;
+
 use anyhow::Context;
 mod prost;
 
@@ -68,6 +70,20 @@ pub struct CompileOptions {
     ///
     /// See https://docs.rs/prost-build/0.12.4/prost_build/struct.Config.html#method.enable_type_names
     pub enable_type_names: bool,
+
+    // Configures the directory into which generated files will be written.
+    ///
+    /// Defaults to the OUT_DIR env variable, if unset.
+    ///
+    /// See https://docs.rs/prost-build/latest/prost_build/struct.Config.html#method.out_dir.
+    pub out_dir: Option<PathBuf>,
+
+    // Configures the path to the protoc executable.
+    ///
+    /// Defaults to the PROTOC env variable, if unset.
+    ///
+    /// See https://docs.rs/prost-build/latest/prost_build/struct.Config.html#method.protoc_executable.
+    pub protoc_executable: Option<PathBuf>,
 }
 /// A service definition to generate micro_rpc code for.
 #[derive(Debug)]

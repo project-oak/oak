@@ -1,5 +1,5 @@
 #
-# Copyright 2023 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,26 +18,23 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//micro_rpc_build:build_defs.bzl", "rust_micro_rpc_service")
 
 package(
-    default_visibility = ["//:internal"],
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
 proto_library(
-    name = "micro_rpc_noise_proto",
-    srcs = ["micro_rpc_noise.proto"],
+    name = "test_schema_proto",
+    srcs = ["test_schema.proto"],
     deps = [
         "//proto/micro_rpc:options_proto",
-        "//proto/session:session_proto",
+        "@com_google_protobuf//:any_proto",
+        "@com_google_protobuf//:duration_proto",
+        "@com_google_protobuf//:empty_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
 )
 
 rust_micro_rpc_service(
-    name = "micro_rpc_noise_rust_proto",
-    srcs = [":micro_rpc_noise_proto"],
-    extern_paths = {
-        ".oak": "oak_proto_rust::oak",
-    },
-    deps = [
-        "//oak_proto_rust",
-    ],
+    name = "test_schema_service",
+    srcs = [":test_schema_proto"],
 )

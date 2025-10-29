@@ -23,14 +23,10 @@
 extern crate alloc;
 
 use micro_rpc::Transport;
-
-mod test_schema {
-    #![allow(dead_code, clippy::let_unit_value)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs"));
-
-    pub const CODE_FILE: &str = concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs");
-}
+use test_schema_service::micro_rpc::tests::{
+    LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, TestService,
+    TestServiceAsyncClient, TestServiceClient, TestServiceServer,
+};
 
 /// Test implementation of a fallible transport that always returns the same
 /// error.
@@ -46,29 +42,24 @@ impl Transport for FailingTransport {
 
 struct TestServiceImpl;
 
-/// An implementation of the [`test_schema::TestService`] service trait for
+/// An implementation of the [`TestService`] service trait for
 /// testing.
-impl test_schema::TestService for TestServiceImpl {
+impl TestService for TestServiceImpl {
     fn lookup_data(
         &mut self,
-        request: test_schema::LookupDataRequest,
-    ) -> Result<test_schema::LookupDataResponse, micro_rpc::Status> {
+        request: LookupDataRequest,
+    ) -> Result<LookupDataResponse, micro_rpc::Status> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
-        h.get(&request.key)
-            .map(|v| test_schema::LookupDataResponse { value: v.clone() })
-            .ok_or_else(|| {
-                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::NotFound, "not found")
-            })
+        h.get(&request.key).map(|v| LookupDataResponse { value: v.clone() }).ok_or_else(|| {
+            micro_rpc::Status::new_with_message(micro_rpc::StatusCode::NotFound, "not found")
+        })
     }
 
-    fn log(
-        &mut self,
-        request: test_schema::LogRequest,
-    ) -> Result<test_schema::LogResponse, micro_rpc::Status> {
+    fn log(&mut self, request: LogRequest) -> Result<LogResponse, micro_rpc::Status> {
         eprintln!("log: {}", request.entry);
-        Ok(test_schema::LogResponse {})
+        Ok(LogResponse {})
     }
 
     fn empty(&mut self, _request: ()) -> Result<(), ::micro_rpc::Status> {
@@ -96,8 +87,8 @@ impl test_schema::TestService for TestServiceImpl {
 
 #[test]
 fn test_failing_transport() {
-    let mut client = test_schema::TestServiceClient::new(FailingTransport);
-    let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+    let mut client = TestServiceClient::new(FailingTransport);
+    let request = LookupDataRequest { key: vec![14, 12] };
     let transport_response = client.lookup_data(&request);
     assert_eq!(Err(42), transport_response);
 }
@@ -105,15 +96,15 @@ fn test_failing_transport() {
 #[test]
 fn test_lookup_data() {
     let service = TestServiceImpl;
-    let transport = test_schema::TestServiceServer::new(service);
-    let mut client = test_schema::TestServiceClient::new(transport);
+    let transport = TestServiceServer::new(service);
+    let mut client = TestServiceClient::new(transport);
     {
-        let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+        let request = LookupDataRequest { key: vec![14, 12] };
         let response = client.lookup_data(&request).into_ok();
-        assert_eq!(Ok(test_schema::LookupDataResponse { value: vec![19, 88] }), response);
+        assert_eq!(Ok(LookupDataResponse { value: vec![19, 88] }), response);
     }
     {
-        let request = test_schema::LookupDataRequest { key: vec![10, 00] };
+        let request = LookupDataRequest { key: vec![10, 00] };
         let response = client.lookup_data(&request).into_ok();
         assert_eq!(
             Err(micro_rpc::Status::new_with_message(micro_rpc::StatusCode::NotFound, "not found")),
@@ -124,12 +115,12 @@ fn test_lookup_data() {
 
 /// Simple async wrapper around the synchronous server.
 /// Used to test async clients that expect an async transport.
-pub struct AsyncTestServiceServer<S: test_schema::TestService> {
-    inner: test_schema::TestServiceServer<S>,
+pub struct AsyncTestServiceServer<S: TestService> {
+    inner: TestServiceServer<S>,
 }
 
 #[async_trait::async_trait]
-impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> micro_rpc::AsyncTransport
+impl<S: TestService + std::marker::Send + std::marker::Sync> micro_rpc::AsyncTransport
     for AsyncTestServiceServer<S>
 {
     async fn invoke(&mut self, request_bytes: &[u8]) -> Result<alloc::vec::Vec<u8>, !> {
@@ -140,16 +131,16 @@ impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> micro_
 #[tokio::test]
 async fn test_async_lookup_data() {
     let service = TestServiceImpl;
-    let service_impl = test_schema::TestServiceServer::new(service);
+    let service_impl = TestServiceServer::new(service);
     let async_transport = AsyncTestServiceServer { inner: service_impl };
-    let mut client = test_schema::TestServiceAsyncClient::new(async_transport);
+    let mut client = TestServiceAsyncClient::new(async_transport);
     {
-        let request = test_schema::LookupDataRequest { key: vec![14, 12] };
+        let request = LookupDataRequest { key: vec![14, 12] };
         let response = client.lookup_data(&request).await.into_ok();
-        assert_eq!(Ok(test_schema::LookupDataResponse { value: vec![19, 88] }), response);
+        assert_eq!(Ok(LookupDataResponse { value: vec![19, 88] }), response);
     }
     {
-        let request = test_schema::LookupDataRequest { key: vec![10, 00] };
+        let request = LookupDataRequest { key: vec![10, 00] };
         let response = client.lookup_data(&request).await.into_ok();
         assert_eq!(
             Err(micro_rpc::Status::new_with_message(micro_rpc::StatusCode::NotFound, "not found")),

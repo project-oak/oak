@@ -53,6 +53,12 @@ pub fn compile(
     if options.enable_type_names {
         config.enable_type_names();
     }
+    if let Some(out_dir) = options.out_dir {
+        config.out_dir(out_dir);
+    }
+    if let Some(protoc_executable) = options.protoc_executable {
+        config.protoc_executable(protoc_executable);
+    }
     config
         // Use BTreeMap to allow using this function in no-std crates.
         .btree_map(["."])
