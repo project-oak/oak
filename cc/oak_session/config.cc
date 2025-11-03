@@ -87,4 +87,8 @@ session::SessionConfig* SessionConfigBuilder::Build() {
   return bindings::session_config_builder_build(builder_);
 }
 
+session::SessionConfigHolder SessionConfigBuilder::BuildHolder() {
+  return SessionConfigHolder(Build());
+}
+
 }  // namespace oak::session

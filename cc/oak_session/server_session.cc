@@ -34,6 +34,9 @@ namespace oak::session {
 
 absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create(
     session::SessionConfig* config) {
+  if (config == nullptr) {
+    return absl::InvalidArgumentError("config cannot be null");
+  }
   const bindings::ErrorOrServerSession result =
       bindings::new_server_session(config);
 
@@ -42,6 +45,11 @@ absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create(
   }
 
   return absl::WrapUnique(new ServerSession(result.result));
+}
+
+absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create(
+    session::SessionConfigHolder config) {
+  return Create(config.release());
 }
 
 absl::StatusOr<std::unique_ptr<ServerSession>> ServerSession::Create() {

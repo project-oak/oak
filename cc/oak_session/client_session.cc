@@ -36,6 +36,10 @@ namespace {}  // namespace
 
 absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create(
     session::SessionConfig* config) {
+  if (config == nullptr) {
+    return absl::InvalidArgumentError("config cannot be null");
+  }
+
   const bindings::ErrorOrClientSession result =
       bindings::new_client_session(config);
 
@@ -44,6 +48,11 @@ absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create(
   }
 
   return absl::WrapUnique(new ClientSession(result.result));
+}
+
+absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create(
+    session::SessionConfigHolder config) {
+  return Create(config.release());
 }
 
 absl::StatusOr<std::unique_ptr<ClientSession>> ClientSession::Create() {

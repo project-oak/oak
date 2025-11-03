@@ -157,6 +157,7 @@ extern ffi::bindings::ErrorOrRustBytes identity_key_get_public_key(
     IdentityKey*);
 
 extern SessionConfig* session_config_builder_build(SessionConfigBuilder*);
+extern void session_config_free(SessionConfig*);
 
 // Corresponds to functions in oak_session/ffi/client_session.rs
 extern ErrorOrClientSession new_client_session(SessionConfig*);

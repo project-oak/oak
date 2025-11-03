@@ -174,6 +174,16 @@ pub unsafe extern "C" fn session_config_builder_build(
     Box::into_raw(Box::new(builder.build()))
 }
 
+/// Consumes and releases the memory of the SessionConfig.
+///
+/// # Safety
+///
+/// session_config must be a valid, properly aligned pointer to a SessionConfig.
+#[no_mangle]
+pub unsafe extern "C" fn session_config_free(session_config: *mut SessionConfig) {
+    drop(Box::from_raw(session_config));
+}
+
 /// Call add_self_attestion on the provided builder.
 ///
 /// # Safety

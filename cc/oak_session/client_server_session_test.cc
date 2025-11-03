@@ -63,13 +63,13 @@ constexpr absl::string_view kClientKeyBytes =
 constexpr absl::string_view kServerKeyBytes =
     "serverkeybytes12serverkeybytes34";
 
-SessionConfig* TestConfigUnattestedNN() {
+SessionConfigHolder TestConfigUnattestedNN() {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseNN)
-      .Build();
+      .BuildHolder();
 }
 
-SessionConfig* TestConfigAttestedNNServer() {
+SessionConfigHolder TestConfigAttestedNNServer() {
   auto signing_key = bindings::new_random_signing_key();
   auto verifying_bytes = bindings::signing_key_verifying_key_bytes(signing_key);
 
@@ -103,10 +103,10 @@ SessionConfig* TestConfigAttestedNNServer() {
 
   bindings::free_signing_key(signing_key);
 
-  return builder.Build();
+  return builder.BuildHolder();
 }
 
-SessionConfig* TestConfigAttestedNNClient() {
+SessionConfigHolder TestConfigAttestedNNClient() {
   auto verifier = bindings::new_fake_attestation_verifier(
       ffi::bindings::BytesView(kFakeEvent),
       ffi::bindings::BytesView(kFakePlatform));
@@ -114,31 +114,32 @@ SessionConfig* TestConfigAttestedNNClient() {
   return SessionConfigBuilder(AttestationType::kPeerUnidirectional,
                               HandshakeType::kNoiseNN)
       .AddPeerVerifier(kFakeAttesterId, verifier)
-      .Build();
+      .BuildHolder();
 }
 
-SessionConfig* TestConfigUnattestedNKClient(absl::string_view public_key) {
+SessionConfigHolder TestConfigUnattestedNKClient(absl::string_view public_key) {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseNK)
       .SetPeerStaticPublicKey(public_key)
-      .Build();
+      .BuildHolder();
 }
 
-SessionConfig* TestConfigUnattestedNKServer(
+SessionConfigHolder TestConfigUnattestedNKServer(
     bindings::IdentityKey* identity_key) {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseNK)
       .SetSelfStaticPrivateKey(identity_key)
-      .Build();
+      .BuildHolder();
 }
 
-SessionConfig* TestConfigUnattestedKK(absl::string_view peer_public_key,
-                                      bindings::IdentityKey* self_private_key) {
+SessionConfigHolder TestConfigUnattestedKK(
+    absl::string_view peer_public_key,
+    bindings::IdentityKey* self_private_key) {
   return SessionConfigBuilder(AttestationType::kUnattested,
                               HandshakeType::kNoiseKK)
       .SetPeerStaticPublicKey(peer_public_key)
       .SetSelfStaticPrivateKey(self_private_key)
-      .Build();
+      .BuildHolder();
 }
 
 void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
@@ -162,6 +163,13 @@ void DoHandshake(ClientSession& client_session, ServerSession& server_session) {
 
   EXPECT_THAT(client_session.IsOpen(), Eq(true));
   EXPECT_THAT(server_session.IsOpen(), Eq(true));
+}
+
+TEST(ClientServerSessionTest, MultipleUsageFails) {
+  auto client_session_config = TestConfigUnattestedNN();
+  EXPECT_THAT(ClientSession::Create(std::move(client_session_config)), IsOk());
+  EXPECT_THAT(ClientSession::Create(std::move(client_session_config)),
+              Not(IsOk()));
 }
 
 TEST(ClientServerSessionTest, UnattestedNNHandshakeSucceeds) {

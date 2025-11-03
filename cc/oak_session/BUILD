@@ -141,5 +141,6 @@ cc_library(
         "//cc/ffi:bytes_view",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
     ],
 )

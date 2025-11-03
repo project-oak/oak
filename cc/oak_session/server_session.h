@@ -41,8 +41,11 @@ class ServerSession {
  public:
   // A valid `SessionConfig` can be obtained using
   // oak::session::SessionConfigBuilder.
+  ABSL_DEPRECATED("Use the overload accepting SessionConfigHolder.")
   static absl::StatusOr<std::unique_ptr<ServerSession>> Create(
       session::SessionConfig* config);
+  static absl::StatusOr<std::unique_ptr<ServerSession>> Create(
+      session::SessionConfigHolder config);
   // Use a default configuration, Unattested + NoiseNN
   ABSL_DEPRECATED("Use the config-providing variant.")
   static absl::StatusOr<std::unique_ptr<ServerSession>> Create();
