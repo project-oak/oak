@@ -633,6 +633,11 @@ pub struct Evidence {
     pub application_keys: ::core::option::Option<ApplicationKeys>,
     #[prost(message, optional, tag = "4")]
     pub event_log: ::core::option::Option<EventLog>,
+    /// A version of the event_log that does not contain sensitive data. Note that
+    /// each transparent event log entry must have a corresponding entry in the
+    /// original event_log.
+    #[prost(message, optional, tag = "5")]
+    pub transparent_event_log: ::core::option::Option<EventLog>,
 }
 /// This proto defines the layered DICE Attestation Evidence.
 ///

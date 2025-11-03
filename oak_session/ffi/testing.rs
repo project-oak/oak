@@ -50,6 +50,7 @@ pub unsafe extern "C" fn new_fake_evidence(
         event_log: Some(EventLog {
             encoded_events: vec![unsafe { fake_event_log_data_bytes.as_slice().to_vec() }],
         }),
+        transparent_event_log: None,
     };
     RustBytes::new(evidence.encode_to_vec().into_boxed_slice())
 }

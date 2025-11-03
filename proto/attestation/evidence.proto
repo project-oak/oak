@@ -124,4 +124,9 @@ message Evidence {
   ApplicationKeys application_keys = 3;
 
   EventLog event_log = 4;
+
+  // A version of the event_log that does not contain sensitive data. Note that
+  // each transparent event log entry must have a corresponding entry in the
+  // original event_log.
+  EventLog transparent_event_log = 5;
 }

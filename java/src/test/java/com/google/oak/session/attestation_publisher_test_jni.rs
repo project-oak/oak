@@ -99,6 +99,7 @@ extern "system" fn Java_com_google_oak_session_AttestationPublisherTest_nativeCr
         application_keys: None,
         event_log: Some(EventLog { encoded_events: vec![b"fake event".to_vec()] }),
         layers: vec![],
+        transparent_event_log: None,
     };
 
     let endorsement = Variant { id: b"testing".to_vec(), value: b"fake endorsement".to_vec() };

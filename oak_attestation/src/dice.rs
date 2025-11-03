@@ -294,8 +294,13 @@ pub fn stage0_dice_data_and_event_log_to_proto(
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.layer_1_evidence)?];
     let application_keys = None;
-    let evidence =
-        Some(Evidence { root_layer, layers, application_keys, event_log: Some(event_log) });
+    let evidence = Some(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+        event_log: Some(event_log),
+        transparent_event_log: None,
+    });
     let certificate_authority = Some(CertificateAuthority {
         eca_private_key: value.layer_1_certificate_authority.eca_private_key
             [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
@@ -326,7 +331,8 @@ pub fn evidence_and_event_log_to_proto(
         .transpose()
         .map_err(anyhow::Error::msg)
         .context("couldn't decode event log")?;
-    Ok(Evidence { root_layer, layers, application_keys, event_log })
+    let transparent_event_log: Option<EventLog> = None;
+    Ok(Evidence { root_layer, layers, application_keys, event_log, transparent_event_log })
 }
 
 fn root_layer_evidence_to_proto(

@@ -123,6 +123,7 @@ pub fn generate_initial_dice_data<
         layers: Vec::new(),
         application_keys: None,
         event_log: Some(event_log),
+        transparent_event_log: None,
     };
 
     let result_ca = CertificateAuthority { eca_private_key: stage0_eca_key.to_bytes().to_vec() };
