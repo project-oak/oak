@@ -51,7 +51,7 @@ use oak_session::{
     generator::{BindableAssertionGenerator, SessionKeyBindableAssertionGenerator},
     handshake::HandshakeType,
     key_extractor::KeyExtractor,
-    session::{AttestationEvidence, AttestationPublisher},
+    session::{AttestationEvidence, AttestationPublisher, DEFAULT_MAX_MESSAGE_QUEUE_LEN},
     session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
     verifier::{BoundAssertionVerifier, SessionKeyBoundAssertionVerifier},
     ClientSession, ProtocolEngine, ServerSession, Session,
@@ -1089,6 +1089,100 @@ fn test_session_sendable() -> anyhow::Result<()> {
         .build();
     let server_session = ServerSession::create(server_config)?;
     test(server_session);
+    Ok(())
+}
+
+#[googletest::test]
+fn test_outgoing_message_queue_fails_when_exceeded() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
+
+    for _ in 0..DEFAULT_MAX_MESSAGE_QUEUE_LEN {
+        assert_that!(client_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+        assert_that!(server_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+    }
+    assert_that!(
+        client_session.write(PlaintextMessage { plaintext: "Hello".into() }),
+        err(anything())
+    );
+    assert_that!(
+        server_session.write(PlaintextMessage { plaintext: "Hello".into() }),
+        err(anything())
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn test_client_incoming_message_queue_fails_when_exceeded() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
+
+    for _ in 0..DEFAULT_MAX_MESSAGE_QUEUE_LEN {
+        assert_that!(server_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+        let encrypted_message = server_session
+            .get_outgoing_message()
+            .expect("An error occurred while getting the client outgoing message")
+            .expect("No client outgoing message was produced");
+        assert_that!(client_session.put_incoming_message(encrypted_message), ok(some(())));
+    }
+    assert_that!(server_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+    let encrypted_message = server_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client outgoing message")
+        .expect("No client outgoing message was produced");
+    assert_that!(client_session.put_incoming_message(encrypted_message), err(anything()));
+
+    Ok(())
+}
+
+#[googletest::test]
+fn test_server_incoming_message_queue_fails_when_exceeded() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+    let server_config =
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
+
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
+
+    do_attest(&mut client_session, &mut server_session)?;
+
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
+
+    for _ in 0..DEFAULT_MAX_MESSAGE_QUEUE_LEN {
+        assert_that!(client_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+        let encrypted_message = client_session
+            .get_outgoing_message()
+            .expect("An error occurred while getting the client outgoing message")
+            .expect("No client outgoing message was produced");
+        assert_that!(server_session.put_incoming_message(encrypted_message), ok(some(())));
+    }
+    assert_that!(client_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
+    let encrypted_message = client_session
+        .get_outgoing_message()
+        .expect("An error occurred while getting the client outgoing message")
+        .expect("No client outgoing message was produced");
+    assert_that!(server_session.put_incoming_message(encrypted_message), err(anything()));
+
     Ok(())
 }
 

@@ -91,6 +91,8 @@ use crate::{
     ProtocolEngine,
 };
 
+pub const DEFAULT_MAX_MESSAGE_QUEUE_LEN: usize = 1000;
+
 /// A unique identifier for an established secure session channel.
 ///
 /// This token is derived from the cryptographic hash of the handshake
@@ -502,6 +504,10 @@ impl Session for ClientSession {
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => {
+                anyhow::ensure!(
+                    self.outgoing_requests.len() < DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+                    "Message queue limit exceeded"
+                );
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
@@ -647,6 +653,10 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 im @ SessionResponse { response: Some(Response::EncryptedMessage(_)) },
                 Step::Open { .. },
             ) => {
+                anyhow::ensure!(
+                    self.incoming_responses.len() < DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+                    "Message queue limit exceeded"
+                );
                 self.incoming_responses.push_back(im);
                 Ok(Some(()))
             }
@@ -706,6 +716,10 @@ impl Session for ServerSession {
     fn write(&mut self, plaintext: PlaintextMessage) -> Result<(), Error> {
         match &mut self.step {
             Step::Open { encryptor, .. } => {
+                anyhow::ensure!(
+                    self.outgoing_responses.len() < DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+                    "Message queue limit exceeded"
+                );
                 let encrypted_message: EncryptedMessage = encryptor
                     .encrypt(plaintext.into())
                     .map(From::from)
@@ -843,6 +857,10 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 im @ SessionRequest { request: Some(Request::EncryptedMessage(_)) },
                 Step::Open { .. },
             ) => {
+                anyhow::ensure!(
+                    self.incoming_requests.len() < DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+                    "Message queue limit exceeded"
+                );
                 self.incoming_requests.push_back(im);
                 Ok(Some(()))
             }
