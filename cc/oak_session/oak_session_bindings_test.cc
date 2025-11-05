@@ -37,6 +37,7 @@ using ::oak::ffi::bindings::free_rust_bytes;
 using ::oak::ffi::bindings::free_rust_bytes_contents;
 using ::oak::session::v1::SessionRequest;
 using ::oak::session::v1::SessionResponse;
+using ::testing::ContainsRegex;
 using ::testing::Eq;
 using ::testing::Ne;
 
@@ -527,6 +528,14 @@ TEST(OakSessionBindingsTest, ErrorsAreReturned) {
 }
 
 TEST(OakSessionBindingsTest, IncorrectKeyLenReturnsError) {}
+
+TEST(OakSessionBindingsTest, AttestationIds) {
+  // Just make sure they're UUIDs.
+  ASSERT_THAT(absl::string_view(certificate_based_attestation_id()),
+              ContainsRegex("^([A-Fa-f0-9]+-){4}[A-Fa-f0-9]+$"));
+  ASSERT_THAT(absl::string_view(confidential_space_attestation_id()),
+              ContainsRegex("^([A-Fa-f0-9]+-){4}[A-Fa-f0-9]+$"));
+}
 
 }  // namespace
 }  // namespace oak::session::bindings

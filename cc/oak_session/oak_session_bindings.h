@@ -126,6 +126,8 @@ struct ErrorOrIdentityKey {
 
 extern "C" {
 // Corresponds to functions in oak_session/ffi/config.rs
+extern const char* const certificate_based_attestation_id();
+extern const char* const confidential_space_attestation_id();
 extern ErrorOrSessionConfigBuilder new_session_config_builder(uint32_t,
                                                               uint32_t);
 extern SessionConfigBuilder* session_config_builder_add_self_attester(

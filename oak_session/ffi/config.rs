@@ -32,7 +32,7 @@ pub static ATTESTATION_TYPE_PEER_UNIDIRECTIONAL: u32 = 3;
 #[no_mangle]
 pub static ATTESTATION_TYPE_UNATTESTED: u32 = 4;
 
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
@@ -42,6 +42,9 @@ use oak_crypto::{
 };
 use oak_ffi_bytes::BytesView;
 use oak_ffi_error::{Error, ErrorOrRustBytes};
+use oak_proto_rust::attestation::{
+    CERTIFICATE_BASED_ATTESTATION_ID_CSTR, CONFIDENTIAL_SPACE_ATTESTATION_ID_CSTR,
+};
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
@@ -49,6 +52,16 @@ use oak_session::{
     session_binding::SignatureBinderBuilder,
 };
 use p256::ecdsa::SigningKey;
+
+#[no_mangle]
+pub extern "C" fn certificate_based_attestation_id() -> *const c_char {
+    CERTIFICATE_BASED_ATTESTATION_ID_CSTR.as_ptr()
+}
+
+#[no_mangle]
+pub extern "C" fn confidential_space_attestation_id() -> *const c_char {
+    CONFIDENTIAL_SPACE_ATTESTATION_ID_CSTR.as_ptr()
+}
 
 /// Create a new `SessionConfigBuilder` for use in FFI;
 #[no_mangle]

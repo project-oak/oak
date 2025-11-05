@@ -40,6 +40,9 @@ enum class HandshakeType {
   kNoiseNN = bindings::HANDSHAKE_TYPE_NOISE_NN,
 };
 
+absl::string_view CertificateBasedAttestationId();
+absl::string_view ConfidentialSpaceAttestationId();
+
 // An opaque pointer to a Rust SessionConfig that can be used for constructing
 // sessions.
 using SessionConfig = bindings::SessionConfig;

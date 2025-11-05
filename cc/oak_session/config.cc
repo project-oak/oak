@@ -22,6 +22,15 @@
 #include "cc/oak_session/oak_session_bindings.h"
 
 namespace oak::session {
+
+absl::string_view CertificateBasedAttestationId() {
+  return absl::string_view(bindings::certificate_based_attestation_id());
+}
+
+absl::string_view ConfidentialSpaceAttestationId() {
+  return absl::string_view(bindings::confidential_space_attestation_id());
+}
+
 SessionConfigBuilder::SessionConfigBuilder(AttestationType attestation_type,
                                            HandshakeType handshake_type) {
   bindings::ErrorOrSessionConfigBuilder builder_result =

@@ -58,6 +58,7 @@ rust_library(
         "//oak_crypto",
         "//oak_ffi:oak_ffi_bytes",
         "//oak_ffi:oak_ffi_error",
+        "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:p256",
     ],
