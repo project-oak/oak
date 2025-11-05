@@ -478,5 +478,12 @@ TEST(ClientServerSessionTest, ConvertsToString) {
   EXPECT_THAT(received_request_string, Eq(plaintext_message));
 }
 
+// Run with --config=asan to verify that builder properly cleans up the
+// underlying memory.
+TEST(ClientServerSessionTest, UnusedConfigIsFreed) {
+  auto builder = SessionConfigBuilder(AttestationType::kUnattested,
+                                      HandshakeType::kNoiseNN);
+}
+
 }  // namespace
 }  // namespace oak::session

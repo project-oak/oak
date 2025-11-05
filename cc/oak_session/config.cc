@@ -52,48 +52,64 @@ SessionConfigBuilder::SessionConfigBuilder(AttestationType attestation_type,
 
 SessionConfigBuilder SessionConfigBuilder::AddSelfAttester(
     absl::string_view attester_id, bindings::FfiAttester attester) {
-  builder_ = session_config_builder_add_self_attester(
-      builder_, ffi::bindings::BytesView(attester_id), attester);
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_add_self_attester(
+        builder_, ffi::bindings::BytesView(attester_id), attester);
+  }
+  return std::move(*this);
 }
 
 SessionConfigBuilder SessionConfigBuilder::AddSelfEndorser(
     absl::string_view endorser_id, bindings::FfiEndorser endorser) {
-  builder_ = session_config_builder_add_self_endorser(
-      builder_, ffi::bindings::BytesView(endorser_id), endorser);
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_add_self_endorser(
+        builder_, ffi::bindings::BytesView(endorser_id), endorser);
+  }
+  return std::move(*this);
 }
 
 SessionConfigBuilder SessionConfigBuilder::AddPeerVerifier(
     absl::string_view attester_id, bindings::FfiAttestationVerifier verifier) {
-  builder_ = session_config_builder_add_peer_verifier(
-      builder_, ffi::bindings::BytesView(attester_id), verifier);
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_add_peer_verifier(
+        builder_, ffi::bindings::BytesView(attester_id), verifier);
+  }
+  return std::move(*this);
 }
 
 SessionConfigBuilder SessionConfigBuilder::AddSessionBinder(
     absl::string_view attester_id, bindings::SigningKey* binding_key) {
-  builder_ = session_config_builder_add_session_binder(
-      builder_, ffi::bindings::BytesView(attester_id), binding_key);
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_add_session_binder(
+        builder_, ffi::bindings::BytesView(attester_id), binding_key);
+  }
+  return std::move(*this);
 }
 
 SessionConfigBuilder SessionConfigBuilder::SetSelfStaticPrivateKey(
     bindings::IdentityKey* signing_key) {
-  builder_ =
-      session_config_builder_set_self_static_private_key(builder_, signing_key);
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_set_self_static_private_key(builder_,
+                                                                  signing_key);
+  }
+  return std::move(*this);
 }
 
 SessionConfigBuilder SessionConfigBuilder::SetPeerStaticPublicKey(
     absl::string_view public_key) {
-  builder_ = session_config_builder_set_peer_static_public_key(
-      builder_, ffi::bindings::BytesView(public_key));
-  return *this;
+  if (builder_ != nullptr) {
+    builder_ = session_config_builder_set_peer_static_public_key(
+        builder_, ffi::bindings::BytesView(public_key));
+  }
+  return std::move(*this);
 }
 
 session::SessionConfig* SessionConfigBuilder::Build() {
-  return bindings::session_config_builder_build(builder_);
+  bindings::SessionConfigBuilder* builder = std::exchange(builder_, nullptr);
+  if (builder == nullptr) {
+    return nullptr;
+  }
+  return bindings::session_config_builder_build(builder);
 }
 
 session::SessionConfigHolder SessionConfigBuilder::BuildHolder() {

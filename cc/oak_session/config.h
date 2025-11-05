@@ -97,12 +97,33 @@ class SessionConfigHolder {
 // Convenience wrapper around the SessionConfigBuilder in
 // oak_session/src/config.rs. All functionality may not be available, and will
 // be added on an as-needed basis.
+//
+// Once `Build` has been called on an instance, the underlying builder will no
+// longer be valid. If you continue to try to use the builder, the `Add`
+// operations will be no-ops, and the `Build` operation will return a null
+// pointer.
 class SessionConfigBuilder {
  public:
   SessionConfigBuilder(AttestationType attestation_type,
                        HandshakeType handshake_type);
+  ~SessionConfigBuilder() {
+    bindings::SessionConfigBuilder* builder = std::exchange(builder_, nullptr);
+    if (builder != nullptr) {
+      bindings::free_session_config_builder(builder);
+    }
+  }
   SessionConfig* Build();
   SessionConfigHolder BuildHolder();
+
+  SessionConfigBuilder(const SessionConfigBuilder&) = delete;
+  SessionConfigBuilder& operator=(const SessionConfigBuilder&) = delete;
+  SessionConfigBuilder(SessionConfigBuilder&& other) {
+    builder_ = std::exchange(other.builder_, nullptr);
+  }
+  SessionConfigBuilder& operator=(SessionConfigBuilder&& other) {
+    builder_ = std::exchange(other.builder_, nullptr);
+    return *this;
+  }
 
   SessionConfigBuilder AddSelfAttester(absl::string_view attester_id,
                                        bindings::FfiAttester attester);
