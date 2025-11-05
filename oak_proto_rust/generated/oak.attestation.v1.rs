@@ -631,11 +631,20 @@ pub struct Evidence {
     /// - Sign arbitrary data with the signing key
     #[prost(message, optional, tag = "3")]
     pub application_keys: ::core::option::Option<ApplicationKeys>,
+    /// The original event_log. Each entry contains measurements done by some stage
+    /// in the boot/launch process. The measurements may contain sensitive or
+    /// internal data about the job itself.
     #[prost(message, optional, tag = "4")]
     pub event_log: ::core::option::Option<EventLog>,
     /// A version of the event_log that does not contain sensitive data. Note that
     /// each transparent event log entry must have a corresponding entry in the
-    /// original event_log.
+    /// original event_log. This was added to avoid maintaining two complete
+    /// attesters with their own DICE chains.
+    ///
+    /// This event log will be populated for stage 0 but may be ignored by
+    /// subsequent layers, if not needed (e.g., if the other layers do not contain
+    /// any sensitive information). This field is populated in stage 0 (for now) to
+    /// avoid branching stage 0 or adding a flag system.
     #[prost(message, optional, tag = "5")]
     pub transparent_event_log: ::core::option::Option<EventLog>,
 }
