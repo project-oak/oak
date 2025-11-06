@@ -481,6 +481,30 @@ pub struct Stage0Measurements {
     #[prost(string, tag = "6")]
     pub kernel_cmdline: ::prost::alloc::string::String,
 }
+/// Transparent (i.e. externally shareable) measurements for Stage 0.
+/// These measurements will be used in the transparent version of the event log.
+/// The digests are derived from the SHA2-256 hash algorithm.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Stage0TransparentMeasurements {
+    /// Kernel setup data digest.
+    #[prost(bytes = "vec", tag = "1")]
+    pub setup_data_digest: ::prost::alloc::vec::Vec<u8>,
+    /// Kernel digest.
+    #[prost(bytes = "vec", tag = "2")]
+    pub kernel_measurement: ::prost::alloc::vec::Vec<u8>,
+    /// Initial RAM disk digest.
+    #[prost(bytes = "vec", tag = "3")]
+    pub ram_disk_digest: ::prost::alloc::vec::Vec<u8>,
+    /// E820 table digest.
+    #[prost(bytes = "vec", tag = "4")]
+    pub memory_map_digest: ::prost::alloc::vec::Vec<u8>,
+    /// ACPI table generation digest
+    #[prost(bytes = "vec", tag = "5")]
+    pub acpi_digest: ::prost::alloc::vec::Vec<u8>,
+    /// Kernel Command line digest.
+    #[prost(bytes = "vec", tag = "6")]
+    pub kernel_cmdline_digest: ::prost::alloc::vec::Vec<u8>,
+}
 /// All the related measurements for Oak Container's Stage 1.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Stage1Measurements {

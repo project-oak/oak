@@ -41,6 +41,24 @@ message Stage0Measurements {
   string kernel_cmdline = 6;
 }
 
+// Transparent (i.e. externally shareable) measurements for Stage 0.
+// These measurements will be used in the transparent version of the event log.
+// The digests are derived from the SHA2-256 hash algorithm.
+message Stage0TransparentMeasurements {
+  // Kernel setup data digest.
+  bytes setup_data_digest = 1;
+  // Kernel digest.
+  bytes kernel_measurement = 2;
+  // Initial RAM disk digest.
+  bytes ram_disk_digest = 3;
+  // E820 table digest.
+  bytes memory_map_digest = 4;
+  // ACPI table generation digest
+  bytes acpi_digest = 5;
+  // Kernel Command line digest.
+  bytes kernel_cmdline_digest = 6;
+}
+
 // All the related measurements for Oak Container's Stage 1.
 message Stage1Measurements {
   // replaced by SystemLayerData, which holds the same data. Will be removed.
