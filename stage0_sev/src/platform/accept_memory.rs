@@ -67,6 +67,9 @@ trait Validate<S: PageSize> {
 impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
     fn pvalidate(&self, counter: &AtomicUsize) -> Result<(), InstructionError> {
         pvalidate(self.start_address().as_u64() as usize, S::SEV_PAGE_SIZE, Validation::Validated)?;
+        // Read the first and last byte of the page validated to evict cache (CVE-2025-38560)
+        let _val = unsafe { self.start_address().as_ptr::<u8>().read_volatile() };
+        let _val2 = unsafe { self.start_address().as_ptr::<u8>().add(S::SEV_PAGE_SIZE-1).read_volatile() };
         counter.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
