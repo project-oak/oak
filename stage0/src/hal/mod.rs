@@ -215,6 +215,12 @@ pub trait Platform {
             addr_size
         }
     }
+
+    // Validate required components for measured boot. In SEV-SNP, these launch
+    // primitives are found in the kernel hashes table
+    fn validate_measured_boot(
+       cmdline: &[u8], initrd_digest: &[u8], kernel_setup_data: &[u8], kernel_bytes: &[u8]
+    ) -> bool;
 }
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending

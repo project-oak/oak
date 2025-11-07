@@ -114,6 +114,13 @@ impl Measured for Kernel {
     }
 }
 
+impl Kernel {
+    #[allow(dead_code)]
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0
+    }
+}
+
 /// Tries to load the kernel command-line from the fw_cfg device.
 ///
 /// We first try to read it using the traditional selector. If it is not
