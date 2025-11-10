@@ -16,6 +16,9 @@
 
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
 
@@ -136,6 +139,21 @@ class SessionConfigBuilder {
   SessionConfigBuilder SetSelfStaticPrivateKey(
       bindings::IdentityKey* signing_key);
   SessionConfigBuilder SetPeerStaticPublicKey(absl::string_view public_key);
+
+  // Allows direct manipulation of the underlying
+  // `bindings::SessionConfigBuilder*`.
+  //
+  // Ownership of the `SessionConfigBuilder` pointer is passed to `update_fn`,
+  // and we take the ownership of the returned `SessionConfigBuilder`. If the
+  // `update_fn` returns an error, it is responsible for releasing the memory.
+  // Any errors that `update_fn` returns are propagated to the caller.
+  //
+  // If at all possbile do not use this method due to the sharp edges and prefer
+  // to implement proper wrappers for the FFI calls.
+  absl::Status UpdateRaw(
+      absl::AnyInvocable<absl::StatusOr<bindings::SessionConfigBuilder*>(
+          bindings::SessionConfigBuilder*)>
+          update_fn);
 
  private:
   bindings::SessionConfigBuilder* builder_;

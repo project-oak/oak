@@ -16,8 +16,14 @@
 
 #include "cc/oak_session/config.h"
 
+#include <utility>
+
+#include "absl/functional/any_invocable.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "cc/ffi/bytes_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
 
@@ -110,6 +116,21 @@ session::SessionConfig* SessionConfigBuilder::Build() {
     return nullptr;
   }
   return bindings::session_config_builder_build(builder);
+}
+
+absl::Status SessionConfigBuilder::UpdateRaw(
+    absl::AnyInvocable<absl::StatusOr<bindings::SessionConfigBuilder*>(
+        bindings::SessionConfigBuilder*)>
+        update_fn) {
+  if (builder_ == nullptr) {
+    return absl::FailedPreconditionError("Builder is already built.");
+  }
+  auto result = update_fn(std::exchange(builder_, nullptr));
+  if (!result.ok()) {
+    return result.status();
+  }
+  builder_ = std::move(*result);
+  return absl::OkStatus();
 }
 
 session::SessionConfigHolder SessionConfigBuilder::BuildHolder() {
