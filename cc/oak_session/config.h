@@ -69,6 +69,12 @@ class SessionConfigHolder {
   SessionConfigHolder& operator=(const SessionConfigHolder&) = delete;
   SessionConfigHolder(SessionConfigHolder&& other) : config_(other.release()) {}
   SessionConfigHolder& operator=(SessionConfigHolder&& other) {
+    if (this == &other) {
+      return *this;
+    }
+    if (config_ != nullptr) {
+      session_config_free(config_);
+    }
     config_ = other.release();
     return *this;
   }
