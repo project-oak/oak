@@ -50,8 +50,20 @@ impl SealedMemoryDatabaseServiceTestImpl {
     pub async fn add_blob_inner(&self, id: String, blob: DataBlob) {
         self.database.lock().await.insert(id, blob);
     }
-    pub async fn add_metadata_blob_inner(&self, id: String, blob: MetadataBlob) {
-        self.metadata_database.lock().await.insert(id, blob);
+    pub async fn add_metadata_blob_inner(&self, id: String, mut blob: MetadataBlob) -> bool {
+        let mut db = self.metadata_database.lock().await;
+
+        // Check if the provided version matches the currently stored version.
+        if let Some(existing_blob) = db.get(id.as_str()) {
+            if existing_blob.version != blob.version {
+                return false;
+            }
+        }
+
+        // Trivial versioning mechanism: just append a 1 for each version increment.
+        blob.version = format!("{}1", blob.version);
+        db.insert(id, blob);
+        true
     }
     pub async fn get_blob_inner(&self, id: &str) -> Option<DataBlob> {
         self.database.lock().await.get(id).cloned()
@@ -99,12 +111,18 @@ impl SealedMemoryDatabaseService for SealedMemoryDatabaseServiceTestImpl {
         // matching the expected semantics (returning a failure if the provided version
         // does not match the existing stored one)
         let request = request.into_inner();
-        self.add_metadata_blob_inner(
-            request.metadata_blob.as_ref().unwrap().data_blob.as_ref().unwrap().id.clone(),
-            request.metadata_blob.unwrap(),
-        )
-        .await;
-        Ok(tonic::Response::new(WriteMetadataBlobResponse {}))
+        let added = self
+            .add_metadata_blob_inner(
+                request.metadata_blob.as_ref().unwrap().data_blob.as_ref().unwrap().id.clone(),
+                request.metadata_blob.unwrap(),
+            )
+            .await;
+        if !added {
+            // "failed precondition" is a signal to the caller to re-fetch and try again.
+            Err(tonic::Status::failed_precondition("metadata blob version mismatch"))
+        } else {
+            Ok(tonic::Response::new(WriteMetadataBlobResponse {}))
+        }
     }
 
     async fn read_metadata_blob(

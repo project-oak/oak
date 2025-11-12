@@ -44,6 +44,10 @@ pub struct Metrics {
     db_init_latency: Histogram<u64>,
     // Latency of persisting the database.
     db_persist_latency: Histogram<u64>,
+    // Latency of persisting the database, including retries.
+    db_persist_latency_with_retries: Histogram<u64>,
+    // Number of attempts to successfully persist the database.
+    db_persist_attempts: Histogram<u64>,
     // Number of retries when connecting to the database.
     db_connect_retries: Counter<u64>,
     // Number of failures when persisting the database.
@@ -103,6 +107,17 @@ impl Metrics {
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
             .init();
+        let db_persist_latency_with_retries = observer
+            .meter
+            .u64_histogram("db_persist_latency_with_retries")
+            .with_description("Latency of persisting the database including all retry attempts.")
+            .with_unit("ms")
+            .init();
+        let db_persist_attempts = observer
+            .meter
+            .u64_histogram("db_persist_attempts")
+            .with_description("Number of attempts before metadata persist succeeds.")
+            .init();
         let db_connect_retries = observer
             .meter
             .u64_counter("db_connect_retries")
@@ -129,6 +144,8 @@ impl Metrics {
         db_size.record(1, &[]);
         db_init_latency.record(1, &[]);
         db_persist_latency.record(1, &[]);
+        db_persist_latency_with_retries.record(1, &[]);
+        db_persist_attempts.record(1, &[]);
         db_connect_retries.add(0, &[]);
         db_persist_failures.add(0, &[]);
         db_persist_queue_size.observe(0, &[]);
@@ -148,6 +165,8 @@ impl Metrics {
             db_size,
             db_init_latency,
             db_persist_latency,
+            db_persist_latency_with_retries,
+            db_persist_attempts,
             db_connect_retries,
             db_persist_failures,
             db_persist_queue_size,
@@ -208,6 +227,14 @@ impl Metrics {
 
     pub fn record_db_persist_latency(&self, latency: u64) {
         self.db_persist_latency.record(latency, &[]);
+    }
+
+    pub fn record_db_persist_latency_with_retries(&self, latency: u64) {
+        self.db_persist_latency_with_retries.record(latency, &[]);
+    }
+
+    pub fn record_db_persist_attempts(&self, attempts: u64) {
+        self.db_persist_attempts.record(attempts, &[]);
     }
 
     pub fn inc_db_connect_retries(&self) {

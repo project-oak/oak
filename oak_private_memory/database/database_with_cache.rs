@@ -20,7 +20,7 @@ use sealed_memory_rust_proto::prelude::v1::*;
 use crate::{
     icing::{IcingMetaDatabase, PageToken},
     memory_cache::MemoryCache,
-    MemoryId,
+    IcingTempDir, MemoryId,
 };
 
 /// A database with cache. It loads the meta database of the user at start,
@@ -61,6 +61,15 @@ impl DatabaseWithCache {
     /// in durable storage, and should be written back.
     pub fn changed(&self) -> bool {
         self.database.needs_writeback()
+    }
+
+    /// Replace the underlying IcingMetaDatabase with a new one created from the
+    /// provided blob, and then re-apply any pending changes on top of that new
+    /// db.
+    pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<()> {
+        let tempdir = IcingTempDir::new("pm-rebase");
+        self.database = IcingMetaDatabase::import_with_changes(tempdir, new_blob, &self.database)?;
+        Ok(())
     }
 
     fn add_memory_id(&mut self, memory: &mut Memory) {
