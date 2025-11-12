@@ -20,10 +20,11 @@ package(
 )
 
 rust_library(
-    name = "sigstore_client",
-    srcs = glob(["src/**/*.rs"]),
+    name = "cosign_util",
+    srcs = glob(["*.rs"]),
     deps = [
-        "//trex/sigstore",
+        "//tr/endorscope",
+        "//tr/rekor",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:oci-client",

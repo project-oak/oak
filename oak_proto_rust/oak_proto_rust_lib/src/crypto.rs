@@ -44,7 +44,7 @@ pub fn parse_p256_ecdsa_verifying_key(proto: ProtoVerifyingKey) -> Result<Verify
 pub fn p256_ecdsa_verifying_key_to_proto(key: &VerifyingKey) -> Result<ProtoVerifyingKey, Error> {
     Ok(ProtoVerifyingKey {
         r#type: KeyType::EcdsaP256Sha256 as i32,
-        key_id: 0,
+        key_id: 1,
         raw: key.to_public_key_der().map_err(Error::ConversionToPublicKeyDerError)?.to_vec(),
     })
 }

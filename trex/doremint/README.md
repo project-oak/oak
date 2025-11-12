@@ -103,6 +103,26 @@ specific public key for verification and does not yet support the keyless
 workflow. For more details, see the
 [Cosign documentation on signing](https://docs.sigstore.dev/cosign/signing).
 
+### Sigstore Cosign
+
+[Cosign](https://github.com/sigstore/cosign/blob/main/specs/SIGNATURE_SPEC.md)
+standardizes how signatures for OCI artifacts are stored and discovered. Instead
+of requiring a separate server to store signatures, Cosign leverages the OCI
+registry itself.
+
+The protocol works as follows:
+
+1. When an artifact (e.g., a container image) is signed, a new OCI manifest is
+   created for the signature payload.
+2. This signature manifest is stored in the same repository as the artifact it
+   signs.
+3. It is identified by a unique tag derived from the digest of the original
+   artifact. The convention is to replace the `sha256:` prefix with `sha256-`
+   and append `.sig`. For example, an artifact with the digest `sha256:abc...`
+   would have a signature with the tag `sha256-abc....sig`.
+4. The signature itself, along with its associated Rekor bundle, is stored in
+   the annotations of a layer within this signature manifest.
+
 ### Verifying an Endorsement
 
 To verify a signed endorsement for an image:

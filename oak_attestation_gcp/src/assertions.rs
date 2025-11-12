@@ -349,7 +349,7 @@ mod tests {
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
                             &read_testdata_string!("developer_key.pub.pem"),
-                            0,
+                            1,
                         )),
                         rekor_public_key: None,
                     },
@@ -380,7 +380,7 @@ mod tests {
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
                             &read_testdata_string!("developer_key.pub.pem"),
-                            0,
+                            1,
                         )),
                         rekor_public_key: None,
                     },

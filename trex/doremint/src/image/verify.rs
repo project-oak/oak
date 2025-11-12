@@ -25,19 +25,11 @@ bazel run trex/doremint image verify -- \
 */
 use anyhow::Context;
 use clap::Parser;
+use cosign_util::pull_package;
 use digest_util::hex_digest_from_typed_hash;
 use oak_time_std::instant::now;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
-use rekor::{
-    get_rekor_v1_public_key_raw,
-    log_entry::{serialize_rekor_log_entry, LogEntry},
-};
-use sigstore_client::cosign;
-use verify_endorsement::{
-    create_endorsement_reference_value, create_signed_endorsement, create_verifying_key_from_pem,
-    create_verifying_key_from_raw, verify_endorsement,
-};
 
 use crate::flags::{read_pem_file, Claims};
 
@@ -65,26 +57,8 @@ impl VerifyCommand {
         };
         let client = Client::new(ClientConfig::default());
 
-        let (statement, rekor_bundle) = cosign::pull_payload(&client, &auth, &self.image).await?;
-
-        let log_entry = LogEntry::from_cosign_bundle(rekor_bundle.raw_data())?;
-        let serialized_log_entry = serialize_rekor_log_entry(&log_entry)?;
-        println!("Converted Rekor log entry: {serialized_log_entry:?}");
-
-        let signed_endorsement = create_signed_endorsement(
-            statement.unverified_message(),
-            statement.signature(),
-            0,   // The key ID is not used here.
-            &[], // The subject is not needed for verification.
-            &serialized_log_entry,
-        );
-
-        let endorser_key = create_verifying_key_from_pem(&self.endorser_public_key, 0);
-        let rekor_key = create_verifying_key_from_raw(&get_rekor_v1_public_key_raw(), 0);
-        let ref_value = create_endorsement_reference_value(endorser_key, Some(rekor_key));
-
-        let statement =
-            verify_endorsement(now().into_unix_millis(), &signed_endorsement, &ref_value)?;
+        let package = pull_package(&client, &auth, &self.image, &self.endorser_public_key).await?;
+        let statement = package.verify(now().into_unix_millis())?;
 
         // Need to verify the endorsement subject and the claims as well.
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;

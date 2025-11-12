@@ -22,6 +22,7 @@
 use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Result};
+use intoto::statement::DefaultStatement;
 use oak_proto_rust::oak::attestation::v1::{EndorsementReferenceValue, SignedEndorsement};
 use verify_endorsement::{
     create_endorsement_reference_value, create_signed_endorsement, create_verifying_key_from_pem,
@@ -87,11 +88,10 @@ impl Package {
     }
 
     /// Verifies the endorsement package.
-    pub fn verify(&self, now_utc_millis: i64) -> Result<()> {
+    pub fn verify(&self, now_utc_millis: i64) -> Result<DefaultStatement> {
         let signed_endorsement = self.get_signed_endorsement()?;
         let ref_value = self.get_reference_value();
         verify_endorsement(now_utc_millis, &signed_endorsement, &ref_value)
             .context("verifying endorsement")
-            .map(|_| ())
     }
 }
