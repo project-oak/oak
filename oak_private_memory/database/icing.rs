@@ -430,6 +430,12 @@ impl IcingMetaDatabase {
     // Adds a new memory to the cache.
     // The generated metadta is returned so that it can be re-applied if needed.
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
+        // Check if the memory already exists.
+        if self.get_blob_id_by_memory_id(memory.id.clone())?.is_some() {
+            // The memory already exists with a different blob id, so we need to delete it
+            // to clear the views before adding it again.
+            self.delete_memories([memory.id.clone()].as_ref())?;
+        }
         let pending_metadata = PendingMetadata::new(memory, &blob_id);
         self.add_pending_metadata(pending_metadata)?;
         if let Some(views) = memory.views.as_ref() {
@@ -1107,25 +1113,23 @@ impl IcingMetaDatabase {
         Ok((search_result_ids, next_page_token))
     }
 
+    pub fn delete_document(&mut self, blob_id: &BlobId) -> anyhow::Result<()> {
+        let result = self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes());
+        if result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Failed to delete document with id {}: {:?}", blob_id, result.status);
+        }
+        Ok(())
+    }
+
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
         for memory_id in memory_ids {
             let view_ids = self.get_view_ids_by_memory_id(memory_id.clone())?;
             for view_id in view_ids {
-                let result =
-                    self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), view_id.as_bytes());
-                if result.status.clone().context("no status")?.code
-                    != Some(icing::status_proto::Code::Ok.into())
-                {
-                    bail!("Failed to delete view with id {}: {:?}", view_id, result.status);
-                }
+                self.delete_document(&view_id)?;
             }
-            let result =
-                self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
-            if result.status.clone().context("no status")?.code
-                != Some(icing::status_proto::Code::Ok.into())
-            {
-                bail!("Failed to delete memory with id {}: {:?}", memory_id, result.status);
-            }
+            self.delete_document(memory_id)?;
             self.applied_operations.push(MutationOperation::Remove(memory_id.clone()));
         }
         Ok(())
@@ -1643,6 +1647,81 @@ mod tests {
         icing_database.delete_memories(&[memory_id.clone()])?;
         let view_ids = icing_database.get_view_ids_by_memory_id(memory_id);
         assert_that!(view_ids, ok(is_empty()));
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_update_memory_replaces_views_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let memory_id = "memory_id_to_update".to_string();
+        let blob_id1 = "blob_id_1".to_string();
+
+        // First, add a memory with two views.
+        let memory1 = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory1, blob_id1)?;
+
+        // Check that the views were added.
+        let view_ids1 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
+        assert_that!(view_ids1, unordered_elements_are![eq(&"view1"), eq(&"view2")]);
+
+        // Now, "update" the memory by adding a new memory with the same ID but
+        // different views.
+        let blob_id2 = "blob_id_2".to_string();
+        let memory2 = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "view3".to_string(), // New view
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 0.0, 1.0],
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory2, blob_id2)?;
+
+        // Check that the old views are gone and only the new one exists.
+        let view_ids2 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
+        assert_that!(view_ids2, unordered_elements_are![eq(&"view3")]);
+
+        // Update again, this time with no views.
+        let blob_id3 = "blob_id_3".to_string();
+        let memory3 =
+            Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() };
+        icing_database.add_memory(&memory3, blob_id3)?;
+
+        // Check that all views are gone.
+        let view_ids3 = icing_database.get_view_ids_by_memory_id(memory_id)?;
+        assert_that!(view_ids3, is_empty());
+
         Ok(())
     }
 }
