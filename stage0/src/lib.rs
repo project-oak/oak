@@ -159,6 +159,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     P::populate_zero_page(&mut zero_page);
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
+    let kernel_cmdline = cmdline.kernel_cmdline();
 
     // Safety: this is the only place where we try to load a kernel, so the backing
     // memory is unused.
@@ -205,8 +206,22 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
         memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
         acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
-        kernel_cmdline: cmdline.clone(),
+        kernel_cmdline: kernel_cmdline.clone(),
     };
+
+    let kernel_commandline_digest = cmdline.measure();
+
+    // Introduce transparent measurements (i.e. measurements that do not contain
+    // sensitive data).
+    let stage0_transparent_event_proto =
+        oak_proto_rust::oak::attestation::v1::Stage0TransparentMeasurements {
+            setup_data_digest: stage0_event_proto.setup_data_digest.clone(),
+            kernel_measurement: stage0_event_proto.kernel_measurement.clone(),
+            ram_disk_digest: stage0_event_proto.ram_disk_digest.clone(),
+            memory_map_digest: stage0_event_proto.memory_map_digest.clone(),
+            acpi_digest: stage0_event_proto.acpi_digest.clone(),
+            kernel_cmdline_digest: kernel_commandline_digest.as_bytes().to_vec(),
+        };
 
     // Use the root derived key as the UDS (unique device secret) for deriving
     // sealing keys.
@@ -225,13 +240,23 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         base
     };
 
+    // Generate Stage0 Transparent Event Log data.
+    // TODO: b/452735395 - Update the attester to accept the new transparent event.
+    let stage0_transparent_event =
+        oak_stage0_dice::encode_stage0_transparent_event(stage0_transparent_event_proto);
+    let transparent_event_sha2_256_digest = Sha256::digest(&stage0_transparent_event).to_vec();
+
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_sha2_256_digest));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
-    log::debug!("Kernel command-line: {}", cmdline);
+    log::debug!("Kernel command-line: {}", kernel_cmdline);
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
     log::debug!("Event digest: sha2-256:{}", hex::encode(event_sha2_256_digest));
+    log::debug!(
+        "Transparent event digest: sha2-256:{}",
+        hex::encode(transparent_event_sha2_256_digest)
+    );
 
     let mut attester = P::get_attester().expect("couldn't get a valid attester");
     attester.extend(&stage0_event[..]).expect("couldn't extend attester");
@@ -282,6 +307,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
+
     sensitive_attestation_data_length += PAGE_SIZE;
 
     // TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
@@ -309,12 +335,12 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     let extra = format!(
         "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
     );
-    let cmdline = if cmdline.is_empty() {
+    let cmdline = if kernel_cmdline.is_empty() {
         extra
-    } else if cmdline.contains("--") {
-        format!("{} {}", cmdline, extra)
+    } else if kernel_cmdline.contains("--") {
+        format!("{} {}", kernel_cmdline, extra)
     } else {
-        format!("{} -- {}", cmdline, extra)
+        format!("{} -- {}", kernel_cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
 

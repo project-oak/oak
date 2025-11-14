@@ -114,11 +114,28 @@ impl Measured for Kernel {
     }
 }
 
+#[derive(Default)]
+pub struct KernelCmdLine {
+    kernel_cmdline: String,
+}
+
+impl KernelCmdLine {
+    pub fn kernel_cmdline(&self) -> String {
+        self.kernel_cmdline.clone()
+    }
+}
+
+impl Measured for KernelCmdLine {
+    fn measure(&self) -> crate::Measurement {
+        self.kernel_cmdline.as_bytes().measure()
+    }
+}
+
 /// Tries to load the kernel command-line from the fw_cfg device.
 ///
 /// We first try to read it using the traditional selector. If it is not
 /// available there we try to read it using a custom file path.
-pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<String> {
+pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<KernelCmdLine> {
     let cmdline_file = fw_cfg.get_cmdline_file()?;
     // Safety: len will always be at least 1 byte, and we don't care about
     // alignment. If the allocation fails, we won't try coercing it into a
@@ -132,5 +149,5 @@ pub fn try_load_cmdline<P: crate::Platform>(fw_cfg: &mut FwCfg<P>) -> Option<Str
         .into_string()
         .expect("invalid kernel command-line");
     log::debug!("Kernel cmdline: {}", cmdline);
-    Some(cmdline)
+    Some(KernelCmdLine { kernel_cmdline: cmdline.clone() })
 }

@@ -70,6 +70,15 @@ pub mod oak {
                     type_url_for::<Self>()
                 }
             }
+
+            impl Name for Stage0TransparentMeasurements {
+                const PACKAGE: &'static str = PACKAGE;
+                const NAME: &'static str = "Stage0TransparentMeasurements";
+
+                fn type_url() -> String {
+                    type_url_for::<Self>()
+                }
+            }
         }
     }
 
