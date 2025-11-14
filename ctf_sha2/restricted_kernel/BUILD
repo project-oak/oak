@@ -39,3 +39,19 @@ rust_binary(
         "@oak_crates_index//:sha2",
     ],
 )
+
+rust_binary(
+    name = "launcher",
+    srcs = ["launcher.rs"],
+    deps = [
+        "//ctf_sha2/restricted_kernel/proto:service",
+        "@oak//micro_rpc",
+        "@oak//oak_launcher_utils",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+    ],
+)
