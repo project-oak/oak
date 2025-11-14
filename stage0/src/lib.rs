@@ -153,7 +153,8 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // allocator before this point will fail.
     allocator::init_global_allocator(zero_page.e820_table());
 
-    let setup_data_sha2_256_digest =
+    #[allow(unused_variables)]
+    let (setup_data, setup_data_sha2_256_digest) =
         zero_page.try_fill_hdr_from_setup_data(&mut fwcfg).unwrap_or_default();
 
     P::populate_zero_page(&mut zero_page);
@@ -191,6 +192,17 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
                 ram_disk.measure()
             })
             .unwrap_or_default();
+
+    #[cfg(feature = "sev_kernel_hashes")]
+    {
+    // Before writing these values to the event log, if a kernel hashes table was supplied,
+    // do a quick check to verify that the launch primitives are valid via measured direct boot
+    assert!(P::validate_measured_boot(
+        cmdline.as_bytes(),
+        &ram_disk_sha2_256_digest,
+        setup_data.as_bytes(),
+        kernel.as_bytes()));
+    }
 
     // QEMU assumes all SEV VMs use OVMF, and leaves type_of_loader 0x00. This
     // would make the kernel unable to load stage1. We need to fix it to make
