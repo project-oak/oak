@@ -35,7 +35,7 @@
 //!   - XSDT (Extended System Description Table) - ACPI Spec section 5.2.8
 //!     contains a header (also `DescriptionHeader`) and a variable number of
 //!     8-byte pointers to the headers (also `DescriptionHeader`) of
-//!     substrucutres described below.
+//!     substructures described below.
 //!
 //!     - RSDT and XSDT entry pointers point to a number of possible
 //!       substructures, each with a 4-byte signature, listed in tables 5.5 and
