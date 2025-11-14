@@ -23,7 +23,7 @@
 //! basic structure of ACPI tables is as follows:
 //!
 //! - RSDP (Root System Descriptor Pointer) is a structure (not a pointer)
-//!   described in ACPI Spec section 5.2.5. It's location is hardcoded by the
+//!   described in ACPI Spec section 5.2.5. Its location is hardcoded by the
 //!   firmware, and it's in the first 1KB of the EBDA. In our case we provide
 //!   the location using the linker section ".ebda.rsdp" (see layout.ld files).
 //!   The RSDP contains optional pointers to an RSDT and an XSDT. Version 1 RSDP
@@ -40,10 +40,10 @@
 //!     - RSDT and XSDT entry pointers point to a number of possible
 //!       substructures, each with a 4-byte signature, listed in tables 5.5 and
 //!       5.6 of ACPI Spec.
-//!     - One such substracture is a MADT (Multiple APIC Description Table),
+//!     - One such substructure is a MADT (Multiple APIC Description Table),
 //!       with signature "APIC", described in ACPI Spec section 5.2.12. A MADT
 //!       (our type: `Madt`) contains a header (also a `DescriptionHeader`), a
-//!       coupld more fields, plus a variable number of variable length
+//!       couple more fields, plus a variable number of variable length
 //!       "Interrupt Controller Structures". These ICSs can't be represented in
 //!       Rust, so they're parsed dynamically (remember that the initial content
 //!       of ACPI tables is given to use by the VMM).
