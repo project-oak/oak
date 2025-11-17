@@ -53,6 +53,16 @@ java_proto_library(
 )
 
 proto_library(
+    name = "cb_eventlog_proto",
+    srcs = ["cb_eventlog.proto"],
+)
+
+cc_proto_library(
+    name = "cb_eventlog_cc_proto",
+    deps = [":cb_eventlog_proto"],
+)
+
+proto_library(
     name = "dice_proto",
     srcs = ["dice.proto"],
     deps = [":evidence_proto"],
@@ -233,6 +243,8 @@ build_test(
         ":attachment_proto",
         ":attachment_cc_proto",
         ":attachment_java_proto",
+        ":cb_eventlog_proto",
+        ":cb_eventlog_cc_proto",
         ":dice_proto",
         ":dice_cc_proto",
         ":dice_java_proto",

@@ -459,6 +459,43 @@ pub struct MpmAttachment {
     #[prost(string, tag = "2")]
     pub package_version: ::prost::alloc::string::String,
 }
+/// Represents the Layer 1 (or Stage 1) event of Confidential Borg that is
+/// externally sharable (i.e. it does not contain sensitive internal data).
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Layer1TransparentEvent {
+    /// Hash of the binary.
+    #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
+    pub runtime_agent_measurement: ::prost::alloc::vec::Vec<u8>,
+    /// Hash of the command line args supplied to the binary.
+    #[prost(bytes = "vec", tag = "2")]
+    #[serde(with = "crate::base64data")]
+    pub command_line_digest: ::prost::alloc::vec::Vec<u8>,
+}
+/// Layer 2 (or Stage 2) event proto for Confidential Borg that is shareable with
+/// end clients.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Layer2TransparentEvent {
+    /// The MPMs running on Confidential Borg. This includes the server-binary that
+    /// is being deployed on Confidential Borg.
+    #[prost(message, repeated, tag = "1")]
+    pub packages: ::prost::alloc::vec::Vec<MpmPackage>,
+}
+/// Mpm package information.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MpmPackage {
+    #[prost(string, tag = "1")]
+    pub mpm_version_id: ::prost::alloc::string::String,
+}
 /// All the related measurements for Stage 0.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Stage0Measurements {

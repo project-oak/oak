@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
         "../proto/attestation/assertion.proto",
         "../proto/attestation/attachment.proto",
+        "../proto/attestation/cb_eventlog.proto",
         "../proto/attestation/dice.proto",
         "../proto/attestation/reference_value.proto",
         "../proto/attestation/endorsement.proto",
@@ -73,7 +74,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.Evidence",
         "oak.attestation.v1.Endorsements",
         "oak.attestation.v1.ApplicationKeys",
+        "oak.attestation.v1.Layer1TransparentEvent",
+        "oak.attestation.v1.Layer2TransparentEvent",
         "oak.attestation.v1.LayerEvidence",
+        "oak.attestation.v1.MpmPackage",
         "oak.attestation.v1.RootLayerEvidence",
         "oak.attestation.v1.OakRestrictedKernelEndorsements",
         "oak.attestation.v1.RootLayerEndorsements",
