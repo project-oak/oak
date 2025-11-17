@@ -1,0 +1,4316 @@
+{
+  "flights": [
+    {
+      "flight": {
+        "key": "LONDON-MADRID-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-01T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "135.20",
+            "price_points": "13520",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "451.75",
+            "price_points": "45175",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-01T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "128.70",
+            "price_points": "12870",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "430.50",
+            "price_points": "43050",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-01T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "119.60",
+            "price_points": "11960",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-01T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "141.25",
+            "price_points": "14125",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "488.80",
+            "price_points": "48880",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-01T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "115.50",
+            "price_points": "11550",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T08:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "138.45",
+            "price_points": "13845",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "465.10",
+            "price_points": "46510",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T11:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-01T12:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "142.10",
+            "price_points": "14210",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "495.30",
+            "price_points": "49530",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T14:00:00Z",
+        "arrival_airport": "LTN",
+        "arrival_time_utc": "2025-12-01T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "125.40",
+            "price_points": "12540",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T17:45:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "133.25",
+            "price_points": "13325",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "442.80",
+            "price_points": "44280",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-01T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "118.30",
+            "price_points": "11830",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-01T06:30:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "115.20",
+            "price_points": "11520",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-BARCELONA-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-01T10:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T12:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "128.40",
+            "price_points": "12840",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "422.40",
+            "price_points": "42240",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-BARCELONA-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-01T13:15:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "109.20",
+            "price_points": "10920",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-01T17:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "122.40",
+            "price_points": "12240",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-BARCELONA-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-01T19:45:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T22:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "105.60",
+            "price_points": "10560",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-LONDON-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T07:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-01T08:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "118.80",
+            "price_points": "11880",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-LONDON-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T09:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T10:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "126.00",
+            "price_points": "12600",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "414.00",
+            "price_points": "41400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-LONDON-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T12:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-01T13:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "111.60",
+            "price_points": "11160",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-LONDON-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T16:30:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-01T17:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "124.80",
+            "price_points": "12480",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-LONDON-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-01T21:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "108.00",
+            "price_points": "10800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-01T08:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "85.60",
+            "price_points": "8560",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "301.60",
+            "price_points": "30160",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-01T11:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T13:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "92.00",
+            "price_points": "9200",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "320.00",
+            "price_points": "32000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-01T14:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-01T16:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "78.40",
+            "price_points": "7840",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LCY",
+        "departure_time_utc": "2025-12-01T18:15:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-01T20:35:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "88.80",
+            "price_points": "8880",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "315.20",
+            "price_points": "31520",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-01T20:30:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-01T22:50:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "72.80",
+            "price_points": "7280",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T07:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T07:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "90.40",
+            "price_points": "9040",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "312.00",
+            "price_points": "31200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-01-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T10:00:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "87.20",
+            "price_points": "8720",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "304.00",
+            "price_points": "30400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-01T13:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-01T13:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "76.00",
+            "price_points": "7600",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T17:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-01T17:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "94.40",
+            "price_points": "9440",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "328.00",
+            "price_points": "32800",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-01T21:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-01T21:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "71.20",
+            "price_points": "7120",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-BARCELONA-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T09:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T10:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "74.20",
+            "price_points": "7420",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "245.70",
+            "price_points": "24570",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T12:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T13:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "68.60",
+            "price_points": "6860",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-BARCELONA-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T15:30:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T16:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "78.40",
+            "price_points": "7840",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "266.00",
+            "price_points": "26600",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-BARCELONA-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T18:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "65.10",
+            "price_points": "6510",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T21:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "71.40",
+            "price_points": "7140",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-MADRID-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T08:45:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "70.00",
+            "price_points": "7000",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-MADRID-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T11:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T12:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "75.60",
+            "price_points": "7560",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "252.00",
+            "price_points": "25200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-MADRID-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T14:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T15:45:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "63.70",
+            "price_points": "6370",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-MADRID-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T17:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T18:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "72.10",
+            "price_points": "7210",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-MADRID-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T20:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T21:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "79.80",
+            "price_points": "7980",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "273.00",
+            "price_points": "27300",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "108.00",
+            "price_points": "10800",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "385.00",
+            "price_points": "38500",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-01T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "102.00",
+            "price_points": "10200",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "360.00",
+            "price_points": "36000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "95.00",
+            "price_points": "9500",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "112.00",
+            "price_points": "11200",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "390.00",
+            "price_points": "39000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-01T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-01T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "92.00",
+            "price_points": "9200",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-MADRID-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-01T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T09:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "105.00",
+            "price_points": "10500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "370.00",
+            "price_points": "37000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-MADRID-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T09:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T11:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "110.00",
+            "price_points": "11000",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "395.00",
+            "price_points": "39500",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-MADRID-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T12:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T14:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "98.00",
+            "price_points": "9800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-MADRID-01-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-01T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T18:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "108.00",
+            "price_points": "10800",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "380.00",
+            "price_points": "38000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-MADRID-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-01T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-01T21:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "94.00",
+            "price_points": "9400",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T07:15:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-01T09:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "95.40",
+            "price_points": "9540",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T10:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T12:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "102.60",
+            "price_points": "10260",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "342.00",
+            "price_points": "34200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T14:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-01T15:45:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "88.20",
+            "price_points": "8820",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T18:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-01T19:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "99.00",
+            "price_points": "9900",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-01T20:45:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-01T22:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "82.80",
+            "price_points": "8280",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-01T08:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T09:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "97.20",
+            "price_points": "9720",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-01-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T11:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T12:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "104.40",
+            "price_points": "10440",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "351.00",
+            "price_points": "35100",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-01-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-01T15:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T16:45:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "86.40",
+            "price_points": "8640",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-01-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-01T18:30:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T20:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "100.80",
+            "price_points": "10080",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-01-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-01T21:15:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-01T23:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "81.00",
+            "price_points": "8100",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-06-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-06T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-06T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "189.28",
+            "price_points": "18928",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "632.45",
+            "price_points": "63245",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-06-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-06T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-06T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "180.18",
+            "price_points": "18018",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "602.70",
+            "price_points": "60270",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-06-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-06T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-06T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "167.44",
+            "price_points": "16744",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-06-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-06T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-06T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "197.75",
+            "price_points": "19775",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "684.32",
+            "price_points": "68432",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-06-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-06T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-06T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "161.70",
+            "price_points": "16170",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-06-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-06T08:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-06T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "193.83",
+            "price_points": "19383",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "651.14",
+            "price_points": "65114",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-06-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-06T11:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-06T12:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "198.94",
+            "price_points": "19894",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "693.42",
+            "price_points": "69342",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-06-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-06T14:00:00Z",
+        "arrival_airport": "LTN",
+        "arrival_time_utc": "2025-12-06T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "175.56",
+            "price_points": "17556",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-06-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-06T17:45:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-06T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "186.55",
+            "price_points": "18655",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "619.92",
+            "price_points": "61992",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-06-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-06T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-06T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "165.62",
+            "price_points": "16562",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-24-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-24T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-24T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "338.00",
+            "price_points": "33800",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1129.38",
+            "price_points": "112938",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-24-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-24T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-24T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "321.75",
+            "price_points": "32175",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1076.25",
+            "price_points": "107625",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-24-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-24T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-24T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "299.00",
+            "price_points": "29900",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-24-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-24T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-24T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "353.13",
+            "price_points": "35313",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1222.00",
+            "price_points": "122200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-24-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-24T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-24T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "288.75",
+            "price_points": "28875",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-24-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-24T08:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-24T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "346.13",
+            "price_points": "34613",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1162.75",
+            "price_points": "116275",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-24-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-24T11:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-24T12:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "355.25",
+            "price_points": "35525",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1238.25",
+            "price_points": "123825",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-24-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-24T14:00:00Z",
+        "arrival_airport": "LTN",
+        "arrival_time_utc": "2025-12-24T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "313.50",
+            "price_points": "31350",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-24-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-24T17:45:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-24T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "333.13",
+            "price_points": "33313",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1107.00",
+            "price_points": "110700",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-24-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-24T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-24T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "295.75",
+            "price_points": "29575",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+        {
+      "flight": {
+        "key": "LONDON-MADRID-12-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-12T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-12T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "165.80",
+            "price_points": "16580",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "550.25",
+            "price_points": "55025",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-12-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-12T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-12T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "158.30",
+            "price_points": "15830",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "535.50",
+            "price_points": "53550",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-12-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-12T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-12T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "145.10",
+            "price_points": "14510",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-12-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-12T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-12T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "172.50",
+            "price_points": "17250",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "590.80",
+            "price_points": "59080",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-12-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-12T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-12T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "139.90",
+            "price_points": "13990",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-12-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-12T08:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-12T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "168.10",
+            "price_points": "16810",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "562.40",
+            "price_points": "56240",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-12-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-12T11:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-12T12:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "174.20",
+            "price_points": "17420",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "599.90",
+            "price_points": "59990",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-12-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-12T14:00:00Z",
+        "arrival_airport": "LTN",
+        "arrival_time_utc": "2025-12-12T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "151.30",
+            "price_points": "15130",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-12-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-12T17:45:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-12T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "163.50",
+            "price_points": "16350",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "540.00",
+            "price_points": "54000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-12-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-12T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-12T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "142.00",
+            "price_points": "14200",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-13-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-13T07:15:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-13T09:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "133.56",
+            "price_points": "13356",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-13-12-2025",
+        "airline": "Air France",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-13T10:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-13T12:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "143.64",
+            "price_points": "14364",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "478.80",
+            "price_points": "47880",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-13-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-13T14:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-13T15:45:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "123.48",
+            "price_points": "12348",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-13-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-13T18:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-13T19:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "138.60",
+            "price_points": "13860",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "BARCELONA-PARIS-13-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BCN",
+        "departure_time_utc": "2025-12-13T20:45:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-13T22:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "115.92",
+            "price_points": "11592",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-13-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-13T08:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-13T09:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "136.08",
+            "price_points": "13608",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-13-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-13T11:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-13T12:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "146.16",
+            "price_points": "14616",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "491.40",
+            "price_points": "49140",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-13-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-13T15:00:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-13T16:45:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "120.96",
+            "price_points": "12096",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-13-12-2025",
+        "airline": "Vueling",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-13T18:30:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-13T20:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Vueling Club",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "141.12",
+            "price_points": "14112",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-BARCELONA-13-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-13T21:15:00Z",
+        "arrival_airport": "BCN",
+        "arrival_time_utc": "2025-12-13T23:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "113.40",
+            "price_points": "11340",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-19-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-19T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-19T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "348.18",
+            "price_points": "34818",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1155.53",
+            "price_points": "115553",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-19-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-19T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-19T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "332.43",
+            "price_points": "33243",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1124.55",
+            "price_points": "112455",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-19-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-19T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-19T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "304.71",
+            "price_points": "30471",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-19-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-19T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-19T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "362.25",
+            "price_points": "36225",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1240.68",
+            "price_points": "124068",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-19-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-19T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-19T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "293.79",
+            "price_points": "29379",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-19-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T08:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-19T10:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "353.01",
+            "price_points": "35301",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1181.04",
+            "price_points": "118104",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-19-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T11:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-19T12:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "365.82",
+            "price_points": "36582",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1259.79",
+            "price_points": "125979",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-19-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T14:00:00Z",
+        "arrival_airport": "LTN",
+        "arrival_time_utc": "2025-12-19T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "317.73",
+            "price_points": "31773",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-19-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T17:45:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-19T19:15:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "343.35",
+            "price_points": "34335",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1134.00",
+            "price_points": "113400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-LONDON-19-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T20:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-19T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "298.20",
+            "price_points": "29820",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-20-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-20T08:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-20T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "256.80",
+            "price_points": "25680",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "904.80",
+            "price_points": "90480",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-20-12-2025",
+        "airline": "Air France",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-20T11:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-20T13:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "276.00",
+            "price_points": "27600",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "960.00",
+            "price_points": "96000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-20-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-20T14:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-20T16:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "235.20",
+            "price_points": "23520",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-20-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LCY",
+        "departure_time_utc": "2025-12-20T18:15:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-20T20:35:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "266.40",
+            "price_points": "26640",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "945.60",
+            "price_points": "94560",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-PARIS-20-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-20T20:30:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-20T22:50:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "218.40",
+            "price_points": "21840",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-20-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-20T07:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-20T07:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "271.20",
+            "price_points": "27120",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "936.00",
+            "price_points": "93600",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-20-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-20T10:00:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-20T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "261.60",
+            "price_points": "26160",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "912.00",
+            "price_points": "91200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-20-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-20T13:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-20T13:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "228.00",
+            "price_points": "22800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-20-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-20T17:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-20T17:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "283.20",
+            "price_points": "28320",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "984.00",
+            "price_points": "98400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-20-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-20T21:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-20T21:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "213.60",
+            "price_points": "21360",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+        {
+      "flight": {
+        "key": "LONDON-MADRID-13-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-13T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-13T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "191.20",
+            "price_points": "19120",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "635.75",
+            "price_points": "63575",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-13-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-13T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-13T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "183.70",
+            "price_points": "18370",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "610.50",
+            "price_points": "61050",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-13-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-13T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-13T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "170.60",
+            "price_points": "17060",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-13-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-13T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-13T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "199.25",
+            "price_points": "19925",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "690.80",
+            "price_points": "69080",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-13-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-13T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-13T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "165.50",
+            "price_points": "16550",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-14-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-14T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-14T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "188.40",
+            "price_points": "18840",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "628.25",
+            "price_points": "62825",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-14-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-14T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-14T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "180.10",
+            "price_points": "18010",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "601.80",
+            "price_points": "60180",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-14-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-14T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-14T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "168.30",
+            "price_points": "16830",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-14-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-14T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-14T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "195.50",
+            "price_points": "19550",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "685.20",
+            "price_points": "68520",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-14-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-14T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-14T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "162.90",
+            "price_points": "16290",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-15-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-15T07:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-15T09:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "140.20",
+            "price_points": "14020",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "461.75",
+            "price_points": "46175",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-15-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "LGW",
+        "departure_time_utc": "2025-12-15T09:15:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-15T11:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "133.70",
+            "price_points": "13370",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "440.50",
+            "price_points": "44050",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-15-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "LTN",
+        "departure_time_utc": "2025-12-15T12:30:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-15T15:00:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "124.60",
+            "price_points": "12460",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-15-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "LHR",
+        "departure_time_utc": "2025-12-15T16:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-15T18:30:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "146.25",
+            "price_points": "14625",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "498.80",
+            "price_points": "49880",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "LONDON-MADRID-15-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "STN",
+        "departure_time_utc": "2025-12-15T19:00:00Z",
+        "arrival_airport": "MAD",
+        "arrival_time_utc": "2025-12-15T21:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "120.50",
+            "price_points": "12050",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-17-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-17T07:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-17T07:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "95.40",
+            "price_points": "9540",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "322.00",
+            "price_points": "32200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-17-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-17T10:00:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-17T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "92.20",
+            "price_points": "9220",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "314.00",
+            "price_points": "31400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-17-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-17T13:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-17T13:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "81.00",
+            "price_points": "8100",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-17-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-17T17:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-17T17:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "99.40",
+            "price_points": "9940",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "338.00",
+            "price_points": "33800",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-17-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-17T21:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-17T21:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "76.20",
+            "price_points": "7620",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-18-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-18T07:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-18T07:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "101.40",
+            "price_points": "10140",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "342.00",
+            "price_points": "34200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-18-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-18T10:00:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-18T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "98.20",
+            "price_points": "9820",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "334.00",
+            "price_points": "33400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-18-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-18T13:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-18T13:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "87.00",
+            "price_points": "8700",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-18-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-18T17:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-18T17:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "105.40",
+            "price_points": "10540",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "358.00",
+            "price_points": "35800",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-18-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-18T21:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-18T21:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "82.20",
+            "price_points": "8220",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-19-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-19T07:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-19T07:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "281.20",
+            "price_points": "28120",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "966.00",
+            "price_points": "96600",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-19-12-2025",
+        "airline": "British Airways",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-19T10:00:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-19T10:20:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "271.60",
+            "price_points": "27160",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "942.00",
+            "price_points": "94200",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-19-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "ORY",
+        "departure_time_utc": "2025-12-19T13:00:00Z",
+        "arrival_airport": "LGW",
+        "arrival_time_utc": "2025-12-19T13:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "238.00",
+            "price_points": "23800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-19-12-2025",
+        "airline": "Air France",
+        "departure_airport": "CDG",
+        "departure_time_utc": "2025-12-19T17:30:00Z",
+        "arrival_airport": "LHR",
+        "arrival_time_utc": "2025-12-19T17:50:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "293.20",
+            "price_points": "29320",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "1014.00",
+            "price_points": "101400",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "PARIS-LONDON-19-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "BVA",
+        "departure_time_utc": "2025-12-19T21:00:00Z",
+        "arrival_airport": "STN",
+        "arrival_time_utc": "2025-12-19T21:20:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "223.60",
+            "price_points": "22360",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-15-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-15T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-15T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "113.00",
+            "price_points": "11300",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "395.00",
+            "price_points": "39500",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-15-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-15T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-15T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "107.00",
+            "price_points": "10700",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "370.00",
+            "price_points": "37000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-15-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-15T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-15T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "100.00",
+            "price_points": "10000",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-15-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-15T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-15T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "117.00",
+            "price_points": "11700",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "400.00",
+            "price_points": "40000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-15-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-15T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-15T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "97.00",
+            "price_points": "9700",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-16-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-16T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-16T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "111.00",
+            "price_points": "11100",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "393.00",
+            "price_points": "39300",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-16-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-16T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-16T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "105.00",
+            "price_points": "10500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "368.00",
+            "price_points": "36800",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-16-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-16T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-16T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "98.00",
+            "price_points": "9800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-16-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-16T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-16T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "115.00",
+            "price_points": "11500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "398.00",
+            "price_points": "39800",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-16-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-16T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-16T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "95.00",
+            "price_points": "9500",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-17-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-17T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-17T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "114.00",
+            "price_points": "11400",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "396.00",
+            "price_points": "39600",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-17-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-17T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-17T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "108.00",
+            "price_points": "10800",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "371.00",
+            "price_points": "37100",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-17-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-17T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-17T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "101.00",
+            "price_points": "10100",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-17-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-17T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-17T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "118.00",
+            "price_points": "11800",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "401.00",
+            "price_points": "40100",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-17-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-17T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-17T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "98.00",
+            "price_points": "9800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-18-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-18T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-18T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "121.00",
+            "price_points": "12100",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "416.00",
+            "price_points": "41600",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-18-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-18T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-18T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "115.00",
+            "price_points": "11500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "391.00",
+            "price_points": "39100",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-18-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-18T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-18T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "108.00",
+            "price_points": "10800",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-18-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-18T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-18T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "125.00",
+            "price_points": "12500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "421.00",
+            "price_points": "42100",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-18-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-18T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-18T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "105.00",
+            "price_points": "10500",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-19-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T06:45:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-19T08:45:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "270.00",
+            "price_points": "27000",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "962.50",
+            "price_points": "96250",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-19-12-2025",
+        "airline": "Iberia",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T10:00:00Z",
+        "arrival_airport": "ORY",
+        "arrival_time_utc": "2025-12-19T12:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Avios",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "255.00",
+            "price_points": "25500",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "900.00",
+            "price_points": "90000",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-19-12-2025",
+        "airline": "easyJet",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T13:30:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-19T15:30:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "237.50",
+            "price_points": "23750",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-19-12-2025",
+        "airline": "Air France",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T17:00:00Z",
+        "arrival_airport": "CDG",
+        "arrival_time_utc": "2025-12-19T19:00:00Z",
+        "stops": 0,
+        "loyalty_program": "Flying Blue",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "280.00",
+            "price_points": "28000",
+            "baggage": "1 carry-on",
+            "cancellation_policy": "Refundable with fee"
+          },
+          {
+            "cabin": "Business",
+            "price_usd": "975.00",
+            "price_points": "97500",
+            "baggage": "1 carry-on, 2 checked bags",
+            "cancellation_policy": "Fully refundable"
+          }
+        ]
+      }
+    },
+    {
+      "flight": {
+        "key": "MADRID-PARIS-19-12-2025",
+        "airline": "Ryanair",
+        "departure_airport": "MAD",
+        "departure_time_utc": "2025-12-19T20:15:00Z",
+        "arrival_airport": "BVA",
+        "arrival_time_utc": "2025-12-19T22:15:00Z",
+        "stops": 0,
+        "loyalty_program": "None",
+        "price_options": [
+          {
+            "cabin": "Economy",
+            "price_usd": "230.00",
+            "price_points": "23000",
+            "baggage": "1 personal item",
+            "cancellation_policy": "Non-refundable"
+          }
+        ]
+      }
+    }
+  ]
+}

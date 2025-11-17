@@ -1,0 +1,678 @@
+{
+  "availabilities": [
+    {
+      "availability": {
+        "key": "LONDON:01-12-2025",
+        "date": "01-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:001",
+            "room_type": "Deluxe King",
+            "price_usd": "1200"
+          },
+          {
+            "hotel_id": "LONDON:004",
+            "room_type": "Shared 8-Bed Dorm",
+            "price_usd": "60"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:01-12-2025",
+        "date": "01-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:001",
+            "room_type": "Deluxe Room",
+            "price_usd": "1100"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:01-12-2025",
+        "date": "01-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:001",
+            "room_type": "Wonderful King Room",
+            "price_usd": "600"
+          },
+          {
+            "hotel_id": "BARCELONA:004",
+            "room_type": "Shared 8-Bed Female Dorm",
+            "price_usd": "45"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:01-12-2025",
+        "date": "01-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:001",
+            "room_type": "Deluxe Room Eiffel View",
+            "price_usd": "1500"
+          },
+          {
+            "hotel_id": "PARIS:005",
+            "room_type": "Shared 10-Bed Dorm",
+            "price_usd": "55"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:02-12-2025",
+        "date": "02-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:002",
+            "room_type": "Standard Room",
+            "price_usd": "350"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:02-12-2025",
+        "date": "02-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:002",
+            "room_type": "Standard Room",
+            "price_usd": "280"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:02-12-2025",
+        "date": "02-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:002",
+            "room_type": "Deluxe Room Sea View",
+            "price_usd": "800"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:02-12-2025",
+        "date": "02-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:002",
+            "room_type": "Premier King",
+            "price_usd": "1800"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:03-12-2025",
+        "date": "03-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:003",
+            "room_type": "Standard Queen",
+            "price_usd": "300"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:03-12-2025",
+        "date": "03-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:005",
+            "room_type": "Deluxe Room",
+            "price_usd": "400"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:03-12-2025",
+        "date": "03-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:003",
+            "room_type": "Standard Double",
+            "price_usd": "220"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:03-12-2025",
+        "date": "03-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:003",
+            "room_type": "Standard King",
+            "price_usd": "250"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:04-12-2025",
+        "date": "04-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:005",
+            "room_type": "Deluxe City View King",
+            "price_usd": "900"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:04-12-2025",
+        "date": "04-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:003",
+            "room_type": "Shared 6-Bed Dorm",
+            "price_usd": "50"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:04-12-2025",
+        "date": "04-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:005",
+            "room_type": "Classic Room",
+            "price_usd": "450"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:04-12-2025",
+        "date": "04-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:004",
+            "room_type": "Grand Deluxe Room",
+            "price_usd": "1000"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:05-12-2025",
+        "date": "05-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:001",
+            "room_type": "Deluxe King",
+            "price_usd": "1680"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:05-12-2025",
+        "date": "05-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:004",
+            "room_type": "Deluxe King",
+            "price_usd": "448"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:05-12-2025",
+        "date": "05-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:003",
+            "room_type": "Standard King",
+            "price_usd": "350"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:06-12-2025",
+        "date": "06-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:001",
+            "room_type": "One-Bedroom Suite",
+            "price_usd": "3500"
+          },
+          {
+            "hotel_id": "LONDON:002",
+            "room_type": "Standard Room",
+            "price_usd": "490"
+          },
+          {
+            "hotel_id": "LONDON:004",
+            "room_type": "Shared 8-Bed Dorm",
+            "price_usd": "84"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:06-12-2025",
+        "date": "06-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:001",
+            "room_type": "Deluxe Room",
+            "price_usd": "1540"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:06-12-2025",
+        "date": "06-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:001",
+            "room_type": "Fabulous Sky King",
+            "price_usd": "1260"
+          },
+          {
+            "hotel_id": "BARCELONA:004",
+            "room_type": "Private Queen Room",
+            "price_usd": "182"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:06-12-2025",
+        "date": "06-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:001",
+            "room_type": "Deluxe Room Eiffel View",
+            "price_usd": "2100"
+          },
+          {
+            "hotel_id": "PARIS:005",
+            "room_type": "Shared 10-Bed Dorm",
+            "price_usd": "77"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:13-12-2025",
+        "date": "13-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:004",
+            "room_type": "Private Twin Room",
+            "price_usd": "210"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:13-12-2025",
+        "date": "13-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:003",
+            "room_type": "Shared 6-Bed Dorm",
+            "price_usd": "70"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:13-12-2025",
+        "date": "13-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:002",
+            "room_type": "Executive Suite",
+            "price_usd": "2240"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:13-12-2025",
+        "date": "13-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:002",
+            "room_type": "Premier King",
+            "price_usd": "2520"
+          },
+          {
+            "hotel_id": "PARIS:005",
+            "room_type": "Private Double Room",
+            "price_usd": "224"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:20-12-2025",
+        "date": "20-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:002",
+            "room_type": "Standard Room",
+            "price_usd": "630"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:21-12-2025",
+        "date": "21-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:005",
+            "room_type": "Deluxe Room",
+            "price_usd": "720"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:19-12-2025",
+        "date": "19-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:003",
+            "room_type": "Standard Double",
+            "price_usd": "396"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:20-12-2025",
+        "date": "20-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:003",
+            "room_type": "Standard King",
+            "price_usd": "450"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:24-12-2025",
+        "date": "24-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:001",
+            "room_type": "Deluxe King",
+            "price_usd": "3360"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:24-12-2025",
+        "date": "24-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:001",
+            "room_type": "Premier Suite",
+            "price_usd": "6160"
+          },
+          {
+            "hotel_id": "MADRID:003",
+            "room_type": "Private Double Room",
+            "price_usd": "392"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:24-12-2025",
+        "date": "24-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:001",
+            "room_type": "Wonderful King Room",
+            "price_usd": "1680"
+          },
+          {
+            "hotel_id": "BARCELONA:005",
+            "room_type": "Classic Room",
+            "price_usd": "1260"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:24-12-2025",
+        "date": "24-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:002",
+            "room_type": "Grand Premier Suite",
+            "price_usd": "11200"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:25-12-2025",
+        "date": "25-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:002",
+            "room_type": "Standard Room",
+            "price_usd": "980"
+          },
+          {
+            "hotel_id": "LONDON:004",
+            "room_type": "Shared 8-Bed Dorm",
+            "price_usd": "168"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:25-12-2025",
+        "date": "25-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:004",
+            "room_type": "Deluxe King",
+            "price_usd": "896"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:25-12-2025",
+        "date": "25-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:002",
+            "room_type": "Deluxe Room Sea View",
+            "price_usd": "2240"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:25-12-2025",
+        "date": "25-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:001",
+            "room_type": "Duplex Suite",
+            "price_usd": "8400"
+          },
+          {
+            "hotel_id": "PARIS:005",
+            "room_type": "Shared 10-Bed Dorm",
+            "price_usd": "154"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "LONDON:31-12-2025",
+        "date": "31-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "LONDON:001",
+            "room_type": "One-Bedroom Suite",
+            "price_usd": "10000"
+          },
+          {
+            "hotel_id": "LONDON:002",
+            "room_type": "Standard Room",
+            "price_usd": "1400"
+          },
+          {
+            "hotel_id": "LONDON:004",
+            "room_type": "Private Twin Room",
+            "price_usd": "600"
+          },
+          {
+            "hotel_id": "LONDON:005",
+            "room_type": "Premier Shard Suite",
+            "price_usd": "7200"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "MADRID:31-12-2025",
+        "date": "31-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "MADRID:001",
+            "room_type": "Premier Suite",
+            "price_usd": "8800"
+          },
+          {
+            "hotel_id": "MADRID:003",
+            "room_type": "Shared 6-Bed Dorm",
+            "price_usd": "200"
+          },
+          {
+            "hotel_id": "MADRID:004",
+            "room_type": "Suite with Terrace",
+            "price_usd": "2200"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "BARCELONA:31-12-2025",
+        "date": "31-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "BARCELONA:001",
+            "room_type": "Fabulous Sky King",
+            "price_usd": "3600"
+          },
+          {
+            "hotel_id": "BARCELONA:004",
+            "room_type": "Private Queen Room",
+            "price_usd": "520"
+          },
+          {
+            "hotel_id": "BARCELONA:005",
+            "room_type": "Deluxe with Terrace",
+            "price_usd": "2600"
+          }
+        ]
+      }
+    },
+    {
+      "availability": {
+        "key": "PARIS:31-12-2025",
+        "date": "31-12-2025",
+        "hotels": [
+          {
+            "hotel_id": "PARIS:001",
+            "room_type": "Duplex Suite",
+            "price_usd": "12000"
+          },
+          {
+            "hotel_id": "PARIS:002",
+            "room_type": "Grand Premier Suite",
+            "price_usd": "16000"
+          },
+          {
+            "hotel_id": "PARIS:003",
+            "room_type": "Standard King",
+            "price_usd": "1000"
+          },
+          {
+            "hotel_id": "PARIS:004",
+            "room_type": "Junior Suite",
+            "price_usd": "8000"
+          },
+          {
+            "hotel_id": "PARIS:005",
+            "room_type": "Private Double Room",
+            "price_usd": "640"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -45,3 +45,9 @@ variable "exposed_port" {
   description = "Port on which to expose incoming TCP traffic in the GCP firewall."
   default     = 8080
 }
+
+variable "create_firewall_rule" {
+  type        = bool
+  description = "Whether to create the firewall rule."
+  default     = true
+}

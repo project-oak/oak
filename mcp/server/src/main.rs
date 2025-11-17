@@ -17,7 +17,7 @@
 use axum::Router;
 use clap::Parser;
 use log::info;
-use mcp_server_lib::service::WeatherService;
+use mcp_server_lib::service::Service;
 use rmcp::transport::streamable_http_server::{
     session::local::LocalSessionManager, StreamableHttpService,
 };
@@ -41,8 +41,8 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let args = Args::parse();
 
-    info!("Starting weather service");
-    let service = WeatherService::new(&args.oak_functions_url, args.attestation);
+    info!("Starting MCP server");
+    let service = Service::new(&args.oak_functions_url, args.attestation);
     let http_service = StreamableHttpService::new(
         move || Ok(service.clone()),
         LocalSessionManager::default().into(),
@@ -52,12 +52,12 @@ async fn main() -> anyhow::Result<()> {
     let router = Router::new().nest_service("/mcp", http_service);
 
     let tcp_listener = TcpListener::bind(&args.listen_address).await?;
-    info!("listening on {}", &args.listen_address);
+    info!("Listening on {}", &args.listen_address);
     axum::serve(tcp_listener, router)
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.unwrap();
         })
         .await?;
-    info!("Stopping weather service");
+    info!("Stopping MCP server");
     Ok(())
 }

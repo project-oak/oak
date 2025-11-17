@@ -1,0 +1,1183 @@
+{
+  "activities": [
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "British Museum",
+        "type": "Museum",
+        "style_tags": "History, Culture, Art",
+        "duration_hours": "3.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "0",
+            "ticket_type": "General Admission",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "0",
+            "ticket_type": "General Admission",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "0",
+            "ticket_type": "General Admission",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:30"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "0",
+            "ticket_type": "General Admission",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "0",
+            "ticket_type": "General Admission",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "17:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "Tower of London",
+        "type": "Landmark",
+        "style_tags": "History, Castle, Royalty",
+        "duration_hours": "3",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "40",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "40",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "48",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "48",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "17:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "The Phantom of the Opera",
+        "type": "Show",
+        "style_tags": "Musical, Theatre, Classic",
+        "duration_hours": "2.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "75",
+            "ticket_type": "Stalls",
+            "start_time": "19:30"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "75",
+            "ticket_type": "Stalls",
+            "start_time": "19:30"
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "85",
+            "ticket_type": "Stalls",
+            "start_time": "14:30"
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "95",
+            "ticket_type": "Stalls",
+            "start_time": "19:30"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "120",
+            "ticket_type": "Stalls",
+            "start_time": "14:30"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "140",
+            "ticket_type": "Stalls",
+            "start_time": "19:30"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "London Eye",
+        "type": "Landmark",
+        "style_tags": "Sightseeing, View, Ferris Wheel",
+        "duration_hours": "0.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "42",
+            "ticket_type": "Standard Ticket",
+            "operating_hours": {
+              "open": "11:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "50",
+            "ticket_type": "Standard Ticket",
+            "operating_hours": {
+              "open": "11:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "55",
+            "ticket_type": "Standard Ticket",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "55",
+            "ticket_type": "Standard Ticket",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "Warner Bros. Studio Tour London - The Making of Harry Potter",
+        "type": "Tour",
+        "style_tags": "Movies, Family-Friendly, Themed",
+        "duration_hours": "3.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "65",
+            "ticket_type": "Adult",
+            "start_time": "10:00"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "65",
+            "ticket_type": "Adult",
+            "start_time": "12:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "75",
+            "ticket_type": "Adult",
+            "start_time": "11:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "85",
+            "ticket_type": "Adult",
+            "start_time": "09:00"
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "85",
+            "ticket_type": "Adult",
+            "start_time": "14:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "LONDON",
+        "name": "Christmas at Kew Gardens",
+        "type": "Event",
+        "style_tags": "Christmas, Lights, Outdoor, Family-Friendly",
+        "duration_hours": "2",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "35",
+            "ticket_type": "Adult Off-Peak",
+            "operating_hours": {
+              "open": "16:30",
+              "close": "22:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "35",
+            "ticket_type": "Adult Off-Peak",
+            "operating_hours": {
+              "open": "16:30",
+              "close": "22:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "45",
+            "ticket_type": "Adult Peak",
+            "operating_hours": {
+              "open": "16:30",
+              "close": "22:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "45",
+            "ticket_type": "Adult Peak",
+            "operating_hours": {
+              "open": "16:30",
+              "close": "22:00"
+            }
+          },
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "50",
+            "ticket_type": "Adult Christmas Week",
+            "operating_hours": {
+              "open": "16:30",
+              "close": "22:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Prado Museum",
+        "type": "Museum",
+        "style_tags": "Art, History, European Art",
+        "duration_hours": "3",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "18",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "18",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "18",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "22",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "22",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "19:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Royal Palace of Madrid",
+        "type": "Landmark",
+        "style_tags": "History, Architecture, Royalty",
+        "duration_hours": "2.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "15",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "15",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "20",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "20",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "16:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Flamenco Show at Cardamomo",
+        "type": "Show",
+        "style_tags": "Culture, Dance, Music, Spanish",
+        "duration_hours": "1",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "50",
+            "ticket_type": "Show + Drink",
+            "start_time": "18:00"
+          },
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "50",
+            "ticket_type": "Show + Drink",
+            "start_time": "20:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "65",
+            "ticket_type": "Show + Drink",
+            "start_time": "19:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "65",
+            "ticket_type": "Show + Drink",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "75",
+            "ticket_type": "Show + Drink",
+            "start_time": "19:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "75",
+            "ticket_type": "Show + Drink",
+            "start_time": "22:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Tapas and Wine Tasting Tour",
+        "type": "Tour",
+        "style_tags": "Food, Wine, Culture",
+        "duration_hours": "3",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "80",
+            "ticket_type": "Adult",
+            "start_time": "18:00"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "80",
+            "ticket_type": "Adult",
+            "start_time": "19:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "95",
+            "ticket_type": "Adult",
+            "start_time": "19:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "105",
+            "ticket_type": "Adult",
+            "start_time": "13:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "105",
+            "ticket_type": "Adult",
+            "start_time": "19:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Reina Sofia Museum",
+        "type": "Museum",
+        "style_tags": "Art, Modern Art, Spanish Art",
+        "duration_hours": "2.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "14",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "21:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "14",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "21:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "16",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "21:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "16",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "14:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "MADRID",
+        "name": "Bernabéu Stadium Tour",
+        "type": "Tour",
+        "style_tags": "Sports, Football, Stadium",
+        "duration_hours": "1.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "30",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "30",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "35",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "40",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "18:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "40",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "18:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Sagrada Familia",
+        "type": "Landmark",
+        "style_tags": "Architecture, Gaudi, Church",
+        "duration_hours": "2",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "38",
+            "ticket_type": "Basic Ticket",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "38",
+            "ticket_type": "Basic Ticket",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "42",
+            "ticket_type": "Basic Ticket",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "48",
+            "ticket_type": "Basic Ticket",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "48",
+            "ticket_type": "Basic Ticket",
+            "operating_hours": {
+              "open": "10:30",
+              "close": "18:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Park Güell",
+        "type": "Park",
+        "style_tags": "Architecture, Gaudi, Outdoor, View",
+        "duration_hours": "1.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "12",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "12",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "15",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "15",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "17:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Picasso Museum",
+        "type": "Museum",
+        "style_tags": "Art, Picasso, Modern Art",
+        "duration_hours": "2",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "14",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "0",
+            "ticket_type": "Free Entry",
+            "operating_hours": {
+              "open": "17:00",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "14",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "16",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "19:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "16",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "10:00",
+              "close": "19:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Gothic Quarter Walking Tour",
+        "type": "Tour",
+        "style_tags": "History, Walking, Architecture",
+        "duration_hours": "2.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "25",
+            "ticket_type": "Adult",
+            "start_time": "10:00"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "25",
+            "ticket_type": "Adult",
+            "start_time": "15:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "30",
+            "ticket_type": "Adult",
+            "start_time": "10:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "35",
+            "ticket_type": "Adult",
+            "start_time": "10:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "35",
+            "ticket_type": "Adult",
+            "start_time": "16:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Casa Batlló",
+        "type": "Landmark",
+        "style_tags": "Architecture, Gaudi, Modernism",
+        "duration_hours": "1.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "39",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "39",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "45",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "20:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "45",
+            "ticket_type": "General",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "20:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "BARCELONA",
+        "name": "Palau de la Música Catalana Concert",
+        "type": "Show",
+        "style_tags": "Music, Concert, Architecture",
+        "duration_hours": "1.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "60",
+            "ticket_type": "Spanish Guitar",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "65",
+            "ticket_type": "Spanish Guitar",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "80",
+            "ticket_type": "Flamenco & Opera",
+            "start_time": "21:30"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "90",
+            "ticket_type": "Flamenco & Opera",
+            "start_time": "21:30"
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "70",
+            "ticket_type": "Mañanas de Clásica",
+            "start_time": "12:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Louvre Museum",
+        "type": "Museum",
+        "style_tags": "Art, History, Culture, World-Famous",
+        "duration_hours": "4",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "20",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "20",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "20",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "21:45"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "25",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "25",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "18:00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Eiffel Tower Summit Access",
+        "type": "Landmark",
+        "style_tags": "Sightseeing, View, Iconic",
+        "duration_hours": "2.5",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "30",
+            "ticket_type": "Adult with Lift",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "23:45"
+            }
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "30",
+            "ticket_type": "Adult with Lift",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "23:45"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "35",
+            "ticket_type": "Adult with Lift",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "00:45"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "40",
+            "ticket_type": "Adult with Lift",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "00:45"
+            }
+          },
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "50",
+            "ticket_type": "Christmas Week Adult with Lift",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "00:45"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Moulin Rouge Show",
+        "type": "Show",
+        "style_tags": "Cabaret, Dance, Music, Nightlife",
+        "duration_hours": "2",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "110",
+            "ticket_type": "Show Only",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "120",
+            "ticket_type": "Show Only",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "140",
+            "ticket_type": "Show Only",
+            "start_time": "19:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "130",
+            "ticket_type": "Show Only",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "150",
+            "ticket_type": "Show Only",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "250",
+            "ticket_type": "New Year's Eve Special",
+            "start_time": "21:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Palace of Versailles Tour",
+        "type": "Tour",
+        "style_tags": "History, Royalty, Architecture, Gardens",
+        "duration_hours": "4",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Tuesday",
+            "price_usd": "25",
+            "ticket_type": "Passport",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "25",
+            "ticket_type": "Passport",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "32",
+            "ticket_type": "Passport",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "32",
+            "ticket_type": "Passport",
+            "operating_hours": {
+              "open": "09:00",
+              "close": "17:30"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Seine River Cruise",
+        "type": "Tour",
+        "style_tags": "Sightseeing, Boat, Romantic",
+        "duration_hours": "1",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Monday",
+            "price_usd": "18",
+            "ticket_type": "Day Cruise",
+            "start_time": "14:00"
+          },
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "18",
+            "ticket_type": "Day Cruise",
+            "start_time": "16:00"
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "25",
+            "ticket_type": "Illuminations Cruise",
+            "start_time": "20:00"
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "30",
+            "ticket_type": "Illuminations Cruise",
+            "start_time": "21:00"
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "30",
+            "ticket_type": "Illuminations Cruise",
+            "start_time": "20:00"
+          }
+        ]
+      }
+    },
+    {
+      "activity": {
+        "key": "PARIS",
+        "name": "Musée d'Orsay",
+        "type": "Museum",
+        "style_tags": "Art, Impressionism, Van Gogh",
+        "duration_hours": "3",
+        "weekly_schedule": [
+          {
+            "day_of_week": "Wednesday",
+            "price_usd": "18",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Thursday",
+            "price_usd": "18",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "21:45"
+            }
+          },
+          {
+            "day_of_week": "Friday",
+            "price_usd": "18",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Saturday",
+            "price_usd": "22",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "18:00"
+            }
+          },
+          {
+            "day_of_week": "Sunday",
+            "price_usd": "22",
+            "ticket_type": "Adult",
+            "operating_hours": {
+              "open": "09:30",
+              "close": "18:00"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
