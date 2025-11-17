@@ -18,6 +18,7 @@ use alloc::vec::Vec;
 
 use oak_attestation_types::{
     attester::Attester,
+    transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, Serializable},
 };
 use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
@@ -62,6 +63,16 @@ impl Attester for RtmrAttester {
     }
 
     fn quote(&self) -> anyhow::Result<Evidence> {
+        anyhow::bail!("Not implemented");
+    }
+}
+
+impl TransparentAttester for RtmrAttester {
+    fn extend(
+        &mut self,
+        _original_encoded_event: &[u8],
+        _transparent_encoded_event: &[u8],
+    ) -> anyhow::Result<()> {
         anyhow::bail!("Not implemented");
     }
 }

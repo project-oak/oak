@@ -21,6 +21,7 @@ use ciborium::Value;
 use coset::{cwt::ClaimName, CborSerializable, CoseKey};
 use oak_attestation_types::{
     attester::Attester,
+    transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
 };
 use oak_dice::{
@@ -232,6 +233,16 @@ impl Attester for DiceAttester {
 
     fn quote(&self) -> anyhow::Result<Evidence> {
         Ok(self.evidence.clone())
+    }
+}
+
+impl TransparentAttester for DiceAttester {
+    fn extend(
+        &mut self,
+        _original_encoded_event: &[u8],
+        _transparent_encoded_event: &[u8],
+    ) -> anyhow::Result<()> {
+        anyhow::bail!("Not implemented");
     }
 }
 
