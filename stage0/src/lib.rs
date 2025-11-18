@@ -28,7 +28,7 @@ use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
 use oak_attestation_types::{
-    attester::Attester,
+    transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
 };
 use oak_dice::evidence::{
@@ -259,7 +259,9 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     );
 
     let mut attester = P::get_attester().expect("couldn't get a valid attester");
-    attester.extend(&stage0_event[..]).expect("couldn't extend attester");
+    attester
+        .extend(&stage0_event[..], &stage0_transparent_event[..])
+        .expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 
     let mut attestation_data: DiceData =

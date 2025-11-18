@@ -75,6 +75,8 @@ pub const SHA2_256_ID: i64 = -4670572;
 pub const EVENT_ID: i64 = -4670573;
 /// The CWT private claim ID of the application keys.
 pub const APPLICATION_KEY_ID: i64 = -4670574;
+/// The CWT private claim ID of the transparent Event digest.
+pub const TRANSPARENT_EVENT_ID: i64 = -4670575;
 
 /// String to be used as salt for generating Key IDs.
 const ID_SALT: &[u8] = b"DICE_ID_SALT";

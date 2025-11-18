@@ -68,12 +68,14 @@ impl Attester for RtmrAttester {
 }
 
 impl TransparentAttester for RtmrAttester {
+    // TODO: b/452735395 - Update the extend method to populate the transparency
+    // log.
     fn extend(
         &mut self,
-        _original_encoded_event: &[u8],
+        original_encoded_event: &[u8],
         _transparent_encoded_event: &[u8],
     ) -> anyhow::Result<()> {
-        anyhow::bail!("Not implemented");
+        Attester::extend(self, original_encoded_event)
     }
 }
 
