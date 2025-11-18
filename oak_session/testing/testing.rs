@@ -562,10 +562,13 @@ pub fn create_mock_session_key_assertion_generator(
 ) -> Box<dyn BindableAssertionGenerator> {
     let mut generator = MockTestAssertionGenerator::new();
     generator.expect_generate().returning(move |_| Ok(assertion.clone()));
-    Box::new(SessionKeyBindableAssertionGenerator {
-        assertion_generator: Arc::new(generator),
-        binding_signer: Arc::new(SigningKey::random(&mut OsRng)),
-    })
+    Box::new(
+        SessionKeyBindableAssertionGenerator::create_with_assertion_generator(
+            &generator,
+            Arc::new(SigningKey::random(&mut OsRng)),
+        )
+        .expect("assertion generator creation failed"),
+    )
 }
 
 pub fn create_passing_mock_session_key_assertion_verifier() -> Box<dyn BoundAssertionVerifier> {

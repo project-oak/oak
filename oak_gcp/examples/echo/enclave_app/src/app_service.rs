@@ -20,7 +20,7 @@
 /// may need to be configured in specific ways.
 use std::{collections::BTreeMap, pin::Pin, sync::Arc};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context, Result};
 use oak_attestation_gcp::{assertions::GcpAssertionGenerator, OAK_SESSION_NOISE_V1_AUDIENCE};
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_server::{
     EnclaveApplication, EnclaveApplicationServer,
@@ -56,22 +56,24 @@ impl EnclaveApplicationImplementation {
         application_handler: EchoHandler,
         binding_key: SigningKey,
         endorsement: ConfidentialSpaceEndorsement,
-    ) -> Self {
-        let gcp_assertion_generator: Arc<dyn BindableAssertionGenerator> =
-            Arc::new(SessionKeyBindableAssertionGenerator {
-                assertion_generator: Arc::new(GcpAssertionGenerator {
+    ) -> Result<Self> {
+        let gcp_assertion_generator: Arc<dyn BindableAssertionGenerator> = Arc::new(
+            SessionKeyBindableAssertionGenerator::create_with_assertion_generator(
+                &GcpAssertionGenerator {
                     audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
                     endorsement: Some(endorsement),
-                }),
-                binding_signer: Arc::new(binding_key),
-            });
-        Self {
+                },
+                Arc::new(binding_key),
+            )
+            .context("calling the GCP assertion generator")?,
+        );
+        Ok(Self {
             application_handler: Arc::new(application_handler),
             assertion_generators: BTreeMap::from([(
                 ATTESTATION_ID.to_string(),
                 gcp_assertion_generator,
             )]),
-        }
+        })
     }
 }
 
@@ -144,7 +146,7 @@ pub async fn create(
             application_handler,
             binding_key,
             endorsement,
-        )))
+        )?))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
