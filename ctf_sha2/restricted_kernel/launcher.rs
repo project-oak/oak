@@ -29,6 +29,8 @@ pub struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let cli = Args::parse();
     let (guest_instance, connector_handle) = launcher::launch(cli.launcher_params).await?;
 
