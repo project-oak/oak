@@ -300,7 +300,6 @@ copy-oak-artifacts: \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
-    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "oak_containers_stage1_tdx") \
     (copy-binary "oak_containers/syslogd" "oak_containers_syslogd") \
     (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
@@ -339,9 +338,6 @@ github-oak_containers_nvidia_system_image: \
 
 github-oak_containers_orchestrator: \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator")
-
-github-stage1_tdx_cpio: \
-    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "stage1_tdx.cpio")
 
 github-stage1_cpio: \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "stage1.cpio")

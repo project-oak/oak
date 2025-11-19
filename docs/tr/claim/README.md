@@ -10,8 +10,6 @@
   [oak_containers_kernel_cmd_line](https://github.com/project-oak/oak/blob/main/docs/tr/claim/48633.md)
 - `85483`
   [oak_containers_stage1](https://github.com/project-oak/oak/blob/main/docs/tr/claim/85483.md)
-- `58963`
-  [oak_containers_stage1_tdx](https://github.com/project-oak/oak/blob/main/docs/tr/claim/74984.md)
 - `74984`
   [oak_containers_system_image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/58963.md)
 - `18136`

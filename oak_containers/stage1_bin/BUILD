@@ -26,7 +26,7 @@ rust_binary(
     name = "oak_containers_stage1_bin",
     srcs = glob(["src/**"]),
     deps = [
-        "//oak_attestation",
+        "//oak_containers/attester",
         "//oak_containers/stage1",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:tokio",

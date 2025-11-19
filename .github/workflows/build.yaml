@@ -23,7 +23,6 @@ jobs:
           - buildconfigs/oak_containers_kernel.sh
           - buildconfigs/oak_containers_orchestrator.sh
           - buildconfigs/oak_containers_stage1.sh
-          - buildconfigs/oak_containers_stage1_tdx.sh
           - buildconfigs/oak_containers_syslogd.sh
           - buildconfigs/oak_containers_system_image.sh
           - buildconfigs/oak_containers_nvidia_system_image.sh

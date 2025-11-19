@@ -17,10 +17,10 @@
 use std::error::Error;
 
 use clap::Parser;
-use oak_attestation::dice::DiceAttester;
+use oak_containers_attester::UnifiedAttester;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = oak_containers_stage1::Args::parse();
-    oak_containers_stage1::main::<DiceAttester>(&args).await
+    oak_containers_stage1::main::<UnifiedAttester>(&args).await
 }

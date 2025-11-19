@@ -35,17 +35,6 @@ pkg_files(
 )
 
 pkg_files(
-    name = "orchestrator_tdx_files",
-    srcs = [
-        "//oak_containers/orchestrator_bin_tdx:bin/oak_containers_orchestrator",
-    ],
-    attributes = pkg_attributes(
-        mode = "0744",
-    ),
-    strip_prefix = "/oak_containers/orchestrator_bin_tdx/bin",
-)
-
-pkg_files(
     name = "syslogd_files",
     srcs = [
         "//oak_containers/syslogd",
@@ -78,16 +67,6 @@ pkg_tar(
 )
 
 pkg_tar(
-    name = "rust_bins_tdx_tar",
-    srcs = [
-        ":agent_files",
-        ":orchestrator_tdx_files",
-        ":syslogd_files",
-    ],
-    package_dir = "/usr/bin",
-)
-
-pkg_tar(
     name = "oak_containers_system_image_tar",
     deps = [
         ":rust_bins_tar",
@@ -101,22 +80,6 @@ xz_compress(
     # This rule will fail unless you run: just oak_containers_system_image_binaries
     # This restriction will be removed once everything is bazelified.
     target = ":oak_containers_system_image_tar",
-)
-
-pkg_tar(
-    name = "oak_containers_tdx_system_image_tar",
-    deps = [
-        ":rust_bins_tdx_tar",
-        "@oak_containers_system_image_base//file:base-image.tar.xz",
-    ],
-)
-
-xz_compress(
-    name = "oak_containers_tdx_system_image",
-    out = "oak_containers_tdx_system_image.tar.xz",
-    # This rule will fail unless you run: just oak_containers_sytem_image_binaries
-    # This restriction will be removed once everything is bazelified.
-    target = ":oak_containers_tdx_system_image_tar",
 )
 
 pkg_tar(
