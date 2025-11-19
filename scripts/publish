@@ -41,12 +41,17 @@ upload_file() {
   copy_file "${file}" "gs://${FBUCKET}/${hash}"
 
   # static.space provides a long-term map from file hash to file URL.
+  # This is best effort only - script will continue on failure.
+  # Makes a total of 4 attempts, pausing 2 seconds in between attempts,
+  # regardless of the nature of the error.
   local url="https://storage.googleapis.com/${FBUCKET}/${hash}"
-  curl --fail --silent \
-    --request POST \
+  curl --fail --request POST \
     --header 'Content-Type: application/json' \
     --data "{ \"url\": \"${url}\" }" \
-    https://api.static.space/v1/snapshot > /dev/null 2>&1
+    --retry 3 \
+    --retry-delay 2 \
+    --retry-all-errors \
+    https://api.static.space/v1/snapshot 2>&1 || true
 
   echo "${hash}"
 }
