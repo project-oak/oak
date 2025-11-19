@@ -55,6 +55,7 @@ java_proto_library(
 proto_library(
     name = "cb_eventlog_proto",
     srcs = ["cb_eventlog.proto"],
+    deps = [":eventlog_proto"],
 )
 
 cc_proto_library(

@@ -18,26 +18,28 @@ syntax = "proto3";
 
 package oak.attestation.v1;
 
+import "proto/attestation/eventlog.proto";
+
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
-option java_outer_classname = "CbEventlog";
+option java_outer_classname = "CbTransparentEventlog";
 
-// Represents the Layer 1 (or Stage 1) event of Confidential Borg that is
-// externally sharable (i.e. it does not contain sensitive internal data).
-message Layer1TransparentEvent {
+// Represents the Layer 1 (or Stage 1) event of CB that is externally sharable
+// (i.e. it does not contain sensitive internal data).
+message CbLayer1TransparentEvent {
   // Hash of the binary.
   bytes runtime_agent_measurement = 1;
 
-  // Hash of the command line args supplied to the binary.
-  bytes command_line_digest = 2;
+  // Regex of the command line args supplied to the binary that are known at
+  // build time (i.e. they are 'static')
+  BinaryArgvRexexMeasurement runtime_agent_argv = 2;
 }
 
-// Layer 2 (or Stage 2) event proto for Confidential Borg that is shareable with
-// end clients.
-message Layer2TransparentEvent {
-  // The MPMs running on Confidential Borg. This includes the server-binary that
-  // is being deployed on Confidential Borg.
+// Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
+message CbLayer2TransparentEvent {
+  // The MPMs running on CB. This includes the server-binary that is being
+  // deployed on CB.
   repeated MpmPackage packages = 1;
 }
 
