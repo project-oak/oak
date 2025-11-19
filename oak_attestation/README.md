@@ -64,11 +64,11 @@ and may be used in conjunction with the original Attester trait:
 
 ```rust
 pub trait TransparentAttester {
-    fn extend(&mut self, original_encoded_event: &[u8], transparent_encoded_event: &[u8]) -> Result<()>;
+    fn extend_transparent(&mut self, original_encoded_event: &[u8], transparent_encoded_event: &[u8]) -> Result<()>;
 }
 ```
 
-- `extend` function accepts an `original_encoded_event` and a
+- `extend_transparent` function accepts an `original_encoded_event` and a
   `transparent_encoded_event`. The `original_encoded_event` contains potentially
   sensitive data. The `transparent_encoded_event` is a version of the same
   encoded event that does not contain sensitive data (for example, sensitive

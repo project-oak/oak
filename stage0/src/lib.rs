@@ -260,7 +260,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
 
     let mut attester = P::get_attester().expect("couldn't get a valid attester");
     attester
-        .extend(&stage0_event[..], &stage0_transparent_event[..])
+        .extend_transparent(&stage0_event[..], &stage0_transparent_event[..])
         .expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 

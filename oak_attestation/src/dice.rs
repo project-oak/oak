@@ -209,7 +209,7 @@ impl Attester for DiceAttester {
 }
 
 impl TransparentAttester for DiceAttester {
-    fn extend(
+    fn extend_transparent(
         &mut self,
         original_encoded_event: &[u8],
         transparent_encoded_event: &[u8],

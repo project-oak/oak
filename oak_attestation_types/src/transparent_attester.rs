@@ -26,8 +26,7 @@ pub trait TransparentAttester: Send + Sync {
     /// transparent encoded event should correspond to the same event. The
     /// original event contains potentially sensitive data, the transparent
     /// event has no sensitive data and can be shared externally.
-    /// TODO: b/452735395 - Change method name to `extend_transparent`
-    fn extend(
+    fn extend_transparent(
         &mut self,
         original_encoded_event: &[u8],
         transparent_encoded_event: &[u8],
