@@ -1,4 +1,5 @@
 resource "google_compute_instance" "oak_proxy_client" {
+  project          = var.gcp_project_id
   name             = var.instance_name
   machine_type     = var.machine_type
   zone             = var.zone
@@ -45,7 +46,7 @@ resource "google_compute_instance" "oak_proxy_client" {
   metadata = {
     tee-image-reference        = var.image_digest
     tee-container-log-redirect = "true"
-    tee-env-SERVER_PROXY_URL   = "ws://${var.oak_proxy_server_ip}:${var.exposed_port}"
+    tee-cmd                    = "[\"--config=/etc/proxy_client.toml\",\"--server-proxy-url=ws://${var.oak_proxy_server_ip}:${var.exposed_port}\"]"
   }
 
   # Add a tag to create corresponding firewall rules for.

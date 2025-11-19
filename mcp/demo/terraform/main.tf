@@ -43,7 +43,7 @@ module "flights_mcp_server" {
 }
 
 module "flights_proxy" {
-  source              = "../../proxy/terraform"
+  source              = "../../../oak_proxy/terraform"
   gcp_project_id      = var.gcp_project_id
   zone                = var.zone
   instance_name       = "flights-proxy"
@@ -80,7 +80,7 @@ module "hotels_mcp_server" {
 }
 
 module "hotels_proxy" {
-  source              = "../../proxy/terraform"
+  source              = "../../../oak_proxy/terraform"
   gcp_project_id      = var.gcp_project_id
   zone                = var.zone
   instance_name       = "hotels-proxy"
@@ -117,7 +117,7 @@ module "activities_mcp_server" {
 }
 
 module "activities_proxy" {
-  source              = "../../proxy/terraform"
+  source              = "../../../oak_proxy/terraform"
   gcp_project_id      = var.gcp_project_id
   zone                = var.zone
   instance_name       = "activities-proxy"
