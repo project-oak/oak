@@ -27,7 +27,6 @@ use p256::ecdsa::VerifyingKey;
 
 /// Trait that allows extracting a verifying key (e.g., a session binding key)
 /// from the supplied and verified evidence.
-/// Deprecated: use endorsed_evidence_assertion_verifier::KeyExtractor instead.
 pub trait KeyExtractor: Send + Sync {
     /// Extracts the verifying key from the attestation results returned by
     /// [`AttestationVerifier`]. Only results of a successful verification are
@@ -40,8 +39,6 @@ pub trait KeyExtractor: Send + Sync {
 
 /// Key extractor that takes the key from the top level signing_public_key field
 /// in [`AttestationResults`]
-/// Deprecated: use
-/// endorsed_evidence_assertion_verifier::DefaultSigningKeyExtractor instead.
 pub struct DefaultSigningKeyExtractor;
 
 impl KeyExtractor for DefaultSigningKeyExtractor {
@@ -64,8 +61,6 @@ impl KeyExtractor for DefaultSigningKeyExtractor {
 
 /// Key extractor that retrieves the binding key from the artifacts contained
 /// in [`AttestationResults`].
-/// Deprecated: use
-/// endorsed_evidence_assertion_verifier::DefaultBindingKeyExtractor instead.
 pub struct DefaultBindingKeyExtractor;
 
 impl KeyExtractor for DefaultBindingKeyExtractor {

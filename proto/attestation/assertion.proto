@@ -22,6 +22,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/attestation/endorsement.proto";
+import "proto/attestation/evidence.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -58,4 +59,10 @@ message ConfidentialSpaceAssertion {
   // An optional endorsement for the endorsement that can be sent to the client
   // by the Cloud application to support the measurements in the JWT token.
   ConfidentialSpaceEndorsement container_image_endorsement = 2;
+}
+
+message EndorsedEvidenceAssertion {
+  Evidence evidence = 1;
+  Endorsements endorsements = 2;
+  bytes asserted_data_signature = 3;
 }

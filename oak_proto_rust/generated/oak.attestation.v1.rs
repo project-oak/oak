@@ -389,92 +389,6 @@ pub mod endorsements {
         Cb(super::CbEndorsements),
     }
 }
-/// Assertion that an attesting party is making to the verifying peer. Assertion
-/// represents a claim that the attesting party is making to the verifying party,
-/// which the verifying party can use to make a decision on whether to proceed
-/// with establishing a secure session. and must contain all evidence needed to
-/// verify the assertion.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Assertion {
-    /// Bytes of the assertion. We make no assumption about the format used: it can
-    /// be a serialized proto, JWT or any other data that the peer can use to make
-    /// the pass/fail decision about the assertion.
-    #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
-    pub content: ::prost::alloc::vec::Vec<u8>,
-}
-/// Assertion that wraps an inner assertion that signs the enclosed asserted
-/// data. The asserted data is then used to verify a wrapper assertion.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WrapperAssertion {
-    /// Inner assertion establishes the authenticity of the asserted data.
-    #[prost(message, optional, tag = "1")]
-    pub inner_assertion: ::core::option::Option<Assertion>,
-    /// Asserted data is signed by the inner assertion and is being used to verify
-    /// the outer assertion. For example it can contain a public key for the
-    /// signature in the wrapper assertion.
-    #[prost(bytes = "vec", tag = "2")]
-    pub inner_asserted_data: ::prost::alloc::vec::Vec<u8>,
-    /// Outer assertion that can be verified with the help if the asserted data.
-    #[prost(message, optional, tag = "3")]
-    pub outer_assertion: ::core::option::Option<Assertion>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ConfidentialSpaceAssertion {
-    /// GCP attestation token for the container image.
-    #[prost(bytes = "vec", tag = "1")]
-    pub jwt_token: ::prost::alloc::vec::Vec<u8>,
-    /// An optional endorsement for the endorsement that can be sent to the client
-    /// by the Cloud application to support the measurements in the JWT token.
-    #[prost(message, optional, tag = "2")]
-    pub container_image_endorsement: ::core::option::Option<
-        ConfidentialSpaceEndorsement,
-    >,
-}
-/// The Transparent Release attachment for Oak Stage 0. Measurements
-/// are produced with:
-/// <https://github.com/project-oak/oak/tree/main/snp_measurement>
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FirmwareAttachment {
-    /// Digest of the unmodified firmware-type binary. This field can remain
-    /// empty for attestation verification. It is only needed if identifying
-    /// the binary given the attachement is a requirement.
-    #[prost(message, optional, tag = "2")]
-    pub binary: ::core::option::Option<super::super::HexDigest>,
-    /// Maps number of vCPUs to measurement of the modified firmware binary.
-    #[prost(btree_map = "int32, message", tag = "1")]
-    pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
-}
-/// The Transparent Release attachment for bzImage-like kernels.
-/// Measurements are produced with:
-/// <https://github.com/project-oak/oak/tree/main/oak_kernel_measurement>
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct KernelAttachment {
-    /// Digest of the unmodified bzImage. This field can remain empty for
-    /// attestation verification. It is only needed if identifying the
-    /// bzImage given the attachement is a requirement.
-    #[prost(message, optional, tag = "3")]
-    pub bz_image: ::core::option::Option<super::super::HexDigest>,
-    /// Digest of the kernel image part of the bzImage.
-    #[prost(message, optional, tag = "1")]
-    pub image: ::core::option::Option<super::super::HexDigest>,
-    /// Digest of the setup data part of the bzImage.
-    #[prost(message, optional, tag = "2")]
-    pub setup_data: ::core::option::Option<super::super::HexDigest>,
-}
-/// The Transparent Release attachment for MPMs.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MpmAttachment {
-    /// The name of the MPM.
-    #[prost(string, tag = "1")]
-    pub package_name: ::prost::alloc::string::String,
-    /// The version of the MPM.
-    #[prost(string, tag = "2")]
-    pub package_version: ::prost::alloc::string::String,
-}
 /// Regex-based measurement of the command line for a binary. This includes a
 /// regex arguement to match against the command line arguements and the
 /// associated result of the regex match.
@@ -584,39 +498,6 @@ pub struct EventLog {
     #[prost(bytes = "vec", repeated, tag = "2")]
     #[serde(with = "crate::base64data::repeated_bytes")]
     pub encoded_events: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-}
-/// Represents the Layer 1 (or Stage 1) event of CB that is externally sharable
-/// (i.e. it does not contain sensitive internal data).
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CbLayer1TransparentEvent {
-    /// SHA2-256 of a proto containing the binary and metadata measurements for CB
-    /// layer 1.
-    #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
-    pub runtime_agent_measurement: ::prost::alloc::vec::Vec<u8>,
-}
-/// Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CbLayer2TransparentEvent {
-    /// The packages running on CB. This includes the server-binary that is being
-    /// deployed on CB.
-    #[prost(message, repeated, tag = "1")]
-    pub packages: ::prost::alloc::vec::Vec<MpmPackage>,
-}
-/// Mpm package information (executables and static data).
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MpmPackage {
-    #[prost(string, tag = "1")]
-    pub mpm_version_id: ::prost::alloc::string::String,
 }
 /// Evidence generated by the Layer0.
 ///
@@ -781,6 +662,134 @@ impl TeePlatform {
             _ => None,
         }
     }
+}
+/// Assertion that an attesting party is making to the verifying peer. Assertion
+/// represents a claim that the attesting party is making to the verifying party,
+/// which the verifying party can use to make a decision on whether to proceed
+/// with establishing a secure session. and must contain all evidence needed to
+/// verify the assertion.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Assertion {
+    /// Bytes of the assertion. We make no assumption about the format used: it can
+    /// be a serialized proto, JWT or any other data that the peer can use to make
+    /// the pass/fail decision about the assertion.
+    #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
+    pub content: ::prost::alloc::vec::Vec<u8>,
+}
+/// Assertion that wraps an inner assertion that signs the enclosed asserted
+/// data. The asserted data is then used to verify a wrapper assertion.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WrapperAssertion {
+    /// Inner assertion establishes the authenticity of the asserted data.
+    #[prost(message, optional, tag = "1")]
+    pub inner_assertion: ::core::option::Option<Assertion>,
+    /// Asserted data is signed by the inner assertion and is being used to verify
+    /// the outer assertion. For example it can contain a public key for the
+    /// signature in the wrapper assertion.
+    #[prost(bytes = "vec", tag = "2")]
+    pub inner_asserted_data: ::prost::alloc::vec::Vec<u8>,
+    /// Outer assertion that can be verified with the help if the asserted data.
+    #[prost(message, optional, tag = "3")]
+    pub outer_assertion: ::core::option::Option<Assertion>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConfidentialSpaceAssertion {
+    /// GCP attestation token for the container image.
+    #[prost(bytes = "vec", tag = "1")]
+    pub jwt_token: ::prost::alloc::vec::Vec<u8>,
+    /// An optional endorsement for the endorsement that can be sent to the client
+    /// by the Cloud application to support the measurements in the JWT token.
+    #[prost(message, optional, tag = "2")]
+    pub container_image_endorsement: ::core::option::Option<
+        ConfidentialSpaceEndorsement,
+    >,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EndorsedEvidenceAssertion {
+    #[prost(message, optional, tag = "1")]
+    pub evidence: ::core::option::Option<Evidence>,
+    #[prost(message, optional, tag = "2")]
+    pub endorsements: ::core::option::Option<Endorsements>,
+    #[prost(bytes = "vec", tag = "3")]
+    pub asserted_data_signature: ::prost::alloc::vec::Vec<u8>,
+}
+/// The Transparent Release attachment for Oak Stage 0. Measurements
+/// are produced with:
+/// <https://github.com/project-oak/oak/tree/main/snp_measurement>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FirmwareAttachment {
+    /// Digest of the unmodified firmware-type binary. This field can remain
+    /// empty for attestation verification. It is only needed if identifying
+    /// the binary given the attachement is a requirement.
+    #[prost(message, optional, tag = "2")]
+    pub binary: ::core::option::Option<super::super::HexDigest>,
+    /// Maps number of vCPUs to measurement of the modified firmware binary.
+    #[prost(btree_map = "int32, message", tag = "1")]
+    pub configs: ::prost::alloc::collections::BTreeMap<i32, super::super::HexDigest>,
+}
+/// The Transparent Release attachment for bzImage-like kernels.
+/// Measurements are produced with:
+/// <https://github.com/project-oak/oak/tree/main/oak_kernel_measurement>
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct KernelAttachment {
+    /// Digest of the unmodified bzImage. This field can remain empty for
+    /// attestation verification. It is only needed if identifying the
+    /// bzImage given the attachement is a requirement.
+    #[prost(message, optional, tag = "3")]
+    pub bz_image: ::core::option::Option<super::super::HexDigest>,
+    /// Digest of the kernel image part of the bzImage.
+    #[prost(message, optional, tag = "1")]
+    pub image: ::core::option::Option<super::super::HexDigest>,
+    /// Digest of the setup data part of the bzImage.
+    #[prost(message, optional, tag = "2")]
+    pub setup_data: ::core::option::Option<super::super::HexDigest>,
+}
+/// The Transparent Release attachment for MPMs.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MpmAttachment {
+    /// The name of the MPM.
+    #[prost(string, tag = "1")]
+    pub package_name: ::prost::alloc::string::String,
+    /// The version of the MPM.
+    #[prost(string, tag = "2")]
+    pub package_version: ::prost::alloc::string::String,
+}
+/// Represents the Layer 1 (or Stage 1) event of CB that is externally sharable
+/// (i.e. it does not contain sensitive internal data).
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CbLayer1TransparentEvent {
+    /// SHA2-256 of a proto containing the binary and metadata measurements for CB
+    /// layer 1.
+    #[prost(bytes = "vec", tag = "1")]
+    #[serde(with = "crate::base64data")]
+    pub runtime_agent_measurement: ::prost::alloc::vec::Vec<u8>,
+}
+/// Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CbLayer2TransparentEvent {
+    /// The packages running on CB. This includes the server-binary that is being
+    /// deployed on CB.
+    #[prost(message, repeated, tag = "1")]
+    pub packages: ::prost::alloc::vec::Vec<MpmPackage>,
+}
+/// Mpm package information (executables and static data).
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(default)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MpmPackage {
+    #[prost(string, tag = "1")]
+    pub mpm_version_id: ::prost::alloc::string::String,
 }
 /// Message for passing embedded certificate authority information between
 /// layers. Will never appear in the evidence that is sent to the client.
