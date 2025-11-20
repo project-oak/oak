@@ -406,6 +406,22 @@ pub struct Assertion {
     #[serde(with = "crate::base64data")]
     pub content: ::prost::alloc::vec::Vec<u8>,
 }
+/// Assertion that wraps an inner assertion that signs the enclosed asserted
+/// data. The asserted data is then used to verify a wrapper assertion.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WrapperAssertion {
+    /// Inner assertion establishes the authenticity of the asserted data.
+    #[prost(message, optional, tag = "1")]
+    pub inner_assertion: ::core::option::Option<Assertion>,
+    /// Asserted data is signed by the inner assertion and is being used to verify
+    /// the outer assertion. For example it can contain a public key for the
+    /// signature in the wrapper assertion.
+    #[prost(bytes = "vec", tag = "2")]
+    pub inner_asserted_data: ::prost::alloc::vec::Vec<u8>,
+    /// Outer assertion that can be verified with the help if the asserted data.
+    #[prost(message, optional, tag = "3")]
+    pub outer_assertion: ::core::option::Option<Assertion>,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfidentialSpaceAssertion {
     /// GCP attestation token for the container image.

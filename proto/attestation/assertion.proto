@@ -39,6 +39,19 @@ message Assertion {
   bytes content = 1;
 }
 
+// Assertion that wraps an inner assertion that signs the enclosed asserted
+// data. The asserted data is then used to verify a wrapper assertion.
+message WrapperAssertion {
+  // Inner assertion establishes the authenticity of the asserted data.
+  Assertion inner_assertion = 1;
+  // Asserted data is signed by the inner assertion and is being used to verify
+  // the outer assertion. For example it can contain a public key for the
+  // signature in the wrapper assertion.
+  bytes inner_asserted_data = 2;
+  // Outer assertion that can be verified with the help if the asserted data.
+  Assertion outer_assertion = 3;
+}
+
 message ConfidentialSpaceAssertion {
   // GCP attestation token for the container image.
   bytes jwt_token = 1;

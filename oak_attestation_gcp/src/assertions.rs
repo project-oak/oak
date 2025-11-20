@@ -182,8 +182,8 @@ impl AssertionVerifier for GcpAssertionVerifier {
 
         if eat_nonce != expected_nonce {
             return Err(AssertionVerifierError::AssertedDataMismatch {
-                expected: expected_nonce.into(),
-                actual: eat_nonce.into(),
+                expected: expected_nonce,
+                actual: eat_nonce,
             });
         }
 
