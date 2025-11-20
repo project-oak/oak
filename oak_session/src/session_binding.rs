@@ -70,6 +70,7 @@
 //!     with it.
 
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use core::fmt::Debug;
 
 use anyhow::{anyhow, Error};
 use derive_builder::Builder;
@@ -142,7 +143,7 @@ impl SessionBinder for SignatureBinder {
 /// its claimed (and attested) identity and has bound it to the current session.
 /// The `Send` bound allows verifiers to be sent across threads if needed.
 #[cfg_attr(test, automock)]
-pub trait SessionBindingVerifier: Send {
+pub trait SessionBindingVerifier: Send + Sync + Debug {
     /// Verifies the `binding` against the `bound_data`.
     ///
     /// `bound_data` is typically the handshake hash of the current session.
@@ -158,7 +159,7 @@ pub trait SessionBindingVerifier: Send {
 ///
 /// It verifies a signature (the `binding`) over the concatenation of the
 /// `bound_data` (e.g., handshake hash) and optional `additional_data`.
-#[derive(Builder)]
+#[derive(Builder, Debug)]
 #[builder(no_std)]
 #[builder(pattern = "owned")]
 pub struct SignatureBindingVerifier {

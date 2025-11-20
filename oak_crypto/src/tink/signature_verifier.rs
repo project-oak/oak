@@ -35,7 +35,7 @@ extern "C" {
     ) -> StatusWrapper;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SignatureVerifier {
     tink_public_keyset: Vec<u8>,
 }

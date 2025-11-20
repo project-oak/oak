@@ -22,16 +22,19 @@ use oak_proto_rust::oak::{
 };
 use p256::ecdsa::{signature::Signer, Signature, SigningKey};
 use prost::Message;
-use strum::Display;
 use thiserror::Error;
 
 /// Errors that can occur during assertion verification.
-#[derive(Error, Debug, Display)]
+#[derive(Error, Debug)]
 pub enum BindableAssertionGeneratorError {
-    //  #[error("Generic assertion generation error")]
+    #[error("Generic assertion generation error")]
     GenericFailure { error_msg: String },
-    //  #[error("Assertion binding failure")]
+    #[error("Assertion binding failure")]
     BindingGenerationFailure { error_msg: String },
+    #[error(transparent)]
+    AssertionGenerationFailure(#[from] AssertionGeneratorError),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 /// Defines the behavior for generating assertions that can be cryptographically
