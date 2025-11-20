@@ -96,6 +96,8 @@ def rust_tonic_grpc_service(
         name = name,
         srcs = [":" + generate_service_lib_name],
         deps = [
+            Label("@oak_crates_index//:prost"),
+            Label("@oak_crates_index//:prost-types"),
             Label("@oak_crates_index//:tonic"),
         ] + deps,
         **kwargs

@@ -16,6 +16,7 @@
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//micro_rpc_build:build_defs.bzl", "rust_micro_rpc_service")
+load("//oak_grpc_utils:build_defs.bzl", "rust_tonic_grpc_service")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,6 +33,17 @@ proto_library(
 
 rust_micro_rpc_service(
     name = "service",
+    srcs = [":service_proto"],
+    extern_paths = {
+        ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
+    },
+    deps = [
+        "//oak_proto_rust",
+    ],
+)
+
+rust_tonic_grpc_service(
+    name = "tonic_service",
     srcs = [":service_proto"],
     extern_paths = {
         ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
