@@ -59,3 +59,28 @@ oci_runtime_bundle(
     name = "bundle",
     image = ":image",
 )
+
+rust_binary(
+    name = "host_app",
+    srcs = ["host_app.rs"],
+    data = [
+        ":bundle",
+        "//oak_containers/kernel:bzImage",
+        "//oak_containers/stage1_bin:stage1_cpio",
+        "//oak_containers/system_image:oak_containers_system_image",
+        "//stage0_bin",
+    ],
+    deps = [
+        "//ctf_sha2/restricted_kernel/proto:tonic_service",
+        "//oak_containers/launcher:lib",
+        "//oak_file_utils",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:which",
+    ],
+)
