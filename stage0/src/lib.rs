@@ -45,7 +45,7 @@ use x86_64::{
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
         idt::InterruptDescriptorTable,
-        paging::{PageSize, Size1GiB},
+        paging::{PageSize, Size1GiB, Size4KiB},
     },
     PhysAddr, VirtAddr,
 };
@@ -92,7 +92,11 @@ pub static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
-const PAGE_SIZE: usize = 4096;
+// Default memory page size on x86_64.
+const PAGE_SIZE: usize = Size4KiB::SIZE as usize;
+
+// Double page size for items larger than the PAGE_SIZE limit.
+const DOUBLE_PAGE_SIZE: usize = PAGE_SIZE * 2;
 
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
     let cs = gdt.append(Descriptor::kernel_code_segment());
@@ -315,10 +319,13 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
     // write all of it in memory.
     // Write DiceData protobuf bytes to memory.
-    let mut encoded_attestation_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
+    let mut encoded_attestation_proto = Vec::with_capacity_in(DOUBLE_PAGE_SIZE, &crate::BOOT_ALLOC);
     // Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
     // the size of the encoded DiceData proto.
-    assert!(serialized_attestation_data.len() < PAGE_SIZE - size_of_val(&STAGE0_DICE_PROTO_MAGIC));
+    assert!(
+        serialized_attestation_data.len()
+            < DOUBLE_PAGE_SIZE - size_of_val(&STAGE0_DICE_PROTO_MAGIC)
+    );
     // Insert a magic number to ensure the correctness of the data being read.
     encoded_attestation_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
     encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_ref());
@@ -328,10 +335,10 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // Reserve memory containing DICE proto Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
         encoded_attestation_proto.as_bytes().as_ptr() as usize,
-        PAGE_SIZE,
+        DOUBLE_PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
-    sensitive_attestation_data_length += PAGE_SIZE;
+    sensitive_attestation_data_length += DOUBLE_PAGE_SIZE;
 
     // Append the DICE data address to the kernel command-line.
     let extra = format!(
