@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.Evidence",
         "oak.attestation.v1.Endorsements",
         "oak.attestation.v1.ApplicationKeys",
-        "oak.attestation.v1.BinaryArgvRexexMeasurement",
+        "oak.attestation.v1.BinaryArgvRegexMeasurement",
         "oak.attestation.v1.CbLayer1TransparentEvent",
         "oak.attestation.v1.CbLayer2TransparentEvent",
         "oak.attestation.v1.LayerEvidence",

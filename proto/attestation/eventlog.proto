@@ -28,7 +28,7 @@ option java_package = "com.google.oak.attestation.v1";
 // Regex-based measurement of the command line for a binary. This includes a
 // regex arguement to match against the command line arguements and the
 // associated result of the regex match.
-message BinaryArgvRexexMeasurement {
+message BinaryArgvRegexMeasurement {
   // Regex (if any) that was matched against the command-line arguments during
   // measurement.
   string binary_static_argv_regex = 1;

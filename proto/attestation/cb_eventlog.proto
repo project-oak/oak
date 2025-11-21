@@ -28,12 +28,9 @@ option java_outer_classname = "CbTransparentEventlog";
 // Represents the Layer 1 (or Stage 1) event of CB that is externally sharable
 // (i.e. it does not contain sensitive internal data).
 message CbLayer1TransparentEvent {
-  // Hash of the binary.
+  // SHA2-256 of a proto containing the binary and metadata measurements for CB
+  // layer 1.
   bytes runtime_agent_measurement = 1;
-
-  // Regex of the command line args supplied to the binary that are known at
-  // build time (i.e. they are 'static')
-  BinaryArgvRexexMeasurement runtime_agent_argv = 2;
 }
 
 // Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.

@@ -466,7 +466,7 @@ pub struct MpmAttachment {
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BinaryArgvRexexMeasurement {
+pub struct BinaryArgvRegexMeasurement {
     /// Regex (if any) that was matched against the command-line arguments during
     /// measurement.
     #[prost(string, tag = "1")]
@@ -576,14 +576,11 @@ pub struct EventLog {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer1TransparentEvent {
-    /// Hash of the binary.
+    /// SHA2-256 of a proto containing the binary and metadata measurements for CB
+    /// layer 1.
     #[prost(bytes = "vec", tag = "1")]
     #[serde(with = "crate::base64data")]
     pub runtime_agent_measurement: ::prost::alloc::vec::Vec<u8>,
-    /// Regex of the command line args supplied to the binary that are known at
-    /// build time (i.e. they are 'static')
-    #[prost(message, optional, tag = "2")]
-    pub runtime_agent_argv: ::core::option::Option<BinaryArgvRexexMeasurement>,
 }
 /// Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
 #[derive(serde::Serialize, serde::Deserialize)]
