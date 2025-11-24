@@ -14,6 +14,7 @@
 
 #![feature(try_blocks)]
 
+use clap::Parser;
 use jwt::{Token, Unverified};
 use oak_attestation_gcp::{
     jwt::{verification::report_attestation_token, Claims, Header},
@@ -30,7 +31,7 @@ const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 fn main() -> anyhow::Result<()> {
     let root_certificate =
         Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).map_err(anyhow::Error::msg)?;
-    falsify::falsify(|input| {
+    falsify::falsify(falsify::FalsifyArgs::parse(), |input| {
         if let Ok(input) = Input::decode(input.as_slice()) {
             if let Ok(parsed_token) =
                 Token::<Header, Claims, Unverified>::parse_unverified(&input.jwt)

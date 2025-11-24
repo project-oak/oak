@@ -28,5 +28,6 @@ rust_binary(
     deps = [
         "//falsify",
         "//oak_session:oak_session_testing",
+        "@oak_crates_index//:clap",
     ],
 )

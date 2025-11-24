@@ -24,7 +24,10 @@ package(
 
 proto_library(
     name = "service_proto",
-    srcs = ["service.proto"],
+    srcs = [
+        "arbiter.proto",
+        "service.proto",
+    ],
     deps = [
         "//proto/attestation:evidence_proto",
     ],

@@ -36,7 +36,7 @@ use serde::Serialize;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
+pub struct FalsifyArgs {
     #[arg(long, value_parser = path_parser)]
     input_file: PathBuf,
     #[arg(long, value_parser = path_parser)]
@@ -87,7 +87,7 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 ///
 /// - If `claim` panics, the test is considered [`Status::Falsified`].
 /// - If `claim` completes without panicking, the test is
-///   [`Status::Inconclusive`].
+///   [`Status::NotFalsified`].
 /// - If there is an error reading the input file, the test results in a
 ///   [`Status::SetupError`].
 ///
@@ -98,11 +98,10 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 ///
 /// This function will panic if it cannot serialize the result to TOML or if it
 /// cannot write to the output file.
-pub fn falsify<F>(claim: F)
+pub fn falsify<F>(args: FalsifyArgs, claim: F)
 where
     F: FnOnce(Vec<u8>) + panic::UnwindSafe,
 {
-    let args = Args::parse();
     let result = match get_input_bytes(&args.input_file) {
         Ok(input_bytes) => {
             let panic_result = panic::catch_unwind(|| {

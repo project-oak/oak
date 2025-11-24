@@ -69,6 +69,7 @@ rust_binary(
         "//oak_attestation_gcp",
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:sha2",

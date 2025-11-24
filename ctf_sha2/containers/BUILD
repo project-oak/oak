@@ -84,3 +84,23 @@ rust_binary(
         "@oak_crates_index//:which",
     ],
 )
+
+rust_binary(
+    name = "arbiter",
+    srcs = ["arbiter.rs"],
+    deps = [
+        "//ctf_sha2/containers/proto:tonic_service",
+        "//falsify",
+        "//oak_attestation_verification",
+        "//oak_proto_rust",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:x509-cert",
+    ],
+)

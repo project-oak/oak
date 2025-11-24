@@ -1,3 +1,4 @@
+//
 // Copyright 2025 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,12 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
-use clap::Parser;
+syntax = "proto3";
 
-fn main() {
-    falsify::falsify(
-        falsify::FalsifyArgs::parse(),
-        oak_session_testing::test_unattested_nn_encryption_and_decryption_inner,
-    );
+package oak.ctf_sha2.containers;
+
+import "ctf_sha2/containers/proto/service.proto";
+
+message ArbiterInput {
+  bytes flag = 1;
+  oak.ctf_sha2.enclave.GenerateFlagDigestResponse response = 2;
 }
