@@ -68,7 +68,6 @@ impl Attester for RtmrAttester {
             .get_or_insert_with(EventLog::default)
             .encoded_events
             .push(encoded_event.to_vec());
-        self.evidence.root_layer = None;
 
         let digest = Sha384::digest(encoded_event);
         // We extend RTMR2 for all event log entries.
