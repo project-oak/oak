@@ -21,7 +21,9 @@ use oak_attestation_types::{
     transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, Serializable},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
+use oak_proto_rust::oak::attestation::v1::{
+    DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
+};
 use oak_tdx_guest::tdcall::{
     extend_rtmr, get_report, ExtensionBuffer, ExtraDataBuffer, RtmrIndex, TdReportBuffer,
 };
@@ -34,8 +36,12 @@ pub struct RtmrAttester {
 impl Default for RtmrAttester {
     fn default() -> Self {
         let event_log = Some(EventLog::default());
+        let root_layer = Some(RootLayerEvidence {
+            platform: TeePlatform::IntelTdx as i32,
+            ..Default::default()
+        });
 
-        let evidence = Evidence { event_log, ..Default::default() };
+        let evidence = Evidence { event_log, root_layer, ..Default::default() };
 
         Self { evidence }
     }
