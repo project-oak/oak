@@ -19,24 +19,14 @@ use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
-fn assert_crypto_rng<T: CryptoRng>(_rng: &T) {}
-
 // Unique audience for this binary, to prevent confused deputy attacks.
 // Randomly generated with
 // printf "z%020lu\n" "0x$(openssl rand -hex 8)"
 const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize an empty byte array which will be filled with the secret flag.
-    let mut flag = [0; 64];
-
-    // We must use a cryptographically secure RNG.
-    // See <https://rust-random.github.io/book/guide-gen.html#cryptographically-secure-pseudo-random-number-generator>.
-    let mut rng = StdRng::from_entropy();
-    // Assert the RNG implements the required marker trait, to make sure it is not
-    // accidentally replaced with a non-cryptographically secure RNG.
-    assert_crypto_rng(&rng);
-    rng.fill_bytes(&mut flag);
+    // Generate a secret flag.
+    let flag = generate_flag(&mut StdRng::from_entropy());
 
     // Write out the secret flag to a file. Nobody should be able to read it!
     let mut file = File::create("flag.txt")?;
@@ -77,4 +67,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(Duration::from_secs(5 * 60));
 
     Ok(())
+}
+
+// We must use a cryptographically secure RNG.
+// See <https://rust-random.github.io/book/guide-gen.html#cryptographically-secure-pseudo-random-number-generator>.
+fn generate_flag<T: CryptoRng + RngCore>(rng: &mut T) -> [u8; 64] {
+    let mut flag = [0; 64];
+    rng.fill_bytes(&mut flag);
+    flag
 }

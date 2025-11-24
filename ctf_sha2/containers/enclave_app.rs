@@ -74,15 +74,8 @@ impl FlagDigestService for FlagDigestServiceImpl {
         &self,
         _request: Request<GenerateFlagDigestRequest>,
     ) -> Result<Response<GenerateFlagDigestResponse>, Status> {
-        // Initialize an empty byte array which will be filled with the secret flag.
-        let mut flag = [0u8; 64];
-        // We must use a cryptographically secure RNG.
-        // See <https://rust-random.github.io/book/guide-gen.html#cryptographically-secure-pseudo-random-number-generator>.
-        let mut rng = StdRng::from_entropy();
-        // Assert the RNG implements the required marker trait, to make sure it is not
-        // accidentally replaced with a non-cryptographically secure RNG.
-        assert_crypto_rng(&rng);
-        rng.fill_bytes(&mut flag);
+        // Generate a secret flag.
+        let flag = generate_flag(&mut StdRng::from_entropy());
 
         let mut hasher = Sha256::new();
         hasher.update(flag);
@@ -122,4 +115,10 @@ impl FlagDigestService for FlagDigestServiceImpl {
     }
 }
 
-fn assert_crypto_rng<T: CryptoRng>(_rng: &T) {}
+// We must use a cryptographically secure RNG.
+// See <https://rust-random.github.io/book/guide-gen.html#cryptographically-secure-pseudo-random-number-generator>.
+fn generate_flag<T: CryptoRng + RngCore>(rng: &mut T) -> [u8; 64] {
+    let mut flag = [0; 64];
+    rng.fill_bytes(&mut flag);
+    flag
+}
