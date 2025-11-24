@@ -84,24 +84,6 @@ run-oak-functions-launcher wasm_target port lookup_data_path:
         --port={{port}} \
         --lookup-data={{lookup_data_path}}
 
-ctf-sha2-launcher-artifacts: \
-    (copy-binary "ctf_sha2/restricted_kernel:launcher" "ctf_sha2_launcher") \
-    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
-    (copy-binary "ctf_sha2/restricted_kernel:enclave_app" "ctf_sha2_enclave_app") \
-    (copy-binary "stage0_bin" "") \
-    (copy-binary "enclave_apps/oak_orchestrator" "")
-
-run-ctf-sha2-launcher:
-    # Note: for speed, no dependencies are automatically rebuilt. If you change any code, run
-    # "just ctf-sha2-launcher-artifacts".
-    artifacts/binaries/ctf_sha2_launcher \
-    --vmm-binary=$(which qemu-system-x86_64) \
-    --kernel=artifacts/binaries/oak_restricted_kernel_wrapper_virtio_console_channel_bin \
-    --app-binary=artifacts/binaries/ctf_sha2_enclave_app \
-    --bios-binary=artifacts/binaries/stage0_bin \
-    --memory-size=256M \
-    --initrd=artifacts/binaries/oak_orchestrator
-
 # Profile the Wasm execution and generate a flamegraph.
 profile_wasm:
     # If it fails with SIGSEGV, try running again.

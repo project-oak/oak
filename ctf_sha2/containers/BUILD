@@ -28,7 +28,7 @@ rust_binary(
     name = "enclave_app",
     srcs = ["enclave_app.rs"],
     deps = [
-        "//ctf_sha2/restricted_kernel/proto:tonic_service",
+        "//ctf_sha2/containers/proto:tonic_service",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "//oak_sdk/containers:oak_sdk_containers",
@@ -71,7 +71,7 @@ rust_binary(
         "//stage0_bin",
     ],
     deps = [
-        "//ctf_sha2/restricted_kernel/proto:tonic_service",
+        "//ctf_sha2/containers/proto:tonic_service",
         "//oak_containers/launcher:lib",
         "//oak_file_utils",
         "@oak_crates_index//:anyhow",
