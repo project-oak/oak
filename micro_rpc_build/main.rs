@@ -174,7 +174,7 @@ impl Mod {
                     "#[allow(clippy::let_unit_value)]
 pub mod {mod_name} {{
     use prost::Message;
-    include!(concat!(\"{include_prefix}/{included_file}\"));
+    include!(\"{include_prefix}/{included_file}\");
 {inner_code}
 }}"
                 )
