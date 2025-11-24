@@ -134,23 +134,29 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
     let evidence = {
         #[cfg(feature = "application_keys")]
         {
-            let container_layer =
-                oak_containers_attestation::create_container_dice_layer(&container_event);
-            attester.add_application_keys(
-                container_layer,
-                &instance_public_keys.encryption_public_key,
-                &instance_public_keys.signing_public_key,
-                if let Some(ref group_public_keys) = group_public_keys {
-                    Some(&group_public_keys.encryption_public_key)
-                } else {
-                    None
-                },
-                None,
-            )?
+            // Spawn the `quote` operation on a separate thread to support cases where we
+            // have async attesters.
+            tokio::runtime::Handle::current()
+                .spawn_blocking(move || {
+                    let container_layer =
+                        oak_containers_attestation::create_container_dice_layer(&container_event);
+                    attester.add_application_keys(
+                        container_layer,
+                        &instance_public_keys.encryption_public_key,
+                        &instance_public_keys.signing_public_key,
+                        if let Some(ref group_public_keys) = group_public_keys {
+                            Some(&group_public_keys.encryption_public_key)
+                        } else {
+                            None
+                        },
+                        None,
+                    )
+                })
+                .await??
         }
         #[cfg(not(feature = "application_keys"))]
         {
-            // Spawn the `quote`` operation on a separate thread to support cases where we
+            // Spawn the `quote` operation on a separate thread to support cases where we
             // have async attesters.
             tokio::runtime::Handle::current().spawn_blocking(move || attester.quote()).await??
         }
