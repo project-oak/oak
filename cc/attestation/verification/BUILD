@@ -52,7 +52,10 @@ cc_library(
     hdrs = ["utils.h"],
     deps = [
         "//cc/utils/cose:cwt",
+        "//proto/attestation:eventlog_cc_proto",
         "//proto/attestation:evidence_cc_proto",
+        "//proto/attestation:verification_cc_proto",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
