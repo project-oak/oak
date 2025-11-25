@@ -30,13 +30,16 @@ ABSL_FLAG(std::string, server_key, "experiments/tls-over-grpc/server.key",
           "Path to the server key");
 ABSL_FLAG(std::string, server_cert, "experiments/tls-over-grpc/server.pem",
           "Path to the server certificate");
+ABSL_FLAG(std::string, client_cert, "experiments/tls-over-grpc/client.pem",
+          "Path to the client certificate");
 
 void RunServer() {
   std::string server_address = absl::StrCat("[::]:", absl::GetFlag(FLAGS_port));
   absl::StatusOr<
       std::unique_ptr<experiments::tls_over_grpc::TlsOverGrpcServiceImpl>>
       service = experiments::tls_over_grpc::TlsOverGrpcServiceImpl::Create(
-          absl::GetFlag(FLAGS_server_key), absl::GetFlag(FLAGS_server_cert));
+          absl::GetFlag(FLAGS_server_key), absl::GetFlag(FLAGS_server_cert),
+          absl::GetFlag(FLAGS_client_cert));
   if (!service.ok()) {
     LOG(FATAL) << "Failed to create service: " << service.status();
   }

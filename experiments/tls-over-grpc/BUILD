@@ -32,6 +32,8 @@ genrule(
     outs = [
         "server.key",
         "server.pem",
+        "client.key",
+        "client.pem",
     ],
     cmd = "$(location generate_keys.sh) $(@D)",
 )
@@ -69,7 +71,7 @@ cc_library(
 
 cc_binary(
     name = "server",
-    srcs = ["main.cc"],
+    srcs = ["server_main.cc"],
     data = [
         ":generate_keys",
     ],
@@ -86,7 +88,7 @@ cc_binary(
 
 cc_binary(
     name = "client",
-    srcs = ["client.cc"],
+    srcs = ["client_main.cc"],
     data = [
         ":generate_keys",
     ],

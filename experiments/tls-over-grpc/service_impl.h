@@ -31,7 +31,8 @@ namespace experiments::tls_over_grpc {
 class TlsOverGrpcServiceImpl final : public TlsOverGrpc::Service {
  public:
   static absl::StatusOr<std::unique_ptr<TlsOverGrpcServiceImpl>> Create(
-      const std::string& server_key_path, const std::string& server_cert_path);
+      const std::string& server_key_path, const std::string& server_cert_path,
+      const std::string& client_cert_path);
   grpc::Status TlsSession(
       grpc::ServerContext* context,
       grpc::ServerReaderWriter<TlsSessionResponse, TlsSessionRequest>* stream)

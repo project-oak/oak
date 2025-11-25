@@ -31,6 +31,10 @@
 ABSL_FLAG(std::string, port, "8080", "Port for the server to listen on");
 ABSL_FLAG(std::string, server_cert, "experiments/tls-over-grpc/server.pem",
           "Path to the server certificate");
+ABSL_FLAG(std::string, client_key, "experiments/tls-over-grpc/client.key",
+          "Path to the client key (for mTLS)");
+ABSL_FLAG(std::string, client_cert, "experiments/tls-over-grpc/client.pem",
+          "Path to the client certificate (for mTLS)");
 
 using experiments::tls_over_grpc::TlsOverGrpc;
 using experiments::tls_over_grpc::TlsSessionRequest;
@@ -49,6 +53,18 @@ void RunClient() {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
   if (!ctx) {
     LOG(FATAL) << "Failed to create SSL_CTX";
+  }
+
+  if (SSL_CTX_use_certificate_file(ctx.get(),
+                                   absl::GetFlag(FLAGS_client_cert).c_str(),
+                                   SSL_FILETYPE_PEM) != 1) {
+    LOG(FATAL) << "Failed to load client trust anchor";
+  }
+
+  if (SSL_CTX_use_PrivateKey_file(ctx.get(),
+                                  absl::GetFlag(FLAGS_client_key).c_str(),
+                                  SSL_FILETYPE_PEM) != 1) {
+    LOG(FATAL) << "Failed to load client private key";
   }
 
   if (SSL_CTX_load_verify_locations(
