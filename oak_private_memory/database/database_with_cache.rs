@@ -154,7 +154,6 @@ impl DatabaseWithCache {
             return Ok((Vec::new(), next_page_token));
         }
 
-        // Embedding search
         let blob_ids: Vec<BlobId> =
             search_results.items.iter().map(|item| item.blob_id.clone()).collect();
         let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
@@ -165,9 +164,11 @@ impl DatabaseWithCache {
             .zip(search_results.items.into_iter())
             .map(|(mut memory, item)| {
                 let score = item.score;
-                let view_ids = item.view_ids;
-                if let Some(views) = memory.views.as_mut() {
-                    views.llm_views.retain(|v| view_ids.contains(&v.id));
+                if !request.keep_all_llm_views {
+                    let view_ids = item.view_ids;
+                    if let Some(views) = memory.views.as_mut() {
+                        views.llm_views.retain(|v| view_ids.contains(&v.id));
+                    }
                 }
                 SearchMemoryResultItem { memory: Some(memory), score }
             })

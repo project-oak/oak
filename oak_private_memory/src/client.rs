@@ -267,12 +267,14 @@ impl PrivateMemoryClient {
         page_size: i32,
         result_mask: Option<ResultMask>,
         page_token: &str,
+        keep_all_llm_views: bool,
     ) -> Result<SearchMemoryResponse> {
         let request = SearchMemoryRequest {
             query: Some(query),
             page_size,
             result_mask,
             page_token: page_token.to_string(),
+            keep_all_llm_views,
         };
         let response =
             self.invoke(sealed_memory_request::Request::SearchMemoryRequest(request)).await?;

@@ -310,6 +310,11 @@ message SearchMemoryRequest {
   // Specifies which fields of the matching Memory objects to return or not to
   // return.
   ResultMask result_mask = 4;
+
+  // By default, the LLM views are removed if we are using text only search.
+  // Also, when using embedding search, only the matched llm views are returned.
+  // Set this to true to keep all the LLM views.
+  bool keep_all_llm_views = 5;
 }
 
 message SearchMemoryResultItem {

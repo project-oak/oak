@@ -160,7 +160,7 @@ async fn test_standalone_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 2);
         let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
         assert!(ids.contains(&"memory2".to_string()));
@@ -179,7 +179,7 @@ async fn test_standalone_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 1);
         assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
     }
@@ -267,7 +267,7 @@ async fn test_memory_search_only_return_views_with_highest_scores() {
             ),
         };
 
-        let response = client.search_memory(embedding_query, 1, None, "").await.unwrap();
+        let response = client.search_memory(embedding_query, 1, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 1);
         let top_result = response.results.first().unwrap();
         assert_eq!(top_result.memory.as_ref().unwrap().id, "memory2");

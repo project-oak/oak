@@ -132,8 +132,10 @@ async fn test_client_pagination() {
         let mut actual_ids_search = HashSet::new();
         let mut next_page_token = "".to_string();
         for _ in 0..10 {
-            let response =
-                client.search_memory(query.clone(), 5, None, &next_page_token).await.unwrap();
+            let response = client
+                .search_memory(query.clone(), 5, None, &next_page_token, false)
+                .await
+                .unwrap();
             for result in response.results {
                 actual_ids_search.insert(result.memory.unwrap().id);
             }
@@ -196,7 +198,7 @@ async fn test_client_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 2);
         let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
         assert!(ids.contains(&"memory2".to_string()));
@@ -215,8 +217,96 @@ async fn test_client_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 1);
         assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_client_keep_all_llm_views() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_keep_all_llm_views_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let llm_view1 = LlmView {
+            embedding: Some(Embedding {
+                model_signature: "test_model_1".to_string(),
+                values: vec![1.0, 0.0, 0.0],
+            }),
+            ..Default::default()
+        };
+        let llm_view2 = LlmView {
+            embedding: Some(Embedding {
+                model_signature: "test_model_2".to_string(),
+                values: vec![0.0, 1.0, 0.0],
+            }),
+            ..Default::default()
+        };
+        let llm_view3 = LlmView {
+            embedding: Some(Embedding {
+                model_signature: "test_model_3".to_string(),
+                values: vec![0.0, 0.0, 1.0],
+            }),
+            ..Default::default()
+        };
+
+        let llm_views =
+            LlmViews { llm_views: vec![llm_view1.clone(), llm_view2.clone(), llm_view3.clone()] };
+        let memory_id = "test_memory_with_multiple_views";
+        let memory_to_add = Memory {
+            id: memory_id.to_string(),
+            tags: vec!["test_tag_multiple_views".to_string()],
+            views: Some(llm_views),
+            ..Default::default()
+        };
+
+        client.add_memory(memory_to_add).await.unwrap();
+
+        let query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                    TextQuery {
+                        field: MemoryField::Id as i32,
+                        match_type: MatchType::Equal as i32,
+                        value: Some(text_query::Value::StringVal(memory_id.to_string())),
+                    },
+                ),
+            ),
+        };
+
+        let response = client.search_memory(query.clone(), 10, None, "", true).await.unwrap();
+        assert_eq!(response.results.len(), 1);
+        let returned_memory = response.results[0].memory.as_ref().unwrap();
+        let returned_llm_views = returned_memory.views.as_ref().unwrap().llm_views.clone();
+        assert_eq!(returned_llm_views.len(), 3);
+
+        let returned_model_signatures = returned_llm_views
+            .into_iter()
+            .map(|v| v.embedding.unwrap().model_signature)
+            .collect::<HashSet<String>>();
+
+        let mut expected_model_signatures = HashSet::new();
+        expected_model_signatures.insert("test_model_1".to_string());
+        expected_model_signatures.insert("test_model_2".to_string());
+        expected_model_signatures.insert("test_model_3".to_string());
+
+        assert_eq!(returned_model_signatures, expected_model_signatures);
+
+        // Test that when keep_all_llm_views is false, the llm views are not returned.
+        let response_no_views = client.search_memory(query, 10, None, "", false).await.unwrap();
+        assert_eq!(response_no_views.results.len(), 1);
+        let returned_memory_no_views = response_no_views.results[0].memory.as_ref().unwrap();
+        assert!(
+            returned_memory_no_views.views.is_none()
+                || returned_memory_no_views.views.as_ref().unwrap().llm_views.is_empty()
+        );
     }
 }
