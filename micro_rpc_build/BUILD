@@ -35,6 +35,7 @@ rust_binary(
     srcs = glob(["*.rs"]),
     deps = [
         "//micro_rpc_build",
+        "//proto:proto_gen",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:serde_json",
