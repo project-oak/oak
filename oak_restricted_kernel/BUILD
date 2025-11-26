@@ -34,7 +34,6 @@ _OAK_RESTRICTED_KERNEL_COMMON_DEPS = [
     "//oak_restricted_kernel_interface",
     "//oak_sev_guest",
     "//sev_serial",
-    "//third_party/rust-hypervisor-firmware-virtio",
     "@oak_crates_index//:acpi",
     "@oak_crates_index//:aml",
     "@oak_crates_index//:anyhow",
@@ -82,38 +81,6 @@ rust_library(
 )
 
 rust_library(
-    name = "oak_restricted_kernel_vsock_channel",
-    srcs = glob(["src/**/*.rs"]),
-    crate_features = [
-        "vsock_channel",
-    ],
-    crate_name = "oak_restricted_kernel",
-    target_compatible_with = [
-        "//:x86_64-none-setting",
-    ],
-    deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
-        ":bootstrap",
-        "//oak_virtio",
-    ],
-)
-
-rust_library(
-    name = "oak_restricted_kernel_serial_channel",
-    srcs = glob(["src/**/*.rs"]),
-    crate_features = [
-        "serial_channel",
-    ],
-    crate_name = "oak_restricted_kernel",
-    target_compatible_with = [
-        "//:x86_64-none-setting",
-    ],
-    deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
-        ":bootstrap",
-        "@oak_crates_index//:uart_16550",
-    ],
-)
-
-rust_library(
     name = "oak_restricted_kernel_simple_io_channel",
     srcs = glob(["src/**/*.rs"]),
     crate_features = [
@@ -144,8 +111,6 @@ rust_library(
     )
     for feature in [
         "virtio_console_channel",
-        "vsock_channel",
-        "serial_channel",
         "simple_io_channel",
     ]
 ]

@@ -49,15 +49,11 @@ mod logging;
 mod memory;
 mod mm;
 mod processes;
-#[cfg(feature = "serial_channel")]
-mod serial;
 pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
 mod syscall;
-#[cfg(feature = "vsock_channel")]
-mod virtio;
 #[cfg(feature = "virtio_console_channel")]
 mod virtio_console;
 
@@ -524,10 +520,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
 enum ChannelType {
     #[cfg(feature = "virtio_console_channel")]
     VirtioConsole,
-    #[cfg(feature = "vsock_channel")]
-    VirtioVsock,
-    #[cfg(feature = "serial_channel")]
-    Serial,
     #[cfg(feature = "simple_io_channel")]
     SimpleIo,
 }
@@ -553,10 +545,6 @@ fn get_channel<'a, A: Allocator + Sync>(
         ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
             acpi.expect("ACPI not available; unable to use virtio console"),
         )),
-        #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(alloc)),
-        #[cfg(feature = "serial_channel")]
-        ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
         ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }
