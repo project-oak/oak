@@ -58,7 +58,7 @@ void RunClient() {
   if (SSL_CTX_use_certificate_file(ctx.get(),
                                    absl::GetFlag(FLAGS_client_cert).c_str(),
                                    SSL_FILETYPE_PEM) != 1) {
-    LOG(FATAL) << "Failed to load client trust anchor";
+    LOG(FATAL) << "Failed to load client certificate";
   }
 
   if (SSL_CTX_use_PrivateKey_file(ctx.get(),
@@ -69,7 +69,7 @@ void RunClient() {
 
   if (SSL_CTX_load_verify_locations(
           ctx.get(), absl::GetFlag(FLAGS_server_cert).c_str(), nullptr) != 1) {
-    LOG(FATAL) << "Failed to load server certificate";
+    LOG(FATAL) << "Failed to load server trust anchor";
   }
 
   bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));

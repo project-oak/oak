@@ -52,7 +52,7 @@ TlsOverGrpcServiceImpl::Create(const std::string& server_key_path,
 
   if (SSL_CTX_load_verify_locations(ctx.get(), client_cert_path.c_str(),
                                     nullptr) != 1) {
-    LOG(FATAL) << "Failed to load client certificate";
+    LOG(FATAL) << "Failed to load client trust anchor";
   }
 
   return std::unique_ptr<TlsOverGrpcServiceImpl>(
