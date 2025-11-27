@@ -20,17 +20,17 @@ GCP_PROJECT_ID="${1:-oak-examples-477357}"
 ZONE="${2:-us-west1-b}"
 
 # The directory containing the Terraform configuration.
-readonly TF_DIR="ctf_sha2"
+readonly TF_DIR="ctf_sha2/confidential_space/terraform"
 
 # --- Script ---
 
 echo "Building container image and calculating digest..."
 # We run the :image.digest target which just builds the image locally
 # and creates the digest file. This is the same digest that will be created when pushing the image to the remote registry.
-bazel build //ctf_sha2:image.digest
+bazel build //ctf_sha2/confidential_space:workload_image.digest
 
 # First push the image. The command returns the full URL with the digest of the image that was just pushed.
-FULL_IMAGE_DIGEST="$(bazel run //ctf_sha2:image_push)"
+FULL_IMAGE_DIGEST="$(bazel run //ctf_sha2/confidential_space:workload_image_push)"
 
 echo "Image digest: ${FULL_IMAGE_DIGEST}"
 

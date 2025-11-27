@@ -24,8 +24,8 @@ package(
 )
 
 rust_binary(
-    name = "ctf_sha2",
-    srcs = ["src/main.rs"],
+    name = "workload",
+    srcs = ["workload.rs"],
     deps = [
         "//oak_attestation_gcp",
         "@oak_crates_index//:base64",
@@ -36,34 +36,34 @@ rust_binary(
 )
 
 pkg_tar(
-    name = "tar",
-    srcs = [":ctf_sha2"],
+    name = "workload_tar",
+    srcs = [":workload"],
     package_dir = "/usr/local/bin",
     strip_prefix = "",
 )
 
 oci_image(
-    name = "image",
+    name = "workload_image",
     base = "@distroless_cc_debian12",
-    entrypoint = ["/usr/local/bin/ctf_sha2"],
+    entrypoint = ["/usr/local/bin/workload"],
     exposed_ports = [],
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies
     labels = {
         "tee.launch_policy.log_redirect": "always",
     },
-    tars = [":tar"],
+    tars = [":workload_tar"],
 )
 
 oci_push(
-    name = "image_push",
-    image = ":image",
+    name = "workload_image_push",
+    image = ":workload_image",
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2",
 )
 
 rust_binary(
-    name = "falsify",
+    name = "arbiter",
     testonly = True,
-    srcs = ["falsify/main.rs"],
+    srcs = ["arbiter.rs"],
     deps = [
         "//falsify",
         "//oak_attestation_gcp",
