@@ -19,19 +19,10 @@ load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
-)
-
-rust_library(
-    name = "proto_gen",
-    srcs = ["proto_gen.rs"],
-    deps = [
-        "@oak_crates_index//:thiserror",
-    ],
 )
 
 proto_library(

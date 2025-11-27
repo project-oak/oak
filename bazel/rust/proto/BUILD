@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,26 +17,26 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:default_visibility"],
     licenses = ["notice"],
 )
 
 rust_library(
-    name = "oak_grpc_utils",
-    srcs = glob(["src/**"]),
+    name = "proto_gen",
+    srcs = ["proto_gen.rs"],
     deps = [
-        "@oak_crates_index//:tonic-build",
+        "@oak_crates_index//:thiserror",
     ],
 )
 
 rust_binary(
     name = "generator",
-    srcs = glob(["*.rs"]),
+    srcs = ["main.rs"],
     deps = [
-        "//bazel/rust/proto:proto_gen",
-        "//oak_grpc_utils",
+        ":proto_gen",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:prost-build",
         "@oak_crates_index//:serde_json",
     ],
 )

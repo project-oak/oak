@@ -19,6 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use arbiter_rust_proto::oak::ctf_sha2::containers::ArbiterInput;
 use clap::Parser;
 use log::{error, info};
 use oak_attestation_verification::verifier::verify;
@@ -33,7 +34,6 @@ use oak_proto_rust::oak::attestation::v1::{
 use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use sha2::{Digest, Sha256};
-use tonic_service::oak::ctf_sha2::containers::ArbiterInput;
 use x509_cert::{der::Decode, spki::EncodePublicKey, Certificate};
 
 #[derive(Parser, Debug)]
