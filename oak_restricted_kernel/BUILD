@@ -96,6 +96,22 @@ rust_library(
     ],
 )
 
+rust_library(
+    name = "oak_restricted_kernel_serial_channel",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = [
+        "serial_channel",
+    ],
+    crate_name = "oak_restricted_kernel",
+    target_compatible_with = [
+        "//:x86_64-none-setting",
+    ],
+    deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
+        ":bootstrap",
+        "@oak_crates_index//:uart_16550",
+    ],
+)
+
 [
     rust_test(
         name = "oak_restricted_kernel_%s_test" % feature,
@@ -112,5 +128,6 @@ rust_library(
     for feature in [
         "virtio_console_channel",
         "simple_io_channel",
+        "serial_channel",
     ]
 ]
