@@ -65,7 +65,8 @@ oak-restricted-kernel-launcher-artifacts: \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
     (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
     (copy-binary "oak_restricted_kernel_launcher" "oak_restricted_kernel_launcher") \
-    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "")
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "")
 
 run-oak-restricted-kernel-launcher:
     RUST_LOG=DEBUG artifacts/binaries/oak_restricted_kernel_launcher \

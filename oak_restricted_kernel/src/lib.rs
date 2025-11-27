@@ -550,7 +550,9 @@ fn get_channel<'a, A: Allocator + Sync>(
             acpi.expect("ACPI not available; unable to use virtio console"),
         )),
         #[cfg(feature = "serial_channel")]
-        ChannelType::Serial => Box::new(serial::Serial::new()),
+        ChannelType::Serial => {
+            Box::new(serial::Serial::new(sev_status.contains(SevStatus::SEV_ES_ENABLED)))
+        }
         #[cfg(feature = "simple_io_channel")]
         ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }

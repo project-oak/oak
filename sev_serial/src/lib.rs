@@ -54,12 +54,19 @@ const LINE_CONTROL_8N1: u8 = 3;
 /// See <http://www.larvierinehart.com/serial/serialadc/serial.htm#19>.
 const DATA_TERMINAL_READY_AND_REQUEST_TO_SEND: u8 = 3;
 
-/// Value of the line status register indicating that the send bufffer is empty.
+/// Value of the line status register indicating that the receive buffer is
+/// full.
+///
+/// See <https://wiki.osdev.org/Serial_Ports#Line_status_register>.
+const INPUT_FULL: u8 = 1;
+
+/// Value of the line status register indicating that the send buffer is empty.
 ///
 /// See <https://wiki.osdev.org/Serial_Ports#Line_status_register>.
 const OUTPUT_EMPTY: u8 = 1 << 5;
 
-/// Basic implementation that allows for writing to a serial port.
+/// Basic implementation that allows for writing to and reading from a serial
+/// port.
 ///
 /// Uses the SEV-ES and SEV-SNP GHCB IOIO protocol, or using direct port-based
 /// IO, depending on which IO port factory is used in the wrapper enum.
@@ -77,7 +84,9 @@ where
     /// The factory for creating port readers and writers.
     io_port_factory: F,
     /// The port writer for writing a byte of data.
-    data: W,
+    data_writer: W,
+    /// The port reading for reading a byte of data.
+    data_reader: R,
     /// The port reader for checking the line status.
     line_status: R,
 }
@@ -95,9 +104,10 @@ where
     /// This function is unsafe as callers must make sure that the base address
     /// represents a valid serial port device.
     pub unsafe fn new(base_address: u16, io_port_factory: F) -> Self {
-        let data = io_port_factory.new_writer(base_address);
+        let data_writer = io_port_factory.new_writer(base_address);
+        let data_reader = io_port_factory.new_reader(base_address);
         let line_status = io_port_factory.new_reader(base_address + LINE_STATUS);
-        Self { base_address, io_port_factory, data, line_status }
+        Self { base_address, io_port_factory, data_writer, data_reader, line_status }
     }
 
     /// Initializes the serial port for writing.
@@ -141,7 +151,27 @@ where
         self.wait_for_empty_output()?;
         // Safety: writing to this port is safe based on the requirement that a valid
         // base address was provided when creating this instance.
-        unsafe { self.data.try_write(data) }
+        unsafe { self.data_writer.try_write(data) }
+    }
+
+    /// Wait until the input buffer is full.
+    pub fn wait_for_full_input(&mut self) -> Result<(), &'static str> {
+        // Safety: reading from this ports is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
+        unsafe {
+            while self.line_status.try_read()? & INPUT_FULL != INPUT_FULL {
+                core::hint::spin_loop();
+            }
+        }
+        Ok(())
+    }
+
+    /// Receives a byte of data from the serial port.
+    pub fn receive(&mut self) -> Result<u8, &'static str> {
+        self.wait_for_full_input()?;
+        // Safety: reading from this port is safe based on the requirement that a valid
+        // base address was provided when creating this instance.
+        unsafe { self.data_reader.try_read() }
     }
 }
 

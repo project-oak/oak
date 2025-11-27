@@ -32,7 +32,6 @@ use async_trait::async_trait;
 use clap::{Parser, ValueEnum};
 use command_fds::CommandFdExt;
 use log::info;
-use oak_channel::Write;
 use oak_proto_rust::oak::restricted_kernel::InitialData;
 use prost::Message;
 
@@ -231,12 +230,6 @@ impl Instance {
             // The code below is all sync, but we need some reasonable deadlines otherwise
             // we might just get stuck if the qemu process exits.
             host_socket.set_read_timeout(Some(Duration::from_secs(30)))?;
-
-            if params.communication_channel == CommunicationChannel::Serial {
-                // The first byte written to the serial channel gets dropped when the serial
-                // port gets initialized, so we write a dummy byte.
-                host_socket.write_all(&[255u8]).expect("couldn't write dummy byte");
-            }
 
             oak_channel::basic_framed::send_raw(&mut host_socket, &initial_data_bytes)
                 .context("failed to send application")?;
