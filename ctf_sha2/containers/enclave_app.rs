@@ -22,6 +22,7 @@ use anyhow::Context;
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient;
 use oak_proto_rust::oak::containers::v1::{KeyOrigin, SignRequest};
 use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
+use p256::ecdsa::{signature::SignatureEncoding, Signature};
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
 use sha2::{Digest, Sha256};
 use tokio::{net::TcpListener, sync::Mutex};
@@ -75,41 +76,47 @@ impl FlagDigestService for FlagDigestServiceImpl {
         _request: Request<GenerateFlagDigestRequest>,
     ) -> Result<Response<GenerateFlagDigestResponse>, Status> {
         // Generate a secret flag.
-        let flag = generate_flag(&mut StdRng::from_entropy());
-
-        let mut hasher = Sha256::new();
-        hasher.update(flag);
-        let flag_digest = hasher.finalize().to_vec();
+        let flag_digest = {
+            let flag = generate_flag(&mut StdRng::from_entropy());
+            let mut hasher = Sha256::new();
+            hasher.update(flag);
+            hasher.finalize().to_vec()
+        };
 
         // Sign the flag digest.
-        let sign_req =
-            SignRequest { key_origin: KeyOrigin::Instance as i32, message: flag_digest.clone() };
-        let signature = self
-            .crypto_client
-            .clone()
-            .sign(sign_req)
-            .await
-            .map_err(|e| Status::internal(format!("failed to sign: {:?}", e)))?
-            .into_inner()
-            .signature
-            .ok_or_else(|| Status::internal("missing signature"))?
-            .signature;
+        let signature = {
+            let sign_req = SignRequest {
+                key_origin: KeyOrigin::Instance as i32,
+                message: flag_digest.clone(),
+            };
+            let sign_response = self
+                .crypto_client
+                .clone()
+                .sign(sign_req)
+                .await
+                .map_err(|e| Status::internal(format!("failed to sign: {:?}", e)))?;
+            let signature = sign_response
+                .into_inner()
+                .signature
+                .ok_or_else(|| Status::internal("missing signature"))?
+                .signature;
+            Signature::from_slice(signature.as_slice())
+                .map_err(|e| Status::internal(format!("failed to parse signature: {:?}", e)))?
+        };
 
         // Fetch enclave app Evidence.
-        let endorsed_evidence = self
-            .orchestrator_client
-            .lock()
-            .await
-            .get_endorsed_evidence()
-            .await
-            .map_err(|e| Status::internal(format!("failed to get evidence: {:?}", e)))?;
-
         let evidence =
-            endorsed_evidence.evidence.ok_or_else(|| Status::internal("missing evidence"))?;
+            {
+                let endorsed_evidence =
+                    self.orchestrator_client.lock().await.get_endorsed_evidence().await.map_err(
+                        |e| Status::internal(format!("failed to get evidence: {:?}", e)),
+                    )?;
+                endorsed_evidence.evidence.ok_or_else(|| Status::internal("missing evidence"))?
+            };
 
         Ok(Response::new(GenerateFlagDigestResponse {
             flag_digest,
-            signature,
+            signature: signature.to_der().to_vec(),
             evidence: Some(evidence),
         }))
     }

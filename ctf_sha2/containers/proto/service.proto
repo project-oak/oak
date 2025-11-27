@@ -21,8 +21,14 @@ import "proto/attestation/evidence.proto";
 message GenerateFlagDigestRequest {}
 
 message GenerateFlagDigestResponse {
+  // SHA-256 digest of the secret (randomly-generated) flag.
   bytes flag_digest = 1;
+
+  // ASN.1 DER-encoded signature over the flag digest. Signed with the enclave
+  // app's signing key.
   bytes signature = 2;
+
+  // Enclave app's Evidence bundle.
   oak.attestation.v1.Evidence evidence = 3;
 }
 

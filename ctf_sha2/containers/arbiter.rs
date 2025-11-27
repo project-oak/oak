@@ -30,14 +30,11 @@ use oak_proto_rust::oak::attestation::v1::{
     RootLayerReferenceValues, StringLiterals, SystemLayerReferenceValues, TcbVersion,
     TcbVersionReferenceValue, TextReferenceValue,
 };
-use p256::{
-    ecdsa,
-    ecdsa::{signature::Verifier, Signature, VerifyingKey},
-};
+use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use sha2::{Digest, Sha256};
 use tonic_service::oak::ctf_sha2::containers::ArbiterInput;
-use x509_cert::{der::Decode, Certificate};
+use x509_cert::{der::Decode, spki::EncodePublicKey, Certificate};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -131,6 +128,9 @@ fn main() -> anyhow::Result<()> {
                 &response.flag_digest,
                 &response.signature,
             )
+            .inspect_err(|e| {
+                info!("Enclave signature verification failed: {e:#}");
+            })
             .is_err(),
             "Signature verification succeeded! Claim falsified."
         );
@@ -138,12 +138,16 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn verify_signature(
-    public_key: &[u8],
-    message: &[u8],
-    signature: &[u8],
-) -> Result<(), ecdsa::Error> {
-    VerifyingKey::from_sec1_bytes(public_key)?.verify(message, &Signature::from_slice(signature)?)
+fn verify_signature(public_key: &[u8], message: &[u8], signature: &[u8]) -> anyhow::Result<()> {
+    key_util::verify_signature_ecdsa(
+        signature,
+        message,
+        VerifyingKey::from_sec1_bytes(public_key)
+            .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))?
+            .to_public_key_der()
+            .map_err(|e| anyhow::anyhow!("failed to convert public key to DER: {e}"))?
+            .as_bytes(),
+    )
 }
 
 fn create_reference_values() -> ReferenceValues {
