@@ -35,12 +35,12 @@ message CbLayer1TransparentEvent {
 
 // Layer 2 (or Stage 2) event proto for CB that is shareable with end clients.
 message CbLayer2TransparentEvent {
-  // The MPMs running on CB. This includes the server-binary that is being
+  // The packages running on CB. This includes the server-binary that is being
   // deployed on CB.
   repeated MpmPackage packages = 1;
 }
 
-// Mpm package information.
+// Mpm package information (executables and static data).
 message MpmPackage {
   string mpm_version_id = 1;
 }

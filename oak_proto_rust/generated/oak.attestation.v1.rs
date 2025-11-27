@@ -604,12 +604,12 @@ pub struct CbLayer1TransparentEvent {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CbLayer2TransparentEvent {
-    /// The MPMs running on CB. This includes the server-binary that is being
+    /// The packages running on CB. This includes the server-binary that is being
     /// deployed on CB.
     #[prost(message, repeated, tag = "1")]
     pub packages: ::prost::alloc::vec::Vec<MpmPackage>,
 }
-/// Mpm package information.
+/// Mpm package information (executables and static data).
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
