@@ -21,16 +21,34 @@ use service::oak::echo;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_echo_enclave_app_launch_v0() {
-    test_echo_enclave_app_launch_for_initial_data_version(launcher::InitialDataVersion::V0).await;
+    test_echo_enclave_app_launch_for_initial_data_version(
+        launcher::InitialDataVersion::V0,
+        launcher::CommunicationChannel::VirtioConsole,
+    )
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_echo_enclave_app_launch_v1() {
-    test_echo_enclave_app_launch_for_initial_data_version(launcher::InitialDataVersion::V1).await;
+    test_echo_enclave_app_launch_for_initial_data_version(
+        launcher::InitialDataVersion::V1,
+        launcher::CommunicationChannel::VirtioConsole,
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn test_echo_enclave_app_launch_serial_comms() {
+    test_echo_enclave_app_launch_for_initial_data_version(
+        launcher::InitialDataVersion::V1,
+        launcher::CommunicationChannel::Serial,
+    )
+    .await;
 }
 
 async fn test_echo_enclave_app_launch_for_initial_data_version(
     initial_data_version: launcher::InitialDataVersion,
+    communication_channel: launcher::CommunicationChannel,
 ) {
     let oak_restricted_kernel_orchestrator_app_path =
         data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
@@ -38,8 +56,15 @@ async fn test_echo_enclave_app_launch_for_initial_data_version(
     let oak_echo_enclave_app_path =
         data_path("enclave_apps/oak_echo_enclave_app/oak_echo_enclave_app");
 
+    let kernel = match communication_channel {
+        launcher::CommunicationChannel::Serial =>
+            data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_serial_channel_bin"),
+        launcher::CommunicationChannel::VirtioConsole =>
+            data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+    };
+
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel,
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_echo_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),
@@ -48,6 +73,7 @@ async fn test_echo_enclave_app_launch_for_initial_data_version(
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
         initial_data_version,
+        communication_channel,
     };
     println!("launcher params: {:?}", params);
 

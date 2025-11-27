@@ -100,6 +100,7 @@ async fn test_load_large_lookup_data() {
         memory_size: Some("2G".to_string()),
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
+        communication_channel: launcher::CommunicationChannel::VirtioConsole,
     };
     log::debug!("launcher params: {:?}", params);
 
@@ -172,6 +173,7 @@ async fn test_load_two_gib_lookup_data() {
         memory_size: Some("256M".to_string()),
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
+        communication_channel: launcher::CommunicationChannel::VirtioConsole,
     };
     log::debug!("launcher params: {:?}", params);
 

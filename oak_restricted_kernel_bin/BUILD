@@ -44,3 +44,15 @@ rust_binary(
         "//oak_restricted_kernel:oak_restricted_kernel_simple_io_channel",
     ],
 )
+
+rust_binary(
+    name = "oak_restricted_kernel_bin_serial_channel",
+    srcs = ["src/main.rs"],
+    crate_features = ["serial_channel"],
+    linker_script = "//oak_restricted_kernel:layout.ld",
+    platform = "//:x86_64-unknown-none",
+    deps = [
+        "//oak_linux_boot_params",
+        "//oak_restricted_kernel:oak_restricted_kernel_serial_channel",
+    ],
+)

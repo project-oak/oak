@@ -32,6 +32,7 @@ use async_trait::async_trait;
 use clap::{Parser, ValueEnum};
 use command_fds::CommandFdExt;
 use log::info;
+use oak_channel::Write;
 use oak_proto_rust::oak::restricted_kernel::InitialData;
 use prost::Message;
 
@@ -42,6 +43,13 @@ pub enum InitialDataVersion {
     #[default]
     V0,
     V1,
+}
+
+#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
+pub enum CommunicationChannel {
+    #[default]
+    VirtioConsole,
+    Serial,
 }
 
 /// Represents parameters used for launching VM instances.
@@ -86,6 +94,11 @@ pub struct Params {
     /// proto).
     #[arg(long, value_name = "INITIAL_DATA_VERSION", default_value_t, value_enum)]
     pub initial_data_version: InitialDataVersion,
+
+    /// Which communication channel to use for communication between the host
+    /// and guest.
+    #[arg(long, required = false, value_enum, default_value_t = CommunicationChannel::VirtioConsole)]
+    pub communication_channel: CommunicationChannel,
 }
 
 /// Checks if file with a given path exists.
@@ -166,10 +179,17 @@ impl Instance {
         // Route first serial port to console.
         cmd.args(["-chardev", format!("socket,id=consock,fd={guest_console_fd}").as_str()]);
         cmd.args(["-serial", "chardev:consock"]);
-        // Add the virtio device.
+        // Add the communication channel device.
         cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
-        cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
-        cmd.args(["-device", "virtconsole,chardev=commsock"]);
+        match params.communication_channel {
+            CommunicationChannel::VirtioConsole => {
+                cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
+                cmd.args(["-device", "virtconsole,chardev=commsock"]);
+            }
+            CommunicationChannel::Serial => {
+                cmd.args(["-device", "isa-serial,chardev=commsock,id=serial1"]);
+            }
+        }
         if let Some(pci_passthrough) = params.pci_passthrough {
             cmd.args(["-device", format!("vfio-pci,host={pci_passthrough}").as_str()]);
         }
@@ -211,6 +231,12 @@ impl Instance {
             // The code below is all sync, but we need some reasonable deadlines otherwise
             // we might just get stuck if the qemu process exits.
             host_socket.set_read_timeout(Some(Duration::from_secs(30)))?;
+
+            if params.communication_channel == CommunicationChannel::Serial {
+                // The first byte written to the serial channel gets dropped when the serial
+                // port gets initialized, so we write a dummy byte.
+                host_socket.write_all(&[255u8]).expect("couldn't write dummy byte");
+            }
 
             oak_channel::basic_framed::send_raw(&mut host_socket, &initial_data_bytes)
                 .context("failed to send application")?;
