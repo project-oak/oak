@@ -71,6 +71,12 @@ pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
 /// of the Stage 0 DICE data struct.
 pub const DICE_DATA_LENGTH_CMDLINE_PARAM: &str = "oak-dice-length";
 
+/// The name of the kernel command-line parameter that is used to send the
+/// physical address of the Stage 0 attestation data. The Stage 0 attestation
+/// data starts with the STAGE0_DICE_PROTO_MAGIC entry followed by the
+/// serialized attestation data.
+pub const DICE_DATA_ATTESTATION_PARAM: &str = "oak-dice-attestation";
+
 /// physical address of the Stage 0 event log.
 pub const EVENTLOG_CMDLINE_PARAM: &str = "oak-event-log";
 

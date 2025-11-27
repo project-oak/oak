@@ -32,8 +32,8 @@ use oak_attestation_types::{
     util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
 };
 use oak_dice::evidence::{
-    DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
-    STAGE0_DICE_PROTO_MAGIC,
+    DICE_DATA_ATTESTATION_PARAM, DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM,
+    EVENTLOG_CMDLINE_PARAM, STAGE0_DICE_PROTO_MAGIC,
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
@@ -332,18 +332,27 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // Zero out the serialized proto since it contains a copy of the private key.
     serialized_attestation_data.zeroize();
 
+    let encoded_attestation_proto_data = encoded_attestation_proto.leak();
+
     // Reserve memory containing DICE proto Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        encoded_attestation_proto.as_bytes().as_ptr() as usize,
+        encoded_attestation_proto_data.as_bytes().as_ptr() as usize,
         DOUBLE_PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
     sensitive_attestation_data_length += DOUBLE_PAGE_SIZE;
 
     // Append the DICE data address to the kernel command-line.
-    let extra = format!(
-        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
-    );
+    // TODO: b/463325402 - Remove eventlog and dice data from kernel command-line
+    // and only use the new DICE_DATA_ATTESTATION_PARAM arg with the serialized
+    // attester.
+    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}");
+    let extra = if cfg!(feature = "cmdline_with_serialized_attestation_data") {
+        format!("{extra} --{DICE_DATA_ATTESTATION_PARAM}={encoded_attestation_proto_data:p}")
+    } else {
+        extra
+    };
+
     let cmdline = if kernel_cmdline.is_empty() {
         extra
     } else if kernel_cmdline.contains("--") {
