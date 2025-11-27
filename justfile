@@ -61,6 +61,21 @@ run-oak-functions-containers-launcher wasm_target port lookup_data_path communic
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
+oak-restricted-kernel-launcher-artifacts: \
+    (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
+    (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
+    (copy-binary "oak_restricted_kernel_launcher" "oak_restricted_kernel_launcher") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "")
+
+run-oak-restricted-kernel-launcher:
+    RUST_LOG=DEBUG artifacts/binaries/oak_restricted_kernel_launcher \
+        --bios-binary=artifacts/binaries/stage0_bin \
+        --kernel=artifacts/binaries/oak_restricted_kernel_wrapper_virtio_console_channel_bin \
+        --vmm-binary=$(which qemu-system-x86_64) \
+        --app-binary=artifacts/binaries/oak_echo_enclave_app \
+        --initrd=artifacts/binaries/oak_orchestrator \
+        --memory-size=256M
+
 oak-functions-launcher-artifacts: \
     (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
     (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
@@ -295,6 +310,8 @@ copy-oak-artifacts: \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_measurement" "") \
     (copy-binaries "oak_session_json_wasm:oak_session_json_wasm" "oak_session_json_wasm") \
     (copy-binary "stage0_bin" "stage0_bin") \
     (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
