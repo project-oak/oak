@@ -15,14 +15,10 @@
 
 use anyhow::Context;
 use oak_containers_channel::{buffer::Buffer, create_channel};
-use oak_grpc::oak::containers::{
-    launcher_client::LauncherClient as GrpcLauncherClient,
-    v1::hostlib_key_provisioning_client::HostlibKeyProvisioningClient,
-};
+use oak_grpc::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    containers::{SendAttestationEvidenceRequest, v1::KeyProvisioningRole},
-    key_provisioning::v1::GroupKeys,
+    containers::SendAttestationEvidenceRequest,
 };
 use tonic::transport::Channel;
 
@@ -30,15 +26,13 @@ use tonic::transport::Channel;
 pub struct LauncherClient {
     channel: tonic::transport::Channel,
     inner: GrpcLauncherClient<Channel>,
-    hostlib_key_provisioning_client: HostlibKeyProvisioningClient<Channel>,
 }
 
 impl LauncherClient {
     pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
         let channel = create_channel(addr).await?;
         let inner = GrpcLauncherClient::new(channel.clone());
-        let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel.clone());
-        Ok(Self { channel, inner, hostlib_key_provisioning_client })
+        Ok(Self { channel, inner })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Buffer, Box<dyn std::error::Error>> {
@@ -102,30 +96,6 @@ impl LauncherClient {
         let request = tonic::Request::new(());
         self.inner.clone().notify_app_ready(request).await.context("couldn't send notification")?;
         Ok(())
-    }
-
-    pub async fn get_key_provisioning_role(&self) -> anyhow::Result<KeyProvisioningRole> {
-        let key_provisioning_role = self
-            .hostlib_key_provisioning_client
-            .clone()
-            .get_key_provisioning_role(tonic::Request::new(()))
-            .await
-            .context("couldn't get key provisioning role")?
-            .into_inner()
-            .role;
-        KeyProvisioningRole::try_from(key_provisioning_role)
-            .context("unknown key provisioning role")
-    }
-
-    pub async fn get_group_keys(&self) -> anyhow::Result<GroupKeys> {
-        self.hostlib_key_provisioning_client
-            .clone()
-            .get_group_keys(tonic::Request::new(()))
-            .await
-            .context("couldn't get group keys")?
-            .into_inner()
-            .group_keys
-            .context("get group keys weren't provided")
     }
 
     pub fn channel(&self) -> tonic::transport::Channel {

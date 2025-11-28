@@ -16,7 +16,7 @@
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 
 use anyhow::Context;
-use oak_containers_attestation::{GroupKeys, InstanceKeys};
+use oak_containers_attestation::InstanceKeys;
 use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_grpc::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
@@ -43,32 +43,11 @@ use crate::launcher_client::LauncherClient;
 
 pub struct CryptoService {
     instance_keys: InstanceKeys,
-    group_keys: Arc<GroupKeys>,
 }
 
 impl CryptoService {
-    pub fn new(instance_keys: InstanceKeys, group_keys: Arc<GroupKeys>) -> Self {
-        Self { instance_keys, group_keys }
-    }
-
-    #[allow(clippy::result_large_err)]
-    fn signing_key(
-        &self,
-        key_origin: KeyOrigin,
-    ) -> Result<&p256::ecdsa::SigningKey, tonic::Status> {
-        match key_origin {
-            KeyOrigin::Unspecified => {
-                Err(tonic::Status::invalid_argument("unspecified key origin"))?
-            }
-            KeyOrigin::Instance => Ok(&self.instance_keys.signing_key),
-            KeyOrigin::Group =>
-            // TODO(#4442): Implement with key provisioning.
-            {
-                Err(tonic::Status::unimplemented(
-                    "signing using the group key is not yet implemented",
-                ))
-            }
-        }
+    pub fn new(instance_keys: InstanceKeys) -> Self {
+        Self { instance_keys }
     }
 }
 
@@ -85,7 +64,7 @@ impl OrchestratorCrypto for CryptoService {
                 Err(tonic::Status::invalid_argument("unspecified key origin"))?
             }
             KeyOrigin::Instance => &self.instance_keys.encryption_key,
-            KeyOrigin::Group => &self.group_keys.encryption_key,
+            KeyOrigin::Group => Err(tonic::Status::unimplemented("group key is not supported"))?,
         };
 
         let session_keys = encryption_key
@@ -103,7 +82,7 @@ impl OrchestratorCrypto for CryptoService {
         request: Request<SignRequest>,
     ) -> Result<Response<SignResponse>, tonic::Status> {
         let request = request.into_inner();
-        let signing_key = self.signing_key(request.key_origin())?;
+        let signing_key = &self.instance_keys.signing_key;
         let signature = Signature {
             signature: <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
                 signing_key,
@@ -195,7 +174,6 @@ pub fn create_services(
     evidence: Evidence,
     endorsements: Endorsements,
     instance_keys: InstanceKeys,
-    group_keys: Arc<GroupKeys>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
 ) -> (OrchestratorServer<ServiceImplementation>, OrchestratorCryptoServer<CryptoService>) {
@@ -206,7 +184,7 @@ pub fn create_services(
         evidence,
         endorsements,
     };
-    let crypto_service_instance = CryptoService::new(instance_keys, group_keys);
+    let crypto_service_instance = CryptoService::new(instance_keys);
     (
         OrchestratorServer::new(service_instance),
         OrchestratorCryptoServer::new(crypto_service_instance),

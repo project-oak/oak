@@ -23,7 +23,6 @@ use oak_attestation::ApplicationKeysAttester;
 use oak_attestation_types::{attester::Attester, util::Serializable};
 use oak_containers_agent::metrics::MetricsConfig;
 use oak_containers_attestation::generate_instance_keys;
-use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use prost::Message;
 use tokio::runtime::Handle;
 use tokio_util::sync::CancellationToken;
@@ -33,7 +32,6 @@ mod cdi;
 pub mod container_runtime;
 pub mod dice;
 pub mod ipc_server;
-pub mod key_provisioning;
 pub mod launcher_client;
 pub mod logging;
 
@@ -81,30 +79,8 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
     let _oak_observer =
         oak_containers_agent::metrics::init_metrics(metrics_config, Handle::current());
 
-    // Get key provisioning role.
-    let key_provisioning_role = launcher_client
-        .get_key_provisioning_role()
-        .await
-        .map_err(|error| anyhow!("couldn't get key provisioning role: {:?}", error))?;
-
     // Generate application keys.
     let (instance_keys, instance_public_keys) = generate_instance_keys();
-    #[cfg(feature = "application_keys")]
-    let (mut group_keys, group_public_keys) =
-        if key_provisioning_role == KeyProvisioningRole::Leader {
-            let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
-            (Some(Arc::new(group_keys)), Some(group_public_keys))
-        } else {
-            (None, None)
-        };
-    #[cfg(not(feature = "application_keys"))]
-    let (mut group_keys, _group_public_keys) =
-        if key_provisioning_role == KeyProvisioningRole::Leader {
-            let (group_keys, group_public_keys) = instance_keys.generate_group_keys();
-            (Some(Arc::new(group_keys)), Some(group_public_keys))
-        } else {
-            (None, None)
-        };
 
     // Load application.
     let container_bundle = launcher_client
@@ -149,11 +125,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
                         container_layer,
                         &instance_public_keys.encryption_public_key,
                         &instance_public_keys.signing_public_key,
-                        if let Some(ref group_public_keys) = group_public_keys {
-                            Some(&group_public_keys.encryption_public_key)
-                        } else {
-                            None
-                        },
+                        None,
                         None,
                     )
                 })
@@ -172,18 +144,6 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
-    // Request group keys.
-    if key_provisioning_role == KeyProvisioningRole::Follower {
-        let get_group_keys_response = launcher_client
-            .get_group_keys()
-            .await
-            .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
-        let provisioned_group_keys = instance_keys
-            .provide_group_keys(get_group_keys_response)
-            .context("couldn't provide group keys")?;
-        group_keys = Some(Arc::new(provisioned_group_keys));
-    }
-
     if let Some(path) = args.ipc_socket_path.parent() {
         tokio::fs::create_dir_all(path).await?;
     }
@@ -197,7 +157,6 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
         evidence,
         endorsements,
         instance_keys,
-        group_keys.clone().context("group keys were not provisioned")?,
         application_config,
         launcher_client,
     );
@@ -212,11 +171,6 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
             &args.ipc_socket_path,
             orchestrator_server,
             crypto_server,
-            cancellation_token.clone(),
-        ),
-        crate::key_provisioning::create(
-            &args.orchestrator_addr,
-            group_keys.context("group keys were not provisioned")?,
             cancellation_token.clone(),
         ),
         crate::container_runtime::run(

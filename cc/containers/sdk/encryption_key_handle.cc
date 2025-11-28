@@ -27,7 +27,6 @@
 namespace oak::containers::sdk {
 
 namespace {
-using ::oak::containers::v1::KeyOrigin;
 using ::oak::crypto::RecipientContext;
 using ::oak::crypto::v1::SessionKeys;
 }  // namespace
@@ -37,20 +36,7 @@ InstanceEncryptionKeyHandle::GenerateRecipientContext(
     absl::string_view serialized_encapsulated_public_key) {
   absl::StatusOr<SessionKeys> session_keys =
       orchestrator_crypto_client_.DeriveSessionKeys(
-          KeyOrigin::INSTANCE, serialized_encapsulated_public_key);
-  if (!session_keys.ok()) {
-    return absl::InternalError("couldn't derive session keys");
-  }
-
-  return RecipientContext::Deserialize(*session_keys);
-}
-
-absl::StatusOr<std::unique_ptr<RecipientContext>>
-GroupEncryptionKeyHandle::GenerateRecipientContext(
-    absl::string_view serialized_encapsulated_public_key) {
-  absl::StatusOr<SessionKeys> session_keys =
-      orchestrator_crypto_client_.DeriveSessionKeys(
-          KeyOrigin::GROUP, serialized_encapsulated_public_key);
+          serialized_encapsulated_public_key);
   if (!session_keys.ok()) {
     return absl::InternalError("couldn't derive session keys");
   }

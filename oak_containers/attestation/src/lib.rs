@@ -17,20 +17,12 @@ extern crate alloc;
 
 use alloc::{string::ToString, vec};
 
-use anyhow::Context;
 use bytes::Buf;
 use ciborium::Value;
 use coset::cwt::ClaimName;
-use oak_crypto::{
-    encryption_key::{EncryptionKey, generate_encryption_key_pair},
-    encryptor::ServerEncryptor,
-};
+use oak_crypto::encryption_key::{EncryptionKey, generate_encryption_key_pair};
 use oak_dice::cert::{SHA2_256_ID, generate_ecdsa_key_pair};
-use oak_proto_rust::oak::{
-    attestation::v1::{Event, SystemLayerData},
-    crypto::v1::EncryptedRequest,
-    key_provisioning::v1::GroupKeys as GroupKeysProto,
-};
+use oak_proto_rust::oak::attestation::v1::{Event, SystemLayerData};
 use prost::Message;
 
 /// Measures the system image and returns a corresponding event log entry.
@@ -116,52 +108,4 @@ pub struct InstancePublicKeys {
     pub encryption_public_key: Vec<u8>,
     pub signing_public_key: p256::ecdsa::VerifyingKey,
     pub session_binding_public_key: p256::ecdsa::VerifyingKey,
-}
-
-impl InstanceKeys {
-    pub fn generate_group_keys(&self) -> (GroupKeys, GroupPublicKeys) {
-        let (group_encryption_key, group_encryption_public_key) = generate_encryption_key_pair();
-        (
-            GroupKeys { encryption_key: group_encryption_key },
-            GroupPublicKeys { encryption_public_key: group_encryption_public_key },
-        )
-    }
-
-    pub fn provide_group_keys(&self, group_keys: GroupKeysProto) -> anyhow::Result<GroupKeys> {
-        // Create server encryptor for decrypting the group keys received from the
-        // leader enclave.
-        let encrypted_encryption_private_key = group_keys
-            .encrypted_encryption_private_key
-            .context("encrypted encryption key wasn't provided")?;
-
-        // Decrypt group keys.
-        let (_, mut decrypted_encryption_private_key, _) =
-            ServerEncryptor::decrypt(&encrypted_encryption_private_key, &self.encryption_key)
-                .context("couldn't decrypt the encryption private key")?;
-
-        let group_encryption_key =
-            EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
-                .context("couldn't deserialize private key")?;
-
-        Ok(GroupKeys { encryption_key: group_encryption_key })
-    }
-}
-
-pub struct GroupKeys {
-    pub encryption_key: EncryptionKey,
-}
-
-pub struct GroupPublicKeys {
-    pub encryption_public_key: Vec<u8>,
-}
-
-impl GroupKeys {
-    /// Returns group encryption private key which was encrypted with the
-    /// `peer_public_key`.
-    pub fn encrypted_group_encryption_key(
-        &self,
-        peer_public_key: &[u8],
-    ) -> anyhow::Result<EncryptedRequest> {
-        self.encryption_key.encrypted_private_key(peer_public_key)
-    }
 }

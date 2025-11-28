@@ -89,7 +89,6 @@ pub enum Network {
     Proxy {
         launcher_service_port: u16,
         host_proxy_port: Option<u16>,
-        host_orchestrator_proxy_port: u16,
         extra_guest_to_host_ports: Vec<u16>,
     },
 
@@ -273,11 +272,9 @@ impl Qemu {
             Network::Proxy {
                 launcher_service_port,
                 host_proxy_port,
-                host_orchestrator_proxy_port,
                 ref extra_guest_to_host_ports,
             } => {
                 let vm_address = network.guest_address().unwrap();
-                let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
                 let host_address = Ipv4Addr::LOCALHOST;
 
                 let mut netdev_rules = vec![
@@ -285,9 +282,6 @@ impl Qemu {
                     "id=netdev".to_string(),
                     format!(
                         "guestfwd=tcp:{VM_HOST_ADDRESS}:{VM_HOST_PORT}-cmd:nc {host_address} {launcher_service_port}"
-                    ),
-                    format!(
-                        "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
                     ),
                 ];
 

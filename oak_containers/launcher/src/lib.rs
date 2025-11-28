@@ -24,10 +24,8 @@ use std::{
 
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
-use oak_grpc::oak::key_provisioning::v1::key_provisioning_client::KeyProvisioningClient;
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence, OakContainersEndorsements, endorsements},
-    key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     session::v1::EndorsedEvidence,
 };
 pub use qemu::{Params as QemuParams, VmType as QemuVmType};
@@ -38,7 +36,6 @@ use tokio::{
     time::{Duration, timeout},
 };
 use tokio_vsock::{VMADDR_CID_HOST, VsockAddr, VsockListener};
-use tonic::transport::Channel as TonicChannel;
 
 /// IP address for the host on the virtual network.
 const VM_HOST_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 100));
@@ -65,9 +62,6 @@ const VM_LOCAL_ADDRESS_6: IpAddr =
 
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;
-
-/// The local port that the Orchestrator should be listening on.
-const VM_ORCHESTRATOR_LOCAL_PORT: u16 = 4000;
 
 /// The local address that will be forwarded by the VMM to the guest's IP
 /// adress.
@@ -169,14 +163,12 @@ impl Display for TrustedApplicationAddress {
 pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
-    host_orchestrator_proxy_port: u16,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_evidence: Option<EndorsedEvidence>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
     evidence_receiver: Option<oneshot::Receiver<Evidence>>,
     app_ready_notifier: Option<oneshot::Receiver<()>>,
-    orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
     trusted_app_channel: Channel,
     shutdown: Option<watch::Sender<()>>,
 }
@@ -199,7 +191,6 @@ impl Launcher {
             ChannelType::TapV6 => SocketAddr::new(VM_HOST_ADDRESS_6, VM_HOST_PORT),
         };
 
-        let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(sockaddr)
             .await
             .with_context(|| format!("failed to bind to address {sockaddr}"))?;
@@ -246,8 +237,6 @@ impl Launcher {
             ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
-        let host_orchestrator_proxy_port =
-            { TcpListener::bind(orchestrator_sockaddr).await?.local_addr()?.port() };
         let vmm = qemu::Qemu::start(
             args.qemu_params,
             match trusted_app_channel {
@@ -255,7 +244,6 @@ impl Launcher {
                     qemu::Network::Proxy {
                         launcher_service_port: port,
                         host_proxy_port: Some(host_proxy_port),
-                        host_orchestrator_proxy_port,
                         extra_guest_to_host_ports: args.extra_guest_to_host_ports,
                     }
                 }
@@ -271,14 +259,12 @@ impl Launcher {
         Ok(Self {
             vmm,
             server,
-            host_orchestrator_proxy_port,
             // Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
             // provide corresponding hardware manufacturer's certificates).
             endorsed_evidence: None,
             evidence_receiver: Some(evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
-            orchestrator_key_provisioning_client: None,
             trusted_app_channel,
             shutdown: Some(shutdown_sender),
         })
@@ -339,36 +325,6 @@ impl Launcher {
         self.endorsed_evidence
             .clone()
             .ok_or_else(|| anyhow::anyhow!("endorsed evidence is not set"))
-    }
-
-    // Gets enclave group keys as part of Key Provisioning.
-    pub async fn get_group_keys(
-        &mut self,
-        request: GetGroupKeysRequest,
-    ) -> anyhow::Result<GetGroupKeysResponse> {
-        if self.orchestrator_key_provisioning_client.is_none() {
-            // Create Orchestrator Key Provisioning gRPC client.
-            let orchestrator_uri =
-                format!("http://127.0.0.1:{}", self.host_orchestrator_proxy_port)
-                    .parse()
-                    .context("couldn't parse orchestrator URI")?;
-            let orchestrator_channel = TonicChannel::builder(orchestrator_uri)
-                .connect()
-                .await
-                .context("couldn't connect to orchestrator")?;
-            self.orchestrator_key_provisioning_client =
-                Some(KeyProvisioningClient::new(orchestrator_channel));
-        }
-
-        let get_group_keys_response = self
-            .orchestrator_key_provisioning_client
-            .clone()
-            .context("couldn't get orchestrator key provisioning client")?
-            .get_group_keys(request)
-            .await
-            .context("couldn't get group keys")?
-            .into_inner();
-        Ok(get_group_keys_response)
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {

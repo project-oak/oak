@@ -22,18 +22,12 @@
 namespace oak::containers::sdk {
 
 namespace {
-using ::oak::containers::v1::KeyOrigin;
 using ::oak::crypto::v1::Signature;
 }  // namespace
 
 absl::StatusOr<Signature> InstanceSigningKeyHandle::Sign(
     absl::string_view message) {
-  return orchestrator_crypto_client_.Sign(KeyOrigin::INSTANCE, message);
-}
-
-absl::StatusOr<Signature> GroupSigningKeyHandle::Sign(
-    absl::string_view message) {
-  return orchestrator_crypto_client_.Sign(KeyOrigin::GROUP, message);
+  return orchestrator_crypto_client_.Sign(message);
 }
 
 }  // namespace oak::containers::sdk

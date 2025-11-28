@@ -41,12 +41,12 @@ local_path_override(
 # Rather than trying to build these ourselves, we will use pre-built versions from Oak.
 http_file(
     name = "oak_containers_kernel",
-    urls = ["https://storage.googleapis.com/oak-files/sha2-256:1db2d2971c3fa4f182bd9316515cec48c15ceacf527d8cfd8408b08ce87ed404"],
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:ba01156bcc62de73ccf89fba0edf8832147b4d0f19f1baa67d202b2dc073cb28"],
 )
 
 http_file(
     name = "oak_containers_system_image",
-    urls = ["https://storage.googleapis.com/oak-files/sha2-256:ed97af8058dea6a037145eabe7f637cc08f759cb530645b251709291d9bdeb81"],
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:a947a88bc448c3b3cee9ceb5cd9852d6be03992cddb03e2f4935b3895ebd690c"],
 )
 
 http_file(

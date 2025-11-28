@@ -21,16 +21,10 @@ use std::{
 use anyhow::anyhow;
 use bytes::BytesMut;
 use futures::{FutureExt, Stream};
-use oak_grpc::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
-    v1::hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
-};
+use oak_grpc::oak::containers::launcher_server::{Launcher, LauncherServer};
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    containers::{
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-        v1::{GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole},
-    },
+    containers::{GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest},
 };
 use opentelemetry_proto::tonic::{
     collector::{
@@ -182,28 +176,6 @@ impl Launcher for LauncherServerImplementation {
 }
 
 #[tonic::async_trait]
-impl HostlibKeyProvisioning for LauncherServerImplementation {
-    async fn get_key_provisioning_role(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetKeyProvisioningRoleResponse>, tonic::Status> {
-        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input
-        // argument.
-        Ok(tonic::Response::new(GetKeyProvisioningRoleResponse {
-            role: KeyProvisioningRole::Leader.into(),
-        }))
-    }
-
-    async fn get_group_keys(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
-        // TODO(#4442): Implement sending group keys to the orchestrator.
-        Err(tonic::Status::unimplemented("Key Provisioning is not implemented"))
-    }
-}
-
-#[tonic::async_trait]
 impl MetricsService for LauncherServerImplementation {
     async fn export(
         &self,
@@ -281,7 +253,6 @@ pub async fn new(
     let mut tcp_shutdown = shutdown.clone();
     let tcp_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
-        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
         .add_service(LogsServiceServer::from_arc(server_impl.clone()))
         .serve_with_incoming_shutdown(
@@ -292,7 +263,6 @@ pub async fn new(
     let mut virtio_shutdown = shutdown.clone();
     let virtio_server = Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
-        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(LogsServiceServer::from_arc(server_impl.clone()))
         .serve_with_incoming_shutdown(
             vsock_listener.incoming(),

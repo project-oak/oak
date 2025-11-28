@@ -43,12 +43,11 @@ using ::oak::crypto::v1::Signature;
 }  // namespace
 
 absl::StatusOr<SessionKeys> OrchestratorCryptoClient::DeriveSessionKeys(
-    KeyOrigin key_origin,
     absl::string_view serialized_encapsulated_public_key) const {
   ClientContext context;
   context.set_authority(kContextAuthority);
   DeriveSessionKeysRequest request;
-  request.set_key_origin(key_origin);
+  request.set_key_origin(KeyOrigin::INSTANCE);
   request.set_serialized_encapsulated_public_key(
       serialized_encapsulated_public_key.data(),
       serialized_encapsulated_public_key.size());
@@ -65,11 +64,11 @@ absl::StatusOr<SessionKeys> OrchestratorCryptoClient::DeriveSessionKeys(
 }
 
 absl::StatusOr<Signature> OrchestratorCryptoClient::Sign(
-    KeyOrigin key_origin, absl::string_view message) const {
+    absl::string_view message) const {
   ClientContext context;
   context.set_authority(kContextAuthority);
   SignRequest request;
-  request.set_key_origin(key_origin);
+  request.set_key_origin(KeyOrigin::INSTANCE);
   request.set_message(message.data(), message.size());
   SignResponse response;
 
