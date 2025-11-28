@@ -74,6 +74,7 @@ async fn test_echo_enclave_app_launch_for_initial_data_version(
         pci_passthrough: None,
         initial_data_version,
         communication_channel,
+        vm_type: launcher::VmType::Default,
     };
     println!("launcher params: {:?}", params);
 

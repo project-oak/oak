@@ -62,6 +62,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         pci_passthrough: None,
         initial_data_version: launcher::InitialDataVersion::V0,
         communication_channel: launcher::CommunicationChannel::VirtioConsole,
+        vm_type: launcher::VmType::Default,
     };
     log::debug!("launcher params: {:?}", params);
 
