@@ -15,36 +15,11 @@
 #
 
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//bazel/rust/proto:build_defs.bzl", "rust_proto_library")
 load("//oak_grpc_utils:build_defs.bzl", "rust_tonic_grpc_service")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
-)
-
-proto_library(
-    name = "arbiter_proto",
-    srcs = [
-        "arbiter.proto",
-    ],
-    deps = [
-        ":service_proto",
-    ],
-)
-
-rust_proto_library(
-    name = "arbiter_rust_proto",
-    srcs = [
-        ":arbiter_proto",
-    ],
-    extern_paths = {
-        ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
-        ".oak.ctf_sha2.enclave": "::tonic_service::oak::ctf_sha2::enclave",
-    },
-    deps = [
-        ":tonic_service",
-    ],
 )
 
 proto_library(

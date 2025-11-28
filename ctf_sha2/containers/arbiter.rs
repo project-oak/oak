@@ -19,7 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use arbiter_rust_proto::oak::ctf_sha2::containers::ArbiterInput;
+use arbiter_rust_proto::oak::ctf_sha2::arbiter::{arbiter_input::TeeProof, ArbiterInput};
 use clap::Parser;
 use log::{error, info};
 use oak_attestation_verification::verifier::verify;
@@ -75,30 +75,24 @@ fn main() -> anyhow::Result<()> {
             }
         };
 
-        let response = match input.response {
-            Some(response) => response,
+        let tee_proof = match input.tee_proof {
+            Some(tee_proof) => tee_proof,
             None => {
-                error!("Input does not contain an enclave response message");
+                error!("Input does not contain tee_proof");
                 return;
             }
         };
 
-        // 1. Check flag digest
-        let mut hasher = Sha256::new();
-        hasher.update(&input.flag);
-        let computed_digest = hasher.finalize();
-        if computed_digest.as_slice() != response.flag_digest {
-            info!(
-                "Provided flag {} is incorrect: wanted digest {} but got {}",
-                hex::encode(&input.flag),
-                hex::encode(&response.flag_digest),
-                hex::encode(computed_digest)
-            );
-            return;
-        }
+        let attested_signature = match tee_proof {
+            TeeProof::AttestedSignature(attested_signature) => attested_signature,
+            _ => {
+                error!("Input does not contain attested_signature");
+                return;
+            }
+        };
 
-        // 2. Verify Evidence
-        let evidence = match response.evidence {
+        // Verify Evidence
+        let evidence = match attested_signature.evidence {
             Some(evidence) => evidence,
             None => {
                 error!("Input does not contain enclave evidence");
@@ -121,12 +115,15 @@ fn main() -> anyhow::Result<()> {
             }
         };
 
-        // 3. Verify signature over flag digest
+        // Verify signature over expected flag digest
+        let mut hasher = Sha256::new();
+        hasher.update(&input.flag);
+        let expected_digest = hasher.finalize();
         assert!(
             verify_signature(
                 &extracted.signing_public_key,
-                &response.flag_digest,
-                &response.signature,
+                &expected_digest,
+                &attested_signature.signature,
             )
             .inspect_err(|e| {
                 info!("Enclave signature verification failed: {e:#}");

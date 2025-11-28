@@ -90,8 +90,8 @@ rust_binary(
     name = "arbiter",
     srcs = ["arbiter.rs"],
     deps = [
-        "//ctf_sha2/containers/proto:arbiter_rust_proto",
         "//ctf_sha2/containers/proto:tonic_service",
+        "//ctf_sha2/proto:arbiter_rust_proto",
         "//falsify",
         "//oak_attestation_verification",
         "//oak_proto_rust",

@@ -89,10 +89,6 @@ pub mod oak {
         }
     }
 
-    pub mod ctf_sha2 {
-        include_proto!("oak.ctf_sha2");
-    }
-
     pub mod debug {
         include_proto!("oak.debug");
     }

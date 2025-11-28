@@ -95,7 +95,12 @@ fn parse_extern_paths(extern_paths: &str) -> anyhow::Result<Vec<ExternPath>> {
 }
 
 fn proto_lib_as_code(file: &proto_gen::ProtoLib, include_prefix: &String) -> String {
-    mods_as_code(file.mods.values(), include_prefix)
+    format!(
+        "// Do not lint generated code.
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
+{}",
+        mods_as_code(file.mods.values(), include_prefix)
+    )
 }
 
 fn mod_as_code(module: &proto_gen::Mod, include_prefix: &String) -> String {

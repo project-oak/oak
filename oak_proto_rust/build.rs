@@ -36,7 +36,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../proto/containers/orchestrator_crypto.proto",
         "../proto/crypto/certificate.proto",
         "../proto/crypto/crypto.proto",
-        "../proto/ctf_sha2/falsify.proto",
         "../proto/digest.proto",
         "../proto/oak_debug/service/oak_debug.proto",
         "../proto/oak_functions/abi.proto",
