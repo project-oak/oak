@@ -319,7 +319,15 @@ message SearchMemoryRequest {
 
 message SearchMemoryResultItem {
   Memory memory = 1;
+  // The score for the matched memory, which is the sum of the scores for each
+  // matched view in the memory.
   float score = 2;
+  // The scores for each matched view in the memory.
+  // The order of the scores corresponds to the order of the views in the
+  // memory.
+  // Note: This is only populated if `keep_all_llm_views` is not set in the
+  // request.
+  repeated float view_scores = 3;
 }
 
 message SearchMemoryResponse {

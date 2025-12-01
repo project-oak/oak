@@ -164,13 +164,14 @@ impl DatabaseWithCache {
             .zip(search_results.items.into_iter())
             .map(|(mut memory, item)| {
                 let score = item.score;
+                let view_scores = item.view_scores;
                 if !request.keep_all_llm_views {
                     let view_ids = item.view_ids;
                     if let Some(views) = memory.views.as_mut() {
                         views.llm_views.retain(|v| view_ids.contains(&v.id));
                     }
                 }
-                SearchMemoryResultItem { memory: Some(memory), score }
+                SearchMemoryResultItem { memory: Some(memory), score, view_scores }
             })
             .collect();
 

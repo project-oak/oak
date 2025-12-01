@@ -221,11 +221,12 @@ impl PendingLlmViewMetadata {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct SearchResultId {
     pub blob_id: BlobId,
     pub view_ids: Vec<ViewId>,
     pub score: f32,
+    pub view_scores: Vec<f32>,
 }
 
 #[derive(Debug, Default)]
@@ -789,8 +790,7 @@ impl IcingMetaDatabase {
         let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
         let scoring_spec = scoring_spec.unwrap_or_default();
         let mut page_token = page_token;
-        let mut id_maps: HashMap<BlobId, Vec<ViewId>> = HashMap::new();
-        let mut scores = HashMap::new();
+        let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
         // When embedding search is used, we are matching against views instead
         // of memories. Therefore, we might match mulitple views of the same memory.
         // We need to aggregate the results and scores by memory id.
@@ -822,8 +822,7 @@ impl IcingMetaDatabase {
                         Self::extract_view_id_from_doc(result),
                         result.score.map(|s| s as f32).unwrap_or(0.0),
                     ) {
-                        id_maps.entry(blob_id.clone()).or_default().push(view_id);
-                        *scores.entry(blob_id).or_default() += score;
+                        id_maps.entry(blob_id).or_default().push((view_id, score));
                     }
                 }
                 if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
@@ -840,9 +839,21 @@ impl IcingMetaDatabase {
 
         let mut search_result_ids = SearchResultIds::default();
 
-        for (blob_id, view_ids) in id_maps.into_iter() {
-            let score = scores.get(&blob_id).unwrap_or(&0.0);
-            search_result_ids.items.push(SearchResultId { blob_id, view_ids, score: *score });
+        for (blob_id, views) in id_maps.into_iter() {
+            let mut view_ids = Vec::new();
+            let mut view_scores = Vec::new();
+            let mut total_score = 0.0;
+            for (view_id, score) in views {
+                view_ids.push(view_id);
+                view_scores.push(score);
+                total_score += score;
+            }
+            search_result_ids.items.push(SearchResultId {
+                blob_id,
+                view_ids,
+                score: total_score,
+                view_scores,
+            });
         }
         search_result_ids
             .items
@@ -1721,6 +1732,60 @@ mod tests {
         // Check that all views are gone.
         let view_ids3 = icing_database.get_view_ids_by_memory_id(memory_id)?;
         assert_that!(view_ids3, is_empty());
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_search_with_view_scores_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id = "memory_id_view_scores".to_string();
+        let blob_id = "blob_id_view_scores".to_string();
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![0.7, 0.3, 0.0],
+                }],
+                ..Default::default()
+            })),
+        };
+
+        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        assert_that!(results.items, len(eq(1)));
+        let result = &results.items[0];
+        assert_eq!(result.blob_id, blob_id);
+        assert_that!(&result.view_ids, elements_are![eq("view1"), eq("view2")]);
+        assert_that!(&result.view_scores, elements_are![eq(&0.7), eq(&0.3)]);
+        assert_eq!(result.score, 1.0);
 
         Ok(())
     }
