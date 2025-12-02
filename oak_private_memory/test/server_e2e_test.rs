@@ -389,10 +389,6 @@ async fn test_memory_expiration() {
     client.add_memory(memory_valid.clone()).await.unwrap();
     client.add_memory(memory_no_expiration.clone()).await.unwrap();
 
-    assert!(client.get_memory_by_id("memory_expired", None).await.unwrap().success);
-    assert!(client.get_memory_by_id("memory_valid", None).await.unwrap().success);
-    assert!(client.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
-
     // Close session and wait for changes to propagate.
     drop(client);
     sleep(Duration::from_secs(1)).await;

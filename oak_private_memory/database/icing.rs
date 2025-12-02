@@ -569,11 +569,16 @@ impl IcingMetaDatabase {
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
+        let query_str = build_non_expired_query_str(MEMORY_ID_NAME, &memory_id);
+
         let search_spec = icing::SearchSpecProto {
-            query: Some(memory_id.to_string()),
+            query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHMA_NAME.to_string()],
-            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, MEMORY_ID_NAME)],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
             ..Default::default()
         };
 
@@ -1273,6 +1278,24 @@ impl IcingMetaDatabase {
     }
 }
 
+fn build_non_expired_query_str(property_name: &str, property_val: &str) -> String {
+    let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
+
+    // A memory is considered not expired if its expiration timestamp is in the
+    // future, or if it has no expiration timestamp set.
+    // The query for "property does not exist" is approximated by "NOT (property >=
+    // MIN_INT64)".
+    format!(
+        "({}:{}) AND (({} > {}) OR (NOT ({} >= {})))",
+        property_name,
+        property_val,
+        EXPIRED_TIMESTAMP_NAME,
+        now_ts,
+        EXPIRED_TIMESTAMP_NAME,
+        i64::MIN
+    )
+}
+
 fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
     let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
         Ok(duration) => {
@@ -1864,6 +1887,61 @@ mod tests {
         assert_that!(&result.view_ids, elements_are![eq("view1"), eq("view2")]);
         assert_that!(&result.view_scores, elements_are![eq(&0.7), eq(&0.3)]);
         assert_eq!(result.score, 1.0);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memory_by_id_with_expired_timestamp_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id = "expired_memory_id".to_string();
+        let blob_id = "expired_blob_id".to_string();
+
+        // Create a timestamp in the past (e.g., 1 hour ago)
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600);
+        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["expired".to_string()],
+            expired_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        // Verify the memory is actually stored in the database without considering
+        // expiration.
+        let search_spec_for_existence = icing::SearchSpecProto {
+            query: Some(memory_id.to_string()),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            type_property_filters: vec![IcingMetaDatabase::create_search_filter(
+                SCHMA_NAME,
+                MEMORY_ID_NAME,
+            )],
+            ..Default::default()
+        };
+        let result_spec_for_existence = icing::ResultSpecProto {
+            num_per_page: Some(1),
+            type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHMA_NAME)],
+            ..Default::default()
+        };
+        let search_result_for_existence = icing_database.icing_search_engine.search(
+            &search_spec_for_existence,
+            &icing::get_default_scoring_spec(),
+            &result_spec_for_existence,
+        );
+
+        assert_that!(search_result_for_existence.results, len(eq(1)));
+        assert_that!(
+            IcingMetaDatabase::extract_blob_id_from_doc(&search_result_for_existence.results[0]),
+            eq(&Some(blob_id.clone()))
+        );
+
+        // Try to retrieve the memory using the public API, it should not be found
+        // because it's expired
+        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
 
         Ok(())
     }

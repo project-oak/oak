@@ -17,7 +17,7 @@
 use std::collections::HashSet;
 
 use client::{PrivateMemoryClient, SerializationFormat};
-use private_memory_test_utils::start_server;
+use private_memory_test_utils::{start_server, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
     oak::private_memory::{text_query, LlmView, LlmViews, MatchType, TextQuery},
     prelude::v1::*,
@@ -403,5 +403,81 @@ async fn search_with_view_scores() {
             .map(|v| v.id)
             .collect::<Vec<String>>();
         assert_eq!(returned_view_ids, vec!["view2".to_string(), "view1".to_string()]);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_by_id_with_expired_memories() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_expired_memory_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let expired_memory_id = "expired_memory_id";
+        let non_expired_memory_id = "non_expired_memory_id";
+        let no_expiration_memory_id = "no_expiration_memory_id";
+
+        // Create a timestamp in the past for an expired memory
+        let past_time =
+            std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
+        let expired_timestamp_past = Some(system_time_to_timestamp(past_time));
+
+        // Create a timestamp in the future for a non-expired memory
+        let future_time =
+            std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
+        let expired_timestamp_future = Some(system_time_to_timestamp(future_time));
+
+        // Add an expired memory
+        let expired_memory_to_add = Memory {
+            id: expired_memory_id.to_string(),
+            tags: vec!["expired".to_string()],
+            expired_timestamp: expired_timestamp_past,
+            ..Default::default()
+        };
+        let response_expired = client.add_memory(expired_memory_to_add).await.unwrap();
+        assert_eq!(response_expired.id, expired_memory_id);
+
+        // Add a non-expired memory (expires in the future)
+        let non_expired_memory_to_add = Memory {
+            id: non_expired_memory_id.to_string(),
+            tags: vec!["non_expired".to_string()],
+            expired_timestamp: expired_timestamp_future,
+            ..Default::default()
+        };
+        let response_non_expired = client.add_memory(non_expired_memory_to_add).await.unwrap();
+        assert_eq!(response_non_expired.id, non_expired_memory_id);
+
+        // Add a memory with no expiration
+        let no_expiration_memory_to_add = Memory {
+            id: no_expiration_memory_id.to_string(),
+            tags: vec!["no_expiration".to_string()],
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        let response_no_expiration = client.add_memory(no_expiration_memory_to_add).await.unwrap();
+        assert_eq!(response_no_expiration.id, no_expiration_memory_id);
+
+        // Try to retrieve the expired memory: should not be found
+        let get_response_expired = client.get_memory_by_id(expired_memory_id, None).await.unwrap();
+        assert!(!get_response_expired.success);
+        assert!(get_response_expired.memory.is_none());
+
+        // Try to retrieve the non-expired memory: should be found
+        let get_response_non_expired =
+            client.get_memory_by_id(non_expired_memory_id, None).await.unwrap();
+        assert!(get_response_non_expired.success);
+        assert_eq!(get_response_non_expired.memory.unwrap().id, non_expired_memory_id);
+
+        // Try to retrieve the no-expiration memory: should be found
+        let get_response_no_expiration =
+            client.get_memory_by_id(no_expiration_memory_id, None).await.unwrap();
+        assert!(get_response_no_expiration.success);
+        assert_eq!(get_response_no_expiration.memory.unwrap().id, no_expiration_memory_id);
     }
 }
