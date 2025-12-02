@@ -23,8 +23,9 @@ use oak_attestation_verification_types::assertion_verifier::{
     AssertionVerifier, AssertionVerifierError,
 };
 use oak_proto_rust::oak::attestation::v1::{
-    confidential_space_reference_values::ContainerImage, Assertion, ConfidentialSpaceAssertion,
-    ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues, EndorsementReferenceValue,
+    binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
+    BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
+    ConfidentialSpaceReferenceValues,
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
@@ -81,7 +82,7 @@ impl GcpAssertionVerifier {
         &self,
         verification_time: Instant,
         image_reference: &Reference,
-        endorsement_reference_value: &EndorsementReferenceValue,
+        binary_reference_value: &BinaryReferenceValue,
         endorsement: &Option<ConfidentialSpaceEndorsement>,
     ) -> Result<(), AssertionVerifierError> {
         match endorsement {
@@ -90,7 +91,7 @@ impl GcpAssertionVerifier {
                     verification_time,
                     image_reference,
                     signed_endorsement,
-                    endorsement_reference_value,
+                    binary_reference_value,
                 )
                 .context("verifying workload endorsement")?,
                 None => return Err(anyhow!("missing workload endorsement").into()),
@@ -139,10 +140,15 @@ impl AssertionVerifier for GcpAssertionVerifier {
                     let rekor_key = cosign_reference_values.rekor_public_key.clone();
                     let endorsement_ref_value =
                         create_endorsement_reference_value(endorser_key, rekor_key);
+                    let image_reference_value = BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Endorsement(
+                            endorsement_ref_value,
+                        )),
+                    };
                     self.verify_endorsed_container_image(
                         verification_time,
                         &image_reference,
-                        &endorsement_ref_value,
+                        &image_reference_value,
                         &cs_assertion.container_image_endorsement,
                     )?;
                 }
@@ -156,11 +162,11 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         .into());
                     }
                 }
-                ContainerImage::EndorsementReferenceValues(endorsement_ref_value) => {
+                ContainerImage::ImageReferenceValue(image_reference_value) => {
                     self.verify_endorsed_container_image(
                         verification_time,
                         &image_reference,
-                        endorsement_ref_value,
+                        image_reference_value,
                         &cs_assertion.container_image_endorsement,
                     )?;
                 }
@@ -196,7 +202,8 @@ mod tests {
     use oak_attestation_verification_types::assertion_verifier::AssertionVerifierError;
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, CosignReferenceValues, Endorsement, Signature, SignedEndorsement,
+        binary_reference_value, endorsement::Format, BinaryReferenceValue, CosignReferenceValues,
+        Endorsement, Signature, SignedEndorsement,
     };
     use oak_time::make_instant;
     use prost::Message;
@@ -240,9 +247,11 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
-                container_image: Some(ContainerImage::EndorsementReferenceValues(
-                    create_endorsement_reference_value(developer_public_key, None),
-                )),
+                container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Endorsement(
+                        create_endorsement_reference_value(developer_public_key, None),
+                    )),
+                })),
             },
         };
 

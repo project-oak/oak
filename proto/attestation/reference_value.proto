@@ -412,6 +412,8 @@ message CertificateBasedReferenceValues {
 }
 
 message ConfidentialSpaceReferenceValues {
+  reserved 4;
+
   // The PEM-encoded root certificate for verifying Confidential Space
   // attestations.
   string root_certificate_pem = 1;
@@ -427,8 +429,8 @@ message ConfidentialSpaceReferenceValues {
     // that relies on Oak Transparent release.
     string container_image_reference_prefix = 3;
 
-    // Transparent release endorsement for the container image.
-    EndorsementReferenceValue endorsement_reference_values = 4;
+    // Used to verify the container image.
+    BinaryReferenceValue image_reference_value = 5;
   }
 }
 

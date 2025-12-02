@@ -1333,7 +1333,7 @@ pub struct ConfidentialSpaceReferenceValues {
     /// Reference values specific to the workload container.
     #[prost(
         oneof = "confidential_space_reference_values::ContainerImage",
-        tags = "2, 3, 4"
+        tags = "2, 3, 5"
     )]
     pub container_image: ::core::option::Option<
         confidential_space_reference_values::ContainerImage,
@@ -1353,9 +1353,9 @@ pub mod confidential_space_reference_values {
         /// that relies on Oak Transparent release.
         #[prost(string, tag = "3")]
         ContainerImageReferencePrefix(::prost::alloc::string::String),
-        /// Transparent release endorsement for the container image.
-        #[prost(message, tag = "4")]
-        EndorsementReferenceValues(super::EndorsementReferenceValue),
+        /// Used to verify the container image.
+        #[prost(message, tag = "5")]
+        ImageReferenceValue(super::BinaryReferenceValue),
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
