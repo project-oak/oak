@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::collections::HashMap;
+use std::{collections::HashMap, time::SystemTime};
 
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
@@ -97,6 +97,7 @@ const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
+const EXPIRED_TIMESTAMP_NAME: &str = "expiredTimestamp";
 
 const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
@@ -165,6 +166,12 @@ impl PendingMetadata {
                 timestamp_to_i64(event_timestamp),
             );
         }
+        if let Some(ref expired_timestamp) = memory.expired_timestamp {
+            document_builder.add_int64_property(
+                EXPIRED_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expired_timestamp),
+            );
+        }
         let icing_document = document_builder.build();
         Self { icing_document }
     }
@@ -210,6 +217,12 @@ impl PendingLlmViewMetadata {
             document_builder.add_int64_property(
                 EVENT_TIMESTAMP_NAME.as_bytes(),
                 timestamp_to_i64(event_timestamp),
+            );
+        }
+        if let Some(ref expired_timestamp) = memory.expired_timestamp {
+            document_builder.add_int64_property(
+                EXPIRED_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expired_timestamp),
             );
         }
         let icing_document = document_builder.build();
@@ -310,6 +323,13 @@ impl IcingMetaDatabase {
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EXPIRED_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
             );
 
         let memory_view_schema_type_builder = icing::create_schema_type_config_builder();
@@ -374,6 +394,13 @@ impl IcingMetaDatabase {
             ).add_property(
                 icing::create_property_config_builder()
                     .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EXPIRED_TIMESTAMP_NAME.as_bytes())
                     .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -720,6 +747,35 @@ impl IcingMetaDatabase {
         Ok(all_memory_ids)
     }
 
+    pub fn get_expired_memories_ids(
+        &self,
+        page_size: i32,
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<MemoryId>, PageToken)> {
+        let text_query = TextQuery {
+            match_type: MatchType::Lt as i32,
+            field: MemoryField::ExpiredTimestamp as i32,
+            value: Some(text_query::Value::TimestampVal(system_time_to_timestamp(
+                SystemTime::now(),
+            ))),
+        };
+        let (search_spec, _) = self.build_text_query_specs(&text_query, SCHMA_NAME)?;
+        let projection = Self::create_memory_id_projection(SCHMA_NAME);
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &icing::ScoringSpecProto::default(),
+            page_size,
+            page_token,
+            projection,
+        )?;
+        let ids = Self::extract_memory_ids_from_search_result(search_result.clone());
+        if ids.is_empty() {
+            Ok((ids, PageToken::Start))
+        } else {
+            Ok((ids, next_page_token))
+        }
+    }
+
     pub fn reset(&mut self) {
         self.icing_search_engine.reset();
         let schema = Self::create_schema();
@@ -952,6 +1008,7 @@ impl IcingMetaDatabase {
         let field_name = match text_query.field() {
             MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
             MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
+            MemoryField::ExpiredTimestamp => EXPIRED_TIMESTAMP_NAME,
             MemoryField::Id => MEMORY_ID_NAME,
             MemoryField::Tags => TAG_NAME,
             _ => bail!("unsupported field for text search"),
@@ -959,7 +1016,10 @@ impl IcingMetaDatabase {
 
         let query = match text_query.match_type() {
             MatchType::Equal => {
-                if field_name == CREATED_TIMESTAMP_NAME || field_name == EVENT_TIMESTAMP_NAME {
+                if field_name == CREATED_TIMESTAMP_NAME
+                    || field_name == EVENT_TIMESTAMP_NAME
+                    || field_name == EXPIRED_TIMESTAMP_NAME
+                {
                     format!("({field_name} == {value})")
                 } else {
                     format!("({field_name}:{value})")
@@ -1211,6 +1271,24 @@ impl IcingMetaDatabase {
         );
         icing::IcingGroundTruthFiles::new(self.base_dir.as_str())
     }
+}
+
+fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
+    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => {
+            let seconds = duration.as_secs() as i64;
+            let nanos = duration.subsec_nanos() as i32;
+            (seconds, nanos)
+        }
+        Err(e) => {
+            let duration = e.duration();
+            let seconds = -(duration.as_secs() as i64);
+            let nanos = -(duration.subsec_nanos() as i32);
+            (seconds, nanos)
+        }
+    };
+
+    prost_types::Timestamp { seconds, nanos }
 }
 
 #[derive(Debug, PartialEq, Eq)]

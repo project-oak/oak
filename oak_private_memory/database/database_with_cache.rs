@@ -14,6 +14,7 @@
 
 use anyhow::Context;
 use external_db_client::{BlobId, ExternalDbClient};
+use log::info;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
@@ -182,6 +183,26 @@ impl DatabaseWithCache {
             .collect();
 
         Ok((results, next_page_token))
+    }
+
+    pub async fn clean_expired_memories(&mut self) -> anyhow::Result<u64> {
+        let mut current_token = PageToken::Start;
+        let mut num_cleaned_memories: u64 = 0;
+
+        loop {
+            let (memory_ids, next_token) =
+                self.meta_db().get_expired_memories_ids(100, current_token)?;
+            info!("Deleting {} expired memories.", memory_ids.len());
+            self.delete_memories(memory_ids.clone()).await?;
+            num_cleaned_memories += memory_ids.len() as u64;
+
+            if next_token == PageToken::Start {
+                break;
+            }
+            current_token = next_token;
+        }
+
+        Ok(num_cleaned_memories)
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {

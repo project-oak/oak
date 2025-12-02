@@ -148,6 +148,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
+        "oak.private_memory.Memory.expired_timestamp",
+        "#[serde(with=\"crate::timestamp_converter\")]",
+    );
+    config.field_attribute(
         "oak.private_memory.TextQuery.value.timestamp_val",
         "#[serde(with=\"crate::non_optional_timestamp_converter\")]",
     );

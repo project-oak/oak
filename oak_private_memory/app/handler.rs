@@ -18,7 +18,7 @@ use std::sync::Arc;
 use anyhow::{bail, Context};
 use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler};
-use log::{debug, info};
+use log::{debug, info, warn};
 use metrics::{get_global_metrics, RequestMetricName};
 use oak_private_memory_database::{
     encryption::decrypt_database, DatabaseWithCache, IcingMetaDatabase, IcingTempDir, MemoryId,
@@ -335,7 +335,24 @@ impl SealedMemorySessionHandler {
             .await
             .context("Failed to setup user session context")?;
 
+        let cleanup_start_time = Instant::now();
+        self.clean_expired_memories().await.unwrap_or_else(|e| {
+            warn!("Failed to clean expired memories during key sync: {}", e);
+        });
+        let elapsed = cleanup_start_time.elapsed();
+        get_global_metrics().record_db_cleanup_latency(elapsed.as_millis() as u64);
+
         Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })
+    }
+
+    async fn clean_expired_memories(&self) -> anyhow::Result<()> {
+        info!("Cleaning up expired memories.");
+        let mut mutex_guard = self.session_context().await;
+        let database = &mut mutex_guard.as_mut().context("failed to get database")?.database;
+
+        let num_cleaned_memories = database.clean_expired_memories().await?;
+        get_global_metrics().record_db_cleanup_count(num_cleaned_memories);
+        Ok(())
     }
 
     pub async fn search_memory_handler(

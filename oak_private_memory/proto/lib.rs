@@ -303,8 +303,16 @@ vec_enum_converter!(
     unspecified_variant = crate::oak::private_memory::MemoryField::Unknown,
     doc_string = "a sequence of strings or integers representing MemoryField variants",
     element_doc_string = "a string or an integer representing a MemoryField variant",
-    valid_variants =
-        &["UNKNOWN", "ID", "TAGS", "EMBEDDINGS", "CONTENT", "CREATED_TIMESTAMP", "EVENT_TIMESTAMP"]
+    valid_variants = &[
+        "UNKNOWN",
+        "ID",
+        "TAGS",
+        "EMBEDDINGS",
+        "CONTENT",
+        "CREATED_TIMESTAMP",
+        "EVENT_TIMESTAMP",
+        "EXPIRED_TIMESTAMP"
+    ]
 );
 
 enum_converter!(

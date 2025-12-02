@@ -17,7 +17,7 @@ use std::io::Write;
 
 use env_logger::Env;
 use log::LevelFilter;
-pub use log::{debug, error, info};
+pub use log::{debug, error, info, warn};
 
 pub fn init_logging(enable_logging: bool) {
     if enable_logging {

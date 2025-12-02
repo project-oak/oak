@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::{Duration, SystemTime},
+};
 
 use client::{PrivateMemoryClient, SerializationFormat};
 use private_memory_test_utils::start_server;
@@ -351,4 +354,74 @@ fn create_test_memory(id: &str) -> Memory {
         tags: vec!["tag".to_string()],
         ..Default::default()
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_expiration() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_memory_expiration_user";
+    let format = SerializationFormat::BinaryProto;
+
+    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    let memory_expired = Memory {
+        id: "memory_expired".to_string(),
+        expired_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() - Duration::from_secs(30 * 60),
+        )),
+        ..Default::default()
+    };
+    let memory_valid = Memory {
+        id: "memory_valid".to_string(),
+        expired_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() + Duration::from_secs(30 * 60),
+        )),
+        ..Default::default()
+    };
+    let memory_no_expiration =
+        Memory { id: "memory_no_expiration".to_string(), ..Default::default() };
+
+    client.add_memory(memory_expired.clone()).await.unwrap();
+    client.add_memory(memory_valid.clone()).await.unwrap();
+    client.add_memory(memory_no_expiration.clone()).await.unwrap();
+
+    assert!(client.get_memory_by_id("memory_expired", None).await.unwrap().success);
+    assert!(client.get_memory_by_id("memory_valid", None).await.unwrap().success);
+    assert!(client.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
+
+    // Close session and wait for changes to propagate.
+    drop(client);
+    sleep(Duration::from_secs(1)).await;
+
+    // Creating a new client will trigger a key sync which will run expired memories
+    // deletion.
+    let mut client2 = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
+    assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
+    assert!(client2.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
+}
+
+fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
+    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => {
+            let seconds = duration.as_secs() as i64;
+            let nanos = duration.subsec_nanos() as i32;
+            (seconds, nanos)
+        }
+        Err(e) => {
+            let duration = e.duration();
+            let seconds = -(duration.as_secs() as i64);
+            let nanos = -(duration.subsec_nanos() as i32);
+            (seconds, nanos)
+        }
+    };
+
+    prost_types::Timestamp { seconds, nanos }
 }

@@ -118,6 +118,9 @@ message Memory {
   // set by the client. If not set, the `created_timestamp` will be
   // used.
   google.protobuf.Timestamp event_timestamp = 7;
+  // The time when the memory is considered to be expired. Should be
+  // set by the client. If not set, the memory will never expire.
+  google.protobuf.Timestamp expired_timestamp = 9;
 
   LLMViews views = 8;
 }
@@ -130,6 +133,7 @@ enum MemoryField {
   CONTENT = 4;            // The 'content' field .
   CREATED_TIMESTAMP = 5;  // The 'created_timestamp' field.
   EVENT_TIMESTAMP = 6;    // The 'event_timestamp' field.
+  EXPIRED_TIMESTAMP = 7;  // The 'expired_timestamp' field.
 }
 
 message AddMemoryRequest {
