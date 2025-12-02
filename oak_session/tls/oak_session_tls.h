@@ -26,6 +26,35 @@
 namespace oak::session::tls {
 
 class OakSessionTls;
+class OakSessionTlsInitializer;
+
+enum class OakSessionTlsMode { kClient, kServer };
+
+/**
+ * Managed an SSL Context that will be used to create Oak TLS sessions.
+ */
+class OakSessionTlsContext {
+ public:
+  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
+  CreateServerContext(absl::string_view server_key_path,
+                      absl::string_view server_cert_path);
+
+  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
+  CreateClientContext(absl::string_view server_cert_path);
+
+  // Create a new OakSessionTlsInitializer for a new session using this
+  // context's current configuration.
+  absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> NewSession();
+
+  // Create a new OakSessionTlsInitializer for a new session using an
+  // already-configured ssl_ctx.
+  OakSessionTlsContext(OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx)
+      : mode_(mode), ssl_ctx_(std::move(ssl_ctx)) {}
+
+ private:
+  OakSessionTlsMode mode_;
+  bssl::UniquePtr<SSL_CTX> ssl_ctx_;
+};
 
 /**
  * Manage the initialization state of an opening Oak Session (TLS).

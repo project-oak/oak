@@ -33,6 +33,56 @@ constexpr int kReadBufferSize = kMaxTlsFrameSize;
 
 namespace oak::session::tls {
 
+absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
+OakSessionTlsContext::CreateServerContext(absl::string_view server_key_path,
+                                          absl::string_view server_cert_path) {
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
+  std::string server_key_path_str(server_key_path);
+  std::string server_cert_path_str(server_cert_path);
+  if (!ctx) {
+    return absl::InternalError("Failed to create SSL_CTX");
+  }
+
+  if (SSL_CTX_use_PrivateKey_file(ctx.get(), server_key_path_str.c_str(),
+                                  SSL_FILETYPE_PEM) != 1) {
+    return absl::InternalError("Failed to load private key");
+  }
+
+  if (SSL_CTX_use_certificate_file(ctx.get(), server_cert_path_str.c_str(),
+                                   SSL_FILETYPE_PEM) != 1) {
+    return absl::InternalError("Failed to load certificate");
+  }
+
+  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kServer,
+                                                std::move(ctx));
+}
+
+absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
+OakSessionTlsContext::CreateClientContext(absl::string_view server_cert_path) {
+  std::string server_cert_path_str(server_cert_path);
+  bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
+  if (!ctx) {
+    return absl::InternalError("Failed to create SSL_CTX");
+  }
+
+  if (SSL_CTX_load_verify_locations(ctx.get(), server_cert_path_str.c_str(),
+                                    nullptr) != 1) {
+    return absl::InternalError("Failed to load server certificate");
+  }
+  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kClient,
+                                                std::move(ctx));
+}
+
+absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
+OakSessionTlsContext::NewSession() {
+  switch (mode_) {
+    case OakSessionTlsMode::kClient:
+      return OakSessionTlsInitializer::CreateClient(ssl_ctx_.get());
+    case OakSessionTlsMode::kServer:
+      return OakSessionTlsInitializer::CreateServer(ssl_ctx_.get());
+  }
+}
+
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
   auto ssl = bssl::UniquePtr<SSL>(SSL_new(ssl_ctx));
