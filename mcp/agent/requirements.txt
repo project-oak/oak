@@ -348,7 +348,9 @@ cryptography==45.0.7 \
     --hash=sha256:f3df7b3d0f91b88b2106031fd995802a2e9ae13e02c36c1fc075b43f420f3a17 \
     --hash=sha256:f5414a788ecc6ee6bc58560e85ca624258a55ca434884445440a810796ea0e0b \
     --hash=sha256:fa26fa54c0a9384c27fcdc905a2fb7d60ac6e47d14bc2692145f2b3b1e2cfdbd
-    # via authlib
+    # via
+    #   authlib
+    #   pyjwt
 distro==1.9.0 \
     --hash=sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed \
     --hash=sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2
@@ -1037,9 +1039,9 @@ markupsafe==3.0.2 \
     # via
     #   jinja2
     #   mako
-mcp==1.13.1 \
-    --hash=sha256:165306a8fd7991dc80334edd2de07798175a56461043b7ae907b279794a834c5 \
-    --hash=sha256:c314e7c8bd477a23ba3ef472ee5a32880316c42d03e06dcfa31a1cc7a73b65df
+mcp==1.23.0 \
+    --hash=sha256:5a645cf111ed329f4619f2629a3f15d9aabd7adc2ea09d600d31467b51ecb64f \
+    --hash=sha256:84e0c29316d0a8cf0affd196fd000487ac512aa3f771b63b2ea864e22961772b
     # via google-adk
 multidict==6.6.4 \
     --hash=sha256:01368e3c94032ba6ca0b78e7ccb099643466cf24f8dc8eefcfdc0571d56e58f9 \
@@ -1548,6 +1550,10 @@ pydantic-core==2.33.2 \
 pydantic-settings==2.10.1 \
     --hash=sha256:06f0062169818d0f5524420a360d632d5857b83cffd4d42fe29597807a1614ee \
     --hash=sha256:a60952460b99cf661dc25c29c0ef171721f98bfcb52ef8d9ea4c943d7c8cc796
+    # via mcp
+pyjwt[crypto]==2.10.1 \
+    --hash=sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953 \
+    --hash=sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb
     # via mcp
 pyparsing==3.2.3 \
     --hash=sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf \
@@ -2106,6 +2112,7 @@ typing-extensions==4.15.0 \
     #   google-cloud-aiplatform
     #   google-genai
     #   huggingface-hub
+    #   mcp
     #   openai
     #   opentelemetry-api
     #   opentelemetry-resourcedetector-gcp
@@ -2119,6 +2126,7 @@ typing-inspection==0.4.1 \
     --hash=sha256:389055682238f53b04f7badcb49b989835495a96700ced5dab2d8feae4b26f51 \
     --hash=sha256:6ae134cc0203c33377d43188d4064e9b357dba58cff3185f22924610e70a9d28
     # via
+    #   mcp
     #   pydantic
     #   pydantic-settings
 tzlocal==5.3.1 \
