@@ -34,7 +34,7 @@ use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{der::DecodePem, Certificate};
 
 use crate::{
-    jwt::{verification::report_attestation_token, Claims, Header},
+    jwt::{verification::verify_attestation_token, Claims, Header},
     policy::{verify_endorsement_wrapper, ConfidentialSpaceVerificationError},
 };
 
@@ -168,17 +168,16 @@ impl AssertionVerifier for GcpAssertionVerifier {
         }
 
         let expected_nonce = generate_nonce_from_asserted_data(asserted_data);
-        let eat_nonce = token.claims().eat_nonce.clone();
-        let token_report = report_attestation_token(
+        let eat_nonce = verify_attestation_token(
             token,
             &root_certificate,
             &verification_time,
             self.audience.clone(),
-        );
-        token_report.has_required_claims.context("checking the GCP JWT token required claims")?;
-        token_report.validity.context("checking the GCP JWT token validity period")?;
-        token_report.verification.context("checking the GCP JWT token verification status")?;
-        token_report.issuer_report.context("checking the GCP JWT token issuer root signature")?;
+        )
+        .context("verifying the JWT token")?
+        .claims()
+        .eat_nonce
+        .clone();
 
         if eat_nonce != expected_nonce {
             return Err(AssertionVerifierError::AssertedDataMismatch {
