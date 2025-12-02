@@ -25,7 +25,7 @@ use oak_attestation_verification_types::assertion_verifier::{
 use oak_proto_rust::oak::attestation::v1::{
     binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
     BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
-    ConfidentialSpaceReferenceValues,
+    ConfidentialSpaceReferenceValues, SignedEndorsement,
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
@@ -85,24 +85,20 @@ impl GcpAssertionVerifier {
         binary_reference_value: &BinaryReferenceValue,
         endorsement: &Option<ConfidentialSpaceEndorsement>,
     ) -> Result<(), AssertionVerifierError> {
-        match endorsement {
+        let signed_endorsement = match endorsement {
             Some(ci_endorsement) => match &ci_endorsement.workload_endorsement {
-                Some(signed_endorsement) => verify_endorsement_wrapper(
-                    verification_time,
-                    image_reference,
-                    signed_endorsement,
-                    binary_reference_value,
-                )
-                .context("verifying workload endorsement")?,
+                Some(signed_endorsement) => signed_endorsement,
                 None => return Err(anyhow!("missing workload endorsement").into()),
             },
-            None => {
-                return Err(anyhow!(
-                    "reference values require endorsement to be provided but none was given"
-                )
-                .into())
-            }
-        }
+            None => &SignedEndorsement::default(),
+        };
+        verify_endorsement_wrapper(
+            verification_time,
+            image_reference,
+            signed_endorsement,
+            binary_reference_value,
+        )
+        .context("verifying workload endorsement")?;
         Ok(())
     }
 }

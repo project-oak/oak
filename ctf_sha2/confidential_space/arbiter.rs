@@ -19,12 +19,20 @@ use clap::Parser;
 use jwt::{Token, Unverified};
 use log::{error, info};
 use oak_attestation_gcp::{
-    jwt::{verification::report_attestation_token, Claims, Header},
+    assertions::GcpAssertionVerifier,
+    jwt::{Claims, Header},
     CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
+use oak_attestation_verification_types::assertion_verifier::AssertionVerifier;
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
+        BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceReferenceValues,
+        Digests,
+    },
+    RawDigest,
+};
 use prost::Message;
-use sha2::{Digest, Sha256};
-use x509_cert::{der::DecodePem, Certificate};
 
 // See ctf_sha2/src/main.rs.
 const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
@@ -33,13 +41,11 @@ const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 // $ git checkout c9c0b847ea9e349ab8c8b797bab5e03d1762cb89 && \
 //       bazel run ctf_sha2:image_push
 const EXPECTED_WORKLOAD_DIGEST: &str =
-    "sha256:692ab39ff6bd177481546e39179d40b961c2b5de7959f0ee388806050ac0244c";
+    "692ab39ff6bd177481546e39179d40b961c2b5de7959f0ee388806050ac0244c";
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let root_certificate =
-        Certificate::from_pem(CONFIDENTIAL_SPACE_ROOT_CERT_PEM).map_err(anyhow::Error::msg)?;
     falsify::falsify(falsify::FalsifyArgs::parse(), |input| {
         let input = match ArbiterInput::decode(input.as_slice()) {
             Ok(input) => input,
@@ -65,63 +71,47 @@ fn main() -> anyhow::Result<()> {
             }
         };
 
-        let parsed_token =
-            match Token::<Header, Claims, Unverified>::parse_unverified(&confidential_space_jwt) {
-                Ok(parsed_token) => parsed_token,
-                Err(e) => {
-                    error!("Failed to parse JWT: {e}");
-                    return;
-                }
-            };
+        let verifier = GcpAssertionVerifier {
+            audience: OAK_CTF_SHA2_AUDIENCE.to_string(),
+            reference_values: ConfidentialSpaceReferenceValues {
+                root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_string(),
+                container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Digests(Digests {
+                        digests: vec![RawDigest {
+                            sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST).unwrap(),
+                            ..Default::default()
+                        }],
+                    })),
+                })),
+            },
+        };
 
         // Here we trust the JWT issuance timestamp. This is a bit circular, but there
         // is no obvious better alternative which results in deterministic behaviour.
-        let now = parsed_token.claims().issued_at;
-        let verified_token = match report_attestation_token(
-            parsed_token,
-            &root_certificate,
-            &now,
-            OAK_CTF_SHA2_AUDIENCE.to_string(),
-        )
-        .into_checked_token()
-        {
-            Ok(verified_token) => verified_token,
-            Err(e) => {
-                info!("Failed to verify JWT: {e}");
-                return;
-            }
-        };
+        let now = Token::<Header, Claims, Unverified>::parse_unverified(&confidential_space_jwt)
+            .unwrap()
+            .claims()
+            .issued_at;
 
-        let image_reference = match verified_token.claims().effective_reference() {
-            Ok(image_reference) => image_reference,
-            Err(e) => {
-                error!("Failed to get image reference: {e}");
-                return;
-            }
-        };
-
-        // Built at commit c9c0b847ea9e349ab8c8b797bab5e03d1762cb89:
-        // $ git checkout c9c0b847ea9e349ab8c8b797bab5e03d1762cb89 && \
-        //       bazel run ctf_sha2:image_push
-        if image_reference.digest() != Some(EXPECTED_WORKLOAD_DIGEST) {
-            info!(
-                "Unexpected workload digest: wanted {:?} but got {:?}",
-                Some(EXPECTED_WORKLOAD_DIGEST),
-                image_reference.digest()
-            );
-            return;
-        }
-        assert_ne!(
-            compute_expected_flag_digest_string(&input.flag),
-            verified_token.claims().eat_nonce
+        assert!(
+            verifier
+                .verify(
+                    &Assertion {
+                        content: ConfidentialSpaceAssertion {
+                            jwt_token: confidential_space_jwt.into(),
+                            container_image_endorsement: None,
+                        }
+                        .encode_to_vec(),
+                    },
+                    &input.flag,
+                    now,
+                )
+                .inspect_err(|e| {
+                    info!("JWT verification failed: {e:#}");
+                })
+                .is_err(),
+            "JWT verification succeeded! Claim falsified."
         );
     });
     Ok(())
-}
-
-fn compute_expected_flag_digest_string(flag: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(flag);
-    let expected_flag_digest = hasher.finalize();
-    format!("{expected_flag_digest:x}")
 }
