@@ -481,3 +481,70 @@ async fn test_get_by_id_with_expired_memories() {
         assert_eq!(get_response_no_expiration.memory.unwrap().id, no_expiration_memory_id);
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_by_tag_with_expired_memories() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_expired_memory_by_tag_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let tag = "test_expiration_tag";
+        let expired_memory_id = "expired_memory_id";
+        let non_expired_memory_id = "non_expired_memory_id";
+        let no_expiration_memory_id = "no_expiration_memory_id";
+
+        // Create a timestamp in the past for an expired memory
+        let past_time =
+            std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
+        let expired_timestamp_past = Some(system_time_to_timestamp(past_time));
+
+        // Create a timestamp in the future for a non-expired memory
+        let future_time =
+            std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
+        let expired_timestamp_future = Some(system_time_to_timestamp(future_time));
+
+        // Add an expired memory
+        let expired_memory_to_add = Memory {
+            id: expired_memory_id.to_string(),
+            tags: vec![tag.to_string()],
+            expired_timestamp: expired_timestamp_past,
+            ..Default::default()
+        };
+        client.add_memory(expired_memory_to_add).await.unwrap();
+
+        // Add a non-expired memory (expires in the future)
+        let non_expired_memory_to_add = Memory {
+            id: non_expired_memory_id.to_string(),
+            tags: vec![tag.to_string()],
+            expired_timestamp: expired_timestamp_future,
+            ..Default::default()
+        };
+        client.add_memory(non_expired_memory_to_add).await.unwrap();
+
+        // Add a memory with no expiration
+        let no_expiration_memory_to_add = Memory {
+            id: no_expiration_memory_id.to_string(),
+            tags: vec![tag.to_string()],
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        client.add_memory(no_expiration_memory_to_add).await.unwrap();
+
+        // Retrieve memories by tag
+        let response = client.get_memories(tag, 10, None, "").await.unwrap();
+
+        // Check that only non-expired memories are returned
+        assert_eq!(response.memories.len(), 2);
+        let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
+        assert!(returned_ids.contains(non_expired_memory_id));
+        assert!(returned_ids.contains(no_expiration_memory_id));
+        assert!(!returned_ids.contains(expired_memory_id));
+    }
+}

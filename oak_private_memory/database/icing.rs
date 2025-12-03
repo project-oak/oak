@@ -520,13 +520,16 @@ impl IcingMetaDatabase {
             bail!("Invalid page token provided");
         }
 
+        let query_str = build_non_expired_query_str(TAG_NAME, tag);
+
         let search_spec = icing::SearchSpecProto {
-            query: Some(tag.to_string()),
-            // Match exactly as defined in the schema for tags.
+            query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            // Match only Memory Schema.
             schema_type_filters: vec![SCHMA_NAME.to_string()],
-            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, TAG_NAME)],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
             ..Default::default()
         };
 
@@ -1942,6 +1945,55 @@ mod tests {
         // Try to retrieve the memory using the public API, it should not be found
         // because it's expired
         expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memories_by_tag_with_expiration_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let common_tag = "test_tag".to_string();
+
+        // Memory 1: Expired
+        let memory_id_expired = "memory_expired".to_string();
+        let blob_id_expired = "blob_expired".to_string();
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
+        let memory_expired = Memory {
+            id: memory_id_expired.clone(),
+            tags: vec![common_tag.clone()],
+            expired_timestamp: Some(system_time_to_timestamp(past_time)),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_expired, blob_id_expired.clone())?;
+
+        // Memory 2: Future expiration
+        let memory_id_future = "memory_future".to_string();
+        let blob_id_future = "blob_future".to_string();
+        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour from now
+        let memory_future = Memory {
+            id: memory_id_future.clone(),
+            tags: vec![common_tag.clone()],
+            expired_timestamp: Some(system_time_to_timestamp(future_time)),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_future, blob_id_future.clone())?;
+
+        // Memory 3: No expiration
+        let memory_id_no_expiry = "memory_no_expiry".to_string();
+        let blob_id_no_expiry = "blob_no_expiry".to_string();
+        let memory_no_expiry = Memory {
+            id: memory_id_no_expiry.clone(),
+            tags: vec![common_tag.clone()],
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_no_expiry, blob_id_no_expiry.clone())?;
+
+        // Retrieve memories by tag
+        let (results, _) = icing_database.get_memories_by_tag(&common_tag, 10, PageToken::Start)?;
+
+        // Assert that only non-expired memories are returned
+        assert_that!(results, unordered_elements_are![eq(&blob_id_future), eq(&blob_id_no_expiry)]);
 
         Ok(())
     }
