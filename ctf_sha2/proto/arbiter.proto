@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package oak.ctf_sha2.arbiter;
 
+import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
 
 message ArbiterInput {
@@ -39,6 +40,9 @@ message ArbiterInput {
 message AttestedSignature {
   // TEE Evidence bundle.
   oak.attestation.v1.Evidence evidence = 1;
+  // Endorsement bundle. Currently expected to only contain an AMD SEV-SNP
+  // VCEK certificate.
+  oak.attestation.v1.Endorsements endorsements = 3;
 
   // Required to be ASN.1 DER-encoded signature, signed with the TEE's
   // signing key. The signature's verifying key should be derived from

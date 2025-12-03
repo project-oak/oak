@@ -14,11 +14,6 @@
 // limitations under the License.
 //
 
-use std::{
-    convert::Infallible,
-    path::{Path, PathBuf},
-};
-
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{arbiter_input::TeeProof, ArbiterInput};
 use clap::Parser;
 use log::{error, info};
@@ -34,39 +29,14 @@ use oak_proto_rust::oak::attestation::v1::{
 use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use sha2::{Digest, Sha256};
-use x509_cert::{der::Decode, spki::EncodePublicKey, Certificate};
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[arg(long, value_parser = path_parser)]
-    vcek_cert: PathBuf,
-
-    #[clap(flatten)]
-    pub falsify_args: falsify::FalsifyArgs,
-}
-
-fn path_parser(arg_value: &str) -> Result<PathBuf, Infallible> {
-    // https://bazel.build/docs/user-manual#running-executables
-    Ok(Path::new(&std::env::var("BUILD_WORKING_DIRECTORY").unwrap_or_default()).join(arg_value))
-}
+use x509_cert::{der::Decode, spki::EncodePublicKey, time::Time, Certificate};
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { vcek_cert, falsify_args } = Args::parse();
-
-    let vcek_cert = std::fs::read(vcek_cert)?;
-    let vcek_cert_not_before = Certificate::from_der(vcek_cert.as_slice())
-        .map_err(|e| anyhow::anyhow!("failed to parse VCEK certificate: {e}"))?
-        .tbs_certificate
-        .validity
-        .not_before;
-
     let reference_values = create_reference_values();
-    let endorsements = create_endorsements(vcek_cert.clone());
 
-    falsify::falsify(falsify_args, |input_data| {
+    falsify::falsify(falsify::FalsifyArgs::parse(), |input_data| {
         let input = match ArbiterInput::decode(input_data.as_slice()) {
             Ok(input) => input,
             Err(e) => {
@@ -96,6 +66,20 @@ fn main() -> anyhow::Result<()> {
             Some(evidence) => evidence,
             None => {
                 error!("Input does not contain enclave evidence");
+                return;
+            }
+        };
+        let endorsements = match attested_signature.endorsements {
+            Some(endorsements) => endorsements,
+            None => {
+                error!("Input does not contain enclave endorsements");
+                return;
+            }
+        };
+        let vcek_cert_not_before = match vcek_cert_not_before(&endorsements) {
+            Ok(vcek_cert_not_before) => vcek_cert_not_before,
+            Err(e) => {
+                error!("Failed to compute VCEK not_before timestamp: {e}");
                 return;
             }
         };
@@ -133,6 +117,27 @@ fn main() -> anyhow::Result<()> {
         );
     });
     Ok(())
+}
+
+fn vcek_cert_not_before(endorsements: &Endorsements) -> anyhow::Result<Time> {
+    let vcek_cert = match &endorsements.r#type {
+        Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(
+            oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
+                root_layer:
+                    Some(oak_proto_rust::oak::attestation::v1::RootLayerEndorsements {
+                        tee_certificate: vcek_cert,
+                        ..
+                    }),
+                ..
+            },
+        )) => vcek_cert,
+        _ => return Err(anyhow::anyhow!("Endorsements does not contain VCEK certificate")),
+    };
+    Ok(Certificate::from_der(vcek_cert.as_slice())
+        .map_err(|e| anyhow::anyhow!("failed to parse VCEK certificate: {e}"))?
+        .tbs_certificate
+        .validity
+        .not_before)
 }
 
 fn verify_signature(public_key: &[u8], message: &[u8], signature: &[u8]) -> anyhow::Result<()> {
@@ -234,20 +239,5 @@ mod raw_digests {
 
     pub fn sha2_384(digest: &str) -> RawDigest {
         RawDigest { sha2_384: hex::decode(digest).unwrap(), ..Default::default() }
-    }
-}
-
-fn create_endorsements(vcek_cert: Vec<u8>) -> Endorsements {
-    Endorsements {
-        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(
-            oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
-                root_layer: Some(oak_proto_rust::oak::attestation::v1::RootLayerEndorsements {
-                    tee_certificate: vcek_cert,
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
-        )),
-        ..Default::default()
     }
 }

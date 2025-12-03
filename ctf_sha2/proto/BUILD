@@ -28,6 +28,7 @@ proto_library(
         "arbiter.proto",
     ],
     deps = [
+        "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
     ],
 )
