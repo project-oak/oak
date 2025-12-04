@@ -310,3 +310,79 @@ async fn test_client_keep_all_llm_views() {
         );
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_with_view_scores() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+        let memory_id = "memory_id_view_scores".to_string();
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        client.add_memory(memory).await.unwrap();
+
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                    EmbeddingQuery {
+                        embedding: vec![Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.7, 0.9, 0.0],
+                        }],
+                        ..Default::default()
+                    },
+                ),
+            ),
+        };
+
+        let response = client.search_memory(embedding_query, 10, None, "", false).await.unwrap();
+        assert_eq!(response.results.len(), 1);
+        let result = &response.results[0];
+        assert_eq!(result.memory.as_ref().unwrap().id, memory_id);
+        assert_eq!(result.view_scores, vec![0.9, 0.7]);
+        // assert the views in the memory are view1 and view2
+        let returned_view_ids = result
+            .memory
+            .as_ref()
+            .unwrap()
+            .views
+            .as_ref()
+            .unwrap()
+            .llm_views
+            .clone()
+            .into_iter()
+            .map(|v| v.id)
+            .collect::<Vec<String>>();
+        assert_eq!(returned_view_ids, vec!["view2".to_string(), "view1".to_string()]);
+    }
+}

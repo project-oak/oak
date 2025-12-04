@@ -168,7 +168,13 @@ impl DatabaseWithCache {
                 if !request.keep_all_llm_views {
                     let view_ids = item.view_ids;
                     if let Some(views) = memory.views.as_mut() {
-                        views.llm_views.retain(|v| view_ids.contains(&v.id));
+                        let mut ordered_views = Vec::new();
+                        for view_id in view_ids {
+                            if let Some(view) = views.llm_views.iter().find(|v| v.id == view_id) {
+                                ordered_views.push(view.clone());
+                            }
+                        }
+                        views.llm_views = ordered_views;
                     }
                 }
                 SearchMemoryResultItem { memory: Some(memory), score, view_scores }
