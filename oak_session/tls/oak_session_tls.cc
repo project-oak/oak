@@ -34,22 +34,22 @@ constexpr int kReadBufferSize = kMaxTlsFrameSize;
 namespace oak::session::tls {
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::CreateServerContext(absl::string_view server_key_path,
-                                          absl::string_view server_cert_path) {
+OakSessionTlsContext::CreateServerContext(absl::string_view server_key_asn1,
+                                          absl::string_view server_cert_asn1) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
-  std::string server_key_path_str(server_key_path);
-  std::string server_cert_path_str(server_cert_path);
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
-  if (SSL_CTX_use_PrivateKey_file(ctx.get(), server_key_path_str.c_str(),
-                                  SSL_FILETYPE_PEM) != 1) {
+  if (SSL_CTX_use_RSAPrivateKey_ASN1(
+          ctx.get(), reinterpret_cast<const uint8_t*>(server_key_asn1.data()),
+          server_key_asn1.size()) != 1) {
     return absl::InternalError("Failed to load private key");
   }
 
-  if (SSL_CTX_use_certificate_file(ctx.get(), server_cert_path_str.c_str(),
-                                   SSL_FILETYPE_PEM) != 1) {
+  if (SSL_CTX_use_certificate_ASN1(
+          ctx.get(), server_cert_asn1.size(),
+          reinterpret_cast<const uint8_t*>(server_cert_asn1.data())) != 1) {
     return absl::InternalError("Failed to load certificate");
   }
 
@@ -58,16 +58,17 @@ OakSessionTlsContext::CreateServerContext(absl::string_view server_key_path,
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::CreateClientContext(absl::string_view server_cert_path) {
-  std::string server_cert_path_str(server_cert_path);
+OakSessionTlsContext::CreateClientContext(
+    absl::string_view server_trust_anchor_path) {
+  std::string server_trust_anchor_path_str(server_trust_anchor_path);
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
-  if (SSL_CTX_load_verify_locations(ctx.get(), server_cert_path_str.c_str(),
-                                    nullptr) != 1) {
-    return absl::InternalError("Failed to load server certificate");
+  if (SSL_CTX_load_verify_locations(
+          ctx.get(), server_trust_anchor_path_str.c_str(), nullptr) != 1) {
+    return absl::InternalError("Failed to load trust anchor for client");
   }
   return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kClient,
                                                 std::move(ctx));

@@ -27,12 +27,20 @@ namespace {
 using ::absl_testing::IsOk;
 using ::testing::Eq;
 
+absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path);
+absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path);
+
 constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/server.key";
 constexpr char kTestServerCertPath[] = "oak_session/tls/testing/server.pem";
 
 TEST(OakSessionTlsTest, CreateAndUseSession) {
-  auto server_ctx = OakSessionTlsContext::CreateServerContext(
-      kTestServerKeyPath, kTestServerCertPath);
+  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  ASSERT_THAT(server_key, IsOk());
+  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  ASSERT_THAT(server_cert, IsOk());
+
+  auto server_ctx =
+      OakSessionTlsContext::CreateServerContext(*server_key, *server_cert);
   ASSERT_THAT(server_ctx, IsOk());
 
   auto client_ctx =
@@ -80,6 +88,63 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
       (*client_session)->Decrypt(*encrypted_server_message);
   ASSERT_THAT(decrypted_server_message, IsOk());
   ASSERT_THAT(*decrypted_server_message, Eq(server_message));
+}
+
+absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path) {
+  FILE* file = fopen(key_path, "r");
+  if (file == nullptr) {
+    return absl::InternalError("Failed to open private key file");
+  }
+  bssl::UniquePtr<EVP_PKEY> pkey(
+      PEM_read_PrivateKey(file, nullptr, nullptr, nullptr));
+  fclose(file);
+  if (pkey == nullptr) {
+    return absl::InternalError("Failed to read private key from file");
+  }
+
+  int der_len = i2d_PrivateKey(pkey.get(), NULL);
+  if (der_len < 0) {
+    return absl::InternalError("Failed to get DER length from certificate");
+  }
+
+  std::string pkey_der;
+  pkey_der.resize(der_len);
+  unsigned char* p = reinterpret_cast<unsigned char*>(pkey_der.data());
+
+  der_len = i2d_PrivateKey(pkey.get(), &p);
+  if (der_len < 0) {
+    return absl::InternalError("Failed to convert certificate to DER");
+  }
+
+  return pkey_der;
+}
+
+absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path) {
+  FILE* file = fopen(cert_path, "r");
+  if (file == nullptr) {
+    return absl::InternalError("Failed to open certificate file");
+  }
+  bssl::UniquePtr<X509> cert(PEM_read_X509(file, nullptr, nullptr, nullptr));
+  fclose(file);
+  if (cert == nullptr) {
+    return absl::InternalError("Failed to read certificate from file");
+  }
+
+  int der_len = i2d_X509(cert.get(), nullptr);
+  if (der_len < 0) {
+    return absl::InternalError("Failed to get DER length from certificate");
+  }
+
+  std::string cert_der;
+  cert_der.resize(der_len);
+  unsigned char* p = reinterpret_cast<unsigned char*>(cert_der.data());
+
+  der_len = i2d_X509(cert.get(), &p);
+  if (der_len < 0) {
+    return absl::InternalError("Failed to convert certificate to DER");
+  }
+
+  return cert_der;
 }
 
 }  // namespace

@@ -36,11 +36,15 @@ enum class OakSessionTlsMode { kClient, kServer };
 class OakSessionTlsContext {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-  CreateServerContext(absl::string_view server_key_path,
-                      absl::string_view server_cert_path);
+  // Create a new server context using the provided private key and certificate,
+  // both provided as raw ASN1 bytes. The server key should be an RSA key.
+  CreateServerContext(absl::string_view server_key_asn1,
+                      absl::string_view server_cert_asn1);
 
+  // Create a new client context that will verify the server using the provided
+  // trust anchor.
   static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-  CreateClientContext(absl::string_view server_cert_path);
+  CreateClientContext(absl::string_view server_trust_anchor_path);
 
   // Create a new OakSessionTlsInitializer for a new session using this
   // context's current configuration.
