@@ -24,6 +24,7 @@ use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_proto_rust::oak::{
     attestation::v1::{Assertion, Endorsements, Evidence},
     session::v1::{
+        session_request::Request, session_response::Response, AttestRequest, AttestResponse,
         EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
     },
 };
@@ -33,7 +34,10 @@ use oak_session::{
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    session::{AttestationEvidence, AttestationPublisher, DEFAULT_MAX_MESSAGE_QUEUE_LEN},
+    session::{
+        AttestationEvidence, AttestationPublisher, DEFAULT_MAX_ATTESTATION_SIZE,
+        DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+    },
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
 use oak_session_testing::{
@@ -947,6 +951,59 @@ fn test_server_incoming_message_queue_fails_when_exceeded() -> anyhow::Result<()
         .expect("An error occurred while getting the client outgoing message")
         .expect("No client outgoing message was produced");
     assert_that!(server_session.put_incoming_message(encrypted_message), err(anything()));
+
+    Ok(())
+}
+
+#[googletest::test]
+fn client_fails_when_attest_message_size_limit_exceeded() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_assertion_verifier(
+                "0".to_string(),
+                create_passing_mock_session_key_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .build();
+    let mut client_session = ClientSession::create(client_config)?;
+
+    let mut large_attest_message = AttestResponse { ..Default::default() };
+    for i in 0..DEFAULT_MAX_ATTESTATION_SIZE {
+        large_attest_message.assertions.insert(i.to_string(), Assertion { content: "test".into() });
+    }
+    client_session.get_outgoing_message()?;
+    assert_that!(
+        client_session.put_incoming_message(SessionResponse {
+            response: Some(Response::AttestResponse(large_attest_message))
+        }),
+        err(anything())
+    );
+
+    Ok(())
+}
+
+#[googletest::test]
+fn server_fails_when_attest_message_size_limit_exceeded() -> anyhow::Result<()> {
+    let server_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_assertion_verifier(
+                "0".to_string(),
+                create_passing_mock_session_key_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .build();
+    let mut server_session = ServerSession::create(server_config)?;
+
+    let mut large_attest_message = AttestRequest { ..Default::default() };
+    for i in 0..DEFAULT_MAX_ATTESTATION_SIZE {
+        large_attest_message.assertions.insert(i.to_string(), Assertion { content: "test".into() });
+    }
+    assert_that!(
+        server_session.put_incoming_message(SessionRequest {
+            request: Some(Request::AttestRequest(large_attest_message))
+        }),
+        err(anything())
+    );
 
     Ok(())
 }
