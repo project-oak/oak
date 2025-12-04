@@ -16,7 +16,7 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -77,5 +77,18 @@ rust_binary(
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
+    ],
+)
+
+rust_test(
+    name = "arbiter_tests",
+    crate = ":arbiter",
+    deps = [
+        "//oak_time",
+        "//oak_time:oak_time_std",
+        "@oak_crates_index//:base64",
+        "@oak_crates_index//:jwt",
+        "@oak_crates_index//:openssl",
+        "@oak_crates_index//:sha2",
     ],
 )
