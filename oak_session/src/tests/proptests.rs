@@ -19,6 +19,6 @@ use proptest::prelude::*;
 proptest! {
     #[test]
     fn test_unattested_nn_encryption_and_decryption(message: Vec<u8>) {
-        oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(message)
+        oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(message).expect("Testing test_unattested_nn_encryption_and_decryption_inner")
     }
 }

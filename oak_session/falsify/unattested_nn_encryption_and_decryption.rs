@@ -17,6 +17,8 @@ use clap::Parser;
 fn main() {
     falsify::falsify(
         falsify::FalsifyArgs::parse(),
-        oak_session_testing::test_unattested_nn_encryption_and_decryption_inner,
+        |input| -> Result<(), Box<dyn std::error::Error>> {
+            Ok(oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(input)?)
+        },
     );
 }

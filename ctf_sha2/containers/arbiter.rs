@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
+use anyhow::{anyhow, Context};
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{arbiter_input::TeeProof, ArbiterInput};
 use clap::Parser;
-use log::{error, info};
+use log::info;
 use oak_attestation_verification::verifier::verify;
 use oak_proto_rust::oak::attestation::v1::{
     binary_reference_value, kernel_binary_reference_value, reference_values,
@@ -31,92 +32,68 @@ use prost::Message;
 use sha2::{Digest, Sha256};
 use x509_cert::{der::Decode, spki::EncodePublicKey, time::Time, Certificate};
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     env_logger::init();
 
     let reference_values = create_reference_values();
 
-    falsify::falsify(falsify::FalsifyArgs::parse(), |input_data| {
-        let input = match ArbiterInput::decode(input_data.as_slice()) {
-            Ok(input) => input,
-            Err(e) => {
-                error!("Input failed to decode: {e}");
-                return;
-            }
-        };
+    falsify::falsify(
+        falsify::FalsifyArgs::parse(),
+        |input| -> Result<(), Box<dyn std::error::Error>> {
+            let input = ArbiterInput::decode(input.as_slice())?;
+            let tee_proof = input.tee_proof.context("Input does not contain tee_proof")?;
+            let attested_signature = match tee_proof {
+                TeeProof::AttestedSignature(attested_signature) => Ok(attested_signature),
+                _ => Err(anyhow!("Input does not contain attested_signature")),
+            }?;
 
-        let tee_proof = match input.tee_proof {
-            Some(tee_proof) => tee_proof,
-            None => {
-                error!("Input does not contain tee_proof");
-                return;
-            }
-        };
+            // Verify Evidence
+            let evidence =
+                attested_signature.evidence.context("Input does not contain enclave evidence")?;
+            let endorsements = attested_signature
+                .endorsements
+                .context("Input does not contain enclave endorsements")?;
+            let vcek_cert_not_before = vcek_cert_not_before(&endorsements)?;
 
-        let attested_signature = match tee_proof {
-            TeeProof::AttestedSignature(attested_signature) => attested_signature,
-            _ => {
-                error!("Input does not contain attested_signature");
-                return;
-            }
-        };
+            let extracted = match verify(
+                // Here we trust the VCEK "not before" timestamp. This is not ideal because (if the
+                // cert is somehow forged by an attacker) then it is not trustworthy.
+                // However, there is no obvious better alternative which results in
+                // deterministic behaviour.
+                vcek_cert_not_before.to_unix_duration().as_millis() as i64,
+                &evidence,
+                &endorsements,
+                &reference_values,
+            ) {
+                Ok(extracted) => extracted,
+                Err(e) => {
+                    // Log and return Ok because this is not an `InputError`, this is a failed
+                    // falsification attempt.
+                    info!("Enclave evidence verification failed: {e:#}");
+                    return Ok(());
+                }
+            };
 
-        // Verify Evidence
-        let evidence = match attested_signature.evidence {
-            Some(evidence) => evidence,
-            None => {
-                error!("Input does not contain enclave evidence");
-                return;
-            }
-        };
-        let endorsements = match attested_signature.endorsements {
-            Some(endorsements) => endorsements,
-            None => {
-                error!("Input does not contain enclave endorsements");
-                return;
-            }
-        };
-        let vcek_cert_not_before = match vcek_cert_not_before(&endorsements) {
-            Ok(vcek_cert_not_before) => vcek_cert_not_before,
-            Err(e) => {
-                error!("Failed to compute VCEK not_before timestamp: {e}");
-                return;
-            }
-        };
+            // Verify signature over expected flag digest
+            let mut hasher = Sha256::new();
+            hasher.update(&input.flag);
+            let expected_digest = hasher.finalize();
+            assert!(
+                verify_signature(
+                    &extracted.signing_public_key,
+                    &expected_digest,
+                    &attested_signature.signature,
+                )
+                .inspect_err(|e| {
+                    info!("Enclave signature verification failed: {e:#}");
+                })
+                .is_err(),
+                "Signature verification succeeded! Claim falsified."
+            );
 
-        let extracted = match verify(
-            // Here we trust the VCEK "not before" timestamp. This is a bit circular, but there
-            // is no obvious better alternative which results in deterministic behaviour.
-            vcek_cert_not_before.to_unix_duration().as_millis() as i64,
-            &evidence,
-            &endorsements,
-            &reference_values,
-        ) {
-            Ok(extracted) => extracted,
-            Err(e) => {
-                info!("Enclave evidence verification failed: {e:#}");
-                return;
-            }
-        };
-
-        // Verify signature over expected flag digest
-        let mut hasher = Sha256::new();
-        hasher.update(&input.flag);
-        let expected_digest = hasher.finalize();
-        assert!(
-            verify_signature(
-                &extracted.signing_public_key,
-                &expected_digest,
-                &attested_signature.signature,
-            )
-            .inspect_err(|e| {
-                info!("Enclave signature verification failed: {e:#}");
-            })
-            .is_err(),
-            "Signature verification succeeded! Claim falsified."
-        );
-    });
-    Ok(())
+            Ok(())
+        },
+    );
 }
 
 fn vcek_cert_not_before(endorsements: &Endorsements) -> anyhow::Result<Time> {

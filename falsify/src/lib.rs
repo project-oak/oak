@@ -52,8 +52,10 @@ fn path_parser(arg_value: &str) -> Result<PathBuf, Infallible> {
 pub enum Status {
     // The claim was not falsified.
     NotFalsified,
-    // There was an error setting up the falsification harness.
-    SetupError { error_message: String },
+    // There was an error due to some malformed input.
+    InputError { error_message: String },
+    // The claim returned an error.
+    ClaimError { error_message: String },
     // The claim was falsified.
     Falsified,
 }
@@ -86,10 +88,11 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 /// The `claim` fn is executed in a separate panic-catching scope.
 ///
 /// - If `claim` panics, the test is considered [`Status::Falsified`].
-/// - If `claim` completes without panicking, the test is
+/// - If `claim` completes successfully without panicking, the test is
 ///   [`Status::NotFalsified`].
+/// - If `claim` returns an error, the test results in a [`Status::ClaimError`].
 /// - If there is an error reading the input file, the test results in a
-///   [`Status::SetupError`].
+///   [`Status::InputError`].
 ///
 /// The result is serialized as a [`FalsifyResult`] struct into the specified
 /// TOML output file.
@@ -100,21 +103,26 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 /// cannot write to the output file.
 pub fn falsify<F>(args: FalsifyArgs, claim: F)
 where
-    F: FnOnce(Vec<u8>) + panic::UnwindSafe,
+    F: FnOnce(Vec<u8>) -> Result<(), Box<dyn std::error::Error>> + panic::UnwindSafe,
 {
     let result = match get_input_bytes(&args.input_file) {
         Ok(input_bytes) => {
-            let panic_result = panic::catch_unwind(|| {
-                claim(input_bytes);
-            });
+            let panic_result = panic::catch_unwind(|| claim(input_bytes));
 
             match panic_result {
-                Ok(()) => FalsifyResult { status: Status::NotFalsified },
+                Ok(inner_result) => match inner_result {
+                    Ok(_) => FalsifyResult { status: Status::NotFalsified },
+                    Err(e) => FalsifyResult {
+                        status: Status::ClaimError {
+                            error_message: format!("Claim returned an error: {}", e),
+                        },
+                    },
+                },
                 Err(_) => FalsifyResult { status: Status::Falsified },
             }
         }
         Err(err) => FalsifyResult {
-            status: Status::SetupError {
+            status: Status::InputError {
                 error_message: format!(
                     "Could not read input file: {}\nError: {}",
                     args.input_file.display(),

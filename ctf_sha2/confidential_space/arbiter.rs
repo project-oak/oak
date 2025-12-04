@@ -14,10 +14,11 @@
 
 #![feature(try_blocks)]
 
+use anyhow::{anyhow, Context};
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{arbiter_input::TeeProof, ArbiterInput};
 use clap::Parser;
 use jwt::{Token, Unverified};
-use log::{error, info};
+use log::info;
 use oak_attestation_gcp::{
     assertions::GcpAssertionVerifier,
     jwt::{Claims, Header},
@@ -43,75 +44,69 @@ const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
 const EXPECTED_WORKLOAD_DIGEST: &str =
     "692ab39ff6bd177481546e39179d40b961c2b5de7959f0ee388806050ac0244c";
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     env_logger::init();
 
-    falsify::falsify(falsify::FalsifyArgs::parse(), |input| {
-        let input = match ArbiterInput::decode(input.as_slice()) {
-            Ok(input) => input,
-            Err(e) => {
-                error!("Input failed to decode: {e}");
-                return;
-            }
-        };
+    falsify::falsify(
+        falsify::FalsifyArgs::parse(),
+        |input| -> Result<(), Box<dyn std::error::Error>> {
+            let input = ArbiterInput::decode(input.as_slice())?;
+            let tee_proof = input.tee_proof.context("Input does not contain tee_proof")?;
+            let confidential_space_jwt = match tee_proof {
+                TeeProof::ConfidentialSpaceJwt(confidential_space_jwt) => {
+                    Ok(confidential_space_jwt)
+                }
+                _ => Err(anyhow!("Input does not contain confidential_space_jwt")),
+            }?;
 
-        let tee_proof = match input.tee_proof {
-            Some(tee_proof) => tee_proof,
-            None => {
-                error!("Input does not contain tee_proof");
-                return;
-            }
-        };
+            let verifier = GcpAssertionVerifier {
+                audience: OAK_CTF_SHA2_AUDIENCE.to_string(),
+                reference_values: ConfidentialSpaceReferenceValues {
+                    root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_string(),
+                    container_image: Some(ContainerImage::ImageReferenceValue(
+                        BinaryReferenceValue {
+                            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                                digests: vec![RawDigest {
+                                    sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST).unwrap(),
+                                    ..Default::default()
+                                }],
+                            })),
+                        },
+                    )),
+                },
+            };
 
-        let confidential_space_jwt = match tee_proof {
-            TeeProof::ConfidentialSpaceJwt(confidential_space_jwt) => confidential_space_jwt,
-            _ => {
-                error!("Input does not contain confidential_space_jwt");
-                return;
-            }
-        };
+            // Here we trust the JWT issuance timestamp. This is not ideal because (if the
+            // JWT is somehow forged by an attacker) then it is not trustworthy.
+            // However, there is no obvious better alternative which results in
+            // deterministic behaviour.
+            let now =
+                Token::<Header, Claims, Unverified>::parse_unverified(&confidential_space_jwt)
+                    .unwrap()
+                    .claims()
+                    .issued_at;
 
-        let verifier = GcpAssertionVerifier {
-            audience: OAK_CTF_SHA2_AUDIENCE.to_string(),
-            reference_values: ConfidentialSpaceReferenceValues {
-                root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_string(),
-                container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
-                    r#type: Some(binary_reference_value::Type::Digests(Digests {
-                        digests: vec![RawDigest {
-                            sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST).unwrap(),
-                            ..Default::default()
-                        }],
-                    })),
-                })),
-            },
-        };
+            assert!(
+                verifier
+                    .verify(
+                        &Assertion {
+                            content: ConfidentialSpaceAssertion {
+                                jwt_token: confidential_space_jwt.into(),
+                                container_image_endorsement: None,
+                            }
+                            .encode_to_vec(),
+                        },
+                        &input.flag,
+                        now,
+                    )
+                    .inspect_err(|e| {
+                        info!("JWT verification failed: {e:#}");
+                    })
+                    .is_err(),
+                "JWT verification succeeded! Claim falsified."
+            );
 
-        // Here we trust the JWT issuance timestamp. This is a bit circular, but there
-        // is no obvious better alternative which results in deterministic behaviour.
-        let now = Token::<Header, Claims, Unverified>::parse_unverified(&confidential_space_jwt)
-            .unwrap()
-            .claims()
-            .issued_at;
-
-        assert!(
-            verifier
-                .verify(
-                    &Assertion {
-                        content: ConfidentialSpaceAssertion {
-                            jwt_token: confidential_space_jwt.into(),
-                            container_image_endorsement: None,
-                        }
-                        .encode_to_vec(),
-                    },
-                    &input.flag,
-                    now,
-                )
-                .inspect_err(|e| {
-                    info!("JWT verification failed: {e:#}");
-                })
-                .is_err(),
-            "JWT verification succeeded! Claim falsified."
-        );
-    });
-    Ok(())
+            Ok(())
+        },
+    );
 }

@@ -77,32 +77,36 @@ pub enum HandshakeFollowup {
 // the `proptest!` macro. It is separated out to allow it to be reused as part
 // of a future binary or test that will be tied to falsifiable claims expressed
 // as Oak Transparent Release Endorsements.
-pub fn test_unattested_nn_encryption_and_decryption_inner(message: Vec<u8>) {
+pub fn test_unattested_nn_encryption_and_decryption_inner(message: Vec<u8>) -> anyhow::Result<()> {
     let client_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
     let server_config =
         SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build();
 
-    let mut client_session = ClientSession::create(client_config).unwrap();
-    let mut server_session = ServerSession::create(server_config).unwrap();
+    let mut client_session = ClientSession::create(client_config)?;
+    let mut server_session = ServerSession::create(server_config)?;
 
-    do_attest(&mut client_session, &mut server_session).unwrap();
+    do_attest(&mut client_session, &mut server_session)?;
 
-    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected).unwrap();
+    do_handshake(&mut client_session, &mut server_session, HandshakeFollowup::NotExpected)?;
 
     // Test client to server communication.
-    client_session.write(PlaintextMessage { plaintext: message.clone() }).unwrap();
-    let encrypted_request = client_session.get_outgoing_message().unwrap().unwrap();
-    server_session.put_incoming_message(encrypted_request).unwrap();
-    let decrypted_request = server_session.read().unwrap().unwrap();
+    client_session.write(PlaintextMessage { plaintext: message.clone() })?;
+    let encrypted_request =
+        client_session.get_outgoing_message()?.context("No outgoing message")?;
+    server_session.put_incoming_message(encrypted_request)?;
+    let decrypted_request = server_session.read()?.context("No incoming message")?;
     assert_eq!(decrypted_request.plaintext, message);
 
     // Test server to client communication.
-    server_session.write(PlaintextMessage { plaintext: message.clone() }).unwrap();
-    let encrypted_response = server_session.get_outgoing_message().unwrap().unwrap();
-    client_session.put_incoming_message(encrypted_response).unwrap();
-    let decrypted_response = client_session.read().unwrap().unwrap();
+    server_session.write(PlaintextMessage { plaintext: message.clone() })?;
+    let encrypted_response =
+        server_session.get_outgoing_message()?.context("No outgoing message")?;
+    client_session.put_incoming_message(encrypted_response)?;
+    let decrypted_response = client_session.read()?.context("No incoming message")?;
     assert_eq!(decrypted_response.plaintext, message);
+
+    Ok(())
 }
 
 pub fn test_verifier_success(
