@@ -50,10 +50,55 @@ use crate::{
     IntelTdxPolicy,
 };
 
-/// Attestation verifier that verifies an attestation rooted in AMD SEV-SNP.
-pub struct AmdSevSnpDiceAttestationVerifier {
+// Base AMD SEV-SNP verifier that validates AMD SEV-SNP platform authenticity
+// and configuration and the firmware measurement.
+// TODO: b/452736849 - Utilize the `BaseAmdSevSnpVerifier` for the transparent
+// attestation verifier.
+struct BaseAmdSevSnpVerifier {
     platform_policy: AmdSevSnpPolicy,
     firmware_policy: Box<dyn EventPolicy>,
+}
+
+impl BaseAmdSevSnpVerifier {
+    fn verify_platform(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+        verification_time: Instant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        // Verify AMD SEV-SNP platform authenticity and configuration.
+        let root_layer = evidence.root_layer.as_ref().context("no root layer in evidence")?;
+        let platform_endorsement =
+            endorsements.platform.as_ref().context("no platform endorsement")?;
+        let platform_results = self
+            .platform_policy
+            .verify(verification_time, root_layer, platform_endorsement)
+            .context("verifying platform policy")?;
+        Ok(platform_results)
+    }
+
+    fn verify_firmware(
+        &self,
+        endorsements: &Endorsements,
+        platform_results: &EventAttestationResults,
+        verification_time: Instant,
+    ) -> anyhow::Result<EventAttestationResults> {
+        // Verify firmware measurement.
+        let firmware_endorsement =
+            &endorsements.initial.as_ref().context("no firmware endorsement")?;
+        let measurement = get_initial_measurement(platform_results)
+            .ok_or(anyhow::anyhow!("no initial measurement"))?;
+        let firmware_results = self
+            .firmware_policy
+            .verify(verification_time, measurement, firmware_endorsement)
+            .context("verifying firmware policy")?;
+        Ok(firmware_results)
+    }
+}
+
+/// Attestation verifier that verifies an attestation rooted in AMD SEV-SNP.
+pub struct AmdSevSnpDiceAttestationVerifier {
+    base_verifier: BaseAmdSevSnpVerifier,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
 }
@@ -65,7 +110,8 @@ impl AmdSevSnpDiceAttestationVerifier {
         event_policies: Vec<Box<dyn EventPolicy>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
-        Self { platform_policy, firmware_policy, event_policies, clock }
+        let base_verifier = BaseAmdSevSnpVerifier { platform_policy, firmware_policy };
+        Self { base_verifier, event_policies, clock }
     }
 }
 
@@ -79,13 +125,9 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
     ) -> anyhow::Result<AttestationResults> {
         let verification_time = self.clock.get_time();
 
-        // Verify AMD SEV-SNP platform authenticity and configuration.
-        let root_layer = evidence.root_layer.as_ref().context("no root layer in evidence")?;
-        let platform_endorsement =
-            endorsements.platform.as_ref().context("no platform endorsement")?;
         let platform_results = self
-            .platform_policy
-            .verify(verification_time, root_layer, platform_endorsement)
+            .base_verifier
+            .verify_platform(evidence, endorsements, verification_time)
             .context("verifying platform policy")?;
 
         // Verify DICE chain integrity.
@@ -93,14 +135,9 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // is not used to sign anything.
         let _ = verify_dice_chain(evidence).context("verifying DICE chain")?;
 
-        // Verify firmware measurement.
-        let firmware_endorsement =
-            &endorsements.initial.as_ref().context("no firmware endorsement")?;
-        let measurement = get_initial_measurement(&platform_results)
-            .ok_or(anyhow::anyhow!("no initial measurement"))?;
         let firmware_results = self
-            .firmware_policy
-            .verify(verification_time, measurement, firmware_endorsement)
+            .base_verifier
+            .verify_firmware(endorsements, &platform_results, verification_time)
             .context("verifying firmware policy")?;
 
         // Verify event log and event endorsements with corresponding policies.
