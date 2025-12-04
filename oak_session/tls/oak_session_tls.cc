@@ -38,8 +38,7 @@ OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
   auto ssl = bssl::UniquePtr<SSL>(SSL_new(ssl_ctx));
   if (!ssl) {
     // TODO: b/448338977 - can we get more error details?
-    return absl::FailedPreconditionError(
-        absl::StrFormat("Failed to create SSL instance"));
+    return absl::FailedPreconditionError("Failed to create SSL instance");
   }
 
   // Enable the BIO API for this SSL instance.
@@ -108,12 +107,9 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
   int write_result = BIO_write(bio_read_, tlsFrame.data(), tlsFrame.size());
 
   if (write_result <= 0) {
-    int err = SSL_get_error(ssl_.get(), write_result);
-    return absl::InternalError(
-        absl::StrFormat("Failed to write TLS frame to BIO: %d", err));
+    return absl::InternalError("Failed to write TLS frame to BIO");
   }
 
-  std::cout << "Continuing handshake..." << std::endl;
   int ret = SSL_do_handshake(ssl_.get());
   if (ret < 0) {
     int err = SSL_get_error(ssl_.get(), ret);
@@ -137,8 +133,6 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
             "Failed to read plaintext message from SSL: %d", err));
       }
     } else {
-      std::cout << "Handshake complete with " << read_result
-                << " bytes pending." << std::endl;
       initial_data_.append(buf, read_result);
     }
   }
@@ -150,15 +144,8 @@ absl::StatusOr<std::string> OakSessionTlsInitializer::GetTLSFrame() {
   char buf[kReadBufferSize];
   int read_result = BIO_read(bio_write_, buf, sizeof(buf));
 
-  std::cout << "BIO READ RESULT: " << read_result << std::endl;
   if (read_result < 0) {
-    int err = SSL_get_error(ssl_.get(), read_result);
-    if (err == SSL_ERROR_SYSCALL) {
-      return absl::InternalError(
-          absl::StrFormat("Syscall error reading from BIO: %d", errno));
-    }
-    return absl::InternalError(
-        absl::StrFormat("Failed to read TLS frame from BIO: %d", err));
+    return absl::InternalError("Failed to read TLS frame from BIO");
   }
 
   return std::string(buf, read_result);
@@ -200,9 +187,7 @@ absl::StatusOr<std::string> OakSessionTls::Encrypt(
   int read_result = BIO_read(bio_write_, buf, sizeof(buf));
 
   if (read_result < 0) {
-    int err = SSL_get_error(ssl_.get(), read_result);
-    return absl::InternalError(
-        absl::StrFormat("Failed to read TLS frame from BIO: %d", err));
+    return absl::InternalError("Failed to read TLS frame from BIO");
   }
 
   return std::string(buf, read_result);
@@ -213,9 +198,7 @@ absl::StatusOr<std::string> OakSessionTls::Decrypt(
   int write_result = BIO_write(bio_read_, tls_frame.data(), tls_frame.size());
 
   if (write_result <= 0) {
-    int err = SSL_get_error(ssl_.get(), write_result);
-    return absl::InternalError(
-        absl::StrFormat("Failed to write TLS frame to BIO: %d", err));
+    return absl::InternalError("Failed to write TLS frame to BIO");
   }
 
   char buf[kReadBufferSize];
