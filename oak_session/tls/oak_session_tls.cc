@@ -33,6 +33,11 @@ constexpr int kReadBufferSize = kMaxTlsFrameSize;
 
 namespace oak::session::tls {
 
+namespace {
+absl::StatusOr<std::string> BioReadAll(BIO* bio);
+absl::StatusOr<std::string> SslReadAll(SSL* ssl);
+}  // namespace
+
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
 OakSessionTlsContext::CreateServerContext(absl::string_view server_key_asn1,
                                           absl::string_view server_cert_asn1) {
@@ -174,18 +179,12 @@ absl::Status OakSessionTlsInitializer::PutTLSFrame(absl::string_view tlsFrame) {
   }
 
   if (SSL_is_init_finished(ssl_.get())) {
-    // Empty SSL_read to update internal state for pending.
-    char buf[kReadBufferSize];
-    int read_result = SSL_read(ssl_.get(), buf, sizeof(buf));
-    if (read_result < 0) {
-      int err = SSL_get_error(ssl_.get(), read_result);
-      if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
-        return absl::InternalError(absl::StrFormat(
-            "Failed to read plaintext message from SSL: %d", err));
-      }
-    } else {
-      initial_data_.append(buf, read_result);
+    auto initial_data = SslReadAll(ssl_.get());
+
+    if (!initial_data.ok()) {
+      return initial_data.status();
     }
+    initial_data_ = std::move(*initial_data);
   }
 
   return absl::OkStatus();
@@ -217,6 +216,7 @@ OakSessionTlsInitializer::GetOpenClientSession() {
 
   auto session = absl::WrapUnique(
       new OakSessionTls(std::move(ssl_), bio_read_, bio_write_));
+
   bio_read_ = nullptr;
   bio_write_ = nullptr;
 
@@ -234,14 +234,7 @@ absl::StatusOr<std::string> OakSessionTls::Encrypt(
         absl::StrFormat("Failed to write plaintext message to SSL: %d", err));
   }
 
-  char buf[kReadBufferSize];
-  int read_result = BIO_read(bio_write_, buf, sizeof(buf));
-
-  if (read_result < 0) {
-    return absl::InternalError("Failed to read TLS frame from BIO");
-  }
-
-  return std::string(buf, read_result);
+  return BioReadAll(bio_write_);
 }
 
 absl::StatusOr<std::string> OakSessionTls::Decrypt(
@@ -252,16 +245,52 @@ absl::StatusOr<std::string> OakSessionTls::Decrypt(
     return absl::InternalError("Failed to write TLS frame to BIO");
   }
 
-  char buf[kReadBufferSize];
-  int read_result = SSL_read(ssl_.get(), buf, sizeof(buf));
-
-  if (read_result < 0) {
-    int err = SSL_get_error(ssl_.get(), read_result);
-    return absl::InternalError(
-        absl::StrFormat("Failed to read plaintext message from SSL: %d", err));
-  }
-
-  return std::string(buf, read_result);
+  return SslReadAll(ssl_.get());
 }
 
+namespace {
+
+absl::StatusOr<std::string> BioReadAll(BIO* bio) {
+  std::string result;
+  char buf[kReadBufferSize];
+
+  while (BIO_pending(bio) > 0) {
+    int read_result = BIO_read(bio, buf, sizeof(buf));
+
+    if (read_result < 0) {
+      return absl::InternalError("Failed to read TLS frame from BIO");
+    }
+
+    result.append(buf, read_result);
+  }
+
+  return result;
+}
+
+absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
+  std::string result;
+  char buf[kReadBufferSize];
+
+  while (true) {
+    int read_result = SSL_read(ssl, buf, sizeof(buf));
+
+    if (read_result < 0) {
+      int err = SSL_get_error(ssl, read_result);
+
+      if (err == SSL_ERROR_WANT_READ) {
+        // No more data available for now.
+        break;
+      }
+
+      return absl::InternalError(absl::StrFormat(
+          "Failed to read plaintext message from SSL: %d", err));
+    }
+
+    result.append(buf, read_result);
+  };
+
+  return result;
+}
+
+}  // namespace
 }  // namespace oak::session::tls

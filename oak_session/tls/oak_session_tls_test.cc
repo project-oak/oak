@@ -33,6 +33,15 @@ absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path);
 constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/server.key";
 constexpr char kTestServerCertPath[] = "oak_session/tls/testing/server.pem";
 
+void HandshakeToClientReady(OakSessionTlsInitializer& server_initializer,
+                            OakSessionTlsInitializer& client_initializer);
+void CompleteServerHandshakeWithData(
+    OakSessionTlsInitializer& server_initializer, OakSessionTls& client_session,
+    absl::string_view initial_data);
+void SendReceiveAndVerifyMessage(OakSessionTls& sender, OakSessionTls& receiver,
+                                 absl::string_view message);
+std::string CreateTestData(size_t size);
+
 TEST(OakSessionTlsTest, CreateAndUseSession) {
   auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
@@ -53,28 +62,16 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
   auto client_initializer = (*client_ctx)->NewSession();
   ASSERT_THAT(client_initializer, IsOk());
 
-  auto client_frame_1 = (*client_initializer)->GetTLSFrame();
-  ASSERT_THAT(client_frame_1, IsOk());
-  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_frame_1), IsOk());
-
-  auto server_frame_1 = (*server_initializer)->GetTLSFrame();
-  ASSERT_THAT(server_frame_1, IsOk());
-  ASSERT_THAT((*client_initializer)->PutTLSFrame(*server_frame_1), IsOk());
+  HandshakeToClientReady(**server_initializer, **client_initializer);
 
   // The client should be ready to send data now.
-  ASSERT_TRUE((*client_initializer)->IsReady());
   auto client_session = (*client_initializer)->GetOpenClientSession();
   ASSERT_THAT(client_session, IsOk());
 
   std::string client_message = "hello server";
-  auto encrypted_client_message = (*client_session)->Encrypt(client_message);
-  ASSERT_THAT(encrypted_client_message, IsOk());
+  CompleteServerHandshakeWithData(**server_initializer, **client_session,
+                                  client_message);
 
-  // The server handshake isn't done yet, but this data frame will complete it.
-  ASSERT_THAT((*server_initializer)->PutTLSFrame(*encrypted_client_message),
-              IsOk());
-
-  ASSERT_TRUE((*server_initializer)->IsReady());
   auto server_session = (*server_initializer)->GetOpenClientSession();
   ASSERT_THAT(server_session, IsOk());
   // The intial application data is stored in the initializer.
@@ -82,12 +79,103 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
 
   // Send data from server to client.
   std::string server_message = "hello client";
-  auto encrypted_server_message = (*server_session)->Encrypt(server_message);
-  ASSERT_THAT(encrypted_server_message, IsOk());
-  auto decrypted_server_message =
-      (*client_session)->Decrypt(*encrypted_server_message);
-  ASSERT_THAT(decrypted_server_message, IsOk());
-  ASSERT_THAT(*decrypted_server_message, Eq(server_message));
+  SendReceiveAndVerifyMessage(/*sender=*/**server_session,
+                              /*receiver=*/**client_session, server_message);
+
+  // Send one more client message (non-initial)
+  std::string client_message2 = "hello again client";
+  SendReceiveAndVerifyMessage(/*sender=*/**client_session,
+                              /*receiver=*/**server_session, client_message2);
+}
+
+TEST(OakSessionTlsTest, LargeDataTransfer) {
+  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  ASSERT_THAT(server_key, IsOk());
+  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  ASSERT_THAT(server_cert, IsOk());
+
+  auto server_ctx =
+      OakSessionTlsContext::CreateServerContext(*server_key, *server_cert);
+  ASSERT_THAT(server_ctx, IsOk());
+
+  auto client_ctx =
+      OakSessionTlsContext::CreateClientContext(kTestServerCertPath);
+  ASSERT_THAT(client_ctx, IsOk());
+
+  // Handshake
+  // Create initializers for client and server and do the handshake.
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  HandshakeToClientReady(**server_initializer, **client_initializer);
+
+  auto client_session = (*client_initializer)->GetOpenClientSession();
+  ASSERT_THAT(client_session, IsOk());
+
+  std::string client_message =
+      CreateTestData(100000);  // 100 KB,larger than 16384 frame size
+  CompleteServerHandshakeWithData(**server_initializer, **client_session,
+                                  client_message);
+
+  auto server_session = (*server_initializer)->GetOpenClientSession();
+  ASSERT_THAT(server_session, IsOk());
+  // The intial application data is stored in the initializer.
+  ASSERT_THAT((*server_initializer)->initial_data(), Eq(client_message));
+
+  // Send data from server to client.
+  std::string server_message =
+      CreateTestData(100000);  // 100 KB,larger than 16384 frame size
+  SendReceiveAndVerifyMessage(/*sender=*/**server_session,
+                              /*receiver=*/**client_session, server_message);
+
+  // Send one more client message (non-initial)
+  std::string client_message2 = CreateTestData(100000);  // 100 KB
+  SendReceiveAndVerifyMessage(/*sender=*/**client_session,
+                              /*receiver=*/**server_session, client_message2);
+}
+
+std::string CreateTestData(size_t size) {
+  std::string data;
+  data.resize(size);
+  for (size_t i = 0; i < size; ++i) {
+    data[i] = static_cast<char>(i % 256);
+  }
+  return data;
+}
+
+void HandshakeToClientReady(OakSessionTlsInitializer& server_initializer,
+                            OakSessionTlsInitializer& client_initializer) {
+  auto client_frame_1 = client_initializer.GetTLSFrame();
+  ASSERT_THAT(client_frame_1, IsOk());
+  ASSERT_THAT(server_initializer.PutTLSFrame(*client_frame_1), IsOk());
+
+  auto server_frame_1 = server_initializer.GetTLSFrame();
+  ASSERT_THAT(server_frame_1, IsOk());
+  ASSERT_THAT(client_initializer.PutTLSFrame(*server_frame_1), IsOk());
+
+  ASSERT_TRUE(client_initializer.IsReady());
+}
+
+void CompleteServerHandshakeWithData(
+    OakSessionTlsInitializer& server_initializer, OakSessionTls& client_session,
+    absl::string_view initial_data) {
+  auto encrypted_initial_data = client_session.Encrypt(initial_data);
+  ASSERT_THAT(encrypted_initial_data, IsOk());
+
+  ASSERT_THAT(server_initializer.PutTLSFrame(*encrypted_initial_data), IsOk());
+
+  ASSERT_TRUE(server_initializer.IsReady());
+}
+
+void SendReceiveAndVerifyMessage(OakSessionTls& sender, OakSessionTls& receiver,
+                                 absl::string_view message) {
+  auto encrypted_message = sender.Encrypt(message);
+  ASSERT_THAT(encrypted_message, IsOk());
+  auto decrypted_message = receiver.Decrypt(*encrypted_message);
+  ASSERT_THAT(decrypted_message, IsOk());
+  ASSERT_THAT(*decrypted_message, Eq(message));
 }
 
 absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path) {

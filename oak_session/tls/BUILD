@@ -33,6 +33,7 @@ cc_library(
     deps = [
         "@boringssl//:crypto",
         "@boringssl//:ssl",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
     ],
