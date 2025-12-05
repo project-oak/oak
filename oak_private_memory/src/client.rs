@@ -132,9 +132,11 @@ impl PrivateMemoryClient {
         let mut client = Self { client_session, transport, format };
 
         client.register_user(pm_uid, kek).await?;
-        client.key_sync(pm_uid, kek).await?;
-
-        Ok(client)
+        match client.key_sync(pm_uid, kek).await {
+            Ok(key_sync_response::Status::Success) => Ok(client),
+            Ok(s) => Err(anyhow!("key sync failed with status: {:?}", s)),
+            Err(e) => Err(e),
+        }
     }
 
     pub async fn create_with_start_session(
@@ -192,7 +194,11 @@ impl PrivateMemoryClient {
         sealed_memory_response.response.ok_or_else(|| anyhow!("empty response"))
     }
 
-    async fn register_user(&mut self, pm_uid: &str, kek: &[u8]) -> Result<()> {
+    pub async fn register_user(
+        &mut self,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<user_registration_response::Status> {
         let request = UserRegistrationRequest {
             pm_uid: pm_uid.to_string(),
             key_encryption_key: kek.to_vec(),
@@ -201,26 +207,21 @@ impl PrivateMemoryClient {
         let response =
             self.invoke(sealed_memory_request::Request::UserRegistrationRequest(request)).await?;
         match response {
-            sealed_memory_response::Response::UserRegistrationResponse(resp) => {
-                match resp.status() {
-                    user_registration_response::Status::Success
-                    | user_registration_response::Status::UserAlreadyExists => Ok(()),
-                    s => Err(anyhow!("user registration failed with status: {:?}", s)),
-                }
-            }
+            sealed_memory_response::Response::UserRegistrationResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for user registration")),
         }
     }
 
-    async fn key_sync(&mut self, pm_uid: &str, kek: &[u8]) -> Result<()> {
+    pub async fn key_sync(
+        &mut self,
+        pm_uid: &str,
+        kek: &[u8],
+    ) -> Result<key_sync_response::Status> {
         let request =
             KeySyncRequest { pm_uid: pm_uid.to_string(), key_encryption_key: kek.to_vec() };
         let response = self.invoke(sealed_memory_request::Request::KeySyncRequest(request)).await?;
         match response {
-            sealed_memory_response::Response::KeySyncResponse(resp) => match resp.status() {
-                key_sync_response::Status::Success => Ok(()),
-                s => Err(anyhow!("key sync failed with status: {:?}", s)),
-            },
+            sealed_memory_response::Response::KeySyncResponse(resp) => Ok(resp.status()),
             _ => Err(anyhow!("unexpected response type for key sync")),
         }
     }

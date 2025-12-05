@@ -312,6 +312,25 @@ async fn test_client_keep_all_llm_views() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn test_client_keysync_invalid_key() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_keysync_invalid_key_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let invalid_kek: &[u8; 32] = b"invalidkekinvalidkekinvalidkek_k";
+        let status = client.key_sync(pm_uid, invalid_kek).await;
+        assert_eq!(status.unwrap(), key_sync_response::Status::InvalidKey);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn search_with_view_scores() {
     let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
         start_server().await.unwrap();

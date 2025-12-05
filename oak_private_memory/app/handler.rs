@@ -291,18 +291,13 @@ impl SealedMemorySessionHandler {
         request: KeySyncRequest,
         is_json: bool,
     ) -> anyhow::Result<KeySyncResponse> {
-        if self.session_context().await.is_some() {
-            info!("session already setup");
-            return Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() });
-        }
-
         if request.key_encryption_key.is_empty() || request.pm_uid.is_empty() {
-            bail!("uid or key not set in request");
+            return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
         let key = request.key_encryption_key;
         let uid = request.pm_uid;
         if !Self::is_valid_key(&key) {
-            bail!("Not a valid key!");
+            return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidKey.into() });
         }
 
         let db_client = self
@@ -325,8 +320,13 @@ impl SealedMemorySessionHandler {
                 .wrapped_key
                 .clone()
                 .context("Empty wrapped dek")?;
-            dek = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data)
-                .context("Failed to decrypt DEK")?;
+            dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data) {
+                dek
+            } else {
+                return Ok(KeySyncResponse {
+                    status: key_sync_response::Status::InvalidKey.into(),
+                });
+            }
         } else {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
