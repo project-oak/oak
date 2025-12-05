@@ -1,9 +1,12 @@
 {
   "mcpServers": {
-    // Demo server. See ./mcp_server/README.md for details.
-    "demoServer": {
-      "httpUrl": "http://localhost:8080/mcp",
-      "timeout": 5000
+    // Demo server. See /mcp_server/README.md for details.
+    "demo": {
+      "httpUrl": "http://34.182.105.144:8080/mcp"
+    },
+    // Proxy of the demo server, using /mcp_proxy.
+    "demo-proxy": {
+      "httpUrl": "http://127.0.0.1:8080/mcp"
     }
   }
 }

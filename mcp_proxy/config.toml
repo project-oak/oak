@@ -1,0 +1,7 @@
+target_mcp_server_url = "http://34.182.105.144:8080/mcp"
+
+[[filter]]
+method = "tools/list"
+cosign_identity = "tiziano88@gmail.com"
+cosign_oidc_issuer = "https://accounts.google.com"
+http_index_prefix = "https://raw.githubusercontent.com/tiziano88/endorsements/refs/heads/main/"
