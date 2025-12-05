@@ -46,7 +46,7 @@ use crate::{
         system::SystemPolicy,
     },
     results::get_initial_measurement,
-    verifier::verify_dice_chain,
+    verifier::{verify_dice_chain, EventLogType},
     IntelTdxPolicy,
 };
 
@@ -133,7 +133,8 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         // Verify DICE chain integrity.
         // The output argument is ommited because last layer's certificate authority key
         // is not used to sign anything.
-        let _ = verify_dice_chain(evidence).context("verifying DICE chain")?;
+        let _ = verify_dice_chain(evidence, EventLogType::OriginalEventLog)
+            .context("verifying DICE chain")?;
 
         let firmware_results = self
             .base_verifier
@@ -159,6 +160,63 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
         }
 
         // TODO: b/366419879 - Combine per-event attestation results.
+        Ok(AttestationResults {
+            status: Status::Success.into(),
+            extracted_evidence: None,
+            event_attestation_results,
+            ..Default::default()
+        })
+    }
+}
+
+pub struct AmdSevSnpTransparentDiceAttestationVerifier {
+    base_verifier: BaseAmdSevSnpVerifier,
+    event_policies: Vec<Box<dyn EventPolicy>>,
+    clock: Arc<dyn Clock>,
+}
+
+impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<AttestationResults> {
+        let verification_time = self.clock.get_time();
+
+        let platform_results = self
+            .base_verifier
+            .verify_platform(evidence, endorsements, verification_time)
+            .context("verifying platform policy")?;
+
+        // Verify DICE chain integrity.
+        // The output argument is ommited because last layer's certificate authority key
+        // is not used to sign anything.
+        let _ = verify_dice_chain(evidence, EventLogType::TransparentEventLog)
+            .context("verifying DICE chain")?;
+
+        let firmware_results = self
+            .base_verifier
+            .verify_firmware(endorsements, &platform_results, verification_time)
+            .context("verifying firmware policy")?;
+
+        // Verify event log and event endorsements with corresponding policies.
+        let transparent_event_log = evidence
+            .transparent_event_log
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("no event log"))?;
+        let mut event_attestation_results = vec![platform_results, firmware_results];
+        if !endorsements.events.is_empty() {
+            let results = verify_event_log(
+                verification_time,
+                transparent_event_log,
+                &endorsements.events,
+                self.event_policies.as_slice(),
+            )
+            .context("verifying event log")?;
+
+            event_attestation_results.extend(results);
+        }
+
         Ok(AttestationResults {
             status: Status::Success.into(),
             extracted_evidence: None,
@@ -290,7 +348,8 @@ impl AttestationVerifier for InsecureAttestationVerifier {
         // Verify DICE chain integrity. The output argument is omitted because
         // the last layer's certificate authority key is not used to sign
         // anything.
-        let _ = verify_dice_chain(evidence).context("verifying DICE chain")?;
+        let _ = verify_dice_chain(evidence, EventLogType::OriginalEventLog)
+            .context("verifying DICE chain")?;
 
         // Verify event log and event endorsements with corresponding policies.
         let event_log =

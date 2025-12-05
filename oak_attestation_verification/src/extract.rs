@@ -24,7 +24,7 @@ use oak_dice::cert::{
     ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
     INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
-    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+    SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID, TRANSPARENT_EVENT_ID,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{
@@ -41,7 +41,7 @@ use prost::Message;
 use sha2::Digest;
 use zerocopy::FromBytes;
 
-use crate::platform::convert_amd_sev_snp_attestation_report;
+use crate::{platform::convert_amd_sev_snp_attestation_report, verifier::EventLogType};
 
 pub(crate) struct ApplicationKeyValues {
     pub(crate) encryption_public_key: Vec<u8>,
@@ -306,6 +306,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                         let extracted_data = extract_event_data(
                             &claims_set_from_serialized_cert(&layer.eca_certificate)
                                 .context("parsing claims from CB layer cert")?,
+                            &EventIdType::EventDigest,
                         )
                         .context("extracting event data")?;
                         Ok(Some(extracted_data))
@@ -415,9 +416,32 @@ pub(crate) fn extract_application_key_values(
     Ok(ApplicationKeyValues { encryption_public_key, signing_public_key })
 }
 
+pub(crate) enum EventIdType {
+    // Events recorded under EVENT_ID in the claims map.
+    EventDigest,
+    // Transparent events recorded under TRANSPARENT_EVENT_ID in the claims map.
+    TransparentEventDigest,
+}
+
+impl From<EventLogType> for EventIdType {
+    fn from(event_log_type: EventLogType) -> Self {
+        match event_log_type {
+            EventLogType::OriginalEventLog => EventIdType::EventDigest,
+            EventLogType::TransparentEventLog => EventIdType::TransparentEventDigest,
+        }
+    }
+}
+
 /// Extracts the measurement values for the event data.
-pub(crate) fn extract_event_data(claims: &ClaimsSet) -> anyhow::Result<EventData> {
-    let values = extract_value_from_claims_set(claims, EVENT_ID)
+pub(crate) fn extract_event_data(
+    claims: &ClaimsSet,
+    event_id_type: &EventIdType,
+) -> anyhow::Result<EventData> {
+    let label_id = match event_id_type {
+        EventIdType::EventDigest => EVENT_ID,
+        EventIdType::TransparentEventDigest => TRANSPARENT_EVENT_ID,
+    };
+    let values = extract_value_from_claims_set(claims, label_id)
         .context("extracting event data from claims")?;
     let event = Some(value_to_raw_digest(values)?);
     Ok(EventData { event })

@@ -33,7 +33,7 @@ use p256::ecdsa::VerifyingKey;
 use crate::{
     compare::compare_expected_values,
     expect::get_expected_values,
-    extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence},
+    extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence, EventIdType},
     platform::verify_root_attestation_signature,
 };
 
@@ -152,8 +152,12 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
             &evidence.layers[1..] // Slice from the second element (index 1) to
                                   // the end
         };
-        validate_that_event_log_is_captured_in_dice_layers(event_log, layers_to_check)
-            .context("validating that event log is captured in DICE layers")?
+        validate_that_event_log_is_captured_in_dice_layers(
+            event_log,
+            layers_to_check,
+            EventLogType::OriginalEventLog.into(),
+        )
+        .context("validating that event log is captured in DICE layers")?
     } else {
         anyhow::bail!("event log is not present in the evidence");
     }
@@ -256,9 +260,21 @@ pub fn verify_with_expected_values(
     Ok(extracted_evidence)
 }
 
+// The type of event log in the attestation evidence to verify.
+pub enum EventLogType {
+    // The original `event_log` in the attestation evidence.
+    OriginalEventLog,
+    // The `transparent_event_log`, populated with event entries that do not contain sensitive
+    // data.
+    TransparentEventLog,
+}
+
 /// Verifies signatures of the certificates in the DICE chain and returns last
 /// layer's Certificate Authority key if the verification is successful.
-pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<VerifyingKey> {
+pub fn verify_dice_chain(
+    evidence: &Evidence,
+    event_log_type: EventLogType,
+) -> anyhow::Result<VerifyingKey> {
     let root_layer_verifying_key = {
         let cose_key = {
             let root_layer = evidence
@@ -297,13 +313,33 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<VerifyingKey> {
         })
         .context("verifying DICE chain")?;
 
-    // Verify the event log claim for this layer if it exists. This is done for all
-    // layers here, since the event log is tied uniquely closely to the DICE chain.
-    if let Some(event_log) = &evidence.event_log {
-        validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
-            .context("validating that event log is captured in DICE layers")?
-    } else {
-        anyhow::bail!("event log is not present in the evidence");
+    match event_log_type {
+        EventLogType::OriginalEventLog => {
+            // Verify the event log claim for this layer if it exists. This is done for all
+            // layers here, since the event log is tied uniquely closely to the DICE chain.
+            if let Some(event_log) = &evidence.event_log {
+                validate_that_event_log_is_captured_in_dice_layers(
+                    event_log,
+                    &evidence.layers,
+                    event_log_type.into(),
+                )
+                .context("validating that event log is captured in DICE layers")?
+            } else {
+                anyhow::bail!("event log is not present in the evidence");
+            }
+        }
+        EventLogType::TransparentEventLog => {
+            if let Some(transparent_event_log) = &evidence.transparent_event_log {
+                validate_that_event_log_is_captured_in_dice_layers(
+                    transparent_event_log,
+                    &evidence.layers,
+                    event_log_type.into(),
+                )
+                .context("validating that event log is captured in DICE layers")?
+            } else {
+                anyhow::bail!("transparent event log is not present in the evidence");
+            }
+        }
     }
 
     Ok(last_layer_verifying_key)
@@ -387,24 +423,32 @@ pub fn verify_dice_chain_and_extract_evidence(
     // Verify the event log claim for this layer if it exists. This is done for all
     // layers here, since the event log is tied uniquely closely to the DICE chain.
     if let Some(event_log) = &evidence.event_log {
-        validate_that_event_log_is_captured_in_dice_layers(event_log, &evidence.layers)
-            .context("validating that event log is captured in DICE layers")?
+        validate_that_event_log_is_captured_in_dice_layers(
+            event_log,
+            &evidence.layers,
+            EventLogType::OriginalEventLog.into(),
+        )
+        .context("validating that event log is captured in DICE layers")?
     }
     extract_evidence(evidence)
 }
 
 /// Validates that the digest of the events captured in the event log are
 /// correctly described in the claims of the associated dice layers.
+// Claim entries are under different keys for standard events and transparent
+// events, so the caller must also pass the EventIdType to find the appropriate
+// claims for the events.
 fn validate_that_event_log_is_captured_in_dice_layers(
     event_log: &EventLog,
     dice_layers: &[LayerEvidence],
+    event_id_type: EventIdType,
 ) -> anyhow::Result<()> {
     dice_layers.iter().zip(event_log.encoded_events.iter()).try_for_each(
         |(current_layer, encoded_event)| {
             let event_digest = {
                 let claims = claims_set_from_serialized_cert(&current_layer.eca_certificate)
                     .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
-                extract_event_data(&claims)
+                extract_event_data(&claims, &event_id_type)
                     .context("extracting event data")?
                     .event
                     .context("missing event")?
