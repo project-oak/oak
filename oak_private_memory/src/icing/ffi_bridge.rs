@@ -206,6 +206,7 @@ impl ffi::IcingSearchEngine {
 // Useful constants from icing
 
 pub const LIST_FILTER_QUERY_LANGUAGE_FEATURE: &str = "LIST_FILTER_QUERY_LANGUAGE";
+pub const HAS_PROPERTY_FUNCTION_FEATURE: &str = "HAS_PROPERTY_FUNCTION";
 
 pub fn icing_search_engine_null_helper() -> UniquePtr<IcingSearchEngine> {
     UniquePtr::null()

@@ -548,3 +548,228 @@ async fn test_get_by_tag_with_expired_memories() {
         assert!(!returned_ids.contains(expired_memory_id));
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_test_text_with_expired_memories() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_expired_search_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let common_tag = String::from("expired_search_tag");
+        let model_signature = "test_model_expired".to_string();
+        let embedding_values = vec![1.0, 0.0, 0.0];
+
+        // Memory 1: Expired (timestamp in the past)
+        let expired_memory_id = "memory_expired".to_string();
+        let past_time =
+            std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
+        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expired_memory = Memory {
+            id: expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp,
+            ..Default::default()
+        };
+        client.add_memory(expired_memory).await.unwrap();
+
+        // Memory 2: Non-expired (timestamp in the future)
+        let non_expired_memory_id = "memory_non_expired".to_string();
+        let future_time =
+            std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour in future
+        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+        let non_expired_memory = Memory {
+            id: non_expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "non_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: non_expired_timestamp,
+            ..Default::default()
+        };
+        client.add_memory(non_expired_memory).await.unwrap();
+
+        // Memory 3: Never-expired (no timestamp)
+        let never_expired_memory_id = "memory_never_expired".to_string();
+        let never_expired_memory = Memory {
+            id: never_expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "never_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        client.add_memory(never_expired_memory).await.unwrap();
+
+        // Perform a text search for the common tag
+        let text_query = TextQuery {
+            field: MemoryField::Tags as i32,
+            match_type: MatchType::Equal as i32,
+            value: Some(text_query::Value::StringVal(common_tag.clone())),
+        };
+        let query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
+                    text_query,
+                ),
+            ),
+        };
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
+
+        // Collect the IDs of the memories returned
+        let returned_ids: HashSet<String> =
+            response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
+
+        // Assert that the expired memory is NOT in the results
+        assert!(!returned_ids.contains(&expired_memory_id));
+
+        // Assert that the non-expired and never-expired memories ARE in the results
+        assert!(returned_ids.contains(&non_expired_memory_id));
+        assert!(returned_ids.contains(&never_expired_memory_id));
+        assert_eq!(returned_ids.len(), 2);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_test_embedding_with_expired_memories() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_expired_embedding_search_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let common_tag = String::from("expired_embedding_search_tag");
+        let model_signature = "test_model_expired_embedding".to_string();
+        let embedding_values = vec![1.0, 0.0, 0.0];
+
+        // Memory 1: Expired (timestamp in the past)
+        let expired_memory_id = "embedding_memory_expired".to_string();
+        let past_time =
+            std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
+        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expired_memory = Memory {
+            id: expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "expired_embedding_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp,
+            ..Default::default()
+        };
+        client.add_memory(expired_memory).await.unwrap();
+
+        // Memory 2: Non-expired (timestamp in the future)
+        let non_expired_memory_id = "embedding_memory_non_expired".to_string();
+        let future_time =
+            std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour in future
+        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+        let non_expired_memory = Memory {
+            id: non_expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "non_expired_embedding_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: non_expired_timestamp,
+            ..Default::default()
+        };
+        client.add_memory(non_expired_memory).await.unwrap();
+
+        // Memory 3: Never-expired (no timestamp)
+        let never_expired_memory_id = "embedding_memory_never_expired".to_string();
+        let never_expired_memory = Memory {
+            id: never_expired_memory_id.clone(),
+            tags: vec![common_tag.clone()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "never_expired_embedding_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        client.add_memory(never_expired_memory).await.unwrap();
+
+        // Perform an embedding search
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::EmbeddingQuery(
+                    EmbeddingQuery {
+                        embedding: vec![Embedding {
+                            model_signature: model_signature.clone(),
+                            values: embedding_values.clone(),
+                        }],
+                        ..Default::default()
+                    },
+                ),
+            ),
+        };
+        let response = client.search_memory(embedding_query, 10, None, "", false).await.unwrap();
+
+        // Collect the IDs of the memories returned
+        let returned_ids: HashSet<String> =
+            response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
+
+        // Assert that the expired memory is NOT in the results
+        assert!(!returned_ids.contains(&expired_memory_id));
+
+        // Assert that the non-expired and never-expired memories ARE in the results
+        assert!(returned_ids.contains(&non_expired_memory_id));
+        assert!(returned_ids.contains(&never_expired_memory_id));
+        assert_eq!(returned_ids.len(), 2);
+    }
+}

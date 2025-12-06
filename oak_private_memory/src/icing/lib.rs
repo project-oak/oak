@@ -136,6 +136,7 @@ fn write_file(base_dir: &Path, relative_path: &str, data: &[u8]) -> Result<()> {
 pub fn get_default_icing_options(base_dir: &str) -> IcingSearchEngineOptions {
     IcingSearchEngineOptions {
         enable_scorable_properties: Some(true),
+        build_property_existence_metadata_hits: Some(true),
         base_dir: Some(base_dir.to_string()),
         ..Default::default()
     }

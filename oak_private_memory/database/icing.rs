@@ -529,6 +529,7 @@ impl IcingMetaDatabase {
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
             ],
             ..Default::default()
         };
@@ -581,6 +582,7 @@ impl IcingMetaDatabase {
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
             ],
             ..Default::default()
         };
@@ -850,8 +852,8 @@ impl IcingMetaDatabase {
                 },
             )
         };
-
-        let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
+        let (search_spec, scoring_spec) =
+            self.build_query_specs_filtering_expired_memories(query, schema_name)?;
         let scoring_spec = scoring_spec.unwrap_or_default();
         let mut page_token = page_token;
         let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
@@ -934,6 +936,40 @@ impl IcingMetaDatabase {
             }
             _ => false,
         }
+    }
+
+    fn build_query_specs_filtering_expired_memories(
+        &self,
+        query: &SearchMemoryQuery,
+        schema_name: &str,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        let (mut query_specs, score_spec) = self.build_query_specs(query, schema_name)?;
+
+        // A memory is considered not expired if its expiration timestamp is in the
+        // future, or if it has no expiration timestamp set.
+        let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
+        query_specs.query = Some(format!(
+            "({}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
+            query_specs.query.context("no query")?,
+            EXPIRED_TIMESTAMP_NAME,
+            now_ts,
+            EXPIRED_TIMESTAMP_NAME,
+        ));
+
+        query_specs.enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
+        if !query_specs.enabled_features.contains(&String::from("NUMERIC_SEARCH")) {
+            query_specs.enabled_features.push("NUMERIC_SEARCH".to_string());
+        }
+        if !query_specs
+            .enabled_features
+            .contains(&String::from(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE))
+        {
+            query_specs
+                .enabled_features
+                .push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
+        }
+
+        Ok((query_specs, score_spec))
     }
 
     fn build_query_specs(
@@ -1286,16 +1322,9 @@ fn build_non_expired_query_str(property_name: &str, property_val: &str) -> Strin
 
     // A memory is considered not expired if its expiration timestamp is in the
     // future, or if it has no expiration timestamp set.
-    // The query for "property does not exist" is approximated by "NOT (property >=
-    // MIN_INT64)".
     format!(
-        "({}:{}) AND (({} > {}) OR (NOT ({} >= {})))",
-        property_name,
-        property_val,
-        EXPIRED_TIMESTAMP_NAME,
-        now_ts,
-        EXPIRED_TIMESTAMP_NAME,
-        i64::MIN
+        "({}:{}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
+        property_name, property_val, EXPIRED_TIMESTAMP_NAME, now_ts, EXPIRED_TIMESTAMP_NAME
     )
 }
 
@@ -1522,6 +1551,106 @@ mod tests {
         assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
         // We could also assert on the score if needed, but ordering is often sufficient
         assert_that!(scores, elements_are![eq(&0.9)]);
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_embedding_search_expired_memory_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let model_signature = "test_model".to_string();
+        let embedding_values = vec![1.0, 0.0, 0.0]; // Common embedding for query
+
+        // Create an expired memory
+        let expired_memory_id = "expired_memory_embed".to_string();
+        let expired_blob_id = "expired_blob_embed".to_string();
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
+        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+
+        let expired_memory = Memory {
+            id: expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&expired_memory, expired_blob_id.clone())?;
+
+        // Create a non-expired memory (expires in the future)
+        let non_expired_memory_id = "non_expired_memory_embed".to_string();
+        let non_expired_blob_id = "non_expired_blob_embed".to_string();
+        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour in future
+        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+
+        let non_expired_memory = Memory {
+            id: non_expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "non_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: non_expired_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&non_expired_memory, non_expired_blob_id.clone())?;
+
+        // Create a never-expired memory (no expired_timestamp)
+        let never_expired_memory_id = "never_expired_memory_embed".to_string();
+        let never_expired_blob_id = "never_expired_blob_embed".to_string();
+        let never_expired_memory = Memory {
+            id: never_expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "never_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expired_timestamp: None,
+            ..Default::default()
+        };
+        icing_database.add_memory(&never_expired_memory, never_expired_blob_id.clone())?;
+
+        // Query with an embedding that matches all three (if not for expiration)
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: model_signature.clone(),
+                    values: embedding_values,
+                }],
+                ..Default::default()
+            })),
+        };
+
+        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+        // Assert that just the non-expired and never-expired memories are in the search
+        // results
+        assert_that!(
+            blob_ids,
+            unordered_elements_are![eq(&non_expired_blob_id), eq(&never_expired_blob_id)]
+        );
+
         Ok(())
     }
 
