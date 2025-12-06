@@ -102,6 +102,8 @@ _protected_mode_start:
     1:
     mov %ebx, %eax            # eax = ebx (PVALIDATE will clobber EAX)
     pvalidate                 # set validated bit in RMP, but ignore results for now
+    movl (%ebx), %esi         # Read beginning...
+    movl 4092(%ebx), %edi     # ...and end of page to invalidate cache. Read 4 bytes b/c 32-bit mode
     add $0x1000, %ebx         # ebx += 0x1000
     cmp $0xa0000, %ebx        # have we covered the full 640 KiB?
     jl 1b                     # if no, go back
