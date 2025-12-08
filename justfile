@@ -323,11 +323,6 @@ build-endorse:
     @cd trex/endorse && go build -o ../../bin/endorse .
     @echo "Endorse tool built and moved to bin/endorse"
 
-build-mcp-proxy:
-    @echo "Building mcp_proxy tool..."
-    @cd mcp_proxy && go build -o ../bin/mcp_proxy .
-    @echo "mcp_proxy tool built and moved to bin/mcp_proxy"
-
 ### Github Buildconfig rules
 ### These correspond to the commands in `buildconfigs/*.sh`
 github-key_xor_test_app: \

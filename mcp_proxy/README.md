@@ -1,5 +1,7 @@
 # mcp_proxy
 
+> [!CAUTION] Experimental code, not ready for production use.
+
 This is an HTTP proxy that intercepts responses from a target server and
 verifies if they have been cryptographically endorsed using `cosign` and stored
 in an OCI-compliant endorsement repository.
@@ -44,8 +46,7 @@ http_index_prefix = "https://raw.githubusercontent.com/your_org/your_repo/refs/h
 # Ensure cosign is installed and in your PATH
 # go install github.com/sigstore/cosign/cmd/cosign@latest
 
-just build-mcp-proxy
-./bin/mcp_proxy -config=./mcp_proxy/config.toml
+bazel run mcp_proxy -- --config=$PWD/mcp_proxy/config.toml
 ```
 
 The proxy will start on `http://localhost:8080` (or as configured). All requests
