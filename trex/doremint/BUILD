@@ -33,10 +33,13 @@ rust_binary(
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:maplit",
         "@oak_crates_index//:oci-client",
         "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
+        "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
     ],
@@ -47,8 +50,12 @@ sh_test(
     srcs = ["cli_tests.sh"],
     data = [
         ":doremint",
+        "//trex/doremint/testdata:blob_golden_index.json",
         "//trex/doremint/testdata:claims.toml",
+        "//trex/doremint/testdata:dummy_blob.txt",
         "//trex/doremint/testdata:golden.json",
     ],
-    env = {"CLI": "$(location :doremint)"},
+    env = {
+        "CLI": "$(location :doremint)",
+    },
 )

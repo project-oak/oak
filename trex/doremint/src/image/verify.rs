@@ -18,10 +18,10 @@ Sample call:
 
 export IMAGE_REF=example.com/app@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 bazel run trex/doremint image verify -- \
-  --image "$IMAGE_REF" \
-  --claims $(pwd)/trex/doremint/testdata/claims.toml \
-  --access-token "$(gcloud auth print-access-token)" \
-  --endorser-public-key "$HOME/cosign.pub"
+  --image="$IMAGE_REF" \
+  --claims-toml=$(pwd)/trex/doremint/testdata/claims.toml \
+  --access-token="$(gcloud auth print-access-token)" \
+  --endorser-public-key="$HOME/cosign.pub"
 */
 use anyhow::Context;
 use clap::Parser;
@@ -63,8 +63,19 @@ impl VerifyCommand {
         // Need to verify the endorsement subject and the claims as well.
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = hex_digest_from_typed_hash(typed_hash)?;
-        // Convert Vec<String> to Vec<&str>.
-        let claims: Vec<&str> = self.claims.claims.iter().map(|s| s.as_str()).collect();
+
+        let claims_vec = self
+            .claims
+            .claims_toml
+            .as_ref()
+            .map(|c| c.claims.clone())
+            .or(self.claims.claims.clone())
+            .unwrap();
+        if claims_vec.is_empty() {
+            anyhow::bail!("at least one claim must be provided");
+        }
+
+        let claims: Vec<&str> = claims_vec.iter().map(|s| s.as_str()).collect();
         statement
             .validate(Some(digest), now(), &claims)
             .context("validating endorsement statement")?;

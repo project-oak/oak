@@ -238,9 +238,9 @@ async fn handle_filtered_response(
     }
 
     if let Err(e) = verification_result {
-        let err_msg = format!("Endorsement verification failed for subject digest: {}.\nError: {}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, please run the endorsement tool on the saved subject file:\nendorse -file={:?} -repository=<path_to_repo>\n",
+        let err_msg = format!("Endorsement verification failed for subject digest: {}.\nError: {}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={:?} --repository=<path_to_repo> --valid-for=1d --claims=https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md\n",
             subject_digest, e, filter.cosign_identity, subject_path);
-        log::error!("{}", err_msg);
+        log::error!("{err_msg}");
         return Err((StatusCode::FORBIDDEN, err_msg));
     }
 

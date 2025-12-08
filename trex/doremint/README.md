@@ -64,14 +64,14 @@ First, use `doremint` to create the unsigned endorsement statement:
 ```bash
 doremint image endorse \
     --image=$IMAGE_REFERENCE \
-    --claims=$PATH_TO_CLAIMS_TOML \
+    --claims-toml=$PATH_TO_CLAIMS_TOML \
     --valid-for=$VALIDITY_DURATION \
     --output=/path/to/endorsement.json
 ```
 
 - `--image`: The OCI reference of the image to endorse (e.g.,
   `gcr.io/my-project/my-image@sha256:...`).
-- `--claims`: A TOML file containing a list of claims to include.
+- `--claims-toml`: A TOML file containing a list of claims to include.
 - `--valid-for`: How long the endorsement is valid (e.g., `30d`, `12h`, `1w`).
 - `--output`: The path to write the unsigned endorsement statement to.
 
@@ -131,12 +131,12 @@ To verify a signed endorsement for an image:
 doremint image verify \
     --image=$IMAGE_REFERENCE \
     --endorser-public-key=$PATH_TO_PUBLIC_KEY_PEM \
-    --claims=$PATH_TO_CLAIMS_TOML
+    --claims-toml=$PATH_TO_CLAIMS_TOML
 ```
 
 - `--image`: The OCI reference of the image to verify.
 - `--endorser-public-key`: The public key that was used to sign the endorsement.
-- `--claims`: A TOML file containing the list of claims that you expect the
+- `--claims-toml`: A TOML file containing the list of claims that you expect the
   endorsement to have.
 
 **Note on Rekor's Public Key**: `doremint` includes Rekor's public key to verify

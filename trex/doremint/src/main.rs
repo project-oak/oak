@@ -14,8 +14,10 @@
 
 #![feature(try_blocks)]
 
+mod blob;
 mod flags;
 mod image;
+mod repository;
 
 use clap::{Parser, Subcommand};
 use oci_spec::distribution::Reference;
@@ -36,14 +38,6 @@ struct Args {
 
     #[arg(long, global = true, help = "An OCI Image reference")]
     pub image: Option<Reference>,
-
-    #[arg(
-        long,
-        global = true,
-        help = "Path to a file containing claims about an image",
-        value_parser = flags::parse_claims,
-    )]
-    pub claims: Option<flags::Claims>,
 }
 
 impl Args {
@@ -55,12 +49,14 @@ impl Args {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Image(image::Image),
+    Blob(blob::Blob),
 }
 
 impl Commands {
     async fn run(&self) -> anyhow::Result<()> {
         match self {
             Self::Image(args) => args.run().await,
+            Self::Blob(args) => args.run().await,
         }
     }
 }
