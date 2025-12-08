@@ -105,7 +105,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
             Err(e) => return Err(e),
         }
     }
-    anyhow::bail!("Failed to persist after 10 attempts");
+    anyhow::bail!("Failed to persist after {} attempts", MAX_RETRY_ATTEMPTS);
 }
 
 pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {
