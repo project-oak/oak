@@ -16,7 +16,7 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 load("//bazel:defs.bzl", "oci_runtime_bundle")
 
 package(
@@ -94,7 +94,10 @@ rust_binary(
         "//ctf_sha2/proto:arbiter_rust_proto",
         "//falsify",
         "//oak_attestation_verification",
+        "//oak_attestation_verification:test_util",
+        "//oak_dice",
         "//oak_proto_rust",
+        "//oak_time",
         "//tr/key_util",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
@@ -105,5 +108,34 @@ rust_binary(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:x509-cert",
+    ],
+)
+
+rust_test(
+    name = "arbiter_tests",
+    srcs = ["arbiter.rs"],
+    deps = [
+        "//ctf_sha2/containers/proto:tonic_service",
+        "//ctf_sha2/proto:arbiter_rust_proto",
+        "//falsify",
+        "//oak_attestation_verification",
+        "//oak_attestation_verification:test_util",
+        "//oak_dice",
+        "//oak_proto_rust",
+        "//oak_sev_snp_attestation_report",
+        "//oak_time",
+        "//tr/key_util",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:coset",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:hex",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:x509-cert",
+        "@oak_crates_index//:zerocopy",
     ],
 )

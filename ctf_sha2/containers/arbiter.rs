@@ -15,7 +15,9 @@
 //
 
 use anyhow::{anyhow, Context};
-use arbiter_rust_proto::oak::ctf_sha2::arbiter::{arbiter_input::TeeProof, ArbiterInput};
+use arbiter_rust_proto::oak::ctf_sha2::arbiter::{
+    arbiter_input::TeeProof, ArbiterInput, AttestedSignature,
+};
 use clap::Parser;
 use log::info;
 use oak_attestation_verification::verifier::verify;
@@ -27,15 +29,14 @@ use oak_proto_rust::oak::attestation::v1::{
     RootLayerReferenceValues, StringLiterals, SystemLayerReferenceValues, TcbVersion,
     TcbVersionReferenceValue, TextReferenceValue,
 };
+use oak_time::Instant;
 use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use sha2::{Digest, Sha256};
-use x509_cert::{der::Decode, spki::EncodePublicKey, time::Time, Certificate};
+use x509_cert::{der::Decode, spki::EncodePublicKey, Certificate};
 
 fn main() {
     env_logger::init();
-
-    let reference_values = create_reference_values();
 
     falsify::falsify(
         falsify::FalsifyArgs::parse(),
@@ -47,42 +48,22 @@ fn main() {
                 _ => Err(anyhow!("Input does not contain attested_signature")),
             }?;
 
-            // Verify Evidence
-            let evidence =
-                attested_signature.evidence.context("Input does not contain enclave evidence")?;
+            // Here we trust the VCEK "not before" timestamp. This is not ideal because (if
+            // the cert is somehow forged by an attacker) then it is not
+            // trustworthy. However, there is no obvious better alternative
+            // which results in deterministic behaviour.
             let endorsements = attested_signature
                 .endorsements
+                .as_ref()
                 .context("Input does not contain enclave endorsements")?;
-            let vcek_cert_not_before = vcek_cert_not_before(&endorsements)?;
+            let vcek_cert_not_before = vcek_cert_not_before(endorsements)?;
 
-            let extracted = match verify(
-                // Here we trust the VCEK "not before" timestamp. This is not ideal because (if the
-                // cert is somehow forged by an attacker) then it is not trustworthy.
-                // However, there is no obvious better alternative which results in
-                // deterministic behaviour.
-                vcek_cert_not_before.to_unix_duration().as_millis() as i64,
-                &evidence,
-                &endorsements,
-                &reference_values,
-            ) {
-                Ok(extracted) => extracted,
-                Err(e) => {
-                    // Log and return Ok because this is not an `InputError`, this is a failed
-                    // falsification attempt.
-                    info!("Enclave evidence verification failed: {e:#}");
-                    return Ok(());
-                }
-            };
-
-            // Verify signature over expected flag digest
-            let mut hasher = Sha256::new();
-            hasher.update(&input.flag);
-            let expected_digest = hasher.finalize();
             assert!(
-                verify_signature(
-                    &extracted.signing_public_key,
-                    &expected_digest,
-                    &attested_signature.signature,
+                verify_attested_signature(
+                    &vcek_cert_not_before,
+                    &attested_signature,
+                    &input.flag,
+                    &create_reference_values()
                 )
                 .inspect_err(|e| {
                     info!("Enclave signature verification failed: {e:#}");
@@ -90,13 +71,39 @@ fn main() {
                 .is_err(),
                 "Signature verification succeeded! Claim falsified."
             );
-
             Ok(())
         },
     );
 }
 
-fn vcek_cert_not_before(endorsements: &Endorsements) -> anyhow::Result<Time> {
+fn verify_attested_signature(
+    now: &Instant,
+    attested_signature: &AttestedSignature,
+    asserted_flag: &[u8],
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<()> {
+    // Verify Evidence
+    let evidence =
+        attested_signature.evidence.as_ref().context("Input does not contain enclave evidence")?;
+    let endorsements = attested_signature
+        .endorsements
+        .as_ref()
+        .context("Input does not contain enclave endorsements")?;
+    let extracted = verify(now.into_unix_millis(), evidence, endorsements, reference_values)?;
+
+    // Verify signature over expected flag digest
+    key_util::verify_signature_ecdsa(
+        &attested_signature.signature,
+        &Sha256::digest(asserted_flag),
+        VerifyingKey::from_sec1_bytes(&extracted.signing_public_key)
+            .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))?
+            .to_public_key_der()
+            .map_err(|e| anyhow::anyhow!("failed to convert public key to DER: {e}"))?
+            .as_bytes(),
+    )
+}
+
+fn vcek_cert_not_before(endorsements: &Endorsements) -> anyhow::Result<Instant> {
     let vcek_cert = match &endorsements.r#type {
         Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(
             oak_proto_rust::oak::attestation::v1::OakContainersEndorsements {
@@ -110,23 +117,12 @@ fn vcek_cert_not_before(endorsements: &Endorsements) -> anyhow::Result<Time> {
         )) => vcek_cert,
         _ => return Err(anyhow::anyhow!("Endorsements does not contain VCEK certificate")),
     };
-    Ok(Certificate::from_der(vcek_cert.as_slice())
+    let not_before = Certificate::from_der(vcek_cert.as_slice())
         .map_err(|e| anyhow::anyhow!("failed to parse VCEK certificate: {e}"))?
         .tbs_certificate
         .validity
-        .not_before)
-}
-
-fn verify_signature(public_key: &[u8], message: &[u8], signature: &[u8]) -> anyhow::Result<()> {
-    key_util::verify_signature_ecdsa(
-        signature,
-        message,
-        VerifyingKey::from_sec1_bytes(public_key)
-            .map_err(|e| anyhow::anyhow!("failed to parse public key: {e}"))?
-            .to_public_key_der()
-            .map_err(|e| anyhow::anyhow!("failed to convert public key to DER: {e}"))?
-            .as_bytes(),
-    )
+        .not_before;
+    Ok(Instant::from_unix_millis(not_before.to_unix_duration().as_millis() as i64))
 }
 
 fn create_reference_values() -> ReferenceValues {
@@ -216,5 +212,335 @@ mod raw_digests {
 
     pub fn sha2_384(digest: &str) -> RawDigest {
         RawDigest { sha2_384: hex::decode(digest).unwrap(), ..Default::default() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseKey};
+    use oak_dice::cert::{CONTAINER_IMAGE_LAYER_ID, KERNEL_LAYER_ID, SYSTEM_IMAGE_LAYER_ID};
+    use oak_proto_rust::oak::attestation::v1::{
+        binary_reference_value, kernel_binary_reference_value, reference_values,
+        text_reference_value, ApplicationKeys, BinaryReferenceValue, ContainerLayerReferenceValues,
+        Endorsements, Evidence, KernelBinaryReferenceValue, KernelLayerReferenceValues,
+        LayerEvidence, OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerReferenceValues, TeePlatform, TextReferenceValue,
+    };
+    use oak_time::make_instant;
+    use p256::ecdsa::{signature::Signer, SigningKey};
+    use sha2::{Digest, Sha256};
+
+    use super::*;
+
+    #[test]
+    fn test_verify_attested_signature_succeeds() {
+        let (evidence, signing_key) = generate_fake_evidence();
+        let flag = b"here is a random flag";
+        let signature: p256::ecdsa::Signature = signing_key.sign(&Sha256::digest(flag));
+
+        assert!(verify_attested_signature(
+            &make_instant!("2025-12-09T09:04:07.000Z"),
+            &AttestedSignature {
+                evidence: Some(evidence),
+                endorsements: Some(empty_endorsements()),
+                signature: signature.to_der().to_bytes().to_vec(),
+            },
+            flag,
+            &insecure_reference_values()
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn test_verify_attested_signature_fails_invalid_signature() {
+        let (evidence, _signing_key) = generate_fake_evidence();
+        let flag = b"here is a random flag";
+
+        assert!(verify_attested_signature(
+            &make_instant!("2025-12-09T09:04:07.000Z"),
+            &AttestedSignature {
+                evidence: Some(evidence),
+                endorsements: Some(empty_endorsements()),
+                // Provide an invalid signature
+                signature: vec![0u8; 64],
+            },
+            flag,
+            &insecure_reference_values()
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_verify_attested_signature_fails_invalid_flag() {
+        let (evidence, signing_key) = generate_fake_evidence();
+        let flag = b"here is a random flag";
+        let signature: p256::ecdsa::Signature = signing_key.sign(&Sha256::digest(flag));
+
+        assert!(verify_attested_signature(
+            &make_instant!("2025-12-09T09:04:07.000Z"),
+            &AttestedSignature {
+                evidence: Some(evidence),
+                endorsements: Some(empty_endorsements()),
+                signature: signature.to_der().to_bytes().to_vec(),
+            },
+            // Supply a different flag than the one that the enclave app signed.
+            b"this is a bad guess",
+            &insecure_reference_values()
+        )
+        .is_err());
+    }
+
+    fn generate_fake_evidence() -> (Evidence, SigningKey) {
+        // 1. Generate Root Key
+        let (root_private_key, root_public_key) = oak_dice::cert::generate_ecdsa_key_pair();
+
+        // 2. Create Fake Root Report
+        let root_public_key_cose = oak_dice::cert::verifying_key_to_cose_key(&root_public_key);
+        let root_layer = RootLayerEvidence {
+            platform: TeePlatform::None.into(),
+            remote_attestation_report: create_fake_attestation_report(root_public_key_cose.clone()),
+            eca_public_key: root_public_key_cose
+                .to_vec()
+                .expect("failed to serialize root public key"),
+        };
+
+        // 3. Create Layer 1 (Kernel)
+        let (kernel_private_key, kernel_public_key) = oak_dice::cert::generate_ecdsa_key_pair();
+
+        // Populate required claims with dummy values
+        let kernel_claims = vec![(
+            ClaimName::PrivateUse(KERNEL_LAYER_ID),
+            Value::Map(vec![
+                (
+                    Value::Integer(oak_dice::cert::KERNEL_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::KERNEL_COMMANDLINE_ID.into()),
+                    Value::Text("console=ttyS0".to_string()),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::SETUP_DATA_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::INITRD_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::MEMORY_MAP_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::ACPI_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+            ]),
+        )];
+
+        let kernel_cert = oak_dice::cert::generate_signing_certificate(
+            &root_private_key,
+            hex::encode(oak_dice::cert::derive_verifying_key_id(&root_public_key)),
+            &kernel_public_key,
+            kernel_claims,
+        )
+        .expect("failed to generate kernel certificate");
+
+        // 4. Create Layer 2 (System)
+        let (system_private_key, system_public_key) = oak_dice::cert::generate_ecdsa_key_pair();
+
+        let system_claims = vec![(
+            ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
+            Value::Map(vec![(
+                Value::Integer(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID.into()),
+                Value::Map(vec![(
+                    Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                    Value::Bytes(vec![0u8; 32]),
+                )]),
+            )]),
+        )];
+
+        let system_cert = oak_dice::cert::generate_signing_certificate(
+            &kernel_private_key,
+            hex::encode(oak_dice::cert::derive_verifying_key_id(&kernel_public_key)),
+            &system_public_key,
+            system_claims,
+        )
+        .expect("failed to generate system certificate");
+
+        // 5. Create Application Keys (signed by System Key, containing Container
+        //    Claims)
+        let app_encryption_public_key_bytes = vec![0u8; 32]; // Fake X25519 key
+
+        let (app_signing_private_key, app_signing_public_key) =
+            oak_dice::cert::generate_ecdsa_key_pair();
+
+        let container_claims = vec![(
+            ClaimName::PrivateUse(CONTAINER_IMAGE_LAYER_ID),
+            Value::Map(vec![
+                (
+                    Value::Integer(oak_dice::cert::LAYER_3_CODE_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+                (
+                    Value::Integer(oak_dice::cert::FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(oak_dice::cert::SHA2_256_ID.into()),
+                        Value::Bytes(vec![0u8; 32]),
+                    )]),
+                ),
+            ]),
+        )];
+
+        let system_public_key_id_hex =
+            hex::encode(oak_dice::cert::derive_verifying_key_id(&system_public_key));
+        let app_encryption_cert = oak_dice::cert::generate_kem_certificate(
+            &system_private_key,
+            system_public_key_id_hex.clone(),
+            &app_encryption_public_key_bytes,
+            container_claims.clone(),
+        )
+        .expect("failed to generate app encryption certificate");
+        let app_signing_cert = oak_dice::cert::generate_signing_certificate(
+            &system_private_key,
+            system_public_key_id_hex,
+            &app_signing_public_key,
+            container_claims,
+        )
+        .expect("failed to generate app signing certificate");
+
+        let application_keys = ApplicationKeys {
+            encryption_public_key_certificate: app_encryption_cert
+                .to_vec()
+                .expect("failed to serialize app encryption certificate"),
+            signing_public_key_certificate: app_signing_cert
+                .to_vec()
+                .expect("failed to serialize app signing certificate"),
+            ..Default::default()
+        };
+
+        let layers = vec![
+            LayerEvidence {
+                eca_certificate: kernel_cert
+                    .to_vec()
+                    .expect("failed to serialize kernel certificate"),
+            },
+            LayerEvidence {
+                eca_certificate: system_cert
+                    .to_vec()
+                    .expect("failed to serialize system certificate"),
+            },
+        ];
+
+        let evidence = Evidence {
+            root_layer: Some(root_layer),
+            layers,
+            application_keys: Some(application_keys),
+            event_log: None,
+            transparent_event_log: None,
+        };
+
+        // We return app_signing_private_key because it's the one signing the data
+        (evidence, app_signing_private_key)
+    }
+
+    // Also see //oak_sev_snp_attestation_report.
+    fn create_fake_attestation_report(root_public_key: CoseKey) -> Vec<u8> {
+        let mut remote_attestation_report = vec![0u8; 1184];
+        // report_data: offset 80 (0x50). Length 32.
+        remote_attestation_report[80..80 + 32].copy_from_slice(&Sha256::digest(
+            root_public_key.to_vec().expect("failed to serialize public key"),
+        ));
+        remote_attestation_report
+    }
+
+    fn empty_endorsements() -> Endorsements {
+        Endorsements {
+            r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(
+                OakContainersEndorsements {
+                    root_layer: Some(RootLayerEndorsements::default()),
+                    ..Default::default()
+                },
+            )),
+            ..Default::default()
+        }
+    }
+
+    fn insecure_reference_values() -> ReferenceValues {
+        ReferenceValues {
+            r#type: Some(reference_values::Type::OakContainers(OakContainersReferenceValues {
+                root_layer: Some(RootLayerReferenceValues {
+                    insecure: Some(
+                        oak_proto_rust::oak::attestation::v1::InsecureReferenceValues {},
+                    ),
+                    ..Default::default()
+                }),
+                kernel_layer: Some(KernelLayerReferenceValues {
+                    kernel: Some(KernelBinaryReferenceValue {
+                        r#type: Some(kernel_binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                    kernel_cmd_line_text: Some(TextReferenceValue {
+                        r#type: Some(text_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                    init_ram_fs: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                    memory_map: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                    acpi: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                }),
+                system_layer: Some(SystemLayerReferenceValues {
+                    system_image: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                }),
+                container_layer: Some(ContainerLayerReferenceValues {
+                    binary: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                    configuration: Some(BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Skip(
+                            oak_proto_rust::oak::attestation::v1::SkipVerification {},
+                        )),
+                    }),
+                }),
+            })),
+        }
     }
 }
