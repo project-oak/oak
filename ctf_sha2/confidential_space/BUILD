@@ -16,7 +16,7 @@
 
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -58,37 +58,4 @@ oci_push(
     name = "workload_image_push",
     image = ":workload_image",
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2",
-)
-
-rust_binary(
-    name = "arbiter",
-    testonly = True,
-    srcs = ["arbiter.rs"],
-    deps = [
-        "//ctf_sha2/proto:arbiter_rust_proto",
-        "//falsify",
-        "//oak_attestation_gcp",
-        "//oak_attestation_verification_types",
-        "//oak_proto_rust",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:hex",
-        "@oak_crates_index//:jwt",
-        "@oak_crates_index//:log",
-        "@oak_crates_index//:prost",
-    ],
-)
-
-rust_test(
-    name = "arbiter_tests",
-    crate = ":arbiter",
-    deps = [
-        "//oak_time",
-        "//oak_time:oak_time_std",
-        "@oak_crates_index//:base64",
-        "@oak_crates_index//:jwt",
-        "@oak_crates_index//:openssl",
-        "@oak_crates_index//:sha2",
-    ],
 )
