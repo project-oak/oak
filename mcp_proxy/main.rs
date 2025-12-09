@@ -14,11 +14,7 @@
 // limitations under the License.
 //
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use axum::{
@@ -32,9 +28,13 @@ use axum::{
 use clap::Parser;
 use config::{Config, Filter};
 use digest::{compute_canonical_digest, Digest};
-use oci_spec::image::ImageIndex;
+use oak_proto_rust::oak::HexDigest;
 use thiserror::Error;
 use tokio::net::TcpListener;
+use trex_client::{
+    http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
+    EndorsementVerifier,
+};
 
 mod config;
 mod digest;
@@ -71,6 +71,11 @@ struct AppState {
     config: Config,
     client: reqwest::Client,
 }
+
+/// Claim associated with a "good" MCP tool list (including tool names and
+/// descriptions).
+const MCP_TOOL_LIST_CLAIM_TYPE: &str =
+    "https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md";
 
 /// Entry point for the application. Initializes the logger, parses arguments,
 /// loads configuration, sets up the application state, and starts the TCP
@@ -174,7 +179,7 @@ async fn handle_request(
     if let Some(filter) = matched_filter {
         log::info!("Request matched filter for method: {}", filter.method);
         if filter.cosign_identity.is_some() {
-            return handle_filtered_response(response, filter, &state).await;
+            return handle_filtered_response(response, filter).await;
         }
     }
 
@@ -204,7 +209,6 @@ async fn handle_request(
 async fn handle_filtered_response(
     response: reqwest::Response,
     filter: &Filter,
-    state: &AppState,
 ) -> Result<Response, (StatusCode, String)> {
     let status = response.status();
 
@@ -221,27 +225,42 @@ async fn handle_filtered_response(
         (StatusCode::INTERNAL_SERVER_ERROR, msg)
     })?;
 
-    let (subject_digest, subject_path) = cache_subject(&body_bytes)?;
-
-    let mut verification_result =
-        Err(VerificationError::EndorsementNotFound(subject_digest.to_string()));
+    let (subject_digest_local, subject_path) = cache_subject(&body_bytes)?;
+    let subject_digest =
+        HexDigest { sha2_256: subject_digest_local.to_hex(), ..Default::default() };
 
     if let Some(prefix) = &filter.http_index_prefix {
-        verification_result = verify_endorsement_from_index(
-            &state.client,
-            prefix,
-            filter,
-            &subject_digest,
-            &subject_path,
-        )
-        .await;
-    }
+        // Fetch index.
+        let index = fetch_index(prefix)
+            .await
+            .map_err(|e| {
+                let msg = format!("Failed to fetch index: {e}");
+                log::error!("{msg}");
+                (StatusCode::INTERNAL_SERVER_ERROR, msg)
+            })?
+            .clone();
 
-    if let Err(e) = verification_result {
-        let err_msg = format!("Endorsement verification failed for subject digest: {}.\nError: {}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={:?} --repository=<path_to_repo> --valid-for=1d --claims=https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md\n",
-            subject_digest, e, filter.cosign_identity, subject_path);
-        log::error!("{err_msg}");
-        return Err((StatusCode::FORBIDDEN, err_msg));
+        // Create repo and verifier.
+        let index_repo = Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone())));
+        let blob_repo = Box::new(HttpBlobFetcher::new(prefix.clone()));
+        let verifier = EndorsementVerifier::new(index_repo, blob_repo);
+
+        let now = oak_time_std::instant::now();
+        let required_claims = vec![MCP_TOOL_LIST_CLAIM_TYPE.to_string()];
+
+        let identity = filter.cosign_identity.as_deref().unwrap_or_default();
+        let issuer =
+            filter.cosign_oidc_issuer.as_deref().unwrap_or("https://oauth2.sigstore.dev/auth");
+
+        let result =
+            verifier.verify(&subject_digest, now, &required_claims, identity, issuer).await;
+
+        if let Err(e) = result {
+            let err_msg = format!("Endorsement verification failed for subject digest: {subject_digest_local}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
+                filter.cosign_identity);
+            log::error!("{err_msg}");
+            return Err((StatusCode::FORBIDDEN, err_msg));
+        }
     }
 
     let mut builder = Response::builder().status(status);
@@ -282,151 +301,4 @@ fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, St
     }
 
     Ok((digest, subject_path))
-}
-
-/// Attempts to verify the endorsement for the given subject by consulting the
-/// OCI index.
-async fn verify_endorsement_from_index(
-    client: &reqwest::Client,
-    prefix: &str,
-    filter: &Filter,
-    subject_digest: &Digest,
-    subject_path: &Path,
-) -> Result<(), VerificationError> {
-    let index_url = format!("{}/index.json", prefix.trim_end_matches('/'));
-    log::info!("Fetching index from: {index_url}");
-
-    let index = fetch_index(client, &index_url)
-        .await
-        .map_err(|e| VerificationError::IndexLookupFailed(e.to_string()))?;
-
-    for entry in index.manifests() {
-        if let Some(annotations) = entry.annotations() {
-            if annotations.get("tr.subject") == Some(&subject_digest.to_string())
-                && annotations.get("tr.type") == Some(&"endorsement".to_string())
-            {
-                let digest_str = entry.digest().to_string();
-                log::info!("Found endorsement digest: {digest_str}");
-
-                match verify_candidate_endorsement(
-                    client,
-                    prefix,
-                    filter,
-                    &digest_str,
-                    subject_path,
-                )
-                .await
-                {
-                    Ok(()) => return Ok(()),
-                    Err(e) => {
-                        log::warn!("Candidate endorsement failed verification: {e}");
-                        // Continue checking other candidates
-                    }
-                }
-            }
-        }
-    }
-
-    Err(VerificationError::EndorsementNotFound(subject_digest.to_string()))
-}
-
-/// Downloads, caches, and verifies a specific endorsement blob.
-async fn verify_candidate_endorsement(
-    client: &reqwest::Client,
-    prefix: &str,
-    filter: &Filter,
-    digest_str: &str,
-    subject_path: &Path,
-) -> Result<(), VerificationError> {
-    let digest = Digest::from_hex(digest_str)
-        .map_err(|e| VerificationError::InvalidDigestFormat(e.to_string()))?;
-
-    let blob_url =
-        format!("{}/blobs/{}/{}", prefix.trim_end_matches('/'), digest.algo(), digest.to_hex());
-    log::info!("Fetching endorsement blob from: {blob_url}");
-
-    let temp_dir = PathBuf::from("/tmp/mcp_proxy");
-    let endorsement_path = temp_dir.join(digest_str);
-
-    if !endorsement_path.exists() {
-        let resp = client
-            .get(&blob_url)
-            .send()
-            .await
-            .map_err(|e| VerificationError::BlobFetchFailed(e.to_string()))?;
-
-        if !resp.status().is_success() {
-            return Err(VerificationError::BlobFetchFailed(format!("Status: {}", resp.status())));
-        }
-
-        let endorsement_data =
-            resp.bytes().await.map_err(|e| VerificationError::BlobFetchFailed(e.to_string()))?;
-
-        let computed_digest = compute_canonical_digest(&endorsement_data);
-        if digest == computed_digest {
-            log::info!("Endorsement digest verified.");
-            fs::write(&endorsement_path, &endorsement_data)
-                .map_err(|e| VerificationError::CacheFailed(e.to_string()))?;
-            log::info!("Endorsement cached at: {endorsement_path:?}");
-        } else {
-            log::warn!("Endorsement digest verification failed");
-            return Err(VerificationError::DigestMismatch);
-        }
-    } else {
-        log::info!("Endorsement already in cache: {endorsement_path:?}");
-    }
-
-    run_cosign_verify_blob(filter, &endorsement_path, subject_path)
-}
-
-/// Executes the `cosign` command to verify the endorsement signature over a
-/// blob.
-fn run_cosign_verify_blob(
-    filter: &Filter,
-    endorsement_path: &Path,
-    subject_path: &Path,
-) -> Result<(), VerificationError> {
-    log::info!("Calling cosign to verify endorsement...");
-    let mut args = vec![
-        "verify-blob".to_string(),
-        format!("--bundle={}", endorsement_path.to_string_lossy()),
-        subject_path.to_string_lossy().to_string(),
-    ];
-
-    if let Some(identity) = &filter.cosign_identity {
-        args.push(format!("--certificate-identity={identity}"));
-
-        let issuer =
-            filter.cosign_oidc_issuer.as_deref().unwrap_or("https://oauth2.sigstore.dev/auth");
-        args.push(format!("--certificate-oidc-issuer={issuer}"));
-    }
-    log::info!("cosign args: {args:?}");
-
-    // Use spawn/output to run cosign
-    let output = Command::new("cosign").args(&args).output().map_err(|e| {
-        VerificationError::Internal(format!("Failed to execute cosign command: {e}"))
-    })?;
-
-    if output.status.success() {
-        log::info!("Cosign verification PASSED!");
-        log::debug!("Cosign Stdout: {}", String::from_utf8_lossy(&output.stdout));
-        Ok(())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        log::warn!("Cosign verification FAILED: {:?}", output.status);
-        log::warn!("Cosign Stdout: {}", String::from_utf8_lossy(&output.stdout));
-        log::warn!("Cosign Stderr: {}", stderr);
-        Err(VerificationError::CosignFailed(stderr))
-    }
-}
-
-/// Fetches and parses the OCI image index from the given URL.
-async fn fetch_index(client: &reqwest::Client, url: &str) -> Result<ImageIndex> {
-    let resp = client.get(url).send().await?;
-    if !resp.status().is_success() {
-        anyhow::bail!("index lookup failed with status: {}", resp.status());
-    }
-    let body = resp.bytes().await?;
-    let index: ImageIndex = serde_json::from_slice(&body)?;
-    Ok(index)
 }

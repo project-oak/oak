@@ -63,6 +63,7 @@ impl Commands {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
     let mut args = Args::parse();
 
     let result = args.run();

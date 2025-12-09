@@ -15,7 +15,7 @@
       "size": 810,
       "annotations": {
         "tr.type": "endorsement",
-        "tr.subject": "sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
+        "oak.tr.endorsement.subject_digest": "sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
       }
     },
     {

@@ -15,6 +15,7 @@
 //
 
 pub mod endorse;
+pub mod verify;
 
 use clap::{Parser, Subcommand};
 
@@ -34,12 +35,14 @@ impl Blob {
 #[derive(Subcommand, Debug)]
 pub enum BlobCommands {
     Endorse(endorse::Endorse),
+    Verify(verify::Verify),
 }
 
 impl BlobCommands {
     pub async fn run(&self) -> anyhow::Result<()> {
         match self {
             Self::Endorse(cmd) => cmd.run().await,
+            Self::Verify(cmd) => cmd.run().await,
         }
     }
 }

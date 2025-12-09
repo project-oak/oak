@@ -17,7 +17,6 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 
 use anyhow::{Context, Result};
@@ -28,19 +27,16 @@ use maplit::hashmap;
 use oak_proto_rust::oak::HexDigest;
 use oak_time::{Duration, Instant};
 use oci_spec::image::{Digest, MediaType};
+use trex_client::{
+    cosign::cosign_sign_blob, OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION, OAK_TR_TYPE_ANNOTATION,
+    OAK_TR_VALUE_ENDORSEMENT, OAK_TR_VALUE_SUBJECT, REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION,
+    REKOR_TYPE_HASHED_REKORD,
+};
 
 use crate::{
     flags::{self, parse_current_time, parse_duration},
     repository::{prepare_repository, repository_add_file},
 };
-
-const TR_TYPE_ANNOTATION: &str = "tr.type";
-const TR_SUBJECT_ANNOTATION: &str = "tr.subject";
-const TR_ENDORSEMENT_ANNOTATION: &str = "tr.endorsement";
-
-const SUBJECT_TYPE: &str = "subject";
-const ENDORSEMENT_TYPE: &str = "endorsement";
-const SIGNATURE_TYPE: &str = "signature";
 
 const OCTET_STREAM_MEDIA_TYPE: &str = "application/octet-stream";
 const IN_TOTO_MEDIA_TYPE: &str = "application/vnd.in-toto+json";
@@ -92,7 +88,7 @@ fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<HexDig
         repository_path,
         &file_data,
         hashmap! {
-            TR_TYPE_ANNOTATION.to_string() => SUBJECT_TYPE.to_string(),
+            OAK_TR_TYPE_ANNOTATION.to_string() => OAK_TR_VALUE_SUBJECT.to_string(),
         },
         MediaType::Other(OCTET_STREAM_MEDIA_TYPE.to_string()),
     )?;
@@ -144,51 +140,23 @@ impl Endorse {
             &self.repository,
             &statement_data,
             hashmap! {
-                TR_TYPE_ANNOTATION.to_string() => ENDORSEMENT_TYPE.to_string(),
+                OAK_TR_TYPE_ANNOTATION.to_string() => OAK_TR_VALUE_ENDORSEMENT.to_string(),
                 // This annotation is used to efficiently look up endorsements about a specific digest from a repository index.
-                TR_SUBJECT_ANNOTATION.to_string() => format!("sha256:{}", subject_hex_digest.sha2_256),
+                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => format!("sha256:{}", subject_hex_digest.sha2_256),
             },
             MediaType::Other(IN_TOTO_MEDIA_TYPE.to_string()),
         )?;
         let statement_digest_str = statement_desc.digest().digest().to_string();
 
         // Sign statement (Create Signature Bundle).
-        let temp_dir = std::env::temp_dir();
+        let bundle_data = cosign_sign_blob(&statement_data)?;
 
-        // The output bundle that cosign will write.
-        let temp_bundle_path = temp_dir.join(format!("bundle-{}.json", std::process::id()));
-
-        // The input statement that cosign will read.
-        let temp_statement_path = temp_dir.join(format!("statement-{}.json", std::process::id()));
-        fs::write(&temp_statement_path, &statement_data)
-            .context("Failed to write temp statement")?;
-
-        eprintln!(
-                "Calling cosign to create endorsement signature... (please complete OIDC flow if prompted)"
-            );
-        let mut command = Command::new("cosign");
-        command
-            .arg("sign-blob")
-            .arg(format!("--bundle={}", temp_bundle_path.display()))
-            .arg(format!("--oidc-issuer={}", "https://oauth2.sigstore.dev/auth"))
-            .arg("--yes")
-            .arg(&temp_statement_path);
-        eprintln!("Running command: {command:?}");
-
-        let status = command.status().context("Failed to execute cosign")?;
-
-        if !status.success() {
-            anyhow::bail!("Cosign failed with status: {status}");
-        }
-
-        // Read signature bundle from the temporary file, and add it to the repository.
-        let bundle_data = fs::read(&temp_bundle_path).context("Failed to read generated bundle")?;
         repository_add_file(
             &self.repository,
             &bundle_data,
             hashmap! {
-                TR_TYPE_ANNOTATION.to_string() => SIGNATURE_TYPE.to_string(),
-                TR_ENDORSEMENT_ANNOTATION.to_string() => statement_digest_str,
+                OAK_TR_TYPE_ANNOTATION.to_string() => REKOR_TYPE_HASHED_REKORD.to_string(),
+                REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION.to_string() => format!("sha256:{}", statement_digest_str),
             },
             MediaType::Other(SIGSTORE_BUNDLE_MEDIA_TYPE.to_string()),
         )?;

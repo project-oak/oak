@@ -16,7 +16,6 @@
 
 use std::fmt;
 
-use anyhow::Result;
 use sha2::{Digest as Sha2Digest, Sha256};
 
 /// A digest of some underlying data.
@@ -27,22 +26,6 @@ pub enum Digest {
 }
 
 impl Digest {
-    pub fn from_hex(s: &str) -> Result<Self> {
-        let parts: Vec<&str> = s.split(':').collect();
-        if parts.len() != 2 {
-            anyhow::bail!("invalid digest format");
-        }
-        let algo = parts[0];
-        let hex_digest = parts[1];
-        match algo {
-            "sha256" => {
-                let digest = hex::decode(hex_digest)?;
-                Ok(Digest::Sha256(digest))
-            }
-            _ => anyhow::bail!("unsupported algorithm: {algo}"),
-        }
-    }
-
     pub fn algo(&self) -> &str {
         match self {
             Digest::Sha256(_) => "sha256",

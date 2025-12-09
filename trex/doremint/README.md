@@ -13,9 +13,13 @@ rather than just trusting the artifact itself.
 
 ## Functionality
 
-The tool is split into two main commands: `endorse` and `verify`.
+The tool is split into two main subcommands: `image` and `blob`.
 
-### `endorse`
+### `image`
+
+Commands for working with OCI container images.
+
+#### `image endorse`
 
 This command creates a new, unsigned
 [Transparent Release in-toto statement](https://project-oak.github.io/oak/tr/endorsement/v1)
@@ -30,7 +34,7 @@ for a container image. The statement includes the following fields:
 An in-toto statement is a JSON file that can then be signed and attached to an
 image using the `cosign` tool.
 
-### `verify`
+#### `image verify`
 
 This command verifies a signed endorsement against a container image. It
 performs a complete, end-to-end verification of the software supply chain, which
@@ -49,6 +53,20 @@ includes:
    - The digest of the image matches the subject of the endorsement.
 
 If all of these checks pass, the tool confirms that the endorsement is valid.
+
+### `blob`
+
+Commands for working with arbitrary blobs (files).
+
+#### `blob endorse`
+
+Endorses a file, creating a Transparent Release statement and storing it in a
+local directory structure acting as an OCI repository.
+
+#### `blob verify`
+
+Verifies an endorsement for a blob by fetching it from an HTTP server serving
+the OCI repository.
 
 ## Usage
 
@@ -143,3 +161,101 @@ doremint image verify \
 the transparency log's inclusion promise. In the very unlikely event that Rekor
 rotates its key, this tool must be updated. The key can be obtained from
 [Rekor's public API](https://rekor.sigstore.dev/api/v1/log/publicKey).
+
+## Endorsing and Verifying Blobs (E2E Example)
+
+This section demonstrates how to endorse a local file (blob) and then verify
+that endorsement using `doremint`.
+
+### Prerequisites
+
+- `doremint` built and available in your path.
+- Python 3 (for running a simple HTTP server).
+- `cosign` installed and configured (specifically for identity-based signing,
+  which `doremint blob endorse` uses internally).
+
+### 1. Setup
+
+Create a temporary directory for the example:
+
+```bash
+mkdir -p /tmp/doremint-demo/repo
+cd /tmp/doremint-demo
+```
+
+Create a dummy file to endorse:
+
+```bash
+echo "Hello, secure world!" > /tmp/artifact.txt
+ARTIFACT_DIGEST=$(sha256sum /tmp/artifact.txt | awk '{print "sha256:" $1}')
+echo "Artifact Digest: $ARTIFACT_DIGEST"
+```
+
+### 2. Endorse the Blob
+
+Run `doremint blob endorse` to sign the artifact and store the endorsement in
+the local repository structure.
+
+```bash
+bazel run trex/doremint -- \
+  blob endorse \
+  --file=/tmp/artifact.txt \
+  --repository=/tmp/endorsements \
+  --claims=test \
+  --valid-for=1d
+```
+
+This command will:
+
+1. Read `artifact.txt`.
+2. Create an endorsement statement with the specified claim valid for 1 day
+   (`1d`).
+3. Sign the statement using `cosign` (this might trigger an OIDC authentication
+   flow in your browser).
+4. Store the artifact, the statement, and the signature in `./repo` formatted as
+   an OCI repository.
+
+You can check the resulting repository structure:
+
+```console
+$ tree /tmp/endorsements
+/tmp/endorsements
+├── blobs
+│   └── sha256
+│       ├── 4e79a01a8c7e93013a8980c189dc9555bf535001411e9996cbde3d0d27b0d866
+│       ├── 6af6ffef11abef73607f5a72ca6f068af1fd2941298615bea2111a68456d31d0
+│       └── 77356716220225abedf3dad1a4291f035cd26f279208d1d279feff56f2c362cb
+└── index.json
+```
+
+### 3. Serve the Repository
+
+Start a simple HTTP server to serve the repository content. Open a new terminal
+window:
+
+```bash
+cd /tmp/endorsements
+python3 -m http.server 8080
+```
+
+### 4. Verify the Endorsement
+
+Now, verify the endorsement using `doremint blob verify`. You need to know the
+identity used to sign the blob (e.g., your email address and the issuer).
+
+```bash
+bazel run trex/doremint -- \
+  blob verify \
+  --subject-digest=$ARTIFACT_DIGEST \
+  --http-index-prefix=http://localhost:8080 \
+  --claims=test \
+  --cosign-identity="your.email@example.com" \
+  --cosign-oidc-issuer="https://accounts.google.com"
+```
+
+Replace `your.email@example.com` and the issuer with the actual values used
+during the signing process (which `cosign` typically prints or you know from
+your OIDC provider).
+
+If successful, you should see output indicating "Verification successful!" and
+details about the endorsement.

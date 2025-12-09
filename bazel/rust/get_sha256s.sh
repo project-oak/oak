@@ -1,3 +1,4 @@
+#!/bin/bash
 RUST_NIGHTLY_VERSION=2025-04-03
 
 echo "=== Linux x86_64 ==="
