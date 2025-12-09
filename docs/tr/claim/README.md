@@ -1,5 +1,11 @@
 # Claims directory
 
+To select a new random id:
+
+```bash
+printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
+```
+
 ## Binaries
 
 - `35705`
@@ -41,6 +47,8 @@
   [Inline-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/77149.md)
 - `98982`
   [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
+- `94503`
+  [MCP Tool Description](https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md)
 - `31543`
   [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
 - `19224`
