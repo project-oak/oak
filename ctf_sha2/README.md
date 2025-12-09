@@ -52,15 +52,38 @@ claim that the flag remains secret.
 
 ### The Arbiter
 
-Each challenge variant comes with an "Arbiter" (verifier) program. This program
-acts as the judge. It accepts your proof (the attestation and the flag) and
-determines if:
+There is a single "Arbiter" (verifier) program for all challenge variants,
+located at `ctf_sha2/arbiter.rs`. This program acts as the judge. It accepts
+your proof (the attestation and the flag) and determines if:
 
 - The attestation is valid and authentic.
 - The hash of your provided flag matches the hash committed to in the
   attestation.
 
 If both checks pass, the Arbiter declares the claim **Falsified**.
+
+### Input Format
+
+The arbiter expects a binary protobuf file containing an
+`oak.ctf_sha2.arbiter.ArbiterInput` message, defined in
+`ctf_sha2/proto/arbiter.proto`.
+
+You will need to construct this message yourself. It contains:
+
+1. `flag`: The bytes of the secret flag you recovered.
+2. `tee_proof`: A oneof field containing the proof specific to the environment
+   (e.g., `confidential_space_jwt` or `attested_signature`).
+
+### Running the Arbiter
+
+You can run the arbiter using Bazel. The command takes two arguments:
+`--input-file` and `--output-file-toml`.
+
+```bash
+bazel run //ctf_sha2:arbiter -- \
+    --input-file=/path/to/your/input.binpb \
+    --output-file-toml=/tmp/falsify_result.toml
+```
 
 ### Interpreting Arbiter Output
 

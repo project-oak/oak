@@ -135,28 +135,5 @@ debugging.
 
 ### Run the Arbiter
 
-The `ctf_sha2/confidential_space/arbiter.rs` binary is the arbiter for this
-challenge. It takes a binary protobuf file as input, and outputs a TOML file
-indicating whether the claim was falsified.
-
-#### Input Format
-
-The input file must be a serialized protobuf message of type
-`oak.ctf_sha2.Input`, defined in `proto/ctf_sha2/falsify.proto`.
-
-You will need to create this binary file yourself, containing the JWT you
-obtained and the secret flag you claim to have discovered.
-
-#### Running the Arbiter
-
-You can run the arbiter using Bazel. The command takes two arguments:
-`--input-file` and `--output-file-toml`.
-
-```bash
-bazel run //ctf_sha2/confidential_space:arbiter -- \
-    --input-file=/path/to/your/input.binpb \
-    --output-file-toml=/tmp/falsify_result.toml
-```
-
-See [Interpreting the Output](../README.md#interpreting-the-output) for details
-on the results.
+See [The Arbiter](../README.md#the-arbiter) in the top-level README for
+instructions on constructing the input and running the verification tool.
