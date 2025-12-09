@@ -6,7 +6,7 @@
 
 The objective of Oak Functions is to design and implement a general-purpose
 computing platform that allows developing stateless applications in a privacy
-preserving way. Oak Functions leverages TEEs and remote attestation, Wasm
+preserving way. Oak Functions leverages TEEs, remote attestation, and Wasm
 sandboxing.
 
 At its core, Oak Functions consists of a **trusted runtime** compiled into a
