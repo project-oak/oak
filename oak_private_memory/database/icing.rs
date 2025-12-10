@@ -97,7 +97,7 @@ const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
-const EXPIRED_TIMESTAMP_NAME: &str = "expiredTimestamp";
+const EXPIRATION_TIMESTAMP_NAME: &str = "expirationTimestamp";
 
 const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
@@ -166,10 +166,10 @@ impl PendingMetadata {
                 timestamp_to_i64(event_timestamp),
             );
         }
-        if let Some(ref expired_timestamp) = memory.expired_timestamp {
+        if let Some(ref expiration_timestamp) = memory.expiration_timestamp {
             document_builder.add_int64_property(
-                EXPIRED_TIMESTAMP_NAME.as_bytes(),
-                timestamp_to_i64(expired_timestamp),
+                EXPIRATION_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expiration_timestamp),
             );
         }
         let icing_document = document_builder.build();
@@ -219,10 +219,10 @@ impl PendingLlmViewMetadata {
                 timestamp_to_i64(event_timestamp),
             );
         }
-        if let Some(ref expired_timestamp) = memory.expired_timestamp {
+        if let Some(ref expiration_timestamp) = memory.expiration_timestamp {
             document_builder.add_int64_property(
-                EXPIRED_TIMESTAMP_NAME.as_bytes(),
-                timestamp_to_i64(expired_timestamp),
+                EXPIRATION_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expiration_timestamp),
             );
         }
         let icing_document = document_builder.build();
@@ -325,7 +325,7 @@ impl IcingMetaDatabase {
                     ),
             ).add_property(
                 icing::create_property_config_builder()
-                    .set_name(EXPIRED_TIMESTAMP_NAME.as_bytes())
+                    .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
                     .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -400,7 +400,7 @@ impl IcingMetaDatabase {
                     ),
             ).add_property(
                 icing::create_property_config_builder()
-                    .set_name(EXPIRED_TIMESTAMP_NAME.as_bytes())
+                    .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
                     .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -764,7 +764,7 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<(Vec<MemoryId>, PageToken)> {
         let text_query = TextQuery {
             match_type: MatchType::Lt as i32,
-            field: MemoryField::ExpiredTimestamp as i32,
+            field: MemoryField::ExpirationTimestamp as i32,
             value: Some(text_query::Value::TimestampVal(system_time_to_timestamp(
                 SystemTime::now(),
             ))),
@@ -951,9 +951,9 @@ impl IcingMetaDatabase {
         query_specs.query = Some(format!(
             "({}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
             query_specs.query.context("no query")?,
-            EXPIRED_TIMESTAMP_NAME,
+            EXPIRATION_TIMESTAMP_NAME,
             now_ts,
-            EXPIRED_TIMESTAMP_NAME,
+            EXPIRATION_TIMESTAMP_NAME,
         ));
 
         query_specs.enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
@@ -1052,7 +1052,7 @@ impl IcingMetaDatabase {
         let field_name = match text_query.field() {
             MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
             MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
-            MemoryField::ExpiredTimestamp => EXPIRED_TIMESTAMP_NAME,
+            MemoryField::ExpirationTimestamp => EXPIRATION_TIMESTAMP_NAME,
             MemoryField::Id => MEMORY_ID_NAME,
             MemoryField::Tags => TAG_NAME,
             _ => bail!("unsupported field for text search"),
@@ -1062,7 +1062,7 @@ impl IcingMetaDatabase {
             MatchType::Equal => {
                 if field_name == CREATED_TIMESTAMP_NAME
                     || field_name == EVENT_TIMESTAMP_NAME
-                    || field_name == EXPIRED_TIMESTAMP_NAME
+                    || field_name == EXPIRATION_TIMESTAMP_NAME
                 {
                     format!("({field_name} == {value})")
                 } else {
@@ -1324,7 +1324,7 @@ fn build_non_expired_query_str(property_name: &str, property_val: &str) -> Strin
     // future, or if it has no expiration timestamp set.
     format!(
         "({}:{}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
-        property_name, property_val, EXPIRED_TIMESTAMP_NAME, now_ts, EXPIRED_TIMESTAMP_NAME
+        property_name, property_val, EXPIRATION_TIMESTAMP_NAME, now_ts, EXPIRATION_TIMESTAMP_NAME
     )
 }
 
@@ -1565,7 +1565,7 @@ mod tests {
         let expired_memory_id = "expired_memory_embed".to_string();
         let expired_blob_id = "expired_blob_embed".to_string();
         let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
-        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
 
         let expired_memory = Memory {
             id: expired_memory_id.clone(),
@@ -1580,7 +1580,7 @@ mod tests {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp,
+            expiration_timestamp,
             ..Default::default()
         };
         icing_database.add_memory(&expired_memory, expired_blob_id.clone())?;
@@ -1604,12 +1604,12 @@ mod tests {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: non_expired_timestamp,
+            expiration_timestamp: non_expired_timestamp,
             ..Default::default()
         };
         icing_database.add_memory(&non_expired_memory, non_expired_blob_id.clone())?;
 
-        // Create a never-expired memory (no expired_timestamp)
+        // Create a never-expired memory (no expiration_timestamp)
         let never_expired_memory_id = "never_expired_memory_embed".to_string();
         let never_expired_blob_id = "never_expired_blob_embed".to_string();
         let never_expired_memory = Memory {
@@ -1625,7 +1625,7 @@ mod tests {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         icing_database.add_memory(&never_expired_memory, never_expired_blob_id.clone())?;
@@ -2024,7 +2024,7 @@ mod tests {
     }
 
     #[gtest]
-    fn icing_get_memory_by_id_with_expired_timestamp_test() -> anyhow::Result<()> {
+    fn icing_get_memory_by_id_with_expiration_timestamp_test() -> anyhow::Result<()> {
         let mut icing_database = IcingMetaDatabase::new(tempdir())?;
 
         let memory_id = "expired_memory_id".to_string();
@@ -2032,12 +2032,12 @@ mod tests {
 
         // Create a timestamp in the past (e.g., 1 hour ago)
         let past_time = SystemTime::now() - std::time::Duration::from_secs(3600);
-        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
 
         let memory = Memory {
             id: memory_id.clone(),
             tags: vec!["expired".to_string()],
-            expired_timestamp,
+            expiration_timestamp,
             ..Default::default()
         };
         icing_database.add_memory(&memory, blob_id.clone())?;
@@ -2090,7 +2090,7 @@ mod tests {
         let memory_expired = Memory {
             id: memory_id_expired.clone(),
             tags: vec![common_tag.clone()],
-            expired_timestamp: Some(system_time_to_timestamp(past_time)),
+            expiration_timestamp: Some(system_time_to_timestamp(past_time)),
             ..Default::default()
         };
         icing_database.add_memory(&memory_expired, blob_id_expired.clone())?;
@@ -2102,7 +2102,7 @@ mod tests {
         let memory_future = Memory {
             id: memory_id_future.clone(),
             tags: vec![common_tag.clone()],
-            expired_timestamp: Some(system_time_to_timestamp(future_time)),
+            expiration_timestamp: Some(system_time_to_timestamp(future_time)),
             ..Default::default()
         };
         icing_database.add_memory(&memory_future, blob_id_future.clone())?;
@@ -2113,7 +2113,7 @@ mod tests {
         let memory_no_expiry = Memory {
             id: memory_id_no_expiry.clone(),
             tags: vec![common_tag.clone()],
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         icing_database.add_memory(&memory_no_expiry, blob_id_no_expiry.clone())?;

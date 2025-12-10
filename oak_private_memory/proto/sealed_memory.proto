@@ -120,20 +120,20 @@ message Memory {
   google.protobuf.Timestamp event_timestamp = 7;
   // The time when the memory is considered to be expired. Should be
   // set by the client. If not set, the memory will never expire.
-  google.protobuf.Timestamp expired_timestamp = 9;
+  google.protobuf.Timestamp expiration_timestamp = 9;
 
   LLMViews views = 8;
 }
 
 enum MemoryField {
-  UNKNOWN = 0;            // Default value, should not be used.
-  ID = 1;                 // The 'id' field of the Memory message.
-  TAGS = 2;               // The 'tags' field.
-  EMBEDDINGS = 3;         // The 'embeddings' field.
-  CONTENT = 4;            // The 'content' field .
-  CREATED_TIMESTAMP = 5;  // The 'created_timestamp' field.
-  EVENT_TIMESTAMP = 6;    // The 'event_timestamp' field.
-  EXPIRED_TIMESTAMP = 7;  // The 'expired_timestamp' field.
+  UNKNOWN = 0;               // Default value, should not be used.
+  ID = 1;                    // The 'id' field of the Memory message.
+  TAGS = 2;                  // The 'tags' field.
+  EMBEDDINGS = 3;            // The 'embeddings' field.
+  CONTENT = 4;               // The 'content' field .
+  CREATED_TIMESTAMP = 5;     // The 'created_timestamp' field.
+  EVENT_TIMESTAMP = 6;       // The 'event_timestamp' field.
+  EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
 }
 
 message AddMemoryRequest {

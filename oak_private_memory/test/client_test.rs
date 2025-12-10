@@ -426,18 +426,18 @@ async fn test_get_by_id_with_expired_memories() {
         // Create a timestamp in the past for an expired memory
         let past_time =
             std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-        let expired_timestamp_past = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp_past = Some(system_time_to_timestamp(past_time));
 
         // Create a timestamp in the future for a non-expired memory
         let future_time =
             std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
-        let expired_timestamp_future = Some(system_time_to_timestamp(future_time));
+        let expiration_timestamp_future = Some(system_time_to_timestamp(future_time));
 
         // Add an expired memory
         let expired_memory_to_add = Memory {
             id: expired_memory_id.to_string(),
             tags: vec!["expired".to_string()],
-            expired_timestamp: expired_timestamp_past,
+            expiration_timestamp: expiration_timestamp_past,
             ..Default::default()
         };
         let response_expired = client.add_memory(expired_memory_to_add).await.unwrap();
@@ -447,7 +447,7 @@ async fn test_get_by_id_with_expired_memories() {
         let non_expired_memory_to_add = Memory {
             id: non_expired_memory_id.to_string(),
             tags: vec!["non_expired".to_string()],
-            expired_timestamp: expired_timestamp_future,
+            expiration_timestamp: expiration_timestamp_future,
             ..Default::default()
         };
         let response_non_expired = client.add_memory(non_expired_memory_to_add).await.unwrap();
@@ -457,7 +457,7 @@ async fn test_get_by_id_with_expired_memories() {
         let no_expiration_memory_to_add = Memory {
             id: no_expiration_memory_id.to_string(),
             tags: vec!["no_expiration".to_string()],
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         let response_no_expiration = client.add_memory(no_expiration_memory_to_add).await.unwrap();
@@ -503,18 +503,18 @@ async fn test_get_by_tag_with_expired_memories() {
         // Create a timestamp in the past for an expired memory
         let past_time =
             std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-        let expired_timestamp_past = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp_past = Some(system_time_to_timestamp(past_time));
 
         // Create a timestamp in the future for a non-expired memory
         let future_time =
             std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // in 1 hour
-        let expired_timestamp_future = Some(system_time_to_timestamp(future_time));
+        let expiration_timestamp_future = Some(system_time_to_timestamp(future_time));
 
         // Add an expired memory
         let expired_memory_to_add = Memory {
             id: expired_memory_id.to_string(),
             tags: vec![tag.to_string()],
-            expired_timestamp: expired_timestamp_past,
+            expiration_timestamp: expiration_timestamp_past,
             ..Default::default()
         };
         client.add_memory(expired_memory_to_add).await.unwrap();
@@ -523,7 +523,7 @@ async fn test_get_by_tag_with_expired_memories() {
         let non_expired_memory_to_add = Memory {
             id: non_expired_memory_id.to_string(),
             tags: vec![tag.to_string()],
-            expired_timestamp: expired_timestamp_future,
+            expiration_timestamp: expiration_timestamp_future,
             ..Default::default()
         };
         client.add_memory(non_expired_memory_to_add).await.unwrap();
@@ -532,7 +532,7 @@ async fn test_get_by_tag_with_expired_memories() {
         let no_expiration_memory_to_add = Memory {
             id: no_expiration_memory_id.to_string(),
             tags: vec![tag.to_string()],
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         client.add_memory(no_expiration_memory_to_add).await.unwrap();
@@ -570,7 +570,7 @@ async fn search_test_text_with_expired_memories() {
         let expired_memory_id = "memory_expired".to_string();
         let past_time =
             std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
         let expired_memory = Memory {
             id: expired_memory_id.clone(),
             tags: vec![common_tag.clone()],
@@ -584,7 +584,7 @@ async fn search_test_text_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp,
+            expiration_timestamp,
             ..Default::default()
         };
         client.add_memory(expired_memory).await.unwrap();
@@ -593,7 +593,7 @@ async fn search_test_text_with_expired_memories() {
         let non_expired_memory_id = "memory_non_expired".to_string();
         let future_time =
             std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour in future
-        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+        let non_expiration_timestamp = Some(system_time_to_timestamp(future_time));
         let non_expired_memory = Memory {
             id: non_expired_memory_id.clone(),
             tags: vec![common_tag.clone()],
@@ -607,7 +607,7 @@ async fn search_test_text_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: non_expired_timestamp,
+            expiration_timestamp: non_expiration_timestamp,
             ..Default::default()
         };
         client.add_memory(non_expired_memory).await.unwrap();
@@ -627,7 +627,7 @@ async fn search_test_text_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         client.add_memory(never_expired_memory).await.unwrap();
@@ -682,7 +682,7 @@ async fn search_test_embedding_with_expired_memories() {
         let expired_memory_id = "embedding_memory_expired".to_string();
         let past_time =
             std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour ago
-        let expired_timestamp = Some(system_time_to_timestamp(past_time));
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
         let expired_memory = Memory {
             id: expired_memory_id.clone(),
             tags: vec![common_tag.clone()],
@@ -696,7 +696,7 @@ async fn search_test_embedding_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp,
+            expiration_timestamp,
             ..Default::default()
         };
         client.add_memory(expired_memory).await.unwrap();
@@ -705,7 +705,7 @@ async fn search_test_embedding_with_expired_memories() {
         let non_expired_memory_id = "embedding_memory_non_expired".to_string();
         let future_time =
             std::time::SystemTime::now().checked_add(std::time::Duration::from_secs(3600)).unwrap(); // 1 hour in future
-        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+        let non_expiration_timestamp = Some(system_time_to_timestamp(future_time));
         let non_expired_memory = Memory {
             id: non_expired_memory_id.clone(),
             tags: vec![common_tag.clone()],
@@ -719,7 +719,7 @@ async fn search_test_embedding_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: non_expired_timestamp,
+            expiration_timestamp: non_expiration_timestamp,
             ..Default::default()
         };
         client.add_memory(non_expired_memory).await.unwrap();
@@ -739,7 +739,7 @@ async fn search_test_embedding_with_expired_memories() {
                     ..Default::default()
                 }],
             }),
-            expired_timestamp: None,
+            expiration_timestamp: None,
             ..Default::default()
         };
         client.add_memory(never_expired_memory).await.unwrap();

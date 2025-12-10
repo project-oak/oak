@@ -370,14 +370,14 @@ async fn test_memory_expiration() {
 
     let memory_expired = Memory {
         id: "memory_expired".to_string(),
-        expired_timestamp: Some(system_time_to_timestamp(
+        expiration_timestamp: Some(system_time_to_timestamp(
             std::time::SystemTime::now() - Duration::from_secs(30 * 60),
         )),
         ..Default::default()
     };
     let memory_valid = Memory {
         id: "memory_valid".to_string(),
-        expired_timestamp: Some(system_time_to_timestamp(
+        expiration_timestamp: Some(system_time_to_timestamp(
             std::time::SystemTime::now() + Duration::from_secs(30 * 60),
         )),
         ..Default::default()

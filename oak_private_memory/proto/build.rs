@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
-        "oak.private_memory.Memory.expired_timestamp",
+        "oak.private_memory.Memory.expiration_timestamp",
         "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
