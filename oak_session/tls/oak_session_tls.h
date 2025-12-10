@@ -107,7 +107,7 @@ class OakSessionTlsInitializer {
 
   // Returns true if the handshake is complete.
   //
-  // After the handshake is complete, the `GetOpenClientSession` method can be
+  // After the handshake is complete, the `GetOpenSession` method can be
   // used to get the open session for encrypting and decrypting application
   bool IsReady();
 
@@ -122,7 +122,7 @@ class OakSessionTlsInitializer {
   // In some cases, the handshake completion may be accompanied by some initial
   // data. So be sure to check the contents of `initial_data()` after retrieving
   // the session, and before discarding the initializer.
-  absl::StatusOr<std::unique_ptr<OakSessionTls>> GetOpenClientSession();
+  absl::StatusOr<std::unique_ptr<OakSessionTls>> GetOpenSession();
 
   // Put an incoming TLS frame into the initializer.
   absl::Status PutTLSFrame(absl::string_view tlsFrame);

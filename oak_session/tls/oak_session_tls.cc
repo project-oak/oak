@@ -214,7 +214,7 @@ bool OakSessionTlsInitializer::IsReady() {
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTls>>
-OakSessionTlsInitializer::GetOpenClientSession() {
+OakSessionTlsInitializer::GetOpenSession() {
   if (ssl_ == nullptr) {
     return absl::FailedPreconditionError("Initializer is no longer valid.");
   }

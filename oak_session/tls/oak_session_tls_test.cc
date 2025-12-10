@@ -74,14 +74,14 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
   HandshakeToClientReady(**server_initializer, **client_initializer);
 
   // The client should be ready to send data now.
-  auto client_session = (*client_initializer)->GetOpenClientSession();
+  auto client_session = (*client_initializer)->GetOpenSession();
   ASSERT_THAT(client_session, IsOk());
 
   std::string client_message = "hello server";
   CompleteServerHandshakeWithData(**server_initializer, **client_session,
                                   client_message);
 
-  auto server_session = (*server_initializer)->GetOpenClientSession();
+  auto server_session = (*server_initializer)->GetOpenSession();
   ASSERT_THAT(server_session, IsOk());
   // The intial application data is stored in the initializer.
   ASSERT_THAT((*server_initializer)->initial_data(), Eq(client_message));
@@ -138,14 +138,14 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
   HandshakeToClientReady(**server_initializer, **client_initializer);
 
   // The client should be ready to send data now.
-  auto client_session = (*client_initializer)->GetOpenClientSession();
+  auto client_session = (*client_initializer)->GetOpenSession();
   ASSERT_THAT(client_session, IsOk());
 
   std::string client_message = "hello server";
   CompleteServerHandshakeWithData(**server_initializer, **client_session,
                                   client_message);
 
-  auto server_session = (*server_initializer)->GetOpenClientSession();
+  auto server_session = (*server_initializer)->GetOpenSession();
   ASSERT_THAT(server_session, IsOk());
   // The intial application data is stored in the initializer.
   ASSERT_THAT((*server_initializer)->initial_data(), Eq(client_message));
@@ -204,7 +204,7 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
   HandshakeToClientReady(**server_initializer, **client_initializer);
 
   // The client should be ready to send data now.
-  auto client_session = (*client_initializer)->GetOpenClientSession();
+  auto client_session = (*client_initializer)->GetOpenSession();
   ASSERT_THAT(client_session, IsOk());
 
   std::string client_message = "hello server";
@@ -252,7 +252,7 @@ TEST(OakSessionTlsTest,
   HandshakeToClientReady(**server_initializer, **client_initializer);
 
   // The client should be ready to send data now.
-  auto client_session = (*client_initializer)->GetOpenClientSession();
+  auto client_session = (*client_initializer)->GetOpenSession();
   ASSERT_THAT(client_session, IsOk());
 
   // Now try to complete the handshake on the server side: it should fail.
@@ -295,7 +295,7 @@ TEST(OakSessionTlsTest, LargeDataTransfer) {
 
   HandshakeToClientReady(**server_initializer, **client_initializer);
 
-  auto client_session = (*client_initializer)->GetOpenClientSession();
+  auto client_session = (*client_initializer)->GetOpenSession();
   ASSERT_THAT(client_session, IsOk());
 
   std::string client_message =
@@ -303,7 +303,7 @@ TEST(OakSessionTlsTest, LargeDataTransfer) {
   CompleteServerHandshakeWithData(**server_initializer, **client_session,
                                   client_message);
 
-  auto server_session = (*server_initializer)->GetOpenClientSession();
+  auto server_session = (*server_initializer)->GetOpenSession();
   ASSERT_THAT(server_session, IsOk());
   // The intial application data is stored in the initializer.
   ASSERT_THAT((*server_initializer)->initial_data(), Eq(client_message));
