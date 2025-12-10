@@ -36,26 +36,30 @@ namespace oak::session::tls {
 namespace {
 absl::StatusOr<std::string> BioReadAll(BIO* bio);
 absl::StatusOr<std::string> SslReadAll(SSL* ssl);
+absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity);
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::CreateServerContext(absl::string_view server_key_asn1,
-                                          absl::string_view server_cert_asn1) {
+OakSessionTlsContext::Create(const ServerContextConfig& config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
-  if (SSL_CTX_use_RSAPrivateKey_ASN1(
-          ctx.get(), reinterpret_cast<const uint8_t*>(server_key_asn1.data()),
-          server_key_asn1.size()) != 1) {
-    return absl::InternalError("Failed to load private key");
+  absl::Status creds_status = SetTlsIdentity(ctx.get(), config.tls_identity);
+  if (!creds_status.ok()) {
+    return creds_status;
   }
 
-  if (SSL_CTX_use_certificate_ASN1(
-          ctx.get(), server_cert_asn1.size(),
-          reinterpret_cast<const uint8_t*>(server_cert_asn1.data())) != 1) {
-    return absl::InternalError("Failed to load certificate");
+  if (config.client_trust_anchor_path.has_value()) {
+    SSL_CTX_set_verify(
+        ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+
+    if (SSL_CTX_load_verify_locations(ctx.get(),
+                                      config.client_trust_anchor_path->c_str(),
+                                      nullptr) != 1) {
+      return absl::InternalError("Failed to load trust anchor for client");
+    }
   }
 
   return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kServer,
@@ -63,18 +67,22 @@ OakSessionTlsContext::CreateServerContext(absl::string_view server_key_asn1,
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::CreateClientContext(
-    absl::string_view server_trust_anchor_path) {
-  std::string server_trust_anchor_path_str(server_trust_anchor_path);
+OakSessionTlsContext::Create(const ClientContextConfig& config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
-  if (SSL_CTX_load_verify_locations(
-          ctx.get(), server_trust_anchor_path_str.c_str(), nullptr) != 1) {
-    return absl::InternalError("Failed to load trust anchor for client");
+  SSL_CTX_load_verify_locations(
+      ctx.get(), config.server_trust_anchor_path.c_str(), nullptr);
+
+  if (config.tls_identity.has_value()) {
+    absl::Status creds_status = SetTlsIdentity(ctx.get(), *config.tls_identity);
+    if (!creds_status.ok()) {
+      return creds_status;
+    }
   }
+
   return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kClient,
                                                 std::move(ctx));
 }
@@ -290,6 +298,22 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
   };
 
   return result;
+}
+
+absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity) {
+  if (SSL_CTX_use_RSAPrivateKey_ASN1(
+          ctx, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
+          tls_identity.key_asn1.size()) != 1) {
+    return absl::InternalError("Failed to load private key");
+  }
+
+  if (SSL_CTX_use_certificate_ASN1(ctx, tls_identity.cert_asn1.size(),
+                                   reinterpret_cast<const uint8_t*>(
+                                       tls_identity.cert_asn1.data())) != 1) {
+    return absl::InternalError("Failed to load certificate");
+  }
+
+  return absl::OkStatus();
 }
 
 }  // namespace

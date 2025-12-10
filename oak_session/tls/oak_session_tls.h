@@ -30,21 +30,48 @@ class OakSessionTlsInitializer;
 
 enum class OakSessionTlsMode { kClient, kServer };
 
+// The public/private key pair that this node will use.
+// Both values should be non-empty.
+struct TlsIdentity {
+  // The private key that this node will use during handshake. If left blank, no
+  // private key will be set for this node to send as verification.
+  std::string key_asn1;
+
+  // The cerificate containing the public key corresponding to the private key
+  // in self_key_asn1.
+  std::string cert_asn1;
+};
+
+// Parameters to configure OakSessionTlsContext for server behavior.
+struct ServerContextConfig {
+  // The key and certificate to use for this server.
+  TlsIdentity tls_identity;
+
+  // Optional trust anchor path for the client.
+  // If set, client verification mode will be enabled, and client verification
+  // will be required.
+  std::optional<std::string> client_trust_anchor_path;
+};
+
+// Parameters to configure OakSessionTlsContext for client behavior.
+struct ClientContextConfig {
+  // The path to a trust anchor that can verify the server.
+  std::string server_trust_anchor_path;
+
+  // If provided, the client will support (but not require) mTLS mode, and the
+  // server can request a certificate for verification.
+  std::optional<TlsIdentity> tls_identity;
+};
+
 /**
  * Managed an SSL Context that will be used to create Oak TLS sessions.
  */
 class OakSessionTlsContext {
  public:
-  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-  // Create a new server context using the provided private key and certificate,
-  // both provided as raw ASN1 bytes. The server key should be an RSA key.
-  CreateServerContext(absl::string_view server_key_asn1,
-                      absl::string_view server_cert_asn1);
-
-  // Create a new client context that will verify the server using the provided
-  // trust anchor.
-  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-  CreateClientContext(absl::string_view server_trust_anchor_path);
+  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> Create(
+      const ClientContextConfig& config);
+  static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> Create(
+      const ServerContextConfig& config);
 
   // Create a new OakSessionTlsInitializer for a new session using this
   // context's current configuration.

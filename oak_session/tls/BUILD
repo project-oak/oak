@@ -24,12 +24,8 @@ package(
 
 cc_library(
     name = "oak_session_tls",
-    srcs = [
-        "oak_session_tls.cc",
-    ],
-    hdrs = [
-        "oak_session_tls.h",
-    ],
+    srcs = ["oak_session_tls.cc"],
+    hdrs = ["oak_session_tls.h"],
     deps = [
         "@boringssl//:crypto",
         "@boringssl//:ssl",
@@ -41,12 +37,8 @@ cc_library(
 
 cc_test(
     name = "oak_session_tls_test",
-    srcs = [
-        "oak_session_tls_test.cc",
-    ],
-    data = [
-        "//oak_session/tls/testing:test_keys",
-    ],
+    srcs = ["oak_session_tls_test.cc"],
+    data = ["//oak_session/tls/testing:test_keys"],
     deps = [
         ":oak_session_tls",
         "@boringssl//:crypto",
