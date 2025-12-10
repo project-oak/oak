@@ -35,12 +35,27 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "util",
+    srcs = ["util.cc"],
+    hdrs = ["util.h"],
+    deps = [
+        ":oak_session_tls",
+        "@boringssl//:crypto",
+        "@boringssl//:ssl",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
 cc_test(
     name = "oak_session_tls_test",
     srcs = ["oak_session_tls_test.cc"],
     data = ["//oak_session/tls/testing:test_keys"],
     deps = [
         ":oak_session_tls",
+        ":util",
         "@boringssl//:crypto",
         "@boringssl//:ssl",
         "@com_google_absl//absl/status",

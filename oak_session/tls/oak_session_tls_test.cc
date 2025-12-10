@@ -18,6 +18,7 @@
 #include "absl/status/status_matchers.h"
 #include "absl/status/statusor.h"
 #include "gtest/gtest.h"
+#include "oak_session/tls/util.h"
 #include "openssl/base.h"
 #include "openssl/ssl.h"
 
@@ -27,9 +28,6 @@ namespace {
 using ::absl_testing::IsOk;
 using ::absl_testing::StatusIs;
 using ::testing::Eq;
-
-absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path);
-absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path);
 
 constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/server.key";
 constexpr char kTestServerCertPath[] = "oak_session/tls/testing/server.pem";
@@ -46,9 +44,9 @@ void SendReceiveAndVerifyMessage(OakSessionTls& sender, OakSessionTls& receiver,
 std::string CreateTestData(size_t size);
 
 TEST(OakSessionTlsTest, CreateAndUseSession) {
-  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
-  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
 
   ServerContextConfig server_config{
@@ -100,13 +98,13 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
 }
 
 TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
-  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
-  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
-  auto client_key = LoadPrivateKeyFromFile(kTestClientKeyPath);
+  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
   ASSERT_THAT(client_key, IsOk());
-  auto client_cert = LoadCertificateFromFile(kTestClientCertPath);
+  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
   ASSERT_THAT(client_cert, IsOk());
 
   ServerContextConfig server_config{
@@ -164,13 +162,13 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
 }
 
 TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
-  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
-  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
-  auto client_key = LoadPrivateKeyFromFile(kTestClientKeyPath);
+  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
   ASSERT_THAT(client_key, IsOk());
-  auto client_cert = LoadCertificateFromFile(kTestClientCertPath);
+  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
   ASSERT_THAT(client_cert, IsOk());
 
   // Do not enable a trust anchor so the server does not request a client
@@ -216,13 +214,13 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
 
 TEST(OakSessionTlsTest,
      ServerRequestsClientCertButClientDoesntSetFailsHandshake) {
-  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
-  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
-  auto client_key = LoadPrivateKeyFromFile(kTestClientKeyPath);
+  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
   ASSERT_THAT(client_key, IsOk());
-  auto client_cert = LoadCertificateFromFile(kTestClientCertPath);
+  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
   ASSERT_THAT(client_cert, IsOk());
 
   // Enable a client trust anchor, which will trigger client cert request.
@@ -267,9 +265,9 @@ TEST(OakSessionTlsTest,
 }
 
 TEST(OakSessionTlsTest, LargeDataTransfer) {
-  auto server_key = LoadPrivateKeyFromFile(kTestServerKeyPath);
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
-  auto server_cert = LoadCertificateFromFile(kTestServerCertPath);
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
 
   ServerContextConfig server_config{
@@ -362,63 +360,6 @@ void SendReceiveAndVerifyMessage(OakSessionTls& sender, OakSessionTls& receiver,
   auto decrypted_message = receiver.Decrypt(*encrypted_message);
   ASSERT_THAT(decrypted_message, IsOk());
   ASSERT_THAT(*decrypted_message, Eq(message));
-}
-
-absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path) {
-  FILE* file = fopen(key_path, "r");
-  if (file == nullptr) {
-    return absl::InternalError("Failed to open private key file");
-  }
-  bssl::UniquePtr<EVP_PKEY> pkey(
-      PEM_read_PrivateKey(file, nullptr, nullptr, nullptr));
-  fclose(file);
-  if (pkey == nullptr) {
-    return absl::InternalError("Failed to read private key from file");
-  }
-
-  int der_len = i2d_PrivateKey(pkey.get(), NULL);
-  if (der_len < 0) {
-    return absl::InternalError("Failed to get DER length from certificate");
-  }
-
-  std::string pkey_der;
-  pkey_der.resize(der_len);
-  unsigned char* p = reinterpret_cast<unsigned char*>(pkey_der.data());
-
-  der_len = i2d_PrivateKey(pkey.get(), &p);
-  if (der_len < 0) {
-    return absl::InternalError("Failed to convert certificate to DER");
-  }
-
-  return pkey_der;
-}
-
-absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path) {
-  FILE* file = fopen(cert_path, "r");
-  if (file == nullptr) {
-    return absl::InternalError("Failed to open certificate file");
-  }
-  bssl::UniquePtr<X509> cert(PEM_read_X509(file, nullptr, nullptr, nullptr));
-  fclose(file);
-  if (cert == nullptr) {
-    return absl::InternalError("Failed to read certificate from file");
-  }
-
-  int der_len = i2d_X509(cert.get(), nullptr);
-  if (der_len < 0) {
-    return absl::InternalError("Failed to get DER length from certificate");
-  }
-
-  std::string cert_der;
-  cert_der.resize(der_len);
-  unsigned char* p = reinterpret_cast<unsigned char*>(cert_der.data());
-
-  der_len = i2d_X509(cert.get(), &p);
-  if (der_len < 0) {
-    return absl::InternalError("Failed to convert certificate to DER");
-  }
-
-  return cert_der;
 }
 
 }  // namespace
