@@ -52,7 +52,6 @@ sh_test(
     srcs = ["cli_tests.sh"],
     data = [
         ":doremint",
-        "//trex/doremint/testdata:blob_golden_index.json",
         "//trex/doremint/testdata:claims.toml",
         "//trex/doremint/testdata:dummy_blob.txt",
         "//trex/doremint/testdata:golden.json",

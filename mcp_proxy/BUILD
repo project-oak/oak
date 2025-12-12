@@ -43,7 +43,6 @@ rust_binary(
         "@oak_crates_index//:hyper",
         "@oak_crates_index//:hyper-util",
         "@oak_crates_index//:log",
-        "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:reqwest",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",

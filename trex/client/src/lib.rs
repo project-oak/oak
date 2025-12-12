@@ -21,20 +21,51 @@ use async_trait::async_trait;
 use intoto::statement::DefaultStatement;
 use oak_proto_rust::oak::HexDigest;
 use oak_time::Instant;
-use oci_spec::image::Descriptor;
+use oci_spec::image::Digest;
+use serde::{Deserialize, Serialize};
 
 pub mod cosign;
 pub mod http;
 
-pub const OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION: &str = "oak.tr.endorsement.subject_digest";
-pub const OAK_TR_TYPE_ANNOTATION: &str = "oak.tr.type";
-pub const OAK_TR_ENDORSEMENT_ANNOTATION: &str = "oak.tr.endorsement";
+pub const OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION: &str = "z14197672990661659844";
+pub const OAK_TR_TYPE_ANNOTATION: &str = "z17560787766618339208";
+pub const OAK_TR_ENDORSEMENT_ANNOTATION: &str = "z07536186093917175676";
 
-pub const REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION: &str = "rekor.hashedrekord.data_hash";
+pub const REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION: &str = "z09517987585984635338";
 
-pub const OAK_TR_VALUE_SUBJECT: &str = "oak.tr.subject";
-pub const OAK_TR_VALUE_ENDORSEMENT: &str = "oak.tr.endorsement";
-pub const REKOR_TYPE_HASHED_REKORD: &str = "rekor.hashedrekord";
+pub const OAK_TR_VALUE_SUBJECT: &str = "z01055973668873387432";
+pub const OAK_TR_VALUE_ENDORSEMENT: &str = "z12892009233847085319";
+pub const REKOR_TYPE_HASHED_REKORD: &str = "z08532839784414992196";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "z12941845592822707391")]
+pub enum CASClient {
+    // A URL to a static server that exposes files according to the format used by OCI.
+    // The URL is relative to the location of the index.json file, and typically points
+    // to the 'blobs' directory within the OCI Image Layout.
+    // See https://github.com/opencontainers/image-spec/blob/main/image-layout.md#blobs.
+    #[serde(rename = "z05040460528458638259")]
+    OCI {
+        #[serde(rename = "z03515109587559058051")]
+        url: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Entry {
+    #[serde(rename = "z03665336898950737597")]
+    pub digest: Digest,
+    #[serde(rename = "z03635071009672686095")]
+    pub annotations: std::collections::HashMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Index {
+    #[serde(rename = "z07820418574027061416")]
+    pub entries: Vec<Entry>,
+    #[serde(rename = "z00767225522304297082")]
+    pub cas_clients: Vec<CASClient>,
+}
 
 /// Returns true if the descriptor is an Oak endorsement for the given subject
 /// digest.
@@ -43,11 +74,12 @@ pub const REKOR_TYPE_HASHED_REKORD: &str = "rekor.hashedrekord";
 /// 1. `oak.tr.type` annotation set to `oak.tr.endorsement`.
 /// 2. `oak.tr.endorsement.subject_digest` annotation matching the given subject
 ///    digest.
-pub fn is_oak_endorsement(entry: &Descriptor, subject_digest: &str) -> bool {
-    let annotations = entry.annotations().clone().unwrap_or_default();
-    annotations.get(OAK_TR_TYPE_ANNOTATION) == Some(&OAK_TR_VALUE_ENDORSEMENT.to_string())
-        && annotations.get(OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION)
-            == Some(&subject_digest.to_string())
+pub fn is_oak_endorsement(entry: &Entry, subject_digest: &str) -> bool {
+    let annotations = &entry.annotations;
+    annotations.get(OAK_TR_TYPE_ANNOTATION).map(|v| v.as_slice())
+        == Some(&[OAK_TR_VALUE_ENDORSEMENT.to_string()][..])
+        && annotations.get(OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION).map(|v| v.as_slice())
+            == Some(&[subject_digest.to_string()][..])
 }
 
 /// Returns true if the descriptor is a hashed Rekor entry (signature) for the
@@ -57,11 +89,12 @@ pub fn is_oak_endorsement(entry: &Descriptor, subject_digest: &str) -> bool {
 /// 1. `oak.tr.type` annotation set to `rekor.hashedrekord`.
 /// 2. `rekor.hashedrekord.data_hash` annotation matching the given endorsement
 ///    digest.
-pub fn is_hashed_rekord(entry: &Descriptor, endorsement_digest: &str) -> bool {
-    let annotations = entry.annotations().clone().unwrap_or_default();
-    annotations.get(OAK_TR_TYPE_ANNOTATION) == Some(&REKOR_TYPE_HASHED_REKORD.to_string())
-        && annotations.get(REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION)
-            == Some(&endorsement_digest.to_string())
+pub fn is_hashed_rekord(entry: &Entry, endorsement_digest: &str) -> bool {
+    let annotations = &entry.annotations;
+    annotations.get(OAK_TR_TYPE_ANNOTATION).map(|v| v.as_slice())
+        == Some(&[REKOR_TYPE_HASHED_REKORD.to_string()][..])
+        && annotations.get(REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION).map(|v| v.as_slice())
+            == Some(&[endorsement_digest.to_string()][..])
 }
 
 /// Trait for looking up endorsements and signatures from an index.

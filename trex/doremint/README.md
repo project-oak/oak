@@ -179,7 +179,7 @@ that endorsement using `doremint`.
 Create a temporary directory for the example:
 
 ```bash
-mkdir -p /tmp/doremint-demo/repo
+mkdir --parents /tmp/doremint-demo/repo
 cd /tmp/doremint-demo
 ```
 
@@ -247,7 +247,7 @@ identity used to sign the blob (e.g., your email address and the issuer).
 bazel run trex/doremint -- \
   blob verify \
   --subject-digest=$ARTIFACT_DIGEST \
-  --http-index-prefix=http://localhost:8080 \
+  --http-index-url=http://localhost:8080/index.json \
   --claims=test \
   --cosign-identity="your.email@example.com" \
   --cosign-oidc-issuer="https://accounts.google.com"

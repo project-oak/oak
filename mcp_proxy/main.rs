@@ -229,21 +229,24 @@ async fn handle_filtered_response(
     let subject_digest =
         HexDigest { sha2_256: subject_digest_local.to_hex(), ..Default::default() };
 
-    if let Some(prefix) = &filter.http_index_prefix {
-        // Fetch index.
-        let index = fetch_index(prefix)
-            .await
-            .map_err(|e| {
-                let msg = format!("Failed to fetch index: {e}");
-                log::error!("{msg}");
-                (StatusCode::INTERNAL_SERVER_ERROR, msg)
-            })?
-            .clone();
+    if let Some(index_url) = &filter.endorsement_index_url {
+        log::info!("Loading endorsement index from {index_url}");
+        let index = fetch_index(index_url).await.map_err(|e| {
+            let msg = format!("Failed to fetch endorsement index: {e}");
+            log::error!("{msg}");
+            (StatusCode::INTERNAL_SERVER_ERROR, msg)
+        })?;
 
-        // Create repo and verifier.
-        let index_repo = Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone())));
-        let blob_repo = Box::new(HttpBlobFetcher::new(prefix.clone()));
-        let verifier = EndorsementVerifier::new(index_repo, blob_repo);
+        // This currently assumes that there's a single OCI CAS client in the index. In
+        // the future, we'll need to handle multiple CAS clients (e.g. OCI, Git-style,
+        // etc.) and allow the user to select which one to use.
+        let cas_client = index.cas_clients.first().expect("no CAS clients found in the index");
+
+        let fetcher = Box::new(HttpBlobFetcher::new(cas_client.clone()));
+        let verifier = EndorsementVerifier::new(
+            Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone()))),
+            fetcher,
+        );
 
         let now = oak_time_std::instant::now();
         let required_claims = vec![MCP_TOOL_LIST_CLAIM_TYPE.to_string()];

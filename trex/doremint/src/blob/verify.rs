@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use digest_util::hex_digest_from_typed_hash;
 use oak_proto_rust::oak::HexDigest;
@@ -28,8 +28,8 @@ use crate::flags;
 
 #[derive(Parser, Debug)]
 pub struct Verify {
-    #[arg(long, help = "URL to the root of the OCI endorsement repository")]
-    http_index_prefix: String,
+    #[arg(long, help = "URL to the index.json file", required = true)]
+    endorsement_index_url: String,
 
     #[arg(long, help = "Expected OIDC issuer for the cosign identity")]
     cosign_oidc_issuer: String,
@@ -56,12 +56,18 @@ impl Verify {
     pub async fn run(&self) -> Result<()> {
         let subject_digest: HexDigest = hex_digest_from_typed_hash(&self.subject_digest)?;
 
-        let image_index = fetch_index(&self.http_index_prefix).await?;
+        let index = fetch_index(&self.endorsement_index_url).await?;
 
-        let index = Box::new(HttpEndorsementIndex::new(Box::new(move || image_index.clone())));
-        let fetcher = Box::new(HttpBlobFetcher::new(self.http_index_prefix.clone()));
+        // This currently assumes that there's a single OCI CAS client in the index. In
+        // the future, we'll need to handle multiple CAS clients (e.g. OCI, Git-style,
+        // etc.) and allow the user to select which one to use.
+        let cas_client = index.cas_clients.first().context("no CAS clients found in the index")?;
 
-        let verifier = EndorsementVerifier::new(index, fetcher);
+        let fetcher = Box::new(HttpBlobFetcher::new(cas_client.clone()));
+        let verifier = EndorsementVerifier::new(
+            Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone()))),
+            fetcher,
+        );
 
         let required_claims = self
             .claims

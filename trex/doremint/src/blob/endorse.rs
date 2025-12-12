@@ -26,7 +26,7 @@ use intoto::statement::{make_statement, serialize_statement};
 use maplit::hashmap;
 use oak_proto_rust::oak::HexDigest;
 use oak_time::{Duration, Instant};
-use oci_spec::image::{Digest, MediaType};
+use oci_spec::image::Digest;
 use trex_client::{
     cosign::cosign_sign_blob, OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION, OAK_TR_TYPE_ANNOTATION,
     OAK_TR_VALUE_ENDORSEMENT, OAK_TR_VALUE_SUBJECT, REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION,
@@ -37,10 +37,6 @@ use crate::{
     flags::{self, parse_current_time, parse_duration},
     repository::{prepare_repository, repository_add_file},
 };
-
-const OCTET_STREAM_MEDIA_TYPE: &str = "application/octet-stream";
-const IN_TOTO_MEDIA_TYPE: &str = "application/vnd.in-toto+json";
-const SIGSTORE_BUNDLE_MEDIA_TYPE: &str = "application/vnd.dev.sigstore.bundle+json";
 
 // In most cases we don't care about the subject name in the endorsement.
 const EMPTY_SUBJECT_NAME: &str = "";
@@ -88,12 +84,11 @@ fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<HexDig
         repository_path,
         &file_data,
         hashmap! {
-            OAK_TR_TYPE_ANNOTATION.to_string() => OAK_TR_VALUE_SUBJECT.to_string(),
+            OAK_TR_TYPE_ANNOTATION.to_string() => vec![OAK_TR_VALUE_SUBJECT.to_string()],
         },
-        MediaType::Other(OCTET_STREAM_MEDIA_TYPE.to_string()),
     )?;
 
-    oci_digest_to_hex_digest(desc.digest())
+    oci_digest_to_hex_digest(&desc.digest)
 }
 
 impl Endorse {
@@ -140,13 +135,12 @@ impl Endorse {
             &self.repository,
             &statement_data,
             hashmap! {
-                OAK_TR_TYPE_ANNOTATION.to_string() => OAK_TR_VALUE_ENDORSEMENT.to_string(),
+                OAK_TR_TYPE_ANNOTATION.to_string() => vec![OAK_TR_VALUE_ENDORSEMENT.to_string()],
                 // This annotation is used to efficiently look up endorsements about a specific digest from a repository index.
-                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => format!("sha256:{}", subject_hex_digest.sha2_256),
+                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => vec![format!("sha256:{}", subject_hex_digest.sha2_256)],
             },
-            MediaType::Other(IN_TOTO_MEDIA_TYPE.to_string()),
         )?;
-        let statement_digest_str = statement_desc.digest().digest().to_string();
+        let statement_digest_str = statement_desc.digest.digest().to_string();
 
         // Sign statement (Create Signature Bundle).
         let bundle_data = cosign_sign_blob(&statement_data)?;
@@ -155,10 +149,9 @@ impl Endorse {
             &self.repository,
             &bundle_data,
             hashmap! {
-                OAK_TR_TYPE_ANNOTATION.to_string() => REKOR_TYPE_HASHED_REKORD.to_string(),
-                REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION.to_string() => format!("sha256:{}", statement_digest_str),
+                OAK_TR_TYPE_ANNOTATION.to_string() => vec![REKOR_TYPE_HASHED_REKORD.to_string()],
+                REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION.to_string() => vec![format!("sha256:{}", statement_digest_str)],
             },
-            MediaType::Other(SIGSTORE_BUNDLE_MEDIA_TYPE.to_string()),
         )?;
 
         let index_path = self.repository.join("index.json");

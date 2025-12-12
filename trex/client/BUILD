@@ -43,5 +43,6 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:url",
     ],
 )

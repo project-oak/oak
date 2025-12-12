@@ -17,8 +17,9 @@
 use std::{collections::HashMap, fs, path::Path, str::FromStr};
 
 use anyhow::{Context, Result};
-use oci_spec::image::{Descriptor, Digest, ImageIndex, MediaType};
+use oci_spec::image::Digest;
 use sha2::{Digest as ShaDigest, Sha256};
+use trex_client::{CASClient, Entry, Index};
 
 /// Ensures that the necessary directory structure for an OCI-like repository
 /// exists. Specifically, it creates the `blobs/sha256` subdirectory where
@@ -40,27 +41,24 @@ pub fn prepare_repository(repository_path: &Path) -> Result<()> {
 /// 3. Stores the content as a blob in the `blobs/sha256` directory, using its
 ///    hexadecimal digest as the filename. If the blob already exists, it is not
 ///    rewritten.
-/// 4. Creates an OCI `Descriptor` for the added blob, including provided
-///    annotations and media type.
+/// 4. Creates an `Entry` for the added blob, including provided annotations.
 /// 5. Updates the `index.json` file in the repository root to include this new
-///    descriptor.
+///    entry.
 ///
 /// # Arguments
 /// * `repository_path` - The root path of the OCI-like repository.
 /// * `content` - The bytes of the file to add.
-/// * `annotations` - A HashMap of annotations to associate with the descriptor
-///   in `index.json`.
-/// * `media_type` - The media type of the content.
+/// * `annotations` - A HashMap of annotations to associate with the entry in
+///   `index.json`.
 ///
 /// # Returns
-/// A `Result` containing the `Descriptor` of the added file on success, or an
+/// A `Result` containing the `Entry` of the added file on success, or an
 /// `anyhow::Error` on failure.
 pub fn repository_add_file(
     repository_path: &Path,
     content: &[u8],
-    annotations: HashMap<String, String>,
-    media_type: MediaType,
-) -> Result<Descriptor> {
+    annotations: HashMap<String, Vec<String>>,
+) -> Result<Entry> {
     prepare_repository(repository_path)?;
 
     // 2. Hash content to create a content-addressable identifier.
@@ -78,51 +76,49 @@ pub fn repository_add_file(
         eprintln!("Blob already exists at {:?}", blob_path);
     }
 
-    // 4. Create an OCI Descriptor for the new blob.
+    // 4. Create an Entry for the new blob.
     let digest = Digest::from_str(&digest_str).context("Failed to parse digest")?;
-    let mut descriptor = Descriptor::new(media_type, content.len() as u64, digest);
-    descriptor.set_annotations(Some(annotations));
 
-    // 5. Update the repository's `index.json` to reference the new descriptor.
+    let entry = Entry { digest, annotations: annotations.clone() };
+
+    // 5. Update the repository's `index.json` to reference the new entry.
     let index_path = repository_path.join("index.json");
-    update_index(&index_path, vec![descriptor.clone()])?;
+    update_index(&index_path, vec![entry.clone()])?;
 
-    Ok(descriptor)
+    Ok(entry)
 }
 
-/// Updates an OCI image index file (`index.json`) with new or updated
-/// descriptors.
+/// Updates an index file (`index.json`) with new or updated entries.
 ///
-/// If the `index.json` file does not exist, a new one is created with schema
-/// version 2. Existing entries in the index with the same digest as a
+/// If the `index.json` file does not exist, a new one is created.
+/// Existing entries in the index with the same digest as a
 /// `new_entry` are replaced.
 ///
 /// # Arguments
 /// * `path` - The path to the `index.json` file.
-/// * `new_entries` - A vector of `Descriptor`s to add or update in the index.
+/// * `new_entries` - A vector of `Entry`s to add or update in the index.
 ///
 /// # Returns
 /// A `Result` indicating success or an `anyhow::Error` on failure.
-fn update_index(path: &Path, new_entries: Vec<Descriptor>) -> Result<()> {
+fn update_index(path: &Path, new_entries: Vec<Entry>) -> Result<()> {
     // Load existing index or create a new one if it doesn't exist.
     let mut index = if path.exists() {
         let data = fs::read(path).context("Failed to read index")?;
         serde_json::from_slice(&data).context("Failed to parse existing index")?
     } else {
-        let mut idx = ImageIndex::default();
-        idx.set_schema_version(2);
-        idx
+        Index { entries: vec![], cas_clients: vec![] }
     };
 
-    let mut manifests = index.manifests().clone();
+    if index.cas_clients.is_empty() {
+        index.cas_clients.push(CASClient::OCI { url: "./blobs".to_string() });
+    }
 
     for entry in new_entries {
         // Remove any existing entry with the same digest to ensure idempotence and
         // update capability.
-        manifests.retain(|m| m.digest() != entry.digest());
-        manifests.push(entry);
+        index.entries.retain(|e| e.digest != entry.digest);
+        index.entries.push(entry);
     }
-    index.set_manifests(manifests);
 
     // Serialize the updated index and write it back to the file.
     let new_data = serde_json::to_string_pretty(&index).context("Failed to marshal index")?;

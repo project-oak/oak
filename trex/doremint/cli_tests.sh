@@ -127,11 +127,35 @@ test_blob_endorse_digest() {
     fi
 }
 
+# shellcheck disable=SC2329
+test_blob_endorse_index_content() {
+    set -e
+    local repository_dir=$(mktemp -d)
+    local output_index="${repository_dir}/index.json"
+
+    $CLI blob endorse \
+      --file="$BLOB_FILE" \
+      --claims-toml="$CLAIMS_FILE" \
+      --valid-for=24h \
+      --issued-on=2025-01-01T00:00:00Z \
+      --repository="$repository_dir"
+
+    # Verify cas_clients field in index.json.
+    # z00767225522304297082 is the renamed field for cas_clients.
+    # z12941845592822707391 is the tag field for CASClient.
+    # z05040460528458638259 is the renamed OCI variant.
+    # z03515109587559058051 is the renamed url field.
+    grep -q '"z00767225522304297082":' "$output_index"
+    grep -q '"z12941845592822707391": "z05040460528458638259"' "$output_index"
+    grep -q '"z03515109587559058051": "./blobs"' "$output_index"
+}
+
 run test_default_issued_at_flag
 run test_output_flag
 run test_stdout
 run test_blob_help
 run test_blob_endorse
 run test_blob_endorse_digest
+run test_blob_endorse_index_content
 
 exit $overall_status
