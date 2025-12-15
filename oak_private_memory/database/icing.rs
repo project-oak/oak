@@ -137,7 +137,7 @@ struct PendingMetadata {
 
 impl PendingMetadata {
     #[allow(deprecated)]
-    pub fn new(memory: &Memory, blob_id: &BlobId) -> Self {
+    pub fn new(memory: &Memory, blob_id: &BlobId) -> anyhow::Result<Self> {
         let memory_id = &memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embeddings: Vec<_> = memory
@@ -172,8 +172,8 @@ impl PendingMetadata {
                 timestamp_to_i64(expiration_timestamp),
             );
         }
-        let icing_document = document_builder.build();
-        Self { icing_document }
+        let icing_document = document_builder.build()?;
+        Ok(Self { icing_document })
     }
 
     pub fn document(&self) -> &DocumentProto {
@@ -190,11 +190,15 @@ struct PendingLlmViewMetadata {
 }
 
 impl PendingLlmViewMetadata {
-    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> Option<Self> {
+    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> anyhow::Result<Option<Self>> {
         let memory_id = &memory.id;
         let view_id = &view.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
-        let embedding = view.embedding.as_ref()?;
+        let embedding = if let Some(e) = view.embedding.as_ref() {
+            e
+        } else {
+            return Ok(None);
+        };
         let embeddings =
             vec![icing::create_vector_proto(embedding.model_signature.as_str(), &embedding.values)];
         let document_builder = icing::create_document_builder();
@@ -225,8 +229,8 @@ impl PendingLlmViewMetadata {
                 timestamp_to_i64(expiration_timestamp),
             );
         }
-        let icing_document = document_builder.build();
-        Some(Self { icing_document })
+        let icing_document = document_builder.build()?;
+        Ok(Some(Self { icing_document }))
     }
 
     pub fn document(&self) -> &DocumentProto {
@@ -267,7 +271,7 @@ impl IcingMetaDatabase {
         }
     }
 
-    fn create_schema() -> icing::SchemaProto {
+    fn create_schema() -> anyhow::Result<icing::SchemaProto> {
         let schema_type_builder = icing::create_schema_type_config_builder();
         schema_type_builder
             .set_type(SCHMA_NAME.as_bytes())
@@ -418,8 +422,8 @@ impl IcingMetaDatabase {
     pub fn new(base_dir: IcingTempDir) -> anyhow::Result<Self> {
         debug!("Creating new icing database in {}", base_dir.as_str());
         let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
-        let schema = Self::create_schema();
-        let result_proto = icing_search_engine.set_schema(&schema);
+        let schema = Self::create_schema()?;
+        let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
@@ -447,7 +451,7 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
         let options_bytes = icing::get_default_icing_options(base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
+        let result_proto = icing_search_engine.initialize()?;
         ensure!(
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
@@ -464,13 +468,13 @@ impl IcingMetaDatabase {
             // to clear the views before adding it again.
             self.delete_memories([memory.id.clone()].as_ref())?;
         }
-        let pending_metadata = PendingMetadata::new(memory, &blob_id);
+        let pending_metadata = PendingMetadata::new(memory, &blob_id)?;
         self.add_pending_metadata(pending_metadata)?;
         if let Some(views) = memory.views.as_ref() {
             for view in &views.llm_views {
                 // TODO: yongheng - Generate view id if not provided.
                 if let Some(pending_view_metadata) =
-                    PendingLlmViewMetadata::new(memory, view, &blob_id)
+                    PendingLlmViewMetadata::new(memory, view, &blob_id)?
                 {
                     self.add_pending_memory_view_metadata(pending_view_metadata)?;
                 }
@@ -483,7 +487,7 @@ impl IcingMetaDatabase {
         &mut self,
         pending_metadata: PendingLlmViewMetadata,
     ) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document());
+        let result = self.icing_search_engine.put(pending_metadata.document())?;
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -497,7 +501,7 @@ impl IcingMetaDatabase {
     }
 
     fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document());
+        let result = self.icing_search_engine.put(pending_metadata.document())?;
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -552,8 +556,8 @@ impl IcingMetaDatabase {
                 &search_spec,
                 &icing::get_default_scoring_spec(), // Use default scoring for now
                 &result_spec,
-            ),
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            )?,
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
             PageToken::Invalid => unreachable!(), // Already handled
         };
 
@@ -597,7 +601,7 @@ impl IcingMetaDatabase {
             &search_spec,
             &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
             &result_spec,
-        );
+        )?;
 
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
@@ -640,7 +644,7 @@ impl IcingMetaDatabase {
             &search_spec,
             &icing::get_default_scoring_spec(),
             &result_spec,
-        );
+        )?;
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -733,8 +737,8 @@ impl IcingMetaDatabase {
                     &search_spec,
                     &icing::get_default_scoring_spec(),
                     &result_spec,
-                ),
-                PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+                )?,
+                PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
                 PageToken::Invalid => bail!("Invalid page token"),
             };
 
@@ -786,11 +790,12 @@ impl IcingMetaDatabase {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> anyhow::Result<()> {
         self.icing_search_engine.reset();
-        let schema = Self::create_schema();
-        self.icing_search_engine.set_schema(&schema);
+        let schema = Self::create_schema()?;
+        self.icing_search_engine.set_schema(&schema)?;
         self.applied_operations.push(MutationOperation::Reset);
+        Ok(())
     }
 
     fn execute_search(
@@ -811,9 +816,9 @@ impl IcingMetaDatabase {
 
         let search_result = match page_token {
             PageToken::Start => {
-                self.icing_search_engine.search(search_spec, scoring_spec, &result_spec)
+                self.icing_search_engine.search(search_spec, scoring_spec, &result_spec)?
             }
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
             PageToken::Invalid => bail!("invalid page token"),
         };
 
@@ -1229,7 +1234,8 @@ impl IcingMetaDatabase {
     }
 
     pub fn delete_document(&mut self, blob_id: &BlobId) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes());
+        let result =
+            self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes())?;
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -1291,10 +1297,7 @@ impl IcingMetaDatabase {
                     new_db.add_pending_memory_view_metadata(pending_view_metadata.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
-                MutationOperation::Reset => {
-                    new_db.reset();
-                    Ok(())
-                }
+                MutationOperation::Reset => Ok(new_db.reset()?),
             };
 
             if result.is_err() {
@@ -1770,7 +1773,7 @@ mod tests {
 
         // Second concurrent changer import and reset.
         let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
-        db3.reset();
+        let _ = db3.reset();
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
@@ -2065,9 +2068,11 @@ mod tests {
             &result_spec_for_existence,
         );
 
-        assert_that!(search_result_for_existence.results, len(eq(1)));
+        assert_that!(search_result_for_existence.as_ref().unwrap().results, len(eq(1)));
         assert_that!(
-            IcingMetaDatabase::extract_blob_id_from_doc(&search_result_for_existence.results[0]),
+            IcingMetaDatabase::extract_blob_id_from_doc(
+                &search_result_for_existence.unwrap().results[0]
+            ),
             eq(&Some(blob_id.clone()))
         );
 

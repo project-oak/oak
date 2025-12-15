@@ -137,7 +137,7 @@ impl DatabaseWithCache {
         if !all_memory_ids.is_empty() {
             self.delete_memories(all_memory_ids).await?;
         }
-        self.meta_db().reset();
+        let _ = self.meta_db().reset();
         Ok(())
     }
 

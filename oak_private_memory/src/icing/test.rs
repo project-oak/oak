@@ -44,15 +44,15 @@ mod tests {
 
         let schema_builder = create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        let schema = schema_builder.build();
+        let schema = schema_builder.build().unwrap();
 
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
         let icing_search_engine = create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
+        let result_proto = icing_search_engine.initialize().unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result_proto = icing_search_engine.set_schema(&schema);
+        let result_proto = icing_search_engine.set_schema(&schema).unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
@@ -64,9 +64,10 @@ mod tests {
                 &["message body one".as_bytes(), "message body two".as_bytes()],
             )
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
-        let result_proto = icing_search_engine.put(&doc1);
+        let result_proto = icing_search_engine.put(&doc1).unwrap();
         if result_proto.status.clone().unwrap().code != Some(status_proto::Code::Ok.into()) {
             println!("Result {:?}", result_proto);
         }
@@ -80,8 +81,9 @@ mod tests {
 
         let result_spec = ResultSpecProto { num_per_page: Some(3), ..Default::default() };
 
-        let search_result_proto =
-            icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
+        let search_result_proto = icing_search_engine
+            .search(&search_spec, &get_default_scoring_spec(), &result_spec)
+            .unwrap();
         let next_page_token = search_result_proto.next_page_token();
         assert!(next_page_token == 0);
         // Using assert_eq! is generally preferred over assert! for equality checks
@@ -105,15 +107,15 @@ mod tests {
 
         let schema_builder = create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        let schema = schema_builder.build();
+        let schema = schema_builder.build().unwrap();
         // The original database.
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
         let icing_search_engine = create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
+        let result_proto = icing_search_engine.initialize().unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
-        let result_proto = icing_search_engine.set_schema(&schema);
+        let result_proto = icing_search_engine.set_schema(&schema).unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         const K_DEFAULT_CREATION_TIMESTAMP_MS: u64 = 1575492852000;
@@ -122,9 +124,10 @@ mod tests {
             .set_schema("Message".as_bytes())
             .add_string_property("body".as_bytes(), &["message body one".as_bytes()])
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
-        let result_proto = icing_search_engine.put(&doc1);
+        let result_proto = icing_search_engine.put(&doc1).unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
         let result_proto = icing_search_engine.persist_to_disk(persist_type::Code::Full.into());
         let result_proto = icing::PersistToDiskResultProto::decode(result_proto.as_slice())?;
@@ -145,7 +148,7 @@ mod tests {
         let options_bytes = get_default_icing_options(migrated_dir_str).encode_to_vec();
         let icing_search_engine = create_icing_search_engine(&options_bytes);
         // Initialize the engine with the migrated data.
-        let result_proto = icing_search_engine.initialize();
+        let result_proto = icing_search_engine.initialize().unwrap();
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
         //let result_proto = icing_search_engine.set_schema(&schema);
@@ -160,8 +163,9 @@ mod tests {
 
         let result_spec = ResultSpecProto { num_per_page: Some(3), ..Default::default() };
 
-        let search_result_proto =
-            icing_search_engine.search(&search_spec, &get_default_scoring_spec(), &result_spec);
+        let search_result_proto = icing_search_engine
+            .search(&search_spec, &get_default_scoring_spec(), &result_spec)
+            .unwrap();
         let next_page_token = search_result_proto.next_page_token();
         assert!(next_page_token == 0);
         // Using assert_eq! is generally preferred over assert! for equality checks
@@ -199,16 +203,16 @@ mod tests {
 
         let schema_builder = create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        let schema = schema_builder.build();
+        let schema = schema_builder.build().unwrap();
 
         // Initialize Icing
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
         let icing_search_engine = create_icing_search_engine(&options_bytes);
-        let init_result = icing_search_engine.initialize();
+        let init_result = icing_search_engine.initialize().unwrap();
         assert_eq!(init_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
-        let set_schema_result = icing_search_engine.set_schema(&schema);
+        let set_schema_result = icing_search_engine.set_schema(&schema).unwrap();
         assert_eq!(set_schema_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
         // Create Documents
@@ -226,7 +230,8 @@ mod tests {
             .add_string_property("body".as_bytes(), &["message body one".as_bytes()])
             .add_vector_property("embedding1".as_bytes(), &doc1_vectors)
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
         let doc2_vectors = [create_vector_proto(model_sig, &[-0.1, 0.2, -0.3, -0.4, 0.5])];
         let doc2 = create_document_builder()
@@ -235,7 +240,8 @@ mod tests {
             .add_string_property("body".as_bytes(), &["message body two".as_bytes()])
             .add_vector_property("embedding1".as_bytes(), &doc2_vectors)
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
         let doc3_vectors = [create_vector_proto(model_sig, &[-0.1, 0.2, -0.3, -0.4, 1.5])];
         let doc3 = create_document_builder()
@@ -244,14 +250,15 @@ mod tests {
             .add_string_property("body".as_bytes(), &["message body three".as_bytes()])
             .add_vector_property("embedding1".as_bytes(), &doc3_vectors)
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
         // Put Documents
-        let put1_result = icing_search_engine.put(&doc1);
+        let put1_result = icing_search_engine.put(&doc1).unwrap();
         assert_eq!(put1_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
-        let put2_result = icing_search_engine.put(&doc2);
+        let put2_result = icing_search_engine.put(&doc2).unwrap();
         assert_eq!(put2_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
-        let put3_result = icing_search_engine.put(&doc3);
+        let put3_result = icing_search_engine.put(&doc3).unwrap();
         assert_eq!(put3_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
         // Define Search and Scoring Specs
@@ -285,7 +292,8 @@ mod tests {
         };
 
         // Perform Search and Assert Results
-        let search_result = icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
+        let search_result =
+            icing_search_engine.search(&search_spec, &scoring_spec, &result_spec).unwrap();
         assert_eq!(search_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
         assert_eq!(search_result.results.len(), 2);
 
@@ -336,16 +344,16 @@ mod tests {
 
         let schema_builder = create_schema_builder();
         schema_builder.add_type(&schema_type_builder);
-        let schema = schema_builder.build();
+        let schema = schema_builder.build().unwrap();
 
         // Initialize Icing
         let options_bytes =
             get_default_icing_options(temp_dir.path().to_str().unwrap()).encode_to_vec();
         let icing_search_engine = create_icing_search_engine(&options_bytes);
-        let init_result = icing_search_engine.initialize();
+        let init_result = icing_search_engine.initialize().unwrap();
         assert_eq!(init_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
-        let set_schema_result = icing_search_engine.set_schema(&schema);
+        let set_schema_result = icing_search_engine.set_schema(&schema).unwrap();
         assert_eq!(set_schema_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
         // Create Documents
@@ -362,7 +370,8 @@ mod tests {
             .add_string_property("name".as_bytes(), &["Document 1".as_bytes()])
             .add_vector_property("embeddings".as_bytes(), &doc1_embeddings)
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS)
-            .build();
+            .build()
+            .unwrap();
 
         // Document 2
         let doc2_embeddings = [
@@ -375,12 +384,13 @@ mod tests {
             .add_string_property("name".as_bytes(), &["Document 2".as_bytes()])
             .add_vector_property("embeddings".as_bytes(), &doc2_embeddings)
             .set_creation_timestamp_ms(K_DEFAULT_CREATION_TIMESTAMP_MS + 1) // Ensure different timestamp if needed
-            .build();
+            .build()
+            .unwrap();
 
         // Put Documents
-        let put1_result = icing_search_engine.put(&doc1);
+        let put1_result = icing_search_engine.put(&doc1).unwrap();
         assert_eq!(put1_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
-        let put2_result = icing_search_engine.put(&doc2);
+        let put2_result = icing_search_engine.put(&doc2).unwrap();
         assert_eq!(put2_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
 
         // Define Search Embedding
@@ -415,7 +425,8 @@ mod tests {
         };
 
         // Perform Search
-        let search_result = icing_search_engine.search(&search_spec, &scoring_spec, &result_spec);
+        let search_result =
+            icing_search_engine.search(&search_spec, &scoring_spec, &result_spec).unwrap();
         assert_eq!(search_result.status.unwrap().code, Some(status_proto::Code::Ok.into()));
         assert_eq!(search_result.results.len(), 1, "Expected two documents in results");
 

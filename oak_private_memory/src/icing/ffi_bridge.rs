@@ -139,9 +139,9 @@ use icing_rust_proto::icing::lib::{
 use prost::Message;
 
 impl ffi::DocumentBuilder {
-    pub fn build(&self) -> DocumentProto {
+    pub fn build(&self) -> anyhow::Result<DocumentProto> {
         let result = self.build_impl();
-        DocumentProto::decode(result.as_slice()).unwrap()
+        Ok(DocumentProto::decode(result.as_slice())?)
     }
 
     pub fn add_vector_property(&self, name: &[u8], values: &[VectorProto]) -> &Self {
@@ -153,16 +153,16 @@ impl ffi::DocumentBuilder {
 }
 
 impl ffi::SchemaBuilder {
-    pub fn build(&self) -> SchemaProto {
+    pub fn build(&self) -> anyhow::Result<SchemaProto> {
         let result = self.build_impl();
-        SchemaProto::decode(result.as_slice()).unwrap()
+        Ok(SchemaProto::decode(result.as_slice())?)
     }
 }
 
 impl ffi::IcingSearchEngine {
-    pub fn initialize(&self) -> InitializeResultProto {
+    pub fn initialize(&self) -> anyhow::Result<InitializeResultProto> {
         let result = self.initialize_impl();
-        InitializeResultProto::decode(result.as_slice()).unwrap()
+        Ok(InitializeResultProto::decode(result.as_slice())?)
     }
 
     pub fn search(
@@ -170,36 +170,36 @@ impl ffi::IcingSearchEngine {
         search_spec: &SearchSpecProto,
         scoring_spec: &ScoringSpecProto,
         result_spec: &ResultSpecProto,
-    ) -> SearchResultProto {
+    ) -> anyhow::Result<SearchResultProto> {
         let result = self.search_impl(
             // Use the snake_case FFI function name
             &search_spec.encode_to_vec(),
             &scoring_spec.encode_to_vec(),
             &result_spec.encode_to_vec(),
         );
-        SearchResultProto::decode(result.as_slice()).unwrap()
+        Ok(SearchResultProto::decode(result.as_slice())?)
     }
 
-    pub fn set_schema(&self, schema: &SchemaProto) -> SetSchemaResultProto {
+    pub fn set_schema(&self, schema: &SchemaProto) -> anyhow::Result<SetSchemaResultProto> {
         let schema_bytes = schema.encode_to_vec();
         let result = self.set_schema_impl(&schema_bytes);
-        SetSchemaResultProto::decode(result.as_slice()).unwrap()
+        Ok(SetSchemaResultProto::decode(result.as_slice())?)
     }
 
-    pub fn put(&self, document: &DocumentProto) -> PutResultProto {
+    pub fn put(&self, document: &DocumentProto) -> anyhow::Result<PutResultProto> {
         let document_bytes = document.encode_to_vec();
         let result = self.put_impl(&document_bytes);
-        PutResultProto::decode(result.as_slice()).unwrap()
+        Ok(PutResultProto::decode(result.as_slice())?)
     }
 
-    pub fn delete(&self, namespace: &[u8], uri: &[u8]) -> DeleteResultProto {
+    pub fn delete(&self, namespace: &[u8], uri: &[u8]) -> anyhow::Result<DeleteResultProto> {
         let result = self.delete_impl(namespace, uri);
-        DeleteResultProto::decode(result.as_slice()).unwrap()
+        Ok(DeleteResultProto::decode(result.as_slice())?)
     }
 
-    pub fn get_next_page(&self, next_page_token: u64) -> SearchResultProto {
+    pub fn get_next_page(&self, next_page_token: u64) -> anyhow::Result<SearchResultProto> {
         let result = self.get_next_page_impl(next_page_token);
-        SearchResultProto::decode(result.as_slice()).unwrap()
+        Ok(SearchResultProto::decode(result.as_slice())?)
     }
 }
 

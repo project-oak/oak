@@ -54,6 +54,7 @@ rust_library(
         ":ffi_wrapper-sys",
         "//src/icing/proto:icing_rust_proto",
         "@cxx.rs//:cxx",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
     ],
 )
