@@ -48,37 +48,6 @@ pub mod oak {
     pub mod attestation {
         pub mod v1 {
             include_proto!("oak.attestation.v1");
-            extern crate alloc;
-            use alloc::{format, string::String};
-
-            use prost::Name;
-
-            const PACKAGE: &str = "oak.attestation.v1";
-
-            /// Compute the type URL for the given `oak.attestation.v1` type,
-            /// using `type.googleapis.com` as the authority for the
-            /// URL.
-            fn type_url_for<T: Name>() -> String {
-                format!("type.googleapis.com/{}.{}", T::PACKAGE, T::NAME)
-            }
-
-            impl Name for Stage0Measurements {
-                const PACKAGE: &'static str = PACKAGE;
-                const NAME: &'static str = "Stage0Measurements";
-
-                fn type_url() -> String {
-                    type_url_for::<Self>()
-                }
-            }
-
-            impl Name for Stage0TransparentMeasurements {
-                const PACKAGE: &'static str = PACKAGE;
-                const NAME: &'static str = "Stage0TransparentMeasurements";
-
-                fn type_url() -> String {
-                    type_url_for::<Self>()
-                }
-            }
         }
     }
 
