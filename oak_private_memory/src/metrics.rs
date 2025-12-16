@@ -56,6 +56,12 @@ pub struct Metrics {
     db_connect_retries: Counter<u64>,
     // Number of failures when persisting the database.
     db_persist_failures: Counter<u64>,
+    // Number of failures when syncing keys.
+    decrypt_dek_failures: Counter<u64>,
+    // Number of failures when deserializing database.
+    user_info_deserialization_failures: Counter<u64>,
+    // Number of failures when decrypting database.
+    db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
     db_persist_queue_size: ObservableGauge<u64>,
 }
@@ -145,10 +151,28 @@ impl Metrics {
             .with_description("Number of failures when persisting the database.")
             .init();
 
+        let db_decryption_failures = observer
+            .meter
+            .u64_counter("db_decryption_failures")
+            .with_description("Number of failures when decrypting the database.")
+            .init();
+
         let db_persist_queue_size = observer
             .meter
             .u64_observable_gauge("db_persist_queue_size")
             .with_description("Number of items in the database persist queue.")
+            .init();
+
+        let decrypt_dek_failures = observer
+            .meter
+            .u64_counter("decrypt_dek_failures")
+            .with_description("Number of failures when decrypting the DEK.")
+            .init();
+
+        let user_info_deserialization_failures = observer
+            .meter
+            .u64_counter("user_info_deserialization_failures")
+            .with_description("Number of failures when deserializing user info.")
             .init();
 
         // Initialize the total count to 0 to trigger the metric registration.
@@ -165,6 +189,9 @@ impl Metrics {
         db_persist_attempts.record(1, &[]);
         db_connect_retries.add(0, &[]);
         db_persist_failures.add(0, &[]);
+        decrypt_dek_failures.add(0, &[]);
+        user_info_deserialization_failures.add(0, &[]);
+        db_decryption_failures.add(0, &[]);
         db_persist_queue_size.observe(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
@@ -176,6 +203,9 @@ impl Metrics {
         observer.register_metric(db_persist_latency.clone());
         observer.register_metric(db_connect_retries.clone());
         observer.register_metric(db_persist_failures.clone());
+        observer.register_metric(decrypt_dek_failures.clone());
+        observer.register_metric(user_info_deserialization_failures.clone());
+        observer.register_metric(db_decryption_failures.clone());
         observer.register_metric(db_persist_queue_size.clone());
         Self {
             rpc_count,
@@ -190,6 +220,9 @@ impl Metrics {
             db_persist_attempts,
             db_connect_retries,
             db_persist_failures,
+            decrypt_dek_failures,
+            user_info_deserialization_failures,
+            db_decryption_failures,
             db_persist_queue_size,
         }
     }
@@ -272,6 +305,18 @@ impl Metrics {
 
     pub fn inc_db_persist_failures(&self) {
         self.db_persist_failures.add(1, &[]);
+    }
+
+    pub fn inc_decrypt_dek_failures(&self) {
+        self.decrypt_dek_failures.add(1, &[]);
+    }
+
+    pub fn inc_user_info_deserialization_failures(&self) {
+        self.user_info_deserialization_failures.add(1, &[]);
+    }
+
+    pub fn inc_db_decryption_failures(&self) {
+        self.db_decryption_failures.add(1, &[]);
     }
 
     pub fn record_db_persist_queue_size(&self, max: u64) {

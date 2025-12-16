@@ -235,8 +235,8 @@ impl SealedMemorySessionHandler {
             .context("Failed to get DB client for bootstrap operation")?;
 
         if let Some(data_blob) = db_client.get_unencrypted_blob(&uid, true).await? {
-            // User already exists
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
+                .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
                 .context("Failed to decode PlainTextUserInfo")?;
             let key_derivation_info =
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
@@ -310,6 +310,7 @@ impl SealedMemorySessionHandler {
 
         if let Some(data_blob) = db_client.clone().get_unencrypted_blob(&uid, true).await? {
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
+                .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
                 .context("Failed to decode PlainTextUserInfo")?;
             key_derivation_info =
                 plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
@@ -323,6 +324,7 @@ impl SealedMemorySessionHandler {
             dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data) {
                 dek
             } else {
+                self.metrics.inc_decrypt_dek_failures();
                 return Ok(KeySyncResponse {
                     status: key_sync_response::Status::InvalidKey.into(),
                 });
@@ -450,7 +452,8 @@ async fn get_or_create_db(
         db_client.get_metadata_blob(uid).await?
     {
         info!("Loaded database from blob: Length: {}", encrypted_data_blob.data.len());
-        let encrypted_info = decrypt_database(encrypted_data_blob, dek)?;
+        let encrypted_info = decrypt_database(encrypted_data_blob, dek)
+            .inspect_err(|_| get_global_metrics().inc_db_decryption_failures())?;
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
             info!("Loaded database successfully!!");
