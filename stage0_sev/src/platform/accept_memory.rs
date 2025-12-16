@@ -67,6 +67,23 @@ trait Validate<S: PageSize> {
 impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
     fn pvalidate(&self, counter: &AtomicUsize) -> Result<(), InstructionError> {
         pvalidate(self.start_address().as_u64() as usize, S::SEV_PAGE_SIZE, Validation::Validated)?;
+        let start = Page::from_start_address(self.start_address()).unwrap();
+        let end = Page::from_start_address(VirtAddr::new(self.start_address().as_u64() + S::SIZE))
+            .unwrap();
+        // non-inclusive end
+        let range = Page::<Size4KiB>::range(start, end);
+
+        // Read the first and last byte of each 4K page validated to evict cache
+        // (CVE-2025-38560)
+        range.for_each(|page| {
+            let _val = unsafe { page.start_address().as_ptr::<u8>().read_volatile() };
+            // Due to the nature of CVE-2025-38560, we have to force a flush
+            // for each 4K page even if these are huge pages
+            let _val2 = unsafe {
+                page.start_address().as_ptr::<u8>().add(Size4KiB::SIZE as usize - 1).read_volatile()
+            };
+        });
+
         counter.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
