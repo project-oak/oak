@@ -70,7 +70,7 @@ impl<S: PageSize + ValidatablePageSize> Validate<S> for Page<S> {
         let start = Page::from_start_address(self.start_address()).unwrap();
         let end = Page::from_start_address(VirtAddr::new(self.start_address().as_u64() + S::SIZE)).unwrap();
         // non-inclusive end
-        let range = Page::<S>::range(start, end);
+        let range = Page::<Size4KiB>::range(start, end);
 
         // Read the first and last byte of each 4K page validated to evict cache (CVE-2025-38560)
         range.for_each(|page| {
