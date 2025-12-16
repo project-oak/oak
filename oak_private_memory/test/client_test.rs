@@ -546,6 +546,16 @@ async fn test_get_by_tag_with_expired_memories() {
         assert!(returned_ids.contains(non_expired_memory_id));
         assert!(returned_ids.contains(no_expiration_memory_id));
         assert!(!returned_ids.contains(expired_memory_id));
+
+        // Retrieve memories with the empty tag
+        let response = client.get_memories("", 10, None, "").await.unwrap();
+
+        // Check that only non-expired memories are returned
+        assert_eq!(response.memories.len(), 2);
+        let returned_ids: HashSet<String> = response.memories.into_iter().map(|m| m.id).collect();
+        assert!(returned_ids.contains(non_expired_memory_id));
+        assert!(returned_ids.contains(no_expiration_memory_id));
+        assert!(!returned_ids.contains(expired_memory_id));
     }
 }
 

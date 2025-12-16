@@ -833,6 +833,7 @@ impl IcingMetaDatabase {
         Ok((search_result, next_page_token))
     }
 
+    // TODO: b/469515451 - Support clauses with empty values
     pub fn search(
         &self,
         query: &SearchMemoryQuery,
@@ -1325,10 +1326,17 @@ fn build_non_expired_query_str(property_name: &str, property_val: &str) -> Strin
 
     // A memory is considered not expired if its expiration timestamp is in the
     // future, or if it has no expiration timestamp set.
-    format!(
-        "({}:{}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
-        property_name, property_val, EXPIRATION_TIMESTAMP_NAME, now_ts, EXPIRATION_TIMESTAMP_NAME
-    )
+    let expiration_clause = format!(
+        "({} > {}) OR (NOT hasProperty(\"{}\"))",
+        EXPIRATION_TIMESTAMP_NAME, now_ts, EXPIRATION_TIMESTAMP_NAME
+    );
+
+    if property_val.is_empty() {
+        // If no property value specified, filter just for non expired memories.
+        expiration_clause
+    } else {
+        format!("({}:{}) AND ({})", property_name, property_val, expiration_clause)
+    }
 }
 
 fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
