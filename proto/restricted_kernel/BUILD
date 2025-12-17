@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_visibility = ["//:default_visibility"],
