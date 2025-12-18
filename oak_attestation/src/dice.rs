@@ -336,6 +336,7 @@ pub fn stage0_dice_data_and_event_log_to_proto(
         application_keys,
         event_log: Some(event_log),
         transparent_event_log: None,
+        signed_user_data_certificate: None,
     });
     let certificate_authority = Some(CertificateAuthority {
         eca_private_key: value.layer_1_certificate_authority.eca_private_key
@@ -368,7 +369,15 @@ pub fn evidence_and_event_log_to_proto(
         .map_err(anyhow::Error::msg)
         .context("couldn't decode event log")?;
     let transparent_event_log: Option<EventLog> = None;
-    Ok(Evidence { root_layer, layers, application_keys, event_log, transparent_event_log })
+    let signed_user_data_certificate = None;
+    Ok(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+        event_log,
+        transparent_event_log,
+        signed_user_data_certificate,
+    })
 }
 
 fn root_layer_evidence_to_proto(

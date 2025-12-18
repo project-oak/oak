@@ -76,7 +76,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.BinaryArgvRegexMeasurement",
         "oak.attestation.v1.CbLayer1TransparentEvent",
         "oak.attestation.v1.CbLayer2TransparentEvent",
-        "oak.attestation.v1.LayerEvidence",
         "oak.attestation.v1.MpmPackage",
         "oak.attestation.v1.RootLayerEvidence",
         "oak.attestation.v1.OakRestrictedKernelEndorsements",
@@ -92,6 +91,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.Signature",
         "oak.attestation.v1.Endorsement",
         "oak.attestation.v1.EventLog",
+        "oak.attestation.v1.LayerEvidence",
+        "oak.crypto.v1.Certificate",
+        "oak.crypto.v1.SignatureInfo",
         "oak.Variant",
     ] {
         needed_types.insert(t.to_string());

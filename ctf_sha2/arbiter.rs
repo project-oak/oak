@@ -761,6 +761,7 @@ mod tests {
             application_keys: Some(application_keys),
             event_log: None,
             transparent_event_log: None,
+            signed_user_data_certificate: None,
         };
 
         // We return app_signing_private_key because it's the one signing the data

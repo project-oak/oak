@@ -48,8 +48,10 @@ cargo_build_script(
     },
     data = [
         "//proto:digest.proto",
+        "//proto:validity.proto",
         "//proto/attestation:eventlog.proto",
         "//proto/attestation:evidence.proto",
+        "//proto/crypto:certificate.proto",
         "//proto/crypto:crypto.proto",
         "//proto/micro_rpc:options.proto",
         "//proto/oak_functions:testing.proto",

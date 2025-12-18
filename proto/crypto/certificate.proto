@@ -99,7 +99,7 @@ message SignatureInfo {
 //
 // Certificate is created as following:
 // - [`CertificatePayload`] proto message is serialized and signed using the
-// certificate authority's private key.
+//  certificate authority's private key.
 // - This serialized message is stored in the `serialized_payload` field.
 // - The signature is stored in the `signature_info`.
 //
