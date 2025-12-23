@@ -18,6 +18,9 @@ use axum::Router;
 use clap::Parser;
 use log::info;
 use oak_functions_mcp_lib::service::OakFunctionsMcpService;
+use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
+use oak_proto_rust::oak::functions::{InitializeRequest, LookupDataChunk};
+use prost::Message;
 use rmcp::transport::streamable_http_server::{
     session::local::LocalSessionManager, StreamableHttpService,
 };
@@ -27,6 +30,22 @@ use tokio::net::TcpListener;
 pub struct Args {
     #[arg(short, long, default_value = "0.0.0.0:8080")]
     listen_address: String,
+    #[arg(long, help = "The URI for fetching the wasm logic")]
+    wasm_uri: String,
+    #[arg(
+        long,
+        help = "The URI for fetching the serialized LookupDataChunk data",
+        default_value = ""
+    )]
+    lookup_data_uri: String,
+}
+
+fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    info!("fetching data from uri: {uri}");
+    let response = ureq::get(uri).call()?;
+    let mut buffer = Vec::new();
+    response.into_reader().read_to_end(&mut buffer)?;
+    Ok(buffer)
 }
 
 #[tokio::main]
@@ -38,10 +57,36 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let args = Args::parse();
 
+    let wasm_module_bytes: Vec<u8> = if !args.wasm_uri.is_empty() {
+        fetch_data_from_uri(&args.wasm_uri).expect("unable to fetch Wasm data")
+    } else {
+        panic!("--wasm_uri must be specified")
+    };
+
+    let lookup_data: Option<LookupDataChunk> = if !args.lookup_data_uri.is_empty() {
+        let lookup_data_bytes =
+            fetch_data_from_uri(&args.lookup_data_uri).expect("unable to fetch lookup data");
+        Some(
+            LookupDataChunk::decode(lookup_data_bytes.as_slice())
+                .expect("couldn't decode lookup data"),
+        )
+    } else {
+        None
+    };
+
+    let initialize_request =
+        InitializeRequest { wasm_module: wasm_module_bytes, ..Default::default() };
+
     info!("Starting Oak Functions MCP server");
-    let service = OakFunctionsMcpService::new();
     let http_service = StreamableHttpService::new(
-        move || Ok(service.clone()),
+        move || {
+            let service = OakFunctionsMcpService::<WasmtimeHandler>::new(Default::default());
+            service.initialize(initialize_request.clone()).expect("could not initialize service");
+            if let Some(lookup_data) = &lookup_data {
+                service.load_lookup_data(lookup_data.clone()).expect("could not load lookup data");
+            }
+            Ok(service)
+        },
         LocalSessionManager::default().into(),
         Default::default(),
     );

@@ -14,43 +14,97 @@
 // limitations under the License.
 //
 
+use std::sync::OnceLock;
+
+use anyhow::{Context, Result};
+use oak_functions_service::{instance::OakFunctionsInstance, Handler};
+use oak_proto_rust::oak::functions::{
+    extend_next_lookup_data_request::Data, ExtendNextLookupDataRequest,
+    FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk, ReserveRequest,
+};
 use rmcp::{
-    model::{
-        Implementation, InitializeRequestParam, InitializeResult, ProtocolVersion,
-        ServerCapabilities, ServerInfo,
-    },
-    service::RequestContext,
-    tool_handler, tool_router, ErrorData, RoleServer, ServerHandler,
+    model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo},
+    tool_handler, tool_router, ServerHandler,
 };
 
 const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call.";
 
 use rmcp::handler::server::router::tool::ToolRouter;
 
-#[derive(Clone)]
-pub struct OakFunctionsMcpService {
+pub struct OakFunctionsMcpService<H: Handler> {
     tool_router: ToolRouter<Self>,
+    handler_config: H::HandlerConfig,
+    oak_functions_instance: OnceLock<OakFunctionsInstance<H>>,
 }
 
-impl OakFunctionsMcpService {
-    pub fn new() -> Self {
-        Self { tool_router: Self::tool_router() }
+impl<H: Handler + 'static> OakFunctionsMcpService<H>
+where
+    H::HandlerType: Send + Sync,
+{
+    pub fn new(handler_config: H::HandlerConfig) -> Self {
+        Self {
+            tool_router: Self::tool_router(),
+            handler_config,
+            oak_functions_instance: OnceLock::new(),
+        }
     }
-}
 
-impl Default for OakFunctionsMcpService {
-    fn default() -> Self {
-        Self::new()
+    // Initializes the Oak Functions instance. This can only be done once; all
+    // subsequent calls will fail.
+    pub fn initialize(&self, initialize_request: InitializeRequest) -> Result<()> {
+        if self.oak_functions_instance.get().is_some() {
+            anyhow::bail!("instance already initialized");
+        }
+        let instance =
+            OakFunctionsInstance::new(&initialize_request, None, self.handler_config.clone())
+                .context("Failed to initialize Oak Function MCP server.")?;
+        self.oak_functions_instance
+            .set(instance)
+            .map_err(|_| anyhow::anyhow!("instance already initialized"))?;
+        Ok(())
+    }
+
+    // Loads lookup data into the initialized Oak Functions instance. Subsequent
+    // calls to this function will overwrite any prior lookup data in the Oak
+    // Functions instance.
+    pub fn load_lookup_data(&self, lookup_data: LookupDataChunk) -> Result<()> {
+        let guard = self.oak_functions_instance.get();
+        if let Some(instance) = guard.as_ref() {
+            let entry_count = lookup_data.items.len() as u64;
+            let lookup_data_request =
+                ExtendNextLookupDataRequest { data: Some(Data::Chunk(lookup_data)) };
+            instance
+                .reserve(ReserveRequest { additional_entries: entry_count })
+                .context("failed to reserve lookup data entries")?;
+            instance
+                .extend_next_lookup_data(lookup_data_request)
+                .context("failed to extend next lookup data")?;
+            instance
+                .finish_next_lookup_data(FinishNextLookupDataRequest {})
+                .context("failed to finish loading lookup data")?;
+        } else {
+            anyhow::bail!("instance not initialized");
+        }
+        Ok(())
     }
 }
 
 // TODO: b/469747147 - Provide an `invoke` method that invokes the underlying
 // Oak Functions instance.
 #[tool_router]
-impl OakFunctionsMcpService {}
+impl<H> OakFunctionsMcpService<H>
+where
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
+{
+}
 
 #[tool_handler]
-impl ServerHandler for OakFunctionsMcpService {
+impl<H> ServerHandler for OakFunctionsMcpService<H>
+where
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
+{
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             protocol_version: ProtocolVersion::V_2025_06_18,
@@ -58,14 +112,5 @@ impl ServerHandler for OakFunctionsMcpService {
             server_info: Implementation::from_build_env(),
             instructions: Some(INSTRUCTIONS.into()),
         }
-    }
-
-    // TODO: b/469747147 - Initialize the Oak Functions instance.
-    async fn initialize(
-        &self,
-        _request: InitializeRequestParam,
-        _context: RequestContext<RoleServer>,
-    ) -> Result<InitializeResult, ErrorData> {
-        Ok(self.get_info())
     }
 }

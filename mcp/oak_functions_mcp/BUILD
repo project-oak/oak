@@ -29,6 +29,9 @@ rust_library(
         "@oak_std_crates_index//:async-trait",
     ],
     deps = [
+        "//micro_rpc",
+        "//oak_functions_service:lib_unrestricted",
+        "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:axum",
         "@oak_crates_index//:clap",
@@ -36,6 +39,7 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:rmcp",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tonic",
     ],
 )
 
@@ -44,12 +48,16 @@ rust_binary(
     srcs = ["src/main.rs"],
     deps = [
         ":oak_functions_mcp_lib",
+        "//oak_functions_service:lib_unrestricted",
+        "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:axum",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:rmcp",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:ureq",
     ],
 )
