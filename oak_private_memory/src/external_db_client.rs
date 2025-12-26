@@ -30,6 +30,17 @@ pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
 pub type BlobId = String;
 
+// A non-fatal result from an attempt to persist the metadata db.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum MetadataPersistResult {
+    // The metadata db was persisted, no further action required.
+    Succeeded,
+
+    // The current metadata db is stale; fetch a new one, re-apply your changes,
+    // and try persisting again.
+    RetryNeeded,
+}
+
 // Handlers for storing raw data blobs in the external database.
 #[async_trait]
 pub trait DataBlobHandler {
@@ -52,7 +63,7 @@ pub trait DataBlobHandler {
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<MetadataPersistResult>;
     async fn get_metadata_blob(
         &mut self,
         id: &BlobId,
@@ -102,26 +113,35 @@ impl DataBlobHandler for ExternalDbClient {
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<MetadataPersistResult> {
         let blob =
             metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
         let blob_size = blob.len() as u64;
         let data_blob = DataBlob { id: id.clone(), blob };
         let start_time = tokio::time::Instant::now();
-        self.write_metadata_blob(WriteMetadataBlobRequest {
-            metadata_blob: Some(MetadataBlob {
-                data_blob: Some(data_blob),
-                version: metadata_blob.version,
-            }),
-        })
-        .await?;
+        let write_result = self
+            .write_metadata_blob(WriteMetadataBlobRequest {
+                metadata_blob: Some(MetadataBlob {
+                    data_blob: Some(data_blob),
+                    version: metadata_blob.version,
+                }),
+            })
+            .await;
+
+        if let Err(ref status) = write_result {
+            if status.code() == Code::FailedPrecondition {
+                return Ok(MetadataPersistResult::RetryNeeded);
+            }
+            write_result?;
+        }
+
         let mut elapsed_time = start_time.elapsed().as_millis() as u64;
         if elapsed_time == 0 {
             elapsed_time = 1;
         }
         let speed = blob_size / 1024 / elapsed_time;
         metrics::get_global_metrics().record_db_save_speed(speed);
-        Ok(())
+        Ok(MetadataPersistResult::Succeeded)
     }
 
     async fn add_blobs(

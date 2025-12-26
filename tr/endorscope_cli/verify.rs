@@ -29,6 +29,7 @@ use endorscope::{
     package::Package,
     storage::{CaStorage, EndorsementLoader},
 };
+use intoto::statement::DefaultStatement;
 use oak_time::Instant;
 use rekor::get_rekor_v1_public_key_pem;
 use url::Url;
@@ -221,7 +222,7 @@ pub(crate) fn verify_remote(current_time: Instant, p: VerifyRemoteArgs) {
 }
 
 /// Verifies an endorsement from a given endorsement loader.
-fn display_verify_result(result: Result<()>) {
+fn display_verify_result(result: Result<DefaultStatement>) {
     if result.is_err() {
         panic!("❌ Verification failed: {:?}", result.err().unwrap());
     }

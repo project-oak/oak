@@ -40,9 +40,10 @@ const RUNNABLE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md";
 const OPEN_SOURCE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
+const PI_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md";
 
 const EXPECTED_CLAIMS: &[&str] =
-    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE];
+    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE, PI_CLAIM_TYPE];
 
 fn prettify_claim(claim: &str) -> String {
     match claim {
@@ -50,6 +51,7 @@ fn prettify_claim(claim: &str) -> String {
         OPEN_SOURCE_CLAIM_TYPE => format!("{claim} (Open Source)"),
         RUNNABLE_CLAIM_TYPE => format!("{claim} (Runnable Binary)"),
         PUBLISHED_CLAIM_TYPE => format!("{claim} (Published Binary)"),
+        PI_CLAIM_TYPE => format!("{claim} (Approved for Private AI Compute)"),
         _ => claim.to_string(),
     }
 }

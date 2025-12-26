@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::collections::HashMap;
+use std::{collections::HashMap, time::SystemTime};
 
 use anyhow::{bail, ensure, Context};
 use external_db_client::BlobId;
@@ -97,6 +97,7 @@ const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
 const CREATED_TIMESTAMP_NAME: &str = "createdTimestamp";
 const EVENT_TIMESTAMP_NAME: &str = "eventTimestamp";
+const EXPIRATION_TIMESTAMP_NAME: &str = "expirationTimestamp";
 
 const LLM_VIEW_SCHEMA_NAME: &str = "LlmView";
 const VIEW_ID_NAME: &str = "viewId";
@@ -136,7 +137,7 @@ struct PendingMetadata {
 
 impl PendingMetadata {
     #[allow(deprecated)]
-    pub fn new(memory: &Memory, blob_id: &BlobId) -> Self {
+    pub fn new(memory: &Memory, blob_id: &BlobId) -> anyhow::Result<Self> {
         let memory_id = &memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embeddings: Vec<_> = memory
@@ -165,8 +166,14 @@ impl PendingMetadata {
                 timestamp_to_i64(event_timestamp),
             );
         }
-        let icing_document = document_builder.build();
-        Self { icing_document }
+        if let Some(ref expiration_timestamp) = memory.expiration_timestamp {
+            document_builder.add_int64_property(
+                EXPIRATION_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expiration_timestamp),
+            );
+        }
+        let icing_document = document_builder.build()?;
+        Ok(Self { icing_document })
     }
 
     pub fn document(&self) -> &DocumentProto {
@@ -183,11 +190,15 @@ struct PendingLlmViewMetadata {
 }
 
 impl PendingLlmViewMetadata {
-    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> Option<Self> {
+    pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> anyhow::Result<Option<Self>> {
         let memory_id = &memory.id;
         let view_id = &view.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
-        let embedding = view.embedding.as_ref()?;
+        let embedding = if let Some(e) = view.embedding.as_ref() {
+            e
+        } else {
+            return Ok(None);
+        };
         let embeddings =
             vec![icing::create_vector_proto(embedding.model_signature.as_str(), &embedding.values)];
         let document_builder = icing::create_document_builder();
@@ -212,8 +223,14 @@ impl PendingLlmViewMetadata {
                 timestamp_to_i64(event_timestamp),
             );
         }
-        let icing_document = document_builder.build();
-        Some(Self { icing_document })
+        if let Some(ref expiration_timestamp) = memory.expiration_timestamp {
+            document_builder.add_int64_property(
+                EXPIRATION_TIMESTAMP_NAME.as_bytes(),
+                timestamp_to_i64(expiration_timestamp),
+            );
+        }
+        let icing_document = document_builder.build()?;
+        Ok(Some(Self { icing_document }))
     }
 
     pub fn document(&self) -> &DocumentProto {
@@ -221,11 +238,12 @@ impl PendingLlmViewMetadata {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct SearchResultId {
     pub blob_id: BlobId,
     pub view_ids: Vec<ViewId>,
     pub score: f32,
+    pub view_scores: Vec<f32>,
 }
 
 #[derive(Debug, Default)]
@@ -253,7 +271,7 @@ impl IcingMetaDatabase {
         }
     }
 
-    fn create_schema() -> icing::SchemaProto {
+    fn create_schema() -> anyhow::Result<icing::SchemaProto> {
         let schema_type_builder = icing::create_schema_type_config_builder();
         schema_type_builder
             .set_type(SCHMA_NAME.as_bytes())
@@ -305,6 +323,13 @@ impl IcingMetaDatabase {
             ).add_property(
                 icing::create_property_config_builder()
                     .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
                     .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
@@ -377,6 +402,13 @@ impl IcingMetaDatabase {
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
+            ).add_property(
+                icing::create_property_config_builder()
+                    .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
+                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
             );
 
         let schema_builder = icing::create_schema_builder();
@@ -390,8 +422,8 @@ impl IcingMetaDatabase {
     pub fn new(base_dir: IcingTempDir) -> anyhow::Result<Self> {
         debug!("Creating new icing database in {}", base_dir.as_str());
         let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
-        let schema = Self::create_schema();
-        let result_proto = icing_search_engine.set_schema(&schema);
+        let schema = Self::create_schema()?;
+        let result_proto = icing_search_engine.set_schema(&schema)?;
         ensure!(
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
@@ -419,7 +451,7 @@ impl IcingMetaDatabase {
     ) -> anyhow::Result<cxx::UniquePtr<icing::IcingSearchEngine>> {
         let options_bytes = icing::get_default_icing_options(base_dir_str).encode_to_vec();
         let icing_search_engine = icing::create_icing_search_engine(&options_bytes);
-        let result_proto = icing_search_engine.initialize();
+        let result_proto = icing_search_engine.initialize()?;
         ensure!(
             result_proto.status.context("no status")?.code
                 == Some(icing::status_proto::Code::Ok.into())
@@ -430,13 +462,19 @@ impl IcingMetaDatabase {
     // Adds a new memory to the cache.
     // The generated metadta is returned so that it can be re-applied if needed.
     pub fn add_memory(&mut self, memory: &Memory, blob_id: BlobId) -> anyhow::Result<()> {
-        let pending_metadata = PendingMetadata::new(memory, &blob_id);
+        // Check if the memory already exists.
+        if self.get_blob_id_by_memory_id(memory.id.clone())?.is_some() {
+            // The memory already exists with a different blob id, so we need to delete it
+            // to clear the views before adding it again.
+            self.delete_memories([memory.id.clone()].as_ref())?;
+        }
+        let pending_metadata = PendingMetadata::new(memory, &blob_id)?;
         self.add_pending_metadata(pending_metadata)?;
         if let Some(views) = memory.views.as_ref() {
             for view in &views.llm_views {
                 // TODO: yongheng - Generate view id if not provided.
                 if let Some(pending_view_metadata) =
-                    PendingLlmViewMetadata::new(memory, view, &blob_id)
+                    PendingLlmViewMetadata::new(memory, view, &blob_id)?
                 {
                     self.add_pending_memory_view_metadata(pending_view_metadata)?;
                 }
@@ -449,7 +487,7 @@ impl IcingMetaDatabase {
         &mut self,
         pending_metadata: PendingLlmViewMetadata,
     ) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document());
+        let result = self.icing_search_engine.put(pending_metadata.document())?;
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -463,7 +501,7 @@ impl IcingMetaDatabase {
     }
 
     fn add_pending_metadata(&mut self, pending_metadata: PendingMetadata) -> anyhow::Result<()> {
-        let result = self.icing_search_engine.put(pending_metadata.document());
+        let result = self.icing_search_engine.put(pending_metadata.document())?;
         if result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -486,13 +524,17 @@ impl IcingMetaDatabase {
             bail!("Invalid page token provided");
         }
 
+        let query_str = build_non_expired_query_str(TAG_NAME, tag);
+
         let search_spec = icing::SearchSpecProto {
-            query: Some(tag.to_string()),
-            // Match exactly as defined in the schema for tags.
+            query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            // Match only Memory Schema.
             schema_type_filters: vec![SCHMA_NAME.to_string()],
-            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, TAG_NAME)],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+            ],
             ..Default::default()
         };
 
@@ -514,8 +556,8 @@ impl IcingMetaDatabase {
                 &search_spec,
                 &icing::get_default_scoring_spec(), // Use default scoring for now
                 &result_spec,
-            ),
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            )?,
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
             PageToken::Invalid => unreachable!(), // Already handled
         };
 
@@ -535,11 +577,17 @@ impl IcingMetaDatabase {
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
+        let query_str = build_non_expired_query_str(MEMORY_ID_NAME, &memory_id);
+
         let search_spec = icing::SearchSpecProto {
-            query: Some(memory_id.to_string()),
+            query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHMA_NAME.to_string()],
-            type_property_filters: vec![Self::create_search_filter(SCHMA_NAME, MEMORY_ID_NAME)],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+            ],
             ..Default::default()
         };
 
@@ -553,7 +601,7 @@ impl IcingMetaDatabase {
             &search_spec,
             &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
             &result_spec,
-        );
+        )?;
 
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
@@ -596,7 +644,7 @@ impl IcingMetaDatabase {
             &search_spec,
             &icing::get_default_scoring_spec(),
             &result_spec,
-        );
+        )?;
         if search_result.status.clone().context("no status")?.code
             != Some(icing::status_proto::Code::Ok.into())
         {
@@ -689,8 +737,8 @@ impl IcingMetaDatabase {
                     &search_spec,
                     &icing::get_default_scoring_spec(),
                     &result_spec,
-                ),
-                PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+                )?,
+                PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
                 PageToken::Invalid => bail!("Invalid page token"),
             };
 
@@ -713,11 +761,41 @@ impl IcingMetaDatabase {
         Ok(all_memory_ids)
     }
 
-    pub fn reset(&mut self) {
+    pub fn get_expired_memories_ids(
+        &self,
+        page_size: i32,
+        page_token: PageToken,
+    ) -> anyhow::Result<(Vec<MemoryId>, PageToken)> {
+        let text_query = TextQuery {
+            match_type: MatchType::Lt as i32,
+            field: MemoryField::ExpirationTimestamp as i32,
+            value: Some(text_query::Value::TimestampVal(system_time_to_timestamp(
+                SystemTime::now(),
+            ))),
+        };
+        let (search_spec, _) = self.build_text_query_specs(&text_query, SCHMA_NAME)?;
+        let projection = Self::create_memory_id_projection(SCHMA_NAME);
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &icing::ScoringSpecProto::default(),
+            page_size,
+            page_token,
+            projection,
+        )?;
+        let ids = Self::extract_memory_ids_from_search_result(search_result.clone());
+        if ids.is_empty() {
+            Ok((ids, PageToken::Start))
+        } else {
+            Ok((ids, next_page_token))
+        }
+    }
+
+    pub fn reset(&mut self) -> anyhow::Result<()> {
         self.icing_search_engine.reset();
-        let schema = Self::create_schema();
-        self.icing_search_engine.set_schema(&schema);
+        let schema = Self::create_schema()?;
+        self.icing_search_engine.set_schema(&schema)?;
         self.applied_operations.push(MutationOperation::Reset);
+        Ok(())
     }
 
     fn execute_search(
@@ -738,9 +816,9 @@ impl IcingMetaDatabase {
 
         let search_result = match page_token {
             PageToken::Start => {
-                self.icing_search_engine.search(search_spec, scoring_spec, &result_spec)
+                self.icing_search_engine.search(search_spec, scoring_spec, &result_spec)?
             }
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token),
+            PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
             PageToken::Invalid => bail!("invalid page token"),
         };
 
@@ -755,6 +833,7 @@ impl IcingMetaDatabase {
         Ok((search_result, next_page_token))
     }
 
+    // TODO: b/469515451 - Support clauses with empty values
     pub fn search(
         &self,
         query: &SearchMemoryQuery,
@@ -779,12 +858,11 @@ impl IcingMetaDatabase {
                 },
             )
         };
-
-        let (search_spec, scoring_spec) = self.build_query_specs(query, schema_name)?;
+        let (search_spec, scoring_spec) =
+            self.build_query_specs_filtering_expired_memories(query, schema_name)?;
         let scoring_spec = scoring_spec.unwrap_or_default();
         let mut page_token = page_token;
-        let mut id_maps: HashMap<BlobId, Vec<ViewId>> = HashMap::new();
-        let mut scores = HashMap::new();
+        let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
         // When embedding search is used, we are matching against views instead
         // of memories. Therefore, we might match mulitple views of the same memory.
         // We need to aggregate the results and scores by memory id.
@@ -816,8 +894,7 @@ impl IcingMetaDatabase {
                         Self::extract_view_id_from_doc(result),
                         result.score.map(|s| s as f32).unwrap_or(0.0),
                     ) {
-                        id_maps.entry(blob_id.clone()).or_default().push(view_id);
-                        *scores.entry(blob_id).or_default() += score;
+                        id_maps.entry(blob_id).or_default().push((view_id, score));
                     }
                 }
                 if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
@@ -834,9 +911,21 @@ impl IcingMetaDatabase {
 
         let mut search_result_ids = SearchResultIds::default();
 
-        for (blob_id, view_ids) in id_maps.into_iter() {
-            let score = scores.get(&blob_id).unwrap_or(&0.0);
-            search_result_ids.items.push(SearchResultId { blob_id, view_ids, score: *score });
+        for (blob_id, views) in id_maps.into_iter() {
+            let mut view_ids = Vec::new();
+            let mut view_scores = Vec::new();
+            let mut total_score = 0.0;
+            for (view_id, score) in views {
+                view_ids.push(view_id);
+                view_scores.push(score);
+                total_score += score;
+            }
+            search_result_ids.items.push(SearchResultId {
+                blob_id,
+                view_ids,
+                score: total_score,
+                view_scores,
+            });
         }
         search_result_ids
             .items
@@ -853,6 +942,40 @@ impl IcingMetaDatabase {
             }
             _ => false,
         }
+    }
+
+    fn build_query_specs_filtering_expired_memories(
+        &self,
+        query: &SearchMemoryQuery,
+        schema_name: &str,
+    ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
+        let (mut query_specs, score_spec) = self.build_query_specs(query, schema_name)?;
+
+        // A memory is considered not expired if its expiration timestamp is in the
+        // future, or if it has no expiration timestamp set.
+        let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
+        query_specs.query = Some(format!(
+            "({}) AND (({} > {}) OR (NOT hasProperty(\"{}\")))",
+            query_specs.query.context("no query")?,
+            EXPIRATION_TIMESTAMP_NAME,
+            now_ts,
+            EXPIRATION_TIMESTAMP_NAME,
+        ));
+
+        query_specs.enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
+        if !query_specs.enabled_features.contains(&String::from("NUMERIC_SEARCH")) {
+            query_specs.enabled_features.push("NUMERIC_SEARCH".to_string());
+        }
+        if !query_specs
+            .enabled_features
+            .contains(&String::from(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE))
+        {
+            query_specs
+                .enabled_features
+                .push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
+        }
+
+        Ok((query_specs, score_spec))
     }
 
     fn build_query_specs(
@@ -935,6 +1058,7 @@ impl IcingMetaDatabase {
         let field_name = match text_query.field() {
             MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
             MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
+            MemoryField::ExpirationTimestamp => EXPIRATION_TIMESTAMP_NAME,
             MemoryField::Id => MEMORY_ID_NAME,
             MemoryField::Tags => TAG_NAME,
             _ => bail!("unsupported field for text search"),
@@ -942,7 +1066,10 @@ impl IcingMetaDatabase {
 
         let query = match text_query.match_type() {
             MatchType::Equal => {
-                if field_name == CREATED_TIMESTAMP_NAME || field_name == EVENT_TIMESTAMP_NAME {
+                if field_name == CREATED_TIMESTAMP_NAME
+                    || field_name == EVENT_TIMESTAMP_NAME
+                    || field_name == EXPIRATION_TIMESTAMP_NAME
+                {
                     format!("({field_name} == {value})")
                 } else {
                     format!("({field_name}:{value})")
@@ -1107,25 +1234,24 @@ impl IcingMetaDatabase {
         Ok((search_result_ids, next_page_token))
     }
 
+    pub fn delete_document(&mut self, blob_id: &BlobId) -> anyhow::Result<()> {
+        let result =
+            self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), blob_id.as_bytes())?;
+        if result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Failed to delete document with id {}: {:?}", blob_id, result.status);
+        }
+        Ok(())
+    }
+
     pub fn delete_memories(&mut self, memory_ids: &[MemoryId]) -> anyhow::Result<()> {
         for memory_id in memory_ids {
             let view_ids = self.get_view_ids_by_memory_id(memory_id.clone())?;
             for view_id in view_ids {
-                let result =
-                    self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), view_id.as_bytes());
-                if result.status.clone().context("no status")?.code
-                    != Some(icing::status_proto::Code::Ok.into())
-                {
-                    bail!("Failed to delete view with id {}: {:?}", view_id, result.status);
-                }
+                self.delete_document(&view_id)?;
             }
-            let result =
-                self.icing_search_engine.delete(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes());
-            if result.status.clone().context("no status")?.code
-                != Some(icing::status_proto::Code::Ok.into())
-            {
-                bail!("Failed to delete memory with id {}: {:?}", memory_id, result.status);
-            }
+            self.delete_document(memory_id)?;
             self.applied_operations.push(MutationOperation::Remove(memory_id.clone()));
         }
         Ok(())
@@ -1172,10 +1298,7 @@ impl IcingMetaDatabase {
                     new_db.add_pending_memory_view_metadata(pending_view_metadata.clone())
                 }
                 MutationOperation::Remove(id) => new_db.delete_memories(&[id.to_string()]),
-                MutationOperation::Reset => {
-                    new_db.reset();
-                    Ok(())
-                }
+                MutationOperation::Reset => Ok(new_db.reset()?),
             };
 
             if result.is_err() {
@@ -1196,6 +1319,42 @@ impl IcingMetaDatabase {
         );
         icing::IcingGroundTruthFiles::new(self.base_dir.as_str())
     }
+}
+
+fn build_non_expired_query_str(property_name: &str, property_val: &str) -> String {
+    let now_ts = timestamp_to_i64(&system_time_to_timestamp(SystemTime::now()));
+
+    // A memory is considered not expired if its expiration timestamp is in the
+    // future, or if it has no expiration timestamp set.
+    let expiration_clause = format!(
+        "({} > {}) OR (NOT hasProperty(\"{}\"))",
+        EXPIRATION_TIMESTAMP_NAME, now_ts, EXPIRATION_TIMESTAMP_NAME
+    );
+
+    if property_val.is_empty() {
+        // If no property value specified, filter just for non expired memories.
+        expiration_clause
+    } else {
+        format!("({}:{}) AND ({})", property_name, property_val, expiration_clause)
+    }
+}
+
+fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
+    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => {
+            let seconds = duration.as_secs() as i64;
+            let nanos = duration.subsec_nanos() as i32;
+            (seconds, nanos)
+        }
+        Err(e) => {
+            let duration = e.duration();
+            let seconds = -(duration.as_secs() as i64);
+            let nanos = -(duration.subsec_nanos() as i32);
+            (seconds, nanos)
+        }
+    };
+
+    prost_types::Timestamp { seconds, nanos }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1407,6 +1566,106 @@ mod tests {
     }
 
     #[gtest]
+    fn icing_embedding_search_expired_memory_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let model_signature = "test_model".to_string();
+        let embedding_values = vec![1.0, 0.0, 0.0]; // Common embedding for query
+
+        // Create an expired memory
+        let expired_memory_id = "expired_memory_embed".to_string();
+        let expired_blob_id = "expired_blob_embed".to_string();
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
+
+        let expired_memory = Memory {
+            id: expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expiration_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&expired_memory, expired_blob_id.clone())?;
+
+        // Create a non-expired memory (expires in the future)
+        let non_expired_memory_id = "non_expired_memory_embed".to_string();
+        let non_expired_blob_id = "non_expired_blob_embed".to_string();
+        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour in future
+        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+
+        let non_expired_memory = Memory {
+            id: non_expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "non_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expiration_timestamp: non_expired_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&non_expired_memory, non_expired_blob_id.clone())?;
+
+        // Create a never-expired memory (no expiration_timestamp)
+        let never_expired_memory_id = "never_expired_memory_embed".to_string();
+        let never_expired_blob_id = "never_expired_blob_embed".to_string();
+        let never_expired_memory = Memory {
+            id: never_expired_memory_id.clone(),
+            tags: vec!["embed_tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "never_expired_view".to_string(),
+                    embedding: Some(Embedding {
+                        model_signature: model_signature.clone(),
+                        values: embedding_values.clone(),
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            expiration_timestamp: None,
+            ..Default::default()
+        };
+        icing_database.add_memory(&never_expired_memory, never_expired_blob_id.clone())?;
+
+        // Query with an embedding that matches all three (if not for expiration)
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: model_signature.clone(),
+                    values: embedding_values,
+                }],
+                ..Default::default()
+            })),
+        };
+
+        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+        // Assert that just the non-expired and never-expired memories are in the search
+        // results
+        assert_that!(
+            blob_ids,
+            unordered_elements_are![eq(&non_expired_blob_id), eq(&never_expired_blob_id)]
+        );
+
+        Ok(())
+    }
+
+    #[gtest]
     fn icing_import_with_changes_test_add_memory() -> anyhow::Result<()> {
         // Original base db.
         let mut db1 = IcingMetaDatabase::new(tempdir())?;
@@ -1522,7 +1781,7 @@ mod tests {
 
         // Second concurrent changer import and reset.
         let mut db3 = IcingMetaDatabase::import(tempdir(), db1_exported.as_slice())?;
-        db3.reset();
+        let _ = db3.reset();
 
         // When db3 writeback detects that it needs a fresher copy, it will import with
         // its own changes.
@@ -1643,6 +1902,241 @@ mod tests {
         icing_database.delete_memories(&[memory_id.clone()])?;
         let view_ids = icing_database.get_view_ids_by_memory_id(memory_id);
         assert_that!(view_ids, ok(is_empty()));
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_update_memory_replaces_views_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let memory_id = "memory_id_to_update".to_string();
+        let blob_id1 = "blob_id_1".to_string();
+
+        // First, add a memory with two views.
+        let memory1 = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory1, blob_id1)?;
+
+        // Check that the views were added.
+        let view_ids1 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
+        assert_that!(view_ids1, unordered_elements_are![eq(&"view1"), eq(&"view2")]);
+
+        // Now, "update" the memory by adding a new memory with the same ID but
+        // different views.
+        let blob_id2 = "blob_id_2".to_string();
+        let memory2 = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![LlmView {
+                    id: "view3".to_string(), // New view
+                    embedding: Some(Embedding {
+                        model_signature: "test_model".to_string(),
+                        values: vec![0.0, 0.0, 1.0],
+                    }),
+                    ..Default::default()
+                }],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory2, blob_id2)?;
+
+        // Check that the old views are gone and only the new one exists.
+        let view_ids2 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
+        assert_that!(view_ids2, unordered_elements_are![eq(&"view3")]);
+
+        // Update again, this time with no views.
+        let blob_id3 = "blob_id_3".to_string();
+        let memory3 =
+            Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() };
+        icing_database.add_memory(&memory3, blob_id3)?;
+
+        // Check that all views are gone.
+        let view_ids3 = icing_database.get_view_ids_by_memory_id(memory_id)?;
+        assert_that!(view_ids3, is_empty());
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_search_with_view_scores_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id = "memory_id_view_scores".to_string();
+        let blob_id = "blob_id_view_scores".to_string();
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["tag".to_string()],
+            views: Some(LlmViews {
+                llm_views: vec![
+                    LlmView {
+                        id: "view1".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![1.0, 0.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                    LlmView {
+                        id: "view2".to_string(),
+                        embedding: Some(Embedding {
+                            model_signature: "test_model".to_string(),
+                            values: vec![0.0, 1.0, 0.0],
+                        }),
+                        ..Default::default()
+                    },
+                ],
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        let embedding_query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![0.7, 0.3, 0.0],
+                }],
+                ..Default::default()
+            })),
+        };
+
+        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        assert_that!(results.items, len(eq(1)));
+        let result = &results.items[0];
+        assert_eq!(result.blob_id, blob_id);
+        assert_that!(&result.view_ids, elements_are![eq("view1"), eq("view2")]);
+        assert_that!(&result.view_scores, elements_are![eq(&0.7), eq(&0.3)]);
+        assert_eq!(result.score, 1.0);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memory_by_id_with_expiration_timestamp_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id = "expired_memory_id".to_string();
+        let blob_id = "expired_blob_id".to_string();
+
+        // Create a timestamp in the past (e.g., 1 hour ago)
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600);
+        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
+
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["expired".to_string()],
+            expiration_timestamp,
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        // Verify the memory is actually stored in the database without considering
+        // expiration.
+        let search_spec_for_existence = icing::SearchSpecProto {
+            query: Some(memory_id.to_string()),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            type_property_filters: vec![IcingMetaDatabase::create_search_filter(
+                SCHMA_NAME,
+                MEMORY_ID_NAME,
+            )],
+            ..Default::default()
+        };
+        let result_spec_for_existence = icing::ResultSpecProto {
+            num_per_page: Some(1),
+            type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHMA_NAME)],
+            ..Default::default()
+        };
+        let search_result_for_existence = icing_database.icing_search_engine.search(
+            &search_spec_for_existence,
+            &icing::get_default_scoring_spec(),
+            &result_spec_for_existence,
+        );
+
+        assert_that!(search_result_for_existence.as_ref().unwrap().results, len(eq(1)));
+        assert_that!(
+            IcingMetaDatabase::extract_blob_id_from_doc(
+                &search_result_for_existence.unwrap().results[0]
+            ),
+            eq(&Some(blob_id.clone()))
+        );
+
+        // Try to retrieve the memory using the public API, it should not be found
+        // because it's expired
+        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memories_by_tag_with_expiration_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let common_tag = "test_tag".to_string();
+
+        // Memory 1: Expired
+        let memory_id_expired = "memory_expired".to_string();
+        let blob_id_expired = "blob_expired".to_string();
+        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
+        let memory_expired = Memory {
+            id: memory_id_expired.clone(),
+            tags: vec![common_tag.clone()],
+            expiration_timestamp: Some(system_time_to_timestamp(past_time)),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_expired, blob_id_expired.clone())?;
+
+        // Memory 2: Future expiration
+        let memory_id_future = "memory_future".to_string();
+        let blob_id_future = "blob_future".to_string();
+        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour from now
+        let memory_future = Memory {
+            id: memory_id_future.clone(),
+            tags: vec![common_tag.clone()],
+            expiration_timestamp: Some(system_time_to_timestamp(future_time)),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_future, blob_id_future.clone())?;
+
+        // Memory 3: No expiration
+        let memory_id_no_expiry = "memory_no_expiry".to_string();
+        let blob_id_no_expiry = "blob_no_expiry".to_string();
+        let memory_no_expiry = Memory {
+            id: memory_id_no_expiry.clone(),
+            tags: vec![common_tag.clone()],
+            expiration_timestamp: None,
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_no_expiry, blob_id_no_expiry.clone())?;
+
+        // Retrieve memories by tag
+        let (results, _) = icing_database.get_memories_by_tag(&common_tag, 10, PageToken::Start)?;
+
+        // Assert that only non-expired memories are returned
+        assert_that!(results, unordered_elements_are![eq(&blob_id_future), eq(&blob_id_no_expiry)]);
+
         Ok(())
     }
 }

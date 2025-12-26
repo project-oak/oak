@@ -28,12 +28,12 @@ use core::panic::PanicInfo;
 
 use linked_list_allocator::LockedHeap;
 use oak_attestation_types::{
-    attester::Attester,
+    transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
 };
 use oak_dice::evidence::{
-    DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM, EVENTLOG_CMDLINE_PARAM,
-    STAGE0_DICE_PROTO_MAGIC,
+    DICE_DATA_ATTESTATION_PARAM, DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM,
+    EVENTLOG_CMDLINE_PARAM, STAGE0_DICE_PROTO_MAGIC,
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
@@ -45,7 +45,7 @@ use x86_64::{
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
         idt::InterruptDescriptorTable,
-        paging::{PageSize, Size1GiB},
+        paging::{PageSize, Size1GiB, Size4KiB},
     },
     PhysAddr, VirtAddr,
 };
@@ -92,7 +92,11 @@ pub static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
-const PAGE_SIZE: usize = 4096;
+// Default memory page size on x86_64.
+const PAGE_SIZE: usize = Size4KiB::SIZE as usize;
+
+// Double page size for items larger than the PAGE_SIZE limit.
+const DOUBLE_PAGE_SIZE: usize = PAGE_SIZE * 2;
 
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
     let cs = gdt.append(Descriptor::kernel_code_segment());
@@ -160,6 +164,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     P::populate_zero_page(&mut zero_page);
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
+    let kernel_cmdline = cmdline.kernel_cmdline();
 
     // Safety: this is the only place where we try to load a kernel, so the backing
     // memory is unused.
@@ -217,8 +222,22 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         ram_disk_digest: ram_disk_sha2_256_digest.as_bytes().to_vec(),
         memory_map_digest: memory_map_sha2_256_digest.as_bytes().to_vec(),
         acpi_digest: acpi_sha2_256_digest.as_bytes().to_vec(),
-        kernel_cmdline: cmdline.clone(),
+        kernel_cmdline: kernel_cmdline.clone(),
     };
+
+    let kernel_commandline_digest = cmdline.measure();
+
+    // Introduce transparent measurements (i.e. measurements that do not contain
+    // sensitive data).
+    let stage0_transparent_event_proto =
+        oak_proto_rust::oak::attestation::v1::Stage0TransparentMeasurements {
+            setup_data_digest: stage0_event_proto.setup_data_digest.clone(),
+            kernel_measurement: stage0_event_proto.kernel_measurement.clone(),
+            ram_disk_digest: stage0_event_proto.ram_disk_digest.clone(),
+            memory_map_digest: stage0_event_proto.memory_map_digest.clone(),
+            acpi_digest: stage0_event_proto.acpi_digest.clone(),
+            kernel_cmdline_digest: kernel_commandline_digest.as_bytes().to_vec(),
+        };
 
     // Use the root derived key as the UDS (unique device secret) for deriving
     // sealing keys.
@@ -237,16 +256,28 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         base
     };
 
+    // Generate Stage0 Transparent Event Log data.
+    // TODO: b/452735395 - Update the attester to accept the new transparent event.
+    let stage0_transparent_event =
+        oak_stage0_dice::encode_stage0_transparent_event(stage0_transparent_event_proto);
+    let transparent_event_sha2_256_digest = Sha256::digest(&stage0_transparent_event).to_vec();
+
     log::debug!("Kernel image digest: sha2-256:{}", hex::encode(kernel_sha2_256_digest));
     log::debug!("Kernel setup data digest: sha2-256:{}", hex::encode(setup_data_sha2_256_digest));
-    log::debug!("Kernel command-line: {}", cmdline);
+    log::debug!("Kernel command-line: {}", kernel_cmdline);
     log::debug!("Initial RAM disk digest: sha2-256:{}", hex::encode(ram_disk_sha2_256_digest));
     log::debug!("ACPI table generation digest: sha2-256:{}", hex::encode(acpi_sha2_256_digest));
     log::debug!("E820 table digest: sha2-256:{}", hex::encode(memory_map_sha2_256_digest));
     log::debug!("Event digest: sha2-256:{}", hex::encode(event_sha2_256_digest));
+    log::debug!(
+        "Transparent event digest: sha2-256:{}",
+        hex::encode(transparent_event_sha2_256_digest)
+    );
 
     let mut attester = P::get_attester().expect("couldn't get a valid attester");
-    attester.extend(&stage0_event[..]).expect("couldn't extend attester");
+    attester
+        .extend_transparent(&stage0_event[..], &stage0_transparent_event[..])
+        .expect("couldn't extend attester");
     let mut serialized_attestation_data = attester.serialize();
 
     let mut attestation_data: DiceData =
@@ -294,39 +325,52 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
         PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
+
     sensitive_attestation_data_length += PAGE_SIZE;
 
     // TODO: b/360223468 - Combine the DiceData proto with the EventLog Proto and
     // write all of it in memory.
     // Write DiceData protobuf bytes to memory.
-    let mut encoded_attestation_proto = Vec::with_capacity_in(PAGE_SIZE, &crate::BOOT_ALLOC);
+    let mut encoded_attestation_proto = Vec::with_capacity_in(DOUBLE_PAGE_SIZE, &crate::BOOT_ALLOC);
     // Ensure that DiceData proto bytes is not too big. The 8 bytes are reserved for
     // the size of the encoded DiceData proto.
-    assert!(serialized_attestation_data.len() < PAGE_SIZE - size_of_val(&STAGE0_DICE_PROTO_MAGIC));
+    assert!(
+        serialized_attestation_data.len()
+            < DOUBLE_PAGE_SIZE - size_of_val(&STAGE0_DICE_PROTO_MAGIC)
+    );
     // Insert a magic number to ensure the correctness of the data being read.
     encoded_attestation_proto.extend_from_slice(STAGE0_DICE_PROTO_MAGIC.to_le_bytes().as_slice());
     encoded_attestation_proto.extend_from_slice(serialized_attestation_data.as_ref());
     // Zero out the serialized proto since it contains a copy of the private key.
     serialized_attestation_data.zeroize();
 
+    let encoded_attestation_proto_data = encoded_attestation_proto.leak();
+
     // Reserve memory containing DICE proto Data.
     zero_page.insert_e820_entry(BootE820Entry::new(
-        encoded_attestation_proto.as_bytes().as_ptr() as usize,
-        PAGE_SIZE,
+        encoded_attestation_proto_data.as_bytes().as_ptr() as usize,
+        DOUBLE_PAGE_SIZE,
         E820EntryType::RESERVED,
     ));
-    sensitive_attestation_data_length += PAGE_SIZE;
+    sensitive_attestation_data_length += DOUBLE_PAGE_SIZE;
 
     // Append the DICE data address to the kernel command-line.
-    let extra = format!(
-        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
-    );
-    let cmdline = if cmdline.is_empty() {
-        extra
-    } else if cmdline.contains("--") {
-        format!("{} {}", cmdline, extra)
+    // TODO: b/463325402 - Remove eventlog and dice data from kernel command-line
+    // and only use the new DICE_DATA_ATTESTATION_PARAM arg with the serialized
+    // attester.
+    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}");
+    let extra = if cfg!(feature = "cmdline_with_serialized_attestation_data") {
+        format!("{extra} --{DICE_DATA_ATTESTATION_PARAM}={encoded_attestation_proto_data:p}")
     } else {
-        format!("{} -- {}", cmdline, extra)
+        extra
+    };
+
+    let cmdline = if kernel_cmdline.is_empty() {
+        extra
+    } else if kernel_cmdline.contains("--") {
+        format!("{} {}", kernel_cmdline, extra)
+    } else {
+        format!("{} -- {}", kernel_cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
 

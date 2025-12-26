@@ -18,7 +18,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:java_lite_proto_library.bzl", "java_lite_proto_library")
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -28,7 +28,10 @@ package(
 proto_library(
     name = "assertion_proto",
     srcs = ["assertion.proto"],
-    deps = [":endorsement_proto"],
+    deps = [
+        ":endorsement_proto",
+        ":evidence_proto",
+    ],
 )
 
 java_proto_library(
@@ -50,6 +53,17 @@ cc_proto_library(
 java_proto_library(
     name = "attachment_java_proto",
     deps = [":attachment_proto"],
+)
+
+proto_library(
+    name = "cb_eventlog_proto",
+    srcs = ["cb_eventlog.proto"],
+    deps = [":eventlog_proto"],
+)
+
+cc_proto_library(
+    name = "cb_eventlog_cc_proto",
+    deps = [":cb_eventlog_proto"],
 )
 
 proto_library(
@@ -233,6 +247,8 @@ build_test(
         ":attachment_proto",
         ":attachment_cc_proto",
         ":attachment_java_proto",
+        ":cb_eventlog_proto",
+        ":cb_eventlog_cc_proto",
         ":dice_proto",
         ":dice_cc_proto",
         ":dice_java_proto",

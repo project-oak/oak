@@ -16,9 +16,8 @@
 
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("//oak_grpc_utils:build_defs.bzl", "rust_tonic_grpc_service")
 
 package(
     default_visibility = ["//:internal"],
@@ -46,51 +45,14 @@ cc_grpc_library(
     deps = [":hello_world_cc_proto"],
 )
 
-cargo_build_script(
-    name = "build",
-    srcs = [
-        "build.rs",
-    ],
-    build_script_env = {
-        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
-    },
-    data = [
-        ":hello_world.proto",
-        "//proto:digest.proto",
-        "//proto:validity.proto",
-        "//proto:variant.proto",
-        "//proto/attestation:assertion.proto",
-        "//proto/attestation:endorsement.proto",
-        "//proto/attestation:eventlog.proto",
-        "//proto/attestation:evidence.proto",
-        "//proto/crypto:certificate.proto",
-        "//proto/crypto:crypto.proto",
-        "//proto/session:messages.proto",
-        "//proto/session:service_streaming.proto",
-        "//proto/session:session.proto",
-        "@com_google_protobuf//:descriptor_proto_srcs",
-        "@com_google_protobuf//:well_known_type_protos",
-    ],
-    tools = [
-        "@com_google_protobuf//:protoc",
-    ],
-    deps = [
-        "//oak_grpc_utils",
-        "//oak_proto_build_utils",
-        "@oak_crates_index//:prost-build",
-    ],
-)
-
-rust_library(
+rust_tonic_grpc_service(
     name = "hello_world_rust_proto",
-    srcs = ["lib.rs"],
+    srcs = [":hello_world_proto"],
     crate_name = "oak_hello_world_proto",
+    extern_paths = {
+        ".oak": "::oak_proto_rust::oak",
+    },
     deps = [
-        ":build",
         "//oak_proto_rust",
-        "@oak_crates_index//:prost",
-        "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:tonic",
     ],
 )

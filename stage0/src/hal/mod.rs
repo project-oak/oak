@@ -21,7 +21,9 @@ use core::arch::x86_64::CpuidResult;
 pub use base::Base;
 #[cfg(test)]
 use mockall;
-use oak_attestation_types::{attester::Attester, util::Serializable};
+use oak_attestation_types::{
+    attester::Attester, transparent_attester::TransparentAttester, util::Serializable,
+};
 use oak_dice::evidence::TeePlatform;
 use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
@@ -78,12 +80,13 @@ pub enum PageAssignment {
 ))]
 pub trait Platform {
     type Mmio<S: PageSize>: Mmio<S>;
-    type Attester: Attester + Serializable;
+    type Attester: Attester + TransparentAttester + Serializable;
 
     /// Performs the CPUID instruction.
     fn cpuid(leaf: u32) -> CpuidResult;
 
     /// # Safety
+    //
     //   - base_address is aligned to u32
     //   - we've checked it's within the page size
     //   - we were promised that he memory is valid

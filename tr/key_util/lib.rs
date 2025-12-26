@@ -92,13 +92,13 @@ pub fn verify_signature(
 
 /// Verifies the signature over the contents using the public key.
 pub fn verify_signature_ecdsa(
-    signature: &[u8],
+    signature_der: &[u8],
     contents: &[u8],
-    public_key: &[u8],
+    public_key_der: &[u8],
 ) -> anyhow::Result<()> {
-    let sig = ecdsa::Signature::from_der(signature)
+    let sig = ecdsa::Signature::from_der(signature_der)
         .map_err(|error| anyhow::anyhow!("invalid ASN.1 signature: {}", error))?;
-    let key = convert_raw_to_verifying_key(public_key)
+    let key = convert_raw_to_verifying_key(public_key_der)
         .map_err(|error| anyhow::anyhow!("couldn't convert public key: {error}"))?;
 
     key.verify(contents, &sig)

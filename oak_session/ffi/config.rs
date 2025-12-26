@@ -197,16 +197,6 @@ pub unsafe extern "C" fn session_config_free(session_config: *mut SessionConfig)
     drop(Box::from_raw(session_config));
 }
 
-/// Consumes and releases the memory of the SessionConfigBuilder.
-///
-/// # Safety
-///
-/// builder must be a valid, properly aligned pointer to a SessionConfig.
-#[no_mangle]
-pub unsafe extern "C" fn free_session_config_builder(builder: *mut SessionConfigBuilder) {
-    drop(Box::from_raw(builder))
-}
-
 /// Call add_self_attestion on the provided builder.
 ///
 /// # Safety
@@ -367,6 +357,25 @@ pub unsafe extern "C" fn identity_key_get_public_key(
         Ok(ik) => ErrorOrRustBytes::ok(ik.into_boxed_slice()),
         Err(e) => ErrorOrRustBytes::err(e),
     }
+}
+
+/// Return ownership of the [`SessionConfigBuilder`] pointer to Rust, where it
+/// will be dropped and all related memory released.
+///
+/// Session configs builders are typically consumed as part of constructing a
+/// [`SessionConfig`] object; thus, this function should be called rarely.
+///
+/// # Safety
+///
+/// * The provided [`SessionConfigBuilder`] pointer should be non-null, properly
+///   aligned, and points to a valid [`SessionConfigBuilder`] instance.
+///
+/// * The pointer should not be used anymore after calling this function.
+#[no_mangle]
+pub unsafe extern "C" fn free_session_config_builder(
+    session_config_builder: *mut SessionConfigBuilder,
+) {
+    drop(Box::from_raw(session_config_builder))
 }
 
 #[repr(C)]

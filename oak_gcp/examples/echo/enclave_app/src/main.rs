@@ -15,16 +15,14 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
+use cosign_util::pull_package;
 use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
 use oak_gcp_examples_echo_enclave_app::{app, app_service, gcp};
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client, Reference};
 use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
-use rekor::log_entry::{serialize_rekor_log_entry, LogEntry};
 use sha2::Digest;
-use sigstore_client::cosign::pull_payload;
 use tokio::net::TcpListener;
-use verify_endorsement::create_signed_endorsement;
 
 const ENCLAVE_APP_PORT: u16 = 8080;
 
@@ -67,24 +65,19 @@ async fn main() -> anyhow::Result<()> {
     println!("Fetching endorsement for {image_reference}...");
     let client = Client::new(ClientConfig::default());
     let auth = RegistryAuth::Bearer(token);
-    let (statement, rekor_bundle) = pull_payload(&client, &auth, &image_reference).await?;
-    println!("Received statement: {statement:?}");
-    println!("Received Rekor bundle: {rekor_bundle:?}");
 
-    let log_entry: LogEntry = LogEntry::from_cosign_bundle(rekor_bundle.raw_data())?;
-    let serialized_log_entry: Vec<u8> = serialize_rekor_log_entry(&log_entry)?;
-    println!("Converted Rekor log entry: {serialized_log_entry:?}");
-
-    let endorsement = ConfidentialSpaceEndorsement {
-        jwt_token,
-        workload_endorsement: Some(create_signed_endorsement(
-            statement.unverified_message(),
-            statement.signature(),
-            0,   // The key ID is not used here.
-            &[], // The subject is not needed for verification.
-            &serialized_log_entry,
-        )),
+    let signed_endorsement = {
+        // The signed endorsement does not contain the endorser public key,
+        // therefore we may pass the key as empty.
+        let package = pull_package(&client, &auth, &image_reference, "").await?;
+        let endorsement = &package.endorsement;
+        let log_entry = package.log_entry.as_ref().ok_or(anyhow::anyhow!("missing log entry"))?;
+        println!("Received statement: {endorsement:?}");
+        println!("Converted Rekor log entry: {log_entry:?}");
+        package.get_signed_endorsement()?
     };
+    let endorsement =
+        ConfidentialSpaceEndorsement { jwt_token, workload_endorsement: Some(signed_endorsement) };
 
     println!("Starting enclave echo app...");
     let join_handle =

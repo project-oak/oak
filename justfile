@@ -61,6 +61,22 @@ run-oak-functions-containers-launcher wasm_target port lookup_data_path communic
         --virtio-guest-cid={{virtio_guest_cid}} \
         --communication-channel={{communication_channel}}
 
+oak-restricted-kernel-launcher-artifacts: \
+    (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
+    (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
+    (copy-binary "oak_restricted_kernel_launcher" "oak_restricted_kernel_launcher") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "")
+
+run-oak-restricted-kernel-launcher:
+    RUST_LOG=DEBUG artifacts/binaries/oak_restricted_kernel_launcher \
+        --bios-binary=artifacts/binaries/stage0_bin \
+        --kernel=artifacts/binaries/oak_restricted_kernel_wrapper_virtio_console_channel_bin \
+        --vmm-binary=$(which qemu-system-x86_64) \
+        --app-binary=artifacts/binaries/oak_echo_enclave_app \
+        --initrd=artifacts/binaries/oak_orchestrator \
+        --memory-size=256M
+
 oak-functions-launcher-artifacts: \
     (copy-binary "enclave_apps/oak_functions_enclave_app" "oak_functions_enclave_app") \
     (copy-binary "enclave_apps/oak_orchestrator" "oak_orchestrator") \
@@ -282,7 +298,6 @@ copy-oak-artifacts: \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator") \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
-    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "oak_containers_stage1_tdx") \
     (copy-binary "oak_containers/syslogd" "oak_containers_syslogd") \
     (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
@@ -296,10 +311,17 @@ copy-oak-artifacts: \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_simple_io_channel_measurement" "") \
     (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin" "") \
     (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_measurement" "") \
+    (copy-binary "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin" "") \
+    (copy-subjects "oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_measurement" "") \
     (copy-binaries "oak_session_json_wasm:oak_session_json_wasm" "oak_session_json_wasm") \
     (copy-binary "stage0_bin" "stage0_bin") \
     (copy-binary "stage0_bin_tdx" "stage0_bin_tdx")
 
+
+build-endorse:
+    @echo "Building endorse tool..."
+    @cd trex/endorse && go build -o ../../bin/endorse .
+    @echo "Endorse tool built and moved to bin/endorse"
 
 ### Github Buildconfig rules
 ### These correspond to the commands in `buildconfigs/*.sh`
@@ -321,9 +343,6 @@ github-oak_containers_nvidia_system_image: \
 
 github-oak_containers_orchestrator: \
     (copy-binary "oak_containers/orchestrator_bin:bin/oak_containers_orchestrator" "oak_containers_orchestrator")
-
-github-stage1_tdx_cpio: \
-    (copy-binary "oak_containers/stage1_bin_tdx:stage1_tdx.cpio" "stage1_tdx.cpio")
 
 github-stage1_cpio: \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "stage1.cpio")

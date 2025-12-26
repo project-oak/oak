@@ -15,9 +15,9 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
-exports_file=(["profile.proto"])
+exports_file = ["profile.proto"]
 
 package(
     default_visibility = ["//visibility:public"],

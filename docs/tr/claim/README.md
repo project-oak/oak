@@ -1,5 +1,11 @@
 # Claims directory
 
+To select a new random id:
+
+```bash
+printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
+```
+
 ## Binaries
 
 - `35705`
@@ -10,8 +16,6 @@
   [oak_containers_kernel_cmd_line](https://github.com/project-oak/oak/blob/main/docs/tr/claim/48633.md)
 - `85483`
   [oak_containers_stage1](https://github.com/project-oak/oak/blob/main/docs/tr/claim/85483.md)
-- `58963`
-  [oak_containers_stage1_tdx](https://github.com/project-oak/oak/blob/main/docs/tr/claim/74984.md)
 - `74984`
   [oak_containers_system_image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/58963.md)
 - `18136`
@@ -43,10 +47,14 @@
   [Inline-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/77149.md)
 - `98982`
   [Kernel-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/98982.md)
+- `94503`
+  [MCP Tool Description](https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md)
 - `31543`
   [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
 - `19224`
   [OCI container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md)
+- `39284`
+  [Private AI Compute](https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md)
 - `52637`
   [Published binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/52637.md)
 - `75606`

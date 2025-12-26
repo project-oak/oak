@@ -34,6 +34,7 @@ rust_binary(
     name = "generator",
     srcs = glob(["*.rs"]),
     deps = [
+        "//bazel/rust/proto:proto_gen",
         "//micro_rpc_build",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

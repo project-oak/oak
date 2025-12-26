@@ -30,6 +30,7 @@ rust_library(
     ],
     crate_name = "oak_containers_launcher",
     deps = [
+        "//oak_launcher_utils",
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",
         "@oak_crates_index//:anyhow",

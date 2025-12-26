@@ -30,59 +30,61 @@ use serde::Deserialize;
 
 use crate::tools::OakFunctionsTool;
 
+const REQUEST_DESC: &str =
+    "Get activity request. Needs to be formatted as a city name (e.g., LONDON).";
+const INSTRUCTIONS: &str = "Activity server that can provide activity information based on a city.";
+
 #[derive(Clone)]
-pub struct WeatherService {
+pub struct Service {
     oak_functions: OakFunctionsTool,
     tool_router: ToolRouter<Self>,
 }
 
-impl WeatherService {
+impl Service {
     pub fn new(oak_functions_url: &str, attestation: bool) -> Self {
         let oak_functions = OakFunctionsTool::new(oak_functions_url, attestation);
-
         Self { oak_functions, tool_router: Self::tool_router() }
     }
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
-struct GetWeatherRequest {
-    #[schemars(description = "Latitude")]
-    latitude: f32,
-    #[schemars(description = "Longitude")]
-    longitude: f32,
+struct GetRequest {
+    #[schemars(description = REQUEST_DESC)]
+    key: String,
 }
 
 #[tool_router]
-impl WeatherService {
-    #[tool(
-        description = "Provides current weather for specified coordinates. If the server connection fails, this means that the server is not trusted, and the user request will be leaked. And cannot risk leaking the request and compromise user's privacy! So please explain it to the user"
-    )]
-    async fn get_weather(
-        &self,
-        params: Parameters<GetWeatherRequest>,
-    ) -> Result<CallToolResult, ErrorData> {
-        let Parameters(GetWeatherRequest { latitude, longitude }) = params;
-        info!("Requested weather for ({}, {})", latitude, longitude);
+impl Service {
+    #[tool(description = "Provides activity information")]
+    async fn get(&self, params: Parameters<GetRequest>) -> Result<CallToolResult, ErrorData> {
+        let Parameters(GetRequest { key }) = params;
+        info!("Requested the following key: {}", key);
 
         info!("Sending a tool request");
-        let tool_result =
-            self.oak_functions.invoke(format!("({latitude},{longitude})").as_bytes()).await;
+        let tool_result = self.oak_functions.invoke(key.as_bytes()).await;
         info!("Tool result: {:?}", tool_result);
         let result = match tool_result {
             Ok(tool_response_bytes) => {
-                let tool_response = String::from_utf8(tool_response_bytes)
-                    .expect("unable to convert tool response bytes to string");
-                info!("Received a tool response: {}", tool_response);
-                json!({
-                    "status": "success",
-                    "weather": tool_response,
-                })
+                if !tool_response_bytes.is_empty() {
+                    let tool_response = String::from_utf8(tool_response_bytes)
+                        .expect("unable to convert tool response bytes to string");
+                    info!("Received a tool response: {}", tool_response);
+                    json!({
+                        "status": "success",
+                        "response": tool_response,
+                    })
+                } else {
+                    json!({
+                        "status": "error",
+                        "response": format!("No entry with the key: {}", key),
+                    })
+                }
             }
             Err(err) => {
                 warn!("Received an error: {:?}", err);
                 json!({
                     "status": "error",
-                    "error_message": format!("Couldn't verify server attestation"),
+                    "error_message": "Couldn't verify server attestation",
                 })
             }
         };
@@ -93,15 +95,13 @@ impl WeatherService {
 }
 
 #[tool_handler]
-impl ServerHandler for WeatherService {
+impl ServerHandler for Service {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             protocol_version: ProtocolVersion::V_2025_06_18,
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation::from_build_env(),
-            instructions: Some(
-                "Weather server that can provide weather information based on coordinates".into(),
-            ),
+            instructions: Some(INSTRUCTIONS.into()),
         }
     }
 

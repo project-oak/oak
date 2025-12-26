@@ -42,12 +42,26 @@ pub struct Metrics {
     db_size: Histogram<u64>,
     // Latency of Icing database initialization.
     db_init_latency: Histogram<u64>,
+    // Latency of expired memories cleanup.
+    db_cleanup_latency: Histogram<u64>,
+    // Number of expired memories cleaned up during a cleanup.
+    db_cleanup_count: Histogram<u64>,
     // Latency of persisting the database.
     db_persist_latency: Histogram<u64>,
+    // Latency of persisting the database, including retries.
+    db_persist_latency_with_retries: Histogram<u64>,
+    // Number of attempts to successfully persist the database.
+    db_persist_attempts: Histogram<u64>,
     // Number of retries when connecting to the database.
     db_connect_retries: Counter<u64>,
     // Number of failures when persisting the database.
     db_persist_failures: Counter<u64>,
+    // Number of failures when syncing keys.
+    decrypt_dek_failures: Counter<u64>,
+    // Number of failures when deserializing database.
+    user_info_deserialization_failures: Counter<u64>,
+    // Number of failures when decrypting database.
+    db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
     db_persist_queue_size: ObservableGauge<u64>,
 }
@@ -97,11 +111,33 @@ impl Metrics {
             .with_description("Latency of Icing database initialization.")
             .with_unit("ms")
             .init();
+        let db_cleanup_latency = observer
+            .meter
+            .u64_histogram("db_cleanup_latency")
+            .with_description("Latency of expired memories cleanup operation.")
+            .with_unit("ms")
+            .init();
+        let db_cleanup_count = observer
+            .meter
+            .u64_histogram("db_cleanup_count")
+            .with_description("Number of expired memories cleaned up during cleanup operation.")
+            .init();
         let db_persist_latency = observer
             .meter
             .u64_histogram("db_persist_latency")
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
+            .init();
+        let db_persist_latency_with_retries = observer
+            .meter
+            .u64_histogram("db_persist_latency_with_retries")
+            .with_description("Latency of persisting the database including all retry attempts.")
+            .with_unit("ms")
+            .init();
+        let db_persist_attempts = observer
+            .meter
+            .u64_histogram("db_persist_attempts")
+            .with_description("Number of attempts before metadata persist succeeds.")
             .init();
         let db_connect_retries = observer
             .meter
@@ -115,10 +151,28 @@ impl Metrics {
             .with_description("Number of failures when persisting the database.")
             .init();
 
+        let db_decryption_failures = observer
+            .meter
+            .u64_counter("db_decryption_failures")
+            .with_description("Number of failures when decrypting the database.")
+            .init();
+
         let db_persist_queue_size = observer
             .meter
             .u64_observable_gauge("db_persist_queue_size")
             .with_description("Number of items in the database persist queue.")
+            .init();
+
+        let decrypt_dek_failures = observer
+            .meter
+            .u64_counter("decrypt_dek_failures")
+            .with_description("Number of failures when decrypting the DEK.")
+            .init();
+
+        let user_info_deserialization_failures = observer
+            .meter
+            .u64_counter("user_info_deserialization_failures")
+            .with_description("Number of failures when deserializing user info.")
             .init();
 
         // Initialize the total count to 0 to trigger the metric registration.
@@ -128,18 +182,30 @@ impl Metrics {
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
         db_size.record(1, &[]);
         db_init_latency.record(1, &[]);
+        db_cleanup_latency.record(0, &[]);
+        db_cleanup_count.record(0, &[]);
         db_persist_latency.record(1, &[]);
+        db_persist_latency_with_retries.record(1, &[]);
+        db_persist_attempts.record(1, &[]);
         db_connect_retries.add(0, &[]);
         db_persist_failures.add(0, &[]);
+        decrypt_dek_failures.add(0, &[]);
+        user_info_deserialization_failures.add(0, &[]);
+        db_decryption_failures.add(0, &[]);
         db_persist_queue_size.observe(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
         observer.register_metric(db_size.clone());
         observer.register_metric(db_init_latency.clone());
+        observer.register_metric(db_cleanup_latency.clone());
+        observer.register_metric(db_cleanup_count.clone());
         observer.register_metric(db_persist_latency.clone());
         observer.register_metric(db_connect_retries.clone());
         observer.register_metric(db_persist_failures.clone());
+        observer.register_metric(decrypt_dek_failures.clone());
+        observer.register_metric(user_info_deserialization_failures.clone());
+        observer.register_metric(db_decryption_failures.clone());
         observer.register_metric(db_persist_queue_size.clone());
         Self {
             rpc_count,
@@ -147,9 +213,16 @@ impl Metrics {
             rpc_latency,
             db_size,
             db_init_latency,
+            db_cleanup_latency,
+            db_cleanup_count,
             db_persist_latency,
+            db_persist_latency_with_retries,
+            db_persist_attempts,
             db_connect_retries,
             db_persist_failures,
+            decrypt_dek_failures,
+            user_info_deserialization_failures,
+            db_decryption_failures,
             db_persist_queue_size,
         }
     }
@@ -206,8 +279,24 @@ impl Metrics {
         self.db_init_latency.record(latency, &[]);
     }
 
+    pub fn record_db_cleanup_latency(&self, latency: u64) {
+        self.db_cleanup_latency.record(latency, &[]);
+    }
+
+    pub fn record_db_cleanup_count(&self, count: u64) {
+        self.db_cleanup_count.record(count, &[]);
+    }
+
     pub fn record_db_persist_latency(&self, latency: u64) {
         self.db_persist_latency.record(latency, &[]);
+    }
+
+    pub fn record_db_persist_latency_with_retries(&self, latency: u64) {
+        self.db_persist_latency_with_retries.record(latency, &[]);
+    }
+
+    pub fn record_db_persist_attempts(&self, attempts: u64) {
+        self.db_persist_attempts.record(attempts, &[]);
     }
 
     pub fn inc_db_connect_retries(&self) {
@@ -216,6 +305,18 @@ impl Metrics {
 
     pub fn inc_db_persist_failures(&self) {
         self.db_persist_failures.add(1, &[]);
+    }
+
+    pub fn inc_decrypt_dek_failures(&self) {
+        self.decrypt_dek_failures.add(1, &[]);
+    }
+
+    pub fn inc_user_info_deserialization_failures(&self) {
+        self.user_info_deserialization_failures.add(1, &[]);
+    }
+
+    pub fn inc_db_decryption_failures(&self) {
+        self.db_decryption_failures.add(1, &[]);
     }
 
     pub fn record_db_persist_queue_size(&self, max: u64) {

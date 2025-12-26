@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::SystemTime,
+};
 
 use anyhow::Result;
 use private_memory_server_lib::{
@@ -53,4 +55,22 @@ pub async fn start_server() -> Result<(
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
     ))
+}
+
+pub fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
+    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => {
+            let seconds = duration.as_secs() as i64;
+            let nanos = duration.subsec_nanos() as i32;
+            (seconds, nanos)
+        }
+        Err(e) => {
+            let duration = e.duration();
+            let seconds = -(duration.as_secs() as i64);
+            let nanos = -(duration.subsec_nanos() as i32);
+            (seconds, nanos)
+        }
+    };
+
+    prost_types::Timestamp { seconds, nanos }
 }

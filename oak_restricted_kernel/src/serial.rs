@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use atomic_refcell::AtomicRefCell;
-use uart_16550::SerialPort;
+use oak_sev_guest::io::{PortFactoryWrapper, PortWrapper};
+use spinning_top::Spinlock;
+
+type SerialPort = sev_serial::SerialPort<PortFactoryWrapper, PortWrapper<u8>, PortWrapper<u8>>;
 
 pub struct Serial {
-    port: AtomicRefCell<SerialPort>,
+    port: Spinlock<SerialPort>,
 }
 
 // Base I/O port for the second serial port in the system (colloquially known as
@@ -26,19 +28,26 @@ pub struct Serial {
 static COM2_BASE: u16 = 0x2f8;
 
 impl Serial {
-    pub fn new() -> Serial {
-        // Our contract with the loader requires the second serial port to be
-        // available, so assuming the loader adheres to it, this is safe.
-        let mut port = unsafe { SerialPort::new(COM2_BASE) };
-        port.init();
-        Serial { port: AtomicRefCell::new(port) }
+    pub fn new(sev_es_enabled: bool) -> Serial {
+        let port_factory = if sev_es_enabled {
+            crate::ghcb::get_ghcb_port_factory()
+        } else {
+            PortFactoryWrapper::new_raw()
+        };
+        // Our contract with the launcher requires the second serial port to be
+        // available when using a serial channel for communication, so assuming the
+        // loader adheres to it, this is safe.
+        let mut port = unsafe { SerialPort::new(COM2_BASE, port_factory) };
+        port.init().expect("couldn't initialize comms serial port");
+        Serial { port: Spinlock::new(port) }
     }
 }
 
 impl oak_channel::Write for Serial {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let mut port = self.port.lock();
         for byte in data {
-            self.port.borrow_mut().send_raw(*byte);
+            port.send(*byte).map_err(anyhow::Error::msg)?;
         }
         Ok(())
     }
@@ -50,9 +59,10 @@ impl oak_channel::Write for Serial {
 
 impl oak_channel::Read for Serial {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+        let mut port = self.port.lock();
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
-            data[i] = self.port.borrow_mut().receive();
+            data[i] = port.receive().map_err(anyhow::Error::msg)?;
         }
         Ok(())
     }

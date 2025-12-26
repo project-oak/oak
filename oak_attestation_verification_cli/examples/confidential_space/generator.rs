@@ -139,7 +139,7 @@ fn main() -> anyhow::Result<()> {
     let workload_endorsement = create_signed_endorsement(
         serialized_endorsement.as_slice(),
         developer_signature.to_der().to_vec().as_slice(),
-        0,
+        1,
         &[],
         serde_json::to_vec(&json!({
             "sha256:".to_owned() + IMAGE_DIGEST: generate_log_entry(

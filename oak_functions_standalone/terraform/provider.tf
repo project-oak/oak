@@ -4,6 +4,7 @@ provider "google" {
 }
 
 resource "google_compute_firewall" "oak_functions_firewall" {
+  count   = var.create_firewall_rule ? 1 : 0
   name    = "allow-oak-functions"
   network = "default"
 

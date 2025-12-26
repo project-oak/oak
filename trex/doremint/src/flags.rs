@@ -18,6 +18,7 @@ use std::{
 };
 
 use anyhow::Context;
+use clap::Parser;
 use oak_time::{Duration, Instant};
 use oak_time_std::instant::now;
 use serde::Deserialize;
@@ -52,14 +53,24 @@ impl From<&str> for Output {
 }
 
 #[derive(Default, Debug, Clone, Deserialize)]
-pub struct Claims {
+pub struct ClaimsData {
     pub claims: Vec<String>,
 }
 
-pub(crate) fn parse_claims(path: &str) -> anyhow::Result<Claims> {
+#[derive(Parser, Debug, Clone)]
+#[group(required = true, multiple = false)]
+pub struct Claims {
+    #[arg(long, help = "Path to a file containing claims about an image", value_parser = parse_claims_toml)]
+    pub claims_toml: Option<ClaimsData>,
+
+    #[arg(long, help = "Comma-separated list of claims", value_delimiter = ',')]
+    pub claims: Option<Vec<String>>,
+}
+
+pub(crate) fn parse_claims_toml(path: &str) -> anyhow::Result<ClaimsData> {
     let content =
         fs::read_to_string(path).with_context(|| format!("could not read claims file {path}"))?;
-    let claims: Claims =
+    let claims: ClaimsData =
         toml::from_str(&content).with_context(|| format!("could not parse claims file {path}"))?;
 
     Ok(claims)

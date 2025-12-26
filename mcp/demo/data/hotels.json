@@ -1,0 +1,473 @@
+{
+  "hotels": [
+    {
+      "hotel": {
+        "key": "LONDON",
+        "hotel_id": "LONDON:001",
+        "hotel_name": "The Savoy",
+        "location": "Strand, London WC2R 0EZ, United Kingdom",
+        "rating": "4.9",
+        "style_tags": [
+          "luxury",
+          "historic",
+          "iconic"
+        ],
+        "loyalty_partner": [
+          "Fairmont",
+          "Accor"
+        ],
+        "amenities": [
+          "fine_dining",
+          "spa",
+          "indoor_pool",
+          "butler_service",
+          "gym"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "LONDON",
+        "hotel_id": "LONDON:002",
+        "hotel_name": "The Hoxton, Shoreditch",
+        "location": "81 Great Eastern St, London EC2A 3HU, United Kingdom",
+        "rating": "4.6",
+        "style_tags": [
+          "boutique",
+          "trendy",
+          "coworking"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "restaurant",
+          "bar",
+          "free_wifi",
+          "pet_friendly",
+          "meeting_rooms"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "LONDON",
+        "hotel_id": "LONDON:003",
+        "hotel_name": "Park Plaza Westminster Bridge London",
+        "location": "200 Westminster Bridge Rd, London SE1 7UT, United Kingdom",
+        "rating": "4.5",
+        "style_tags": [
+          "business",
+          "family-friendly",
+          "scenic_views"
+        ],
+        "loyalty_partner": [
+          "Radisson"
+        ],
+        "amenities": [
+          "indoor_pool",
+          "spa",
+          "gym",
+          "business_center",
+          "restaurant"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "LONDON",
+        "hotel_id": "LONDON:004",
+        "hotel_name": "Generator London",
+        "location": "37 Tavistock Pl, London WC1H 9SE, United Kingdom",
+        "rating": "3.9",
+        "style_tags": [
+          "hostel",
+          "social",
+          "budget"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "bar",
+          "communal_lounge",
+          "lockers",
+          "laundry_facilities",
+          "cafe"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "LONDON",
+        "hotel_id": "LONDON:005",
+        "hotel_name": "Shangri-La The Shard, London",
+        "location": "31 St Thomas St, London SE1 9QU, United Kingdom",
+        "rating": "4.7",
+        "style_tags": [
+          "luxury",
+          "panoramic_views",
+          "modern"
+        ],
+        "loyalty_partner": [
+          "Shangri-La"
+        ],
+        "amenities": [
+          "infinity_pool",
+          "fine_dining",
+          "spa",
+          "gym",
+          "sky_bar"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "MADRID",
+        "hotel_id": "MADRID:001",
+        "hotel_name": "Four Seasons Hotel Madrid",
+        "location": "Calle de Sevilla, 3, 28014 Madrid, Spain",
+        "rating": "4.9",
+        "style_tags": [
+          "luxury",
+          "historic_building",
+          "elegant"
+        ],
+        "loyalty_partner": [
+          "Four Seasons"
+        ],
+        "amenities": [
+          "rooftop_pool",
+          "spa",
+          "gym",
+          "fine_dining",
+          "valet_parking"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "MADRID",
+        "hotel_id": "MADRID:002",
+        "hotel_name": "Pestana CR7 Gran Vía Madrid",
+        "location": "Calle Gran Vía, 29, 28013 Madrid, Spain",
+        "rating": "4.6",
+        "style_tags": [
+          "modern",
+          "lifestyle",
+          "sporty"
+        ],
+        "loyalty_partner": [
+          "Pestana"
+        ],
+        "amenities": [
+          "rooftop_pool",
+          "bar",
+          "gym",
+          "restaurant",
+          "city_views"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "MADRID",
+        "hotel_id": "MADRID:003",
+        "hotel_name": "The Hat Madrid",
+        "location": "Calle Imperial, 9, 28012 Madrid, Spain",
+        "rating": "4.4",
+        "style_tags": [
+          "hostel",
+          "boutique",
+          "social",
+          "budget"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "rooftop_bar",
+          "communal_kitchen",
+          "private_rooms",
+          "free_wifi",
+          "lockers"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "MADRID",
+        "hotel_id": "MADRID:004",
+        "hotel_name": "RIU Plaza España",
+        "location": "C. del Maestro Guerrero, s/n, 28013 Madrid, Spain",
+        "rating": "4.7",
+        "style_tags": [
+          "skyscraper",
+          "panoramic_views",
+          "central"
+        ],
+        "loyalty_partner": [
+          "RIU"
+        ],
+        "amenities": [
+          "rooftop_pool",
+          "sky_bar",
+          "glass_walkway",
+          "gym",
+          "restaurant"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "MADRID",
+        "hotel_id": "MADRID:005",
+        "hotel_name": "Only YOU Boutique Hotel Madrid",
+        "location": "Calle del Barquillo, 21, 28004 Madrid, Spain",
+        "rating": "4.8",
+        "style_tags": [
+          "boutique",
+          "design",
+          "charming"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "courtyard_lounge",
+          "restaurant",
+          "spa_services",
+          "free_wifi",
+          "24_hour_reception"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "BARCELONA",
+        "hotel_id": "BARCELONA:001",
+        "hotel_name": "W Barcelona",
+        "location": "Plaça de la Rosa dels Vents, 1, 08039 Barcelona, Spain",
+        "rating": "4.6",
+        "style_tags": [
+          "luxury",
+          "beachfront",
+          "iconic_design",
+          "party_scene"
+        ],
+        "loyalty_partner": [
+          "Marriott"
+        ],
+        "amenities": [
+          "infinity_pool",
+          "spa",
+          "beach_access",
+          "nightclub",
+          "rooftop_bar"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "BARCELONA",
+        "hotel_id": "BARCELONA:002",
+        "hotel_name": "Hotel Arts Barcelona",
+        "location": "Carrer de la Marina, 19-21, 08005 Barcelona, Spain",
+        "rating": "4.7",
+        "style_tags": [
+          "luxury",
+          "artistic",
+          "sea_view"
+        ],
+        "loyalty_partner": [
+          "Marriott",
+          "Ritz-Carlton"
+        ],
+        "amenities": [
+          "two_outdoor_pools",
+          "spa",
+          "michelin_star_restaurant",
+          "gym",
+          "casino"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "BARCELONA",
+        "hotel_id": "BARCELONA:003",
+        "hotel_name": "Praktik Rambla",
+        "location": "Rambla de Catalunya, 27, 08007 Barcelona, Spain",
+        "rating": "4.5",
+        "style_tags": [
+          "boutique",
+          "historic_building",
+          "charming"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "courtyard_terrace",
+          "free_wifi",
+          "library",
+          "air_conditioning"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "BARCELONA",
+        "hotel_id": "BARCELONA:004",
+        "hotel_name": "Generator Barcelona",
+        "location": "C/ de Còrsega, 373, 08037 Barcelona, Spain",
+        "rating": "4.0",
+        "style_tags": [
+          "hostel",
+          "design",
+          "social"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "rooftop_terrace",
+          "bar",
+          "communal_lounge",
+          "private_rooms",
+          "lockers"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "BARCELONA",
+        "hotel_id": "BARCELONA:005",
+        "hotel_name": "Hotel 1898",
+        "location": "La Rambla, 109, 08002 Barcelona, Spain",
+        "rating": "4.6",
+        "style_tags": [
+          "colonial",
+          "luxury",
+          "central"
+        ],
+        "loyalty_partner": [
+          "Nunez i Navarro Hotels"
+        ],
+        "amenities": [
+          "rooftop_pool",
+          "indoor_pool",
+          "spa",
+          "tapas_restaurant",
+          "library"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "PARIS",
+        "hotel_id": "PARIS:001",
+        "hotel_name": "Shangri-La Paris",
+        "location": "10 Av. d'Iéna, 75116 Paris, France",
+        "rating": "4.8",
+        "style_tags": [
+          "palace",
+          "luxury",
+          "eiffel_tower_view",
+          "romantic"
+        ],
+        "loyalty_partner": [
+          "Shangri-La"
+        ],
+        "amenities": [
+          "indoor_pool",
+          "spa",
+          "michelin_star_restaurant",
+          "garden",
+          "gym"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "PARIS",
+        "hotel_id": "PARIS:002",
+        "hotel_name": "Hôtel de Crillon, A Rosewood Hotel",
+        "location": "10 Place de la Concorde, 75008 Paris, France",
+        "rating": "4.9",
+        "style_tags": [
+          "historic",
+          "ultra_luxury",
+          "iconic"
+        ],
+        "loyalty_partner": [
+          "Rosewood"
+        ],
+        "amenities": [
+          "butler_service",
+          "spa",
+          "indoor_pool",
+          "fine_dining",
+          "courtyard"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "PARIS",
+        "hotel_id": "PARIS:003",
+        "hotel_name": "citizenM Paris Gare de Lyon",
+        "location": "8 Rue Van Gogh, 75012 Paris, France",
+        "rating": "4.5",
+        "style_tags": [
+          "modern",
+          "affordable_luxury",
+          "tech_savvy"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "24_7_canteen",
+          "rooftop_bar",
+          "self_check_in",
+          "free_wifi",
+          "smart_rooms"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "PARIS",
+        "hotel_id": "PARIS:004",
+        "hotel_name": "Hôtel Lutetia",
+        "location": "45 Bd Raspail, 75006 Paris, France",
+        "rating": "4.7",
+        "style_tags": [
+          "art_deco",
+          "luxury",
+          "left_bank"
+        ],
+        "loyalty_partner": [
+          "The Set Collection"
+        ],
+        "amenities": [
+          "spa",
+          "indoor_pool",
+          "jazz_bar",
+          "brasserie",
+          "cigar_lounge"
+        ]
+      }
+    },
+    {
+      "hotel": {
+        "key": "PARIS",
+        "hotel_id": "PARIS:005",
+        "hotel_name": "St Christopher's Inn Paris - Gare du Nord",
+        "location": "5 Rue de Dunkerque, 75010 Paris, France",
+        "rating": "3.8",
+        "style_tags": [
+          "hostel",
+          "party_scene",
+          "budget",
+          "social"
+        ],
+        "loyalty_partner": [],
+        "amenities": [
+          "bar",
+          "nightclub",
+          "lockers",
+          "communal_lounge",
+          "free_breakfast"
+        ]
+      }
+    }
+  ]
+}

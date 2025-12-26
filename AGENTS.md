@@ -121,6 +121,11 @@ let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
 
 ## Git
 
+We don't use git.
+
+Do not run any git commands, not even `git status`, and definitely not
+`git commit`, `git push` or `git checkout`.
+
 ### Commits
 
 - When writing commit messages, any backticks

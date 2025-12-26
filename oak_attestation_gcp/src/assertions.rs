@@ -23,8 +23,9 @@ use oak_attestation_verification_types::assertion_verifier::{
     AssertionVerifier, AssertionVerifierError,
 };
 use oak_proto_rust::oak::attestation::v1::{
-    confidential_space_reference_values::ContainerImage, Assertion, ConfidentialSpaceAssertion,
-    ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues, EndorsementReferenceValue,
+    binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
+    BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
+    ConfidentialSpaceReferenceValues, SignedEndorsement,
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
@@ -34,7 +35,7 @@ use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{der::DecodePem, Certificate};
 
 use crate::{
-    jwt::{verification::report_attestation_token, Claims, Header},
+    jwt::{verification::verify_attestation_token, Claims, Header},
     policy::{verify_endorsement_wrapper, ConfidentialSpaceVerificationError},
 };
 
@@ -81,27 +82,23 @@ impl GcpAssertionVerifier {
         &self,
         verification_time: Instant,
         image_reference: &Reference,
-        endorsement_reference_value: &EndorsementReferenceValue,
+        binary_reference_value: &BinaryReferenceValue,
         endorsement: &Option<ConfidentialSpaceEndorsement>,
     ) -> Result<(), AssertionVerifierError> {
-        match endorsement {
+        let signed_endorsement = match endorsement {
             Some(ci_endorsement) => match &ci_endorsement.workload_endorsement {
-                Some(signed_endorsement) => verify_endorsement_wrapper(
-                    verification_time,
-                    image_reference,
-                    signed_endorsement,
-                    endorsement_reference_value,
-                )
-                .context("verifying workload endorsement")?,
+                Some(signed_endorsement) => signed_endorsement,
                 None => return Err(anyhow!("missing workload endorsement").into()),
             },
-            None => {
-                return Err(anyhow!(
-                    "reference values require endorsement to be provided but none was given"
-                )
-                .into())
-            }
-        }
+            None => &SignedEndorsement::default(),
+        };
+        verify_endorsement_wrapper(
+            verification_time,
+            image_reference,
+            signed_endorsement,
+            binary_reference_value,
+        )
+        .context("verifying workload endorsement")?;
         Ok(())
     }
 }
@@ -139,10 +136,15 @@ impl AssertionVerifier for GcpAssertionVerifier {
                     let rekor_key = cosign_reference_values.rekor_public_key.clone();
                     let endorsement_ref_value =
                         create_endorsement_reference_value(endorser_key, rekor_key);
+                    let image_reference_value = BinaryReferenceValue {
+                        r#type: Some(binary_reference_value::Type::Endorsement(
+                            endorsement_ref_value,
+                        )),
+                    };
                     self.verify_endorsed_container_image(
                         verification_time,
                         &image_reference,
-                        &endorsement_ref_value,
+                        &image_reference_value,
                         &cs_assertion.container_image_endorsement,
                     )?;
                 }
@@ -156,11 +158,11 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         .into());
                     }
                 }
-                ContainerImage::EndorsementReferenceValues(endorsement_ref_value) => {
+                ContainerImage::ImageReferenceValue(image_reference_value) => {
                     self.verify_endorsed_container_image(
                         verification_time,
                         &image_reference,
-                        endorsement_ref_value,
+                        image_reference_value,
                         &cs_assertion.container_image_endorsement,
                     )?;
                 }
@@ -168,22 +170,21 @@ impl AssertionVerifier for GcpAssertionVerifier {
         }
 
         let expected_nonce = generate_nonce_from_asserted_data(asserted_data);
-        let eat_nonce = token.claims().eat_nonce.clone();
-        let token_report = report_attestation_token(
+        let eat_nonce = verify_attestation_token(
             token,
             &root_certificate,
             &verification_time,
             self.audience.clone(),
-        );
-        token_report.has_required_claims.context("checking the GCP JWT token required claims")?;
-        token_report.validity.context("checking the GCP JWT token validity period")?;
-        token_report.verification.context("checking the GCP JWT token verification status")?;
-        token_report.issuer_report.context("checking the GCP JWT token issuer root signature")?;
+        )
+        .context("verifying the JWT token")?
+        .claims()
+        .eat_nonce
+        .clone();
 
         if eat_nonce != expected_nonce {
             return Err(AssertionVerifierError::AssertedDataMismatch {
-                expected: expected_nonce.into(),
-                actual: eat_nonce.into(),
+                expected: expected_nonce,
+                actual: eat_nonce,
             });
         }
 
@@ -197,7 +198,8 @@ mod tests {
     use oak_attestation_verification_types::assertion_verifier::AssertionVerifierError;
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, CosignReferenceValues, Endorsement, Signature, SignedEndorsement,
+        binary_reference_value, endorsement::Format, BinaryReferenceValue, CosignReferenceValues,
+        Endorsement, Signature, SignedEndorsement,
     };
     use oak_time::make_instant;
     use prost::Message;
@@ -241,9 +243,11 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
-                container_image: Some(ContainerImage::EndorsementReferenceValues(
-                    create_endorsement_reference_value(developer_public_key, None),
-                )),
+                container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
+                    r#type: Some(binary_reference_value::Type::Endorsement(
+                        create_endorsement_reference_value(developer_public_key, None),
+                    )),
+                })),
             },
         };
 
@@ -349,7 +353,7 @@ mod tests {
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
                             &read_testdata_string!("developer_key.pub.pem"),
-                            0,
+                            1,
                         )),
                         rekor_public_key: None,
                     },
@@ -380,7 +384,7 @@ mod tests {
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
                             &read_testdata_string!("developer_key.pub.pem"),
-                            0,
+                            1,
                         )),
                         rekor_public_key: None,
                     },

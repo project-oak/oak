@@ -22,7 +22,7 @@ package(
 )
 
 rust_binary(
-    name = "main",
+    name = "oak_restricted_kernel_launcher",
     srcs = ["src/main.rs"],
     deps = [
         ":lib",
@@ -50,6 +50,7 @@ rust_test(
     data = [
         "//enclave_apps/oak_echo_enclave_app",
         "//enclave_apps/oak_orchestrator",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_serial_channel_bin",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
     ],

@@ -17,6 +17,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::convert::TryInto;
 
 use anyhow::Context;
 #[allow(deprecated)]
@@ -46,7 +47,6 @@ pub struct RtmrAttester {
 // instances use the applications keys from the event log.
 #[allow(deprecated)]
 impl ApplicationKeysAttester for RtmrAttester {
-    // Not used for RTMRs.
     fn add_application_keys(
         self,
         _layer_data: LayerData,
@@ -55,7 +55,9 @@ impl ApplicationKeysAttester for RtmrAttester {
         _group_kem_public_key: Option<&[u8]>,
         _group_verifying_key: Option<&VerifyingKey>,
     ) -> anyhow::Result<Evidence> {
-        anyhow::bail!("add_application_keys for TDX is not implemented");
+        // When using RTMRs we ignore the application keys, so we just return the
+        // evidence.
+        self.quote()
     }
 }
 
@@ -66,7 +68,6 @@ impl Attester for RtmrAttester {
             .get_or_insert_with(EventLog::default)
             .encoded_events
             .push(encoded_event.to_vec());
-        self.evidence.root_layer = None;
 
         let digest = Sha384::digest(encoded_event);
         // We extend RTMR2 for all event log entries.
@@ -107,8 +108,7 @@ impl Serializable for RtmrAttester {
         // TODO: b/368023328 - Rename DiceData.
         let attestation_data: DiceData = try_decode_length_delimited_proto(bytes)
             .context("couldn't parse attestation data: {:?}")?;
-        let evidence = attestation_data.evidence.ok_or_else(|| anyhow::anyhow!("no evidence"))?;
-        Ok(RtmrAttester { evidence })
+        attestation_data.try_into()
     }
 
     fn serialize(self) -> Vec<u8> {
@@ -116,5 +116,14 @@ impl Serializable for RtmrAttester {
         let attestation_data =
             DiceData { evidence: Some(self.evidence), certificate_authority: None };
         encode_length_delimited_proto(&attestation_data)
+    }
+}
+
+// TODO: b/368023328 - Rename DiceData.
+impl TryFrom<DiceData> for RtmrAttester {
+    type Error = anyhow::Error;
+    fn try_from(value: DiceData) -> anyhow::Result<Self> {
+        let evidence = value.evidence.as_ref().ok_or_else(|| anyhow::anyhow!("no evidence"))?;
+        Ok(Self { evidence: evidence.clone() })
     }
 }

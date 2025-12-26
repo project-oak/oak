@@ -56,6 +56,34 @@ It's important to note that the integrity of the event log must be enforced by
 hardware, i.e. the event log must be rooted in the attestation report, which
 depends on the exact implementation (SNP or TDX).
 
+### Transparent Attester
+
+Transparent Attester is represented as the following trait (defined in
+[`oak_attestation_types`](../oak_attestation_types/src/transparent_attester.rs))
+and may be used in conjunction with the original Attester trait:
+
+```rust
+pub trait TransparentAttester {
+    fn extend_transparent(&mut self, original_encoded_event: &[u8], transparent_encoded_event: &[u8]) -> Result<()>;
+}
+```
+
+- `extend_transparent` function accepts an `original_encoded_event` and a
+  `transparent_encoded_event`. The `original_encoded_event` contains potentially
+  sensitive data. The `transparent_encoded_event` is a version of the same
+  encoded event that does not contain sensitive data (for example, sensitive
+  entries in the `original_encoded_event` are hashed). Both of these encoded
+  events are serialized [`Event`](../proto/attestation/eventlog.proto) messages.
+  and adds it to the internal `EventLog` representation.
+
+Transparent Attester collects events across two
+[`EventLog`](../proto/attestation/eventlog.proto) messages. These event logs are
+embedded in the [`Evidence`](../proto/attestation/evidence.proto).
+
+If implementing this trait, it must be implemented along with the original
+Attester trait because this trait does not provide a `quote` function for the
+final `Evidence` message.
+
 ## DICE
 
 One of the Attester implementations provided by the Oak SDK is

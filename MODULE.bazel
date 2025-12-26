@@ -7,7 +7,9 @@
 module(name = "oak")
 
 git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
 # https://github.com/bazel-contrib/bazel-lib
@@ -24,9 +26,6 @@ bazel_dep(name = "platforms", version = "0.0.11")
 
 # https://github.com/bazelbuild/rules_cc
 bazel_dep(name = "rules_cc", version = "0.1.1")
-
-# https://github.com/bazelbuild/rules_proto
-bazel_dep(name = "rules_proto", version = "7.1.0")
 
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
@@ -126,12 +125,38 @@ git_repository(
 ##### Java Dependencies #####
 
 bazel_dep(name = "rules_jvm_external", version = "6.7")
+
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
-maven.artifact(group = "org.jetbrains.kotlinx", artifact = "kotlinx-coroutines-test", version = "1.10.2", testonly = True)
-maven.artifact(group = "org.jetbrains.kotlin", artifact = "kotlin-test", version = "2.1.20", testonly = True)
-maven.artifact(group = "org.mockito", artifact = "mockito-core", version = "5.4.0", testonly = True)
-maven.artifact(group = "org.mockito.kotlin", artifact = "mockito-kotlin", version = "5.1.0", testonly = True)
-maven.artifact(group = "org.assertj", artifact = "assertj-core", version = "3.27.3", testonly = True)
+maven.artifact(
+    testonly = True,
+    artifact = "kotlinx-coroutines-test",
+    group = "org.jetbrains.kotlinx",
+    version = "1.10.2",
+)
+maven.artifact(
+    testonly = True,
+    artifact = "kotlin-test",
+    group = "org.jetbrains.kotlin",
+    version = "2.1.20",
+)
+maven.artifact(
+    testonly = True,
+    artifact = "mockito-core",
+    group = "org.mockito",
+    version = "5.4.0",
+)
+maven.artifact(
+    testonly = True,
+    artifact = "mockito-kotlin",
+    group = "org.mockito.kotlin",
+    version = "5.1.0",
+)
+maven.artifact(
+    testonly = True,
+    artifact = "assertj-core",
+    group = "org.assertj",
+    version = "3.27.3",
+)
 maven.install(
     artifacts = [
         "co.nstant.in:cbor:0.9",
@@ -156,11 +181,11 @@ use_repo(
     # Unfortunately, we need to list each compat respository name that we want as well.
     "co_nstant_in_cbor",
     "com_google_code_gson_gson",
+    "com_google_crypto_tink_tink",
     "com_google_guava_guava",
+    "com_google_truth_truth",
     "javax_inject_javax_inject",
     "junit_junit",
-    "com_google_crypto_tink_tink",
-    "com_google_truth_truth",
     "org_bouncycastle_bcprov_jdk18on",
     "org_jetbrains_kotlin_kotlin_test",
     "org_mockito_kotlin_mockito_kotlin",
@@ -223,6 +248,7 @@ http_archive(
 #
 # (See oak_containers/system_image/README.md for more details.)
 SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
+
 http_archive(
     name = "oak_cc_toolchain_sysroot",
     build_file = "//:toolchain/sysroot.BUILD",
@@ -233,6 +259,7 @@ http_archive(
 # The binary is used for stage0 tdx measurement test
 # (//tdx_measurement:tdx_measurement_test) only.
 STAGE0_BIN_TDX_COMMIT = "0689771e6fd6d174121eaa0b7df5fe54c4746ce3"
+
 http_file(
     name = "stage0_tdx_bin_for_test",
     downloaded_file_path = "stage0_tdx_bin_for_test",
@@ -241,6 +268,7 @@ http_file(
 )
 
 BASE_IMAGE_SHA256 = "f539ecab633fa0a760ec49e917a0719f2d3ffc1eb6fe7853d518d17699fa035e"
+
 http_file(
     name = "oak_containers_system_image_base",
     downloaded_file_path = "base-image.tar.xz",
@@ -249,6 +277,7 @@ http_file(
 )
 
 NVIDIA_BASE_IMAGE_SHA256 = "10e665a269b79aef1e12a45a60abd1bf4638edae3bad0c41cec764ceacbfe0a9"
+
 http_file(
     name = "oak_containers_nvidia_system_image_base",
     downloaded_file_path = "nvidia-base-image.tar.xz",

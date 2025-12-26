@@ -1,0 +1,51 @@
+//
+// Copyright 2025 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.ctf_sha2.arbiter;
+
+import "proto/attestation/endorsement.proto";
+import "proto/attestation/evidence.proto";
+
+message ArbiterInput {
+  // The preimage random number which was generated in the TEE.
+  bytes flag = 1;
+
+  // Verifiable proof that a TEE originally computed 'flag'.
+  oneof tee_proof {
+    // Binds a TEE's Evidence with 'flag' using a signature over the flag's
+    // SHA-256 digest.
+    AttestedSignature attested_signature = 2;
+
+    // Binds a Confidential Space JWT with 'flag' by using the flag's SHA-256
+    // digest in its nonce.
+    string confidential_space_jwt = 3;
+  }
+}
+
+message AttestedSignature {
+  // TEE Evidence bundle.
+  oak.attestation.v1.Evidence evidence = 1;
+  // Endorsement bundle. Currently expected to only contain an AMD SEV-SNP
+  // VCEK certificate.
+  oak.attestation.v1.Endorsements endorsements = 3;
+
+  // Required to be ASN.1 DER-encoded signature, signed with the TEE's
+  // signing key. The signature's verifying key should be derived from
+  // 'evidence' (once verified).
+  bytes signature = 2;
+}

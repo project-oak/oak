@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use clap::Parser;
+
 fn main() {
-    falsify::falsify(oak_session_testing::test_unattested_nn_encryption_and_decryption_inner);
+    falsify::falsify(
+        falsify::FalsifyArgs::parse(),
+        |input| -> Result<(), Box<dyn std::error::Error>> {
+            Ok(oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(input)?)
+        },
+    );
 }

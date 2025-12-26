@@ -18,9 +18,12 @@ use alloc::vec::Vec;
 
 use oak_attestation_types::{
     attester::Attester,
+    transparent_attester::TransparentAttester,
     util::{encode_length_delimited_proto, Serializable},
 };
-use oak_proto_rust::oak::attestation::v1::{DiceData, EventLog, Evidence};
+use oak_proto_rust::oak::attestation::v1::{
+    DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
+};
 use oak_tdx_guest::tdcall::{
     extend_rtmr, get_report, ExtensionBuffer, ExtraDataBuffer, RtmrIndex, TdReportBuffer,
 };
@@ -33,8 +36,12 @@ pub struct RtmrAttester {
 impl Default for RtmrAttester {
     fn default() -> Self {
         let event_log = Some(EventLog::default());
+        let root_layer = Some(RootLayerEvidence {
+            platform: TeePlatform::IntelTdx as i32,
+            ..Default::default()
+        });
 
-        let evidence = Evidence { event_log, ..Default::default() };
+        let evidence = Evidence { event_log, root_layer, ..Default::default() };
 
         Self { evidence }
     }
@@ -63,6 +70,18 @@ impl Attester for RtmrAttester {
 
     fn quote(&self) -> anyhow::Result<Evidence> {
         anyhow::bail!("Not implemented");
+    }
+}
+
+impl TransparentAttester for RtmrAttester {
+    // TODO: b/452735395 - Update the extend method to populate the transparency
+    // log.
+    fn extend_transparent(
+        &mut self,
+        original_encoded_event: &[u8],
+        _transparent_encoded_event: &[u8],
+    ) -> anyhow::Result<()> {
+        Attester::extend(self, original_encoded_event)
     }
 }
 

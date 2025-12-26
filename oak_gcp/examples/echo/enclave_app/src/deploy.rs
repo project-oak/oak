@@ -135,7 +135,7 @@ fn main() -> Result<()> {
                 "endorse",
                 "--valid-for=30d",
                 &format!("--image={image_uri}"),
-                &format!("--claims={claims_path}"),
+                &format!("--claims-toml={claims_path}"),
                 &format!("--output={endorsement_path}"),
             ]),
         )?;

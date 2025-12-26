@@ -16,6 +16,9 @@
 
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/oak_session/oak_session_bindings.h"
 
@@ -66,6 +69,12 @@ class SessionConfigHolder {
   SessionConfigHolder& operator=(const SessionConfigHolder&) = delete;
   SessionConfigHolder(SessionConfigHolder&& other) : config_(other.release()) {}
   SessionConfigHolder& operator=(SessionConfigHolder&& other) {
+    if (this == &other) {
+      return *this;
+    }
+    if (config_ != nullptr) {
+      session_config_free(config_);
+    }
     config_ = other.release();
     return *this;
   }
@@ -94,6 +103,66 @@ class SessionConfigHolder {
   friend class SessionConfigBuilder;
 };
 
+// A class for managing the underlying `SessionConfigBuilder` Rust
+// bytes. This wrapper takes care of managing and cleaning up the underlying
+// Rust bytes.
+//
+// As with `SessionConfigHolder`, semantically this is close to
+// `std::unique_ptr`.
+class SessionConfigBuilderHolder {
+ public:
+  explicit SessionConfigBuilderHolder(bindings::SessionConfigBuilder* builder)
+      : builder_(builder) {}
+
+  SessionConfigBuilderHolder() : builder_(nullptr) {}
+
+  // `SessionConfigBuilderHolder` is not copyable.
+  SessionConfigBuilderHolder(const SessionConfigBuilderHolder&) = delete;
+  SessionConfigBuilderHolder& operator=(const SessionConfigBuilderHolder&) =
+      delete;
+
+  // Release the builder_ of the moved object
+  SessionConfigBuilderHolder(SessionConfigBuilderHolder&& other)
+      : builder_(other.release()) {};
+
+  SessionConfigBuilderHolder& operator=(SessionConfigBuilderHolder&& other) {
+    if (this == &other) return *this;
+    if (builder_ != nullptr) bindings::free_session_config_builder(builder_);
+    builder_ = other.release();
+    return *this;
+  }
+
+  // Return true if the `SessionConfigBuilderHolder` posseses a non-null
+  // pointer.
+  explicit operator bool() const { return builder_ != nullptr; }
+
+  ~SessionConfigBuilderHolder() {
+    // Do not delete the builder_ in the event that it is null. This can occur
+    // from the bytes being released or moved elsewhere.
+    if (builder_ != nullptr) {
+      bindings::free_session_config_builder(builder_);
+      builder_ = nullptr;
+    }
+  }
+
+  // Fetch the underlying builder_ while having the class still maintain
+  // owernership of the bytes.
+  bindings::SessionConfigBuilder* const get() { return builder_; }
+
+  // Release ownership of the underlying builder_. If release() has been called
+  // previously or if its contents have been been moved, this will return a
+  // nullptr. Calling this method should be done so carefully as it is very
+  // likely to cause a memory leak.
+  bindings::SessionConfigBuilder* release() {
+    bindings::SessionConfigBuilder* result = builder_;
+    builder_ = nullptr;
+    return result;
+  }
+
+ private:
+  bindings::SessionConfigBuilder* builder_;
+};
+
 // Convenience wrapper around the SessionConfigBuilder in
 // oak_session/src/config.rs. All functionality may not be available, and will
 // be added on an as-needed basis.
@@ -106,22 +175,17 @@ class SessionConfigBuilder {
  public:
   SessionConfigBuilder(AttestationType attestation_type,
                        HandshakeType handshake_type);
-  ~SessionConfigBuilder() {
-    bindings::SessionConfigBuilder* builder = std::exchange(builder_, nullptr);
-    if (builder != nullptr) {
-      bindings::free_session_config_builder(builder);
-    }
-  }
+  ~SessionConfigBuilder() = default;
   SessionConfig* Build();
   SessionConfigHolder BuildHolder();
 
   SessionConfigBuilder(const SessionConfigBuilder&) = delete;
   SessionConfigBuilder& operator=(const SessionConfigBuilder&) = delete;
   SessionConfigBuilder(SessionConfigBuilder&& other) {
-    builder_ = std::exchange(other.builder_, nullptr);
+    builder_ = std::move(other.builder_);
   }
   SessionConfigBuilder& operator=(SessionConfigBuilder&& other) {
-    builder_ = std::exchange(other.builder_, nullptr);
+    builder_ = std::move(other.builder_);
     return *this;
   }
 
@@ -137,8 +201,23 @@ class SessionConfigBuilder {
       bindings::IdentityKey* signing_key);
   SessionConfigBuilder SetPeerStaticPublicKey(absl::string_view public_key);
 
+  // Allows direct manipulation of the underlying
+  // `bindings::SessionConfigBuilder*`.
+  //
+  // Ownership of the `SessionConfigBuilder` pointer is passed to `update_fn`,
+  // and we take the ownership of the returned `SessionConfigBuilder`. If the
+  // `update_fn` returns an error, it is responsible for releasing the memory.
+  // Any errors that `update_fn` returns are propagated to the caller.
+  //
+  // If at all possbile do not use this method due to the sharp edges and prefer
+  // to implement proper wrappers for the FFI calls.
+  absl::Status UpdateRaw(
+      absl::AnyInvocable<absl::StatusOr<SessionConfigBuilderHolder>(
+          SessionConfigBuilderHolder)>
+          update_fn);
+
  private:
-  bindings::SessionConfigBuilder* builder_;
+  SessionConfigBuilderHolder builder_;
 };
 
 }  // namespace oak::session

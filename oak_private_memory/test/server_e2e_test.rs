@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::{Duration, SystemTime},
+};
 
 use client::{PrivateMemoryClient, SerializationFormat};
 use private_memory_test_utils::start_server;
@@ -160,7 +163,7 @@ async fn test_standalone_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 2);
         let ids: Vec<String> = response.results.into_iter().map(|r| r.memory.unwrap().id).collect();
         assert!(ids.contains(&"memory2".to_string()));
@@ -179,7 +182,7 @@ async fn test_standalone_text_query() {
                 ),
             ),
         };
-        let response = client.search_memory(query, 10, None, "").await.unwrap();
+        let response = client.search_memory(query, 10, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 1);
         assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
     }
@@ -267,7 +270,7 @@ async fn test_memory_search_only_return_views_with_highest_scores() {
             ),
         };
 
-        let response = client.search_memory(embedding_query, 1, None, "").await.unwrap();
+        let response = client.search_memory(embedding_query, 1, None, "", false).await.unwrap();
         assert_eq!(response.results.len(), 1);
         let top_result = response.results.first().unwrap();
         assert_eq!(top_result.memory.as_ref().unwrap().id, "memory2");
@@ -276,4 +279,145 @@ async fn test_memory_search_only_return_views_with_highest_scores() {
         assert_eq!(views.llm_views.len(), 1);
         assert_eq!(views.llm_views[0].id, "view2b");
     }
+}
+
+// Verify that multiple concurrent writes all get their changes written to the
+// db. Note that this only verifies against a test database implementation;
+// end-to-end implementations should create similar tests with their database
+// implementations to ensure concurrent writes function as expected.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_concurrent_write_sessions() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_embedding_search_with_pagination_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        // Part 1, concurrent add
+        {
+            let mut client1 =
+                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                    .await
+                    .expect("failed to create client 1");
+            let mut client2 =
+                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                    .await
+                    .expect("failed to create client 2");
+
+            let memory1 = create_test_memory("memory1");
+            let memory2 = create_test_memory("memory2");
+            let memory3 = create_test_memory("memory3");
+
+            client1.add_memory(memory1).await.expect("failed to add memory 1");
+            client2.add_memory(memory2).await.expect("failed to add memory 2");
+            client2.add_memory(memory3).await.expect("failed to add memory 3");
+        }
+
+        // Part two, read back
+        // We currently don't have a good signal that the peristence worker is done.
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        {
+            let mut client =
+                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                    .await
+                    .expect("failed to create readback client");
+
+            expect_memory_by_id(&mut client, "memory1").await;
+            expect_memory_by_id(&mut client, "memory2").await;
+            expect_memory_by_id(&mut client, "memory3").await;
+        }
+    }
+}
+
+async fn expect_memory_by_id(client: &mut PrivateMemoryClient, id: &str) {
+    client
+        .get_memory_by_id(id, None)
+        .await
+        .unwrap_or_else(|e| panic!("failed reading {id}: {e:?}"))
+        .memory
+        .unwrap_or_else(|| panic!("{id} was not present"));
+}
+
+fn create_test_memory(id: &str) -> Memory {
+    let mut contents_map = HashMap::new();
+    contents_map.insert(
+        "string_data".to_string(),
+        MemoryValue {
+            value: Some(memory_value::Value::StringVal("this is a test string".to_string())),
+            ..Default::default()
+        },
+    );
+    Memory {
+        id: id.to_string(),
+        content: Some(MemoryContent { contents: contents_map }),
+        tags: vec!["tag".to_string()],
+        ..Default::default()
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_memory_expiration() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_memory_expiration_user";
+    let format = SerializationFormat::BinaryProto;
+
+    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    let memory_expired = Memory {
+        id: "memory_expired".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() - Duration::from_secs(30 * 60),
+        )),
+        ..Default::default()
+    };
+    let memory_valid = Memory {
+        id: "memory_valid".to_string(),
+        expiration_timestamp: Some(system_time_to_timestamp(
+            std::time::SystemTime::now() + Duration::from_secs(30 * 60),
+        )),
+        ..Default::default()
+    };
+    let memory_no_expiration =
+        Memory { id: "memory_no_expiration".to_string(), ..Default::default() };
+
+    client.add_memory(memory_expired.clone()).await.unwrap();
+    client.add_memory(memory_valid.clone()).await.unwrap();
+    client.add_memory(memory_no_expiration.clone()).await.unwrap();
+
+    // Close session and wait for changes to propagate.
+    drop(client);
+    sleep(Duration::from_secs(1)).await;
+
+    // Creating a new client will trigger a key sync which will run expired memories
+    // deletion.
+    let mut client2 = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
+    assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
+    assert!(client2.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
+}
+
+fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
+    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(duration) => {
+            let seconds = duration.as_secs() as i64;
+            let nanos = duration.subsec_nanos() as i32;
+            (seconds, nanos)
+        }
+        Err(e) => {
+            let duration = e.duration();
+            let seconds = -(duration.as_secs() as i64);
+            let nanos = -(duration.subsec_nanos() as i32);
+            (seconds, nanos)
+        }
+    };
+
+    prost_types::Timestamp { seconds, nanos }
 }

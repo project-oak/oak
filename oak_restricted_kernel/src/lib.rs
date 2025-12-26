@@ -56,8 +56,6 @@ pub mod shutdown;
 mod simpleio;
 mod snp;
 mod syscall;
-#[cfg(feature = "vsock_channel")]
-mod virtio;
 #[cfg(feature = "virtio_console_channel")]
 mod virtio_console;
 
@@ -93,6 +91,7 @@ use crate::{
     mm::Translator,
     processes::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
+    syscall::dice_data,
 };
 
 /// Allocator for physical memory frames in the system.
@@ -295,6 +294,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         start_ptr: *mut u8,
         eventlog_ptr: *mut u8,
         sensitive_memory_length: usize,
+        dice_attestation_ptr: Option<*mut u8>,
     }
 
     impl SensitiveDiceDataMemory {
@@ -316,29 +316,25 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 // Older versions of stage0 do not supply this argument. In this case we assume the
                 // lenght of the dice data is the length of the associated struct.
                 .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
-            let dice_data_phys_addr = {
-                let arg = kernel_args
-                    .get(&alloc::format!("--{}", oak_dice::evidence::DICE_DATA_CMDLINE_PARAM))
-                    .expect("no dice data address supplied in the kernel args");
-                let parsed_arg = u64::from_str_radix(
-                    arg.strip_prefix("0x").expect("failed stripping the hex prefix"),
-                    16,
-                )
-                .expect("couldn't parse address as a hex number");
-                PhysAddr::new(parsed_arg)
-            };
 
-            let eventlog_phys_addr = {
-                let arg = kernel_args
-                    .get(&alloc::format!("--{}", oak_dice::evidence::EVENTLOG_CMDLINE_PARAM))
-                    .expect("no eventlog address supplied in the kernel args");
-                let parsed_arg = u64::from_str_radix(
-                    arg.strip_prefix("0x").expect("failed stripping the hex prefix"),
-                    16,
-                )
-                .expect("couldn't parse address as a hex number");
-                PhysAddr::new(parsed_arg)
-            };
+            let dice_data_phys_addr = fetch_address_from_cmdline(
+                &kernel_args,
+                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM,
+            );
+
+            let eventlog_phys_addr = fetch_address_from_cmdline(
+                &kernel_args,
+                oak_dice::evidence::EVENTLOG_CMDLINE_PARAM,
+            );
+            let dice_data_attestation_addr = fetch_address_from_cmdline(
+                kernel_args,
+                oak_dice::evidence::DICE_DATA_ATTESTATION_PARAM,
+            );
+
+            let dice_data_phys_addr = dice_data_phys_addr
+                .expect("stage 0 command line lacks required argument: dice data C-struct address");
+            let eventlog_phys_addr = eventlog_phys_addr
+                .expect("stage 0 command line lacks required argument: eventlog address");
 
             // Ensure that the dice data is stored within reserved memory.
             let end = dice_data_phys_addr + (sensitive_memory_length as u64 - 1);
@@ -356,23 +352,31 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     && dice_data_fully_contained_in_segment
             }));
 
-            let dice_data_virt_addr = {
-                let pt_guard = PAGE_TABLES.lock();
-                let pt = pt_guard.get().expect("failed to get page tables");
-                pt.translate_physical(dice_data_phys_addr)
-                    .expect("failed to translate physical dice address")
-            };
+            let dice_data_virt_addr = fetch_virtual_address(&dice_data_phys_addr);
+            let eventlog_virt_addr = fetch_virtual_address(&eventlog_phys_addr);
 
-            let eventlog_virt_addr = {
-                let pt_guard = PAGE_TABLES.lock();
-                let pt = pt_guard.get().expect("failed to get page tables");
-                pt.translate_physical(eventlog_phys_addr)
-                    .expect("failed to translate physical eventlog address")
-            };
+            // If the dice attester is passed to this layer, read it and pass it along to
+            // the struct.
+            // TODO: b/463325402 - Have the Oak Restricted Kernel depend on the dice
+            // attester in the future instead of the event log and dice data C-struct.
+            let dice_data_attestation_virt_addr =
+                if let Some(dice_data_attestation_addr) = dice_data_attestation_addr {
+                    assert!(info.e820_table().iter().any(|entry| {
+                        let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                            ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                        range.contains(&dice_data_attestation_addr) && range.contains(&end)
+                    }));
+                    let dice_data_attestation_virt_address =
+                        fetch_virtual_address(&dice_data_attestation_addr);
 
+                    Some(dice_data_attestation_virt_address.as_mut_ptr())
+                } else {
+                    None
+                };
             Self {
                 start_ptr: dice_data_virt_addr.as_mut_ptr(),
                 eventlog_ptr: eventlog_virt_addr.as_mut_ptr(),
+                dice_attestation_ptr: dice_data_attestation_virt_addr,
                 sensitive_memory_length,
             }
         }
@@ -524,8 +528,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
 enum ChannelType {
     #[cfg(feature = "virtio_console_channel")]
     VirtioConsole,
-    #[cfg(feature = "vsock_channel")]
-    VirtioVsock,
     #[cfg(feature = "serial_channel")]
     Serial,
     #[cfg(feature = "simple_io_channel")]
@@ -553,10 +555,10 @@ fn get_channel<'a, A: Allocator + Sync>(
         ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
             acpi.expect("ACPI not available; unable to use virtio console"),
         )),
-        #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(alloc)),
         #[cfg(feature = "serial_channel")]
-        ChannelType::Serial => Box::new(serial::Serial::new()),
+        ChannelType::Serial => {
+            Box::new(serial::Serial::new(sev_status.contains(SevStatus::SEV_ES_ENABLED)))
+        }
         #[cfg(feature = "simple_io_channel")]
         ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }
@@ -567,4 +569,27 @@ fn get_channel<'a, A: Allocator + Sync>(
 pub fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
     shutdown::shutdown();
+}
+
+// Fetches a physical address from a stage 0 kernel command line argument. If
+// the argument is not present, None is returned. This function will panic in
+// the event the argument is found and cannot be parsed.
+fn fetch_address_from_cmdline(kernel_args: &args::Args, stage0_arg: &str) -> Option<PhysAddr> {
+    let arg = kernel_args.get(&alloc::format!("--{}", stage0_arg));
+    if arg.is_none() {
+        return None;
+    }
+    let parsed_arg =
+        u64::from_str_radix(arg?.strip_prefix("0x").expect("failed stripping the hex prefix"), 16)
+            .expect("couldn't parse address as a hex number");
+    Some(PhysAddr::new(parsed_arg))
+}
+
+// Fetches the virtual address from the Page Tables using the provided physical
+// address. The function panics if the Page Table cannot be fetched or if the
+// virtual address cannot be fetched.
+fn fetch_virtual_address(phys_address: &PhysAddr) -> VirtAddr {
+    let pt_guard = PAGE_TABLES.lock();
+    let pt = pt_guard.get().expect("failed to get page tables");
+    pt.translate_physical(*phys_address).expect("failed to translate physical eventlog address")
 }

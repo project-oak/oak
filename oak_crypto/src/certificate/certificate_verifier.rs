@@ -210,7 +210,9 @@ impl<V: Verifier> CertificateVerifier<V> {
                     ))?
                     .signature
                     .as_ref();
-                self.signature_verifier.verify(&certificate.serialized_payload, signature)?;
+                self.signature_verifier
+                    .verify(&certificate.serialized_payload, signature)
+                    .map_err(CertificateVerificationError::SignatureVerificationError)?;
                 self.verify_subject_public_key_info(
                     subject_public_key,
                     purpose_id,

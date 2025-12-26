@@ -43,7 +43,7 @@ const TEST_BAD_SIGNATURE: &[u8] = b"TEST_BAD_SIGNATURE";
 const TEST_CURRENT_TIME_MILLIS: i64 = 1_234_567;
 const TEST_CURRENT_TIME: Instant = Instant::from_unix_millis(TEST_CURRENT_TIME_MILLIS);
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 struct MockVerifier {
     expected_signature: Vec<u8>,
 }

@@ -118,18 +118,22 @@ message Memory {
   // set by the client. If not set, the `created_timestamp` will be
   // used.
   google.protobuf.Timestamp event_timestamp = 7;
+  // The time when the memory is considered to be expired. Should be
+  // set by the client. If not set, the memory will never expire.
+  google.protobuf.Timestamp expiration_timestamp = 9;
 
   LLMViews views = 8;
 }
 
 enum MemoryField {
-  UNKNOWN = 0;            // Default value, should not be used.
-  ID = 1;                 // The 'id' field of the Memory message.
-  TAGS = 2;               // The 'tags' field.
-  EMBEDDINGS = 3;         // The 'embeddings' field.
-  CONTENT = 4;            // The 'content' field .
-  CREATED_TIMESTAMP = 5;  // The 'created_timestamp' field.
-  EVENT_TIMESTAMP = 6;    // The 'event_timestamp' field.
+  UNKNOWN = 0;               // Default value, should not be used.
+  ID = 1;                    // The 'id' field of the Memory message.
+  TAGS = 2;                  // The 'tags' field.
+  EMBEDDINGS = 3;            // The 'embeddings' field.
+  CONTENT = 4;               // The 'content' field .
+  CREATED_TIMESTAMP = 5;     // The 'created_timestamp' field.
+  EVENT_TIMESTAMP = 6;       // The 'event_timestamp' field.
+  EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
 }
 
 message AddMemoryRequest {
@@ -310,11 +314,24 @@ message SearchMemoryRequest {
   // Specifies which fields of the matching Memory objects to return or not to
   // return.
   ResultMask result_mask = 4;
+
+  // By default, the LLM views are removed if we are using text only search.
+  // Also, when using embedding search, only the matched llm views are returned.
+  // Set this to true to keep all the LLM views.
+  bool keep_all_llm_views = 5;
 }
 
 message SearchMemoryResultItem {
   Memory memory = 1;
+  // The score for the matched memory, which is the sum of the scores for each
+  // matched view in the memory.
   float score = 2;
+  // The scores for each matched view in the memory.
+  // The order of the scores corresponds to the order of the views in the
+  // memory.
+  // Note: This is only populated if `keep_all_llm_views` is not set in the
+  // request.
+  repeated float view_scores = 3;
 }
 
 message SearchMemoryResponse {

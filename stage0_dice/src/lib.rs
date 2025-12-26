@@ -46,6 +46,7 @@ use zerocopy::{FromZeros, IntoBytes};
 pub type DerivedKey = [u8; 32];
 
 const STAGE0_TAG: &str = "Stage0";
+const STAGE0_TRANSPARENT_TAG: &str = "Stage0Transparent";
 
 // TODO: b/331252282 - Remove temporary workaround for cmd line length.
 fn shorten_cmdline(cmdline: &str) -> String {
@@ -179,6 +180,15 @@ pub fn encode_stage0_event(
     measurements: oak_proto_rust::oak::attestation::v1::Stage0Measurements,
 ) -> Vec<u8> {
     let tag = String::from(STAGE0_TAG);
+    let any = prost_types::Any::from_msg(&measurements);
+    let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
+    event.encode_to_vec()
+}
+
+pub fn encode_stage0_transparent_event(
+    measurements: oak_proto_rust::oak::attestation::v1::Stage0TransparentMeasurements,
+) -> Vec<u8> {
+    let tag = String::from(STAGE0_TRANSPARENT_TAG);
     let any = prost_types::Any::from_msg(&measurements);
     let event = oak_proto_rust::oak::attestation::v1::Event { tag, event: Some(any.unwrap()) };
     event.encode_to_vec()

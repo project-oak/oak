@@ -176,6 +176,7 @@ mod tests {
 
     const CERTIFICATE_EVENT_INDEX: usize = 0;
 
+    #[derive(Debug)]
     struct TestSignatureVerifier {
         pub expected_signature: Vec<u8>,
     }

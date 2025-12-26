@@ -102,8 +102,14 @@ service SealedMemoryDatabaseService {
   rpc ReadDataBlob(ReadDataBlobRequest) returns (ReadDataBlobResponse) {}
 
   // Write a metadata blob to the database.
+  //
   // If the current version of the stored metadata blob does not match the
-  // version provided in the request, the write will fail.
+  // version provided in the request, the write will fail with a "failed
+  // precondition" status code.
+  //
+  // In this case, you should fetch the latest version using `ReadMetadataBlob`,
+  // apply your changes on the latest version, and re-attempt the write
+  // operation.
   rpc WriteMetadataBlob(WriteMetadataBlobRequest)
       returns (WriteMetadataBlobResponse) {}
 

@@ -14,18 +14,28 @@
 // limitations under the License.
 //
 use anyhow::Context;
-use external_db_client::DataBlobHandler;
+use external_db_client::{DataBlobHandler, MetadataPersistResult};
 use log::info;
 use metrics::get_global_metrics;
-use oak_private_memory_database::encryption::encrypt_database;
+use oak_private_memory_database::encryption::{decrypt_database, encrypt_database};
+use prost::Message;
 use sealed_memory_rust_proto::oak::private_memory::EncryptedMetadataBlob;
 use tokio::{sync::mpsc, time::Instant};
 
+static MAX_RETRY_ATTEMPTS: u64 = 25;
+
 use crate::context::UserSessionContext;
-async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
+
+// Attempt to persist the database once.
+// If there is a failure due to a version mismatch,
+// Ok(MetadataPersisteResult::RetryNeeded) will be returned. The caller should
+// re-fetch the latest metadatablob and rebase the icing database and try again.
+async fn try_persist_database(
+    user_context: &mut UserSessionContext,
+) -> anyhow::Result<MetadataPersistResult> {
     if !user_context.database.changed() {
         info!("Database is not changed, skip saving");
-        return Ok(());
+        return Ok(MetadataPersistResult::Succeeded);
     }
 
     let exported_db = user_context.database.export()?;
@@ -36,10 +46,8 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
     info!("Saving db size: {}", db_size);
     get_global_metrics().record_db_size(db_size);
 
-    // TODO: b/443329966 - implement the opportunistic concurrency logic here: if
-    // the write fails due to a version mis-match, re-apply changes.
     let now = Instant::now();
-    user_context
+    let result = user_context
         .database_service_client
         .add_metadata_blob(
             &user_context.uid,
@@ -50,10 +58,54 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
         )
         .await?;
 
-    let elapsed = now.elapsed();
-    get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
+    if result == MetadataPersistResult::Succeeded {
+        let elapsed = now.elapsed();
+        get_global_metrics().record_db_persist_latency(elapsed.as_millis() as u64);
+    }
 
-    Ok(())
+    Ok(result)
+}
+
+// Attempt to persist the database up to MAX_RETRY_ATTEMPTS times.
+// Retries only occur when the FailedPrecondition error code is returned from
+// the underlying database layer.
+async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
+    let mut attempt: u64 = 1;
+
+    let now = Instant::now();
+    while attempt < MAX_RETRY_ATTEMPTS {
+        match try_persist_database(user_context).await {
+            Ok(MetadataPersistResult::Succeeded) => {
+                let elapsed = now.elapsed();
+                get_global_metrics()
+                    .record_db_persist_latency_with_retries(elapsed.as_millis() as u64);
+                get_global_metrics().record_db_persist_attempts(attempt);
+                return Ok(());
+            }
+            Ok(MetadataPersistResult::RetryNeeded) => {
+                attempt += 1;
+                info!("Retrying db save (attempt {attempt}");
+                // rebase the database and try again
+                let refreshed_blob = user_context
+                    .database_service_client
+                    .get_metadata_blob(&user_context.uid)
+                    .await?
+                    .context("no blob found")?;
+
+                let encrypted_data_blob =
+                    refreshed_blob.encrypted_data_blob.context("missing encrypted data blob")?;
+
+                let new_icing_db = decrypt_database(encrypted_data_blob, &user_context.dek)?
+                    .icing_db
+                    .context("missing icing_db in refreshed blob result")?;
+
+                user_context.database.rebase(new_icing_db.encode_to_vec().as_slice())?;
+                user_context.database_version = refreshed_blob.version;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    anyhow::bail!("Failed to persist after {} attempts", MAX_RETRY_ATTEMPTS);
 }
 
 pub async fn run_persistence_service(mut rx: mpsc::UnboundedReceiver<UserSessionContext>) {

@@ -84,6 +84,9 @@ class StreamObserverSessionClient(
    * )
    * ```
    *
+   * Note: Regardless of the underlying gRPC implementation, this client does not allow the sending
+   * of client requests once it's received a half-close from the server.
+   *
    * @param sessionStreamObserver an implementation of [OakSessionStreamObesrver] that will provide
    *   decrypted responses to the caller, and that will provide an observer for sending requests to
    *   the server once the session is established.
@@ -179,11 +182,13 @@ class StreamObserverSessionClient(
 
     override fun onCompleted() {
       // We just forward completion events.
+      oakClientSession.close()
       sessionStreamObserver.onCompleted()
     }
 
     override fun onError(t: Throwable) {
       // We just forward error events.
+      oakClientSession.close()
       sessionStreamObserver.onError(t)
     }
 
@@ -227,10 +232,11 @@ class StreamObserverSessionClient(
         sessionStreamObserver: OakSessionStreamObserver,
         streamStarter: (StreamObserver<SessionResponse>) -> StreamObserver<SessionRequest>,
       ): SessionHandle {
-        val observer = ServerStreamObserver(oakClientSession, sessionStreamObserver)
-        observer.toServer = streamStarter(observer)
         val initMessage =
           oakClientSession.outgoingMessage.assert("Client did not have initial message.")
+
+        val observer = ServerStreamObserver(oakClientSession, sessionStreamObserver)
+        observer.toServer = streamStarter(observer)
         observer.toServer.onNext(initMessage)
         return object : SessionHandle {
           override fun cancel(message: String?, cause: Throwable?) =

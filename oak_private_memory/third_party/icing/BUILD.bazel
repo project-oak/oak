@@ -15,7 +15,7 @@
 #
 
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -73,6 +73,8 @@ cc_library(
             "icing/transform/simple/**/*.h",
         ],
     ),
+    # Add ICING_DISABLE_EIGEN to disable eigen.
+    copts = ["-DICING_DISABLE_EIGEN"],
     includes = [
         ".",  # For includes relative to the library's root (like CMAKE_CURRENT_SOURCE_DIR)
     ],

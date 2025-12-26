@@ -1,3 +1,4 @@
+#!/bin/bash
 # Helper functions for runner commands.
 
 # Run a command, capture stderr separately, along with the combined stderr/stdout.
@@ -11,7 +12,7 @@ function run_command_with_logfiles() {
     # >(tee f) To a tee process writing to f
     # 2> (Redirect stderr)
     # >(tee f >2) To a tee process writing to f, but keeping the output of tee only on stderr.
-    eval "${command}" &> >(tee "${combined_log}") 2> >(tee "${stderr_log}" >&2)
+    eval "${command}" > >(tee "${combined_log}") 2> >(tee "${stderr_log}" >&2)
 }
 
 # Run a command, and then generate simple junit XML files so it can feel like a test.

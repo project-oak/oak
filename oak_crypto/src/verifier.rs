@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
+use core::fmt::Debug;
+
 use anyhow::Context;
 
-pub trait Verifier: Send + Sync {
+pub trait Verifier: Send + Sync + Debug {
     fn verify(&self, message: &[u8], signature: &[u8]) -> anyhow::Result<()>;
 }
 
@@ -36,6 +38,7 @@ impl Verifier for p256::ecdsa::VerifyingKey {
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 struct VerifierKeyHandle {
     inner: p256::ecdsa::VerifyingKey,
 }

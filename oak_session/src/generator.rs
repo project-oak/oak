@@ -15,23 +15,26 @@
 
 use alloc::{boxed::Box, format, string::String, sync::Arc};
 
-use oak_attestation_types::assertion_generator::AssertionGenerator;
+use oak_attestation_types::assertion_generator::{AssertionGenerator, AssertionGeneratorError};
 use oak_proto_rust::oak::{
     attestation::v1::Assertion,
     session::v1::{SessionBinding, SessionBindingKeyWrapperAssertion},
 };
 use p256::ecdsa::{signature::Signer, Signature, SigningKey};
 use prost::Message;
-use strum::Display;
 use thiserror::Error;
 
 /// Errors that can occur during assertion verification.
-#[derive(Error, Debug, Display)]
+#[derive(Error, Debug)]
 pub enum BindableAssertionGeneratorError {
-    //  #[error("Generic assertion generation error")]
+    #[error("Generic assertion generation error")]
     GenericFailure { error_msg: String },
-    //  #[error("Assertion binding failure")]
+    #[error("Assertion binding failure")]
     BindingGenerationFailure { error_msg: String },
+    #[error(transparent)]
+    AssertionGenerationFailure(#[from] AssertionGeneratorError),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 /// Defines the behavior for generating assertions that can be cryptographically
@@ -96,25 +99,38 @@ impl BindableAssertion for SessionKeyBindableAssertion {
 /// [`AssertionGenerator`] to generate an assertion about the public key of a
 /// [`Signer`] that is used for binding the assertion.
 pub struct SessionKeyBindableAssertionGenerator {
-    pub assertion_generator: Arc<dyn AssertionGenerator>,
-    pub binding_signer: Arc<SigningKey>,
+    session_key_assertion: Assertion,
+    binding_signer: Arc<SigningKey>,
 }
 
-impl BindableAssertionGenerator for SessionKeyBindableAssertionGenerator {
-    fn generate(&self) -> Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError> {
-        let public_key = self.binding_signer.verifying_key().to_sec1_bytes();
-        let inner_assertion = self.assertion_generator.generate(&public_key).map_err(|err| {
-            BindableAssertionGeneratorError::GenericFailure {
-                error_msg: format!("failed to generate assertion: {:?}", err),
-            }
-        })?;
+impl SessionKeyBindableAssertionGenerator {
+    pub fn create_with_assertion_generator(
+        assertion_generator: &dyn AssertionGenerator,
+        binding_signer: Arc<SigningKey>,
+    ) -> Result<Self, AssertionGeneratorError> {
+        let public_key = binding_signer.verifying_key().to_sec1_bytes();
+        let inner_assertion = assertion_generator.generate(&public_key)?;
+        Ok(Self::create_with_assertion(inner_assertion, binding_signer))
+    }
+
+    pub fn create_with_assertion(
+        inner_assertion: Assertion,
+        binding_signer: Arc<SigningKey>,
+    ) -> Self {
+        let public_key = binding_signer.verifying_key().to_sec1_bytes();
         let binding_key_assertion = SessionBindingKeyWrapperAssertion {
             public_binding_key: public_key.to_vec(),
             inner_assertion: Some(inner_assertion),
         };
+        let session_key_assertion = Assertion { content: binding_key_assertion.encode_to_vec() };
+        Self { session_key_assertion, binding_signer }
+    }
+}
 
+impl BindableAssertionGenerator for SessionKeyBindableAssertionGenerator {
+    fn generate(&self) -> Result<Box<dyn BindableAssertion>, BindableAssertionGeneratorError> {
         let bindable_assertion = SessionKeyBindableAssertion {
-            assertion: Assertion { content: binding_key_assertion.encode_to_vec() },
+            assertion: self.session_key_assertion.clone(),
             binding_signer: self.binding_signer.clone(),
         };
 

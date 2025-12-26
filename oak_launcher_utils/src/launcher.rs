@@ -44,6 +44,24 @@ pub enum InitialDataVersion {
     V1,
 }
 
+#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
+pub enum CommunicationChannel {
+    #[default]
+    VirtioConsole,
+    Serial,
+}
+
+/// Type of the VM being launched.
+#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
+pub enum VmType {
+    #[default]
+    Default,
+    Sev,
+    SevEs,
+    SevSnp,
+    Tdx,
+}
+
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
@@ -86,6 +104,15 @@ pub struct Params {
     /// proto).
     #[arg(long, value_name = "INITIAL_DATA_VERSION", default_value_t, value_enum)]
     pub initial_data_version: InitialDataVersion,
+
+    /// Which communication channel to use for communication between the host
+    /// and guest.
+    #[arg(long, required = false, value_enum, default_value_t = CommunicationChannel::VirtioConsole)]
+    pub communication_channel: CommunicationChannel,
+
+    /// Which type of VM to launch.
+    #[arg(long, required = false, value_enum, default_value_t = VmType::Default)]
+    pub vm_type: VmType,
 }
 
 /// Checks if file with a given path exists.
@@ -150,10 +177,10 @@ impl Instance {
         cmd.args(["-d", "int,unimp,guest_errors"]);
         // Needed to expose advanced CPU features. Specifically RDRAND which is required
         // for remote attestation.
-        cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
+        cmd.args(["-cpu", "host"]);
         // Set memory size if given.
-        if let Some(memory_size) = params.memory_size {
-            cmd.args(["-m", &memory_size]);
+        if let Some(memory_size) = params.memory_size.as_ref() {
+            cmd.args(["-m", memory_size]);
         };
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
@@ -162,14 +189,68 @@ impl Instance {
         // restart should be treated as a failure)
         cmd.arg("-no-reboot");
         // Use the `microvm` machine as the basis, and ensure ACPI is enabled.
-        cmd.args(["-machine", "microvm,acpi=on"]);
+        let microvm_common = "microvm,acpi=on".to_string();
+        // SEV, SEV-ES, SEV-SNP VMs need confidential guest support and private memory.
+        let sev_machine_suffix = ",confidential-guest-support=sev0,memory-backend=ram1";
+        // Definition of the private memory.
+        let sev_common_object = format!(
+            "memory-backend-memfd,id=ram1,size={},share=true,reserve=false",
+            params.memory_size.clone().unwrap_or("8G".to_string())
+        );
+        // SEV's feature configuration.
+        let sev_config_object = "id=sev0,cbitpos=51,reduced-phys-bits=1";
+        // Generate the parameters and add them to cmd.args.
+        let (machine_arg, object_args) = match params.vm_type {
+            VmType::Default => (microvm_common, vec![]),
+            VmType::Sev => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    "sev-guest,".to_string() + sev_config_object + ",policy=0x1",
+                ],
+            ),
+            VmType::SevEs => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    "sev-guest,".to_string() + sev_config_object + ",policy=0x5",
+                ],
+            ),
+            VmType::SevSnp => (
+                microvm_common + sev_machine_suffix,
+                vec![
+                    sev_common_object,
+                    // Reference:
+                    // https://lore.kernel.org/kvm/20240502231140.GC13783@ls.amr.corp.intel.com/T/
+                    // A basic command-line invocation for SNP would be
+                    // ...
+                    // -object sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1,id-auth=
+                    // ...
+                    "sev-snp-guest,".to_string() + sev_config_object + ",id-auth=",
+                ],
+            ),
+            VmType::Tdx => {
+                anyhow::bail!("The restricted kernel does not yet support Intel TDX.")
+            }
+        };
+        cmd.args(["-machine", &machine_arg]);
+        for obj_arg in object_args {
+            cmd.args(["-object", &obj_arg]);
+        }
         // Route first serial port to console.
         cmd.args(["-chardev", format!("socket,id=consock,fd={guest_console_fd}").as_str()]);
         cmd.args(["-serial", "chardev:consock"]);
-        // Add the virtio device.
+        // Add the communication channel device.
         cmd.args(["-chardev", format!("socket,id=commsock,fd={guest_socket_fd}").as_str()]);
-        cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
-        cmd.args(["-device", "virtconsole,chardev=commsock"]);
+        match params.communication_channel {
+            CommunicationChannel::VirtioConsole => {
+                cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
+                cmd.args(["-device", "virtconsole,chardev=commsock"]);
+            }
+            CommunicationChannel::Serial => {
+                cmd.args(["-device", "isa-serial,chardev=commsock,id=serial1"]);
+            }
+        }
         if let Some(pci_passthrough) = params.pci_passthrough {
             cmd.args(["-device", format!("vfio-pci,host={pci_passthrough}").as_str()]);
         }

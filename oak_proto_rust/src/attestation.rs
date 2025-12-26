@@ -37,3 +37,11 @@ pub const CONFIDENTIAL_SPACE_ATTESTATION_ID_CSTR: &CStr = c"d4d3e98d-334f-4f6d-9
 #[allow(dead_code)]
 pub const CONFIDENTIAL_SPACE_ATTESTATION_ID: &str =
     unsafe { str::from_utf8_unchecked(CONFIDENTIAL_SPACE_ATTESTATION_ID_CSTR.to_bytes()) };
+
+pub const TRANSPARENT_CB_ASSERTION_ID_CSTR: &CStr = c"3d12bbdd-d6d6-4c48-82c9-467dd82ab41f";
+
+// Safety: the UUID is valid UTF-8, and we can't use `Result` in a const
+// context.
+#[allow(dead_code)]
+pub const TRANSPARENT_CB_ASSERTION_ID: &str =
+    unsafe { str::from_utf8_unchecked(TRANSPARENT_CB_ASSERTION_ID_CSTR.to_bytes()) };

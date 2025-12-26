@@ -12,35 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::cell::RefCell;
 use std::{
     boxed::Box,
     string::{String, ToString},
-    sync::{Arc, Mutex},
-    vec::Vec,
+    sync::Arc,
 };
 
 use anyhow::Context;
 use googletest::prelude::*;
-use mockall::mock;
-use oak_attestation_types::{
-    assertion_generator::{AssertionGenerator, AssertionGeneratorError},
-    attester::Attester,
-    endorser::Endorser,
-};
-use oak_attestation_verification_types::{
-    assertion_verifier::{AssertionVerifier, AssertionVerifierError},
-    verifier::AttestationVerifier,
-};
-use oak_crypto::{
-    identity_key::{IdentityKey, IdentityKeyHandle},
-    verifier::Verifier,
-};
+use oak_crypto::identity_key::{IdentityKey, IdentityKeyHandle};
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, Assertion, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{Assertion, Endorsements, Evidence},
     session::v1::{
-        session_request::Request, session_response::Response, EndorsedEvidence, PlaintextMessage,
-        SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response, AttestRequest, AttestResponse,
+        EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
     },
 };
 use oak_session::{
@@ -48,236 +33,20 @@ use oak_session::{
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
-    generator::{BindableAssertionGenerator, SessionKeyBindableAssertionGenerator},
     handshake::HandshakeType,
-    key_extractor::KeyExtractor,
-    session::{AttestationEvidence, AttestationPublisher, DEFAULT_MAX_MESSAGE_QUEUE_LEN},
-    session_binding::{SessionBinder, SessionBindingVerifier, SessionBindingVerifierProvider},
-    verifier::{BoundAssertionVerifier, SessionKeyBoundAssertionVerifier},
+    session::{
+        AttestationEvidence, AttestationPublisher, DEFAULT_MAX_ATTESTATION_SIZE,
+        DEFAULT_MAX_MESSAGE_QUEUE_LEN,
+    },
     ClientSession, ProtocolEngine, ServerSession, Session,
 };
-use oak_time::{clock::FixedClock, instant::Instant, make_instant};
-use p256::ecdsa::SigningKey;
-use rand_core::OsRng;
-
-// Since [`Attester`], [`Endorser`] and [`AttestationVerifier`] are external
-// traits, we have to use `mock!` instead of `[automock]` and define a test
-// struct that implements those traits.
-// <https://docs.rs/mockall/latest/mockall/#external-traits>
-mock! {
-    TestAttester {}
-    impl Attester for TestAttester {
-        fn extend(&mut self, encoded_event: &[u8]) -> anyhow::Result<()>;
-        fn quote(&self) -> anyhow::Result<Evidence>;
-    }
-}
-
-mock! {
-    TestEndorser {}
-    impl Endorser for TestEndorser {
-        fn endorse<'a>(&self, evidence: Option<&'a Evidence>) -> anyhow::Result<Endorsements>;
-    }
-}
-
-mock! {
-    TestSessionBinder {}
-    impl SessionBinder for TestSessionBinder {
-        fn bind(&self, bound_data: &[u8]) -> Vec<u8>;
-    }
-}
-
-mock! {
-    TestAttestationVerifier {}
-    impl AttestationVerifier for TestAttestationVerifier {
-        fn verify(
-            &self,
-            evidence: &Evidence,
-            endorsements: &Endorsements,
-        ) -> anyhow::Result<AttestationResults>;
-    }
-}
-
-mock! {
-  TestKeyExtractor {}
-  impl KeyExtractor for TestKeyExtractor {
-    fn extract_verifying_key(
-        &self,
-        results: &AttestationResults,
-    ) -> anyhow::Result<Box<dyn Verifier>>;
-}
-}
-
-mock! {
-   TestVerifier {}
-   impl Verifier for TestVerifier {
-       fn verify(&self, message: &[u8], signature: &[u8]) -> anyhow::Result<()>;
-   }
-}
-
-mock! {
-    TestSessionBindingVerifier {}
-    impl SessionBindingVerifier for TestSessionBindingVerifier {
-        fn verify_binding(&self, bound_data: &[u8], binding: &[u8]) -> anyhow::Result<()>;
-    }
-}
-
-mock! {
-    TestSessionBindingVerifierProvider {}
-    impl SessionBindingVerifierProvider for TestSessionBindingVerifierProvider {
-        fn create_session_binding_verifier(
-            &self,
-            attestation_results: &AttestationResults,
-        ) -> anyhow::Result<Box<dyn SessionBindingVerifier>>;
-    }
-}
-
-struct TestAttestationPublisher {
-    pub last_published: Mutex<RefCell<Option<AttestationEvidence>>>,
-}
-
-impl TestAttestationPublisher {
-    pub fn new() -> Self {
-        Self { last_published: Mutex::new(RefCell::new(None)) }
-    }
-
-    pub fn take(&self) -> Option<AttestationEvidence> {
-        self.last_published.lock().expect("failed to lock publish item").borrow_mut().take()
-    }
-}
-
-impl AttestationPublisher for TestAttestationPublisher {
-    fn publish(&self, attestation_evidence: AttestationEvidence) {
-        *self.last_published.lock().expect("failed to lock publish item").borrow_mut() =
-            Some(attestation_evidence)
-    }
-}
-
-mock! {
-    TestAssertionVerifier {}
-    impl AssertionVerifier for TestAssertionVerifier {
-        fn verify(
-            &self,
-            assertion: &Assertion,
-            asserted_data: &[u8],
-            verification_time: Instant,
-        ) -> core::result::Result<(), AssertionVerifierError>;
-    }
-}
-
-mock! {
-    TestAssertionGenerator {}
-    impl AssertionGenerator for TestAssertionGenerator {
-        fn generate(&self, asserted_data: &[u8]) -> core::result::Result<Assertion, AssertionGeneratorError>;
-    }
-}
-
-fn create_mock_attester() -> Box<dyn Attester> {
-    let mut attester = MockTestAttester::new();
-    attester.expect_quote().returning(|| Ok(Evidence { ..Default::default() }));
-    Box::new(attester)
-}
-
-fn create_mock_endorser() -> Box<dyn Endorser> {
-    let mut endorser = MockTestEndorser::new();
-    endorser.expect_endorse().returning(|_| Ok(Endorsements { ..Default::default() }));
-    Box::new(endorser)
-}
-
-fn create_passing_mock_verifier() -> Box<dyn AttestationVerifier> {
-    let mut verifier = MockTestAttestationVerifier::new();
-    verifier.expect_verify().returning(move |_, _| {
-        Ok(AttestationResults {
-            status: attestation_results::Status::Success.into(),
-            ..Default::default()
-        })
-    });
-    Box::new(verifier)
-}
-
-fn create_mock_binder() -> Box<dyn SessionBinder> {
-    let mut binder = MockTestSessionBinder::new();
-    binder.expect_bind().returning(|bound_data| bound_data.to_vec());
-    Box::new(binder)
-}
-
-fn create_mock_key_extractor() -> Box<dyn KeyExtractor> {
-    let mut key_extractor = MockTestKeyExtractor::new();
-    key_extractor.expect_extract_verifying_key().returning(|_| {
-        let mut verifier = MockTestVerifier::new();
-        verifier.expect_verify().returning(|_, _| Ok(()));
-        Ok(Box::new(verifier))
-    });
-    Box::new(key_extractor)
-}
-
-fn create_mock_session_binding_verifier() -> Box<dyn SessionBindingVerifier> {
-    let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
-    session_binding_verifier.expect_verify_binding().returning(|_, _| Ok(()));
-    Box::new(session_binding_verifier)
-}
-
-fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVerifierProvider> {
-    let mut session_binding_verifier_provider = MockTestSessionBindingVerifierProvider::new();
-    session_binding_verifier_provider
-        .expect_create_session_binding_verifier()
-        .returning(|_| Ok(create_mock_session_binding_verifier()));
-    Box::new(session_binding_verifier_provider)
-}
-
-fn create_mock_assertion_generator(assertion: Assertion) -> Box<dyn BindableAssertionGenerator> {
-    let mut generator = MockTestAssertionGenerator::new();
-    generator.expect_generate().returning(move |_| Ok(assertion.clone()));
-    Box::new(SessionKeyBindableAssertionGenerator {
-        assertion_generator: Arc::new(generator),
-        binding_signer: Arc::new(SigningKey::random(&mut OsRng)),
-    })
-}
-
-fn create_passing_mock_assertion_verifier() -> Box<dyn BoundAssertionVerifier> {
-    let mut verifier = MockTestAssertionVerifier::new();
-    verifier.expect_verify().returning(|_, _, _| Ok(()));
-    Box::new(SessionKeyBoundAssertionVerifier {
-        assertion_verifier: Arc::new(verifier),
-        clock: Arc::new(FixedClock::at_instant(make_instant!("2025-10-14T17:31:32Z"))),
-    })
-}
-
-fn create_failing_mock_verifier() -> Box<dyn AttestationVerifier> {
-    let mut verifier = MockTestAttestationVerifier::new();
-    verifier.expect_verify().returning(move |_, _| {
-        Ok(AttestationResults {
-            status: attestation_results::Status::GenericFailure.into(),
-            reason: "mock attestation failure".to_string(),
-            ..Default::default()
-        })
-    });
-    Box::new(verifier)
-}
-
-fn create_failing_mock_session_binding_verifier_provider() -> Box<dyn SessionBindingVerifierProvider>
-{
-    let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
-    session_binding_verifier
-        .expect_verify_binding()
-        .returning(|_, _| Err(anyhow::anyhow!("mock session binding verification failure")));
-    let mut session_binding_verifier_provider = MockTestSessionBindingVerifierProvider::new();
-    session_binding_verifier_provider.expect_create_session_binding_verifier().returning(
-        move |_| {
-            let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
-            session_binding_verifier.expect_verify_binding().returning(|_, _| {
-                Err(anyhow::anyhow!("mock session binding verification failure"))
-            });
-            Ok(Box::new(session_binding_verifier))
-        },
-    );
-    Box::new(session_binding_verifier_provider)
-}
-
-#[derive(Debug, PartialEq)]
-pub(super) enum HandshakeFollowup {
-    Expected,
-    NotExpected,
-}
+use oak_session_testing::{
+    create_failing_mock_session_binding_verifier_provider, create_failing_mock_verifier,
+    create_mock_attester, create_mock_binder, create_mock_endorser, create_mock_key_extractor,
+    create_mock_session_binding_verifier_provider, create_mock_session_key_assertion_generator,
+    create_passing_mock_session_key_assertion_verifier, create_passing_mock_verifier, do_attest,
+    do_handshake, invoke_hello_world, HandshakeFollowup, TestAttestationPublisher,
+};
 
 const MATCHED_ATTESTER_ID1: &str = "MATCHED_ATTESTER_ID1";
 const MATCHED_ATTESTER_ID2: &str = "MATCHED_ATTESTER_ID2";
@@ -431,7 +200,7 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -444,7 +213,7 @@ fn pairwise_nn_peer_self_succeeds() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(assertion.clone()),
+                create_mock_session_key_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -737,13 +506,13 @@ fn successful_session_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .add_self_attester(MATCHED_ATTESTER_ID3.to_string(), create_mock_attester())
             .add_self_endorser(MATCHED_ATTESTER_ID3.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID4.to_string(),
-                create_mock_assertion_generator(client_assertion.clone()),
+                create_mock_session_key_assertion_generator(client_assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID3.to_string(), create_mock_binder())
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
@@ -757,7 +526,7 @@ fn successful_session_publishes_evidence() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(server_assertion.clone()),
+                create_mock_session_key_assertion_generator(server_assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .add_peer_verifier_with_key_extractor(
@@ -767,7 +536,7 @@ fn successful_session_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID4.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -838,7 +607,7 @@ fn handshake_failure_client_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -851,7 +620,7 @@ fn handshake_failure_client_publishes_evidence() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(assertion.clone()),
+                create_mock_session_key_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -903,7 +672,7 @@ fn attestation_failure_client_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -916,7 +685,7 @@ fn attestation_failure_client_publishes_evidence() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(assertion.clone()),
+                create_mock_session_key_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -960,7 +729,7 @@ fn handshake_failure_server_publishes_evidence() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(assertion.clone()),
+                create_mock_session_key_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -973,7 +742,7 @@ fn handshake_failure_server_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -1026,7 +795,7 @@ fn attestation_failure_server_publishes_evidence() -> anyhow::Result<()> {
             .add_self_endorser(MATCHED_ATTESTER_ID1.to_string(), create_mock_endorser())
             .add_self_assertion_generator(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_mock_assertion_generator(assertion.clone()),
+                create_mock_session_key_assertion_generator(assertion.clone()),
             )
             .add_session_binder(MATCHED_ATTESTER_ID1.to_string(), create_mock_binder())
             .build();
@@ -1039,7 +808,7 @@ fn attestation_failure_server_publishes_evidence() -> anyhow::Result<()> {
             )
             .add_peer_assertion_verifier(
                 MATCHED_ATTESTER_ID2.to_string(),
-                create_passing_mock_assertion_verifier(),
+                create_passing_mock_session_key_assertion_verifier(),
             )
             .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
             .add_attestation_publisher(
@@ -1186,141 +955,57 @@ fn test_server_incoming_message_queue_fails_when_exceeded() -> anyhow::Result<()
     Ok(())
 }
 
-pub(super) fn do_attest(
-    client_session: &mut ClientSession,
-    server_session: &mut ServerSession,
-) -> anyhow::Result<()> {
-    let attest_request = client_session
-        .get_outgoing_message()
-        .context("An error occurred while getting the client outgoing message")?
-        .context("No client outgoing message was produced")?;
-    assert_that!(
-        attest_request,
-        matches_pattern!(SessionRequest {
-            request: some(matches_pattern!(Request::AttestRequest(anything())))
-        }),
-        "The first message sent by the client is an attestation request"
-    );
-    server_session.put_incoming_message(attest_request)?;
+#[googletest::test]
+fn client_fails_when_attest_message_size_limit_exceeded() -> anyhow::Result<()> {
+    let client_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_assertion_verifier(
+                "0".to_string(),
+                create_passing_mock_session_key_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .build();
+    let mut client_session = ClientSession::create(client_config)?;
 
-    let attest_response = server_session
-        .get_outgoing_message()
-        .context("An error occurred while getting the server outgoing message")?
-        .context("No server outgoing message was produced")?;
-    assert_that!(
-        attest_response,
-        matches_pattern!(SessionResponse {
-            response: some(matches_pattern!(Response::AttestResponse(anything())))
-        }),
-        "The first message sent by the server is an attestation response"
-    );
-    client_session.put_incoming_message(attest_response)?;
-    Ok(())
-}
-
-pub(super) fn do_handshake(
-    client_session: &mut ClientSession,
-    server_session: &mut ServerSession,
-    handshake_followup: HandshakeFollowup,
-) -> anyhow::Result<()> {
-    let handshake_request = client_session
-        .get_outgoing_message()
-        .context("An error occurred while getting the client outgoing message")?
-        .context("No client outgoing message was produced")?;
-    assert_that!(
-        handshake_request,
-        matches_pattern!(SessionRequest {
-            request: some(matches_pattern!(Request::HandshakeRequest(anything())))
-        }),
-        "The message sent by the client is a handshake request"
-    );
-    server_session.put_incoming_message(handshake_request)?;
-    let handshake_response = server_session
-        .get_outgoing_message()
-        .context("An error occurred while getting the server outgoing message")?
-        .context("No server outgoing message was produced")?;
-    assert_that!(
-        handshake_response,
-        matches_pattern!(SessionResponse {
-            response: some(matches_pattern!(Response::HandshakeResponse(anything())))
-        }),
-        "The message sent by the server is a handshake response"
-    );
-    assert_that!(client_session.put_incoming_message(handshake_response)?, some(()));
-
-    if handshake_followup == HandshakeFollowup::Expected {
-        let handshake_followup = client_session
-            .get_outgoing_message()
-            .context("An error occurred while getting the client followup message")?
-            .context("No client followup message was produced")?;
-        assert_that!(
-            handshake_followup,
-            matches_pattern!(SessionRequest {
-                request: some(matches_pattern!(Request::HandshakeRequest(anything())))
-            }),
-            "The message sent by the client is a handshake request"
-        );
-        assert_that!(server_session.put_incoming_message(handshake_followup)?, some(()));
-        assert_that!(server_session.get_outgoing_message()?, none());
+    let mut large_attest_message = AttestResponse { ..Default::default() };
+    for i in 0..DEFAULT_MAX_ATTESTATION_SIZE {
+        large_attest_message.assertions.insert(i.to_string(), Assertion { content: "test".into() });
     }
+    client_session.get_outgoing_message()?;
+    assert_that!(
+        client_session.put_incoming_message(SessionResponse {
+            response: Some(Response::AttestResponse(large_attest_message))
+        }),
+        err(anything())
+    );
 
-    assert_that!(client_session.is_open(), eq(true));
-    assert_that!(server_session.is_open(), eq(true));
-    assert_that!(
-        server_session.get_session_binding_token(b"info")?.as_slice(),
-        eq(client_session.get_session_binding_token(b"info")?.as_slice())
-    );
-    assert_that!(
-        server_session.get_session_binding_token(b"info")?.as_slice(),
-        not(eq(client_session.get_session_binding_token(b"wrong info")?.as_slice()))
-    );
-    assert_that!(
-        client_session.get_peer_attestation_evidence()?,
-        matches_pattern!(AttestationEvidence { evidence: anything(), .. })
-    );
     Ok(())
 }
 
-fn invoke_hello_world(client_session: &mut ClientSession, server_session: &mut ServerSession) {
-    assert_that!(client_session.write(PlaintextMessage { plaintext: "Hello".into() }), ok(()));
-    let encrypted_request = client_session
-        .get_outgoing_message()
-        .expect("An error occurred while getting the client outgoing message")
-        .expect("No client outgoing message was produced");
+#[googletest::test]
+fn server_fails_when_attest_message_size_limit_exceeded() -> anyhow::Result<()> {
+    let server_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_assertion_verifier(
+                "0".to_string(),
+                create_passing_mock_session_key_assertion_verifier(),
+            )
+            .set_assertion_attestation_aggregator(Box::new(PassThrough {}))
+            .build();
+    let mut server_session = ServerSession::create(server_config)?;
+
+    let mut large_attest_message = AttestRequest { ..Default::default() };
+    for i in 0..DEFAULT_MAX_ATTESTATION_SIZE {
+        large_attest_message.assertions.insert(i.to_string(), Assertion { content: "test".into() });
+    }
     assert_that!(
-        encrypted_request,
-        matches_pattern!(SessionRequest {
-            request: some(matches_pattern!(Request::EncryptedMessage(anything())))
+        server_session.put_incoming_message(SessionRequest {
+            request: Some(Request::AttestRequest(large_attest_message))
         }),
-        "The client sent an encrypted message"
+        err(anything())
     );
 
-    assert_that!(server_session.put_incoming_message(encrypted_request), ok(some(())));
-    let decrypted_request = server_session
-        .read()
-        .expect("An error occurred while reading the decrypted incoming message")
-        .expect("No decrypted incoming message was produced");
-    assert_that!(decrypted_request.plaintext, eq("Hello".as_bytes()));
-
-    assert_that!(server_session.write(PlaintextMessage { plaintext: "World".into() }), ok(()));
-    let encrypted_response = server_session
-        .get_outgoing_message()
-        .expect("An error occurred while getting the server outgoing message")
-        .expect("No server outgoing message was produced");
-    assert_that!(
-        encrypted_response,
-        matches_pattern!(SessionResponse {
-            response: some(matches_pattern!(Response::EncryptedMessage(anything())))
-        }),
-        "The server sent an encrypted message"
-    );
-
-    assert_that!(client_session.put_incoming_message(encrypted_response), ok(some(())));
-    let decrypted_response = client_session
-        .read()
-        .expect("An error occurred while reading the decrypted incoming message")
-        .expect("No decrypted incoming message was produced");
-    assert_that!(decrypted_response.plaintext, eq("World".as_bytes()));
+    Ok(())
 }
 
 /// SessionChannel/SessionInitializer Tests

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "manifests": [
+    {
+      "mediaType": "application/octet-stream",
+      "digest": "sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06",
+      "size": 42,
+      "annotations": {
+        "tr.type": "subject"
+      }
+    },
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:93c9047e3fe392fc9df9597fe02119c7de43cf64880b2a4aa8ae0529cc2dfcb5",
+      "size": 810,
+      "annotations": {
+        "tr.type": "endorsement",
+        "oak.tr.endorsement.subject_digest": "sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
+      }
+    },
+    {
+      "mediaType": "application/vnd.dev.sigstore.bundle+json",
+      "digest": "sha256:cc6824eacf39b5be20d289e3f08c6e0bf7b4a0eb5cf1a1b0da2f953bce785e32",
+      "size": 98,
+      "annotations": {
+        "tr.type": "signature",
+        "tr.endorsement": "sha256:93c9047e3fe392fc9df9597fe02119c7de43cf64880b2a4aa8ae0529cc2dfcb5"
+      }
+    }
+  ]
+}

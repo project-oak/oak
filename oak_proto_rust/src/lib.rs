@@ -70,6 +70,15 @@ pub mod oak {
                     type_url_for::<Self>()
                 }
             }
+
+            impl Name for Stage0TransparentMeasurements {
+                const PACKAGE: &'static str = PACKAGE;
+                const NAME: &'static str = "Stage0TransparentMeasurements";
+
+                fn type_url() -> String {
+                    type_url_for::<Self>()
+                }
+            }
         }
     }
 
@@ -78,10 +87,6 @@ pub mod oak {
         pub mod v1 {
             include_proto!("oak.containers.v1");
         }
-    }
-
-    pub mod ctf_sha2 {
-        include_proto!("oak.ctf_sha2");
     }
 
     pub mod debug {

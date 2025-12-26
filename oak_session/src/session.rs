@@ -74,6 +74,7 @@ use oak_proto_rust::oak::{
         PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
     },
 };
+use prost::Message;
 
 use crate::{
     attestation::{
@@ -92,6 +93,7 @@ use crate::{
 };
 
 pub const DEFAULT_MAX_MESSAGE_QUEUE_LEN: usize = 1000;
+pub const DEFAULT_MAX_ATTESTATION_SIZE: usize = 5 * 1024 * 1024; // 5 Mb
 
 /// A unique identifier for an established secure session channel.
 ///
@@ -629,6 +631,11 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
                 SessionResponse { response: Some(Response::AttestResponse(attest_message)) },
                 Step::Attestation { attester, .. },
             ) => {
+                let message_size = attest_message.encoded_len();
+                anyhow::ensure!(
+                    attest_message.encoded_len() < DEFAULT_MAX_ATTESTATION_SIZE,
+                    "Max attest message size exceeded, actual size: {message_size}"
+                );
                 attester.put_incoming_message(attest_message)?.ok_or(anyhow!(
                     "invalid session state: attest message received but attester doesn't expect
                      any"
@@ -838,6 +845,11 @@ impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
                 SessionRequest { request: Some(Request::AttestRequest(attest_message)) },
                 Step::Attestation { attester, .. },
             ) => {
+                let message_size = attest_message.encoded_len();
+                anyhow::ensure!(
+                    attest_message.encoded_len() < DEFAULT_MAX_ATTESTATION_SIZE,
+                    "Max attest message size exceeded, actual size: {message_size}"
+                );
                 attester.put_incoming_message(attest_message)?.ok_or(anyhow!(
                     "invalid session state: attest message received but attester doesn't expect any"
                 ))?;

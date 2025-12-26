@@ -14,13 +14,14 @@
 
 use anyhow::Context;
 use external_db_client::{BlobId, ExternalDbClient};
+use log::info;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
 use crate::{
     icing::{IcingMetaDatabase, PageToken},
     memory_cache::MemoryCache,
-    MemoryId,
+    IcingTempDir, MemoryId,
 };
 
 /// A database with cache. It loads the meta database of the user at start,
@@ -61,6 +62,15 @@ impl DatabaseWithCache {
     /// in durable storage, and should be written back.
     pub fn changed(&self) -> bool {
         self.database.needs_writeback()
+    }
+
+    /// Replace the underlying IcingMetaDatabase with a new one created from the
+    /// provided blob, and then re-apply any pending changes on top of that new
+    /// db.
+    pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<()> {
+        let tempdir = IcingTempDir::new("pm-rebase");
+        self.database = IcingMetaDatabase::import_with_changes(tempdir, new_blob, &self.database)?;
+        Ok(())
     }
 
     fn add_memory_id(&mut self, memory: &mut Memory) {
@@ -127,7 +137,7 @@ impl DatabaseWithCache {
         if !all_memory_ids.is_empty() {
             self.delete_memories(all_memory_ids).await?;
         }
-        self.meta_db().reset();
+        let _ = self.meta_db().reset();
         Ok(())
     }
 
@@ -145,7 +155,6 @@ impl DatabaseWithCache {
             return Ok((Vec::new(), next_page_token));
         }
 
-        // Embedding search
         let blob_ids: Vec<BlobId> =
             search_results.items.iter().map(|item| item.blob_id.clone()).collect();
         let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
@@ -156,15 +165,44 @@ impl DatabaseWithCache {
             .zip(search_results.items.into_iter())
             .map(|(mut memory, item)| {
                 let score = item.score;
-                let view_ids = item.view_ids;
-                if let Some(views) = memory.views.as_mut() {
-                    views.llm_views.retain(|v| view_ids.contains(&v.id));
+                let view_scores = item.view_scores;
+                if !request.keep_all_llm_views {
+                    let view_ids = item.view_ids;
+                    if let Some(views) = memory.views.as_mut() {
+                        let mut ordered_views = Vec::new();
+                        for view_id in view_ids {
+                            if let Some(view) = views.llm_views.iter().find(|v| v.id == view_id) {
+                                ordered_views.push(view.clone());
+                            }
+                        }
+                        views.llm_views = ordered_views;
+                    }
                 }
-                SearchMemoryResultItem { memory: Some(memory), score }
+                SearchMemoryResultItem { memory: Some(memory), score, view_scores }
             })
             .collect();
 
         Ok((results, next_page_token))
+    }
+
+    pub async fn clean_expired_memories(&mut self) -> anyhow::Result<u64> {
+        let mut current_token = PageToken::Start;
+        let mut num_cleaned_memories: u64 = 0;
+
+        loop {
+            let (memory_ids, next_token) =
+                self.meta_db().get_expired_memories_ids(100, current_token)?;
+            info!("Deleting {} expired memories.", memory_ids.len());
+            self.delete_memories(memory_ids.clone()).await?;
+            num_cleaned_memories += memory_ids.len() as u64;
+
+            if next_token == PageToken::Start {
+                break;
+            }
+            current_token = next_token;
+        }
+
+        Ok(num_cleaned_memories)
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {

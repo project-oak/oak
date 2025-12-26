@@ -22,6 +22,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/attestation/endorsement.proto";
+import "proto/attestation/evidence.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -39,10 +40,29 @@ message Assertion {
   bytes content = 1;
 }
 
+// Assertion that wraps an inner assertion that signs the enclosed asserted
+// data. The asserted data is then used to verify a wrapper assertion.
+message WrapperAssertion {
+  // Inner assertion establishes the authenticity of the asserted data.
+  Assertion inner_assertion = 1;
+  // Asserted data is signed by the inner assertion and is being used to verify
+  // the outer assertion. For example it can contain a public key for the
+  // signature in the wrapper assertion.
+  bytes inner_asserted_data = 2;
+  // Outer assertion that can be verified with the help if the asserted data.
+  Assertion outer_assertion = 3;
+}
+
 message ConfidentialSpaceAssertion {
   // GCP attestation token for the container image.
   bytes jwt_token = 1;
   // An optional endorsement for the endorsement that can be sent to the client
   // by the Cloud application to support the measurements in the JWT token.
   ConfidentialSpaceEndorsement container_image_endorsement = 2;
+}
+
+message EndorsedEvidenceAssertion {
+  Evidence evidence = 1;
+  Endorsements endorsements = 2;
+  bytes asserted_data_signature = 3;
 }

@@ -1,0 +1,11 @@
+# proto-file: proto/oak_functions/service/oak_functions.proto
+# proto-message: oak.functions.LookupDataChunk
+
+items: {
+  key: "LHR-MAD-01-12-2025"
+  value: "PUT_CORRECTLY_ESCAPED_JSON_HERE"
+}
+items: {
+  key: "STN-MAD-01-12-2025"
+  value: "PUT_CORRECTLY_ESCAPED_JSON_HERE"
+}

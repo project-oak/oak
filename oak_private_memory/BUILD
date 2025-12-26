@@ -42,6 +42,7 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:rand",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
@@ -174,6 +175,7 @@ rust_library(
         ":private_memory_test_database_server_lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
     ],
 )

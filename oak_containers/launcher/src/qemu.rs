@@ -23,22 +23,12 @@ use std::{
 };
 
 use anyhow::Result;
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use command_fds::CommandFdExt;
+pub use oak_launcher_utils::launcher::VmType;
 use tokio_vsock::VMADDR_CID_HOST;
 
 use crate::path_exists;
-
-/// Types of confidential VMs
-#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
-pub enum VmType {
-    #[default]
-    Default,
-    Sev,
-    SevEs,
-    SevSnp,
-    Tdx,
-}
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]

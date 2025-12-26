@@ -15,7 +15,8 @@
 //
 
 use oak_proto_rust::oak::attestation::v1::{
-    confidential_space_reference_values, ConfidentialSpaceReferenceValues,
+    binary_reference_value, confidential_space_reference_values, BinaryReferenceValue,
+    ConfidentialSpaceReferenceValues,
 };
 use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{der::DecodePem, Certificate};
@@ -42,7 +43,11 @@ pub fn confidential_space_policy_from_reference_values(
                 .clone();
             let rekor_key = cosign_reference_values.rekor_public_key.clone();
             let ref_value = create_endorsement_reference_value(endorser_key, rekor_key);
-            let workload_ref_values = WorkloadReferenceValues::EndorsementReferenceValue(ref_value);
+            let binary_ref_value = BinaryReferenceValue {
+                r#type: Some(binary_reference_value::Type::Endorsement(ref_value)),
+            };
+            let workload_ref_values =
+                WorkloadReferenceValues::ImageReferenceValue(binary_ref_value);
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
         Some(
@@ -55,11 +60,11 @@ pub fn confidential_space_policy_from_reference_values(
             );
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
-        Some(confidential_space_reference_values::ContainerImage::EndorsementReferenceValues(
+        Some(confidential_space_reference_values::ContainerImage::ImageReferenceValue(
             ref_value,
         )) => {
             let workload_ref_values =
-                WorkloadReferenceValues::EndorsementReferenceValue(ref_value.clone());
+                WorkloadReferenceValues::ImageReferenceValue(ref_value.clone());
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
         None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),

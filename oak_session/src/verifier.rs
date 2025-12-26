@@ -11,7 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use alloc::{boxed::Box, format, string::String, sync::Arc};
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+    sync::Arc,
+};
 use core::fmt::Debug;
 
 use oak_attestation_verification_types::assertion_verifier::AssertionVerifier;
@@ -27,7 +32,7 @@ use thiserror::Error;
 /// Errors that can occur during assertion verification.
 #[derive(Clone, Error, Debug)]
 pub enum BoundAssertionVerificationError {
-    #[error("Generic verification error")]
+    #[error("Generic verification error: {error_msg}")]
     GenericFailure { error_msg: String },
     #[error("Binding verification error: {error_msg}")]
     BindingVerificationFailure { error_msg: String },
@@ -35,8 +40,8 @@ pub enum BoundAssertionVerificationError {
     PeerAssertionMissing,
     #[error("Assertion parsing error: {0:?}")]
     AssertionParsingError(DecodeError),
-    #[error("Assertion missing expected fields")]
-    AssertionMissingExpectedFields,
+    #[error("Assertion missing expected fields: {error_msg}")]
+    AssertionMissingExpectedFields { error_msg: String },
 }
 
 // Needs to be explicitly defined because we can't use the #[from] macro. Due to
@@ -172,9 +177,12 @@ impl BoundAssertionVerifier for SessionKeyBoundAssertionVerifier {
         let public_key = binding_key_assertion.public_binding_key.as_slice();
         self.assertion_verifier
             .verify(
-                &binding_key_assertion
-                    .inner_assertion
-                    .ok_or(BoundAssertionVerificationError::AssertionMissingExpectedFields)?,
+                &binding_key_assertion.inner_assertion.ok_or(
+                    BoundAssertionVerificationError::AssertionMissingExpectedFields {
+                        error_msg: "missing inner_assertion in SessionBindingKeyWrapperAssertion"
+                            .to_string(),
+                    },
+                )?,
                 public_key,
                 self.clock.get_time(),
             )

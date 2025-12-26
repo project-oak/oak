@@ -27,7 +27,7 @@ pub struct EndorseCommand {
     #[arg(from_global)]
     pub image: Reference,
 
-    #[arg(from_global)]
+    #[command(flatten)]
     pub claims: flags::Claims,
 
     #[arg(long, value_parser = parse_duration, help = "A duration string indicating how long the endorsement is valid for, e.g., '30d', '12h', '1w'")]
@@ -52,7 +52,19 @@ impl EndorseCommand {
         let name = self.image.repository().to_string();
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
         let digest = hex_digest_from_typed_hash(typed_hash)?;
-        let claim_types = self.claims.claims.iter().map(|x| &**x).collect();
+
+        let claims = self
+            .claims
+            .claims_toml
+            .as_ref()
+            .map(|c| c.claims.clone())
+            .or(self.claims.claims.clone())
+            .unwrap();
+        if claims.is_empty() {
+            anyhow::bail!("at least one claim must be provided");
+        }
+
+        let claim_types: Vec<&str> = claims.iter().map(|x| &**x).collect();
         let statement = make_statement(
             &name,
             &digest,

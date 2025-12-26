@@ -29,7 +29,8 @@ namespace {}  // namespace
 
 absl::StatusOr<std::unique_ptr<TlsOverGrpcServiceImpl>>
 TlsOverGrpcServiceImpl::Create(const std::string& server_key_path,
-                               const std::string& server_cert_path) {
+                               const std::string& server_cert_path,
+                               const std::string& client_cert_path) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
@@ -44,6 +45,16 @@ TlsOverGrpcServiceImpl::Create(const std::string& server_key_path,
                                    SSL_FILETYPE_PEM) != 1) {
     return absl::InternalError("Failed to load certificate");
   }
+
+  // mTLS setup
+  SSL_CTX_set_verify(
+      ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
+
+  if (SSL_CTX_load_verify_locations(ctx.get(), client_cert_path.c_str(),
+                                    nullptr) != 1) {
+    LOG(FATAL) << "Failed to load client trust anchor";
+  }
+
   return std::unique_ptr<TlsOverGrpcServiceImpl>(
       new TlsOverGrpcServiceImpl(std::move(ctx)));
 }
@@ -81,7 +92,7 @@ grpc::Status TlsOverGrpcServiceImpl::TlsSession(
         int err = SSL_get_error(ssl.get(), ret);
         if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
           return grpc::Status(grpc::StatusCode::INTERNAL,
-                              "TLS handshake failed");
+                              absl::StrFormat("TLS handshake failed: %d", err));
         }
       }
     }
@@ -102,7 +113,8 @@ grpc::Status TlsOverGrpcServiceImpl::TlsSession(
       } else {
         int err = SSL_get_error(ssl.get(), len);
         if (err != SSL_ERROR_WANT_READ) {
-          return grpc::Status(grpc::StatusCode::INTERNAL, "TLS read failed");
+          return grpc::Status(grpc::StatusCode::INTERNAL,
+                              absl::StrFormat("TLS read failed: %d", err));
         }
       }
     }
