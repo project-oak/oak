@@ -74,7 +74,7 @@ impl ZeroPage {
     pub fn try_fill_hdr_from_setup_data<P: crate::Platform>(
         &mut self,
         fw_cfg: &mut FwCfg<P>,
-    ) -> Option<[u8; 32]> {
+    ) -> Option<(Vec<u8>, [u8; 32])> {
         let file = fw_cfg.get_setup_file()?;
         let size = file.size();
         // We temporarily copy the setup data to the end of available mapped virtual
@@ -113,7 +113,7 @@ impl ZeroPage {
         // correctly by the kernel.
         let dest = &mut self.inner.hdr.as_mut_bytes()[..src.len()];
         dest.copy_from_slice(src);
-        Some(measurement)
+        Some((buf.to_vec(), measurement))
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine)
