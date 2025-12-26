@@ -27,12 +27,9 @@ use sha2::{Digest, Sha256};
 use strum::FromRepr;
 
 use crate::{
-    acpi_tables::{
-        DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
-    },
-    fw_cfg::FwCfg,
-    pci::PciWindows,
-    Madt, ZeroPage,
+    Fadt, Madt, ZeroPage, acpi_tables::{
+        DescriptionHeader, Dsdt, MultiprocessorWakeup, InterruptSourceOverride, IoApic, LocalApicNmi, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp
+    }, fw_cfg::FwCfg, pci::PciWindows
 };
 
 mod commands;
@@ -217,6 +214,15 @@ fn print_system_data_table_entries<'a>(
                 match madt_entry.structure_type {
                     ProcessorLocalApic::STRUCTURE_TYPE => {
                         log::info!("    -> Local APIC: {:?}", ProcessorLocalApic::new(madt_entry)?);
+                    }
+                    IoApic::STRUCTURE_TYPE => {
+                        log::info!("    -> I/O APIC: {:?}", IoApic::new(madt_entry)?);
+                    }
+                    InterruptSourceOverride::STRUCTURE_TYPE => {
+                        log::info!("    -> Interrupt Source Override: {:?}", InterruptSourceOverride::new(madt_entry)?);
+                    }
+                    LocalApicNmi::STRUCTURE_TYPE => {
+                        log::info!("    -> Local APIC NMI: {:?}", LocalApicNmi::new(madt_entry)?);
                     }
                     ProcessorLocalX2Apic::STRUCTURE_TYPE => {
                         log::info!(
