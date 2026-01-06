@@ -71,10 +71,16 @@ pub struct SignatureInfo {
 /// Minimalistic certificate proto definition.
 ///
 /// Certificate is created as following:
-/// - \[`CertificatePayload`\] proto message is serialized and signed using the
-///   certificate authority's private key.
-/// - This serialized message is stored in the `serialized_payload` field.
-/// - The signature is stored in the `signature_info`.
+/// 1. For SERIALIZED_CERTIFICATE_PAYLOAD type:
+///     - \[`CertificatePayload`\] proto message is serialized and signed using the
+///       certificate authority's private key.
+///     - This serialized message is stored in the `serialized_payload` field.
+///     - The signature is stored in the `signature_info`.
+/// 2. For ARBITRARY_USER_DATA type:
+///     - Arbitrary bytes are signed using the certificate authority's private
+///       key.
+///     - The bytes are stored in the `serialized_payload` field.
+///     - The signature is stored in the `signature_info`.
 ///
 /// The signature is created using the Tink library:
 /// <<https://developers.google.com/tink/digital-signature>>
@@ -83,13 +89,53 @@ pub struct SignatureInfo {
 #[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Certificate {
-    /// Serialized \[`CertificatePayload`\] proto.
+    /// Payload that is signed over.
     #[prost(bytes = "vec", tag = "1")]
     #[serde(with = "crate::base64data")]
     pub serialized_payload: ::prost::alloc::vec::Vec<u8>,
     /// Signature over serialized_payload.
     #[prost(message, optional, tag = "2")]
     pub signature_info: ::core::option::Option<SignatureInfo>,
+    /// Format type for the serialized payload.
+    #[prost(enumeration = "SerializedPayloadType", tag = "3")]
+    pub serialized_payload_type: i32,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum SerializedPayloadType {
+    PayloadTypeUnspecified = 0,
+    /// Serialized \[`CertificatePayload`\] proto.
+    PayloadTypeSerializedCertificate = 1,
+    /// Arbitrary bytes supplied by the caller.
+    PayloadTypeArbitraryUserData = 2,
+}
+impl SerializedPayloadType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::PayloadTypeUnspecified => "PAYLOAD_TYPE_UNSPECIFIED",
+            Self::PayloadTypeSerializedCertificate => {
+                "PAYLOAD_TYPE_SERIALIZED_CERTIFICATE"
+            }
+            Self::PayloadTypeArbitraryUserData => "PAYLOAD_TYPE_ARBITRARY_USER_DATA",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "PAYLOAD_TYPE_UNSPECIFIED" => Some(Self::PayloadTypeUnspecified),
+            "PAYLOAD_TYPE_SERIALIZED_CERTIFICATE" => {
+                Some(Self::PayloadTypeSerializedCertificate)
+            }
+            "PAYLOAD_TYPE_ARBITRARY_USER_DATA" => {
+                Some(Self::PayloadTypeArbitraryUserData)
+            }
+            _ => None,
+        }
+    }
 }
 /// Request message encrypted using Hybrid Public Key Encryption (HPKE).
 /// <<https://www.rfc-editor.org/rfc/rfc9180.html>>

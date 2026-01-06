@@ -35,7 +35,11 @@ use oak_proto_rust::{
             Evidence, ReferenceValues, ReferenceValuesCollection, SessionBindingPublicKeyData,
             SessionBindingPublicKeyEndorsement,
         },
-        crypto::v1::{Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo},
+        crypto::v1::{
+            Certificate, CertificatePayload,
+            SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
+            SubjectPublicKeyInfo,
+        },
         session::v1::{EndorsedEvidence, SessionBinding},
         Validity,
     },
@@ -183,6 +187,7 @@ fn endorsements(
                     signature_info: Some(SignatureInfo {
                         signature: certificate_payload_signature,
                     }),
+                    serialized_payload_type: PayloadTypeSerializedCertificate.into(),
                 }),
             }),
             ..Default::default()

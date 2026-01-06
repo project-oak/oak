@@ -19,7 +19,9 @@ use core::assert_matches::assert_matches;
 
 use oak_proto_rust::oak::{
     crypto::v1::{
-        Certificate, CertificatePayload, ProofOfFreshness, SignatureInfo, SubjectPublicKeyInfo,
+        Certificate, CertificatePayload, ProofOfFreshness,
+        SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
+        SubjectPublicKeyInfo,
     },
     Validity,
 };
@@ -79,6 +81,7 @@ fn create_test_certificate(
     Certificate {
         serialized_payload,
         signature_info: Some(SignatureInfo { signature: signature.to_vec() }),
+        serialized_payload_type: PayloadTypeSerializedCertificate.into(),
     }
 }
 

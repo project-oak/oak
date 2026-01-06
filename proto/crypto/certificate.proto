@@ -95,20 +95,37 @@ message SignatureInfo {
   bytes signature = 1;
 }
 
+enum SerializedPayloadType {
+  PAYLOAD_TYPE_UNSPECIFIED = 0;
+  // Serialized [`CertificatePayload`] proto.
+  PAYLOAD_TYPE_SERIALIZED_CERTIFICATE = 1;
+  // Arbitrary bytes supplied by the caller.
+  PAYLOAD_TYPE_ARBITRARY_USER_DATA = 2;
+}
+
 // Minimalistic certificate proto definition.
 //
 // Certificate is created as following:
-// - [`CertificatePayload`] proto message is serialized and signed using the
-//  certificate authority's private key.
-// - This serialized message is stored in the `serialized_payload` field.
-// - The signature is stored in the `signature_info`.
+// 1. For SERIALIZED_CERTIFICATE_PAYLOAD type:
+//    - [`CertificatePayload`] proto message is serialized and signed using the
+//      certificate authority's private key.
+//    - This serialized message is stored in the `serialized_payload` field.
+//    - The signature is stored in the `signature_info`.
+// 2. For ARBITRARY_USER_DATA type:
+//    - Arbitrary bytes are signed using the certificate authority's private
+//      key.
+//    - The bytes are stored in the `serialized_payload` field.
+//    - The signature is stored in the `signature_info`.
 //
 // The signature is created using the Tink library:
 // <https://developers.google.com/tink/digital-signature>
 message Certificate {
-  // Serialized [`CertificatePayload`] proto.
+  // Payload that is signed over.
   bytes serialized_payload = 1;
 
   // Signature over serialized_payload.
   SignatureInfo signature_info = 2;
+
+  // Format type for the serialized payload.
+  SerializedPayloadType serialized_payload_type = 3;
 }

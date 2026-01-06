@@ -156,7 +156,11 @@ mod tests {
         attestation::v1::{
             CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
         },
-        crypto::v1::{Certificate, CertificatePayload, SignatureInfo, SubjectPublicKeyInfo},
+        crypto::v1::{
+            Certificate, CertificatePayload,
+            SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
+            SubjectPublicKeyInfo,
+        },
         Validity,
     };
     use oak_time::clock::FixedClock;
@@ -228,6 +232,7 @@ mod tests {
         Certificate {
             serialized_payload,
             signature_info: Some(SignatureInfo { signature: signature.to_vec() }),
+            serialized_payload_type: PayloadTypeSerializedCertificate.into(),
         }
     }
 
