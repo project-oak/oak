@@ -48,9 +48,14 @@ async fn try_persist_database(
     let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
-    let db_size = database.data.len() as u64;
+    let db_size = database.data.len();
+    if db_size > crate::db_client::MAX_DECODE_SIZE {
+        // Even we save it, it will fail during the keysync.
+        info!("Database is too large to save: {}", db_size);
+        anyhow::bail!("Database is too large to save: {}", db_size);
+    }
     info!("Saving db size: {}", db_size);
-    get_global_metrics().record_db_size(db_size);
+    get_global_metrics().record_db_size(db_size as u64);
 
     let now = Instant::now();
     let result = user_context
