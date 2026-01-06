@@ -14,6 +14,7 @@
 
 use anyhow::Context;
 use external_db_client::{BlobId, ExternalDbClient};
+use icing::OptimizeResultProto;
 use log::info;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
@@ -56,6 +57,10 @@ impl DatabaseWithCache {
                 wrapped_dek: None,
             }),
         })
+    }
+
+    pub fn optimize(&mut self) -> anyhow::Result<OptimizeResultProto> {
+        self.database.optimize()
     }
 
     /// Returns true if the cached database contains content that doesnt exist

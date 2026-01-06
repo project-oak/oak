@@ -64,6 +64,8 @@ pub struct Metrics {
     db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
     db_persist_queue_size: ObservableGauge<u64>,
+    // Optimize latency.
+    db_optimize_latency: Histogram<u64>,
 }
 
 /// The possible metrics request types.
@@ -175,6 +177,13 @@ impl Metrics {
             .with_description("Number of failures when deserializing user info.")
             .init();
 
+        let db_optimize_latency = observer
+            .meter
+            .u64_histogram("db_optimize_latency")
+            .with_description("Latency of optimizing the database.")
+            .with_unit("ms")
+            .init();
+
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
         rpc_count.add(0, &[KeyValue::new("request_type", "total")]);
@@ -193,6 +202,7 @@ impl Metrics {
         user_info_deserialization_failures.add(0, &[]);
         db_decryption_failures.add(0, &[]);
         db_persist_queue_size.observe(0, &[]);
+        db_optimize_latency.record(1, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -207,6 +217,7 @@ impl Metrics {
         observer.register_metric(user_info_deserialization_failures.clone());
         observer.register_metric(db_decryption_failures.clone());
         observer.register_metric(db_persist_queue_size.clone());
+        observer.register_metric(db_optimize_latency.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -224,6 +235,7 @@ impl Metrics {
             user_info_deserialization_failures,
             db_decryption_failures,
             db_persist_queue_size,
+            db_optimize_latency,
         }
     }
 
@@ -260,6 +272,11 @@ impl Metrics {
 
         self.rpc_latency
             .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+    }
+
+    /// Record the time it took to optimize the DB.
+    pub fn record_db_optimize_latency(&self, latency: u64) {
+        self.db_optimize_latency.record(latency, &[]);
     }
 
     /// Record the time it took to load the DB.

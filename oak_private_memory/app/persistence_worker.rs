@@ -37,7 +37,13 @@ async fn try_persist_database(
         info!("Database is not changed, skip saving");
         return Ok(MetadataPersistResult::Succeeded);
     }
-
+    // Calling this multiple times should be fine because the database is persisted
+    // to disk after each call. Subsequent calls to optimize will be a no-op or
+    // fast.
+    let now = Instant::now();
+    user_context.database.optimize()?;
+    let elapsed = now.elapsed();
+    get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
     let exported_db = user_context.database.export()?;
     let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
@@ -71,7 +77,6 @@ async fn try_persist_database(
 // the underlying database layer.
 async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Result<()> {
     let mut attempt: u64 = 1;
-
     let now = Instant::now();
     while attempt < MAX_RETRY_ATTEMPTS {
         match try_persist_database(user_context).await {

@@ -617,6 +617,10 @@ impl IcingMetaDatabase {
         search_result.results.iter().filter_map(Self::extract_view_id_from_doc).collect::<Vec<_>>()
     }
 
+    pub fn optimize(&self) -> anyhow::Result<icing::OptimizeResultProto> {
+        self.icing_search_engine.optimize()
+    }
+
     fn create_view_id_projection(schema_name: &str) -> icing::TypePropertyMask {
         icing::TypePropertyMask {
             schema_type: Some(schema_name.to_string()),
@@ -2065,6 +2069,7 @@ mod tests {
             )],
             ..Default::default()
         };
+
         let result_spec_for_existence = icing::ResultSpecProto {
             num_per_page: Some(1),
             type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHMA_NAME)],

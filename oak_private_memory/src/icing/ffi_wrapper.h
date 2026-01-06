@@ -234,6 +234,10 @@ class IcingSearchEngine {
         inner_->PersistToDisk((icing::lib::PersistType::Code)persist_type));
   }
 
+  std::unique_ptr<std::vector<uint8_t>> optimize_impl() const {
+    return ProtoToVec(inner_->Optimize());
+  }
+
  private:
   std::unique_ptr<icing::lib::IcingSearchEngine> inner_;
 };

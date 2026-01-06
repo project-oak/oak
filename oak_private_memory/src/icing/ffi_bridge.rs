@@ -54,6 +54,7 @@ mod ffi {
             result_spec: &[u8],
         ) -> UniquePtr<CxxVector<u8>>;
         fn persist_to_disk(&self, persist_type: i32) -> UniquePtr<CxxVector<u8>>;
+        fn optimize_impl(&self) -> UniquePtr<CxxVector<u8>>;
 
         fn create_icing_search_engine(options: &[u8]) -> UniquePtr<IcingSearchEngine>;
     }
@@ -133,8 +134,8 @@ use cxx::UniquePtr;
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
     property_proto::VectorProto, DeleteResultProto, DocumentProto, InitializeResultProto,
-    PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto,
-    SearchSpecProto, SetSchemaResultProto,
+    OptimizeResultProto, PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto,
+    SearchResultProto, SearchSpecProto, SetSchemaResultProto,
 };
 use prost::Message;
 
@@ -200,6 +201,11 @@ impl ffi::IcingSearchEngine {
     pub fn get_next_page(&self, next_page_token: u64) -> anyhow::Result<SearchResultProto> {
         let result = self.get_next_page_impl(next_page_token);
         Ok(SearchResultProto::decode(result.as_slice())?)
+    }
+
+    pub fn optimize(&self) -> anyhow::Result<OptimizeResultProto> {
+        let result = self.optimize_impl();
+        Ok(OptimizeResultProto::decode(result.as_slice())?)
     }
 }
 
