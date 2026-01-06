@@ -27,7 +27,7 @@ run() {
     fi
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_default_issued_at_flag() {
     # `set -e` inside the function ensures that it fails on the first error.
     set -e
@@ -41,7 +41,7 @@ test_default_issued_at_flag() {
       --output="$output_file"
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_output_flag() {
     # `set -e` inside the function ensures that it fails on the first error.
     set -e
@@ -57,7 +57,7 @@ test_output_flag() {
     diff "$GOLDEN_FILE" "$output_file"
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_stdout() {
     set -e
     local output_file=$(mktemp)
@@ -71,14 +71,14 @@ test_stdout() {
     diff "$GOLDEN_FILE" "$output_file"
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_blob_help() {
     set -e
     $CLI blob --help > /dev/null
     $CLI blob endorse --help > /dev/null
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_blob_endorse() {
     set -e
     local repository_dir=$(mktemp -d)
@@ -103,7 +103,7 @@ test_blob_endorse() {
     # We'll rely on the `doremint` command itself to report success and verify the files were stashed.
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 test_blob_endorse_digest() {
     set -e
     local repository_dir=$(mktemp -d)

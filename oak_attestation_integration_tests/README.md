@@ -4,7 +4,6 @@ This crate provides comprehensive integration tests and utilities for Oak's
 attestation system. It serves three main purposes:
 
 1. **Attestation Output Analysis**:
-
    - A binary utility that analyzes attestation output for breaking changes.
    - It saves new snapshots when the output changes.
    - Snapshots are ordered starting at 00000, progressing to 00001 and so on.
@@ -12,7 +11,6 @@ attestation system. It serves three main purposes:
      that alter attestation output.
 
 2. **Verification Backwards Compatibility Checks**:
-
    - Tests the current verification library against snapshots of past
      attestation outputs, ensuring that verification succeeds.
 
@@ -26,14 +24,12 @@ If you encounter a CI failure related to this crate, it likely means one of four
 things (from most to least likely):
 
 1. **Attestation Output Snapshot Update Required**:
-
    - You've made changes that alter the attestation output, but haven't created
      a snapshot.
    - Action: Run `update_testdata_assert_no_breaking_changes` locally, commit
      the new snapshot, and push your changes.
 
 2. **Breaking Changes in Attestation Output Detected**:
-
    - The attestation output has changed in a way that could break verification
      for older versions.
    - Action: Reimplement the change in a non breaking way. Changes should be
@@ -41,7 +37,6 @@ things (from most to least likely):
      current ones. Consult with the team if assistance needed.
 
 3. **Breaking Changes in Verification Library Detected**:
-
    - The verification library has been modified in a way that older evidence in
      snapshot no longer verifies.
    - Action: This is a serious issue that requires careful consideration. Review
@@ -61,7 +56,6 @@ things (from most to least likely):
 ## Future Work and Considerations
 
 1. **Snapshot Versioning**:
-
    - Currently, snapshots are incrementally numbered (000000, 000001, etc.).
    - This approach simplifies identifying the latest snapshot but may lead to
      merge conflicts if multiple changes occur simultaneously.
@@ -69,7 +63,6 @@ things (from most to least likely):
      reduces the likelihood of conflicts.
 
 2. **Snapshot Retention Policy**:
-
    - Snapshots should realistically represent the distribution of evidence "in
      the wild", potentially with a conservative approach.
    - We should establish a policy for deleting old snapshots based on the
@@ -85,7 +78,6 @@ things (from most to least likely):
      deletion.
 
 3. **Breaking Changes to Attestation Outputs**:
-
    - In the future, we may need to allow breaking changes (e.g., removing
      fields) to attestation outputs.
    - This would be based on the assumption that no clients in production are

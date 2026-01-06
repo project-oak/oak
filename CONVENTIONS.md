@@ -53,7 +53,6 @@ projects should prefer to avoid using a src directory.
 For test code, stick to the following conventions:
 
 - Simple unit tests can be directly inline in the relevant file.
-
   - Remember to create a `rust_test` target to include those tests.
 
 - Larger, more involved tests can be moved to a separate `tests.rs` file,
