@@ -150,6 +150,7 @@ impl GsData {
     ///
     /// Safety: this function must only be called once syscalls have been setup.
     pub unsafe fn register_process(process_pml4: PhysFrame) -> anyhow::Result<usize> {
+        #[allow(static_mut_refs)]
         let free_pid = GS_DATA.user_pml4s.iter().position(|&frame| frame.start_address().is_null());
         match free_pid {
             None => Err(anyhow::Error::msg(
@@ -176,6 +177,7 @@ impl GsData {
     /// Changes the root page table, so addresses in userspace will be invalid.
     /// Caller must ensure those side effects are okay.
     pub unsafe fn set_current_pid(pid: usize) -> Result<(), anyhow::Error> {
+        #[allow(static_mut_refs)]
         GS_DATA
             .user_pml4s
             .get(pid)

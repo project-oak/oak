@@ -91,7 +91,6 @@ use crate::{
     mm::Translator,
     processes::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
-    syscall::dice_data,
 };
 
 /// Allocator for physical memory frames in the system.
@@ -294,6 +293,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         start_ptr: *mut u8,
         eventlog_ptr: *mut u8,
         sensitive_memory_length: usize,
+        #[allow(dead_code)]
         dice_attestation_ptr: Option<*mut u8>,
     }
 
@@ -315,17 +315,15 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 })
                 // Older versions of stage0 do not supply this argument. In this case we assume the
                 // lenght of the dice data is the length of the associated struct.
-                .unwrap_or_else(|| core::mem::size_of::<oak_dice::evidence::Stage0DiceData>());
+                .unwrap_or_else(::core::mem::size_of::<oak_dice::evidence::Stage0DiceData>);
 
             let dice_data_phys_addr = fetch_address_from_cmdline(
-                &kernel_args,
+                kernel_args,
                 oak_dice::evidence::DICE_DATA_CMDLINE_PARAM,
             );
 
-            let eventlog_phys_addr = fetch_address_from_cmdline(
-                &kernel_args,
-                oak_dice::evidence::EVENTLOG_CMDLINE_PARAM,
-            );
+            let eventlog_phys_addr =
+                fetch_address_from_cmdline(kernel_args, oak_dice::evidence::EVENTLOG_CMDLINE_PARAM);
             let dice_data_attestation_addr = fetch_address_from_cmdline(
                 kernel_args,
                 oak_dice::evidence::DICE_DATA_ATTESTATION_PARAM,
@@ -575,12 +573,9 @@ pub fn panic(info: &PanicInfo) -> ! {
 // the argument is not present, None is returned. This function will panic in
 // the event the argument is found and cannot be parsed.
 fn fetch_address_from_cmdline(kernel_args: &args::Args, stage0_arg: &str) -> Option<PhysAddr> {
-    let arg = kernel_args.get(&alloc::format!("--{}", stage0_arg));
-    if arg.is_none() {
-        return None;
-    }
+    let arg = kernel_args.get(&alloc::format!("--{}", stage0_arg))?;
     let parsed_arg =
-        u64::from_str_radix(arg?.strip_prefix("0x").expect("failed stripping the hex prefix"), 16)
+        u64::from_str_radix(arg.strip_prefix("0x").expect("failed stripping the hex prefix"), 16)
             .expect("couldn't parse address as a hex number");
     Some(PhysAddr::new(parsed_arg))
 }

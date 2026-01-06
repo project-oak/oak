@@ -38,7 +38,7 @@ oak-functions-containers-launcher-artifacts: \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
     (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
     (copy-binary "oak_functions_containers_app/bundle.tar" "oak_functions_containers_bundle") \
-    (copy-binary "oak_functions_containers_launcher" "oak_functions_containers_launcher") 
+    (copy-binary "oak_functions_containers_launcher" "oak_functions_containers_launcher")
 
 run-oak-functions-containers-launcher wasm_target port lookup_data_path communication_channel virtio_guest_cid:
     # Note: for speed, most dependencies are not automatically rebuilt."
@@ -174,8 +174,16 @@ wasm-crates:
 list-bare-metal-crates:
     bazel query "{{bare_metal_crates_query}}"
 
-bazel-clippy:
+bazel-clippy: bare-metal-clippy std-clippy wasm-clippy
+
+std-clippy:
     bazel build --config=release --config=clippy "$@" //...:all -- -third_party/...
+
+bare-metal-clippy:
+    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --config=clippy --config=release --keep_going --platforms=//:x86_64-unknown-none
+
+wasm-clippy:
+    bazel query "{{wasm_crates_query}}" | xargs bazel build --config=clippy --config=release --keep_going --platforms=//:wasm32-unknown-unknown
 
 bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
 

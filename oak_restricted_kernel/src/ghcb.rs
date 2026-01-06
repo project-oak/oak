@@ -101,6 +101,7 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &M) {
 fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: This is called only during early boot, so there is only a single
     // execution context.
+    #[allow(static_mut_refs)]
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
 
     let ghcb_page = get_ghcb_page();

@@ -88,7 +88,12 @@ pub fn init_gdt(double_fault_stack: VirtAddr, privileged_interrupt_stack: VirtAd
     // variable, but unfortunately that fact is not visible through the
     // MutexGuard. Thus, we need to rely on `transmute()` to extend the lifetime
     // and use `load_unsafe()` to actually load the GDT.
-    let tss_descriptor = Descriptor::tss_segment(unsafe { core::mem::transmute(&descriptors.tss) });
+    let tss_descriptor = Descriptor::tss_segment(unsafe {
+        core::mem::transmute::<
+            &x86_64::structures::tss::TaskStateSegment,
+            &x86_64::structures::tss::TaskStateSegment,
+        >(&descriptors.tss)
+    });
     descriptors.tss_selector = descriptors.gdt.append(tss_descriptor);
     unsafe {
         descriptors.gdt.load_unsafe();
