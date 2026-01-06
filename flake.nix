@@ -65,8 +65,8 @@
             base = with pkgs; mkShell {
               packages = [
                 cachix
-                envsubst
                 fd
+                gettext
                 google-cloud-sdk
                 just
                 ps
