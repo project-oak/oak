@@ -1,3 +1,4 @@
 bazel/test_workspace
 codelab
 oak_private_memory
+linter

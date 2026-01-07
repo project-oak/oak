@@ -16,7 +16,6 @@
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
-    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
@@ -26,9 +25,9 @@ rust_binary(
     deps = [
         ":lib",
         ":tools",
-        "@oak_crates_index//:clap",
-        "@oak_crates_index//:colored",
-        "@oak_crates_index//:ignore",
+        "@crates//:clap",
+        "@crates//:colored",
+        "@crates//:ignore",
     ],
 )
 
@@ -39,8 +38,8 @@ rust_library(
     ],
     crate_name = "linter",
     deps = [
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:ignore",
+        "@crates//:anyhow",
+        "@crates//:ignore",
     ],
 )
 
@@ -49,9 +48,9 @@ rust_library(
     srcs = glob(["tools/*.rs"]),
     deps = [
         ":lib",
-        "@oak_crates_index//:anyhow",
-        "@oak_crates_index//:lazy_static",
-        "@oak_crates_index//:regex",
+        "@crates//:anyhow",
+        "@crates//:lazy_static",
+        "@crates//:regex",
     ],
 )
 

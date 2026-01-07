@@ -27,8 +27,11 @@ presubmit-full: \
     presubmit \
     kokoro_verify_buildconfigs
 
-format:
-    bazel build linter && bazel-bin/linter/linter --fix
+build-linter:
+    bazel build @oak_linter//:linter
+
+format: build-linter
+    bazel-bin/external/oak_linter~/linter --fix
 
 # -- End Developer Workflow Tools --
 
@@ -115,8 +118,8 @@ oak_attestation_explain_wasm:
 
 # --- KOKORO CI Entry Points ---
 
-check-format:
-    bazel build linter && bazel-bin/linter/linter
+check-format: build-linter
+    bazel-bin/external/oak_linter~/linter --fix
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh
