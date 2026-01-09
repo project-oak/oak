@@ -161,8 +161,11 @@ impl OakSessionHandler {
 
         match self.application_handler.handle(&decrypted_request).await {
             Err(e) => {
+                // TODO: b/474398548 - Put the result status into the top level result message
+                // instead of returning an error, so that the stream does not
+                // terminate unnecessarily.
                 self.metrics.inc_failures(RequestMetricName::total());
-                Err(e).into_internal_error("failed to handle message")
+                Err(e)
             }
             Ok(plaintext_response) => Ok(Some(
                 self.server_session

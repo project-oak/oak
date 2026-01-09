@@ -15,7 +15,6 @@
 //
 use std::sync::Arc;
 
-use anyhow::{bail, Context};
 use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info, warn};
@@ -35,7 +34,8 @@ use tokio::{
 use tonic::transport::Channel;
 
 use crate::{
-    context::UserSessionContext, db_client::SharedDbClient, packing::ResponsePacking, MessageType,
+    context::UserSessionContext, db_client::SharedDbClient, packing::ResponsePacking,
+    IntoTonicResult, MessageType,
 };
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.
@@ -133,38 +133,46 @@ impl SealedMemorySessionHandler {
     pub async fn add_memory_handler(
         &self,
         request: AddMemoryRequest,
-    ) -> anyhow::Result<AddMemoryResponse> {
+    ) -> tonic::Result<AddMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
-        let memory = request.memory.context("memory not set in AddMemoryRequest")?;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let memory = request.memory.into_invalid_argument("memory not set in AddMemoryRequest")?;
 
-        let memory_id = database.add_memory(memory).await?;
+        let memory_id =
+            database.add_memory(memory).await.into_internal_error("failed to add memory")?;
         Ok(AddMemoryResponse { id: memory_id.to_string() })
     }
 
     pub async fn get_memories_handler(
         &self,
         request: GetMemoriesRequest,
-    ) -> anyhow::Result<GetMemoriesResponse> {
+    ) -> tonic::Result<GetMemoriesResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
-        let page_token = PageToken::try_from(request.page_token)
-            .map_err(|e| anyhow::anyhow!("Invalid page token: {}", e))?;
+        let page_token =
+            PageToken::try_from(request.page_token).into_invalid_argument("invalid page token")?;
         let (memories, next_page_token) = database
             .get_memories_by_tag(&request.tag, &request.result_mask, request.page_size, page_token)
-            .await?;
+            .await
+            .into_internal_error("failed to get memories by tag")?;
         Ok(GetMemoriesResponse { memories, next_page_token: next_page_token.into() })
     }
 
     pub async fn get_memory_by_id_handler(
         &self,
         request: GetMemoryByIdRequest,
-    ) -> anyhow::Result<GetMemoryByIdResponse> {
+    ) -> tonic::Result<GetMemoryByIdResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
-        let memory = database.get_memory_by_id(request.id, &request.result_mask).await?;
+        let memory = database
+            .get_memory_by_id(request.id, &request.result_mask)
+            .await
+            .into_internal_error("failed to get memory by id")?;
         let success = memory.is_some();
         Ok(GetMemoryByIdResponse { memory, success })
     }
@@ -172,11 +180,12 @@ impl SealedMemorySessionHandler {
     pub async fn reset_memory_handler(
         &self,
         _request: ResetMemoryRequest,
-    ) -> anyhow::Result<ResetMemoryResponse> {
+    ) -> tonic::Result<ResetMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
-        database.reset_memory().await?;
+        database.reset_memory().await.into_internal_error("failed to reset memory")?;
         Ok(ResetMemoryResponse { success: true, ..Default::default() })
     }
 
@@ -187,7 +196,7 @@ impl SealedMemorySessionHandler {
         key_derivation_info: KeyDerivationInfo,
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         is_json: bool,
-    ) -> anyhow::Result<()> {
+    ) -> tonic::Result<()> {
         let (database, database_version) = get_or_create_db(&mut db_client, &uid, &dek).await?;
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
@@ -210,36 +219,48 @@ impl SealedMemorySessionHandler {
         &self,
         request: UserRegistrationRequest,
         is_json: bool,
-    ) -> anyhow::Result<UserRegistrationResponse> {
+    ) -> tonic::Result<UserRegistrationResponse> {
         if request.key_encryption_key.is_empty() {
-            bail!("key_encryption_key not set in UserRegistrationRequest");
+            return Err(tonic::Status::invalid_argument(
+                "key_encryption_key not set in UserRegistrationRequest",
+            ));
         }
         if request.pm_uid.is_empty() {
-            bail!("pm_uid not set in UserRegistrationRequest");
+            return Err(tonic::Status::invalid_argument(
+                "pm_uid not set in UserRegistrationRequest",
+            ));
         }
-        let boot_strap_info = request
-            .boot_strap_info
-            .context("boot_strap_info (KeyDerivationInfo) not set in UserRegistrationRequest")?;
+        let boot_strap_info = request.boot_strap_info.into_invalid_argument(
+            "boot_strap_info (KeyDerivationInfo) not set in UserRegistrationRequest",
+        )?;
 
         let key = request.key_encryption_key;
         let uid = request.pm_uid;
 
         if !Self::is_valid_key(&key) {
-            bail!("Not a valid key!");
+            return Err(tonic::Status::invalid_argument(
+                "Invalid key length in key_encryption_key: only 256-bit key is supported",
+            ));
         }
 
         let mut db_client = self
             .db_client
             .get_or_connect()
             .await
-            .context("Failed to get DB client for bootstrap operation")?;
+            .into_internal_error("Failed to get DB client for bootstrap operation")?;
 
-        if let Some(data_blob) = db_client.get_unencrypted_blob(&uid, true).await? {
+        if let Some(data_blob) = db_client
+            .get_unencrypted_blob(&uid, true)
+            .await
+            .into_internal_error("Failed to get unencrypted blob")?
+        {
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
                 .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
-                .context("Failed to decode PlainTextUserInfo")?;
-            let key_derivation_info =
-                plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
+                .into_internal_error("Failed to decode PlainTextUserInfo")?;
+            let key_derivation_info = plain_text_info
+                .key_derivation_info
+                .clone()
+                .into_internal_error("Empty key derivation info")?;
 
             info!("User have been registered!, {}", uid);
             return Ok(UserRegistrationResponse {
@@ -256,7 +277,10 @@ impl SealedMemorySessionHandler {
         rand::rng().fill(&mut dek);
         let dek: Vec<u8> = dek.into();
         let nonce = generate_nonce();
-        let wrapped_key = EncryptedDataBlob { data: encrypt(&key, &nonce, &dek)?, nonce };
+        let wrapped_key = EncryptedDataBlob {
+            data: encrypt(&key, &nonce, &dek).into_internal_error("failed to encrypt data blob")?,
+            nonce,
+        };
 
         let new_plain_text_info = PlainTextUserInfo {
             key_derivation_info: Some(boot_strap_info.clone()),
@@ -269,7 +293,7 @@ impl SealedMemorySessionHandler {
                 None,
             )
             .await
-            .context("Failed to write blobs")?;
+            .into_internal_error("Failed to write blobs")?;
 
         info!("Successfully registered new user {}", uid);
         self.setup_user_session_context(
@@ -290,7 +314,7 @@ impl SealedMemorySessionHandler {
         &self,
         request: KeySyncRequest,
         is_json: bool,
-    ) -> anyhow::Result<KeySyncResponse> {
+    ) -> tonic::Result<KeySyncResponse> {
         if request.key_encryption_key.is_empty() || request.pm_uid.is_empty() {
             return Ok(KeySyncResponse { status: key_sync_response::Status::InvalidPmUid.into() });
         }
@@ -304,23 +328,30 @@ impl SealedMemorySessionHandler {
             .db_client
             .get_or_connect()
             .await
-            .context("Failed to get DB client for key sync")?;
+            .into_internal_error("Failed to get DB client for key sync")?;
         let key_derivation_info;
         let dek: Vec<u8>;
 
-        if let Some(data_blob) = db_client.clone().get_unencrypted_blob(&uid, true).await? {
+        if let Some(data_blob) = db_client
+            .clone()
+            .get_unencrypted_blob(&uid, true)
+            .await
+            .into_internal_error("Failed to get unencrypted blob")?
+        {
             let plain_text_info = PlainTextUserInfo::decode(&*data_blob.blob)
                 .inspect_err(|_| self.metrics.inc_user_info_deserialization_failures())
-                .context("Failed to decode PlainTextUserInfo")?;
-            key_derivation_info =
-                plain_text_info.key_derivation_info.clone().context("Empty key derivation info")?;
+                .into_internal_error("Failed to decode PlainTextUserInfo")?;
+            key_derivation_info = plain_text_info
+                .key_derivation_info
+                .clone()
+                .into_internal_error("Empty key derivation info")?;
             let wrapped_dek = plain_text_info
                 .wrapped_dek
                 .clone()
-                .context("Empty wrapped dek")?
+                .into_internal_error("Empty wrapped dek")?
                 .wrapped_key
                 .clone()
-                .context("Empty wrapped dek")?;
+                .into_internal_error("Empty wrapped dek")?;
             dek = if let Ok(dek) = decrypt(&key, &wrapped_dek.nonce, &wrapped_dek.data) {
                 dek
             } else {
@@ -335,7 +366,7 @@ impl SealedMemorySessionHandler {
 
         self.setup_user_session_context(uid, dek, key_derivation_info, db_client, is_json)
             .await
-            .context("Failed to setup user session context")?;
+            .into_internal_error("Failed to setup user session context")?;
 
         let cleanup_start_time = Instant::now();
         self.clean_expired_memories().await.unwrap_or_else(|e| {
@@ -347,12 +378,16 @@ impl SealedMemorySessionHandler {
         Ok(KeySyncResponse { status: key_sync_response::Status::Success.into() })
     }
 
-    async fn clean_expired_memories(&self) -> anyhow::Result<()> {
+    async fn clean_expired_memories(&self) -> tonic::Result<()> {
         info!("Cleaning up expired memories.");
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("failed to get database")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("failed to get database")?.database;
 
-        let num_cleaned_memories = database.clean_expired_memories().await?;
+        let num_cleaned_memories = database
+            .clean_expired_memories()
+            .await
+            .into_internal_error("failed to clean memories")?;
         get_global_metrics().record_db_cleanup_count(num_cleaned_memories);
         Ok(())
     }
@@ -360,22 +395,25 @@ impl SealedMemorySessionHandler {
     pub async fn search_memory_handler(
         &self,
         request: SearchMemoryRequest,
-    ) -> anyhow::Result<SearchMemoryResponse> {
+    ) -> tonic::Result<SearchMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
         // The extraction of embedding details is now done in
         // IcingMetaDatabase::embedding_search
-        let (results, next_page_token) = database.search_memory(request).await?;
+        let (results, next_page_token) =
+            database.search_memory(request).await.into_internal_error("failed to search memory")?;
         Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
     }
 
     pub async fn delete_memory_handler(
         &self,
         request: DeleteMemoryRequest,
-    ) -> anyhow::Result<DeleteMemoryResponse> {
+    ) -> tonic::Result<DeleteMemoryResponse> {
         let mut mutex_guard = self.session_context().await;
-        let database = &mut mutex_guard.as_mut().context("call key sync first")?.database;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
 
         let memory_ids: Vec<MemoryId> = request.ids.into_iter().collect();
         Ok(DeleteMemoryResponse {
@@ -390,15 +428,15 @@ impl SealedMemorySessionHandler {
     /// that is a string. In a real implementation, we'd probably
     /// deserialize into a proto, and dispatch to various handlers from
     /// there.
-    pub async fn handle(&self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub async fn handle(&self, request_bytes: &[u8]) -> tonic::Result<Vec<u8>> {
         let request = self
             .deserialize_request(request_bytes)
             .await
-            .context("failed to deserialize request")?;
+            .into_internal_error("failed to deserialize request")?;
         let mut message_type = None;
 
         let request_id = request.request_id;
-        let request_variant = request.request.context("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
+        let request_variant = request.request.into_invalid_argument("The request is empty. The json format might be incorrect: the data type should strictly match.")?;
 
         let metric_name = RequestMetricName::new_sealed_memory_request(&request_variant);
         self.metrics.inc_requests(metric_name.clone());
@@ -439,7 +477,9 @@ impl SealedMemorySessionHandler {
         self.metrics.record_latency(elapsed_time, metric_name);
         response.request_id = request_id;
 
-        self.serialize_response(&response, message_type).await
+        self.serialize_response(&response, message_type)
+            .await
+            .into_internal_error("failed to serialize response")
     }
 }
 
@@ -447,20 +487,22 @@ async fn get_or_create_db(
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
-) -> anyhow::Result<(IcingMetaDatabase, String)> {
+) -> tonic::Result<(IcingMetaDatabase, String)> {
     if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
-        db_client.get_metadata_blob(uid).await?
+        db_client.get_metadata_blob(uid).await.into_internal_error("Failed to get metadata blob")?
     {
         info!("Loaded database from blob: Length: {}", encrypted_data_blob.data.len());
         let encrypted_info = decrypt_database(encrypted_data_blob, dek)
-            .inspect_err(|_| get_global_metrics().inc_db_decryption_failures())?;
+            .inspect_err(|_| get_global_metrics().inc_db_decryption_failures())
+            .into_internal_error("failed to decrypt database")?;
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
             info!("Loaded database successfully!!");
             let db = IcingMetaDatabase::import(
                 IcingTempDir::new("sm-server-icing-"),
                 icing_db.encode_to_vec().as_slice(),
-            )?;
+            )
+            .into_internal_error("failed to import database")?;
             let elapsed = now.elapsed();
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
             return Ok((db, version));
@@ -473,6 +515,7 @@ async fn get_or_create_db(
     // somehow did not exist.
     // The version is empty, indicating that we can unconditionally write the
     // database.
-    let db = IcingMetaDatabase::new(IcingTempDir::new("sm-server-icing-"))?;
+    let db = IcingMetaDatabase::new(IcingTempDir::new("sm-server-icing-"))
+        .into_internal_error("failed to create database")?;
     Ok((db, String::new()))
 }
