@@ -35,7 +35,7 @@ use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
 
 use crate::{
     context::UserSessionContext, db_client::SharedDbClient, handler::SealedMemorySessionHandler,
-    ApplicationConfig,
+    ApplicationConfig, IntoTonicResult,
 };
 
 // The struct that holds the service implementation.
@@ -59,7 +59,7 @@ impl SealedMemoryServiceImplementation {
         }
     }
 
-    fn new_oak_session_handler(&self) -> anyhow::Result<OakSessionHandler> {
+    fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
         OakSessionHandler::new(&self.metrics, &self.persistence_tx, self.db_client.clone())
     }
 }
@@ -79,12 +79,13 @@ impl OakSessionHandler {
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
-    ) -> anyhow::Result<Self> {
+    ) -> tonic::Result<Self> {
         Ok(Self {
             metrics: metrics.clone(),
             server_session: ServerSession::create(
                 SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-            )?,
+            )
+            .into_failed_precondition("failed to initialize oak session")?,
             application_handler: SealedMemorySessionHandler::new(
                 metrics.clone(),
                 persistence_tx.clone(),
@@ -98,9 +99,8 @@ impl OakSessionHandler {
         request: tonic::Result<SealedMemorySessionRequest>,
     ) -> tonic::Result<Option<SessionResponse>> {
         self.metrics.inc_requests(RequestMetricName::total());
-        let session_request = request?
-            .session_request
-            .ok_or_else(|| tonic::Status::internal("failed to get session request"))?;
+        let session_request =
+            request?.session_request.into_invalid_argument("request is missing session request")?;
         self.handle_session_request(session_request).await
     }
 
@@ -130,14 +130,14 @@ impl OakSessionHandler {
         self.metrics.inc_requests(RequestMetricName::handshake());
         self.server_session
             .handle_init_message(session_request)
-            .into_tonic_result("failed to handle init request")?;
+            .into_internal_error("failed to handle init request")?;
 
         // The server may optionally need to send an init response.
         if !self.server_session.is_open() {
             match self
                 .server_session
                 .next_init_message()
-                .into_tonic_result("failed to get next init message")
+                .into_internal_error("failed to get next init message")
             {
                 Ok(r) => Ok(Some(r)),
                 Err(e) => {
@@ -157,29 +157,19 @@ impl OakSessionHandler {
         let decrypted_request = self
             .server_session
             .decrypt(session_request)
-            .into_tonic_result("failed to decrypt request")?;
+            .into_invalid_argument("failed to decrypt request")?;
 
         match self.application_handler.handle(&decrypted_request).await {
             Err(e) => {
                 self.metrics.inc_failures(RequestMetricName::total());
-                Err(e).into_tonic_result("failed to handle message")
+                Err(e).into_internal_error("failed to handle message")
             }
             Ok(plaintext_response) => Ok(Some(
                 self.server_session
                     .encrypt(plaintext_response)
-                    .into_tonic_result("failed to encrypt response")?,
+                    .into_internal_error("failed to encrypt response")?,
             )),
         }
-    }
-}
-
-trait IntoTonicResult<T> {
-    fn into_tonic_result(self, context: &str) -> tonic::Result<T>;
-}
-
-impl<T> IntoTonicResult<T> for anyhow::Result<T> {
-    fn into_tonic_result(self, context: &str) -> tonic::Result<T> {
-        self.map_err(|e| tonic::Status::internal(format!("{context}: {e:?}")))
     }
 }
 
@@ -195,8 +185,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SessionRequest>>,
     ) -> Result<tonic::Response<Self::InvokeStream>, tonic::Status> {
-        let mut oak_session_handler =
-            self.new_oak_session_handler().into_tonic_result("Failed to create session handler")?;
+        let mut oak_session_handler = self.new_oak_session_handler()?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
@@ -214,8 +203,7 @@ impl SealedMemoryService for SealedMemoryServiceImplementation {
         &self,
         request: tonic::Request<tonic::Streaming<SealedMemorySessionRequest>>,
     ) -> Result<tonic::Response<Self::StartSessionStream>, tonic::Status> {
-        let mut oak_session_handler =
-            self.new_oak_session_handler().into_tonic_result("Failed to create session handler")?;
+        let mut oak_session_handler = self.new_oak_session_handler()?;
 
         let mut request_stream = request.into_inner();
         let response_stream = async_stream::try_stream! {
