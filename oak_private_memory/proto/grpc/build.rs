@@ -13,19 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{env, path::Path};
+use std::{env, path::PathBuf};
 
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let oak_proto_path_env = "OAK_PROTO_PATH";
-    let val = env::var(oak_proto_path_env).unwrap();
-    let path = Path::new(&val);
-    let path_str = path.parent().unwrap().parent().unwrap().parent().unwrap();
+    let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
+    let oak_runfiles_path =
+        runfiles::rlocation!(r, "oak").expect("Couldn't get runfile path for oak");
 
     let mut included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
-    included_protos.push(path_str.to_path_buf());
+    included_protos.push(oak_runfiles_path);
 
     let proto_paths = ["../../proto/sealed_memory.proto", "../../proto/database.proto"];
     generate_grpc_code(
