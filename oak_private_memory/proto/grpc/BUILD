@@ -36,6 +36,7 @@ cargo_build_script(
         "//proto:sealed_memory.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
+        "@googleapis//google/rpc:status.proto",
         "@oak//proto:digest.proto",
         "@oak//proto:validity.proto",
         "@oak//proto:variant.proto",

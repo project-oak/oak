@@ -21,10 +21,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
     let oak_runfiles_path =
         runfiles::rlocation!(r, "oak").expect("Couldn't get runfile path for oak");
+    let googleapis_runfile_path =
+        runfiles::rlocation!(r, "googleapis").expect("Couldn't get runfile path for googleapis");
 
     let mut included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
     included_protos.push(oak_runfiles_path);
+    included_protos.push(googleapis_runfile_path);
 
     let proto_paths = ["../../proto/sealed_memory.proto", "../../proto/database.proto"];
     generate_grpc_code(

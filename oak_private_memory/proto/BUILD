@@ -32,6 +32,7 @@ proto_library(
     ],
     deps = [
         "@com_google_protobuf//:timestamp_proto",
+        "@googleapis//google/rpc:status_proto",
         "@oak//proto/session:session_proto",
     ],
 )
@@ -51,6 +52,7 @@ cargo_build_script(
         ":sealed_memory.proto",
         "@com_google_protobuf//:descriptor_proto_srcs",
         "@com_google_protobuf//:well_known_type_protos",
+        "@googleapis//google/rpc:status.proto",
         "@oak//proto:digest.proto",
         "@oak//proto:validity.proto",
         "@oak//proto:variant.proto",

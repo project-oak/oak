@@ -22,6 +22,7 @@ syntax = "proto3";
 package oak.private_memory;
 
 import "google/protobuf/timestamp.proto";
+import "google/rpc/status.proto";
 import "proto/session/session.proto";
 
 message Embedding {
@@ -419,6 +420,22 @@ message SealedMemoryResponse {
     SearchMemoryResponse search_memory_response = 7;
     UserRegistrationResponse user_registration_response = 8;
     DeleteMemoryResponse delete_memory_response = 9;
+
+    // A non-OK status result for a given request.
+    //
+    // If a request is successful, the corresponding response message above will
+    // be populated and returned. This implies an "OK" status result, and no
+    // Status message will be explicitly sent.
+    //
+    // If a provided request was not successful, the server will populate this
+    // field with the error status, rather than sending a response with the
+    // corresponding response type, and the request should be considered
+    // completed.
+    //
+    // TODO: b/474398323 - Update clients to check for this variant.
+    // TODO: b/474398548 - Update Sealed Memory server to populate this variant
+    // for error conditions.
+    google.rpc.Status error_status = 100;
   }
 
   // Propagated from the request_id from the request.

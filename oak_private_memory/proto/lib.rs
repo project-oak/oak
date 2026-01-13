@@ -15,6 +15,12 @@
 
 pub mod prelude;
 
+pub mod google {
+    pub mod rpc {
+        tonic::include_proto!("google.rpc");
+    }
+}
+
 pub mod oak {
     pub mod private_memory {
         tonic::include_proto!("oak.private_memory");
@@ -394,5 +400,22 @@ pub mod non_optional_timestamp_converter {
             seconds: datetime.timestamp(),
             nanos: datetime.timestamp_subsec_nanos() as i32,
         })
+    }
+}
+
+pub mod prost_types_any_converter {
+    use prost_types::Any;
+    use serde::{Deserializer, Serializer};
+    // google.rpc.Status contains an Any field, so we need a serializer for it.
+    // But we don't currently use this field, so the implementation is a no-op
+    // for now.
+    //
+    // If we end up using it, and supporting JSON serialization, each type we
+    // intend to support will need to be explicitly handled here.
+    pub fn serialize<S: Serializer>(_v: &[Any], _s: S) -> Result<S::Ok, S::Error> {
+        Err(serde::ser::Error::custom("serialization of prost_types::Any is not supported yet."))
+    }
+    pub fn deserialize<'de, D: Deserializer<'de>>(_d: D) -> Result<Vec<Any>, D::Error> {
+        Err(serde::de::Error::custom("deserialization of prost_types::Any is not supported yet."))
     }
 }

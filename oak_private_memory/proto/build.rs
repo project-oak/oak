@@ -18,10 +18,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
     let oak_runfiles_path =
         runfiles::rlocation!(r, "oak").expect("Couldn't get runfile path for oak");
+    let googleapis_runfile_path =
+        runfiles::rlocation!(r, "googleapis").expect("Couldn't get runfile path for googleapis");
 
     let mut included_protos = oak_proto_build_utils::get_common_proto_path("..");
-
     included_protos.push(oak_runfiles_path);
+    included_protos.push(googleapis_runfile_path);
 
     let proto_paths =
         ["../proto/sealed_memory.proto", "../proto/database.proto", "../proto/internal.proto"];
@@ -29,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = prost_build::Config::new();
 
     let annotate_types = [
+        "google.rpc.Status",
         "oak.private_memory.SealedMemoryRequest",
         "oak.private_memory.SealedMemoryResponse",
         "oak.private_memory.Memory",
@@ -154,6 +157,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.field_attribute(
         "oak.private_memory.TextQuery.value.timestamp_val",
         "#[serde(with=\"crate::non_optional_timestamp_converter\")]",
+    );
+    config.field_attribute(
+        "google.rpc.Status.details",
+        "#[serde(with=\"crate::prost_types_any_converter\")]",
     );
 
     config.enable_type_names();
