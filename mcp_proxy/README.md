@@ -46,6 +46,7 @@ endorsement_index_url = "https://raw.githubusercontent.com/your_org/your_repo/re
 # Ensure cosign is installed and in your PATH
 # go install github.com/sigstore/cosign/cmd/cosign@latest
 
+export RUST_LOG=trex_client=debug,mcp_proxy=debug
 bazel run mcp_proxy -- --config=$PWD/mcp_proxy/config.toml
 ```
 

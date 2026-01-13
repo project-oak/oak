@@ -23,19 +23,19 @@ use url::Url;
 use crate::{BlobFetcher, CASClient, EndorsementIndex, Index};
 
 pub async fn fetch_index(index_url: &str) -> Result<Index> {
-    log::info!("Fetching index from: {index_url}");
+    log::info!("Fetching endorsement index from: {index_url}");
     let resp = reqwest::get(index_url).await.context("fetching index.json")?;
 
     if !resp.status().is_success() {
-        log::error!("Failed to fetch index from {index_url}: {}", resp.status());
-        anyhow::bail!("failed to fetch index from {index_url}: {}", resp.status());
+        log::error!("Failed to fetch endorsement index from {index_url}: {}", resp.status());
+        anyhow::bail!("failed to fetch endorsement index from {index_url}: {}", resp.status());
     }
 
-    let body = resp.bytes().await.context("reading index body")?;
+    let body = resp.bytes().await.context("reading endorsement index body")?;
     let mut index: Index = serde_json::from_slice(&body).context("parsing index.json")?;
 
     // Resolve relative URLs in CAS clients.
-    let base_url = Url::parse(index_url).context("parsing index URL")?;
+    let base_url = Url::parse(index_url).context("parsing endorsement index URL")?;
     for cas_client in &mut index.cas_clients {
         match cas_client {
             CASClient::OCI { url } => {
