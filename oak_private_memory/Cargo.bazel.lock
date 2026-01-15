@@ -450,16 +450,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bmrng"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
-dependencies = [
- "futures-core",
- "tokio",
-]
-
-[[package]]
 name = "bstr"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1319,7 +1309,6 @@ dependencies = [
  "base64 0.21.7",
  "bitflags 2.9.1",
  "bitvec",
- "bmrng",
  "bytes",
  "chrono",
  "ciborium",

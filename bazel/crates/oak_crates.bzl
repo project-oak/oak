@@ -379,7 +379,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "0.7.9",
     ),
-    "bmrng": crate.spec(version = "0.5.2"),
     "clap": crate.spec(
         features = [
             "derive",

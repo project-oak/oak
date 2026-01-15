@@ -1,5 +1,5 @@
 {
-  "checksum": "94bbac4ad28a8b9ab5d02cb6d1be9dbc0cea405bf4d07d8ff16b39fa88e2f899",
+  "checksum": "6215458ae37680769f1e321be2d9a76ed8a788b38f1ad16f76a81709e0acc190",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2706,58 +2706,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "bmrng 0.5.2": {
-      "name": "bmrng",
-      "version": "0.5.2",
-      "package_url": "https://github.com/oguzbilgener/bmrng",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/bmrng/0.5.2/download",
-          "sha256": "d54df9073108f1558f90ae6c5bf5ab9c917c4185f5527b280c87a993cbead0ac"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "bmrng",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "bmrng",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "futures-core 0.3.31",
-              "target": "futures_core"
-            },
-            {
-              "id": "tokio 1.45.1",
-              "target": "tokio"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.5.2"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE"
     },
     "bstr 1.12.0": {
       "name": "bstr",
@@ -7877,10 +7825,6 @@
             {
               "id": "bitvec 1.0.1",
               "target": "bitvec"
-            },
-            {
-              "id": "bmrng 0.5.2",
-              "target": "bmrng"
             },
             {
               "id": "bytes 1.10.1",
@@ -43249,7 +43193,6 @@
     "base64 0.21.7",
     "bitflags 2.9.1",
     "bitvec 1.0.1",
-    "bmrng 0.5.2",
     "bytes 1.10.1",
     "chrono 0.4.41",
     "ciborium 0.2.2",
