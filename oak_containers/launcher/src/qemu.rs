@@ -243,9 +243,9 @@ impl Qemu {
             "brd.rd_nr=1".to_string(),
             format!("brd.rd_size={ramdrive_size}"),
             "brd.max_part=1".to_string(),
-            format!("ip={vm_address}:::255.255.255.0::eth0:off"),
             "loglevel=7".to_string(),
             "--".to_string(),
+            format!("--eth0-address={vm_address}/24"),
             format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
         ];
 

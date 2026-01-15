@@ -25,6 +25,7 @@ use std::{
     error::Error,
     fs::{self, create_dir},
     io::ErrorKind,
+    net::IpAddr,
     path::Path,
     str::FromStr,
     time::Instant,
@@ -46,6 +47,9 @@ use x86_64::PhysAddr;
 
 #[derive(Parser, Debug)]
 pub struct Args {
+    #[arg(long, value_delimiter = ',')]
+    pub eth0_address: Vec<String>,
+
     #[arg(long, default_value = "http://10.0.2.100:8080")]
     pub launcher_addr: Uri,
 
@@ -104,6 +108,31 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         .read_into_attester()?
     };
 
+    // Configure the network, if requested.
+    let (connection, handle, _) =
+        rtnetlink::new_connection().context("error opening netlink connection")?;
+    tokio::spawn(connection);
+
+    // `ip link show eth0`
+    let mut links = handle.link().get().match_name("eth0".to_string()).execute();
+
+    let link = links.try_next().await?;
+
+    if let Some(ref link) = link {
+        for address in &args.eth0_address {
+            let (address, prefix_len) = address.split_once('/').context("invalid IP address")?;
+            let address = IpAddr::from_str(address).context("invalid IP address")?;
+            let prefix_len = u8::from_str(prefix_len).context("invalid prefix length")?;
+
+            // `ip addr add`
+            handle.address().add(link.header.index, address, prefix_len).execute().await?;
+        }
+        // `ip link set dev $INDEX up`
+        handle.link().set(link.header.index).up().execute().await?;
+    } else {
+        eprintln!("warning: eth0 not found");
+    }
+
     let mut client = LauncherClient::new(args.launcher_addr.clone())
         .await
         .context("error creating the launcher client")?;
@@ -157,20 +186,9 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
 
     // Configure eth0 down, as systemd will want to manage it itself and gets
     // confused if it already has an IP address.
-    {
-        let (connection, handle, _) =
-            rtnetlink::new_connection().context("error opening netlink connection")?;
-        tokio::spawn(connection);
-
-        // `ip link show eth0`
-        let mut links = handle.link().get().match_name("eth0".to_string()).execute();
-
-        if let Some(link) = links.try_next().await? {
-            // `ip link set dev $INDEX down`
-            handle.link().set(link.header.index).down().execute().await?;
-        } else {
-            println!("warning: eth0 not found");
-        }
+    if let Some(link) = link {
+        // `ip link set dev $INDEX down`
+        handle.link().set(link.header.index).down().execute().await?;
     }
 
     // We're not running under Docker, so if the system image has a lingering
