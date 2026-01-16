@@ -177,6 +177,11 @@ wasm-crates:
 list-bare-metal-crates:
     bazel query "{{bare_metal_crates_query}}"
 
+rk-comms-benchmark:
+    bazel run -c opt //oak_restricted_kernel_benchmark:basic_comms_bench -- --bench
+
+benchmarks: rk-comms-benchmark
+
 bazel-clippy: bare-metal-clippy std-clippy wasm-clippy
 
 std-clippy:
