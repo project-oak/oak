@@ -17,9 +17,9 @@
 use alloc::vec::Vec;
 
 use anyhow::Context;
-use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
+use oak_proto_rust::oak::session::v1::PlaintextMessage;
 
-use crate::{ClientSession, ProtocolEngine, ServerSession, session::Session};
+use crate::{ProtocolEngine, session::Session};
 
 /// A convenience implementation for encryption/decryption for a session.
 ///
@@ -36,8 +36,11 @@ use crate::{ClientSession, ProtocolEngine, ServerSession, session::Session};
 ///
 /// You can use [`SessionInitializer`] to help manage the initialization
 /// sequence needed to open the session.
-pub trait SessionChannel<I, O>: ProtocolEngine<I, O> + Session {
-    fn encrypt(&mut self, plaintext: impl Into<Vec<u8>>) -> anyhow::Result<O> {
+pub trait SessionChannel: ProtocolEngine + Session {
+    fn encrypt(
+        &mut self,
+        plaintext: impl Into<Vec<u8>>,
+    ) -> anyhow::Result<<Self as ProtocolEngine>::Output> {
         anyhow::ensure!(self.is_open(), "Session is not open");
         self.write(PlaintextMessage { plaintext: plaintext.into() })
             .context("writing message for encryption")?;
@@ -46,7 +49,10 @@ pub trait SessionChannel<I, O>: ProtocolEngine<I, O> + Session {
             .context("(Library Error, please report) unexpectedly empty outgoing message")
     }
 
-    fn decrypt(&mut self, incoming_message: I) -> anyhow::Result<Vec<u8>> {
+    fn decrypt(
+        &mut self,
+        incoming_message: <Self as ProtocolEngine>::Input,
+    ) -> anyhow::Result<Vec<u8>> {
         anyhow::ensure!(self.is_open(), "Session is not open");
         self.put_incoming_message(incoming_message).context("putting incoming message")?;
         Ok(self
@@ -57,9 +63,7 @@ pub trait SessionChannel<I, O>: ProtocolEngine<I, O> + Session {
     }
 }
 
-impl SessionChannel<SessionResponse, SessionRequest> for ClientSession {}
-impl SessionChannel<SessionRequest, SessionResponse> for ServerSession {}
-
+impl<S: ProtocolEngine + Session> SessionChannel for S {}
 /// A trait that helps to implement the initialization logic for an Oak Session.
 ///
 /// This abstraction is designed to be simple to use, but flexible enough for
@@ -94,20 +98,22 @@ impl SessionChannel<SessionRequest, SessionResponse> for ServerSession {}
 ///     }
 /// }
 /// ```
-pub trait SessionInitializer<I, O>: ProtocolEngine<I, O> + Session {
-    fn next_init_message(&mut self) -> anyhow::Result<O> {
+pub trait SessionInitializer: ProtocolEngine + Session {
+    fn next_init_message(&mut self) -> anyhow::Result<<Self as ProtocolEngine>::Output> {
         anyhow::ensure!(!self.is_open(), "Session already open");
         self.get_outgoing_message()
             .context("getting next outgoing message")?
             .context("unexpected empty first init message")
     }
 
-    fn handle_init_message(&mut self, response: I) -> anyhow::Result<()> {
+    fn handle_init_message(
+        &mut self,
+        response: <Self as ProtocolEngine>::Input,
+    ) -> anyhow::Result<()> {
         anyhow::ensure!(!self.is_open(), "Session already open");
         self.put_incoming_message(response).context("putting incoming message")?;
         Ok(())
     }
 }
 
-impl SessionInitializer<SessionResponse, SessionRequest> for ClientSession {}
-impl SessionInitializer<SessionRequest, SessionResponse> for ServerSession {}
+impl<S: ProtocolEngine + Session> SessionInitializer for S {}

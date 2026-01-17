@@ -105,10 +105,12 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
 
     log::info!("[Client] Oak Session established with server proxy.");
 
-    proxy::<
-        ClientSession,
-        oak_proto_rust::oak::session::v1::SessionResponse,
-        oak_proto_rust::oak::session::v1::SessionRequest,
-    >(PeerRole::Client, session, app_stream, server_proxy_stream, config.keep_alive_interval)
+    proxy::<ClientSession>(
+        PeerRole::Client,
+        session,
+        app_stream,
+        server_proxy_stream,
+        config.keep_alive_interval,
+    )
     .await
 }

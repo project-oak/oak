@@ -18,7 +18,7 @@
 
 extern crate alloc;
 use alloc::{vec, vec::Vec};
-use core::{default::Default, marker::PhantomData};
+use core::default::Default;
 
 use oak_channel::{Read, Write};
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
@@ -49,22 +49,16 @@ impl<T: Read + Write> MessageStream for T {
 }
 
 // A message stream implemented as a noise session over a message stream.
-pub struct NoiseMessageStream<MS: MessageStream, I, O, S>
+pub struct NoiseMessageStream<MS: MessageStream, S>
 where
-    I: prost::Message + Default,
-    O: prost::Message + Default,
-    S: ProtocolEngine<I, O> + Session,
+    S: ProtocolEngine + Session,
 {
     message_stream: MS,
     session: S,
-    _phantom_i: PhantomData<I>,
-    _phantom_o: PhantomData<O>,
 }
 
-pub type ClientNoiseMessageStream<MS> =
-    NoiseMessageStream<MS, SessionResponse, SessionRequest, ClientSession>;
-pub type ServerNoiseMessageStream<MS> =
-    NoiseMessageStream<MS, SessionRequest, SessionResponse, ServerSession>;
+pub type ClientNoiseMessageStream<MS> = NoiseMessageStream<MS, ClientSession>;
+pub type ServerNoiseMessageStream<MS> = NoiseMessageStream<MS, ServerSession>;
 
 impl<MS: MessageStream> ClientNoiseMessageStream<MS> {
     // Create a new client session for the provided message stream, and perform
@@ -93,12 +87,7 @@ impl<MS: MessageStream> ClientNoiseMessageStream<MS> {
                     .expect("failed to put incoming message");
             }
         }
-        NoiseMessageStream {
-            message_stream,
-            session,
-            _phantom_i: PhantomData,
-            _phantom_o: PhantomData,
-        }
+        NoiseMessageStream { message_stream, session }
     }
 }
 
@@ -127,12 +116,7 @@ impl<MS: MessageStream> ServerNoiseMessageStream<MS> {
                 message_stream.send_message(resp.encode_to_vec().as_slice());
             }
         }
-        NoiseMessageStream {
-            message_stream,
-            session,
-            _phantom_i: PhantomData,
-            _phantom_o: PhantomData,
-        }
+        NoiseMessageStream { message_stream, session }
     }
 }
 
@@ -142,15 +126,15 @@ impl<MS: MessageStream> ServerNoiseMessageStream<MS> {
 ///
 /// The length encoding is outside of the encrypted payload, so that reading can
 /// occur as expected.
-impl<MS: MessageStream, I, O, S> MessageStream for NoiseMessageStream<MS, I, O, S>
+impl<MS: MessageStream, S> MessageStream for NoiseMessageStream<MS, S>
 where
-    I: prost::Message + Default,
-    O: prost::Message + Default,
-    S: ProtocolEngine<I, O> + Session,
+    S: ProtocolEngine + Session,
+    S::Input: prost::Message + Default,
+    S::Output: prost::Message,
 {
     fn read_message(&mut self) -> Vec<u8> {
         let incoming_bytes = self.message_stream.read_message();
-        let incoming_message = <I as prost::Message>::decode(incoming_bytes.as_slice())
+        let incoming_message = <S::Input as prost::Message>::decode(incoming_bytes.as_slice())
             .expect("failed to decode incoming encrypted message");
         self.session
             .put_incoming_message(incoming_message)

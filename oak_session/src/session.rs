@@ -561,7 +561,9 @@ impl Session for ClientSession {
     }
 }
 
-impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
+impl ProtocolEngine for ClientSession {
+    type Input = SessionResponse;
+    type Output = SessionRequest;
     /// Gets the next outgoing `SessionRequest` to be sent to the server.
     ///
     /// Depending on the current `step`:
@@ -778,7 +780,9 @@ impl Session for ServerSession {
     }
 }
 
-impl ProtocolEngine<SessionRequest, SessionResponse> for ServerSession {
+impl ProtocolEngine for ServerSession {
+    type Input = SessionRequest;
+    type Output = SessionResponse;
     /// Gets the next outgoing `SessionResponse` to be sent to the client.
     ///
     /// Depending on the current `step`:

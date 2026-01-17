@@ -47,7 +47,7 @@ impl fmt::Display for PeerRole {
 ///   backend.
 /// - `encrypted_stream`: The stream connected to the remote proxy.
 /// - `session`: The `oak_session` instance.
-pub async fn proxy<S, I, O>(
+pub async fn proxy<S>(
     role: PeerRole,
     mut session: S,
     plaintext_stream: TcpStream,
@@ -55,9 +55,9 @@ pub async fn proxy<S, I, O>(
     keep_alive_interval: Duration,
 ) -> anyhow::Result<()>
 where
-    S: ProtocolEngine<I, O> + Session + Send + 'static,
-    I: Message + Default + Send + 'static,
-    O: Message + Default + Send + 'static,
+    S: ProtocolEngine + Session + Send + 'static,
+    S::Input: prost::Message + Default,
+    S::Output: prost::Message,
 {
     let (mut plaintext_reader, mut plaintext_writer) = tokio::io::split(plaintext_stream);
     let (mut encrypted_writer, mut encrypted_reader) = encrypted_stream.split();
@@ -92,7 +92,7 @@ where
                         } else {
                             log::debug!("[{role}] Peer sent more data.");
                             // let mut session = session.lock().await;
-                            let message = I::decode(data)?;
+                            let message = S::Input::decode(data)?;
                             session.put_incoming_message(message)?;
                             if let Some(plaintext) = session.read()? {
                                 plaintext_writer.write_all(&plaintext.plaintext).await?;

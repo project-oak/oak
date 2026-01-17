@@ -361,7 +361,9 @@ impl AttestationHandler for ClientAttestationHandler {
     }
 }
 
-impl ProtocolEngine<AttestResponse, AttestRequest> for ClientAttestationHandler {
+impl ProtocolEngine for ClientAttestationHandler {
+    type Input = AttestResponse;
+    type Output = AttestRequest;
     /// Gets the next outgoing `AttestRequest` message to be sent to the server.
     ///
     /// For the client, this is typically the initial `AttestRequest` containing
@@ -525,7 +527,9 @@ impl AttestationHandler for ServerAttestationHandler {
     }
 }
 
-impl ProtocolEngine<AttestRequest, AttestResponse> for ServerAttestationHandler {
+impl ProtocolEngine for ServerAttestationHandler {
+    type Input = AttestRequest;
+    type Output = AttestResponse;
     /// Gets the next outgoing `AttestResponse` message to be sent to the
     /// client.
     ///

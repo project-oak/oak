@@ -355,7 +355,9 @@ impl HandshakeHandler for ClientHandshakeHandler {
 
 /// Implements the `ProtocolEngine` for the `ClientHandshakeHandler`, defining
 /// how it exchanges messages with the server during the handshake.
-impl ProtocolEngine<HandshakeResponse, HandshakeRequest> for ClientHandshakeHandler {
+impl ProtocolEngine for ClientHandshakeHandler {
+    type Input = HandshakeResponse;
+    type Output = HandshakeRequest;
     /// Retrieves the next outgoing `HandshakeRequest` to be sent to the server.
     ///
     /// This method is called by the session logic to get the client's messages.
@@ -540,7 +542,9 @@ impl HandshakeHandler for ServerHandshakeHandler {
     }
 }
 
-impl ProtocolEngine<HandshakeRequest, HandshakeResponse> for ServerHandshakeHandler {
+impl ProtocolEngine for ServerHandshakeHandler {
+    type Input = HandshakeRequest;
+    type Output = HandshakeResponse;
     /// Gets the outgoing `HandshakeResponse` to be sent to the client.
     ///
     /// This message is generated after processing the client's initial
