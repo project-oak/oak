@@ -28,7 +28,7 @@ use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
 use tokio_vsock::VMADDR_CID_HOST;
 
-use crate::path_exists;
+use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT};
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -84,18 +84,25 @@ pub struct Params {
     pub vm_type: VmType,
 }
 
+pub enum Network {
+    // Set up a network with the following proxy ports.
+    Proxy {
+        launcher_service_port: u16,
+        host_proxy_port: Option<u16>,
+        host_orchestrator_proxy_port: u16,
+    },
+
+    // Set up TAP networking.
+    Tap,
+}
+
 pub struct Qemu {
     instance: tokio::process::Child,
     guest_cid: Option<u32>,
 }
 
 impl Qemu {
-    pub fn start(
-        params: Params,
-        launcher_service_port: u16,
-        host_proxy_port: Option<u16>,
-        host_orchestrator_proxy_port: u16,
-    ) -> Result<Self> {
+    pub fn start(params: Params, network: Network) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
         cmd.kill_on_drop(true);
@@ -195,20 +202,38 @@ impl Qemu {
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
         let vm_address = crate::VM_LOCAL_ADDRESS;
-        let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
-        let host_address = Ipv4Addr::LOCALHOST;
 
-        let mut netdev_rules = vec![
-            "user".to_string(),
-            "id=netdev".to_string(),
-            format!("guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"),
-            format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
-        ];
-        if let Some(host_proxy_port) = host_proxy_port {
-            let vm_port = crate::VM_LOCAL_PORT;
-            netdev_rules.push(format!(
-                "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
-            ));
+        let netdev_rules = match network {
+            Network::Proxy {
+                launcher_service_port,
+                host_proxy_port,
+                host_orchestrator_proxy_port,
+            } => {
+                let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
+                let host_address = Ipv4Addr::LOCALHOST;
+
+                let mut netdev_rules = vec![
+                    "user".to_string(),
+                    "id=netdev".to_string(),
+                    format!("guestfwd=tcp:{VM_HOST_ADDRESS}:{VM_HOST_PORT}-cmd:nc {host_address} {launcher_service_port}"),
+                    format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
+                ];
+
+                if let Some(host_proxy_port) = host_proxy_port {
+                    let vm_port = crate::VM_LOCAL_PORT;
+                    netdev_rules.push(format!(
+                        "hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"
+                    ));
+                };
+
+                netdev_rules
+            }
+            Network::Tap => vec![
+                "tap".to_string(),
+                "id=netdev".to_string(),
+                "ifname=oak0".to_string(),
+                "script=no".to_string(),
+            ],
         };
         cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args([
@@ -236,6 +261,10 @@ impl Qemu {
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
 
+        let launcher_service_port = match network {
+            Network::Proxy { launcher_service_port, .. } => launcher_service_port,
+            Network::Tap => VM_HOST_PORT,
+        };
         let cmdline = vec![
             params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
             "console=ttyS0".to_string(),

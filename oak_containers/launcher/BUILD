@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(
     default_visibility = ["//:internal"],
@@ -67,4 +68,9 @@ rust_binary(
 alias(
     name = "launcher",
     actual = ":oak_containers_launcher",
+)
+
+sh_binary(
+    name = "nswrap",
+    srcs = ["nswrap.sh"],
 )
