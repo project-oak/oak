@@ -619,7 +619,7 @@ pub struct Evidence {
     /// avoid branching stage 0 or adding a flag system.
     #[prost(message, optional, tag = "5")]
     pub transparent_event_log: ::core::option::Option<EventLog>,
-    /// Arbitrary user data signed by the penultimate layer's ECA key.
+    /// Arbitrary user data signed by the final layer's ECA key.
     #[prost(message, optional, tag = "6")]
     pub signed_user_data_certificate: ::core::option::Option<
         super::super::crypto::v1::Certificate,
