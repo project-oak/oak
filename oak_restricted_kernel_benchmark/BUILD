@@ -45,6 +45,7 @@ rust_binary(
         "//oak_proto_rust",
         "//oak_session",
         "@oak_crates_index//:criterion",
+        "@oak_crates_index//:env_logger",
         "@oak_crates_index//:futures",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",

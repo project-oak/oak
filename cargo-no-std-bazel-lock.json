@@ -1,5 +1,5 @@
 {
-  "checksum": "5283998dc169176f4dd6ccd59c228849a60c23cad929d5c0ba958c4ab8f5cd1b",
+  "checksum": "50bf783dd929893909b8366df652b6c9a8e70e687bd13651db8485e811a80f53",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -315,7 +315,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "zerocopy 0.8.25",
+              "id": "zerocopy 0.8.33",
               "target": "zerocopy"
             }
           ],
@@ -3098,7 +3098,7 @@
               "target": "uart_16550"
             },
             {
-              "id": "virtio-drivers 0.7.5",
+              "id": "virtio-drivers 0.12.0",
               "target": "virtio_drivers"
             },
             {
@@ -3122,7 +3122,7 @@
               "target": "x86_64"
             },
             {
-              "id": "zerocopy 0.8.25",
+              "id": "zerocopy 0.8.33",
               "target": "zerocopy"
             },
             {
@@ -3485,6 +3485,45 @@
         "version": "0.13.8"
       },
       "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "embedded-io 0.6.1": {
+      "name": "embedded-io",
+      "version": "0.6.1",
+      "package_url": "https://github.com/rust-embedded/embedded-hal",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/embedded-io/0.6.1/download",
+          "sha256": "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "embedded_io",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "embedded_io",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "edition": "2021",
+        "version": "0.6.1"
+      },
+      "license": "MIT OR Apache-2.0",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -6515,7 +6554,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.25",
+              "id": "zerocopy 0.8.33",
               "target": "zerocopy"
             }
           ],
@@ -7608,6 +7647,54 @@
         "BSL-1.0"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "safe-mmio 0.2.7": {
+      "name": "safe-mmio",
+      "version": "0.2.7",
+      "package_url": "https://github.com/google/safe-mmio",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/safe-mmio/0.2.7/download",
+          "sha256": "a0a69f884a1511aa811aa94e04559414a66b18ca63f50f84ca31e304f38bad0d"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "safe_mmio",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "safe_mmio",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "zerocopy 0.8.33",
+              "target": "zerocopy"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "0.2.7"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE"
     },
     "scopeguard 1.2.0": {
       "name": "scopeguard",
@@ -9680,14 +9767,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "virtio-drivers 0.7.5": {
+    "virtio-drivers 0.12.0": {
       "name": "virtio-drivers",
-      "version": "0.7.5",
+      "version": "0.12.0",
       "package_url": "https://github.com/rcore-os/virtio-drivers",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/virtio-drivers/0.7.5/download",
-          "sha256": "d6a39747311dabb3d37807037ed1c3c38d39f99198d091b5b79ecd5c8d82f799"
+          "url": "https://static.crates.io/crates/virtio-drivers/0.12.0/download",
+          "sha256": "a7a6012590bf8cc11f57abb1b5a8470e2366353bf352386b48650a87b5538204"
         }
       },
       "targets": [
@@ -9712,7 +9799,8 @@
         "crate_features": {
           "common": [
             "alloc",
-            "default"
+            "default",
+            "embedded-io"
           ],
           "selects": {}
         },
@@ -9723,11 +9811,23 @@
               "target": "bitflags"
             },
             {
+              "id": "embedded-io 0.6.1",
+              "target": "embedded_io"
+            },
+            {
               "id": "log 0.4.27",
               "target": "log"
             },
             {
-              "id": "zerocopy 0.7.35",
+              "id": "safe-mmio 0.2.7",
+              "target": "safe_mmio"
+            },
+            {
+              "id": "thiserror 2.0.12",
+              "target": "thiserror"
+            },
+            {
+              "id": "zerocopy 0.8.33",
               "target": "zerocopy"
             }
           ],
@@ -9743,7 +9843,7 @@
           ],
           "selects": {}
         },
-        "version": "0.7.5"
+        "version": "0.12.0"
       },
       "license": "MIT",
       "license_ids": [
@@ -10886,82 +10986,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy 0.7.35": {
+    "zerocopy 0.8.33": {
       "name": "zerocopy",
-      "version": "0.7.35",
+      "version": "0.8.33",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy/0.7.35/download",
-          "sha256": "1b9b4fd18abc82b8136838da5d50bae7bdea537c574d8dc1a34ed098d6c166f0"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "zerocopy",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "zerocopy",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "alloc",
-            "byteorder",
-            "default",
-            "derive",
-            "zerocopy-derive"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "byteorder 1.5.0",
-              "target": "byteorder"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "zerocopy-derive 0.7.35",
-              "target": "zerocopy_derive"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.7.35"
-      },
-      "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
-      "license_ids": [
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "zerocopy 0.8.25": {
-      "name": "zerocopy",
-      "version": "0.8.25",
-      "package_url": "https://github.com/google/zerocopy",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/zerocopy/0.8.25/download",
-          "sha256": "a1702d9583232ddb9174e01bb7c15a2ab8fb1bc6f227aa1233858c351a3ba0cb"
+          "url": "https://static.crates.io/crates/zerocopy/0.8.33/download",
+          "sha256": "668f5168d10b9ee831de31933dc111a459c97ec93225beb307aed970d1372dfd"
         }
       },
       "targets": [
@@ -10997,6 +11029,7 @@
         ],
         "crate_features": {
           "common": [
+            "alloc",
             "derive",
             "simd",
             "zerocopy-derive"
@@ -11006,7 +11039,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.25",
+              "id": "zerocopy 0.8.33",
               "target": "build_script_build"
             }
           ],
@@ -11016,13 +11049,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "zerocopy-derive 0.8.25",
+              "id": "zerocopy-derive 0.8.33",
               "target": "zerocopy_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.8.25"
+        "version": "0.8.33"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -11043,71 +11076,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy-derive 0.7.35": {
+    "zerocopy-derive 0.8.33": {
       "name": "zerocopy-derive",
-      "version": "0.7.35",
+      "version": "0.8.33",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy-derive/0.7.35/download",
-          "sha256": "fa4f8080344d4671fb4e831a13ad1e68092748387dfc4f55e356242fae12ce3e"
-        }
-      },
-      "targets": [
-        {
-          "ProcMacro": {
-            "crate_name": "zerocopy_derive",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "zerocopy_derive",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "proc-macro2 1.0.95",
-              "target": "proc_macro2"
-            },
-            {
-              "id": "quote 1.0.40",
-              "target": "quote"
-            },
-            {
-              "id": "syn 2.0.101",
-              "target": "syn"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.7.35"
-      },
-      "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
-      "license_ids": [
-        "Apache-2.0",
-        "BSD-2-Clause",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "zerocopy-derive 0.8.25": {
-      "name": "zerocopy-derive",
-      "version": "0.8.25",
-      "package_url": "https://github.com/google/zerocopy",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.25/download",
-          "sha256": "28a6e20d751156648aa063f3800b706ee209a32c0b4d9f24be3d980b01be55ef"
+          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.33/download",
+          "sha256": "2c7962b26b0a8685668b671ee4b54d007a67d4eaf05fda79ac0ecf41e32270f1"
         }
       },
       "targets": [
@@ -11147,7 +11123,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.8.25"
+        "version": "0.8.33"
       },
       "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
       "license_ids": [
@@ -11386,13 +11362,13 @@
     "strum 0.26.3",
     "thiserror 2.0.12",
     "uart_16550 0.3.2",
-    "virtio-drivers 0.7.5",
+    "virtio-drivers 0.12.0",
     "wasm-bindgen 0.2.100",
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
     "x509-verify 0.4.8",
     "x86_64 0.15.2",
-    "zerocopy 0.8.25",
+    "zerocopy 0.8.33",
     "zeroize 1.8.1"
   ],
   "direct_dev_deps": [],

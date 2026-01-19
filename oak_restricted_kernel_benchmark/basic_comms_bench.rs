@@ -54,6 +54,8 @@ async fn start_rk_enclave_server() -> (Box<dyn GuestInstance>, Box<dyn oak_chann
 }
 
 fn test_read_speeds(c: &mut Criterion) {
+    let _ = env_logger::try_init();
+
     // Start the enclave app.
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     let (_instance, mut channel) = rt.block_on(async { start_rk_enclave_server().await });
@@ -84,6 +86,8 @@ fn test_read_speeds(c: &mut Criterion) {
 }
 
 fn test_write_speeds(c: &mut Criterion) {
+    let _ = env_logger::try_init();
+
     // Start the enclave app.
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     let (_instance, mut channel) = rt.block_on(async { start_rk_enclave_server().await });

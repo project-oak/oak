@@ -297,7 +297,7 @@ OAK_NO_STD_ANNOTATIONS = {
 # Crates for the no_std crates index. Crates that are used in all crate indexes
 # should instead be added to _common_crates.
 OAK_NO_STD_CRATES = _common_crates(std = False) | {
-    "virtio-drivers": crate.spec(version = "0.7.3"),
+    "virtio-drivers": crate.spec(version = "0.12.0"),
     # We have to use the exact version that `rules_rust` uses.
     # If `rules_rust` in oak got updated, we also need to adjust the version.
     "wasm-bindgen": crate.spec(version = "=0.2.100"),

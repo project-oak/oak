@@ -26,7 +26,6 @@ use aml::{
 };
 use anyhow::anyhow;
 use log::info;
-use oak_channel::{Read, Write};
 use spinning_top::Spinlock;
 use virtio_drivers::{
     device::console::VirtIOConsole,
@@ -60,7 +59,7 @@ unsafe impl Hal for OakHal {
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(vaddr.as_ptr()))
             .unwrap()
-            .as_u64() as usize;
+            .as_u64();
         (phys_addr, vaddr)
     }
 
@@ -85,7 +84,7 @@ unsafe impl Hal for OakHal {
                 .lock()
                 .get()
                 .unwrap()
-                .translate_physical(PhysAddr::new(paddr as u64))
+                .translate_physical(PhysAddr::new(paddr))
                 .unwrap()
                 .as_mut_ptr(),
         )
@@ -104,7 +103,7 @@ unsafe impl Hal for OakHal {
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(buffer.cast::<u8>().as_ptr()))
             .unwrap()
-            .as_u64() as usize
+            .as_u64()
     }
 
     unsafe fn unshare(
@@ -118,16 +117,16 @@ unsafe impl Hal for OakHal {
 }
 
 #[repr(transparent)]
-pub struct MmioConsoleChannel {
-    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport>>,
+pub struct MmioConsoleChannel<'a> {
+    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport<'a>>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
 // TODO(#3531): this will most likely break once we do add threads, though.
-unsafe impl Sync for MmioConsoleChannel {}
-unsafe impl Send for MmioConsoleChannel {}
+unsafe impl Sync for MmioConsoleChannel<'_> {}
+unsafe impl Send for MmioConsoleChannel<'_> {}
 
-impl Read for MmioConsoleChannel {
+impl oak_channel::Read for MmioConsoleChannel<'_> {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -146,7 +145,7 @@ impl Read for MmioConsoleChannel {
     }
 }
 
-impl Write for MmioConsoleChannel {
+impl oak_channel::Write for MmioConsoleChannel<'_> {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -181,7 +180,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
+pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
@@ -192,20 +191,26 @@ pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
         .collect();
 
     for device in virtio_devices {
-        let header = PAGE_TABLES
-            .lock()
-            .get()
-            .unwrap()
-            .translate_physical(
-                find_memory_range(device, &mut acpi.aml)
-                    .expect("unable to determine physical memory range for virtio MMIO device")
-                    .0,
-            )
-            .unwrap();
+        let acpi_aml_range = find_memory_range(device, &mut acpi.aml)
+            .expect("unable to determine physical memory range for virtio MMIO device");
 
-        let transport =
-            unsafe { MmioTransport::new(core::ptr::NonNull::new(header.as_mut_ptr()).unwrap()) }
-                .expect("MMIO transport setup error");
+        let header =
+            PAGE_TABLES.lock().get().unwrap().translate_physical(acpi_aml_range.0).unwrap();
+
+        let mmio_size = acpi_aml_range.1 - acpi_aml_range.0;
+
+        info!(
+            "Found virtio MMIO device {}; physical range: 0x{:x} - 0x{:x}, size: 0x{:x}",
+            device.name, acpi_aml_range.0, acpi_aml_range.1, mmio_size
+        );
+
+        let transport = unsafe {
+            MmioTransport::new(
+                core::ptr::NonNull::new(header.as_mut_ptr()).unwrap(),
+                mmio_size as usize,
+            )
+        }
+        .expect("MMIO transport setup error");
 
         if transport.device_type() != DeviceType::Console {
             continue;
