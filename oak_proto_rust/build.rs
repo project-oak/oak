@@ -92,8 +92,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.attestation.v1.Endorsement",
         "oak.attestation.v1.EventLog",
         "oak.attestation.v1.LayerEvidence",
-        "oak.crypto.v1.Certificate",
-        "oak.crypto.v1.SignatureInfo",
         "oak.Variant",
     ] {
         needed_types.insert(t.to_string());

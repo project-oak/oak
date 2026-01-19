@@ -109,10 +109,7 @@ java_lite_proto_library(
 proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
-    deps = [
-        ":eventlog_proto",
-        "//proto/crypto:certificate_proto",
-    ],
+    deps = [":eventlog_proto"],
 )
 
 cc_proto_library(

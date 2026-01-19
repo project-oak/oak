@@ -620,10 +620,12 @@ pub struct Evidence {
     #[prost(message, optional, tag = "5")]
     pub transparent_event_log: ::core::option::Option<EventLog>,
     /// Arbitrary user data signed by the final layer's ECA key.
-    #[prost(message, optional, tag = "6")]
-    pub signed_user_data_certificate: ::core::option::Option<
-        super::super::crypto::v1::Certificate,
-    >,
+    ///
+    /// A serialized COSE Sign object containing the user data and headers
+    /// indicating the signing algorithm used.
+    #[prost(bytes = "vec", tag = "6")]
+    #[serde(with = "crate::base64data")]
+    pub signed_user_data_certificate: ::prost::alloc::vec::Vec<u8>,
 }
 /// This proto defines the layered DICE Attestation Evidence.
 ///

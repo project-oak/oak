@@ -54,9 +54,6 @@ pub struct CertificatePayload {
     pub proof_of_freshness: ::core::option::Option<ProofOfFreshness>,
 }
 /// Information about the signature that signs the certificate.
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SignatureInfo {
     /// Signature value bytes.
@@ -65,7 +62,6 @@ pub struct SignatureInfo {
     /// algorithm used to create this signature):
     /// <<https://developers.google.com/tink/wire-format#digital_signatures>>
     #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// Minimalistic certificate proto definition.
@@ -84,14 +80,10 @@ pub struct SignatureInfo {
 ///
 /// The signature is created using the Tink library:
 /// <<https://developers.google.com/tink/digital-signature>>
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[serde(default)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Certificate {
     /// Payload that is signed over.
     #[prost(bytes = "vec", tag = "1")]
-    #[serde(with = "crate::base64data")]
     pub serialized_payload: ::prost::alloc::vec::Vec<u8>,
     /// Signature over serialized_payload.
     #[prost(message, optional, tag = "2")]

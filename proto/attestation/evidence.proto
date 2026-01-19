@@ -19,7 +19,6 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "proto/attestation/eventlog.proto";
-import "proto/crypto/certificate.proto";
 
 option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
@@ -141,5 +140,8 @@ message Evidence {
   EventLog transparent_event_log = 5;
 
   // Arbitrary user data signed by the final layer's ECA key.
-  oak.crypto.v1.Certificate signed_user_data_certificate = 6;
+  //
+  // A serialized COSE Sign object containing the user data and headers
+  // indicating the signing algorithm used.
+  bytes signed_user_data_certificate = 6;
 }
