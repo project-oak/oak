@@ -21,6 +21,7 @@
 extern crate alloc;
 use alloc::{boxed::Box, vec};
 
+use anyhow::Context;
 use oak_restricted_kernel_sdk::{
     channel::{FileDescriptorChannel, Read, Write},
     entrypoint,
@@ -39,8 +40,14 @@ use oak_restricted_kernel_sdk::{
 // (to ensure client knows bytes were received.)
 #[entrypoint]
 fn start_test_server() -> ! {
-    let mut fd = Box::<FileDescriptorChannel>::default();
+    loop {
+        let result = main_loop();
+        log::error!("main_loop() returned: {:?} (automatically restarting loop)", result);
+    }
+}
 
+fn main_loop() -> anyhow::Result<()> {
+    let mut fd = Box::<FileDescriptorChannel>::default();
     // Command: 1 - write to RK
     // Commmand: 2 - read from RK
     let mut command_buf = [0u8; 1];
@@ -50,19 +57,19 @@ fn start_test_server() -> ! {
 
     loop {
         // Get the command and payload size
-        fd.read_exact(&mut command_buf).expect("failed to read message size");
-        fd.read_exact(&mut size_buf).expect("failed to read message size");
+        fd.read_exact(&mut command_buf).context("failed to read message size")?;
+        fd.read_exact(&mut size_buf).context("failed to read message size")?;
 
         let mut payload = vec![0u8; u32::from_le_bytes(size_buf) as usize];
 
         if command_buf[0] == 1 {
             // Read from host
-            fd.read_exact(&mut payload).expect("failed to reaad message");
+            fd.read_exact(&mut payload).context("failed to reaad message")?;
             // Ack
             fd.write_all(&[1]).expect("failed to write ack");
         } else if command_buf[0] == 2 {
             // Write to host
-            fd.write_all(payload.as_slice()).expect("failed to write message");
+            fd.write_all(payload.as_slice()).context("failed to write message")?;
             // No ack needed.
         }
     }

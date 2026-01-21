@@ -49,7 +49,12 @@ async fn start_rk_enclave_server() -> (Box<dyn GuestInstance>, Box<dyn oak_chann
     let (guest_instance, _connector_handle) =
         launcher::launch(params).await.expect("failed to launch");
 
-    let oak_channel = guest_instance.connect().await.expect("couldn't get connector handle");
+    let read_timeout = Duration::from_secs(5);
+    let write_timeout = Duration::from_secs(5);
+    let oak_channel = guest_instance
+        .connect_with_timeouts(read_timeout, write_timeout)
+        .await
+        .expect("couldn't get connector handle");
     (guest_instance, oak_channel)
 }
 

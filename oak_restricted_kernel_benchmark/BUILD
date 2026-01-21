@@ -62,6 +62,7 @@ rust_binary(
     ],
     deps = [
         "//oak_restricted_kernel_sdk",
+        "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
     ],
 )
