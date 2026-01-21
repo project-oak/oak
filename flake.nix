@@ -99,6 +99,8 @@
                 python312
                 wasm-pack
                 iconv
+                iproute2
+                util-linux
               ]
               ++
               # Linux-specific dependencies.

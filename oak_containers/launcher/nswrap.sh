@@ -1,8 +1,11 @@
- #!/bin/bash
+#!/bin/bash
 #
 # Convenience script to set up networking in a network namespace for tests.
 
-set -e
+set -o xtrace
+set -o errexit
+set -o nounset
+set -o pipefail
 
 ip link set lo up
 

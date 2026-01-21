@@ -53,6 +53,9 @@ docker_run_flags=(
   # This prevent bazel from having to re-populate the cache every time you start
   # your local docker container.
   '--mount=type=volume,src=bazel-cache,target=/root/.cache/bazel'
+
+  # TAP networking support
+  '--device=/dev/net/tun'
 )
 
 # If the host supports KVM, allow the docker image to use it.

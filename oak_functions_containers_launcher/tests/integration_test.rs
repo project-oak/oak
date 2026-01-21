@@ -56,8 +56,6 @@ async fn test_launcher_key_value_lookup_network() {
     run_key_value_lookup_test("network").await;
 }
 
-/*
-// Temporarily disabled until we fix some of the test infrastructure.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_tap() {
     if oak_functions_test_utils::skip_test() {
@@ -67,7 +65,6 @@ async fn test_launcher_key_value_lookup_tap() {
 
     run_key_value_lookup_test("tap").await;
 }
-*/
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]

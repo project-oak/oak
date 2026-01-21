@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test", "rust_test_suite")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(
     default_visibility = ["//:internal"],
@@ -75,8 +76,8 @@ rust_binary(
     ],
 )
 
-rust_test_suite(
-    name = "oak_functions_containers_launcher_test",
+rust_test(
+    name = "oak_functions_containers_launcher_test_bin",
     srcs = ["tests/integration_test.rs"],
     data = [
         ":oak_functions_containers_launcher",
@@ -88,6 +89,8 @@ rust_test_suite(
         "//oak_functions_containers_app:bundle",
         "//oak_functions_launcher:mock_lookup_data",
     ],
+    # Don't run this test directly, as it requires nswrap to work.
+    tags = ["manual"],
     deps = [
         "//oak_client",
         "//oak_file_utils",
@@ -96,5 +99,15 @@ rust_test_suite(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:tokio",
+    ],
+)
+
+sh_test(
+    name = "oak_functions_containers_launcher_test",
+    srcs = ["tests/run_integration_test.sh"],
+    args = ["$(location :oak_functions_containers_launcher_test_bin)"],
+    data = [
+        ":oak_functions_containers_launcher_test_bin",
+        "//oak_containers/launcher:nswrap",
     ],
 )
