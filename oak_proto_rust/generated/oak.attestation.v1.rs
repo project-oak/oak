@@ -583,6 +583,7 @@ pub struct ApplicationKeys {
 ///
 /// The name is chosen to match the RATS terminology:
 /// <<https://datatracker.ietf.org/doc/html/rfc9334#name-evidence>>
+/// NEXT_ID: 8
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(default)]
@@ -623,7 +624,7 @@ pub struct Evidence {
     ///
     /// A serialized COSE Sign object containing the user data and headers
     /// indicating the signing algorithm used.
-    #[prost(bytes = "vec", tag = "6")]
+    #[prost(bytes = "vec", tag = "7")]
     #[serde(with = "crate::base64data")]
     pub signed_user_data_certificate: ::prost::alloc::vec::Vec<u8>,
 }

@@ -107,7 +107,10 @@ message ApplicationKeys {
 //
 // The name is chosen to match the RATS terminology:
 // <https://datatracker.ietf.org/doc/html/rfc9334#name-evidence>
+// NEXT_ID: 8
 message Evidence {
+  reserved 6;
+
   // Layer0 attestation evidence.
   RootLayerEvidence root_layer = 1;
 
@@ -143,5 +146,5 @@ message Evidence {
   //
   // A serialized COSE Sign object containing the user data and headers
   // indicating the signing algorithm used.
-  bytes signed_user_data_certificate = 6;
+  bytes signed_user_data_certificate = 7;
 }
