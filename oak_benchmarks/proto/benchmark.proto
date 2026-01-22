@@ -1,0 +1,62 @@
+//
+// Copyright 2026 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.benchmark;
+
+import "proto/micro_rpc/options.proto";
+
+// Request to run a benchmark.
+message RunBenchmarkRequest {
+  // Type of benchmark to run.
+  BenchmarkType benchmark_type = 1;
+  // Size of data to process (bytes).
+  uint32 data_size = 2;
+  // Number of iterations.
+  uint32 iterations = 3;
+}
+
+// Types of benchmarks supported.
+enum BenchmarkType {
+  BENCHMARK_TYPE_UNSPECIFIED = 0;
+  BENCHMARK_TYPE_SHA256 = 1;
+  BENCHMARK_TYPE_P256_SIGN = 2;
+  BENCHMARK_TYPE_MEMORY_INSERT = 3;
+  BENCHMARK_TYPE_MEMORY_LOOKUP = 4;
+  BENCHMARK_TYPE_ARRAY_UPDATE = 5;
+}
+
+// Result of a benchmark run.
+message RunBenchmarkResponse {
+  // TSC ticks elapsed during the benchmark.
+  uint64 elapsed_tsc = 1;
+  // Number of iterations completed.
+  uint32 iterations_completed = 2;
+  // Total bytes processed.
+  uint64 bytes_processed = 3;
+  // Status code (0 = success).
+  uint32 status = 4;
+}
+
+// Benchmark service for Oak performance evaluation.
+service Benchmark {
+  // Run a benchmark and return results.
+  // method_id: 1001
+  rpc RunBenchmark(RunBenchmarkRequest) returns (RunBenchmarkResponse) {
+    option (.oak.micro_rpc.method_id) = 1001;
+  }
+}
