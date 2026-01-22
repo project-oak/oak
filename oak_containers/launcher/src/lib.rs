@@ -83,8 +83,13 @@ pub enum ChannelType {
     #[default]
     Network,
 
-    /// Use TUN/TAP networking; assumes there is a `oak0` TAP device configured.
+    /// Use TUN/TAP networking with IPv4; assumes there is a `oak0` TAP device
+    /// configured.
     Tap,
+
+    /// Use TUN/TAP networking with IPv6; assumes there is a `oak0` TAP device
+    /// configured.
+    TapV6,
 
     // Use virtio-vsock.
     VirtioVsock,
@@ -119,7 +124,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 #[derive(Clone)]
 pub enum Channel {
     Network { host_proxy_port: u16, trusted_app_address: Option<SocketAddr> },
-    Tap,
+    Tap { guest_address: IpAddr },
     VirtioVsock { trusted_app_address: Option<VsockAddr> },
 }
 
@@ -137,10 +142,9 @@ impl TryFrom<Channel> for TrustedApplicationAddress {
             Channel::Network { host_proxy_port: _, trusted_app_address } => {
                 trusted_app_address.map(TrustedApplicationAddress::Network)
             }
-            Channel::Tap => Some(TrustedApplicationAddress::Network(SocketAddr::new(
-                VM_LOCAL_ADDRESS,
-                VM_LOCAL_PORT,
-            ))),
+            Channel::Tap { guest_address } => Some(TrustedApplicationAddress::Network(
+                SocketAddr::new(guest_address, VM_LOCAL_PORT),
+            )),
             Channel::VirtioVsock { trusted_app_address } => {
                 trusted_app_address.map(TrustedApplicationAddress::VirtioVsock)
             }
@@ -181,10 +185,14 @@ impl Launcher {
                 SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)
             }
             ChannelType::Tap => SocketAddr::new(VM_HOST_ADDRESS, VM_HOST_PORT),
+            ChannelType::TapV6 => SocketAddr::new(VM_HOST_ADDRESS_6, VM_HOST_PORT),
         };
+
         let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-        let listener = TcpListener::bind(sockaddr).await?;
-        let port = listener.local_addr()?.port();
+        let listener = TcpListener::bind(sockaddr)
+            .await
+            .with_context(|| format!("failed to bind to address {sockaddr}"))?;
+        let port = listener.local_addr().context("failed to get local port")?.port();
 
         // Reuse the same port we got for the TCP socket for vsock.
         let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
@@ -218,7 +226,8 @@ impl Launcher {
                 let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
                 Channel::Network { host_proxy_port, trusted_app_address: None }
             }
-            ChannelType::Tap => Channel::Tap,
+            ChannelType::Tap => Channel::Tap { guest_address: VM_LOCAL_ADDRESS },
+            ChannelType::TapV6 => Channel::Tap { guest_address: VM_LOCAL_ADDRESS_6 },
             ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
@@ -234,7 +243,7 @@ impl Launcher {
                         host_orchestrator_proxy_port,
                     }
                 }
-                Channel::Tap => qemu::Network::Tap,
+                Channel::Tap { guest_address } => qemu::Network::Tap { guest_address },
                 Channel::VirtioVsock { trusted_app_address: _ } => qemu::Network::Proxy {
                     launcher_service_port: port,
                     host_proxy_port: None,
@@ -280,7 +289,7 @@ impl Launcher {
                     trusted_app_address
                         .replace(SocketAddr::new(IpAddr::V4(PROXY_ADDRESS), *host_proxy_port));
                 }
-                Channel::Tap => {}
+                Channel::Tap { .. } => {}
                 Channel::VirtioVsock { trusted_app_address } => {
                     trusted_app_address.replace(VsockAddr::new(
                         self.vmm.guest_cid().expect("VMM does not have a guest CID"),

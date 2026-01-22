@@ -16,7 +16,7 @@
 
 use std::{
     io::{BufRead, BufReader},
-    net::Ipv4Addr,
+    net::{IpAddr, Ipv4Addr},
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
@@ -28,7 +28,7 @@ use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
 use tokio_vsock::VMADDR_CID_HOST;
 
-use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT, VM_LOCAL_ADDRESS_6};
+use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT};
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -93,7 +93,35 @@ pub enum Network {
     },
 
     // Set up TAP networking.
-    Tap,
+    Tap {
+        guest_address: IpAddr,
+    },
+}
+
+impl Network {
+    fn launcher_port(&self) -> u16 {
+        match self {
+            Network::Proxy { launcher_service_port, .. } => *launcher_service_port,
+            Network::Tap { .. } => VM_HOST_PORT,
+        }
+    }
+
+    /// Returns the address to be assigned to the guest.
+    fn guest_address(&self) -> IpAddr {
+        match self {
+            Network::Proxy { .. } => crate::VM_LOCAL_ADDRESS,
+            Network::Tap { guest_address } => *guest_address,
+        }
+    }
+
+    /// Returns the address to be assigned to the guest with the correct
+    /// netmask.
+    fn guest_eth0_address(&self) -> String {
+        match self.guest_address() {
+            IpAddr::V4(guest_address) => format!("{}/24", guest_address),
+            IpAddr::V6(guest_address) => format!("{}/64", guest_address),
+        }
+    }
 }
 
 pub struct Qemu {
@@ -201,14 +229,13 @@ impl Qemu {
         }
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
-        let vm_address = crate::VM_LOCAL_ADDRESS;
-
         let netdev_rules = match network {
             Network::Proxy {
                 launcher_service_port,
                 host_proxy_port,
                 host_orchestrator_proxy_port,
             } => {
+                let vm_address = network.guest_address();
                 let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
                 let host_address = Ipv4Addr::LOCALHOST;
 
@@ -228,7 +255,7 @@ impl Qemu {
 
                 netdev_rules
             }
-            Network::Tap => vec![
+            Network::Tap { .. } => vec![
                 "tap".to_string(),
                 "id=netdev".to_string(),
                 "ifname=oak0".to_string(),
@@ -261,10 +288,6 @@ impl Qemu {
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
 
-        let launcher_service_port = match network {
-            Network::Proxy { launcher_service_port, .. } => launcher_service_port,
-            Network::Tap => VM_HOST_PORT,
-        };
         let cmdline = vec![
             params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
             "console=ttyS0".to_string(),
@@ -274,9 +297,8 @@ impl Qemu {
             "brd.max_part=1".to_string(),
             "loglevel=7".to_string(),
             "--".to_string(),
-            format!("--eth0-address={vm_address}/24"),
-            format!("--eth0-address={VM_LOCAL_ADDRESS_6}/64"),
-            format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
+            format!("--eth0-address={}", network.guest_eth0_address()),
+            format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{}", network.launcher_port()),
         ];
 
         cmd.args(["-append", cmdline.join(" ").as_str()]);
