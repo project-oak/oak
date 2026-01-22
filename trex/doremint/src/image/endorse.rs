@@ -14,8 +14,8 @@
 
 use anyhow::Context;
 use clap::Parser;
-use digest_util::hex_digest_from_typed_hash;
 use intoto::statement::make_statement;
+use oak_digest::Digest;
 use oak_time::{Duration, Instant};
 use oci_spec::distribution::Reference;
 
@@ -51,7 +51,7 @@ impl EndorseCommand {
 
         let name = self.image.repository().to_string();
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
-        let digest = hex_digest_from_typed_hash(typed_hash)?;
+        let digest = Digest::from_typed_hash(typed_hash)?;
 
         let claims = self
             .claims
@@ -67,7 +67,7 @@ impl EndorseCommand {
         let claim_types: Vec<&str> = claims.iter().map(|x| &**x).collect();
         let statement = make_statement(
             &name,
-            &digest,
+            &digest.into(),
             self.issued_on,
             self.issued_on,
             self.issued_on + self.valid_for,

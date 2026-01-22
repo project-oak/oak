@@ -16,10 +16,10 @@
 
 use alloc::{string::String, vec::Vec};
 
-use digest_util::hex_digest_from_typed_hash;
 use jwt::Token;
 use oak_attestation_verification::{decode_event_proto, results::set_session_binding_public_key};
 use oak_attestation_verification_types::policy::Policy;
+use oak_digest::Digest;
 use oak_proto_rust::oak::{
     attestation::v1::{
         binary_reference_value, BinaryReferenceValue, ConfidentialSpaceEndorsement,
@@ -29,7 +29,7 @@ use oak_proto_rust::oak::{
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference as OciReference;
-use sha2::{Digest, Sha256};
+use sha2::{Digest as OtherDigest, Sha256};
 use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
@@ -119,7 +119,7 @@ pub(crate) fn verify_endorsement_wrapper(
     let typed_hash = image_reference.digest().ok_or(
         ConfidentialSpaceVerificationError::MissingField("Missing digest in OCI reference"),
     )?;
-    let digest = hex_digest_from_typed_hash(typed_hash)
+    let digest = Digest::from_typed_hash(typed_hash)
         .map_err(|_| IFError("Malformed digest in OCI reference"))?;
 
     match ref_value.r#type.as_ref() {
@@ -127,20 +127,21 @@ pub(crate) fn verify_endorsement_wrapper(
             let statement =
                 verify_endorsement(verification_time.into_unix_millis(), signed_endorsement, val)
                     .map_err(|err| EVError(format!("{err:#}")))?;
-            statement.validate_subject(&digest).map_err(|err| EVError(format!("{err:#}")))
+            statement
+                .validate_subject(&digest.clone().into())
+                .map_err(|err| EVError(format!("{err:#}")))
         }
         Some(binary_reference_value::Type::Skip(_)) => Ok(()),
         Some(binary_reference_value::Type::Digests(digests)) => {
             // We expect the digest to be SHA2-256.
-            if digest.sha2_256.is_empty() {
-                return Err(IFError("Missing SHA2-256 digest in OCI reference"));
-            }
-            let sha2_256_digest = hex::decode(&digest.sha2_256)
-                .map_err(|_| IFError("Malformed digest in OCI reference"))?;
-            if digests.digests.iter().any(|d| d.sha2_256 == sha2_256_digest) {
-                Ok(())
+            if let Digest::Sha256(h) = digest {
+                if digests.digests.iter().any(|d| d.sha2_256 == h.as_ref()) {
+                    Ok(())
+                } else {
+                    Err(EVError("Digest mismatch".to_string()))
+                }
             } else {
-                Err(EVError("Digest mismatch".to_string()))
+                Err(IFError("Missing SHA2-256 digest in OCI reference"))
             }
         }
         None => Err(IFError("Missing reference value type")),

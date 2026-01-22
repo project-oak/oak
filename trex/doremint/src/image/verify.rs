@@ -26,7 +26,7 @@ bazel run trex/doremint image verify -- \
 use anyhow::Context;
 use clap::Parser;
 use cosign_util::pull_package;
-use digest_util::hex_digest_from_typed_hash;
+use oak_digest::Digest;
 use oak_time_std::instant::now;
 use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
 use oci_spec::distribution::Reference;
@@ -62,7 +62,7 @@ impl VerifyCommand {
 
         // Need to verify the endorsement subject and the claims as well.
         let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
-        let digest = hex_digest_from_typed_hash(typed_hash)?;
+        let digest = Digest::from_typed_hash(typed_hash)?;
 
         let claims_vec = self
             .claims
@@ -77,7 +77,7 @@ impl VerifyCommand {
 
         let claims: Vec<&str> = claims_vec.iter().map(|s| s.as_str()).collect();
         statement
-            .validate(Some(digest), now(), &claims)
+            .validate(Some(digest.into()), now(), &claims)
             .context("validating endorsement statement")?;
 
         println!("Endorsement verified successfully for image {}", self.image);

@@ -21,12 +21,10 @@ use std::{
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use digest_util::hex_digest_from_typed_hash;
 use intoto::statement::{make_statement, serialize_statement};
 use maplit::hashmap;
-use oak_proto_rust::oak::HexDigest;
+use oak_digest::Digest;
 use oak_time::{Duration, Instant};
-use oci_spec::image::Digest;
 use trex_client::{
     cosign::cosign_sign_blob, OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION, OAK_TR_TYPE_ANNOTATION,
     OAK_TR_VALUE_ENDORSEMENT, OAK_TR_VALUE_SUBJECT, REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION,
@@ -74,11 +72,7 @@ pub struct Input {
     pub digest: Option<String>,
 }
 
-fn oci_digest_to_hex_digest(oci_digest: &Digest) -> Result<HexDigest> {
-    hex_digest_from_typed_hash(oci_digest.as_ref())
-}
-
-fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<HexDigest> {
+fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<Digest> {
     let file_data = fs::read(file_path).context("Failed to read file")?;
     let desc = repository_add_file(
         repository_path,
@@ -88,7 +82,7 @@ fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<HexDig
         },
     )?;
 
-    oci_digest_to_hex_digest(&desc.digest)
+    Digest::from_typed_hash(desc.digest.as_ref()).map_err(|e| anyhow::anyhow!(e))
 }
 
 impl Endorse {
@@ -99,10 +93,10 @@ impl Endorse {
         // which case stash the file itself in the repo too) or from the user provided
         // digest flag (in which case the repo may not contain the content of the
         // digest).
-        let subject_hex_digest = if let Some(path) = &self.input.file {
+        let subject_digest = if let Some(path) = &self.input.file {
             store_subject_file(&self.repository, path)?
         } else if let Some(digest_str_ref) = &self.input.digest {
-            hex_digest_from_typed_hash(digest_str_ref)?
+            Digest::from_typed_hash(digest_str_ref)?
         } else {
             unreachable!("clap ensures one is present");
         };
@@ -121,7 +115,7 @@ impl Endorse {
         let claim_types: Vec<&str> = claims.iter().map(|x| &**x).collect();
         let statement = make_statement(
             EMPTY_SUBJECT_NAME,
-            &subject_hex_digest,
+            &subject_digest.clone().into(),
             self.issued_on,
             self.issued_on,
             self.issued_on + self.valid_for,
@@ -137,7 +131,7 @@ impl Endorse {
             hashmap! {
                 OAK_TR_TYPE_ANNOTATION.to_string() => vec![OAK_TR_VALUE_ENDORSEMENT.to_string()],
                 // This annotation is used to efficiently look up endorsements about a specific digest from a repository index.
-                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => vec![format!("sha256:{}", subject_hex_digest.sha2_256)],
+                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => vec![subject_digest.to_typed_hash()],
             },
         )?;
         let statement_digest_str = statement_desc.digest.digest().to_string();

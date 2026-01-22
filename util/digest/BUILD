@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -28,7 +28,14 @@ rust_library(
     ],
     crate_name = "oak_digest",
     deps = [
+        "//oak_proto_rust",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:sha2",
+        "@oak_crates_index//:thiserror",
     ],
+)
+
+rust_test(
+    name = "digest_test",
+    crate = ":digest",
 )

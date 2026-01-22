@@ -16,8 +16,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use digest_util::hex_digest_from_typed_hash;
-use oak_proto_rust::oak::HexDigest;
+use oak_digest::Digest;
 use oak_time::Instant;
 use trex_client::{
     http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
@@ -54,7 +53,7 @@ pub struct Verify {
 
 impl Verify {
     pub async fn run(&self) -> Result<()> {
-        let subject_digest: HexDigest = hex_digest_from_typed_hash(&self.subject_digest)?;
+        let subject_digest = Digest::from_typed_hash(&self.subject_digest)?;
 
         let index = fetch_index(&self.endorsement_index_url).await?;
 
@@ -80,7 +79,7 @@ impl Verify {
         println!("Verifying endorsement for subject {}", self.subject_digest);
         let statement = verifier
             .verify(
-                &subject_digest,
+                &subject_digest.into(),
                 self.valid_at,
                 &required_claims,
                 &self.cosign_identity,
