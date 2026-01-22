@@ -9,6 +9,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Compatibility with older versions of Docker daemon as the Docker we get from
+# nix might be too new.
+export DOCKER_API_VERSION=1.41
+
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
 cd "$SCRIPTS_DIR"

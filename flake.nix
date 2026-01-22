@@ -161,7 +161,7 @@
                 bison
                 cpio
                 cosign
-                curl
+                curlWithGnuTls
                 docker
                 fakeroot
                 flex
