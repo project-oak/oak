@@ -76,7 +76,7 @@ impl Encryptor for UnorderedChannelEncryptor {
         let nonce: [u8; NONCE_LEN] = ciphertext
             .nonce
             .as_ref()
-            .unwrap()
+            .context("payload is missing nonce")?
             .clone()
             .try_into()
             .map_err(|e| anyhow!("Failed to extract nonce error: {e:#?}"))?;

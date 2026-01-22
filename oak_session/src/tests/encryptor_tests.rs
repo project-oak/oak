@@ -38,12 +38,31 @@ fn test_unordered_encryptor_inorder_messages() {
         UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_1, key_2, 0) };
     let mut replica_2 =
         UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 0) };
-
     for message in test_messages() {
         let payload = Payload { message: message.plaintext.to_vec(), nonce: None, aad: None };
         let encrypted_payload = replica_1.encrypt(payload).unwrap();
         let plaintext = replica_2.decrypt(encrypted_payload).unwrap().message;
         assert_that!(message.plaintext, eq(&plaintext));
+    }
+}
+
+#[test]
+fn test_unordered_encryptor_handles_missing_nonce_on_decrypt() {
+    let key_1 = &[42u8; SYMMETRIC_KEY_LEN];
+    let key_2 = &[52u8; SYMMETRIC_KEY_LEN];
+    let mut replica_1 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_1, key_2, 0) };
+    let mut replica_2 =
+        UnorderedChannelEncryptor { crypter: UnorderedCrypter::new(key_2, key_1, 0) };
+    for message in test_messages() {
+        let payload = Payload { message: message.plaintext.to_vec(), nonce: None, aad: None };
+        let mut encrypted_payload = replica_1.encrypt(payload).unwrap();
+        encrypted_payload.nonce = None; // Remove nonce to simulate missing nonce scenario
+        let failed_decrypt = replica_2.decrypt(encrypted_payload);
+        assert_that!(
+            failed_decrypt,
+            err(result_of!(|e: &anyhow::Error| e.to_string().contains("missing nonce"), eq(true)))
+        );
     }
 }
 

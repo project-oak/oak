@@ -35,6 +35,7 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone)]
 pub struct Payload {
     pub message: Vec<u8>,
     pub aad: Option<Vec<u8>>,
