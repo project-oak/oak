@@ -16,7 +16,7 @@
 use std::{
     error::Error,
     fmt::Display,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv6Addr, SocketAddr},
     num::{NonZeroU16, NonZeroU32},
 };
 
@@ -143,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         CommunicationChannel::TcpChannel(config) => {
             let port = NonZeroU16::new(config.port.try_into()?)
                 .map_or(OAK_FUNCTIONS_CONTAINERS_APP_PORT, Into::into);
-            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
+            let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port);
             let listener = TcpListener::bind(addr).await?;
             tokio::spawn(serve(
                 addr,
