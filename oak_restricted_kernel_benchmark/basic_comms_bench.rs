@@ -67,7 +67,7 @@ fn test_read_speeds(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("Read From Enclave");
     // Gets pretty slow past 10000
-    for size in [1u32, 100, 10_000] {
+    for size in [1u32, 100, 10_000, 10_000_000] {
         group.throughput(criterion::Throughput::Bytes(size as u64));
         group.bench_with_input(criterion::BenchmarkId::from_parameter(size), &size, |b, size| {
             b.iter_custom(|iters| {

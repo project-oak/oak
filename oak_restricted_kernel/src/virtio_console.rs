@@ -149,8 +149,10 @@ impl oak_channel::Write for MmioConsoleChannel<'_> {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
-        for char in data {
-            console.send(*char).map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
+        for chunk in data.chunks(PAGE_SIZE) {
+            console
+                .send_bytes(chunk)
+                .map_err(|err| anyhow!("Virtio console write error: {:?}", err))?;
         }
 
         Ok(())
