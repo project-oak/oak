@@ -1,5 +1,5 @@
 {
-  "checksum": "2cf4d82355b22c0e95bcf52334b314560d0f80d912fbf7dc4b874dc810cc2135",
+  "checksum": "2d5dc62a0cfaa3346c5320eadc86a1baa7cea2ef647f1c183450d8a62bc09010",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3070,6 +3070,10 @@
               "target": "sha2"
             },
             {
+              "id": "sha3 0.10.8",
+              "target": "sha3"
+            },
+            {
               "id": "signature 2.2.0",
               "target": "signature"
             },
@@ -4757,6 +4761,56 @@
         "version": "0.3.77"
       },
       "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "keccak 0.1.5": {
+      "name": "keccak",
+      "version": "0.1.5",
+      "package_url": "https://github.com/RustCrypto/sponges/tree/master/keccak",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/keccak/0.1.5/download",
+          "sha256": "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "keccak",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "keccak",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [],
+          "selects": {
+            "cfg(target_arch = \"aarch64\")": [
+              {
+                "id": "cpufeatures 0.2.17",
+                "target": "cpufeatures"
+              }
+            ]
+          }
+        },
+        "edition": "2018",
+        "version": "0.1.5"
+      },
+      "license": "Apache-2.0 OR MIT",
       "license_ids": [
         "Apache-2.0",
         "MIT"
@@ -8192,6 +8246,58 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "sha3 0.10.8": {
+      "name": "sha3",
+      "version": "0.10.8",
+      "package_url": "https://github.com/RustCrypto/hashes",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/sha3/0.10.8/download",
+          "sha256": "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "sha3",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "sha3",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "digest 0.10.7",
+              "target": "digest"
+            },
+            {
+              "id": "keccak 0.1.5",
+              "target": "keccak"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.10.8"
+      },
+      "license": "MIT OR Apache-2.0",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "signature 2.2.0": {
       "name": "signature",
       "version": "2.2.0",
@@ -11030,6 +11136,7 @@
       "x86_64-unknown-linux-gnu",
       "x86_64-unknown-none"
     ],
+    "cfg(target_arch = \"aarch64\")": [],
     "cfg(target_arch = \"spirv\")": [],
     "cfg(target_arch = \"x86_64\")": [
       "x86_64-unknown-linux-gnu",
@@ -11099,6 +11206,7 @@
     "serde 1.0.219",
     "serde_json 1.0.140",
     "sha2 0.10.9",
+    "sha3 0.10.8",
     "signature 2.2.0",
     "snafu 0.8.6",
     "spinning_top 0.3.0",
