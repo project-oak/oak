@@ -20,7 +20,7 @@ mod server;
 
 use std::{
     fmt::Display,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
 };
 
 use anyhow::Context;
@@ -44,11 +44,25 @@ use tonic::transport::Channel as TonicChannel;
 /// IP address for the host on the virtual network.
 const VM_HOST_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 100));
 
+/// IPv6 address for the host on the virtual network.
+// We use a Unique Local Address from the fd00::/8 block, with a random global
+// id.
+//
+// Global id = d2:a994:f3c5, subnet = 0001, interface id = 10:0:2:64
+// (so that the addresses match the IPv4 ones for ease of understanding)
+#[allow(unused)]
+const VM_HOST_ADDRESS_6: IpAddr =
+    IpAddr::V6(Ipv6Addr::new(0xFDD2, 0xA994, 0xF3C5, 0x0001, 0x0010, 0x0000, 0x0002, 0x00064));
+
 /// Port where the launcher will listen on the virtual network.
 const VM_HOST_PORT: u16 = 8080;
 
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
+
+/// The local IPv6 address assigned to the VM guest.
+const VM_LOCAL_ADDRESS_6: IpAddr =
+    IpAddr::V6(Ipv6Addr::new(0xFDD2, 0xA994, 0xF3C5, 0x0001, 0x0010, 0x0000, 0x0002, 0x00015));
 
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;

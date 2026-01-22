@@ -3,3 +3,4 @@ Name=enp0s1
 
 [Network]
 Address=10.0.2.15/24
+Address=FDD2:A994:F3C5:1:10:0:2:15/64

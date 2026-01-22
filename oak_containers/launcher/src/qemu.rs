@@ -28,7 +28,7 @@ use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
 use tokio_vsock::VMADDR_CID_HOST;
 
-use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT};
+use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT, VM_LOCAL_ADDRESS_6};
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -275,6 +275,7 @@ impl Qemu {
             "loglevel=7".to_string(),
             "--".to_string(),
             format!("--eth0-address={vm_address}/24"),
+            format!("--eth0-address={VM_LOCAL_ADDRESS_6}/64"),
             format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{launcher_service_port}"),
         ];
 
