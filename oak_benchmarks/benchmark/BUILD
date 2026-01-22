@@ -28,6 +28,7 @@ rust_library(
         "src/lib.rs",
         "src/memory/mod.rs",
         "src/service.rs",
+        "src/timer.rs",
     ],
     crate_features = [],
     deps = [
@@ -43,6 +44,7 @@ rust_library(
         "src/memory/mod.rs",
         "src/service.rs",
         "src/tests.rs",
+        "src/timer.rs",
     ],
     crate_features = ["std"],
     crate_name = "benchmark",
