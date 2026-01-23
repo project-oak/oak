@@ -24,6 +24,16 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
+          # Create a package that contains the 'bat' binary renamed to 'cat'
+          bazelisk-as-bazel = pkgs.symlinkJoin {
+            name = "bazelisk-as-bazel";
+            paths = [ pkgs.bazelisk];
+            postBuild = ''
+              # Remove the original binary link if you only want the alias
+              # or keep it. Here we explicitly create the alias link:
+              ln -s $out/bin/bazelisk $out/bin/bazel
+            '';
+          };
           inherit (pkgs) lib stdenv;
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
@@ -135,13 +145,15 @@
                 # Prevent issues when trying to do nix builds inside of a nix shell.
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
+
+                export BAZELISK_VERIFY_SHA256=d0d3668108c395eee26bd3bd2d251285fdd6dcdd70f22b6c9145e7963ada8e63
               '';
               packages = [
                 autoconf
                 autogen
                 automake
                 jdk17_headless
-                bazel_7
+                bazelisk-as-bazel
                 androidSdk
                 bazel-buildtools
                 openssl
