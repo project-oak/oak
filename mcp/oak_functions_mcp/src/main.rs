@@ -28,14 +28,20 @@ use tokio::net::TcpListener;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[arg(short, long, default_value = "0.0.0.0:8080")]
+    #[arg(short, long, default_value = "127.0.0.1:8080")]
     listen_address: String,
-    #[arg(long, help = "The URI for fetching the wasm logic")]
+    // Currently only a key-value lookup is supported.
+    // TODO: b/469747147 - Support arbitrary Wasm logic.
+    #[arg(
+        long,
+        help = "The URI for fetching the wasm logic",
+        default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/wasm/key_value_lookup.wasm"
+    )]
     wasm_uri: String,
     #[arg(
         long,
         help = "The URI for fetching the serialized LookupDataChunk data",
-        default_value = ""
+        default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/double_lookup_data.binarypb"
     )]
     lookup_data_uri: String,
 }

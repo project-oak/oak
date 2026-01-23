@@ -17,19 +17,48 @@
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
+use log::info;
 use oak_functions_service::{instance::OakFunctionsInstance, Handler};
 use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, ExtendNextLookupDataRequest,
     FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk, ReserveRequest,
 };
 use rmcp::{
-    model::{Implementation, ProtocolVersion, ServerCapabilities, ServerInfo},
-    tool_handler, tool_router, ServerHandler,
+    handler::server::wrapper::Parameters,
+    model::{
+        Implementation, InitializeRequestParam, InitializeResult, ProtocolVersion,
+        ServerCapabilities, ServerInfo,
+    },
+    schemars,
+    schemars::JsonSchema,
+    service::RequestContext,
+    tool, tool_handler, tool_router, ErrorData, RoleServer, ServerHandler,
 };
+use serde::{Deserialize, Serialize};
 
 const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call.";
 
 use rmcp::handler::server::router::tool::ToolRouter;
+
+// Request structure for invoking Oak Functions. Right now this is specially
+// suited to key, value lookups where the keys are integers from 1-1000
+// (inclusive). TODO: b/469747147 - Accept this as an arguement or config from
+// the operator.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[schemars(description = "Request to invoke Oak Functions with a lookup key")]
+struct OakFunctionsMcpRequest {
+    /// The lookup key. Must be a string containing only an integer between 1
+    /// and 1000 (inclusive).
+    #[schemars(
+        description = "The lookup key. Must be a string containing only an integer value between 1 and 1000 (inclusive). For example: \"1\", \"500\", \"1000\". Do not include any other characters."
+    )]
+    key: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct OakFunctionsMcpResponse {
+    value: String,
+}
 
 pub struct OakFunctionsMcpService<H: Handler> {
     tool_router: ToolRouter<Self>,
@@ -52,6 +81,7 @@ where
     // Initializes the Oak Functions instance. This can only be done once; all
     // subsequent calls will fail.
     pub fn initialize(&self, initialize_request: InitializeRequest) -> Result<()> {
+        info!("Initializing Oak Functions instance");
         if self.oak_functions_instance.get().is_some() {
             anyhow::bail!("instance already initialized");
         }
@@ -68,6 +98,7 @@ where
     // calls to this function will overwrite any prior lookup data in the Oak
     // Functions instance.
     pub fn load_lookup_data(&self, lookup_data: LookupDataChunk) -> Result<()> {
+        info!("Loading lookup data");
         let guard = self.oak_functions_instance.get();
         if let Some(instance) = guard.as_ref() {
             let entry_count = lookup_data.items.len() as u64;
@@ -89,14 +120,40 @@ where
     }
 }
 
-// TODO: b/469747147 - Provide an `invoke` method that invokes the underlying
-// Oak Functions instance.
 #[tool_router]
 impl<H> OakFunctionsMcpService<H>
 where
     H: Handler + 'static,
     H::HandlerType: Send + Sync,
 {
+    // TODO: b/469747147 - Create an rmcp::model::Tool at startup instead of
+    // utilizing the tool Macro.
+    #[tool(description = "Invoke Oak Functions with a key to look up a value")]
+    async fn invoke(
+        &self,
+        params: Parameters<OakFunctionsMcpRequest>,
+    ) -> Result<String, ErrorData> {
+        info!("Invoking Oak Functions");
+        let Parameters(OakFunctionsMcpRequest { key }) = params;
+        let guard = self.oak_functions_instance.get();
+        if let Some(instance) = guard.as_ref() {
+            let response = instance.handle_user_request(key.as_bytes().to_vec()).map_err(|e| {
+                ErrorData::internal_error(
+                    format!("Invoke failed with microRpc status: {e:?}"),
+                    None,
+                )
+            })?;
+            let result = serde_json::to_string(&OakFunctionsMcpResponse {
+                value: String::from_utf8(response).expect("unable to convert response to string"),
+            })
+            .map_err(|e| {
+                ErrorData::internal_error(format!("JSON serialization failed: {e}"), None)
+            })?;
+            Ok(result)
+        } else {
+            Err(ErrorData::internal_error("instance is not initialized".to_string(), None))
+        }
+    }
 }
 
 #[tool_handler]
@@ -112,5 +169,13 @@ where
             server_info: Implementation::from_build_env(),
             instructions: Some(INSTRUCTIONS.into()),
         }
+    }
+
+    async fn initialize(
+        &self,
+        _request: InitializeRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<InitializeResult, ErrorData> {
+        Ok(self.get_info())
     }
 }
