@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -64,5 +64,38 @@ rust_binary(
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:log",
+    ],
+)
+
+rust_test(
+    name = "basic_comms_stress_test",
+    srcs = [
+        "basic_comms_stress_test.rs",
+    ],
+    data = [
+        ":basic_comms_enclave_app",
+        "//enclave_apps/oak_orchestrator",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
+    ],
+    env = {
+        "RUST_LOG": "debug",
+        "RUST_BACKTRACE": "1",
+    },
+    # TODO: b/477383650 remove this once we resolve the virtio hanging issue.
+    tags = ["manual"],
+    deps = [
+        "//oak_channel:oak_channel_client",
+        "//oak_file_utils",
+        "//oak_launcher_utils",
+        "//oak_proto_rust",
+        "//oak_session",
+        "@oak_crates_index//:criterion",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:futures",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:which",
     ],
 )

@@ -55,21 +55,29 @@ fn main_loop() -> anyhow::Result<()> {
     // Size to read or write.
     let mut size_buf = [0u8; 4];
 
+    let mut iter = 0;
     loop {
+        iter += 1;
+        log::debug!("Waiting for command... (iteration {})", iter);
         // Get the command and payload size
         fd.read_exact(&mut command_buf).context("failed to read message size")?;
+        log::debug!("Received command: {}", command_buf[0]);
         fd.read_exact(&mut size_buf).context("failed to read message size")?;
+        log::debug!("Received size: {}", u32::from_le_bytes(size_buf));
 
         let mut payload = vec![0u8; u32::from_le_bytes(size_buf) as usize];
 
         if command_buf[0] == 1 {
             // Read from host
             fd.read_exact(&mut payload).context("failed to reaad message")?;
+            log::debug!("Received payload of size: {}", payload.len());
             // Ack
             fd.write_all(&[1]).expect("failed to write ack");
+            log::debug!("Sent ack");
         } else if command_buf[0] == 2 {
             // Write to host
             fd.write_all(payload.as_slice()).context("failed to write message")?;
+            log::debug!("Sent payload of size: {}", payload.len());
             // No ack needed.
         }
     }
