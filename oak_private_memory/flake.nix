@@ -20,6 +20,16 @@
               rust-overlay.overlays.default
             ];
           };
+          # Create a bazelisk package that can be called as "bazel".
+          bazelisk-as-bazel = pkgs.symlinkJoin {
+            name = "bazelisk-as-bazel";
+            paths = [ pkgs.bazelisk];
+            postBuild = ''
+              # Remove the original binary link if you only want the alias
+              # or keep it. Here we explicitly create the alias link:
+              ln -s $out/bin/bazelisk $out/bin/bazel
+            '';
+          };
           rustToolchain =
             # This should be kept in sync with the value in bazel/rust/defs.bzl
             pkgs.rust-bin.nightly."2025-03-01".default.override {
@@ -82,12 +92,14 @@
               shellHook = ''
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
+
+                export BAZELISK_VERIFY_SHA256=d0d3668108c395eee26bd3bd2d251285fdd6dcdd70f22b6c9145e7963ada8e63
               '';
               packages = [
                 autoconf
                 autogen
                 automake
-                bazel_7
+                bazelisk-as-bazel
                 bazel-buildtools
               ];
             };

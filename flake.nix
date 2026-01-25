@@ -24,7 +24,7 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
-          # Create a package that contains the 'bat' binary renamed to 'cat'
+          # Create a bazelisk package that can be called as "bazel".
           bazelisk-as-bazel = pkgs.symlinkJoin {
             name = "bazelisk-as-bazel";
             paths = [ pkgs.bazelisk];
