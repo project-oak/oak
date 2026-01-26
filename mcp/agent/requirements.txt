@@ -1566,9 +1566,9 @@ python-dotenv==1.1.1 \
     #   google-adk
     #   litellm
     #   pydantic-settings
-python-multipart==0.0.20 \
-    --hash=sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104 \
-    --hash=sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13
+python-multipart==0.0.22 \
+    --hash=sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155 \
+    --hash=sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58
     # via mcp
 pyyaml==6.0.2 \
     --hash=sha256:01179a4a8559ab5de078078f37e5c1a30d76bb88519906844fd7bdea1b7729ff \
