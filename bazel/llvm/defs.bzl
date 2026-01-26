@@ -31,7 +31,7 @@ def setup_llvm_toolchains():
                 "-nostdlib",
             ],
         },
-        llvm_version = "19.1.6",
+        llvm_version = "20.1.0",
         sysroot = {
             "linux-x86_64": "@@oak_cc_toolchain_sysroot//:sysroot",
         },

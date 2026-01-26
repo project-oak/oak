@@ -56,6 +56,11 @@ bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_cryp
 
 # https://github.com/bazel-contrib/rules_python
 bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+
+# https://github.com/helly25/bzl
+# Bazel utils, dependency of toolchains_llvm
+bazel_dep(name = "helly25_bzl", version = "0.3.1")
+
 bazel_dep(name = "oak_linter", version = "0.1", dev_dependency = True)
 local_path_override(
     module_name = "oak_linter",

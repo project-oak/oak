@@ -6,12 +6,16 @@
 ###############################################################################
 bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
-bazel_dep(name = "aspect_bazel_lib", version = "2.16.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
 
 # https://github.com/google/protobuf
-bazel_dep(name = "protobuf", version = "29.2", repo_name = "com_google_protobuf")
-bazel_dep(name = "grpc", version = "1.71.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
+bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "rules_cc", version = "0.2.8")
 
+# https://github.com/helly25/bzl
+# Bazel utils, dependency of toolchains_llvm
+bazel_dep(name = "helly25_bzl", version = "0.3.1")
 bazel_dep(name = "rules_shell", version = "0.5.0")
 bazel_dep(name = "rules_rust", version = "0.61.0")

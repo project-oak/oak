@@ -32,11 +32,8 @@ def load_llvm_repositories(oak_repo_name = "oak"):
 
     http_archive(
         name = "toolchains_llvm",
-        canonical_id = "v1.4.0",
-        patch_args = ["-p1"],
-        patch_tool = "patch",
-        patches = ["@" + oak_repo_name + "//third_party/toolchains_llvm:toolchains_llvm_x86_none.patch"],
-        sha256 = "fded02569617d24551a0ad09c0750dc53a3097237157b828a245681f0ae739f8",
-        strip_prefix = "toolchains_llvm-v1.4.0",
-        url = "https://github.com/bazel-contrib/toolchains_llvm/releases/download/v1.4.0/toolchains_llvm-v1.4.0.tar.gz",
+        canonical_id = "v1.6.0",
+        strip_prefix = "toolchains_llvm-v1.6.0",
+        integrity = "sha256-KymKHX6plnn17fivCTZzY+ZMufvEbgt8GxuisbG1EFg=",
+        url = "https://github.com/bazel-contrib/toolchains_llvm/releases/download/v1.6.0/toolchains_llvm-v1.6.0.tar.gz",
     )

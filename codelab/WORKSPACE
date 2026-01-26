@@ -16,6 +16,8 @@
 
 workspace(name = "enclave_app_starter")
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 # The `name` argument in all `http_archive` rules should be equal to the
 # WORKSPACE name of the corresponding library.
 
@@ -30,6 +32,16 @@ local_repository(
     name = "oak",
     path = "..",
 )
+
+http_archive(
+    name = "bazel_features",
+    strip_prefix = "bazel_features-1.39.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.39.0/bazel_features-v1.39.0.tar.gz",
+)
+
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+
+bazel_features_deps()
 
 load("@oak//bazel/llvm:deps.bzl", "load_llvm_repositories")
 
@@ -50,6 +62,10 @@ load_patched_crates()
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
+
+load("@oak//bazel/rust:stdlibs.bzl", "setup_rebuilt_rust_stdlibs")
+
+setup_rebuilt_rust_stdlibs()
 
 load("@oak//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
 
