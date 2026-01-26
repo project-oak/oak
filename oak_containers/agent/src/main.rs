@@ -17,6 +17,7 @@
 #![feature(c_size_t)]
 
 use clap::Parser;
+use http::Uri;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
 use opentelemetry::{global::set_error_handler, metrics::AsyncInstrument, KeyValue};
 use procfs::{Current, CurrentSI};
@@ -25,7 +26,7 @@ use tokio::time::{self, Duration};
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(env, default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
+    launcher_addr: Uri,
 }
 
 fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow::Error> {
@@ -278,7 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_error_handler(|err| eprintln!("oak-agent: OTLP error: {}", err))?;
 
     let metrics_config = MetricsConfig {
-        launcher_addr: args.launcher_addr,
+        launcher_addr: args.launcher_addr.to_string(),
         scope: "oak_agent",
         excluded_metrics: None,
     };

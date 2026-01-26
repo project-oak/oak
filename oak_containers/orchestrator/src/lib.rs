@@ -26,6 +26,7 @@ use oak_containers_attestation::generate_instance_keys;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use prost::Message;
 use tokio_util::sync::CancellationToken;
+use tonic::transport::Uri;
 
 mod cdi;
 pub mod container_runtime;
@@ -38,7 +39,7 @@ pub mod logging;
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(env, default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
+    launcher_addr: Uri,
 
     #[arg(default_value = "10.0.2.15:4000")]
     orchestrator_addr: String,
@@ -61,7 +62,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
     let args = Args::parse();
 
     let launcher_client = Arc::new(
-        LauncherClient::create(args.launcher_addr.parse()?)
+        LauncherClient::create(args.launcher_addr.clone())
             .await
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
@@ -69,7 +70,7 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
     set_error_handler(|err| eprintln!("oak_containers_orchestrator: OTLP error: {}", err))?;
 
     let metrics_config = MetricsConfig {
-        launcher_addr: args.launcher_addr,
+        launcher_addr: args.launcher_addr.to_string(),
         scope: "orchestrator",
         excluded_metrics: None,
     };

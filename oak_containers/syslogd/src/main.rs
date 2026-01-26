@@ -29,11 +29,12 @@ use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
 use tokio::sync::OnceCell;
 use tokio_stream::StreamExt;
+use tonic::transport::Uri;
 
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(env, default_value = "http://10.0.2.100:8080")]
-    launcher_addr: String,
+    launcher_addr: Uri,
 }
 
 #[allow(clippy::never_loop)]
@@ -57,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_error_handler(|err| eprintln!("oak-syslogd: OTLP error: {}", err))?;
 
     let term = Arc::new(OnceCell::new());
-    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
+    let launcher_client = LauncherClient::create(args.launcher_addr)
         .await
         .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 

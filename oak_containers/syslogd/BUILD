@@ -37,6 +37,7 @@ rust_binary(
         "@oak_crates_index//:signal-hook-tokio",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tonic",
     ],
 )
 
