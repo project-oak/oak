@@ -15,6 +15,7 @@
 //
 
 pub mod confidential_space;
+pub mod signed_policy;
 
 use std::{net::SocketAddr, time::Duration};
 

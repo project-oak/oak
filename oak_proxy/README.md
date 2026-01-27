@@ -244,6 +244,7 @@ Confidential Space attestations.
 
 **`server.toml`**
 
+
 ```toml
 listen_address = "127.0.0.1:8081"
 backend_address = "127.0.0.1:8080"
@@ -265,6 +266,47 @@ root_certificate_pem_path = "/path/to/confidential_space_root.crt"
 # policy_public_key_pem_path = "/path/to/key.pem"
 ```
 
+### Signed Policy Format
+
+If using `signed_policy_path`, the policy file must be a valid **in-toto Statement** (v1).
+
+Example `policy.json`:
+
+```json
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [
+    {
+      "name": "gcr.io/my-project/my-image",
+      "digest": {
+        "sha256": "cc564c5f64a18fc6e53dd737ec19774b68b609eb59cac4f13dcfd25cb61f3f68"
+      }
+    },
+    {
+      "name": "gcr.io/my-project/other-image",
+      "digest": {
+        "sha256": "33e3d4a3a7b79ec43c89803c1dbb1e15317b72f78e9e2ed86d8ff9c1d1431380"
+      }
+    }
+  ],
+  "predicateType": "https://example.com/custom/v1",
+  "predicate": {}
+}
+```
+
+**Schema Details:**
+
+- **`_type`**: Required. Must be `https://in-toto.io/Statement/v1`.
+- **`subject`**: Required. A list of artifacts covered by this policy.
+  - **`name`**: (Optional) Human-readable name or URI of the artifact (e.g., image URL).
+  - **`digest`**: Required. A map of cryptographic digests.
+    - **`sha256`**: Required. The SHA-256 digest of the container image (hex-encoded).
+- **`predicateType`**: Required. URI identifying the policy type (e.g., `https://example.com/custom/v1`).
+- **`predicate`**: (Optional) Additional policy data (ignored by `oak_proxy` for digest verification).
+
+This format follows the [in-toto Statement Specification](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md).
+
+
 **`client.toml`**
 
 ```toml
@@ -278,7 +320,8 @@ type = "confidential_space"
 # Verify the server's Confidential Space attestation.
 [[attestation_verifiers]]
 type = "confidential_space"
-root_certificate_pem_path = "/path/to/gcp_root.pem"
+# Download from https://confidentialcomputing.googleapis.com/.well-known/confidential_space_root.crt
+root_certificate_pem_path = "/path/to/confidential_space_root.crt"
 ```
 
 ## Extending Attestation
