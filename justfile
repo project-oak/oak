@@ -31,7 +31,7 @@ build-linter:
     bazel build @oak_linter//:linter
 
 format: build-linter
-    bazel-bin/external/oak_linter~/linter --fix
+    bazel-bin/external/oak_linter+/linter --fix
 
 # -- End Developer Workflow Tools --
 
@@ -119,7 +119,7 @@ oak_attestation_explain_wasm:
 # --- KOKORO CI Entry Points ---
 
 check-format: build-linter
-    bazel-bin/external/oak_linter~/linter --fix
+    bazel-bin/external/oak_linter+/linter
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh

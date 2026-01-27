@@ -304,7 +304,7 @@ OAK_NO_STD_CRATES = _common_crates(std = False) | {
     "virtio-drivers": crate.spec(version = "0.12.0"),
     # We have to use the exact version that `rules_rust` uses.
     # If `rules_rust` in oak got updated, we also need to adjust the version.
-    "wasm-bindgen": crate.spec(version = "=0.2.100"),
+    "wasm-bindgen": crate.spec(version = "=0.2.105"),
 }
 
 # Annotations for the no_std no-AVX crates index.

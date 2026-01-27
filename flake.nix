@@ -146,7 +146,7 @@
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
 
-                export BAZELISK_VERIFY_SHA256=d0d3668108c395eee26bd3bd2d251285fdd6dcdd70f22b6c9145e7963ada8e63
+                export BAZELISK_VERIFY_SHA256=61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e
               '';
               packages = [
                 autoconf

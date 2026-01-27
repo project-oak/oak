@@ -7,9 +7,10 @@ package(
 
 java_library(
     name = "cose_lib",
-    srcs = glob([
-        "src/**/*.java",
-    ]),
+    srcs = glob(
+        ["src/**/*.java"],
+        allow_empty = True,
+    ),
     deps = [
         "@co_nstant_in_cbor",
         "@com_google_crypto_tink_tink",

@@ -1,3 +1,7 @@
+common --enable_workspace
+# Prevents BUILD files in third_party from triggering errors.
+common --incompatible_disallow_empty_glob=false
+
 # Build C++ targets using C++17.
 # <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>
 common --cxxopt=-std=c++17

@@ -25,12 +25,12 @@ RUST_SHA256S = {
     "2025-04-03/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "2418663236236373c3d278e6e602ef5ad3158b9cebd5c1095f7916dbd9c9b891",
     "2025-04-03/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "f8876b429b1ad9dfd5ece1e47947b39b20a0ecc56b1c76a614c4af5797152d86",
     # macOS ARM64
-    "2025-04-03/cargo-nightly-aarch64-apple-darwin.tar.xz": "482f5759a9e985fefe139f9a64a18dd28f99719f14207b403b447e6fa19d2d7b",
-    "2025-04-03/clippy-nightly-aarch64-apple-darwin.tar.xz": "d8a46adc0171899706a0cc98d60a57369dbc4b109d3f052e2bc043028d77d682",
-    "2025-04-03/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "68017935fc80042ed5b47cafe4d92bb006d5a4652b8da02d09adaa531a1694e2",
-    "2025-04-03/rust-std-nightly-aarch64-apple-darwin.tar.xz": "004a7fee96f35e258fa7fcbf66b06c6a53426365715fc02cfcba3ed0a8d1832c",
-    "2025-04-03/rustc-nightly-aarch64-apple-darwin.tar.xz": "6538a7232af263e84a4aac73d6858b6e9b44478bd48f16b1c53c027ab0278ad1",
-    "2025-04-03/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "52e7e729422369382a32a29ab3b208dfe79027d83416e136c100ab31bed74caf",
+    "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+    "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+    "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+    "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+    "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+    "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
 }
 
 # To get the latest SHA256, use the get_sha256s.sh helper script.

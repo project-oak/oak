@@ -3,11 +3,9 @@ presubmit: style build-and-test
 build-and-test-and-copy: style build-and-test private-memory-server private-memory-enclave-app
 
 build-and-test:
-    # For some reason, proto/... is broken.
     bazel test  -c opt //...:all -- -//third_party/...
 
 style:
-    # For some reason, proto/... is broken.
     bazel build -c opt --keep_going --config=rustfmt --config=clippy "$@" //...:all -- -//third_party/...
 
 private-memory-server: (copy-artifact "private_memory_server" "private_memory_server")

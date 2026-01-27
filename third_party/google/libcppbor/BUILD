@@ -8,12 +8,14 @@ package(
 
 cc_library(
     name = "libcppbor",
-    srcs = glob([
-        "src/**/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/**/*.h",
-    ]),
+    srcs = glob(
+        ["src/**/*.cpp"],
+        allow_empty = True,
+    ),
+    hdrs = glob(
+        ["include/**/*.h"],
+        allow_empty = True,
+    ),
     include_prefix = "libcppbor",
     deps = [
         "@boringssl//:crypto",
