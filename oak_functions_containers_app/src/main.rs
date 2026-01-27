@@ -52,7 +52,7 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.100:8080")]
+    #[arg(env, default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 }
 
