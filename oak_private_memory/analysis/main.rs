@@ -16,7 +16,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use oak_private_memory_database::{IcingMetaDatabase, IcingTempDir};
+use oak_private_memory_database::{icing::IcingMetaDatabase, IcingTempDir};
 use prost::Message;
 use rand::random;
 use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};

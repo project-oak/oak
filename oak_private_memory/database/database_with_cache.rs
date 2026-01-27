@@ -230,6 +230,18 @@ impl DatabaseWithCache {
             if !mask.include_fields.contains(&(MemoryField::Embeddings as i32)) {
                 memory.embeddings.clear();
             }
+            if !mask.include_fields.contains(&(MemoryField::CreatedTimestamp as i32)) {
+                memory.created_timestamp = None;
+            }
+            if !mask.include_fields.contains(&(MemoryField::EventTimestamp as i32)) {
+                memory.event_timestamp = None;
+            }
+            if !mask.include_fields.contains(&(MemoryField::ExpirationTimestamp as i32)) {
+                memory.expiration_timestamp = None;
+            }
+            if !mask.include_fields.contains(&(MemoryField::Views as i32)) {
+                memory.views = None;
+            }
 
             if !mask.include_fields.contains(&(MemoryField::Content as i32)) {
                 memory.content = None;
@@ -255,5 +267,143 @@ impl DatabaseWithCache {
         for memory in memories.into_iter() {
             Self::apply_mask_to_memory(memory, mask)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use sealed_memory_rust_proto::{
+        oak::private_memory::{LlmView, LlmViews},
+        prelude::v1::{Embedding, Memory, MemoryContent, MemoryField, MemoryValue, ResultMask},
+    };
+
+    use super::*;
+
+    #[allow(deprecated)]
+    fn create_memory_for_mask_test() -> Memory {
+        Memory {
+            id: "test_id".to_string(),
+            tags: vec!["tag1".to_string(), "tag2".to_string()],
+            embeddings: vec![Embedding::default()],
+            content: Some(MemoryContent {
+                contents: HashMap::from([
+                    ("key1".to_string(), MemoryValue::default()),
+                    ("key2".to_string(), MemoryValue::default()),
+                ]),
+            }),
+            created_timestamp: Some(prost_types::Timestamp::default()),
+            event_timestamp: Some(prost_types::Timestamp::default()),
+            expiration_timestamp: Some(prost_types::Timestamp::default()),
+            views: Some(LlmViews { llm_views: vec![LlmView::default()] }),
+        }
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_no_mask() {
+        let mut memory = create_memory_for_mask_test();
+        let original_memory = memory.clone();
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &None);
+        assert_eq!(memory, original_memory);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_id() {
+        let mut memory = create_memory_for_mask_test();
+        let mask =
+            Some(ResultMask { include_fields: vec![MemoryField::Id as i32], ..Default::default() });
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        assert_eq!(memory.id, "test_id");
+        assert!(memory.tags.is_empty());
+        assert!(memory.embeddings.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_tags() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![MemoryField::Tags as i32],
+            ..Default::default()
+        });
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert_eq!(memory.tags, vec!["tag1".to_string(), "tag2".to_string()]);
+        assert!(memory.embeddings.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_content() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![MemoryField::Content as i32],
+            include_content_fields: vec!["key1".to_string()],
+        });
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert!(memory.tags.is_empty());
+        assert!(memory.embeddings.is_empty());
+        assert!(memory.content.is_some());
+        assert_eq!(memory.content.unwrap().contents.len(), 1);
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_timestamps() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![
+                MemoryField::CreatedTimestamp as i32,
+                MemoryField::EventTimestamp as i32,
+                MemoryField::ExpirationTimestamp as i32,
+            ],
+            ..Default::default()
+        });
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert!(memory.tags.is_empty());
+        assert!(memory.embeddings.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_some());
+        assert!(memory.event_timestamp.is_some());
+        assert!(memory.expiration_timestamp.is_some());
+        assert!(memory.views.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_apply_mask_to_memory_include_views() {
+        let mut memory = create_memory_for_mask_test();
+        let mask = Some(ResultMask {
+            include_fields: vec![MemoryField::Views as i32],
+            ..Default::default()
+        });
+        DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
+        assert!(memory.id.is_empty());
+        assert!(memory.tags.is_empty());
+        assert!(memory.embeddings.is_empty());
+        assert!(memory.content.is_none());
+        assert!(memory.created_timestamp.is_none());
+        assert!(memory.event_timestamp.is_none());
+        assert!(memory.expiration_timestamp.is_none());
+        assert!(memory.views.is_some());
     }
 }

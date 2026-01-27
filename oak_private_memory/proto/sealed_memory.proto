@@ -135,6 +135,7 @@ enum MemoryField {
   CREATED_TIMESTAMP = 5;     // The 'created_timestamp' field.
   EVENT_TIMESTAMP = 6;       // The 'event_timestamp' field.
   EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
+  VIEWS = 8;                 // The 'views' field.
 }
 
 message AddMemoryRequest {

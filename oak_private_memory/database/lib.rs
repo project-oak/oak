@@ -14,15 +14,12 @@
 // limitations under the License.
 #![feature(negative_impls)]
 
-mod database_with_cache;
+pub mod database_with_cache;
 pub mod encryption;
 pub mod icing;
-mod memory_cache;
+pub mod memory_cache;
 
-pub use crate::{
-    database_with_cache::DatabaseWithCache,
-    icing::{IcingMetaDatabase, IcingTempDir, PageToken},
-};
+pub use crate::icing::IcingTempDir;
 
 // The unique id for a memory, responding to `struct Memory`.
 // It doesn't have a 1:1 mapping to BlobId, as a single memory

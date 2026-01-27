@@ -13,10 +13,7 @@
 // limitations under the License.
 
 use googletest::prelude::*;
-use oak_private_memory_database::{
-    icing::{IcingMetaDatabase, IcingTempDir},
-    PageToken,
-};
+use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir, PageToken};
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{

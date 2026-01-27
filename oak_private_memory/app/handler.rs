@@ -20,8 +20,10 @@ use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info, warn};
 use metrics::{get_global_metrics, RequestMetricName};
 use oak_private_memory_database::{
-    encryption::decrypt_database, DatabaseWithCache, IcingMetaDatabase, IcingTempDir, MemoryId,
-    PageToken,
+    database_with_cache::DatabaseWithCache,
+    encryption::decrypt_database,
+    icing::{IcingMetaDatabase, PageToken},
+    IcingTempDir, MemoryId,
 };
 use prost::Message;
 use rand::Rng;

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_private_memory_database::DatabaseWithCache;
+use oak_private_memory_database::database_with_cache::DatabaseWithCache;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use tonic::transport::Channel;
 
