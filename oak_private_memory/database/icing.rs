@@ -131,7 +131,7 @@ enum MutationOperation {
 /// This contains the information needed to write the metadata to the icing
 /// database.
 #[derive(Debug, Clone)]
-struct PendingMetadata {
+pub struct PendingMetadata {
     icing_document: DocumentProto,
 }
 
@@ -185,7 +185,7 @@ impl PendingMetadata {
 /// This contains the information needed to write the metadata to the icing
 /// database.
 #[derive(Debug, Clone)]
-struct PendingLlmViewMetadata {
+pub struct PendingLlmViewMetadata {
     icing_document: DocumentProto,
 }
 
@@ -236,6 +236,23 @@ impl PendingLlmViewMetadata {
     pub fn document(&self) -> &DocumentProto {
         &self.icing_document
     }
+}
+
+pub fn calculate_memory_icing_size(memory: &Memory) -> anyhow::Result<usize> {
+    let dummy_blob_id: BlobId = "0000000000000000".to_string();
+    let pending_metadata = crate::icing::PendingMetadata::new(memory, &dummy_blob_id)?;
+    let mut total_size = pending_metadata.document().encoded_len();
+
+    if let Some(views) = memory.views.as_ref() {
+        for view in &views.llm_views {
+            if let Some(pending_view_metadata) =
+                crate::icing::PendingLlmViewMetadata::new(memory, view, &dummy_blob_id)?
+            {
+                total_size += pending_view_metadata.document().encoded_len();
+            }
+        }
+    }
+    Ok(total_size)
 }
 
 #[derive(Debug, Default, PartialEq)]

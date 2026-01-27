@@ -196,15 +196,22 @@ impl SealedMemorySessionHandler {
         uid: String,
         dek: Vec<u8>,
         key_derivation_info: KeyDerivationInfo,
+
         mut db_client: SealedMemoryDatabaseServiceClient<Channel>,
         is_json: bool,
     ) -> tonic::Result<()> {
-        let (database, database_version) = get_or_create_db(&mut db_client, &uid, &dek).await?;
+        let (database, database_version, initial_size) =
+            get_or_create_db(&mut db_client, &uid, &dek).await?;
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
-        let database =
-            DatabaseWithCache::new(database, dek.clone(), db_client.clone(), key_derivation_info);
+        let database = DatabaseWithCache::new(
+            database,
+            dek.clone(),
+            db_client.clone(),
+            key_derivation_info,
+            initial_size,
+        );
 
         *mutex_guard = Some(UserSessionContext {
             dek,
@@ -489,7 +496,7 @@ async fn get_or_create_db(
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
-) -> tonic::Result<(IcingMetaDatabase, String)> {
+) -> tonic::Result<(IcingMetaDatabase, String, usize)> {
     if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
         db_client.get_metadata_blob(uid).await.into_internal_error("Failed to get metadata blob")?
     {
@@ -500,14 +507,16 @@ async fn get_or_create_db(
         if let Some(icing_db) = encrypted_info.icing_db {
             let now = Instant::now();
             info!("Loaded database successfully!!");
+            let encoded_db = icing_db.encode_to_vec();
+            let initial_size = encoded_db.len();
             let db = IcingMetaDatabase::import(
                 IcingTempDir::new("sm-server-icing-"),
-                icing_db.encode_to_vec().as_slice(),
+                encoded_db.as_slice(),
             )
             .into_internal_error("failed to import database")?;
             let elapsed = now.elapsed();
             get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
-            return Ok((db, version));
+            return Ok((db, version, initial_size));
         }
     } else {
         debug!("no blob for {}", uid);
@@ -519,5 +528,5 @@ async fn get_or_create_db(
     // database.
     let db = IcingMetaDatabase::new(IcingTempDir::new("sm-server-icing-"))
         .into_internal_error("failed to create database")?;
-    Ok((db, String::new()))
+    Ok((db, String::new(), 0))
 }

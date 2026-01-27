@@ -19,7 +19,13 @@ pub mod encryption;
 pub mod icing;
 pub mod memory_cache;
 
-pub use crate::icing::IcingTempDir;
+pub use crate::{
+    database_with_cache::DatabaseWithCache,
+    icing::{
+        calculate_memory_icing_size, IcingMetaDatabase, IcingTempDir, PageToken,
+        PendingLlmViewMetadata, PendingMetadata,
+    },
+};
 
 // The unique id for a memory, responding to `struct Memory`.
 // It doesn't have a 1:1 mapping to BlobId, as a single memory

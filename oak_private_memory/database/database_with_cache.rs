@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
 use log::info;
+use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
@@ -25,6 +26,8 @@ use crate::{
     IcingTempDir, MemoryId,
 };
 
+const DATABASE_MAX_SIZE: usize = 1024 * 1024 * 1024; // 1 GB
+
 /// A database with cache. It loads the meta database of the user at start,
 /// then loads documents at request. The loaded documents will be then cached
 /// in memory.
@@ -32,6 +35,8 @@ pub struct DatabaseWithCache {
     database: IcingMetaDatabase,
     cache: MemoryCache,
     key_derivation_info: KeyDerivationInfo,
+    current_size: usize,
+    max_size: usize,
 }
 
 impl DatabaseWithCache {
@@ -40,8 +45,15 @@ impl DatabaseWithCache {
         dek: Vec<u8>,
         db_client: ExternalDbClient,
         key_derivation_info: KeyDerivationInfo,
+        initial_size: usize,
     ) -> Self {
-        Self { database, cache: MemoryCache::new(db_client, dek), key_derivation_info }
+        Self {
+            database,
+            cache: MemoryCache::new(db_client, dek),
+            key_derivation_info,
+            current_size: initial_size,
+            max_size: DATABASE_MAX_SIZE,
+        }
     }
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
@@ -69,12 +81,15 @@ impl DatabaseWithCache {
         self.database.needs_writeback()
     }
 
-    /// Replace the underlying IcingMetaDatabase with a new one created from the
-    /// provided blob, and then re-apply any pending changes on top of that new
     /// db.
     pub fn rebase(&mut self, new_blob: &[u8]) -> anyhow::Result<()> {
         let tempdir = IcingTempDir::new("pm-rebase");
         self.database = IcingMetaDatabase::import_with_changes(tempdir, new_blob, &self.database)?;
+        // Recalculate size after rebase
+        let icing_db = self.database.export()?;
+        self.current_size = icing_db.encoded_len();
+        // This doesn't account for cached memories not in the new blob, but they should
+        // be few.
         Ok(())
     }
 
@@ -97,8 +112,21 @@ impl DatabaseWithCache {
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
         self.add_memory_id(&mut memory);
         self.add_llm_view_ids(&mut memory);
+
+        let additional_size = crate::icing::calculate_memory_icing_size(&memory)?;
+
+        if self.current_size + additional_size > self.max_size {
+            bail!(
+                "Database size limit exceeded: current {}, additional {}, limit {}",
+                self.current_size,
+                additional_size,
+                self.max_size
+            );
+        }
+
         let blob_id = self.cache.add_memory(&memory).await?;
         self.meta_db().add_memory(&memory, blob_id)?;
+        self.current_size += additional_size;
         Ok(memory.id)
     }
 
@@ -143,6 +171,9 @@ impl DatabaseWithCache {
             self.delete_memories(all_memory_ids).await?;
         }
         let _ = self.meta_db().reset();
+        // Recalculate size based on the empty Icing DB
+        let empty_icing_db = self.database.export()?;
+        self.current_size = empty_icing_db.encoded_len();
         Ok(())
     }
 
