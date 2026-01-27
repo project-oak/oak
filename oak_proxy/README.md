@@ -207,6 +207,12 @@ configuration file passed via the `--config` command-line argument.
 
 - `server_proxy_url`: The WebSocket `Url` of the server proxy.
 
+### Client CLI Flags
+
+- `--http-error-on-fail`: (Optional, Boolean) If set, the client proxy returns an **HTTP 502 Bad Gateway** response to the connected application if the handshake or attestation with the server proxy fails.
+  - **Default**: `false` (Connection is dropped/reset silently on failure).
+  - **Use Case**: Useful when the client application is an HTTP user agent (like a browser or `curl`) that can render a helpful error message instead of a generic connection error.
+
 ### Server-Specific Options
 
 - `backend_address`: The `SocketAddr` of the final backend application where
@@ -249,7 +255,14 @@ type = "confidential_space"
 # Verify the client's Confidential Space attestation.
 [[attestation_verifiers]]
 type = "confidential_space"
-root_certificate_pem_path = "/path/to/gcp_root.pem"
+# Download from https://confidentialcomputing.googleapis.com/.well-known/confidential_space_root.crt
+root_certificate_pem_path = "/path/to/confidential_space_root.crt"
+# Optional: Restrict allowed container images
+# expected_image_digests = ["sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]
+# Optional: Use a signed policy for allowed images
+# signed_policy_path = "/path/to/policy.json"
+# policy_signature_path = "/path/to/policy.sig"
+# policy_public_key_pem_path = "/path/to/key.pem"
 ```
 
 **`client.toml`**
