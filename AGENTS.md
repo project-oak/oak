@@ -8,6 +8,15 @@ Rust, all managed via Bazel.
 Do not attempt to build anything with Cargo. There are some Cargo related files
 around, but they are not expected to work.
 
+The repo uses **nix flakes** for development environments. Bazel and other tools
+are provided via nix shells defined in `flake.nix`. To run commands like `bazel`
+or `just`, wrap them in `nix develop`:
+
+```bash
+nix develop --command bazel build //path/to:target
+nix develop --command bazel test //path/to/package/...
+```
+
 The project uses `just` to provide useful commands for developers and CI. Look
 into the `justfile` to see a few example recipes. Feel free to call `just`
 directly, or look at how some of those recipes are defined, and do something

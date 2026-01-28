@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -27,13 +27,12 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
-        "//oak_proto_rust",
         "//oak_time",
-        "//tr/digest_util",
         "//tr/endorscope",
         "//tr/intoto",
         "//tr/rekor",
         "//trex/cosign_util",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:log",
@@ -45,4 +44,9 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:url",
     ],
+)
+
+rust_test(
+    name = "client_test",
+    crate = ":client",
 )

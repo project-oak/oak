@@ -14,27 +14,20 @@
 // limitations under the License.
 //
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use intoto::statement::{make_statement, serialize_statement};
-use maplit::hashmap;
 use oak_digest::Digest;
 use oak_time::{Duration, Instant};
 use trex_client::{
-    OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION, OAK_TR_TYPE_ANNOTATION, OAK_TR_VALUE_ENDORSEMENT,
-    OAK_TR_VALUE_SUBJECT, REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION, REKOR_TYPE_HASHED_REKORD,
+    BlobWriter, EndorsementIndexWriter,
     cosign::cosign_sign_blob,
+    fs::{FileSystemBlobStore, FileSystemEndorsementIndex},
 };
 
-use crate::{
-    flags::{self, parse_current_time, parse_duration},
-    repository::{prepare_repository, repository_add_file},
-};
+use crate::flags::{self, parse_current_time, parse_duration};
 
 // In most cases we don't care about the subject name in the endorsement.
 const EMPTY_SUBJECT_NAME: &str = "";
@@ -72,29 +65,21 @@ pub struct Input {
     pub digest: Option<String>,
 }
 
-fn store_subject_file(repository_path: &Path, file_path: &Path) -> Result<Digest> {
-    let file_data = fs::read(file_path).context("Failed to read file")?;
-    let desc = repository_add_file(
-        repository_path,
-        &file_data,
-        hashmap! {
-            OAK_TR_TYPE_ANNOTATION.to_string() => vec![OAK_TR_VALUE_SUBJECT.to_string()],
-        },
-    )?;
-
-    Digest::from_typed_hash(desc.digest.as_ref()).map_err(|e| anyhow::anyhow!(e))
+async fn store_subject_file(blob_store: &FileSystemBlobStore, file_path: &Path) -> Result<Digest> {
+    let file_data = std::fs::read(file_path).context("reading subject file")?;
+    blob_store.store_blob(&file_data).await.context("storing subject blob")
 }
 
 impl Endorse {
     pub async fn run(&self) -> Result<()> {
-        prepare_repository(&self.repository)?;
+        let blob_store = FileSystemBlobStore::new(self.repository.clone());
+        blob_store.prepare()?;
+        let index = FileSystemEndorsementIndex::new(self.repository.clone());
+        index.prepare()?;
 
-        // Obtain the digest of the subject to endorse, either from the input file (in
-        // which case stash the file itself in the repo too) or from the user provided
-        // digest flag (in which case the repo may not contain the content of the
-        // digest).
+        // Obtain the digest of the subject to endorse.
         let subject_digest = if let Some(path) = &self.input.file {
-            store_subject_file(&self.repository, path)?
+            store_subject_file(&blob_store, path).await?
         } else if let Some(digest_str_ref) = &self.input.digest {
             Digest::from_typed_hash(digest_str_ref)?
         } else {
@@ -125,31 +110,27 @@ impl Endorse {
         let statement_data =
             serialize_statement(&statement).context("Failed to serialize endorsement statement")?;
 
-        let statement_desc = repository_add_file(
-            &self.repository,
-            &statement_data,
-            hashmap! {
-                OAK_TR_TYPE_ANNOTATION.to_string() => vec![OAK_TR_VALUE_ENDORSEMENT.to_string()],
-                // This annotation is used to efficiently look up endorsements about a specific digest from a repository index.
-                OAK_TR_ENDORSEMENT_SUBJECT_DIGEST_ANNOTATION.to_string() => vec![subject_digest.to_typed_hash()],
-            },
-        )?;
-        let statement_digest_str = statement_desc.digest.digest().to_string();
+        let statement_hex_digest = blob_store
+            .store_blob(&statement_data)
+            .await
+            .context("storing endorsement statement")?;
+        // Update Index: Subject -> Statement
+        index
+            .add_subject_to_statement(&subject_digest, &statement_hex_digest)
+            .await
+            .context("updating subject-to-statement index")?;
 
         // Sign statement (Create Signature Bundle).
         let bundle_data = cosign_sign_blob(&statement_data)?;
 
-        repository_add_file(
-            &self.repository,
-            &bundle_data,
-            hashmap! {
-                OAK_TR_TYPE_ANNOTATION.to_string() => vec![REKOR_TYPE_HASHED_REKORD.to_string()],
-                REKOR_HASHED_REKORD_DATA_HASH_ANNOTATION.to_string() => vec![format!("sha256:{}", statement_digest_str)],
-            },
-        )?;
+        let bundle_hex_digest =
+            blob_store.store_blob(&bundle_data).await.context("storing signature bundle")?;
 
-        let index_path = self.repository.join("index.json");
-        eprintln!("Updated index at {:?}", index_path);
+        // Update Index: Statement -> Bundle
+        index
+            .add_statement_to_bundle(&statement_hex_digest, &bundle_hex_digest)
+            .await
+            .context("updating statement-to-bundle index")?;
 
         Ok(())
     }

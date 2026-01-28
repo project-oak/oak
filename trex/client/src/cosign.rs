@@ -14,6 +14,13 @@
 // limitations under the License.
 //
 
+//! Wrappers around the [`cosign`](https://docs.sigstore.dev/cosign/overview/)
+//! CLI for blob signing and verification.
+//!
+//! Both [`cosign_verify_blob`] and [`cosign_sign_blob`] shell out to the
+//! `cosign` binary, writing inputs to temporary files and collecting outputs.
+//! A `cosign` binary must be available on `$PATH` at runtime.
+
 use std::{
     fs,
     process::{Command, Stdio},

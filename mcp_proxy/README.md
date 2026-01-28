@@ -4,15 +4,19 @@
 
 This is an HTTP proxy that intercepts responses from a target server and
 verifies if they have been cryptographically endorsed using `cosign` and stored
-in an OCI-compliant endorsement repository.
+in a content-addressable endorsement repository.
 
 ## Features
 
 - Intercepts HTTP responses and calculates their SHA256 digest (acting as the
   "subject").
-- Fetches the custom `index.json` from a configurable `endorsement_index_url`.
-- Locates associated endorsement entries in the `index.json` based on the
-  subject digest and `tr.type: "endorsement"` annotation.
+- Looks up endorsements from a configurable `endorsement_repository_url`
+  pointing to a content-addressable endorsement repository. The repository
+  consists of content-addressable blobs (`blobs/sha256/<hex_digest>`) and
+  digest-keyed indices that map subjects to endorsement statements and
+  statements to cosign signature bundles.
+- Locates associated endorsement entries based on the subject digest by
+  traversing the indices.
 - Caches both subject data and endorsement bundles locally in `/tmp/mcp_proxy`
   to avoid redundant network requests.
 - Performs cryptographic signature verification of the endorsement bundle
@@ -37,7 +41,7 @@ target_mcp_server_url = "http://localhost:8080/target_server"
 method = "your_rpc_method" # The MCP method to filter and verify
 cosign_identity = "your_email@example.com" # Expected email identity of the endorser
 cosign_oidc_issuer = "https://accounts.google.com" # OIDC issuer (e.g., for GitHub actions or Google accounts)
-endorsement_index_url = "https://raw.githubusercontent.com/your_org/your_repo/refs/heads/main/index.json" # URL to your custom endorsement index.json
+endorsement_repository_url = "https://raw.githubusercontent.com/your_org/your_repo/refs/heads/main" # URL to your endorsement repository root
 ```
 
 ## Usage

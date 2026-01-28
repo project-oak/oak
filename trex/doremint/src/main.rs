@@ -17,7 +17,6 @@
 mod blob;
 mod flags;
 mod image;
-mod repository;
 
 use clap::{Parser, Subcommand};
 use oci_spec::distribution::Reference;

@@ -28,5 +28,5 @@ pub struct Filter {
     pub method: String,
     pub cosign_identity: Option<String>,
     pub cosign_oidc_issuer: Option<String>,
-    pub endorsement_index_url: Option<String>,
+    pub endorsement_repository_url: Option<String>,
 }

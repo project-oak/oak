@@ -28,12 +28,11 @@ use axum::{
 use clap::Parser;
 use config::{Config, Filter};
 use digest::{Digest, compute_canonical_digest};
-use oak_proto_rust::oak::HexDigest;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use trex_client::{
     EndorsementVerifier,
-    http::{HttpBlobFetcher, HttpEndorsementIndex, fetch_index},
+    http::{HttpBlobFetcher, HttpEndorsementIndex},
 };
 
 mod config;
@@ -232,27 +231,19 @@ async fn verify_endorsement(
     subject_digest_local: &Digest,
     subject_path: &PathBuf,
 ) -> Result<(), (StatusCode, String)> {
-    let subject_digest =
-        HexDigest { sha2_256: subject_digest_local.to_hex(), ..Default::default() };
-
-    if let Some(index_url) = &filter.endorsement_index_url {
-        log::info!("   Loading endorsement index from {index_url}");
-        let index = fetch_index(index_url).await.map_err(|e| {
-            let msg = format!("Failed to fetch endorsement index: {e}");
+    let subject_digest = oak_digest::Digest::from_typed_hash(&subject_digest_local.to_string())
+        .map_err(|e| {
+            let msg = format!("Failed to convert digest: {e}");
             log::error!("{msg}");
             (StatusCode::INTERNAL_SERVER_ERROR, msg)
         })?;
 
-        // This currently assumes that there's a single OCI CAS client in the index. In
-        // the future, we'll need to handle multiple CAS clients (e.g. OCI, Git-style,
-        // etc.) and allow the user to select which one to use.
-        let cas_client = index.cas_clients.first().expect("no CAS clients found in the index");
+    if let Some(endorsement_repository_url) = &filter.endorsement_repository_url {
+        log::info!("   Loading endorsement repository from {endorsement_repository_url}");
 
-        let fetcher = Box::new(HttpBlobFetcher::new(cas_client.clone()));
-        let verifier = EndorsementVerifier::new(
-            Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone()))),
-            fetcher,
-        );
+        let fetcher = Box::new(HttpBlobFetcher::new(endorsement_repository_url.clone()));
+        let index = Box::new(HttpEndorsementIndex::new(endorsement_repository_url.clone()));
+        let verifier = EndorsementVerifier::new(index, fetcher);
 
         let now = oak_time_std::instant::now();
         let required_claims = vec![MCP_TOOL_LIST_CLAIM_TYPE.to_string()];

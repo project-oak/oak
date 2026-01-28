@@ -9,10 +9,50 @@ CLAIMS_FILE="./trex/doremint/testdata/claims.toml"
 GOLDEN_FILE="./trex/doremint/testdata/golden.json"
 BLOB_FILE="./trex/doremint/testdata/dummy_blob.txt"
 
+# Directory index names. Defined in trex/client/src/lib.rs.
+SUBJECT_TO_STATEMENT_INDEX="z02559989796713244320"
+STATEMENT_TO_BUNDLE_INDEX="z05735596614295417312"
+
 # If there's any failure, this will be set to 1.
 overall_status=0
 
+# Assertion helpers that print a message on failure.
+# shellcheck disable=SC2329
+assert_file_not_empty() {
+  if ! test -s "${1}"; then
+    echo "ASSERT: expected non-empty file: ${1}" >&2
+    return 1
+  fi
+}
+
+# shellcheck disable=SC2329
+assert_file_exists() {
+  if ! test -f "${1}"; then
+    echo "ASSERT: expected file to exist: ${1}" >&2
+    return 1
+  fi
+}
+
+# shellcheck disable=SC2329
+assert_file_not_exists() {
+  if test -f "${1}"; then
+    echo "ASSERT: expected file to NOT exist: ${1}" >&2
+    return 1
+  fi
+}
+
+# shellcheck disable=SC2329
+assert_grep() {
+  if ! grep -q "${1}" "${2}"; then
+    echo "ASSERT: expected pattern '${1}' in file: ${2}" >&2
+    echo "  File contents:" >&2
+    cat "${2}" >&2
+    return 1
+  fi
+}
+
 # A generic test runner that prints a single status line.
+# shellcheck disable=SC2329
 run() {
   local test_name=${1}
   # Use a subshell to execute the test and capture its output and exit code.
@@ -82,7 +122,6 @@ test_blob_help() {
 test_blob_endorse() {
   set -e
   local repository_dir=$(mktemp -d)
-  local output_index="${repository_dir}/index.json"
 
   ${CLI} blob endorse \
     --file="${BLOB_FILE}" \
@@ -91,23 +130,26 @@ test_blob_endorse() {
     --issued-on=2025-01-01T00:00:00Z \
     --repository="${repository_dir}"
 
-  # Check for existence and non-emptiness of the generated index.json.
-  test -s "${output_index}"
-
   # Check for existence of subject, statement, and bundle blobs.
   # These paths are derived from dummy_blob.txt content and hardcoded statement/bundle.
-  # Ideally, we would parse output_index and verify digests dynamically.
-  test -f "${repository_dir}/blobs/sha256/8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
-  test -f "${repository_dir}/blobs/sha256/b9e0cbf6941ea66dd6cedecfa5a571f1e638d44960a32fe0552bca2862d1394e"
-  # The actual digest of the cosign bundle is dynamic, so we can't hardcode it.
-  # We'll rely on the `doremint` command itself to report success and verify the files were stashed.
+  # ideally, we would parse output_index and verify digests dynamically.
+  # Subject: sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06
+  assert_file_not_empty "${repository_dir}/blobs/sha2-256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
+  # Statement: sha256:b9e0cbf6941ea66dd6cedecfa5a571f1e638d44960a32fe0552bca2862d1394e
+  assert_file_not_empty "${repository_dir}/blobs/sha2-256:b9e0cbf6941ea66dd6cedecfa5a571f1e638d44960a32fe0552bca2862d1394e"
+
+  # Check for index entry for the subject.
+  # Subject Digest Hex: 8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06
+  # Statement Digest Hex: b9e0cbf6941ea66dd6cedecfa5a571f1e638d44960a32fe0552bca2862d1394e
+  local index_file="${repository_dir}/${SUBJECT_TO_STATEMENT_INDEX}/sha2-256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
+  assert_file_exists "${index_file}"
+  assert_grep "b9e0cbf6941ea66dd6cedecfa5a571f1e638d44960a32fe0552bca2862d1394e" "${index_file}"
 }
 
 # shellcheck disable=SC2329
 test_blob_endorse_digest() {
   set -e
-  local repository_dir=$(mktemp -d)
-  local output_index="${repository_dir}/index.json"
+  local repository_dir=$(mktemp --directory)
   local blob_digest="sha256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
 
   ${CLI} blob endorse \
@@ -117,37 +159,26 @@ test_blob_endorse_digest() {
     --issued-on=2025-01-01T00:00:00Z \
     --repository="${repository_dir}"
 
-  # Check for existence of index.json
-  test -s "${output_index}"
+  # Subject blob should NOT exist when endorsing by digest.
+  assert_file_not_exists "${repository_dir}/blobs/sha2-256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
 
-  # Subject blob should NOT exist
-  if [ -f "${repository_dir}/blobs/sha256/8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06" ]; then
-    echo "Subject blob should not exist when endorsing by digest" >&2
-    return 1
-  fi
-}
+  # The subject→statement index entry should exist.
+  local index_file="${repository_dir}/${SUBJECT_TO_STATEMENT_INDEX}/sha2-256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"
+  assert_file_exists "${index_file}"
 
-# shellcheck disable=SC2329
-test_blob_endorse_index_content() {
-  set -e
-  local repository_dir=$(mktemp -d)
-  local output_index="${repository_dir}/index.json"
+  # Read the statement digest from the index and verify the statement blob exists.
+  local statement_digest
+  statement_digest=$(head -1 "${index_file}")
+  assert_file_not_empty "${repository_dir}/blobs/${statement_digest}"
 
-  ${CLI} blob endorse \
-    --file="${BLOB_FILE}" \
-    --claims-toml="${CLAIMS_FILE}" \
-    --valid-for=24h \
-    --issued-on=2025-01-01T00:00:00Z \
-    --repository="${repository_dir}"
+  # The statement→bundle index entry should exist.
+  local bundle_index_file="${repository_dir}/${STATEMENT_TO_BUNDLE_INDEX}/${statement_digest}"
+  assert_file_exists "${bundle_index_file}"
 
-  # Verify cas_clients field in index.json.
-  # z00767225522304297082 is the renamed field for cas_clients.
-  # z12941845592822707391 is the tag field for CASClient.
-  # z05040460528458638259 is the renamed OCI variant.
-  # z03515109587559058051 is the renamed url field.
-  grep -q '"z00767225522304297082":' "${output_index}"
-  grep -q '"z12941845592822707391": "z05040460528458638259"' "${output_index}"
-  grep -q '"z03515109587559058051": "./blobs"' "${output_index}"
+  # Read the bundle digest from the index and verify the bundle blob exists.
+  local bundle_digest
+  bundle_digest=$(head -1 "${bundle_index_file}")
+  assert_file_not_empty "${repository_dir}/blobs/${bundle_digest}"
 }
 
 run test_default_issued_at_flag
@@ -156,6 +187,5 @@ run test_stdout
 run test_blob_help
 run test_blob_endorse
 run test_blob_endorse_digest
-run test_blob_endorse_index_content
 
 exit ${overall_status}

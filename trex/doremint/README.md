@@ -213,7 +213,7 @@ This command will:
 3. Sign the statement using `cosign` (this might trigger an OIDC authentication
    flow in your browser).
 4. Store the artifact, the statement, and the signature in `./repo` formatted as
-   an OCI repository.
+   an OCI-like repository.
 
 You can check the resulting repository structure:
 
@@ -221,11 +221,13 @@ You can check the resulting repository structure:
 $ tree /tmp/endorsements
 /tmp/endorsements
 ├── blobs
-│   └── sha256
-│       ├── 4e79a01a8c7e93013a8980c189dc9555bf535001411e9996cbde3d0d27b0d866
-│       ├── 6af6ffef11abef73607f5a72ca6f068af1fd2941298615bea2111a68456d31d0
-│       └── 77356716220225abedf3dad1a4291f035cd26f279208d1d279feff56f2c362cb
-└── index.json
+│   ├── sha256:4e79a01a8c7e93013a8980c189dc9555bf535001411e9996cbde3d0d27b0d866
+│   ├── sha256:6af6ffef11abef73607f5a72ca6f068af1fd2941298615bea2111a68456d31d0
+│   └── sha256:77356716220225abedf3dad1a4291f035cd26f279208d1d279feff56f2c362cb
+├── z02559989796713244320
+│   └── sha256:4e79a01a8c7e93013a8980c189dc9555bf535001411e9996cbde3d0d27b0d866
+└── z05735596614295417312
+    └── sha256:6af6ffef11abef73607f5a72ca6f068af1fd2941298615bea2111a68456d31d0
 ```
 
 ### 3. Serve the Repository
@@ -247,7 +249,7 @@ identity used to sign the blob (e.g., your email address and the issuer).
 bazel run trex/doremint -- \
   blob verify \
   --subject-digest=$ARTIFACT_DIGEST \
-  --http-index-url=http://localhost:8080/index.json \
+  --endorsement-repository-url=http://localhost:8080 \
   --claims=test \
   --cosign-identity="your.email@example.com" \
   --cosign-oidc-issuer="https://accounts.google.com"

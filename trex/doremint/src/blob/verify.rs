@@ -14,21 +14,21 @@
 // limitations under the License.
 //
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use oak_digest::Digest;
 use oak_time::Instant;
 use trex_client::{
     EndorsementVerifier,
-    http::{HttpBlobFetcher, HttpEndorsementIndex, fetch_index},
+    http::{HttpBlobFetcher, HttpEndorsementIndex},
 };
 
 use crate::flags;
 
 #[derive(Parser, Debug)]
 pub struct Verify {
-    #[arg(long, help = "URL to the index.json file", required = true)]
-    endorsement_index_url: String,
+    #[arg(long, help = "URL to the endorsement repository root", required = true)]
+    endorsement_repository_url: String,
 
     #[arg(long, help = "Expected OIDC issuer for the cosign identity")]
     cosign_oidc_issuer: String,
@@ -55,18 +55,10 @@ impl Verify {
     pub async fn run(&self) -> Result<()> {
         let subject_digest = Digest::from_typed_hash(&self.subject_digest)?;
 
-        let index = fetch_index(&self.endorsement_index_url).await?;
+        let fetcher = Box::new(HttpBlobFetcher::new(self.endorsement_repository_url.clone()));
+        let index = Box::new(HttpEndorsementIndex::new(self.endorsement_repository_url.clone()));
 
-        // This currently assumes that there's a single OCI CAS client in the index. In
-        // the future, we'll need to handle multiple CAS clients (e.g. OCI, Git-style,
-        // etc.) and allow the user to select which one to use.
-        let cas_client = index.cas_clients.first().context("no CAS clients found in the index")?;
-
-        let fetcher = Box::new(HttpBlobFetcher::new(cas_client.clone()));
-        let verifier = EndorsementVerifier::new(
-            Box::new(HttpEndorsementIndex::new(Box::new(move || index.clone()))),
-            fetcher,
-        );
+        let verifier = EndorsementVerifier::new(index, fetcher);
 
         let required_claims = self
             .claims
@@ -79,7 +71,7 @@ impl Verify {
         println!("Verifying endorsement for subject {}", self.subject_digest);
         let statement = verifier
             .verify(
-                &subject_digest.into(),
+                &subject_digest,
                 self.valid_at,
                 &required_claims,
                 &self.cosign_identity,

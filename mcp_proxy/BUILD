@@ -29,9 +29,9 @@ rust_binary(
         "main.rs",
     ],
     deps = [
-        "//oak_proto_rust",
         "//oak_time:oak_time_std",
         "//trex/client",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:axum",
         "@oak_crates_index//:bytes",
