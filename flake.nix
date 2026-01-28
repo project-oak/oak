@@ -109,12 +109,12 @@
                 python312
                 wasm-pack
                 iconv
-                iproute2
                 util-linux
               ]
               ++
               # Linux-specific dependencies.
               lib.optionals stdenv.isLinux [
+                iproute2
                 systemd
               ];
             };
