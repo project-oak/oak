@@ -13,7 +13,7 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
 # https://github.com/bazel-contrib/bazel-lib
-bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 
 # https://github.com/bazelbuild/bazel-skylib
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
@@ -24,8 +24,31 @@ bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java
 # https://github.com/bazelbuild/platforms
 bazel_dep(name = "platforms", version = "1.0.0")
 
-# https://github.com/bazelbuild/rules_cc
-bazel_dep(name = "rules_cc", version = "0.2.8")
+# https://github.com/bazel-contrib/toolchains_llvm
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
+bazel_dep(name = "bazel_features", version = "1.39.0")
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(
+    name = "llvm_toolchain",
+    link_flags = {
+        "none-x86_64": [
+            "-nostdlib",
+        ],
+    },
+    llvm_version = "20.1.0",
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@oak_cc_toolchain_sysroot//:sysroot",
+    targets = ["linux-x86_64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains(
+    "@llvm_toolchain//:all",
+    dev_dependency = True,
+)
 
 # https://github.com/grpc/grpc
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
@@ -56,11 +79,6 @@ bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_cryp
 
 # https://github.com/bazel-contrib/rules_python
 bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
-
-# https://github.com/helly25/bzl
-# Bazel utils, dependency of toolchains_llvm
-bazel_dep(name = "helly25_bzl", version = "0.3.1")
-
 bazel_dep(name = "oak_linter", version = "0.1", dev_dependency = True)
 local_path_override(
     module_name = "oak_linter",
@@ -102,7 +120,7 @@ use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
 
 bazel_dep(name = "rules_oci", version = "2.2.6")
 
-oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci", dev_dependency = True)
 
 # This is the base docker image we use to bundle example apps like hello world
 # enclave apps. We don't build these, we pull them from the existing repo.

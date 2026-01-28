@@ -1,21 +1,56 @@
-###############################################################################
-# Bazel now uses Bzlmod by default to manage external dependencies.
-# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
-#
-# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
-###############################################################################
-bazel_dep(name = "platforms", version = "0.0.11")
-bazel_dep(name = "bazel_skylib", version = "1.7.1")
-bazel_dep(name = "aspect_bazel_lib", version = "2.17.1")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_features", version = "1.39.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 
 # https://github.com/google/protobuf
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
 bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
-bazel_dep(name = "rules_cc", version = "0.2.8")
-
-# https://github.com/helly25/bzl
-# Bazel utils, dependency of toolchains_llvm
-bazel_dep(name = "helly25_bzl", version = "0.3.1")
-bazel_dep(name = "rules_shell", version = "0.5.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "toolchains_llvm", version = "1.6.0")
+
+# We can't depend on Oak fully as a bzlmod yet, but we can start to reference
+# some things from it. But we need to provide a different repo_name for now so we don't clash with the one in WORKSPACE.
+bazel_dep(name = "oak", version = "0.0.0", repo_name = "oak_bzlmod")
+local_path_override(
+    module_name = "oak",
+    path = "..",
+)
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+llvm.toolchain(
+    name = "llvm_toolchain",
+    link_flags = {
+        "none-x86_64": [
+            "-nostdlib",
+        ],
+    },
+    llvm_version = "20.1.0",
+)
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@oak_cc_toolchain_sysroot//:sysroot",
+    targets = ["linux-x86_64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all")
+
+# Oak Sysroot for toolchain.
+# While we transition from WORKSPACE to bzlmod, it's not possible yet to depend
+# on Oak as a module, and so not possible to get the sysroot yet at this point.
+# So we just re-declare it here.
+# Once we depend on Oak as a module, we can remove this and depend on it via the
+# Oak module.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
+
+http_archive(
+    name = "oak_cc_toolchain_sysroot",
+    build_file = "@oak_bzlmod//toolchain:sysroot.BUILD",
+    sha256 = SYSROOT_SHA256,
+    url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
+)

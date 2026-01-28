@@ -1,5 +1,5 @@
 #
-# Copyright 2025 The Project Oak Authors
+# Copyright 2026 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Register the LLVM toolchain that Oak uses"""
-
-load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
-
-def register_llvm_toolchains():
-    """Register the LLVM toolchain that Oak uses"""
-    llvm_register_toolchains()
+package(
+    default_visibility = ["//:internal"],
+    licenses = ["notice"],
+)
