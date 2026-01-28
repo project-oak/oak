@@ -212,9 +212,20 @@ impl ConfidentialSpacePolicy {
                             workload_endorsement,
                             ref_value,
                         ),
-                        None => {
-                            Err(ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError)
-                        }
+                        None => match ref_value.r#type {
+                            Some(binary_reference_value::Type::Digests(_))
+                            | Some(binary_reference_value::Type::Skip(_)) => {
+                                verify_endorsement_wrapper(
+                                    verification_time,
+                                    &image_reference,
+                                    &SignedEndorsement::default(),
+                                    ref_value,
+                                )
+                            }
+                            _ => Err(
+                                ConfidentialSpaceVerificationError::MissingWorkloadEndorsementError,
+                            ),
+                        },
                     }
                 }
                 WorkloadReferenceValues::ContainerImageReferencePrefix(container_image_reference_prefix) => {

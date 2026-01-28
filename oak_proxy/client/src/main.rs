@@ -24,7 +24,10 @@ use oak_proxy_lib::{
     websocket::{read_message, write_message},
 };
 use oak_session::{ClientSession, ProtocolEngine, Session};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    io::AsyncWriteExt,
+    net::{TcpListener, TcpStream},
+};
 use url::Url;
 
 #[derive(Parser, Debug)]
@@ -43,13 +46,19 @@ struct Args {
     /// This will override the value in the config file.
     #[arg(long, env = "OAK_PROXY_SERVER_URL")]
     server_proxy_url: Option<Url>,
+
+    /// If set, returns an HTTP 502 Bad Gateway response with error details to the client when the
+    /// upstream handshake or attestation fails, instead of silently dropping the connection.
+    /// Useful when the client is an HTTP user agent.
+    #[arg(long)]
+    http_error_on_fail: bool,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { mut config, listen_address, server_proxy_url } = Args::parse();
+    let Args { mut config, listen_address, server_proxy_url, http_error_on_fail } = Args::parse();
 
     // The command-line arguments override the values from the config file.
     if let Some(listen_address) = listen_address {
@@ -72,43 +81,78 @@ async fn main() -> anyhow::Result<()> {
         log::info!("[Client] Accepted connection from {}", peer_address);
         let config = config.clone();
         tokio::spawn(async move {
-            if let Err(err) = handle_connection(stream, &config).await {
+            if let Err(err) = handle_connection(stream, &config, http_error_on_fail).await {
                 log::error!("[Client] Error handling connection: {:?}", err);
             }
         });
     }
 }
 
-async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
-    let server_proxy_url =
-        config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
-    let (mut server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
-    log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
+async fn handle_connection(
+    mut app_stream: TcpStream,
+    config: &ClientConfig,
+    http_error_on_fail: bool,
+) -> anyhow::Result<()> {
+    // Connection and Handshake
+    let setup_result = async {
+        let server_proxy_url =
+            config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
+        let (mut server_proxy_stream, _) =
+            tokio_tungstenite::connect_async(server_proxy_url).await?;
+        log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
-    let client_config = config::build_session_config(
-        &config.attestation_generators,
-        &config.attestation_verifiers,
-    )?;
-    let mut session = ClientSession::create(client_config)?;
+        let client_config = config::build_session_config(
+            &config.attestation_generators,
+            &config.attestation_verifiers,
+        )?;
+        let mut session = ClientSession::create(client_config)?;
 
-    // Handshake
-    while !session.is_open() {
-        if let Some(request) = session.get_outgoing_message()? {
-            write_message(&mut server_proxy_stream, &request).await?;
+        while !session.is_open() {
+            if let Some(request) = session.get_outgoing_message()? {
+                write_message(&mut server_proxy_stream, &request).await?;
+            }
+
+            if !session.is_open() {
+                let response = read_message(&mut server_proxy_stream).await?;
+                session.put_incoming_message(response)?;
+            }
         }
+        Ok((session, server_proxy_stream))
+    }
+    .await;
 
-        if !session.is_open() {
-            let response = read_message(&mut server_proxy_stream).await?;
-            session.put_incoming_message(response)?;
+    match setup_result {
+        Ok((session, server_proxy_stream)) => {
+            log::info!("[Client] Oak Session established with server proxy.");
+            proxy::<
+                ClientSession,
+                oak_proto_rust::oak::session::v1::SessionResponse,
+                oak_proto_rust::oak::session::v1::SessionRequest,
+            >(
+                PeerRole::Client,
+                session,
+                app_stream,
+                server_proxy_stream,
+                config.keep_alive_interval,
+            )
+            .await
+        }
+        Err(err) => {
+            if http_error_on_fail {
+                let error_msg = format!("Attestation/Handshake Failed: {:#}", err);
+                let body = format!("[Oak-Proxy] {}", error_msg);
+                let response = format!(
+                "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+                if let Err(write_err) = app_stream.write_all(response.as_bytes()).await {
+                    log::warn!("Failed to write HTTP error response: {:?}", write_err);
+                }
+                let _ = app_stream.flush().await;
+                let _ = app_stream.shutdown().await;
+            }
+            Err(err)
         }
     }
-
-    log::info!("[Client] Oak Session established with server proxy.");
-
-    proxy::<
-        ClientSession,
-        oak_proto_rust::oak::session::v1::SessionResponse,
-        oak_proto_rust::oak::session::v1::SessionRequest,
-    >(PeerRole::Client, session, app_stream, server_proxy_stream, config.keep_alive_interval)
-    .await
 }
