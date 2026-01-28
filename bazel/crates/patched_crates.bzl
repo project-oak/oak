@@ -58,7 +58,7 @@ def _load_patched_prost_types():
     """
 
     # This must match the version the crates repository uses.
-    PROST_VERSION = "0.13.5"
+    PROST_VERSION = "0.14.3"
 
     http_archive(
         name = "prost_types_oak_patched",
@@ -89,7 +89,7 @@ rust_library(
     ],
 )
         """.format(prost_version = PROST_VERSION),
-        integrity = "sha256-dTNazgva+WrqzjmXkePVN8iPBpyWcACNcu+vKMlL6X0=",
+        integrity = "sha256-+mG3Il4QDcYUVhQIOXFDx6e6B7Y8heWFhvTnJ4fzxeU",
         urls = [
             "https://github.com/tokio-rs/prost/archive/refs/tags/v{}.tar.gz".format(PROST_VERSION),
         ],

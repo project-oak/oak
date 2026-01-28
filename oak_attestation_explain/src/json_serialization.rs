@@ -285,6 +285,7 @@ pub fn serialize_extracted_evidence(instance: &ExtractedEvidence) -> serde_json:
         Some(extracted_evidence::EvidenceValues::OakContainers(instance)) => {
             json!({ "oak_containers": serialize_oak_containers_data(instance) })
         }
+        #[allow(deprecated)]
         Some(extracted_evidence::EvidenceValues::Cb(instance)) => {
             json!({ "cb": serialize_cb_data(instance) })
         }
@@ -866,6 +867,7 @@ pub fn serialize_confidential_space_reference_values(
     });
     if let Some(r#container_image) = r#container_image {
         match r#container_image {
+            #[allow(deprecated)]
             confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                 cosign_reference_values,
             ) => {
@@ -916,6 +918,7 @@ pub fn serialize_reference_values(instance: &ReferenceValues) -> serde_json::Val
         Some(reference_values::Type::OakContainers(instance)) => {
             json!({ "oak_containers": serialize_oak_containers_reference_values(instance) })
         }
+        #[allow(deprecated)]
         Some(reference_values::Type::Cb(instance)) => {
             json!({ "cb": serialize_cb_reference_values(instance) })
         }

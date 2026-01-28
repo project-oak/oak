@@ -99,6 +99,7 @@ def rust_tonic_grpc_service(
             Label("@oak_crates_index//:prost"),
             Label("@oak_crates_index//:prost-types"),
             Label("@oak_crates_index//:tonic"),
+            Label("@oak_crates_index//:tonic-prost"),
         ] + deps,
         **kwargs
     )

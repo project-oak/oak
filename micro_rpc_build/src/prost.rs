@@ -104,7 +104,7 @@ fn method_id(method: &prost_build::Method) -> anyhow::Result<u32> {
         .comments
         .leading
         .iter()
-        .filter_map(|line| line.strip_prefix(" method_id: "))
+        .filter_map(|line| line.strip_prefix("method_id: "))
         .collect::<Vec<_>>();
     if method_ids.is_empty() {
         anyhow::bail!("no method_id comment on method {}", method.proto_name)

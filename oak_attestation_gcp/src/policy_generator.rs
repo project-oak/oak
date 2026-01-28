@@ -33,6 +33,7 @@ pub fn confidential_space_policy_from_reference_values(
         .map_err(anyhow::Error::msg)?;
 
     match &reference_values.r#container_image {
+        #[allow(deprecated)]
         Some(confidential_space_reference_values::ContainerImage::CosignReferenceValues(
             cosign_reference_values,
         )) => {
@@ -91,6 +92,7 @@ mod tests {
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem,
             r#container_image: Some(
+                #[allow(deprecated)]
                 confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                     CosignReferenceValuesProto {
                         developer_public_key: Some(developer_key),
@@ -143,6 +145,7 @@ mod tests {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: "".to_string(),
+            #[allow(deprecated)]
             r#container_image: Some(
                 confidential_space_reference_values::ContainerImage::CosignReferenceValues(
                     CosignReferenceValuesProto {

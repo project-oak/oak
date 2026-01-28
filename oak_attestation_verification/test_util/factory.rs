@@ -278,6 +278,7 @@ pub fn create_reference_values_for_extracted_evidence(
                 }),
             }))
         }
+        #[allow(deprecated)]
         EvidenceValues::Cb(_) => panic!("not yet supported"),
         EvidenceValues::Standalone(_) => panic!("not yet supported"),
     };
@@ -403,6 +404,7 @@ pub fn get_rk_reference_values(
 
 /// Shorthand to extract CB reference values subtype.
 pub fn get_cb_reference_values(reference_values: &ReferenceValues) -> CbReferenceValues {
+    #[allow(deprecated)]
     let cb_reference_values = match reference_values.r#type.as_ref() {
         Some(reference_values::Type::Cb(cb_reference_values)) => cb_reference_values.clone(),
         _ => panic!("no CB reference values"),

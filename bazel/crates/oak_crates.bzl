@@ -208,8 +208,8 @@ def _common_crates(std):
             default_features = False,
             # No derive feature - it requires std and will make other crates
             # in this index, like bytes, require std.
-            features = ["prost-derive"] if std else [],
-            version = "0.13.5",
+            features = ["derive"] if std else [],
+            version = "0.14.3",
         ),
         "rand_chacha": crate.spec(
             default_features = std,
@@ -466,10 +466,10 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         features = [
             "trace",
         ],
-        version = "0.29.0",
+        version = "0.31.0",
     ),
     "opentelemetry-appender-tracing": crate.spec(
-        version = "0.29.0",
+        version = "0.31.0",
     ),
     "opentelemetry-proto": crate.spec(
         features = [
@@ -477,7 +477,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "logs",
             "metrics",
         ],
-        version = "0.29.0",
+        version = "0.31.0",
     ),
     "opentelemetry-otlp": crate.spec(
         features = [
@@ -486,7 +486,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "metrics",
             "trace",
         ],
-        version = "0.29.0",
+        version = "0.31.0",
     ),
     "opentelemetry_sdk": crate.spec(
         features = [
@@ -496,7 +496,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "spec_unstable_metrics_views",
             "trace",
         ],
-        version = "0.29.0",
+        version = "0.31.0",
     ),
     "os_pipe": crate.spec(version = "1.1.5"),
     "ouroboros": crate.spec(version = "0.18.4"),
@@ -517,9 +517,9 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "procfs": crate.spec(version = "0.16.0"),
     "proptest": crate.spec(version = "1.4.0"),
     "proptest-derive": crate.spec(version = "0.4.0"),
-    "prost-build": crate.spec(version = "0.13.5"),
-    "prost-derive": crate.spec(version = "0.13.5"),
-    "prost-types": crate.spec(version = "0.13.5"),
+    "prost-build": crate.spec(version = "0.14.3"),
+    "prost-derive": crate.spec(version = "0.14.3"),
+    "prost-types": crate.spec(version = "0.14.3"),
     "quote": crate.spec(version = "1.0.35"),
     "rand": crate.spec(version = "0.8.5"),
     "regex": crate.spec(
@@ -622,7 +622,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "tokio-vsock": crate.spec(
         version = "*",
-        features = ["tonic012"],
+        features = ["tonic014"],
     ),
     "toml": crate.spec(version = "0.8.12"),
     "tonic": crate.spec(
@@ -630,12 +630,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "gzip",
             "tls-webpki-roots",
         ],
-        version = "0.12.0",
+        version = "0.14.3",
     ),
-    "tonic-build": crate.spec(version = "0.12.0"),
-    "tonic-web": crate.spec(version = "0.12.0"),
+    "tonic-prost": crate.spec(version = "0.14.3"),
+    "tonic-prost-build": crate.spec(version = "0.14.3"),
+    "tonic-web": crate.spec(version = "0.14.3"),
     "tower": crate.spec(
-        features = ["load-shed"],
+        features = ["load-shed", "util"],
         version = "0.4",
     ),
     "tower-http": crate.spec(

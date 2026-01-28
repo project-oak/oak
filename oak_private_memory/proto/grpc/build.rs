@@ -17,6 +17,12 @@ use std::env;
 
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
+macro_rules! pathbufs {
+    ( $( $x:expr ),* $(,)? ) => {
+        &[ $( std::path::PathBuf::from($x) ),* ]
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = runfiles::Runfiles::create().expect("Couldn't initialize runfiles");
     let oak_runfiles_path =
@@ -29,9 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     included_protos.push(oak_runfiles_path);
     included_protos.push(googleapis_runfile_path);
 
-    let proto_paths = ["../../proto/sealed_memory.proto", "../../proto/database.proto"];
+    let proto_paths = pathbufs!("../../proto/sealed_memory.proto", "../../proto/database.proto");
     generate_grpc_code(
-        &proto_paths,
+        proto_paths,
         &included_protos,
         CodegenOptions {
             build_server: true,

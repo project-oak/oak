@@ -74,5 +74,6 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tonic-prost",
     ],
 )

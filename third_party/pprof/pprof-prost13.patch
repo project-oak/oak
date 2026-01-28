@@ -5,7 +5,7 @@
          "@oak_std_crates_index__once_cell-1.21.3//:once_cell",
          "@oak_std_crates_index__pprof-0.15.0//:build_script_build",
 -        "@oak_std_crates_index__prost-0.12.6//:prost",
-+        "@oak_std_crates_index__prost-0.13.5//:prost",
++        "@oak_std_crates_index__prost-0.14.3//:prost",
          "@oak_std_crates_index__smallvec-1.15.1//:smallvec",
          "@oak_std_crates_index__spin-0.10.0//:spin",
          "@oak_std_crates_index__symbolic-demangle-12.15.5//:symbolic_demangle",
@@ -14,7 +14,7 @@
      ],
      proc_macro_deps = [
 -        "@oak_std_crates_index__prost-derive-0.12.6//:prost_derive",
-+        "@oak_std_crates_index__prost-derive-0.13.5//:prost_derive",
++        "@oak_std_crates_index__prost-derive-0.14.3//:prost_derive",
      ],
      compile_data = glob(
          allow_empty = True,
@@ -23,7 +23,7 @@
      ),
      deps = [
 -        "@oak_std_crates_index__prost-build-0.12.6//:prost_build",
-+        "@oak_std_crates_index__prost-build-0.13.5//:prost_build",
++        "@oak_std_crates_index__prost-build-0.14.3//:prost_build",
          "@oak_std_crates_index__sha2-0.10.9//:sha2",
      ],
      edition = "2021",

@@ -127,6 +127,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
             .context("parsing the effective OCI container reference")?;
         if let Some(ci_ref_value) = &self.reference_values.container_image {
             match ci_ref_value {
+                #[allow(deprecated)]
                 ContainerImage::CosignReferenceValues(cosign_reference_values) => {
                     let endorser_key = cosign_reference_values
                         .developer_public_key
@@ -349,6 +350,7 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                #[allow(deprecated)]
                 container_image: Some(ContainerImage::CosignReferenceValues(
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(
@@ -380,6 +382,7 @@ mod tests {
             audience: OAK_SESSION_NOISE_V1_AUDIENCE.to_string(),
             reference_values: ConfidentialSpaceReferenceValues {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
+                #[allow(deprecated)]
                 container_image: Some(ContainerImage::CosignReferenceValues(
                     CosignReferenceValues {
                         developer_public_key: Some(create_verifying_key_from_pem(

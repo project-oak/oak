@@ -180,6 +180,7 @@ fn main() -> anyhow::Result<()> {
                 r#type: Some(reference_values::Type::ConfidentialSpace(
                     ConfidentialSpaceReferenceValues {
                         root_certificate_pem: String::from_utf8(root_cert.to_pem()?)?,
+                        #[allow(deprecated)]
                         container_image: Some(ContainerImage::CosignReferenceValues(
                             CosignReferenceValues {
                                 developer_public_key: Some(

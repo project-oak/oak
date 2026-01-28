@@ -2,7 +2,7 @@
 /// Information about the public key that the certificate is issued for.
 /// All fields of this message must be set. Otherwise the certificate is
 /// considered invalid.
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SubjectPublicKeyInfo {
     /// Public key that this certificate is issued for.
     #[prost(bytes = "vec", tag = "1")]
@@ -23,7 +23,7 @@ pub struct SubjectPublicKeyInfo {
 /// generated after the pulse. See documentation for NIST fields here:
 /// <https://csrc.nist.gov/projects/interoperable-randomness-beacons/beacon-20>
 /// <https://csrc.nist.gov/csrc/media/Projects/interoperable-randomness-beacons/documents/certificate/beacon-2.0.xsd>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ProofOfFreshness {
     /// NIST pulse index (starting with one) of the chain that a pulse is contained
     /// in.
@@ -42,7 +42,7 @@ pub struct ProofOfFreshness {
 /// Payload that is signed by the certificate.
 /// All fields of this message must be set. Otherwise the certificate is
 /// considered invalid.
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CertificatePayload {
     /// Certificate validity period.
     #[prost(message, optional, tag = "1")]
@@ -54,7 +54,7 @@ pub struct CertificatePayload {
     pub proof_of_freshness: ::core::option::Option<ProofOfFreshness>,
 }
 /// Information about the signature that signs the certificate.
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SignatureInfo {
     /// Signature value bytes.
     ///
@@ -67,20 +67,21 @@ pub struct SignatureInfo {
 /// Minimalistic certificate proto definition.
 ///
 /// Certificate is created as following:
+///
 /// 1. For SERIALIZED_CERTIFICATE_PAYLOAD type:
-///     - \[`CertificatePayload`\] proto message is serialized and signed using the
-///       certificate authority's private key.
-///     - This serialized message is stored in the `serialized_payload` field.
-///     - The signature is stored in the `signature_info`.
-/// 2. For ARBITRARY_USER_DATA type:
-///     - Arbitrary bytes are signed using the certificate authority's private
-///       key.
-///     - The bytes are stored in the `serialized_payload` field.
-///     - The signature is stored in the `signature_info`.
+///    * \[`CertificatePayload`\] proto message is serialized and signed using the
+///      certificate authority's private key.
+///    * This serialized message is stored in the `serialized_payload` field.
+///    * The signature is stored in the `signature_info`.
+/// 1. For ARBITRARY_USER_DATA type:
+///    * Arbitrary bytes are signed using the certificate authority's private
+///      key.
+///    * The bytes are stored in the `serialized_payload` field.
+///    * The signature is stored in the `signature_info`.
 ///
 /// The signature is created using the Tink library:
 /// <<https://developers.google.com/tink/digital-signature>>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Certificate {
     /// Payload that is signed over.
     #[prost(bytes = "vec", tag = "1")]
@@ -131,7 +132,7 @@ impl SerializedPayloadType {
 }
 /// Request message encrypted using Hybrid Public Key Encryption (HPKE).
 /// <<https://www.rfc-editor.org/rfc/rfc9180.html>>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EncryptedRequest {
     /// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
@@ -147,7 +148,7 @@ pub struct EncryptedRequest {
 /// Response message encrypted Hybrid Public Key Encryption (HPKE), which uses a
 /// response key generated as part of bidirectional encryption.
 /// <<https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EncryptedResponse {
     /// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
@@ -156,7 +157,7 @@ pub struct EncryptedResponse {
 }
 /// Message encrypted with Authenticated Encryption with Associated Data (AEAD).
 /// <<https://datatracker.ietf.org/doc/html/rfc5116>>
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AeadEncryptedMessage {
     #[prost(bytes = "vec", tag = "1")]
     pub ciphertext: ::prost::alloc::vec::Vec<u8>,
@@ -168,7 +169,7 @@ pub struct AeadEncryptedMessage {
 /// Envelope containing session keys required to encrypt/decrypt messages within
 /// a secure session. Needed to serialize contexts in order to send them over an
 /// RPC.
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SessionKeys {
     /// AEAD key for encrypting/decrypting client requests.
     #[prost(bytes = "vec", tag = "1")]
@@ -177,7 +178,7 @@ pub struct SessionKeys {
     #[prost(bytes = "vec", tag = "4")]
     pub response_key: ::prost::alloc::vec::Vec<u8>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Signature {
     #[prost(bytes = "vec", tag = "1")]
     pub signature: ::prost::alloc::vec::Vec<u8>,

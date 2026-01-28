@@ -1,5 +1,5 @@
 {
-  "checksum": "64310c24d4727b307da60e9f43c81a168ef23e47cc207b8fceb0f5504c346e9e",
+  "checksum": "bbf0ad5d8709b0ca439ef6273599af3a23c39945cf3b6a55b59ff35c35cdb922",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3030,7 +3030,7 @@
               "target": "primeorder"
             },
             {
-              "id": "prost 0.13.5",
+              "id": "prost 0.14.3",
               "target": "prost"
             },
             {
@@ -6788,14 +6788,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "prost 0.13.5": {
+    "prost 0.14.3": {
       "name": "prost",
-      "version": "0.13.5",
+      "version": "0.14.3",
       "package_url": "https://github.com/tokio-rs/prost",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/prost/0.13.5/download",
-          "sha256": "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
+          "url": "https://static.crates.io/crates/prost/0.14.3/download",
+          "sha256": "d2ea70524a2f82d518bce41317d0fae74151505651af45faf1ffbd6fd33f0568"
         }
       },
       "targets": [
@@ -6827,7 +6827,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.13.5"
+        "version": "0.14.3"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -11196,7 +11196,7 @@
     "p384 0.13.1",
     "pkcs8 0.10.2",
     "primeorder 0.13.6",
-    "prost 0.13.5",
+    "prost 0.14.3",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex-lite 0.1.6",

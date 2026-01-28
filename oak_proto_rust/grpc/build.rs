@@ -15,12 +15,18 @@
 
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
+macro_rules! pathbufs {
+    ( $( $x:expr ),* $(,)? ) => {
+        &[ $( std::path::PathBuf::from($x) ),* ]
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let included_protos = oak_proto_build_utils::get_common_proto_path("../..");
 
     // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
-        &[
+        pathbufs!(
             "../../proto/containers/interfaces.proto",
             "../../proto/containers/orchestrator_crypto.proto",
             "../../proto/containers/hostlib_key_provisioning.proto",
@@ -30,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../../proto/oak_functions/standalone/oak_functions_session.proto",
             "../../proto/oak_verity/oak_verity.proto",
             "../../third_party/google/profile.proto",
-        ],
+        ),
         &included_protos,
         CodegenOptions {
             build_client: true,

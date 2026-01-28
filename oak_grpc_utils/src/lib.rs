@@ -44,9 +44,9 @@ impl ExternPath {
 /// The path to the root repository must be passed as `include`. All paths to
 /// `.proto` files must be specified relative to this path. Likewise, all
 /// imported paths in `.proto` files must be specified relative to this path.
-pub fn generate_grpc_code(
-    protos: &[impl AsRef<Path>],
-    include: &[impl AsRef<Path>],
+pub fn generate_grpc_code<P: AsRef<Path>>(
+    protos: &[P],
+    include: &[P],
     options: CodegenOptions,
 ) -> std::io::Result<()> {
     set_protoc_env_if_unset();
@@ -55,7 +55,7 @@ pub fn generate_grpc_code(
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
-    let mut config = tonic_build::configure()
+    let mut config = tonic_prost_build::configure()
         .build_client(options.build_client)
         .build_server(options.build_server);
 

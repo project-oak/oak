@@ -81,6 +81,7 @@ impl EchoClient {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_owned(),
+            #[allow(deprecated)]
             r#container_image: Some(ContainerImage::CosignReferenceValues(CosignReferenceValues {
                 developer_public_key: Some(
                     p256_ecdsa_verifying_key_to_proto(&developer_public_key)

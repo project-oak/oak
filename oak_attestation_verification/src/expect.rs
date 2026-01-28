@@ -85,6 +85,7 @@ pub fn get_expected_values(
                 .context("getting containers expected values")?;
             Ok(ExpectedValues { r#type: Some(expected_values::Type::OakContainers(expected)) })
         }
+        #[allow(deprecated)]
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             let expected = get_cb_expected_values(now_utc_millis, ends, rvs)
                 .context("getting CB expected values")?;

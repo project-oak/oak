@@ -54,6 +54,7 @@ pub fn compare_expected_values(
             Some(EvidenceValues::OakContainers(values)),
             Some(expected_values::Type::OakContainers(expected)),
         ) => compare_oak_containers_measurement_digests(values, expected),
+        #[allow(deprecated)]
         (Some(EvidenceValues::Cb(values)), Some(expected_values::Type::Cb(expected))) => {
             compare_cb_measurement_digests(values, expected)
         }

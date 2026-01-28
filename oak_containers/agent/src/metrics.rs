@@ -24,7 +24,7 @@ use opentelemetry::{
     KeyValue,
 };
 use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
-use opentelemetry_sdk::metrics::{Aggregation, Instrument, MetricError, SdkMeterProvider, Stream};
+use opentelemetry_sdk::metrics::{Aggregation, Instrument, SdkMeterProvider, Stream};
 use tokio::runtime::Handle;
 
 pub enum MeterInstrument {
@@ -75,8 +75,13 @@ impl OakObserver {
         // drop [base] metrics marked excluded
         for metric in excluded_metrics {
             provider = provider.with_view(move |i: &Instrument| {
-                if i.name == metric {
-                    Some(Stream::new().aggregation(Aggregation::Drop))
+                if i.name() == metric {
+                    Some(
+                        Stream::builder()
+                            .with_aggregation(Aggregation::Drop)
+                            .build()
+                            .expect("failed to make stream"),
+                    )
                 } else {
                     None
                 }
@@ -118,7 +123,7 @@ pub fn init_metrics(metrics_config: MetricsConfig) -> OakObserver {
     observer
 }
 
-fn add_base_metrics(observer: &mut OakObserver) -> Result<(), MetricError> {
+fn add_base_metrics(observer: &mut OakObserver) -> Result<(), ()> {
     observer.register_metric(
         observer
             .meter

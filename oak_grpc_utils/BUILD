@@ -25,7 +25,7 @@ rust_library(
     name = "oak_grpc_utils",
     srcs = glob(["src/**"]),
     deps = [
-        "@oak_crates_index//:tonic-build",
+        "@oak_crates_index//:tonic-prost-build",
     ],
 )
 
