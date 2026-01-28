@@ -301,7 +301,18 @@ OAK_NO_STD_ANNOTATIONS = {
 # Crates for the no_std crates index. Crates that are used in all crate indexes
 # should instead be added to _common_crates.
 OAK_NO_STD_CRATES = _common_crates(std = False) | {
-    "virtio-drivers": crate.spec(version = "0.12.0"),
+    "embedded-io": crate.spec(
+        default_features = False,
+        version = "0.6.1",
+    ),
+    # Selecting the version that has the Read cursor advance fix.
+    # We should be able to switch back to the normal version syntax
+    # on the next release.
+    "virtio-drivers": crate.spec(
+        git = "https://github.com/rcore-os/virtio-drivers.git",
+        rev = "dd8772498d581ae8d5644806c0072d3dc6f94118",
+        features = ["embedded-io"],
+    ),
     # We have to use the exact version that `rules_rust` uses.
     # If `rules_rust` in oak got updated, we also need to adjust the version.
     "wasm-bindgen": crate.spec(version = "=0.2.105"),

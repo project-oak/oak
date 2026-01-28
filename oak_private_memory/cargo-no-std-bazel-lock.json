@@ -1,5 +1,5 @@
 {
-  "checksum": "5f13cfa85fa7b16acfd817593059427cc61dffbea6c0fbb78ddb90375d5f5753",
+  "checksum": "f9e55a6dbdad9f191e8210bf85abd5606746cc6311d4c35e23b6914f7db369bd",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -2948,6 +2948,10 @@
             {
               "id": "elf 0.7.4",
               "target": "elf"
+            },
+            {
+              "id": "embedded-io 0.6.1",
+              "target": "embedded_io"
             },
             {
               "id": "getrandom 0.2.16",
@@ -9905,9 +9909,11 @@
       "version": "0.12.0",
       "package_url": "https://github.com/rcore-os/virtio-drivers",
       "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/virtio-drivers/0.12.0/download",
-          "sha256": "a7a6012590bf8cc11f57abb1b5a8470e2366353bf352386b48650a87b5538204"
+        "Git": {
+          "remote": "https://github.com/rcore-os/virtio-drivers.git",
+          "commitish": {
+            "Rev": "dd8772498d581ae8d5644806c0072d3dc6f94118"
+          }
         }
       },
       "targets": [
@@ -11410,6 +11416,7 @@
     "derive_builder 0.20.2",
     "ecdsa 0.16.9",
     "elf 0.7.4",
+    "embedded-io 0.6.1",
     "getrandom 0.2.16",
     "goblin 0.8.2",
     "hashbrown 0.14.5",

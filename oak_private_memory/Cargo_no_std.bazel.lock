@@ -481,6 +481,7 @@ dependencies = [
  "derive_builder",
  "ecdsa",
  "elf",
+ "embedded-io",
  "getrandom",
  "goblin",
  "hashbrown",
@@ -1591,8 +1592,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "virtio-drivers"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a6012590bf8cc11f57abb1b5a8470e2366353bf352386b48650a87b5538204"
+source = "git+https://github.com/rcore-os/virtio-drivers.git?rev=dd8772498d581ae8d5644806c0072d3dc6f94118#dd8772498d581ae8d5644806c0072d3dc6f94118"
 dependencies = [
  "bitflags 2.10.0",
  "embedded-io",

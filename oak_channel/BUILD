@@ -27,6 +27,7 @@ _OAK_CHANNEL_DEPS = [
     "@oak_crates_index//:anyhow",
     "@oak_crates_index//:bitflags",
     "@oak_crates_index//:bytes",
+    "@oak_crates_index//:log",
     "@oak_crates_index//:static_assertions",
 ]
 

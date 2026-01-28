@@ -25,6 +25,7 @@ use aml::{
     AmlContext,
 };
 use anyhow::anyhow;
+use embedded_io::Read;
 use log::info;
 use spinning_top::Spinlock;
 use virtio_drivers::{
@@ -129,19 +130,9 @@ unsafe impl Send for MmioConsoleChannel<'_> {}
 impl oak_channel::Read for MmioConsoleChannel<'_> {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
-
-        let len = data.len();
-        let mut count = 0;
-        while count < len {
-            if let Some(char) =
-                console.recv(true).map_err(|err| anyhow!("Virtio console read error: {:?}", err))?
-            {
-                data[count] = char;
-                count += 1;
-            }
-        }
-
-        Ok(())
+        console.read_exact(data).map_err(|err| {
+            anyhow!("Virtio console read_exact error: {:?}, requested length: {}", err, data.len())
+        })
     }
 }
 

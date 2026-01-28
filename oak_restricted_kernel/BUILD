@@ -76,6 +76,7 @@ rust_library(
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         ":bootstrap",
+        "@oak_crates_index//:embedded-io",
         "@oak_crates_index//:virtio-drivers",
     ],
 )
