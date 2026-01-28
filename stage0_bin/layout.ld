@@ -53,6 +53,7 @@ HIDDEN(DESCRIPTOR_INTERRUPT_GATE = 0xE << 40);
 HIDDEN(SEV_SECTION_UNMEASURED = 0x1);
 HIDDEN(SEV_SECTION_SECRET = 0x2);
 HIDDEN(SEV_SECTION_CPUID = 0x3);
+HIDDEN(SEV_SECTION_KERNEL_HASHES = 0x10);
 
 /*
  * LD doesn't follow the order of the layout script when placing segments without explicit phdrs
@@ -63,6 +64,7 @@ PHDRS
     boot PT_LOAD;
     ap_text PT_LOAD;
     ap_bss PT_LOAD;
+    snp_hash_table PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
@@ -105,6 +107,14 @@ SECTIONS {
     ap_bss_size = SIZEOF(.ap_bss);
 
     ASSERT(. <= 0x10000, "AP bootstrap code needs to be in the first 64K")
+
+    /* Linkable in the bootloader
+     * UEFI hardcodes this address and table size:
+     * https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/Include/Fdf/MemFd.fdf.inc#L89-L93
+     */
+    .snp_hash_table 0x10c00 (NOLOAD) : {
+       . += 0x400; /* 1k */
+    } > ram_low : snp_hash_table
 
     .bss (NOLOAD) : {
         bss_start = .;
@@ -291,7 +301,8 @@ SECTIONS {
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
     .guid_tables TOP - 0x20 - (16             /* AMD SEV header       <--------|     */
-                                  + 3*12      /* AMD SEV metadata sections     |     */
+                                  + 4*12      /* AMD SEV metadata sections     |     */
+                                  + 26        /* AMD SEV kernel hashes block   |     */
                                   + 22        /* AMD SEV metadata offset block |     */
                                   + 22        /* AMD SEV-ES reset block              */
                                   + 18        /* footer */) : {
@@ -328,6 +339,20 @@ SECTIONS {
         LONG(SEV_CPUID)
         LONG(0x1000)
         LONG(SEV_SECTION_CPUID)
+        /* Kernel hashes location
+         * https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm#L88-L91
+         * UEFI calculates this as
+         * https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/Include/Fdf/MemFd.fdf.inc#L86-L87
+         */
+        LONG(0x10000)
+        /* This is calculated from the following:
+         * https://github.com/tianocore/edk2/blob/0192f2d7cb3098d5cf1a2ed25874f47a08001de7/OvmfPkg/ResetVector/ResetVector.nasmb#L78
+         * where those other values are set in the .fdf file here:
+         * https://github.com/tianocore/edk2/blob/0192f2d7cb3098d5cf1a2ed25874f47a08001de7/OvmfPkg/AmdSev/AmdSevX64.fdf#L74-L78
+         * Since both of them just add up to a single page (4096), we just calculate that directly.
+         */
+        LONG(0x1000)
+        LONG(SEV_SECTION_KERNEL_HASHES)
         HIDDEN(sev_guided_structure_end = .);
 
         /*
@@ -345,6 +370,22 @@ SECTIONS {
         SHORT(0x5ea7)
         BYTE(0x55) BYTE(0x85) BYTE(0xa7) BYTE(0xbf) BYTE(0x67) BYTE(0xcc)
         HIDDEN(sev_metadata_offset_end = .);
+
+        /* GUID calculated from
+         * https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm#L106-L114
+         */
+        HIDDEN(sev_kernel_fw_hash_block_start = .);
+        /* SEV Hash GUID table. */
+        LONG(0x10c00)
+        /* This is the lower 1024 bits of the 4k page starting from the launch secrets page. */
+        LONG(0x400)
+        SHORT(sev_kernel_fw_hash_block_end - sev_kernel_fw_hash_block_start)
+        LONG(0x7255371f)
+        SHORT(0x3a3b)
+        SHORT(0x4b04)
+        SHORT(0x7b92)
+        BYTE(0x1d) BYTE(0xa6) BYTE(0xef) BYTE(0xa8) BYTE(0xd4) BYTE(0x54)
+        HIDDEN(sev_kernel_fw_hash_block_end = .);
 
         /* SEV-ES reset block: uint32 addr, uint16 size, 16-byte GUID */
         HIDDEN(sev_es_reset_block_start = .);
