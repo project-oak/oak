@@ -17,6 +17,7 @@ continuously monitored for regressions.
 | oak_functions_enclave_app                           | Yes             |                           |
 | oak_functions_insecure_container                    | No              | GitHub provenance missing |
 | oak_functions_insecure_enclave_app                  | Yes             |                           |
+| oak_logcabin_endorser_enclave_app                   | Yes             |                           |
 | oak_restricted_kernel_simple_io_init_rd_wrapper_bin | Yes             |                           |
 | oak_orchestrator                                    | Yes             |                           |
 | stage0_bin                                          | Yes             |                           |

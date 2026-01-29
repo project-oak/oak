@@ -30,6 +30,7 @@ jobs:
           - buildconfigs/oak_echo_raw_enclave_app.sh
           - buildconfigs/oak_functions_enclave_app.sh
           - buildconfigs/oak_functions_insecure_enclave_app.sh
+          - buildconfigs/oak_logcabin_endorser_enclave_app.sh
           - buildconfigs/oak_orchestrator.sh
           - buildconfigs/oak_restricted_kernel_simple_io_channel.sh
           - buildconfigs/private_memory_server.sh
