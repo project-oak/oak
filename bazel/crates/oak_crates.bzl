@@ -462,12 +462,14 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "openssl": crate.spec(
         version = "0.10.73",
     ),
-    # TODO b/350061567 - Remove opentelemetry version pins
     "opentelemetry": crate.spec(
         features = [
             "trace",
         ],
-        version = "0.26.0",
+        version = "0.29.0",
+    ),
+    "opentelemetry-appender-tracing": crate.spec(
+        version = "0.29.0",
     ),
     "opentelemetry-proto": crate.spec(
         features = [
@@ -475,7 +477,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "logs",
             "metrics",
         ],
-        version = "0.26.0",
+        version = "0.29.0",
     ),
     "opentelemetry-otlp": crate.spec(
         features = [
@@ -484,16 +486,17 @@ OAK_STD_CRATES = _common_crates(std = True) | {
             "metrics",
             "trace",
         ],
-        version = "0.26.0",
+        version = "0.29.0",
     ),
     "opentelemetry_sdk": crate.spec(
         features = [
             "logs",
             "metrics",
             "rt-tokio",
+            "spec_unstable_metrics_views",
             "trace",
         ],
-        version = "0.26.0",
+        version = "0.29.0",
     ),
     "os_pipe": crate.spec(version = "1.1.5"),
     "ouroboros": crate.spec(version = "0.18.4"),
@@ -597,6 +600,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         features = [
             "rustls-tls-native-roots",
         ],
+    ),
+    "tracing-subscriber": crate.spec(
+        version = "0.3.22",
+        # We aren't using tracing subscriber ourselves, it's just included to extract opentelemetry error messages.
+        # So we don't want the tracing-log feature enabled, as it conflicts with our current logging setups.
+        default_features = False,
+        features = ["fmt", "smallvec", "ansi", "std"],
     ),
     "tungstenite": crate.spec(
         version = "0.27.0",

@@ -19,7 +19,7 @@
 use clap::Parser;
 use http::Uri;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
-use opentelemetry::{global::set_error_handler, metrics::AsyncInstrument, KeyValue};
+use opentelemetry::{metrics::AsyncInstrument, KeyValue};
 use procfs::{Current, CurrentSI};
 use tokio::time::{self, Duration};
 
@@ -36,35 +36,31 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
             .u64_observable_counter("cpu_seconds_total")
             .with_unit("seconds")
             .with_callback(cpu_seconds_total)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_counter("context_switches_total")
             .with_callback(context_switches_total)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_counter("forks_total")
-            .with_callback(forks_total)
-            .try_init()?,
+        oak_observer.meter.u64_observable_counter("forks_total").with_callback(forks_total).build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_gauge("procs_blocked")
             .with_callback(procs_blocked)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_gauge("procs_running")
             .with_callback(procs_running)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
@@ -72,21 +68,21 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
             .u64_observable_counter("network_receive_bytes")
             .with_unit("bytes")
             .with_callback(net_recv_bytes)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_counter("network_receive_packets")
             .with_callback(net_recv_packets)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_counter("network_receive_errors")
             .with_callback(net_recv_errs)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
@@ -94,51 +90,43 @@ fn register_system_metrics(oak_observer: &mut OakObserver) -> Result<(), anyhow:
             .u64_observable_counter("network_transmit_bytes")
             .with_unit("bytes")
             .with_callback(net_sent_bytes)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_counter("network_transmit_packets")
             .with_callback(net_sent_packets)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_counter("network_transmit_errors")
             .with_callback(net_sent_errs)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_total").with_callback(mem_total).try_init()?,
+        oak_observer.meter.u64_observable_gauge("mem_total").with_callback(mem_total).build(),
     );
     oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_free").with_callback(mem_free).try_init()?,
+        oak_observer.meter.u64_observable_gauge("mem_free").with_callback(mem_free).build(),
     );
     oak_observer.register_metric(
         oak_observer
             .meter
             .u64_observable_gauge("mem_available")
             .with_callback(mem_available)
-            .try_init()?,
+            .build(),
     );
     oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_gauge("mem_buffers")
-            .with_callback(mem_buffers)
-            .try_init()?,
+        oak_observer.meter.u64_observable_gauge("mem_buffers").with_callback(mem_buffers).build(),
     );
     oak_observer.register_metric(
-        oak_observer
-            .meter
-            .u64_observable_gauge("mem_cached")
-            .with_callback(mem_cached)
-            .try_init()?,
+        oak_observer.meter.u64_observable_gauge("mem_cached").with_callback(mem_cached).build(),
     );
     oak_observer.register_metric(
-        oak_observer.meter.u64_observable_gauge("mem_slab").with_callback(mem_slab).try_init()?,
+        oak_observer.meter.u64_observable_gauge("mem_slab").with_callback(mem_slab).build(),
     );
     Ok(())
 }
@@ -273,10 +261,24 @@ fn mem_slab(gauge: &dyn AsyncInstrument<u64>) {
     gauge.observe(stats.slab, &[]);
 }
 
+mod otel_logging {
+    use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
+
+    // Set up logging for opentelemetry errors.
+    pub fn init() {
+        let opentelemetry_layer = Layer::new()
+            .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+            .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+        tracing_subscriber::registry().with(opentelemetry_layer).init()
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    set_error_handler(|err| eprintln!("oak-agent: OTLP error: {}", err))?;
+
+    otel_logging::init();
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr.to_string(),

@@ -22,10 +22,7 @@ use std::{
 
 use anyhow::Context;
 use clap::Parser;
-use oak_containers_agent::{
-    metrics::{MetricsConfig, OakObserver},
-    set_error_handler,
-};
+use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
 use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
@@ -85,13 +82,24 @@ where
     .await
 }
 
+mod otel_logging {
+    use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
+
+    // Writes any opentelemetry errors to stderr.
+    pub fn init() {
+        let opentelemetry_layer = Layer::new()
+            .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+            .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+        tracing_subscriber::registry().with(opentelemetry_layer).init();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // Use eprintln here, as normal logging would go through the OTLP connection,
-    // which may no longer be valid.
-    set_error_handler(|err| eprintln!("oak_functions_containers_app: OTLP error: {}", err))?;
+    otel_logging::init();
 
     // This is a hack to get _some_ logging out of the binary, and should be
     // replaced with proper OTLP logging (or logging to journald, or something) in

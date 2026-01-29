@@ -17,6 +17,7 @@
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
     time::Duration,
 };
 
@@ -26,10 +27,13 @@ use oak_functions_containers_app::serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient;
 use oak_proto_rust::oak::functions::InitializeRequest;
-use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
+use opentelemetry::metrics::{InstrumentProvider, Meter};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
+
+struct NoopInstrumentProvider {}
+impl InstrumentProvider for NoopInstrumentProvider {}
 
 #[tokio::test]
 async fn test_lookup() {
@@ -47,7 +51,10 @@ async fn test_lookup() {
     let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
         Box::new(encryption_key),
-        OakObserver { meter: NoopMeterProvider::new().meter(""), metric_registry: Vec::new() },
+        OakObserver {
+            meter: Meter::new(Arc::new(NoopInstrumentProvider {})),
+            metric_registry: Vec::new(),
+        },
         Default::default(),
     ));
 

@@ -89,6 +89,7 @@ APP_DEPS = [
     "@oak_crates_index//:clap",
     "@oak_crates_index//:log",
     "@oak_crates_index//:opentelemetry",
+    "@oak_crates_index//:opentelemetry-appender-tracing",
     "@oak_crates_index//:opentelemetry-otlp",
     "@oak_crates_index//:opentelemetry_sdk",
     "@oak_crates_index//:prost",
@@ -97,6 +98,8 @@ APP_DEPS = [
     "@oak_crates_index//:tonic",
     "@oak_crates_index//:tokio",
     "@oak_crates_index//:tokio-stream",
+    "@oak_crates_index//:tracing",
+    "@oak_crates_index//:tracing-subscriber",
     "@oak_crates_index//:tokio-vsock",
 ]
 

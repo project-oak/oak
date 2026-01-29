@@ -25,7 +25,7 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
-    metrics::{Counter, Histogram, ObservableGauge},
+    metrics::{Counter, Gauge, Histogram},
     KeyValue, Value,
 };
 use prost::Name;
@@ -63,7 +63,7 @@ pub struct Metrics {
     // Number of failures when decrypting database.
     db_decryption_failures: Counter<u64>,
     // Queue size of the in the database persist queue.
-    db_persist_queue_size: ObservableGauge<u64>,
+    db_persist_queue_size: Gauge<u64>,
     // Optimize latency.
     db_optimize_latency: Histogram<u64>,
 }
@@ -87,12 +87,12 @@ impl Metrics {
             .meter
             .u64_counter("rpc_count")
             .with_description("Total number of RPCs received by the private memory server.")
-            .init();
+            .build();
         let rpc_failure_count = observer
             .meter
             .u64_counter("rpc_failure_count")
             .with_description("Number of RPCs that failed.")
-            .init();
+            .build();
         let rpc_latency = observer
             .meter
             .u64_histogram("rpc_latency")
@@ -100,89 +100,89 @@ impl Metrics {
             .with_unit("ms")
             // Update the version of opentelemetry to support custom buckets.
             //.with_boundaries(vec![0, 100, 200, 300, 400, 500, 1000, 2000, 5000, 50000])
-            .init();
+            .build();
         let db_size = observer
             .meter
             .u64_histogram("db_size")
             .with_description("Size of the database in bytes.")
             .with_unit("By")
-            .init();
+            .build();
         let db_init_latency = observer
             .meter
             .u64_histogram("db_init_latency")
             .with_description("Latency of Icing database initialization.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_cleanup_latency = observer
             .meter
             .u64_histogram("db_cleanup_latency")
             .with_description("Latency of expired memories cleanup operation.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_cleanup_count = observer
             .meter
             .u64_histogram("db_cleanup_count")
             .with_description("Number of expired memories cleaned up during cleanup operation.")
-            .init();
+            .build();
         let db_persist_latency = observer
             .meter
             .u64_histogram("db_persist_latency")
             .with_description("Latency of persisting the database.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_persist_latency_with_retries = observer
             .meter
             .u64_histogram("db_persist_latency_with_retries")
             .with_description("Latency of persisting the database including all retry attempts.")
             .with_unit("ms")
-            .init();
+            .build();
         let db_persist_attempts = observer
             .meter
             .u64_histogram("db_persist_attempts")
             .with_description("Number of attempts before metadata persist succeeds.")
-            .init();
+            .build();
         let db_connect_retries = observer
             .meter
             .u64_counter("db_connect_retries")
             .with_description("Number of retries when connecting to the database.")
-            .init();
+            .build();
 
         let db_persist_failures = observer
             .meter
             .u64_counter("db_persist_failures")
             .with_description("Number of failures when persisting the database.")
-            .init();
+            .build();
 
         let db_decryption_failures = observer
             .meter
             .u64_counter("db_decryption_failures")
             .with_description("Number of failures when decrypting the database.")
-            .init();
+            .build();
 
         let db_persist_queue_size = observer
             .meter
-            .u64_observable_gauge("db_persist_queue_size")
+            .u64_gauge("db_persist_queue_size")
             .with_description("Number of items in the database persist queue.")
-            .init();
+            .build();
 
         let decrypt_dek_failures = observer
             .meter
             .u64_counter("decrypt_dek_failures")
             .with_description("Number of failures when decrypting the DEK.")
-            .init();
+            .build();
 
         let user_info_deserialization_failures = observer
             .meter
             .u64_counter("user_info_deserialization_failures")
             .with_description("Number of failures when deserializing user info.")
-            .init();
+            .build();
 
         let db_optimize_latency = observer
             .meter
             .u64_histogram("db_optimize_latency")
             .with_description("Latency of optimizing the database.")
             .with_unit("ms")
-            .init();
+            .build();
 
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
@@ -201,7 +201,7 @@ impl Metrics {
         decrypt_dek_failures.add(0, &[]);
         user_info_deserialization_failures.add(0, &[]);
         db_decryption_failures.add(0, &[]);
-        db_persist_queue_size.observe(0, &[]);
+        db_persist_queue_size.record(0, &[]);
         db_optimize_latency.record(1, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
@@ -339,7 +339,7 @@ impl Metrics {
     }
 
     pub fn record_db_persist_queue_size(&self, max: u64) {
-        self.db_persist_queue_size.observe(max, &[]);
+        self.db_persist_queue_size.record(max, &[]);
     }
 }
 

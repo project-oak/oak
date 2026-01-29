@@ -21,7 +21,7 @@ use launcher_client::LauncherClient;
 #[allow(deprecated)]
 use oak_attestation::ApplicationKeysAttester;
 use oak_attestation_types::{attester::Attester, util::Serializable};
-use oak_containers_agent::{metrics::MetricsConfig, set_error_handler};
+use oak_containers_agent::metrics::MetricsConfig;
 use oak_containers_attestation::generate_instance_keys;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use prost::Message;
@@ -57,6 +57,7 @@ struct Args {
 #[allow(deprecated)]
 pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static>(
 ) -> anyhow::Result<()> {
+    std::env::set_var("RUST_BACKTRACE", "1");
     crate::logging::setup()?;
 
     let args = Args::parse();
@@ -66,8 +67,6 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
             .await
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
-
-    set_error_handler(|err| eprintln!("oak_containers_orchestrator: OTLP error: {}", err))?;
 
     let metrics_config = MetricsConfig {
         launcher_addr: args.launcher_addr.to_string(),

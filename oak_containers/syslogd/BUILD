@@ -31,6 +31,7 @@ rust_binary(
         "@oak_crates_index//:clap",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
         "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:signal-hook",
@@ -38,6 +39,8 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 

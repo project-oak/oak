@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{env, path::PathBuf};
+use std::env;
 
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 

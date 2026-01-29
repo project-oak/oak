@@ -22,6 +22,8 @@ use std::{
 use anyhow::{Context, Result};
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use opentelemetry::logs::{AnyValue, LogRecord, Logger, LoggerProvider, Severity};
+use opentelemetry_otlp::WithTonicConfig;
+use opentelemetry_sdk::logs::SdkLoggerProvider;
 use tokio::sync::{mpsc, OnceCell};
 
 use crate::systemd_journal::{Journal, JournalOpenFlags};
@@ -56,12 +58,15 @@ pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) 
         });
         x.await?
     };
-    let logger = opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_exporter(launcher_client.openmetrics_builder())
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .context("could not create OTLP logger")?
-        .logger("TEE Log");
+    let log_exporter = opentelemetry_otlp::LogExporter::builder()
+        .with_tonic()
+        .with_channel(launcher_client.channel())
+        .build()
+        .context("could not create OTLP log exporter")?;
+
+    let logger =
+        SdkLoggerProvider::builder().with_batch_exporter(log_exporter).build().logger("TEE logger");
+
     let sender = async {
         while let Some(mut msg) = recv.recv().await {
             let mut record = logger.create_log_record();

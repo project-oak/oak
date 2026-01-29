@@ -18,6 +18,7 @@ extern crate log;
 use anyhow::anyhow;
 use log::LevelFilter;
 use syslog::{BasicLogger, Facility, Formatter3164};
+use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
 
 /// Setup logging to syslog.
 pub fn setup() -> anyhow::Result<()> {
@@ -35,8 +36,18 @@ pub fn setup() -> anyhow::Result<()> {
         syslog::unix(formatter).map_err(|e| anyhow!("impossible to connect to syslog: {:?}", e))?;
 
     log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
-        .map(|()| log::set_max_level(LevelFilter::Debug))
         .map_err(|e| anyhow!("failed to set logger: {:?}", e))?;
+    log::set_max_level(LevelFilter::Debug);
+
+    // Enable opentelemetry info&error logs.
+    let opentelemetry_layer = Layer::new()
+        .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+        .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+    tracing_subscriber::registry()
+        .with(opentelemetry_layer)
+        .try_init()
+        .map_err(|e| anyhow!("failed enable tracing: {:?}", e))?;
 
     Ok(())
 }

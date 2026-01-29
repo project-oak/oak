@@ -243,12 +243,12 @@ impl OtelObserver {
                 .u64_histogram("wasm_initialization")
                 .with_unit("microseconds")
                 .with_description("Time spent setting up wasm sandbox for invocation")
-                .init(),
+                .build(),
             wasm_invocation: meter
                 .u64_histogram("wasm_invocation")
                 .with_unit("microseconds")
                 .with_description("Time spent on calling `main` in wasm sandbox")
-                .init(),
+                .build(),
         }
     }
 }

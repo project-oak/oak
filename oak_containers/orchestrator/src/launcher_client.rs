@@ -24,7 +24,6 @@ use oak_proto_rust::oak::{
     containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
     key_provisioning::v1::GroupKeys,
 };
-use opentelemetry_otlp::TonicExporterBuilder;
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
@@ -129,7 +128,7 @@ impl LauncherClient {
             .context("get group keys weren't provided")
     }
 
-    pub fn openmetrics_builder(&self) -> TonicExporterBuilder {
-        opentelemetry_otlp::new_exporter().tonic().with_channel(self.channel.clone())
+    pub fn channel(&self) -> tonic::transport::Channel {
+        self.channel.clone()
     }
 }

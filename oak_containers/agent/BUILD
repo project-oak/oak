@@ -57,11 +57,14 @@ rust_binary(
         "@oak_crates_index//:http",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
         "@oak_crates_index//:opentelemetry-otlp",
         "@oak_crates_index//:opentelemetry_sdk",
         "@oak_crates_index//:procfs",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tower",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 

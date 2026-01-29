@@ -24,7 +24,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry::global::set_error_handler;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
 use tokio::sync::OnceCell;
@@ -51,11 +50,24 @@ async fn signal_handler(mut signals: Signals, term: Arc<OnceCell<()>>) {
     }
 }
 
+mod otel_logging {
+    use tracing_subscriber::{filter::filter_fn, fmt::Layer, prelude::*};
+
+    // Set up logging for opentelemetry errors.
+    pub fn init() {
+        let opentelemetry_layer = Layer::new()
+            .with_writer(std::io::stderr.with_max_level(tracing::Level::WARN))
+            .with_filter(filter_fn(|metadata| metadata.target().starts_with("opentelemetry")));
+
+        tracing_subscriber::registry().with(opentelemetry_layer).init();
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    set_error_handler(|err| eprintln!("oak-syslogd: OTLP error: {}", err))?;
+    otel_logging::init();
 
     let term = Arc::new(OnceCell::new());
     let launcher_client = LauncherClient::create(args.launcher_addr)
