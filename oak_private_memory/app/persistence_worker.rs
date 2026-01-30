@@ -94,7 +94,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
             }
             Ok(MetadataPersistResult::RetryNeeded) => {
                 attempt += 1;
-                info!("Retrying db save (attempt {attempt}");
+                info!("Retrying db save (attempt {attempt})");
                 // rebase the database and try again
                 let refreshed_blob = user_context
                     .database_service_client

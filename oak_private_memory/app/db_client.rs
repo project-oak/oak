@@ -77,9 +77,9 @@ impl SharedDbClient {
                 }
             }
 
+            get_global_metrics().inc_db_connect_retries();
             tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
             backoff *= 2;
-            get_global_metrics().inc_db_connect_retries();
         }
         bail!("Failed to connect to database service after {} attempts", MAX_CONNECT_RETRIES);
     }

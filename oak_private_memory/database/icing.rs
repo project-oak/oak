@@ -34,6 +34,46 @@ fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
 }
 
+/// Trait for building text queries based on MatchType.
+trait TextQueryBuilder {
+    fn build_timestamp_query(&self, field_name: &str, value: i64) -> anyhow::Result<String>;
+    fn build_string_query(&self, field_name: &str, value: &str) -> anyhow::Result<String>;
+}
+
+/// Implementation of TextQueryBuilder for MatchType.
+impl TextQueryBuilder for MatchType {
+    fn build_timestamp_query(&self, field_name: &str, value: i64) -> anyhow::Result<String> {
+        match self {
+            MatchType::Equal => Ok(format!("({field_name} == {value})")),
+            MatchType::Gte => Ok(format!("({field_name} >= {value})")),
+            MatchType::Lte => Ok(format!("({field_name} <= {value})")),
+            MatchType::Gt => Ok(format!("({field_name} > {value})")),
+            MatchType::Lt => Ok(format!("({field_name} < {value})")),
+            _ => bail!("unsupported match type {:?} for timestamp search", self),
+        }
+    }
+
+    fn build_string_query(&self, field_name: &str, value: &str) -> anyhow::Result<String> {
+        match self {
+            MatchType::Equal => {
+                if field_name == CREATED_TIMESTAMP_NAME
+                    || field_name == EVENT_TIMESTAMP_NAME
+                    || field_name == EXPIRATION_TIMESTAMP_NAME
+                {
+                    Ok(format!("({field_name} == {value})"))
+                } else {
+                    Ok(format!("({field_name}:{value})"))
+                }
+            }
+            MatchType::Gte => Ok(format!("({field_name} >= {value})")),
+            MatchType::Lte => Ok(format!("({field_name} <= {value})")),
+            MatchType::Gt => Ok(format!("({field_name} > {value})")),
+            MatchType::Lt => Ok(format!("({field_name} < {value})")),
+            _ => bail!("unsupported match type {:?} for text search", self),
+        }
+    }
+}
+
 // A simple struct to manage the temporary location of the icing database.
 //
 // The directory will be deleted when the struct is dropped, if possible. If
@@ -90,7 +130,7 @@ unsafe impl Send for IcingMetaDatabase {}
 impl !Sync for IcingMetaDatabase {}
 
 const NAMESPACE_NAME: &str = "namespace";
-const SCHMA_NAME: &str = "Memory";
+const SCHEMA_NAME: &str = "Memory";
 const TAG_NAME: &str = "tag";
 const MEMORY_ID_NAME: &str = "memoryId";
 const BLOB_ID_NAME: &str = "blobId";
@@ -143,7 +183,7 @@ impl PendingMetadata {
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
             .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
-            .set_schema(SCHMA_NAME.as_bytes())
+            .set_schema(SCHEMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()]);
@@ -285,7 +325,7 @@ impl IcingMetaDatabase {
     fn create_schema() -> anyhow::Result<icing::SchemaProto> {
         let schema_type_builder = icing::create_schema_type_config_builder();
         schema_type_builder
-            .set_type(SCHMA_NAME.as_bytes())
+            .set_type(SCHEMA_NAME.as_bytes())
             .add_property(
                 icing::create_property_config_builder()
                     .set_name(TAG_NAME.as_bytes())
@@ -542,7 +582,7 @@ impl IcingMetaDatabase {
         let search_spec = icing::SearchSpecProto {
             query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
@@ -560,7 +600,7 @@ impl IcingMetaDatabase {
             // Request a large number to get all results in one go for simplicity.
             // Consider pagination for very large datasets.
             num_per_page: Some(page_size),
-            type_property_masks: vec![Self::create_blob_id_projection(SCHMA_NAME)],
+            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
             ..Default::default()
         };
 
@@ -595,7 +635,7 @@ impl IcingMetaDatabase {
         let search_spec = icing::SearchSpecProto {
             query: Some(query_str),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
             enabled_features: vec![
                 "NUMERIC_SEARCH".to_string(),
                 icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
@@ -606,7 +646,7 @@ impl IcingMetaDatabase {
 
         let result_spec = icing::ResultSpecProto {
             num_per_page: Some(1), // We expect at most one result
-            type_property_masks: vec![Self::create_blob_id_projection(SCHMA_NAME)],
+            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
             ..Default::default()
         };
 
@@ -741,12 +781,12 @@ impl IcingMetaDatabase {
                 query: Some(format!("({} >= 0)", CREATED_TIMESTAMP_NAME)),
                 enabled_features: vec!["NUMERIC_SEARCH".to_string()],
                 term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-                schema_type_filters: vec![SCHMA_NAME.to_string()],
+                schema_type_filters: vec![SCHEMA_NAME.to_string()],
                 ..Default::default()
             };
             let result_spec = icing::ResultSpecProto {
                 num_per_page: Some(1000), // Max page size
-                type_property_masks: vec![Self::create_memory_id_projection(SCHMA_NAME)],
+                type_property_masks: vec![Self::create_memory_id_projection(SCHEMA_NAME)],
                 ..Default::default()
             };
             let search_result: icing::SearchResultProto = match page_token {
@@ -790,8 +830,8 @@ impl IcingMetaDatabase {
                 SystemTime::now(),
             ))),
         };
-        let (search_spec, _) = self.build_text_query_specs(&text_query, SCHMA_NAME)?;
-        let projection = Self::create_memory_id_projection(SCHMA_NAME);
+        let (search_spec, _) = self.build_text_query_specs(&text_query, SCHEMA_NAME)?;
+        let projection = Self::create_memory_id_projection(SCHEMA_NAME);
         let (search_result, next_page_token) = self.execute_search(
             &search_spec,
             &icing::ScoringSpecProto::default(),
@@ -850,7 +890,6 @@ impl IcingMetaDatabase {
         Ok((search_result, next_page_token))
     }
 
-    // TODO: b/469515451 - Support clauses with empty values
     pub fn search(
         &self,
         query: &SearchMemoryQuery,
@@ -868,9 +907,9 @@ impl IcingMetaDatabase {
             )
         } else {
             (
-                SCHMA_NAME,
+                SCHEMA_NAME,
                 icing::TypePropertyMask {
-                    schema_type: Some(SCHMA_NAME.to_string()),
+                    schema_type: Some(SCHEMA_NAME.to_string()),
                     paths: vec![BLOB_ID_NAME.to_string()],
                 },
             )
@@ -1063,15 +1102,6 @@ impl IcingMetaDatabase {
         text_query: &TextQuery,
         schema_name: &str,
     ) -> anyhow::Result<(icing::SearchSpecProto, Option<icing::ScoringSpecProto>)> {
-        let value =
-            if let Some(text_query::Value::TimestampVal(timestamp)) = text_query.value.as_ref() {
-                timestamp_to_i64(timestamp).to_string()
-            } else if let Some(text_query::Value::StringVal(text)) = text_query.value.as_ref() {
-                text.to_string()
-            } else {
-                bail!("unsupported value type for text search");
-            };
-
         let field_name = match text_query.field() {
             MemoryField::CreatedTimestamp => CREATED_TIMESTAMP_NAME,
             MemoryField::EventTimestamp => EVENT_TIMESTAMP_NAME,
@@ -1081,27 +1111,43 @@ impl IcingMetaDatabase {
             _ => bail!("unsupported field for text search"),
         };
 
-        let query = match text_query.match_type() {
-            MatchType::Equal => {
-                if field_name == CREATED_TIMESTAMP_NAME
-                    || field_name == EVENT_TIMESTAMP_NAME
-                    || field_name == EXPIRATION_TIMESTAMP_NAME
-                {
-                    format!("({field_name} == {value})")
+        let match_type = text_query.match_type();
+
+        // Handle empty/None values: when no value is provided, generate
+        // a query that checks for field existence (hasProperty).
+        let (query, needs_has_property_feature) = match text_query.value.as_ref() {
+            Some(text_query::Value::TimestampVal(timestamp)) => {
+                let value = timestamp_to_i64(timestamp);
+                (match_type.build_timestamp_query(field_name, value)?, false)
+            }
+            Some(text_query::Value::StringVal(text)) => {
+                let value = text.to_string();
+                if matches!(match_type, MatchType::Equal) && value.is_empty() {
+                    // Empty string value with Equal match type: check for field existence
+                    (format!("hasProperty(\"{field_name}\")"), true)
                 } else {
-                    format!("({field_name}:{value})")
+                    (match_type.build_string_query(field_name, &value)?, false)
                 }
             }
-            MatchType::Gte => format!("({field_name} >= {value})"),
-            MatchType::Lte => format!("({field_name} <= {value})"),
-            MatchType::Gt => format!("({field_name} > {value})"),
-            MatchType::Lt => format!("({field_name} < {value})"),
-            _ => bail!("unsupported match type for text search"),
+            None => {
+                // No value provided: generate a hasProperty check for EQUAL match type,
+                // otherwise return an error since comparison operators need a value.
+                match match_type {
+                    MatchType::Equal => (format!("hasProperty(\"{field_name}\")"), true),
+                    _ => bail!("comparison operators require a value"),
+                }
+            }
         };
+
+        let mut enabled_features = vec!["NUMERIC_SEARCH".to_string()];
+        if needs_has_property_feature {
+            enabled_features.push(icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string());
+            enabled_features.push(icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string());
+        }
 
         let mut search_spec = icing::SearchSpecProto {
             query: Some(query),
-            enabled_features: vec!["NUMERIC_SEARCH".to_string()],
+            enabled_features,
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             ..Default::default()
         };
@@ -1185,7 +1231,7 @@ impl IcingMetaDatabase {
         let (schema_name, id_name) = if search_views {
             (LLM_VIEW_SCHEMA_NAME, BLOB_ID_NAME)
         } else {
-            (SCHMA_NAME, BLOB_ID_NAME)
+            (SCHEMA_NAME, BLOB_ID_NAME)
         };
         let (search_spec, scoring_spec) =
             self.build_embedding_query_specs(embedding_query, schema_name)?;
@@ -1223,8 +1269,8 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(SearchResultIds, PageToken)> {
-        let (search_spec, _) = self.build_text_query_specs(text_query, SCHMA_NAME)?;
-        let projection = Self::create_blob_id_projection(SCHMA_NAME);
+        let (search_spec, _) = self.build_text_query_specs(text_query, SCHEMA_NAME)?;
+        let projection = Self::create_blob_id_projection(SCHEMA_NAME);
         let (search_result, next_page_token) = self.execute_search(
             &search_spec,
             &icing::ScoringSpecProto::default(),
@@ -2075,9 +2121,9 @@ mod tests {
         let search_spec_for_existence = icing::SearchSpecProto {
             query: Some(memory_id.to_string()),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHMA_NAME.to_string()],
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
             type_property_filters: vec![IcingMetaDatabase::create_search_filter(
-                SCHMA_NAME,
+                SCHEMA_NAME,
                 MEMORY_ID_NAME,
             )],
             ..Default::default()
@@ -2085,7 +2131,7 @@ mod tests {
 
         let result_spec_for_existence = icing::ResultSpecProto {
             num_per_page: Some(1),
-            type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHMA_NAME)],
+            type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHEMA_NAME)],
             ..Default::default()
         };
         let search_result_for_existence = icing_database.icing_search_engine.search(
@@ -2154,6 +2200,106 @@ mod tests {
 
         // Assert that only non-expired memories are returned
         assert_that!(results, unordered_elements_are![eq(&blob_id_future), eq(&blob_id_no_expiry)]);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn build_text_query_specs_with_no_value_test() -> anyhow::Result<()> {
+        let icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Test with None value and EQUAL match type - should generate hasProperty query
+        let text_query = TextQuery {
+            match_type: MatchType::Equal.into(),
+            field: MemoryField::Tags.into(),
+            value: None,
+        };
+
+        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
+
+        // Verify query uses hasProperty
+        expect_that!(search_spec.query.as_ref().unwrap(), eq(&"hasProperty(\"tag\")".to_string()));
+
+        // Verify enabled features include HAS_PROPERTY_FUNCTION_FEATURE
+        expect_that!(
+            search_spec.enabled_features,
+            contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string()))
+        );
+        expect_that!(
+            search_spec.enabled_features,
+            contains(eq(&icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string()))
+        );
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn build_text_query_specs_with_empty_string_value_test() -> anyhow::Result<()> {
+        let icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Test with empty string value and EQUAL match type - should generate
+        // hasProperty query
+        let text_query = TextQuery {
+            match_type: MatchType::Equal.into(),
+            field: MemoryField::Id.into(),
+            value: Some(text_query::Value::StringVal("".to_string())),
+        };
+
+        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
+
+        // Verify query uses hasProperty
+        expect_that!(
+            search_spec.query.as_ref().unwrap(),
+            eq(&"hasProperty(\"memoryId\")".to_string())
+        );
+
+        // Verify enabled features include HAS_PROPERTY_FUNCTION_FEATURE
+        expect_that!(
+            search_spec.enabled_features,
+            contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string()))
+        );
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn build_text_query_specs_comparison_with_no_value_fails_test() -> anyhow::Result<()> {
+        let icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Test with None value and GTE match type - should fail
+        let text_query = TextQuery {
+            match_type: MatchType::Gte.into(),
+            field: MemoryField::CreatedTimestamp.into(),
+            value: None,
+        };
+
+        let result = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME);
+        expect_that!(result.is_err(), eq(true));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn build_text_query_specs_with_string_value_test() -> anyhow::Result<()> {
+        let icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Test with a non-empty string value - should work as before
+        let text_query = TextQuery {
+            match_type: MatchType::Equal.into(),
+            field: MemoryField::Tags.into(),
+            value: Some(text_query::Value::StringVal("my_tag".to_string())),
+        };
+
+        let (search_spec, _) = icing_database.build_text_query_specs(&text_query, SCHEMA_NAME)?;
+
+        // Verify query uses standard term search
+        expect_that!(search_spec.query.as_ref().unwrap(), eq(&"(tag:my_tag)".to_string()));
+
+        // Verify HAS_PROPERTY_FUNCTION_FEATURE is NOT included (not needed)
+        expect_that!(
+            search_spec.enabled_features,
+            not(contains(eq(&icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string())))
+        );
 
         Ok(())
     }

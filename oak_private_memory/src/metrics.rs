@@ -211,6 +211,8 @@ impl Metrics {
         observer.register_metric(db_cleanup_latency.clone());
         observer.register_metric(db_cleanup_count.clone());
         observer.register_metric(db_persist_latency.clone());
+        observer.register_metric(db_persist_latency_with_retries.clone());
+        observer.register_metric(db_persist_attempts.clone());
         observer.register_metric(db_connect_retries.clone());
         observer.register_metric(db_persist_failures.clone());
         observer.register_metric(decrypt_dek_failures.clone());
@@ -285,7 +287,7 @@ impl Metrics {
         let speed = std::cmp::max(1, speed);
 
         self.rpc_latency
-            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_save_kb_per_ms")]);
+            .record(speed, &[opentelemetry::KeyValue::new("request_type", "db_load_kb_per_ms")]);
     }
 
     pub fn record_db_size(&self, size: u64) {
