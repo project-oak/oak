@@ -94,6 +94,10 @@ def _common_crates(std):
             ],
             version = "0.16.9",
         ),
+        "ed25519-dalek": crate.spec(
+            default_features = False,
+            version = "2.2.0",
+        ),
         "elf": crate.spec(
             default_features = False,
             version = "0.7.4",

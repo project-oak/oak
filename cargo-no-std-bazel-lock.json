@@ -1,5 +1,5 @@
 {
-  "checksum": "ee477f6cc7ec33449fc66f8d28e529c5faef2fc24558bad09d3f583380201a80",
+  "checksum": "bb73880ea15c5c540aed917d0cf913c9356e40a8b03a79b43cfc3a8a2a1c4604",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -45,7 +45,7 @@
               "target": "bit_field"
             },
             {
-              "id": "bitflags 2.10.0",
+              "id": "bitflags 2.11.0",
               "target": "bitflags"
             },
             {
@@ -315,7 +315,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             }
           ],
@@ -468,14 +468,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "anyhow 1.0.100": {
+    "anyhow 1.0.101": {
       "name": "anyhow",
-      "version": "1.0.100",
+      "version": "1.0.101",
       "package_url": "https://github.com/dtolnay/anyhow",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/anyhow/1.0.100/download",
-          "sha256": "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
+          "url": "https://static.crates.io/crates/anyhow/1.0.101/download",
+          "sha256": "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
         }
       },
       "targets": [
@@ -512,14 +512,14 @@
         "deps": {
           "common": [
             {
-              "id": "anyhow 1.0.100",
+              "id": "anyhow 1.0.101",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "1.0.100"
+        "edition": "2021",
+        "version": "1.0.101"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -927,14 +927,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "bitflags 2.10.0": {
+    "bitflags 2.11.0": {
       "name": "bitflags",
-      "version": "2.10.0",
+      "version": "2.11.0",
       "package_url": "https://github.com/bitflags/bitflags",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/bitflags/2.10.0/download",
-          "sha256": "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
+          "url": "https://static.crates.io/crates/bitflags/2.11.0/download",
+          "sha256": "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
         }
       },
       "targets": [
@@ -957,7 +957,7 @@
           "**"
         ],
         "edition": "2021",
-        "version": "2.10.0"
+        "version": "2.11.0"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -1080,14 +1080,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "bumpalo 3.19.1": {
+    "bumpalo 3.20.1": {
       "name": "bumpalo",
-      "version": "3.19.1",
+      "version": "3.20.1",
       "package_url": "https://github.com/fitzgen/bumpalo",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/bumpalo/3.19.1/download",
-          "sha256": "5dd9dc738b7a8311c7ade152424974d8115f2cdad61e8dab8dac9f2362298510"
+          "url": "https://static.crates.io/crates/bumpalo/3.20.1/download",
+          "sha256": "5c6f81257d10a0f602a294ae4182251151ff97dbb504ef9afcdda4a64b24d9b4"
         }
       },
       "targets": [
@@ -1116,7 +1116,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "3.19.1"
+        "version": "3.20.1"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -1889,25 +1889,25 @@
           "selects": {
             "aarch64-linux-android": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ],
             "cfg(all(target_arch = \"aarch64\", target_os = \"linux\"))": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ],
             "cfg(all(target_arch = \"aarch64\", target_vendor = \"apple\"))": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ],
             "cfg(all(target_arch = \"loongarch64\", target_os = \"linux\"))": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ]
@@ -2213,6 +2213,12 @@
         "compile_data_glob": [
           "**"
         ],
+        "crate_features": {
+          "common": [
+            "digest"
+          ],
+          "selects": {}
+        },
         "deps": {
           "common": [
             {
@@ -2222,6 +2228,10 @@
             {
               "id": "curve25519-dalek 4.1.3",
               "target": "build_script_build"
+            },
+            {
+              "id": "digest 0.10.7",
+              "target": "digest"
             },
             {
               "id": "subtle 2.6.1",
@@ -2323,7 +2333,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2461,7 +2471,7 @@
               "target": "strsim"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2516,7 +2526,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2651,7 +2661,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2771,7 +2781,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2829,7 +2839,7 @@
               "target": "derive_builder_core"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -2961,7 +2971,7 @@
               "target": "aml"
             },
             {
-              "id": "anyhow 1.0.100",
+              "id": "anyhow 1.0.101",
               "target": "anyhow"
             },
             {
@@ -2977,7 +2987,7 @@
               "target": "base64"
             },
             {
-              "id": "bitflags 2.10.0",
+              "id": "bitflags 2.11.0",
               "target": "bitflags"
             },
             {
@@ -3015,6 +3025,10 @@
             {
               "id": "ecdsa 0.16.9",
               "target": "ecdsa"
+            },
+            {
+              "id": "ed25519-dalek 2.2.0",
+              "target": "ed25519_dalek"
             },
             {
               "id": "elf 0.7.4",
@@ -3121,7 +3135,7 @@
               "target": "regex_lite"
             },
             {
-              "id": "rlsf 0.2.1",
+              "id": "rlsf 0.2.2",
               "target": "rlsf"
             },
             {
@@ -3201,7 +3215,7 @@
               "target": "x86_64"
             },
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             },
             {
@@ -3385,6 +3399,113 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
+    },
+    "ed25519 2.2.3": {
+      "name": "ed25519",
+      "version": "2.2.3",
+      "package_url": "https://github.com/RustCrypto/signatures/tree/master/ed25519",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ed25519/2.2.3/download",
+          "sha256": "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ed25519",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ed25519",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "signature 2.2.0",
+              "target": "signature"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "2.2.3"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "ed25519-dalek 2.2.0": {
+      "name": "ed25519-dalek",
+      "version": "2.2.0",
+      "package_url": "https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/ed25519-dalek/2.2.0/download",
+          "sha256": "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "ed25519_dalek",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "ed25519_dalek",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "curve25519-dalek 4.1.3",
+              "target": "curve25519_dalek"
+            },
+            {
+              "id": "ed25519 2.2.3",
+              "target": "ed25519"
+            },
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
+            },
+            {
+              "id": "subtle 2.6.1",
+              "target": "subtle"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2021",
+        "version": "2.2.0"
+      },
+      "license": "BSD-3-Clause",
+      "license_ids": [
+        "BSD-3-Clause"
+      ],
+      "license_file": "LICENSE"
     },
     "either 1.15.0": {
       "name": "either",
@@ -3649,7 +3770,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -4071,7 +4192,7 @@
             ],
             "cfg(unix)": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ],
@@ -4312,7 +4433,7 @@
               "target": "cfg_if"
             },
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             }
           ],
@@ -4949,14 +5070,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "keccak 0.1.5": {
+    "keccak 0.1.6": {
       "name": "keccak",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "package_url": "https://github.com/RustCrypto/sponges/tree/master/keccak",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/keccak/0.1.5/download",
-          "sha256": "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
+          "url": "https://static.crates.io/crates/keccak/0.1.6/download",
+          "sha256": "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
         }
       },
       "targets": [
@@ -4990,7 +5111,7 @@
           }
         },
         "edition": "2018",
-        "version": "0.1.5"
+        "version": "0.1.6"
       },
       "license": "Apache-2.0 OR MIT",
       "license_ids": [
@@ -5054,14 +5175,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "libc 0.2.180": {
+    "libc 0.2.182": {
       "name": "libc",
-      "version": "0.2.180",
+      "version": "0.2.182",
       "package_url": "https://github.com/rust-lang/libc",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/libc/0.2.180/download",
-          "sha256": "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
+          "url": "https://static.crates.io/crates/libc/0.2.182/download",
+          "sha256": "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
         }
       },
       "targets": [
@@ -5105,14 +5226,14 @@
         "deps": {
           "common": [
             {
-              "id": "libc 0.2.180",
+              "id": "libc 0.2.182",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.180"
+        "version": "0.2.182"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -5405,14 +5526,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "memchr 2.7.6": {
+    "memchr 2.8.0": {
       "name": "memchr",
-      "version": "2.7.6",
+      "version": "2.8.0",
       "package_url": "https://github.com/BurntSushi/memchr",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/memchr/2.7.6/download",
-          "sha256": "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
+          "url": "https://static.crates.io/crates/memchr/2.8.0/download",
+          "sha256": "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
         }
       },
       "targets": [
@@ -5435,7 +5556,7 @@
           "**"
         ],
         "edition": "2021",
-        "version": "2.7.6"
+        "version": "2.8.0"
       },
       "license": "Unlicense OR MIT",
       "license_ids": [
@@ -5488,11 +5609,11 @@
               "target": "fragile"
             },
             {
-              "id": "predicates 3.1.3",
+              "id": "predicates 3.1.4",
               "target": "predicates"
             },
             {
-              "id": "predicates-tree 1.0.12",
+              "id": "predicates-tree 1.0.13",
               "target": "predicates_tree"
             }
           ],
@@ -5577,7 +5698,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -5642,7 +5763,7 @@
         "deps": {
           "common": [
             {
-              "id": "memchr 2.7.6",
+              "id": "memchr 2.8.0",
               "target": "memchr"
             }
           ],
@@ -6647,7 +6768,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             }
           ],
@@ -6663,14 +6784,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "predicates 3.1.3": {
+    "predicates 3.1.4": {
       "name": "predicates",
-      "version": "3.1.3",
+      "version": "3.1.4",
       "package_url": "https://github.com/assert-rs/predicates-rs",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/predicates/3.1.3/download",
-          "sha256": "a5d19ee57562043d37e82899fade9a22ebab7be9cef5026b07fda9cdd4293573"
+          "url": "https://static.crates.io/crates/predicates/3.1.4/download",
+          "sha256": "ada8f2932f28a27ee7b70dd6c1c39ea0675c55a36879ab92f3a715eaa1e63cfe"
         }
       },
       "targets": [
@@ -6699,14 +6820,14 @@
               "target": "anstyle"
             },
             {
-              "id": "predicates-core 1.0.9",
+              "id": "predicates-core 1.0.10",
               "target": "predicates_core"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "3.1.3"
+        "version": "3.1.4"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6715,14 +6836,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "predicates-core 1.0.9": {
+    "predicates-core 1.0.10": {
       "name": "predicates-core",
-      "version": "1.0.9",
-      "package_url": "https://github.com/assert-rs/predicates-rs/tree/master/crates/core",
+      "version": "1.0.10",
+      "package_url": "https://github.com/assert-rs/predicates-rs",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/predicates-core/1.0.9/download",
-          "sha256": "727e462b119fe9c93fd0eb1429a5f7647394014cf3c04ab2c0350eeb09095ffa"
+          "url": "https://static.crates.io/crates/predicates-core/1.0.10/download",
+          "sha256": "cad38746f3166b4031b1a0d39ad9f954dd291e7854fcc0eed52ee41a0b50d144"
         }
       },
       "targets": [
@@ -6745,7 +6866,7 @@
           "**"
         ],
         "edition": "2021",
-        "version": "1.0.9"
+        "version": "1.0.10"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6754,14 +6875,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "predicates-tree 1.0.12": {
+    "predicates-tree 1.0.13": {
       "name": "predicates-tree",
-      "version": "1.0.12",
-      "package_url": "https://github.com/assert-rs/predicates-rs/tree/master/crates/tree",
+      "version": "1.0.13",
+      "package_url": "https://github.com/assert-rs/predicates-rs",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/predicates-tree/1.0.12/download",
-          "sha256": "72dd2d6d381dfb73a193c7fca536518d7caee39fc8503f74e7dc0be0531b425c"
+          "url": "https://static.crates.io/crates/predicates-tree/1.0.13/download",
+          "sha256": "d0de1b847b39c8131db0467e9df1ff60e6d0562ab8e9a16e568ad0fdb372e2f2"
         }
       },
       "targets": [
@@ -6786,7 +6907,7 @@
         "deps": {
           "common": [
             {
-              "id": "predicates-core 1.0.9",
+              "id": "predicates-core 1.0.10",
               "target": "predicates_core"
             },
             {
@@ -6797,7 +6918,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.12"
+        "version": "1.0.13"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -6909,7 +7030,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "unicode-ident 1.0.22",
+              "id": "unicode-ident 1.0.24",
               "target": "unicode_ident"
             }
           ],
@@ -7438,14 +7559,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "rlsf 0.2.1": {
+    "rlsf 0.2.2": {
       "name": "rlsf",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "package_url": "https://github.com/yvt/rlsf",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/rlsf/0.2.1/download",
-          "sha256": "222fb240c3286247ecdee6fa5341e7cdad0ffdf8e7e401d9937f2d58482a20bf"
+          "url": "https://static.crates.io/crates/rlsf/0.2.2/download",
+          "sha256": "1646a59a9734b8b7a0ac51689388a60fe1625d4b956348e9de07591a1478457a"
         }
       },
       "targets": [
@@ -7482,7 +7603,7 @@
           "selects": {
             "cfg(unix)": [
               {
-                "id": "libc 0.2.180",
+                "id": "libc 0.2.182",
                 "target": "libc"
               }
             ]
@@ -7492,13 +7613,17 @@
         "proc_macro_deps": {
           "common": [
             {
+              "id": "rustversion 1.0.22",
+              "target": "rustversion"
+            },
+            {
               "id": "svgbobdoc 0.3.0",
               "target": "svgbobdoc"
             }
           ],
           "selects": {}
         },
-        "version": "0.2.1"
+        "version": "0.2.2"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -7761,7 +7886,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             }
           ],
@@ -7909,7 +8034,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -8317,7 +8442,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -8387,7 +8512,7 @@
               "target": "itoa"
             },
             {
-              "id": "memchr 2.7.6",
+              "id": "memchr 2.8.0",
               "target": "memchr"
             },
             {
@@ -8399,7 +8524,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "zmij 1.0.19",
+              "id": "zmij 1.0.21",
               "target": "zmij"
             }
           ],
@@ -8534,7 +8659,7 @@
               "target": "digest"
             },
             {
-              "id": "keccak 0.1.5",
+              "id": "keccak 0.1.6",
               "target": "keccak"
             }
           ],
@@ -8747,7 +8872,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -9136,7 +9261,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -9342,7 +9467,7 @@
               "target": "build_script_build"
             },
             {
-              "id": "unicode-ident 1.0.22",
+              "id": "unicode-ident 1.0.24",
               "target": "unicode_ident"
             }
           ],
@@ -9369,14 +9494,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "syn 2.0.114": {
+    "syn 2.0.116": {
       "name": "syn",
-      "version": "2.0.114",
+      "version": "2.0.116",
       "package_url": "https://github.com/dtolnay/syn",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/syn/2.0.114/download",
-          "sha256": "d4d107df263a3013ef9b1879b0df87d706ff80f65a86ea879bd9c31f9b307c2a"
+          "url": "https://static.crates.io/crates/syn/2.0.116/download",
+          "sha256": "3df424c70518695237746f84cede799c9c58fcb37450d7b23716568cc8bc69cb"
         }
       },
       "targets": [
@@ -9424,14 +9549,14 @@
               "target": "quote"
             },
             {
-              "id": "unicode-ident 1.0.22",
+              "id": "unicode-ident 1.0.24",
               "target": "unicode_ident"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "2.0.114"
+        "version": "2.0.116"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -9636,7 +9761,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -9761,7 +9886,7 @@
         "deps": {
           "common": [
             {
-              "id": "bitflags 2.10.0",
+              "id": "bitflags 2.11.0",
               "target": "bitflags"
             }
           ],
@@ -9792,14 +9917,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "unicode-ident 1.0.22": {
+    "unicode-ident 1.0.24": {
       "name": "unicode-ident",
-      "version": "1.0.22",
+      "version": "1.0.24",
       "package_url": "https://github.com/dtolnay/unicode-ident",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/unicode-ident/1.0.22/download",
-          "sha256": "9312f7c4f6ff9069b165498234ce8be658059c6728633667c526e27dc2cf1df5"
+          "url": "https://static.crates.io/crates/unicode-ident/1.0.24/download",
+          "sha256": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
         }
       },
       "targets": [
@@ -9821,8 +9946,8 @@
         "compile_data_glob": [
           "**"
         ],
-        "edition": "2018",
-        "version": "1.0.22"
+        "edition": "2021",
+        "version": "1.0.24"
       },
       "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
       "license_ids": [
@@ -10011,7 +10136,7 @@
         "deps": {
           "common": [
             {
-              "id": "bitflags 2.10.0",
+              "id": "bitflags 2.11.0",
               "target": "bitflags"
             },
             {
@@ -10031,7 +10156,7 @@
               "target": "thiserror"
             },
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "zerocopy"
             }
           ],
@@ -10335,7 +10460,7 @@
         "deps": {
           "common": [
             {
-              "id": "bumpalo 3.19.1",
+              "id": "bumpalo 3.20.1",
               "target": "bumpalo"
             },
             {
@@ -10347,7 +10472,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             },
             {
@@ -10411,7 +10536,7 @@
         "deps": {
           "common": [
             {
-              "id": "unicode-ident 1.0.22",
+              "id": "unicode-ident 1.0.24",
               "target": "unicode_ident"
             },
             {
@@ -11110,7 +11235,7 @@
               "target": "bit_field"
             },
             {
-              "id": "bitflags 2.10.0",
+              "id": "bitflags 2.11.0",
               "target": "bitflags"
             },
             {
@@ -11144,14 +11269,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy 0.8.38": {
+    "zerocopy 0.8.39": {
       "name": "zerocopy",
-      "version": "0.8.38",
+      "version": "0.8.39",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy/0.8.38/download",
-          "sha256": "57cf3aa6855b23711ee9852dfc97dfaa51c45feaba5b645d0c777414d494a961"
+          "url": "https://static.crates.io/crates/zerocopy/0.8.39/download",
+          "sha256": "db6d35d663eadb6c932438e763b262fe1a70987f9ae936e60158176d710cae4a"
         }
       },
       "targets": [
@@ -11197,7 +11322,7 @@
         "deps": {
           "common": [
             {
-              "id": "zerocopy 0.8.38",
+              "id": "zerocopy 0.8.39",
               "target": "build_script_build"
             }
           ],
@@ -11207,13 +11332,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "zerocopy-derive 0.8.38",
+              "id": "zerocopy-derive 0.8.39",
               "target": "zerocopy_derive"
             }
           ],
           "selects": {}
         },
-        "version": "0.8.38"
+        "version": "0.8.39"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -11234,14 +11359,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zerocopy-derive 0.8.38": {
+    "zerocopy-derive 0.8.39": {
       "name": "zerocopy-derive",
-      "version": "0.8.38",
+      "version": "0.8.39",
       "package_url": "https://github.com/google/zerocopy",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.38/download",
-          "sha256": "8a616990af1a287837c4fe6596ad77ef57948f787e46ce28e166facc0cc1cb75"
+          "url": "https://static.crates.io/crates/zerocopy-derive/0.8.39/download",
+          "sha256": "4122cd3169e94605190e77839c9a40d40ed048d305bfdc146e7df40ab0f3e517"
         }
       },
       "targets": [
@@ -11274,14 +11399,14 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.8.38"
+        "version": "0.8.39"
       },
       "license": "BSD-2-Clause OR Apache-2.0 OR MIT",
       "license_ids": [
@@ -11388,7 +11513,7 @@
               "target": "quote"
             },
             {
-              "id": "syn 2.0.114",
+              "id": "syn 2.0.116",
               "target": "syn"
             }
           ],
@@ -11404,14 +11529,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "zmij 1.0.19": {
+    "zmij 1.0.21": {
       "name": "zmij",
-      "version": "1.0.19",
+      "version": "1.0.21",
       "package_url": "https://github.com/dtolnay/zmij",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/zmij/1.0.19/download",
-          "sha256": "3ff05f8caa9038894637571ae6b9e29466c1f4f829d26c9b28f869a29cbe3445"
+          "url": "https://static.crates.io/crates/zmij/1.0.21/download",
+          "sha256": "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
         }
       },
       "targets": [
@@ -11448,14 +11573,14 @@
         "deps": {
           "common": [
             {
-              "id": "zmij 1.0.19",
+              "id": "zmij 1.0.21",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "1.0.19"
+        "version": "1.0.21"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -11542,11 +11667,11 @@
     "aead 0.5.2",
     "aes-gcm 0.10.3",
     "aml 0.16.4",
-    "anyhow 1.0.100",
+    "anyhow 1.0.101",
     "arrayvec 0.7.6",
     "atomic_refcell 0.1.13",
     "base64 0.21.7",
-    "bitflags 2.10.0",
+    "bitflags 2.11.0",
     "bitvec 1.0.1",
     "bytes 1.11.1",
     "chrono 0.4.43",
@@ -11556,6 +11681,7 @@
     "curve25519-dalek 4.1.3",
     "derive_builder 0.20.2",
     "ecdsa 0.16.9",
+    "ed25519-dalek 2.2.0",
     "elf 0.7.4",
     "embedded-io 0.6.1",
     "getrandom 0.2.17",
@@ -11582,7 +11708,7 @@
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex-lite 0.1.9",
-    "rlsf 0.2.1",
+    "rlsf 0.2.2",
     "rsa 0.9.10",
     "self_cell 1.2.2",
     "serde 1.0.228",
@@ -11602,7 +11728,7 @@
     "x509-cert 0.2.5",
     "x509-verify 0.4.8",
     "x86_64 0.15.4",
-    "zerocopy 0.8.38",
+    "zerocopy 0.8.39",
     "zeroize 1.8.2"
   ],
   "direct_dev_deps": [],
