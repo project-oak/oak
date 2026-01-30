@@ -23,7 +23,7 @@ impl linter::LinterTool for ShellCheckTool {
     const SUPPORTS_FIX: bool = true;
 
     fn accept(&self, path: &Path) -> anyhow::Result<bool> {
-        super::contents_starts_with(path, b"#!")
+        super::contents_starts_with(path, b"#!/")
     }
 
     fn check(&self, path: &Path) -> anyhow::Result<linter::Outcome> {
