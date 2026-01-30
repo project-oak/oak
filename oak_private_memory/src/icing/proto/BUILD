@@ -29,7 +29,6 @@ cargo_build_script(
     ],
     build_script_env = {
         "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
-        "OAK_PROTO_PATH": "$(locations @icing//:icing_proto_srcs)",
     },
     data = [
         "@com_google_protobuf//:descriptor_proto_srcs",
@@ -44,6 +43,8 @@ cargo_build_script(
         "@oak//oak_proto_build_utils",
         "@oak_crates_index//:prost-build",
         "@oak_crates_index//:serde",
+        "@oak_crates_index//:walkdir",
+        "@rules_rust//tools/runfiles",
     ],
 )
 

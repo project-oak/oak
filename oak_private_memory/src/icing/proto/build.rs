@@ -13,26 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::env;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let oak_proto_path_env = "OAK_PROTO_PATH";
-    let env_var = env::var(oak_proto_path_env).unwrap();
-    let all_protos = env_var
-        .split(" ")
-        .map(|s| s.replace("external/icing/proto", "../../../../icing/proto"))
+    let r = runfiles::Runfiles::create().unwrap();
+    let external_path = r.rlocation("icing/proto").unwrap();
+
+    let all_protos = walkdir::WalkDir::new(&external_path)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().unwrap_or_default().to_string_lossy() == "proto")
+        .map(|e| e.into_path())
         .collect::<Vec<_>>();
 
-    let included_protos = vec![
-        std::path::PathBuf::from("../../../../icing/proto"),
-        std::path::PathBuf::from("../../.."),
-    ];
-
-    let proto_paths = all_protos;
-
-    let mut config = prost_build::Config::new();
-
-    config.compile_protos(&proto_paths, &included_protos).expect("proto compilation failed");
+    prost_build::Config::new()
+        .compile_protos(&all_protos, &[external_path])
+        .expect("proto compilation failed");
 
     Ok(())
 }
