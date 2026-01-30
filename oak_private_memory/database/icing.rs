@@ -140,19 +140,13 @@ impl PendingMetadata {
     pub fn new(memory: &Memory, blob_id: &BlobId) -> anyhow::Result<Self> {
         let memory_id = &memory.id;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
-        let embeddings: Vec<_> = memory
-            .embeddings
-            .iter()
-            .map(|x| icing::create_vector_proto(x.model_signature.as_str(), &x.values))
-            .collect();
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
             .set_key(NAMESPACE_NAME.as_bytes(), memory_id.as_bytes())
             .set_schema(SCHMA_NAME.as_bytes())
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
-            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
-            .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings);
+            .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()]);
 
         if let Some(ref created_timestamp) = memory.created_timestamp {
             document_builder.add_int64_property(
@@ -323,31 +317,33 @@ impl IcingMetaDatabase {
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
-            ).add_property(
-                icing::create_property_config_builder()
-                    .set_name(EMBEDDING_NAME.as_bytes())
-                    .set_data_type_vector(
-                        icing::embedding_indexing_config::embedding_indexing_type::Code::LinearSearch.into(),
-                    )
-                    .set_cardinality(icing::property_config_proto::cardinality::Code::Repeated.into())
-            ).add_property(
+            )
+            .add_property(
                 icing::create_property_config_builder()
                     .set_name(CREATED_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
-            ).add_property(
+            )
+            .add_property(
                 icing::create_property_config_builder()
                     .set_name(EVENT_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
-            ).add_property(
+            )
+            .add_property(
                 icing::create_property_config_builder()
                     .set_name(EXPIRATION_TIMESTAMP_NAME.as_bytes())
-                    .set_data_type_int64(icing::integer_indexing_config::numeric_match_type::Code::Range.into())
+                    .set_data_type_int64(
+                        icing::integer_indexing_config::numeric_match_type::Code::Range.into(),
+                    )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),

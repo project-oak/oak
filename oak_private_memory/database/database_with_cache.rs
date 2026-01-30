@@ -258,9 +258,6 @@ impl DatabaseWithCache {
             if !mask.include_fields.contains(&(MemoryField::Tags as i32)) {
                 memory.tags.clear();
             }
-            if !mask.include_fields.contains(&(MemoryField::Embeddings as i32)) {
-                memory.embeddings.clear();
-            }
             if !mask.include_fields.contains(&(MemoryField::CreatedTimestamp as i32)) {
                 memory.created_timestamp = None;
             }
@@ -307,7 +304,7 @@ mod tests {
 
     use sealed_memory_rust_proto::{
         oak::private_memory::{LlmView, LlmViews},
-        prelude::v1::{Embedding, Memory, MemoryContent, MemoryField, MemoryValue, ResultMask},
+        prelude::v1::{Memory, MemoryContent, MemoryField, MemoryValue, ResultMask},
     };
 
     use super::*;
@@ -316,8 +313,8 @@ mod tests {
     fn create_memory_for_mask_test() -> Memory {
         Memory {
             id: "test_id".to_string(),
+            name: String::default(),
             tags: vec!["tag1".to_string(), "tag2".to_string()],
-            embeddings: vec![Embedding::default()],
             content: Some(MemoryContent {
                 contents: HashMap::from([
                     ("key1".to_string(), MemoryValue::default()),
@@ -349,7 +346,6 @@ mod tests {
         DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
         assert_eq!(memory.id, "test_id");
         assert!(memory.tags.is_empty());
-        assert!(memory.embeddings.is_empty());
         assert!(memory.content.is_none());
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
@@ -368,7 +364,6 @@ mod tests {
         DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert_eq!(memory.tags, vec!["tag1".to_string(), "tag2".to_string()]);
-        assert!(memory.embeddings.is_empty());
         assert!(memory.content.is_none());
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());
@@ -387,7 +382,6 @@ mod tests {
         DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
-        assert!(memory.embeddings.is_empty());
         assert!(memory.content.is_some());
         assert_eq!(memory.content.unwrap().contents.len(), 1);
         assert!(memory.created_timestamp.is_none());
@@ -411,7 +405,6 @@ mod tests {
         DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
-        assert!(memory.embeddings.is_empty());
         assert!(memory.content.is_none());
         assert!(memory.created_timestamp.is_some());
         assert!(memory.event_timestamp.is_some());
@@ -430,7 +423,6 @@ mod tests {
         DatabaseWithCache::apply_mask_to_memory(&mut memory, &mask);
         assert!(memory.id.is_empty());
         assert!(memory.tags.is_empty());
-        assert!(memory.embeddings.is_empty());
         assert!(memory.content.is_none());
         assert!(memory.created_timestamp.is_none());
         assert!(memory.event_timestamp.is_none());

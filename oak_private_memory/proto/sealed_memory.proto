@@ -107,35 +107,38 @@ message LLMViews {
 }
 
 message Memory {
+  // Unique identifier, assigned by Sealed Memory Service.
   string id = 1;
-  reserved 2;
+  // (Optional) Unique name, set by client. See go/named-sealed-memories.
+  string name = 10;
   repeated string tags = 3;
-  // Deprecated. Use `views` instead.
-  repeated Embedding embeddings = 4 [deprecated = true];
   MemoryContent content = 5;
-  // The time when the memory is uploaded. Set by backend.
+  // The time when the memory is uploaded. Set by backend. Updated whenever the
+  // memory is updated, i.e. when calling AddMemory with an existing memory id.
   google.protobuf.Timestamp created_timestamp = 6;
-  // The time when the event described by the data happens. Should be
-  // set by the client. If not set, the `created_timestamp` will be
-  // used.
+  // The time when the event described by the data happens. Should be set by the
+  // client. If not set, the `created_timestamp` will be used for time
+  // calculations (e.g. filtering by time).
   google.protobuf.Timestamp event_timestamp = 7;
   // The time when the memory is considered to be expired. Should be
   // set by the client. If not set, the memory will never expire.
   google.protobuf.Timestamp expiration_timestamp = 9;
 
   LLMViews views = 8;
+
+  reserved 2, 4;
 }
 
 enum MemoryField {
   UNKNOWN = 0;               // Default value, should not be used.
   ID = 1;                    // The 'id' field of the Memory message.
   TAGS = 2;                  // The 'tags' field.
-  EMBEDDINGS = 3;            // The 'embeddings' field.
   CONTENT = 4;               // The 'content' field .
   CREATED_TIMESTAMP = 5;     // The 'created_timestamp' field.
   EVENT_TIMESTAMP = 6;       // The 'event_timestamp' field.
   EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
-  VIEWS = 8;                 // The 'views' field.
+  NAME = 8;                  // The 'name' field.
+  VIEWS = 9;                 // The 'views' field.
 }
 
 message AddMemoryRequest {

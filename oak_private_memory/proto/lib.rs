@@ -313,11 +313,12 @@ vec_enum_converter!(
         "UNKNOWN",
         "ID",
         "TAGS",
-        "EMBEDDINGS",
         "CONTENT",
         "CREATED_TIMESTAMP",
         "EVENT_TIMESTAMP",
-        "EXPIRED_TIMESTAMP"
+        "EXPIRATION_TIMESTAMP",
+        "NAME",
+        "VIEWS"
     ]
 );
 
