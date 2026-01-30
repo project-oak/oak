@@ -23,25 +23,7 @@ local_repository(
     path = "..",
 )
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "rules_java",
-    sha256 = "6d8c6d5cd86fed031ee48424f238fa35f33abc9921fd97dd4ae1119a29fc807f",
-    urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/8.6.3/rules_java-8.6.3.tar.gz",
-    ],
-)
-
-load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
-
-rules_java_dependencies()
-
-load("@aspect_bazel_lib//lib:repositories.bzl", "register_expand_template_toolchains")
-
-register_expand_template_toolchains()
-
 load("@oak//bazel:repositories.bzl", "oak_toolchain_repositories")
 
 oak_toolchain_repositories()
@@ -75,40 +57,6 @@ load("@oak//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
 
-# Bits of Oak depend on gRPC and Java(!), thus these. There are no direct uses
-# of either in this code, however.
-
-http_archive(
-    name = "com_github_grpc_grpc",
-    sha256 = "f40bde4ce2f31760f65dc49a2f50876f59077026494e67dccf23992548b1b04f",
-    strip_prefix = "grpc-1.62.0",
-    urls = [
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.62.0.tar.gz",
-    ],
-)
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-
-grpc_extra_deps()
-
-http_archive(
-    name = "io_grpc_grpc_java",
-    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
-    strip_prefix = "grpc-java-1.56.0",
-    urls = [
-        # Java gRPC v1.56.0 (2023-06-21).
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
-    ],
-)
-
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()
-
 http_archive(
     # Has to be `cxx.rs` as `cxx` hardcodes this name.
     name = "cxx.rs",
@@ -116,34 +64,4 @@ http_archive(
     sha256 = "91d29f7ddd9eedda896cfde88c9c96d796e217061195843511f403090d2248ca",
     strip_prefix = "cxx-1.0.157",
     url = "https://github.com/dtolnay/cxx/archive/refs/tags/1.0.157.tar.gz",
-)
-
-http_archive(
-    name = "rules_foreign_cc",
-    sha256 = "8e5605dc2d16a4229cb8fbe398514b10528553ed4f5f7737b663fdd92f48e1c2",
-    strip_prefix = "rules_foreign_cc-0.13.0",
-    url = "https://github.com/bazel-contrib/rules_foreign_cc/releases/download/0.13.0/rules_foreign_cc-0.13.0.tar.gz",
-)
-
-load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-
-# This sets up some common toolchains for building targets. For more details, please see
-# https://bazelbuild.github.io/rules_foreign_cc/0.13.0/flatten.html#rules_foreign_cc_dependencies
-rules_foreign_cc_dependencies()
-
-http_archive(
-    name = "icu",
-    build_file = "@//third_party/icu:icu.BUILD",
-    # Remove the BUILD files because it will prevent configure_make to find
-    # the files in directories containing the BUILD files.
-    patch_cmds = ["cd source && find . -type f -name \"BUILD.bazel\" -delete"],
-    strip_prefix = "icu",
-    urls = ["https://github.com/unicode-org/icu/releases/download/release-73-1/icu4c-73_1-src.tgz"],
-)
-
-git_repository(
-    name = "icing",
-    build_file = "@//third_party/icing:BUILD.bazel",
-    commit = "c8263cfd12eacefde39cf16b2326fc3ca3fe934f",  # 2025-11-17
-    remote = "https://android.googlesource.com/platform/external/icing",
 )

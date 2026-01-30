@@ -6,12 +6,24 @@
 ###############################################################################
 module(name = "oak_private_memory")
 
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_features", version = "1.39.0")
+bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
+bazel_dep(name = "grpc", version = "1.72.0", repo_name = "com_github_grpc_grpc")
+bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
+bazel_dep(name = "rules_java", version = "8.14.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
 bazel_dep(name = "googleapis", version = "0.0.0-20251211-05f65958")
 bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 
@@ -44,7 +56,7 @@ oci.pull(
     image = "gcr.io/distroless/cc-debian12",
     platforms = ["linux/amd64"],
 )
-use_repo(oci, "distroless_cc_debian12")
+use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
 
 # Matches the version of protobuf used by Oak.
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
@@ -67,7 +79,6 @@ python.toolchain(
 # So we just re-declare it here.
 # Once we depend on Oak as a module, we can remove this and depend on it via the
 # Oak module.
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
 
@@ -76,4 +87,21 @@ http_archive(
     build_file = "@oak_bzlmod//toolchain:sysroot.BUILD",
     sha256 = SYSROOT_SHA256,
     url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
+)
+
+http_archive(
+    name = "icu",
+    build_file = "@//third_party/icu:icu.BUILD",
+    # Remove the BUILD files because it will prevent configure_make to find
+    # the files in directories containing the BUILD files.
+    patch_cmds = ["cd source && find . -type f -name \"BUILD.bazel\" -delete"],
+    strip_prefix = "icu",
+    urls = ["https://github.com/unicode-org/icu/releases/download/release-73-1/icu4c-73_1-src.tgz"],
+)
+
+git_repository(
+    name = "icing",
+    build_file = "@//third_party/icing:BUILD.bazel",
+    commit = "c8263cfd12eacefde39cf16b2326fc3ca3fe934f",  # 2025-11-17
+    remote = "https://android.googlesource.com/platform/external/icing",
 )

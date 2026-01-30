@@ -15,7 +15,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = runfiles::Runfiles::create().unwrap();
-    let external_path = r.rlocation("icing/proto").unwrap();
+    let external_path = r.rlocation("+_repo_rules2+icing/proto").unwrap();
 
     let all_protos = walkdir::WalkDir::new(&external_path)
         .into_iter()
