@@ -20,9 +20,8 @@
 use std::{net::SocketAddr, pin::Pin};
 
 use futures::{Future, Stream, StreamExt};
-use oak_grpc::oak::{
-    functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient,
-    session::v1::streaming_session_server::{StreamingSession, StreamingSessionServer},
+use oak_grpc::oak::session::v1::streaming_session_server::{
+    StreamingSession, StreamingSessionServer,
 };
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
@@ -34,8 +33,10 @@ use oak_proto_rust::oak::{
 };
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
+use crate::OakFunctionsClient;
+
 pub struct SessionProxy {
-    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
 }
@@ -104,7 +105,7 @@ impl StreamingSession for SessionProxy {
 
 pub fn new(
     addr: SocketAddr,
-    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {

@@ -17,7 +17,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{anyhow, Context};
-use oak_grpc::oak::functions::oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient;
 use oak_proto_rust::oak::functions::{
     extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
     FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
@@ -25,8 +24,10 @@ use oak_proto_rust::oak::functions::{
 use prost::Message;
 use ubyte::ByteUnit;
 
+use crate::OakFunctionsClient;
+
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
-    inner: &'a mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    inner: &'a mut OakFunctionsClient,
     chunks: I,
 }
 
@@ -73,7 +74,7 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
 // Loads lookup data from the given path, encodes it, and sends it to the
 // client.
 pub async fn update_lookup_data(
-    client: &mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    client: &mut OakFunctionsClient,
     lookup_data_path: &PathBuf,
     max_chunk_size: ByteUnit,
 ) -> anyhow::Result<()> {
