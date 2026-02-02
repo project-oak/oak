@@ -17,9 +17,11 @@
 // TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor
 // these to share code.
 
-use std::{net::SocketAddr, pin::Pin};
+use std::pin::Pin;
 
+use anyhow::Context;
 use futures::{Stream, StreamExt};
+use http::uri::Uri;
 use oak_grpc::oak::session::v1::streaming_session_server::{
     StreamingSession, StreamingSessionServer,
 };
@@ -104,7 +106,7 @@ impl StreamingSession for SessionProxy {
 }
 
 pub async fn new(
-    addr: SocketAddr,
+    addr: Uri,
     connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
@@ -113,5 +115,11 @@ pub async fn new(
 
     let router = Server::builder().add_service(StreamingSessionServer::new(server_impl));
 
-    router.serve(addr).await.map_err(anyhow::Error::new)
+    if addr.scheme() == Some(&http::uri::Scheme::HTTP) {
+        let addr =
+            addr.authority().context("invalid URI")?.as_str().parse().context("invalid URI")?;
+        router.serve(addr).await.map_err(anyhow::Error::new)
+    } else {
+        anyhow::bail!("unsupported URI scheme: {:?}", addr.scheme())
+    }
 }

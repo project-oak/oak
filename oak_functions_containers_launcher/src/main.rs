@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::{Ipv6Addr, SocketAddr};
+use std::str::FromStr;
 
 use anyhow::Context;
 use clap::Parser;
+use http::uri::Uri;
 use oak_containers_launcher::ChannelType;
 use oak_functions_launcher::LookupDataConfig;
 use oak_proto_rust::oak::functions::{
@@ -95,7 +96,11 @@ async fn main() -> Result<(), anyhow::Error> {
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
 
     let server_future = oak_functions_containers_launcher::server::new(
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, args.functions_args.port)),
+        if let Ok(port) = u16::from_str(&args.functions_args.port) {
+            format!("http://[::]:{port}").parse().unwrap()
+        } else {
+            args.functions_args.port.parse::<Uri>().expect("invalid URI to listen on")
+        },
         untrusted_app.oak_functions_client.clone(),
         evidence,
         endorsements,

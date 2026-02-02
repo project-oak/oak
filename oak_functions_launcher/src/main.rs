@@ -18,7 +18,10 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
-use std::net::{Ipv6Addr, SocketAddr};
+use std::{
+    net::{Ipv6Addr, SocketAddr},
+    str::FromStr,
+};
 
 use clap::Parser;
 use oak_functions_launcher::LookupDataConfig;
@@ -78,7 +81,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let server_future = oak_functions_launcher::server::new(
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.functions_params.port)),
+        SocketAddr::from((
+            Ipv6Addr::UNSPECIFIED,
+            u16::from_str(&cli.functions_params.port).expect("invalid port"),
+        )),
         connector_handle,
         evidence,
         endorsements,
