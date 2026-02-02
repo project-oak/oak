@@ -19,7 +19,7 @@
 
 use std::{net::SocketAddr, pin::Pin};
 
-use futures::{Future, Stream, StreamExt};
+use futures::{Stream, StreamExt};
 use oak_grpc::oak::session::v1::streaming_session_server::{
     StreamingSession, StreamingSessionServer,
 };
@@ -103,13 +103,15 @@ impl StreamingSession for SessionProxy {
     }
 }
 
-pub fn new(
+pub async fn new(
     addr: SocketAddr,
     connector_handle: OakFunctionsClient,
     evidence: Evidence,
     endorsements: Endorsements,
-) -> impl Future<Output = Result<(), tonic::transport::Error>> {
+) -> anyhow::Result<()> {
     let server_impl = SessionProxy { connector_handle, evidence, endorsements };
 
-    Server::builder().add_service(StreamingSessionServer::new(server_impl)).serve(addr)
+    let router = Server::builder().add_service(StreamingSessionServer::new(server_impl));
+
+    router.serve(addr).await.map_err(anyhow::Error::new)
 }
