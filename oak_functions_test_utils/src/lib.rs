@@ -169,11 +169,9 @@ pub fn run_oak_functions_containers_example_in_background(
     wasm_path: impl AsRef<Path>,
     lookup_data_path: impl AsRef<Path>,
     communication_channel: impl AsRef<OsStr>,
-) -> (BackgroundHandle, Uri) {
+    uri: Uri,
+) -> BackgroundHandle {
     eprintln!("using Wasm module {:?}", wasm_path.as_ref());
-
-    let port = portpicker::pick_unused_port().expect("failed to pick a port");
-    eprintln!("using port {}", port);
 
     let wasm_path = data_path(wasm_path);
     let launch_bin =
@@ -200,7 +198,7 @@ pub fn run_oak_functions_containers_example_in_background(
             arg!("--ramdrive-size=", ramdrive_size.to_string()),
             arg!("--memory-size=", memory_size),
             arg!("--wasm=", wasm_path),
-            arg!("--port=", port.to_string()),
+            arg!("--port=", uri.to_string()),
             arg!("--lookup-data=", lookup_data_path),
             arg!("--virtio-guest-cid=", virtio_guest_cid.to_string()),
             arg!("--communication-channel=", communication_channel),
@@ -208,7 +206,7 @@ pub fn run_oak_functions_containers_example_in_background(
         .group_spawn()
         .expect("didn't start oak functions containers launcher");
 
-    (BackgroundHandle(child), format!("http://localhost:{port}").try_into().unwrap())
+    BackgroundHandle(child)
 }
 
 /// A wrapper around a child process that kills it when its dropped.

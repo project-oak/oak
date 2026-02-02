@@ -19,7 +19,6 @@ use oak_client::{client::OakClient, verifier::AttestationVerifier};
 use oak_client_tonic::transport::GrpcStreamingTransport;
 use oak_grpc::oak::session::v1::streaming_session_client::StreamingSessionClient;
 use prost::Message;
-use tonic::transport::Channel;
 
 pub struct OakFunctionsClient {
     oak_client: OakClient<GrpcStreamingTransport>,
@@ -27,9 +26,10 @@ pub struct OakFunctionsClient {
 
 impl OakFunctionsClient {
     pub async fn new(uri: Uri, verifier: &dyn AttestationVerifier) -> anyhow::Result<Self> {
-        let channel =
-            Channel::builder(uri).connect().await.context("couldn't connect via gRPC channel")?;
-        let mut client = StreamingSessionClient::new(channel);
+        let uri = if uri.scheme().is_none() { format!("unix://{}", uri) } else { uri.to_string() };
+        let mut client = StreamingSessionClient::connect(uri)
+            .await
+            .context("couldn't connect via gRPC channel")?;
         let transport = GrpcStreamingTransport::new(|rx| client.stream(rx))
             .await
             .context("couldn't create GRPC streaming transport")?;

@@ -47,6 +47,7 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tokio-vsock",
         "@oak_crates_index//:tonic",
         "@oak_crates_index//:tower",
@@ -99,7 +100,10 @@ rust_test(
         "//oak_functions_client:lib",
         "//oak_functions_test_utils",
         "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:http",
         "@oak_crates_index//:log",
+        "@oak_crates_index//:portpicker",
+        "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
     ],
 )

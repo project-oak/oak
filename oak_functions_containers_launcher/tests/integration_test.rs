@@ -15,17 +15,24 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
+use http::uri::Uri;
 use oak_file_utils::data_path;
+use tempfile::TempDir;
 
 async fn run_key_value_lookup_test(communication_channel: &str) {
     let wasm_path = data_path("oak_functions/examples/key_value_lookup/key_value_lookup.wasm");
 
-    let (mut _output, uri) =
-        oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path,
-            "oak_functions_launcher/mock_lookup_data",
-            communication_channel,
-        );
+    let tempdir = TempDir::new().expect("unable to create temporary directory for UDS");
+    let tempfile = tempdir.path().join("socket");
+
+    let uri: Uri = format!("{}", tempfile.to_str().unwrap()).parse().unwrap();
+
+    let mut _output = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+        &wasm_path,
+        "oak_functions_launcher/mock_lookup_data",
+        communication_channel,
+        uri.clone(),
+    );
 
     // Wait for the server to start up.
     let mut client =
@@ -95,12 +102,15 @@ async fn test_launcher_echo() {
 
     let wasm_path = data_path("oak_functions/examples/echo/echo.wasm");
 
-    let (_background, addr) =
-        oak_functions_test_utils::run_oak_functions_containers_example_in_background(
-            &wasm_path,
-            "oak_functions_launcher/mock_lookup_data",
-            "network",
-        );
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+
+    let addr: Uri = format!("http://[::]:{port}").parse().unwrap();
+    let _background = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+        &wasm_path,
+        "oak_functions_launcher/mock_lookup_data",
+        "network",
+        addr.clone(),
+    );
 
     // Wait for the server to start up.
     let mut client =

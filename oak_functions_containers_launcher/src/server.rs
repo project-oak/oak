@@ -33,6 +33,8 @@ use oak_proto_rust::oak::{
         ResponseWrapper, request_wrapper, response_wrapper,
     },
 };
+use tokio::net::UnixListener;
+use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{Request, Response, Status, Streaming, transport::Server};
 
 use crate::OakFunctionsClient;
@@ -119,7 +121,12 @@ pub async fn new(
         let addr =
             addr.authority().context("invalid URI")?.as_str().parse().context("invalid URI")?;
         router.serve(addr).await.map_err(anyhow::Error::new)
+    } else if addr.scheme().is_none() {
+        let uds = UnixListener::bind(addr.to_string())?;
+        let stream = UnixListenerStream::new(uds);
+
+        router.serve_with_incoming(stream).await.map_err(anyhow::Error::new)
     } else {
-        anyhow::bail!("unsupported URI scheme: {:?}", addr.scheme())
+        anyhow::bail!("unsupported URI: {}", addr)
     }
 }
