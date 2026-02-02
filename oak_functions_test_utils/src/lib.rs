@@ -29,6 +29,7 @@ use std::{
 };
 
 use command_group::stdlib::CommandGroup;
+use http::uri::Uri;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_file_utils::data_path;
 use oak_functions_abi::Response;
@@ -168,7 +169,7 @@ pub fn run_oak_functions_containers_example_in_background(
     wasm_path: impl AsRef<Path>,
     lookup_data_path: impl AsRef<Path>,
     communication_channel: impl AsRef<OsStr>,
-) -> (BackgroundHandle, u16) {
+) -> (BackgroundHandle, Uri) {
     eprintln!("using Wasm module {:?}", wasm_path.as_ref());
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -207,7 +208,7 @@ pub fn run_oak_functions_containers_example_in_background(
         .group_spawn()
         .expect("didn't start oak functions containers launcher");
 
-    (BackgroundHandle(child), port)
+    (BackgroundHandle(child), format!("http://localhost:{port}").try_into().unwrap())
 }
 
 /// A wrapper around a child process that kills it when its dropped.
@@ -224,7 +225,7 @@ impl std::ops::Drop for BackgroundHandle {
 pub fn run_oak_functions_example_in_background(
     wasm_path: &str,
     lookup_data_path: &str,
-) -> (BackgroundHandle, u16) {
+) -> (BackgroundHandle, Uri) {
     eprintln!("using Wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -258,7 +259,7 @@ pub fn run_oak_functions_example_in_background(
             .group_spawn()
             .expect("didn't start oak functions launcher");
 
-    (BackgroundHandle(child), port)
+    (BackgroundHandle(child), format!("http://localhost:{port}").try_into().unwrap())
 }
 
 pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
@@ -287,17 +288,14 @@ pub fn skip_test() -> bool {
 ///
 /// It will give up completely after `connection_timeout`
 pub async fn create_client(
-    port: u16,
+    uri: Uri,
     connection_timeout: std::time::Duration,
 ) -> OakFunctionsClient {
     let interval = std::time::Duration::from_secs(5);
     let attempts = connection_timeout.div_duration_f32(interval) as u32;
     for _ in 1..attempts {
-        let client_result = OakFunctionsClient::new(
-            &format!("http://localhost:{port}"),
-            &InsecureAttestationVerifier {},
-        )
-        .await;
+        let client_result =
+            OakFunctionsClient::new(uri.clone(), &InsecureAttestationVerifier {}).await;
 
         match client_result {
             Ok(client) => return client,

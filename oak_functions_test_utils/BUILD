@@ -41,6 +41,7 @@ rust_library(
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:command-group",
+        "@oak_crates_index//:http",
         "@oak_crates_index//:nix",
         "@oak_crates_index//:once_cell",
         "@oak_crates_index//:port_check",

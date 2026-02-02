@@ -20,7 +20,7 @@ use oak_file_utils::data_path;
 async fn run_key_value_lookup_test(communication_channel: &str) {
     let wasm_path = data_path("oak_functions/examples/key_value_lookup/key_value_lookup.wasm");
 
-    let (mut _output, port) =
+    let (mut _output, uri) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
             &wasm_path,
             "oak_functions_launcher/mock_lookup_data",
@@ -29,7 +29,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
 
     // Wait for the server to start up.
     let mut client =
-        oak_functions_test_utils::create_client(port, std::time::Duration::from_secs(120)).await;
+        oak_functions_test_utils::create_client(uri, std::time::Duration::from_secs(120)).await;
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -95,7 +95,7 @@ async fn test_launcher_echo() {
 
     let wasm_path = data_path("oak_functions/examples/echo/echo.wasm");
 
-    let (_background, port) =
+    let (_background, addr) =
         oak_functions_test_utils::run_oak_functions_containers_example_in_background(
             &wasm_path,
             "oak_functions_launcher/mock_lookup_data",
@@ -104,12 +104,13 @@ async fn test_launcher_echo() {
 
     // Wait for the server to start up.
     let mut client =
-        oak_functions_test_utils::create_client(port, std::time::Duration::from_secs(120)).await;
+        oak_functions_test_utils::create_client(addr.clone(), std::time::Duration::from_secs(120))
+            .await;
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
 
-    let addr = format!("http://localhost:{port}");
+    let addr = addr.to_string();
 
     // TODO(#4177): Check response in the integration test.
     // Run Java client via Bazel.

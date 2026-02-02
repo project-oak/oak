@@ -55,18 +55,19 @@ async fn test_launcher_echo() {
 
     let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
-    let (_child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+    let (_child, addr) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         "oak_functions_launcher/mock_lookup_data",
     );
 
     // Wait for the server to start up.
-    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
+    let mut client =
+        oak_functions_test_utils::create_client(addr.clone(), Duration::from_secs(120)).await;
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
 
-    let addr = format!("http://localhost:{port}");
+    let addr = addr.to_string();
 
     // TODO(#4177): Check response in the integration test.
     // Run Java client via Bazel.
