@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,13 @@
 # limitations under the License.
 #
 
-package(licenses = ["notice"])
+"""Module extensions for Oak toolchains."""
+
+load("//bazel/tools/umoci:umoci_toolchain.bzl", "umoci_toolchain_repo")
+
+def _oak_toolchains_impl(_ctx):
+    umoci_toolchain_repo(name = "umoci")
+
+oak_toolchains = module_extension(
+    implementation = _oak_toolchains_impl,
+)

@@ -18,7 +18,7 @@
 def _oci_runtime_bundle_impl(ctx):
     image = ctx.file.image
     bundle = ctx.outputs.bundle
-    umoci = ctx.toolchains["//bazel/tools/umoci:toolchain_type"].umociinfo.bin
+    umoci = ctx.toolchains["@umoci//:toolchain_type"].umociinfo.bin
     yq = ctx.toolchains["@aspect_bazel_lib//lib:yq_toolchain_type"].yqinfo.bin
     config_patch = ctx.attr.config_patch.replace('"', '\\"')
 
@@ -63,7 +63,7 @@ _oci_runtime_bundle = rule(
         ),
     },
     toolchains = [
-        "//bazel/tools/umoci:toolchain_type",
+        "@umoci//:toolchain_type",
         "@aspect_bazel_lib//lib:yq_toolchain_type",
         "@bazel_tools//tools/sh:toolchain_type",
     ],

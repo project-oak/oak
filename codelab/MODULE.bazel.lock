@@ -402,6 +402,22 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "@@oak+//bazel:extensions.bzl%oak_toolchains": {
+      "general": {
+        "bzlTransitiveDigest": "Ts3O1Dgjoma4dTeAdfcJ04YYPmb+5A1gpv9Yi8VkG3Q=",
+        "usagesDigest": "sHPdIqv1uYmhWe8cIhYNHQ7gqH+8zg3VjNGclkq2Ca0=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "umoci": {
+            "repoRuleId": "@@oak+//bazel/tools/umoci:umoci_toolchain.bzl%umoci_toolchain_repo",
+            "attributes": {}
+          }
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
     "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
       "general": {
         "bzlTransitiveDigest": "NAy+0M15JNVEBb8Tny6t7j3lKqTnsAMjoBB6LJ+C370=",

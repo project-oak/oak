@@ -55,27 +55,20 @@ def _umoci_toolchain_repo_impl(repository_ctx):
         sha256 = "6abecdbe7ac96a8e48fdb73fb53f08d21d4dc5e040f7590d2ca5547b7f2b2e85",
     )
 
+    repository_ctx.symlink(
+        Label("//bazel/tools/umoci:umoci_toolchain.bzl"),
+        "umoci_toolchain.bzl",
+    )
+
     repository_ctx.template(
         "BUILD",
         repository_ctx.attr._build_tpl,
-        substitutions = {
-            "{{oak_workspace_name}}": repository_ctx.attr.oak_workspace_name,
-        },
         executable = False,
     )
 
-_umoci_toolchain_repo = repository_rule(
+umoci_toolchain_repo = repository_rule(
     implementation = _umoci_toolchain_repo_impl,
     attrs = {
-        "oak_workspace_name": attr.string(
-            doc = "The name given to the oak repository, if the default was not used.",
-            default = "oak",
-        ),
         "_build_tpl": attr.label(default = "//bazel/tools/umoci:BUILD.tpl"),
     },
 )
-
-def register_umoci_toolchain(name, oak_workspace_name = None):
-    """Downloads dependencies and registers the umoci toolchain."""
-    _umoci_toolchain_repo(name = name, oak_workspace_name = oak_workspace_name)
-    native.register_toolchains("@{}//:umoci_toolchain".format(name))

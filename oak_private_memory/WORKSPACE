@@ -24,10 +24,6 @@ local_repository(
 )
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@oak//bazel:repositories.bzl", "oak_toolchain_repositories")
-
-oak_toolchain_repositories()
-
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()

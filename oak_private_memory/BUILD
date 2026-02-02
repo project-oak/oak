@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
+load("@oak_bzlmod//bazel:defs.bzl", "oci_runtime_bundle")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_oci//oci:defs.bzl", "oci_image")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")

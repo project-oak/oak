@@ -16,10 +16,6 @@
 
 workspace(name = "oak")
 
-load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
-
-oak_toolchain_repositories()
-
 load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()

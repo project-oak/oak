@@ -14,9 +14,14 @@
 # limitations under the License.
 #
 
-load("@{{oak_workspace_name}}//bazel/tools/umoci:umoci_toolchain.bzl", "umoci_toolchain")
+load(":umoci_toolchain.bzl", "umoci_toolchain")
 
 package(licenses = ["notice"])
+
+toolchain_type(
+    name = "toolchain_type",
+    visibility = ["//visibility:public"],
+)
 
 umoci_toolchain(
     name = "umoci",
@@ -30,5 +35,5 @@ toolchain(
         "@platforms//cpu:x86_64",
     ],
     toolchain = ":umoci",
-    toolchain_type = "@{{oak_workspace_name}}//bazel/tools/umoci:toolchain_type",
+    toolchain_type = ":toolchain_type",
 )

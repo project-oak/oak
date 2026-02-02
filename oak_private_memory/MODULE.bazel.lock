@@ -669,6 +669,22 @@
         "recordedRepoMappingEntries": []
       }
     },
+    "@@oak+//bazel:extensions.bzl%oak_toolchains": {
+      "general": {
+        "bzlTransitiveDigest": "Ts3O1Dgjoma4dTeAdfcJ04YYPmb+5A1gpv9Yi8VkG3Q=",
+        "usagesDigest": "bWJeFGnTYa4HT7lgArnoCnX9kw2Nk9J2lgFjwISHfmU=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "umoci": {
+            "repoRuleId": "@@oak+//bazel/tools/umoci:umoci_toolchain.bzl%umoci_toolchain_repo",
+            "attributes": {}
+          }
+        },
+        "recordedRepoMappingEntries": []
+      }
+    },
     "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {
       "general": {
         "bzlTransitiveDigest": "uxP2cZuW027Q8wpZbeJeuW5MXcNBO8GcOK/LNN2sPvQ=",

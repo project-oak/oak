@@ -132,11 +132,8 @@ oci.pull(
 )
 use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
 
-umoci_toolchain_repo = use_repo_rule("//bazel/tools/umoci:umoci_toolchain.bzl", "_umoci_toolchain_repo")
-
-umoci_toolchain_repo(
-    name = "umoci",
-)
+oak_toolchains = use_extension("//bazel:extensions.bzl", "oak_toolchains")
+use_repo(oak_toolchains, "umoci")
 
 register_toolchains("@umoci//:umoci_toolchain")
 

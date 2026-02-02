@@ -49,6 +49,11 @@ use_repo(llvm, "llvm_toolchain")
 
 register_toolchains("@llvm_toolchain//:all")
 
+oak_toolchains = use_extension("@oak_bzlmod//bazel:extensions.bzl", "oak_toolchains")
+use_repo(oak_toolchains, "umoci")
+
+register_toolchains("@umoci//:umoci_toolchain")
+
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
     name = "distroless_cc_debian12",
