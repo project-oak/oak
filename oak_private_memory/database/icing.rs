@@ -189,6 +189,11 @@ impl PendingMetadata {
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()]);
 
         if let Some(ref created_timestamp) = memory.created_timestamp {
+            let timestamp_ms = (created_timestamp.seconds * 1000
+                + i64::from(created_timestamp.nanos) / 1_000_000)
+                as u64;
+            // Set the document's creation timestamp for Icing's CreationTimestamp ranking
+            document_builder.set_creation_timestamp_ms(timestamp_ms);
             document_builder.add_int64_property(
                 CREATED_TIMESTAMP_NAME.as_bytes(),
                 timestamp_to_i64(created_timestamp),
@@ -1154,7 +1159,17 @@ impl IcingMetaDatabase {
         if !schema_name.is_empty() {
             search_spec.schema_type_filters.push(schema_name.to_string());
         }
-        Ok((search_spec, None))
+
+        // Sort text search results by created_timestamp (descending, i.e. newest
+        // first).
+        let scoring_spec = icing::ScoringSpecProto {
+            rank_by: Some(
+                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
+            ),
+            ..Default::default()
+        };
+
+        Ok((search_spec, Some(scoring_spec)))
     }
 
     fn build_scoring_spec(&self) -> icing::ScoringSpecProto {
@@ -1269,11 +1284,11 @@ impl IcingMetaDatabase {
         page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(SearchResultIds, PageToken)> {
-        let (search_spec, _) = self.build_text_query_specs(text_query, SCHEMA_NAME)?;
+        let (search_spec, scoring_spec) = self.build_text_query_specs(text_query, SCHEMA_NAME)?;
         let projection = Self::create_blob_id_projection(SCHEMA_NAME);
         let (search_result, next_page_token) = self.execute_search(
             &search_spec,
-            &icing::ScoringSpecProto::default(),
+            &scoring_spec.unwrap_or_default(),
             page_size,
             page_token,
             projection,
@@ -2343,6 +2358,54 @@ mod tests {
         // Verify the memory is no longer findable by tag search
         let (results, _) = icing_database.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
         expect_that!(results, is_empty());
+
+        Ok(())
+    }
+
+    /// Test that text_search returns results sorted by created_timestamp
+    /// in descending order (newest first).
+    #[gtest]
+    fn text_search_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Add memories with different created_timestamps, inserted in non-sorted order
+        let memory_old = Memory {
+            id: "memory_old".to_string(),
+            tags: vec!["sort_test".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 1000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_old, "blob_old".to_string())?;
+
+        let memory_new = Memory {
+            id: "memory_new".to_string(),
+            tags: vec!["sort_test".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 3000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_new, "blob_new".to_string())?;
+
+        let memory_mid = Memory {
+            id: "memory_mid".to_string(),
+            tags: vec!["sort_test".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 2000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_mid, "blob_mid".to_string())?;
+
+        // Search for all memories with tag "sort_test"
+        let text_query = TextQuery {
+            field: MemoryField::Tags as i32,
+            match_type: MatchType::Equal as i32,
+            value: Some(text_query::Value::StringVal("sort_test".to_string())),
+        };
+        let (results, _) = icing_database.text_search(&text_query, 10, PageToken::Start)?;
+
+        // Results should be sorted by created_timestamp descending (newest first)
+        let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+        expect_that!(blob_ids.len(), eq(3));
+        // Newest (3000) first, then middle (2000), then oldest (1000)
+        expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
 
         Ok(())
     }
