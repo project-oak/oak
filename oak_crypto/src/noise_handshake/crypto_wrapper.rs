@@ -41,11 +41,11 @@ use ecdsa;
 use p256::ecdsa::signature::Signer;
 use pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use primeorder::{
+    Field, PrimeField,
     elliptic_curve::{
         ops::{Mul, MulByGenerator},
         sec1::{FromEncodedPoint, ToEncodedPoint},
     },
-    Field, PrimeField,
 };
 use rand_core::{RngCore, SeedableRng};
 use sha2::Digest;

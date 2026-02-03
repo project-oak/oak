@@ -23,10 +23,10 @@ use oak_attestation::dice::evidence_and_event_log_to_proto;
 use oak_attestation_types::{attester::Attester, endorser::Endorser};
 use oak_crypto::encryption_key::EncryptionKey;
 use oak_dice::evidence::{
-    Evidence as EvidenceStruct, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE,
+    Evidence as EvidenceStruct, P256_PRIVATE_KEY_SIZE, RestrictedKernelDiceData,
 };
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
-use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD, EVENT_LOG_FD};
+use oak_restricted_kernel_interface::{DICE_DATA_FD, EVENT_LOG_FD, syscall::read};
 use p256::ecdsa::SigningKey;
 use zerocopy::{FromZeros, IntoBytes};
 

@@ -17,11 +17,11 @@
 use const_oid::db::rfc5912::{ECDSA_WITH_SHA_256, ID_RSASSA_PSS};
 use oak_time::Instant;
 use p256::ecdsa::{Signature as P256Signature, VerifyingKey as P256VerifyingKey};
-use rsa::{pss::Signature as RsaSignature, signature::Verifier, RsaPublicKey};
+use rsa::{RsaPublicKey, pss::Signature as RsaSignature, signature::Verifier};
 use sha2::Sha384;
 use x509_cert::{
-    der::{referenced::OwnedToRef, Encode},
     Certificate,
+    der::{Encode, referenced::OwnedToRef},
 };
 
 /// Verifies that the `signee` certificate is correctly signed by the `signer`.

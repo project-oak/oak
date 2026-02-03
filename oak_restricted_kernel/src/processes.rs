@@ -17,7 +17,7 @@
 use alloc::boxed::Box;
 use core::{arch::asm, pin::Pin};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use goblin::{
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
@@ -25,8 +25,8 @@ use goblin::{
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use self_cell::self_cell;
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB},
     VirtAddr,
+    structures::paging::{PageSize, Size2MiB},
 };
 
 use crate::syscall::mmap::mmap;
@@ -209,17 +209,21 @@ impl Process {
     pub unsafe fn execute(&self) -> anyhow::Result<!> {
         let pml4_frame = identify_pml4_frame(&self.pml4).expect("could not get pml4 frame");
 
-        let pid = crate::syscall::GsData::register_process(pml4_frame)?;
-        crate::syscall::GsData::set_current_pid(pid)?;
+        let pid = unsafe { crate::syscall::GsData::register_process(pml4_frame)? };
+        unsafe {
+            crate::syscall::GsData::set_current_pid(pid)?;
+        }
 
         let entry = self.entry;
-        asm! {
-            "mov rsp, {}", // user stack
-            "sysretq",
-            in(reg) APPLICATION_STACK_VIRT_ADDR - 8,
-            in("rcx") entry.as_u64(), // initial RIP
-            in("r11") 0x202, // initial RFLAGS (interrupts enabled)
-            options(noreturn)
+        unsafe {
+            asm! {
+                "mov rsp, {}", // user stack
+                "sysretq",
+                in(reg) APPLICATION_STACK_VIRT_ADDR - 8,
+                in("rcx") entry.as_u64(), // initial RIP
+                in("r11") 0x202, // initial RFLAGS (interrupts enabled)
+                options(noreturn)
+            }
         }
     }
 }

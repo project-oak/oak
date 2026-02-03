@@ -19,7 +19,7 @@ use clap::Parser;
 use log::info;
 use mcp_server_lib::service::Service;
 use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager, StreamableHttpService,
+    StreamableHttpService, session::local::LocalSessionManager,
 };
 use tokio::net::TcpListener;
 
@@ -36,7 +36,10 @@ pub struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
+        // Safety: this is a CLI tool.
+        unsafe {
+            std::env::set_var("RUST_LOG", "info");
+        }
     }
     env_logger::init();
     let args = Args::parse();

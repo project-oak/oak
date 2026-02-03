@@ -27,7 +27,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AssertionVerifierError {
-    #[error("Data in the assertion doesn't match the expected asserted data. Expected: {expected}, actual: {actual}")]
+    #[error(
+        "Data in the assertion doesn't match the expected asserted data. Expected: {expected}, actual: {actual}"
+    )]
     AssertedDataMismatch { expected: String, actual: String },
     #[error("Assertion parsing error: {0:?}")]
     AssertionParsingError(DecodeError),

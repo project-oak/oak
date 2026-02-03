@@ -73,7 +73,7 @@ use bitflags::bitflags;
 use x86_64::VirtAddr;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
-use crate::{acpi::HIGH_MEMORY_ALLOCATOR, Platform};
+use crate::{Platform, acpi::HIGH_MEMORY_ALLOCATOR};
 
 type ResultStaticErr<T> = Result<T, &'static str>;
 
@@ -183,7 +183,7 @@ impl Rsdp {
         if self.rsdt_address == 0 {
             None
         } else {
-            Some(Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)))
+            Some(unsafe { Rsdt::new_mut(VirtAddr::new(self.rsdt_address as u64)) })
         }
     }
 
@@ -201,7 +201,7 @@ impl Rsdp {
         if self.revision < 2 || self.xsdt_address == 0 {
             None
         } else {
-            Some(Xsdt::new_mut(VirtAddr::new(self.xsdt_address)))
+            Some(unsafe { Xsdt::new_mut(VirtAddr::new(self.xsdt_address)) })
         }
     }
 }
@@ -507,8 +507,10 @@ impl Xsdt {
         Ok(xsdt)
     }
 
-    // # Safety: caller must ensure only one mut ref exists at a time.
-    pub fn new_mut(addr: VirtAddr) -> ResultStaticErr<&'static mut Xsdt> {
+    /// # Safety
+    ///
+    /// Caller must ensure only one mut ref exists at a time.
+    pub unsafe fn new_mut(addr: VirtAddr) -> ResultStaticErr<&'static mut Xsdt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
         let xsdt = unsafe { &mut *addr.as_mut_ptr::<Xsdt>() };
         xsdt.validate()?;
@@ -878,10 +880,9 @@ impl Madt {
 
     pub fn from_header_mut(hdr: &mut DescriptionHeader) -> ResultStaticErr<&'static mut Madt> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
-        let madt =
-            unsafe {
-                (hdr as *mut _ as *mut Madt).as_mut().unwrap() // Pointer obtained from a ref can't be null.
-            };
+        let madt = unsafe {
+            (hdr as *mut _ as *mut Madt).as_mut().unwrap() // Pointer obtained from a ref can't be null.
+        };
         madt.validate()?;
         Ok(madt)
     }

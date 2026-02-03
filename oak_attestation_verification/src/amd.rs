@@ -20,8 +20,8 @@ use alloc::string::String;
 
 use const_oid::ObjectIdentifier;
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport, SigningAlgorithm, TcbVersion};
-use p384::ecdsa::{signature::Verifier, VerifyingKey};
-use x509_cert::{der::referenced::OwnedToRef, Certificate};
+use p384::ecdsa::{VerifyingKey, signature::Verifier};
+use x509_cert::{Certificate, der::referenced::OwnedToRef};
 use zerocopy::IntoBytes;
 
 // The keys in the key-value map of X509 certificates are Object Identifiers

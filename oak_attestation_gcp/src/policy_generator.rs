@@ -15,11 +15,11 @@
 //
 
 use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, confidential_space_reference_values, BinaryReferenceValue,
-    ConfidentialSpaceReferenceValues,
+    BinaryReferenceValue, ConfidentialSpaceReferenceValues, binary_reference_value,
+    confidential_space_reference_values,
 };
 use verify_endorsement::create_endorsement_reference_value;
-use x509_cert::{der::DecodePem, Certificate};
+use x509_cert::{Certificate, der::DecodePem};
 
 use crate::policy::{ConfidentialSpacePolicy, WorkloadReferenceValues};
 
@@ -76,8 +76,8 @@ pub fn confidential_space_policy_from_reference_values(
 mod tests {
     use oak_file_utils::read_testdata_string;
     use oak_proto_rust::oak::attestation::v1::{
-        confidential_space_reference_values, ConfidentialSpaceReferenceValues,
-        CosignReferenceValues as CosignReferenceValuesProto,
+        ConfidentialSpaceReferenceValues, CosignReferenceValues as CosignReferenceValuesProto,
+        confidential_space_reference_values,
     };
     use verify_endorsement::create_verifying_key_from_pem;
 

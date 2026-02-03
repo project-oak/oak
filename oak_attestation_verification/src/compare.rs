@@ -21,17 +21,17 @@ use alloc::format;
 use anyhow::Context;
 use digest_util::is_raw_digest_match;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        expected_digests, expected_values, extracted_evidence::EvidenceValues,
-        root_layer_data::Report, text_expected_value, ApplicationLayerData,
-        ApplicationLayerExpectedValues, CbData, CbExpectedValues, ContainerLayerData,
-        ContainerLayerExpectedValues, EventData, EventExpectedValues, ExpectedDigests,
-        ExpectedValues, ExtractedEvidence, KernelLayerData, KernelLayerExpectedValues,
-        OakContainersData, OakContainersExpectedValues, OakRestrictedKernelData,
-        OakRestrictedKernelExpectedValues, RootLayerData, RootLayerExpectedValues, SystemLayerData,
-        SystemLayerExpectedValues, TextExpectedValue,
-    },
     RawDigest,
+    attestation::v1::{
+        ApplicationLayerData, ApplicationLayerExpectedValues, CbData, CbExpectedValues,
+        ContainerLayerData, ContainerLayerExpectedValues, EventData, EventExpectedValues,
+        ExpectedDigests, ExpectedValues, ExtractedEvidence, KernelLayerData,
+        KernelLayerExpectedValues, OakContainersData, OakContainersExpectedValues,
+        OakRestrictedKernelData, OakRestrictedKernelExpectedValues, RootLayerData,
+        RootLayerExpectedValues, SystemLayerData, SystemLayerExpectedValues, TextExpectedValue,
+        expected_digests, expected_values, extracted_evidence::EvidenceValues,
+        root_layer_data::Report, text_expected_value,
+    },
 };
 #[cfg(feature = "regex")]
 use regex_lite::Regex;

@@ -61,10 +61,10 @@ impl<T> OnceCell<T> {
             return None;
         }
 
-        let old = core::mem::replace(&mut *self.value.get(), MaybeUninit::uninit());
+        let old = unsafe { core::mem::replace(&mut *self.value.get(), MaybeUninit::uninit()) };
         self.initialized.store(false, Ordering::Release);
 
-        Some(old.assume_init())
+        Some(unsafe { old.assume_init() })
     }
 
     /// Gets a reference to the inner value if the cell has been initialized.

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use x86_64::structures::paging::{page::PageRange, Page, PageSize};
+use x86_64::structures::paging::{Page, PageSize, page::PageRange};
 
 /// Extremely simple virtual memory address allocator using the bump algorithm.
 ///

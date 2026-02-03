@@ -27,14 +27,14 @@ use oak_attestation_verification::{
 };
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results::Status, binary_reference_value, extracted_evidence::EvidenceValues,
-        reference_values, root_layer_data::Report, tcb_version_reference_value,
-        text_reference_value, BinaryReferenceValue, Digests, Endorsements, Evidence,
-        ExpectedValues, ExtractedEvidence, ReferenceValues, Regex, TcbVersion,
-        TcbVersionReferenceValue, TeePlatform, TextReferenceValue,
-    },
     RawDigest,
+    attestation::v1::{
+        BinaryReferenceValue, Digests, Endorsements, Evidence, ExpectedValues, ExtractedEvidence,
+        ReferenceValues, Regex, TcbVersion, TcbVersionReferenceValue, TeePlatform,
+        TextReferenceValue, attestation_results::Status, binary_reference_value,
+        extracted_evidence::EvidenceValues, reference_values, root_layer_data::Report,
+        tcb_version_reference_value, text_reference_value,
+    },
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use prost::Message;
@@ -487,40 +487,40 @@ verify_unpopulated_tcb_version_failure! {
 }
 
 fn manipulate_boot_loader(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(ref mut stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+    if let Some(stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
             m.boot_loader = 256;
         }
     }
 }
 
 fn manipulate_microcode(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(ref mut stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+    if let Some(stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
             m.microcode = 256;
         }
     }
 }
 
 fn manipulate_tee(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(ref mut stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+    if let Some(stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
             m.tee = 256;
         }
     }
 }
 
 fn manipulate_snp(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(ref mut stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+    if let Some(stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
             m.snp = 256;
         }
     }
 }
 
 fn manipulate_fmc(rv: &mut Option<TcbVersionReferenceValue>) {
-    if let Some(ref mut stripped) = rv {
-        if let Some(tcb_version_reference_value::Type::Minimum(ref mut m)) = &mut stripped.r#type {
+    if let Some(stripped) = rv {
+        if let Some(tcb_version_reference_value::Type::Minimum(m)) = &mut stripped.r#type {
             m.fmc = 256;
         }
     }

@@ -17,7 +17,7 @@ use std::vec::Vec;
 use googletest::prelude::*;
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
-    noise_handshake::{UnorderedCrypter, SYMMETRIC_KEY_LEN},
+    noise_handshake::{SYMMETRIC_KEY_LEN, UnorderedCrypter},
 };
 use oak_proto_rust::oak::session::v1::PlaintextMessage;
 use oak_session::encryptors::UnorderedChannelEncryptor;

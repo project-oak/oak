@@ -21,11 +21,11 @@ use oak_attestation_verification::{decode_event_proto, results::set_session_bind
 use oak_attestation_verification_types::policy::Policy;
 use oak_digest::Digest;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, BinaryReferenceValue, ConfidentialSpaceEndorsement,
-        EventAttestationResults, SessionBindingPublicKeyData, SignedEndorsement,
-    },
     Variant,
+    attestation::v1::{
+        BinaryReferenceValue, ConfidentialSpaceEndorsement, EventAttestationResults,
+        SessionBindingPublicKeyData, SignedEndorsement, binary_reference_value,
+    },
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference as OciReference;
@@ -34,14 +34,14 @@ use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
 use crate::{
-    jwt::{
-        verification::{
-            report_attestation_token, AttestationTokenVerificationReport,
-            AttestationVerificationError,
-        },
-        Claims, Header,
-    },
     OAK_SESSION_NOISE_V1_AUDIENCE,
+    jwt::{
+        Claims, Header,
+        verification::{
+            AttestationTokenVerificationReport, AttestationVerificationError,
+            report_attestation_token,
+        },
+    },
 };
 
 #[derive(Debug)]
@@ -282,7 +282,7 @@ mod tests {
 
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        endorsement::Format, Endorsement, Event, Signature, SignedEndorsement,
+        Endorsement, Event, Signature, SignedEndorsement, endorsement::Format,
     };
     use oak_time::make_instant;
     use prost::Message;

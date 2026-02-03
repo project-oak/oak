@@ -20,10 +20,10 @@ use lazy_static::lazy_static;
 use oak_file_utils::data_path;
 use oak_functions_abi::{Request, Response};
 use oak_functions_service::{
+    Handler,
     logger::StandaloneLogger,
     lookup::LookupDataManager,
-    wasm::{api::StdWasmApiFactory, WasmHandler},
-    Handler,
+    wasm::{WasmHandler, api::StdWasmApiFactory},
 };
 
 lazy_static! {

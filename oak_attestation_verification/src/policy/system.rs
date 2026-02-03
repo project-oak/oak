@@ -19,11 +19,11 @@ use alloc::vec;
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, BinaryReferenceValue, Digests, EventAttestationResults,
-        SystemEndorsement, SystemLayerData, SystemLayerReferenceValues,
-    },
     Variant,
+    attestation::v1::{
+        BinaryReferenceValue, Digests, EventAttestationResults, SystemEndorsement, SystemLayerData,
+        SystemLayerReferenceValues, binary_reference_value,
+    },
 };
 use oak_time::Instant;
 
@@ -93,7 +93,7 @@ impl Policy<[u8]> for SystemPolicy {
 
 #[cfg(test)]
 mod tests {
-    use test_util::{get_oc_reference_values, AttestationData};
+    use test_util::{AttestationData, get_oc_reference_values};
 
     use super::*;
 

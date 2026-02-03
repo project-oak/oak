@@ -27,11 +27,11 @@ use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_containers_app::serve as app_serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_proto_rust::oak::functions::config::{
-    application_config::CommunicationChannel, ApplicationConfig, TcpCommunicationChannel,
-    WasmtimeConfig,
+    ApplicationConfig, TcpCommunicationChannel, WasmtimeConfig,
+    application_config::CommunicationChannel,
 };
 use oak_sdk_containers::{
-    default_orchestrator_channel, InstanceEncryptionKeyHandle, OrchestratorClient,
+    InstanceEncryptionKeyHandle, OrchestratorClient, default_orchestrator_channel,
 };
 use prost::Message;
 use tokio::{

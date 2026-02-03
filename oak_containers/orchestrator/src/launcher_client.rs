@@ -21,7 +21,7 @@ use oak_grpc::oak::containers::{
 };
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
-    containers::{v1::KeyProvisioningRole, SendAttestationEvidenceRequest},
+    containers::{SendAttestationEvidenceRequest, v1::KeyProvisioningRole},
     key_provisioning::v1::GroupKeys,
 };
 use tonic::transport::Channel;

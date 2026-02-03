@@ -22,11 +22,11 @@ use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::{Duration, Instant};
 use sha2::{Digest, Sha384};
 use test_util::AttestationData;
-use x509_cert::{der::DecodePem, Certificate};
+use x509_cert::{Certificate, der::DecodePem};
 
 use super::{
-    verify_intel_tdx_quote_validity, verify_quote_cert_chain_and_extract_leaf, RtmrEmulator,
-    PCK_ROOT,
+    PCK_ROOT, RtmrEmulator, verify_intel_tdx_quote_validity,
+    verify_quote_cert_chain_and_extract_leaf,
 };
 use crate::x509::verify_cert_signature;
 

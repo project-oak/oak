@@ -24,14 +24,11 @@ use digest_util::{
     hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
 };
 use intoto::statement::{
-    get_hex_digest_from_statement, parse_statement, DefaultStatement, Validity,
+    DefaultStatement, Validity, get_hex_digest_from_statement, parse_statement,
 };
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
-        binary_reference_value, endorsement::Format, endorsements, expected_digests,
-        expected_values, kernel_binary_reference_value, reference_values,
-        tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
-        tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
         AmdSevExpectedValues, AmdSevReferenceValues, ApplicationEndorsement,
         ApplicationLayerEndorsements, ApplicationLayerExpectedValues,
         ApplicationLayerReferenceValues, BinaryReferenceValue, CbEndorsements, CbExpectedValues,
@@ -50,8 +47,11 @@ use oak_proto_rust::oak::{
         SystemLayerExpectedValues, SystemLayerReferenceValues, TcbVersionExpectedValue,
         TcbVersionReferenceValue, TdxTcbSvnExpectedValue, TdxTcbSvnReferenceValue,
         TextExpectedValue, TextReferenceValue, TransparentReleaseEndorsement, VerificationSkipped,
+        binary_reference_value, endorsement::Format, endorsements, expected_digests,
+        expected_values, kernel_binary_reference_value, reference_values,
+        tcb_version_expected_value, tcb_version_reference_value, tdx_tcb_svn_expected_value,
+        tdx_tcb_svn_reference_value, text_expected_value, text_reference_value,
     },
-    RawDigest,
 };
 use prost::Message;
 use verify_endorsement::{is_firmware_type, is_kernel_type, verify_endorsement};
@@ -95,7 +95,9 @@ pub fn get_expected_values(
         (None, _) => anyhow::bail!("Endorsements are empty"),
         (_, None) => anyhow::bail!("Reference values are empty"),
         (Some(_), Some(_)) => {
-            anyhow::bail!("Getting expected values: mismatch between evidence, endorsements and reference values")
+            anyhow::bail!(
+                "Getting expected values: mismatch between evidence, endorsements and reference values"
+            )
         }
     }
 }

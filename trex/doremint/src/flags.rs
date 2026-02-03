@@ -44,11 +44,7 @@ impl Output {
 
 impl From<&str> for Output {
     fn from(path: &str) -> Self {
-        if path == "-" || path.is_empty() {
-            Output::Stdout
-        } else {
-            Output::File(path.to_string())
-        }
+        if path == "-" || path.is_empty() { Output::Stdout } else { Output::File(path.to_string()) }
     }
 }
 

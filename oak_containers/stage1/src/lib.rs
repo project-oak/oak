@@ -36,7 +36,7 @@ use clap::Parser;
 use client::LauncherClient;
 use futures_util::TryStreamExt;
 use nix::{
-    mount::{mount, umount, MsFlags},
+    mount::{MsFlags, mount, umount},
     unistd::{chdir, chroot},
 };
 use oak_attestation_types::{attester::Attester, util::Serializable};

@@ -27,7 +27,7 @@ use core::{
 use anyhow::Ok;
 use ecdsa::signature::Verifier;
 use oak_proto_rust::oak::attestation::v1::{KeyType, Signature, VerifyingKeySet};
-use p256::pkcs8::{der::Decode, DecodePublicKey};
+use p256::pkcs8::{DecodePublicKey, der::Decode};
 
 const PUBLIC_KEY_PEM_LABEL: &str = "PUBLIC KEY";
 

@@ -24,7 +24,7 @@ use sealed_memory_rust_proto::oak::private_memory::{
     ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteMetadataBlobRequest,
     WriteUnencryptedDataBlobRequest,
 };
-use tonic::{transport::Channel, Code};
+use tonic::{Code, transport::Channel};
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.

@@ -14,21 +14,20 @@
 // limitations under the License.
 //
 
-use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
+use oak_attestation_integration_tests::{Snapshot, SnapshotPath, create};
 use oak_attestation_verification::verifier::{
     to_attestation_results, verify, verify_dice_chain_and_extract_evidence,
 };
 use oak_proto_rust::oak::attestation::{
     self,
     v1::{
-        attestation_results::Status, binary_reference_value, endorsements,
-        kernel_binary_reference_value, reference_values, text_reference_value,
         ApplicationLayerReferenceValues, BinaryReferenceValue, ContainerLayerReferenceValues,
         Endorsements, Event, InsecureReferenceValues, KernelBinaryReferenceValue,
         KernelLayerReferenceValues, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
         OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
         RootLayerReferenceValues, SkipVerification, Stage0Measurements, SystemLayerReferenceValues,
-        TextReferenceValue,
+        TextReferenceValue, attestation_results::Status, binary_reference_value, endorsements,
+        kernel_binary_reference_value, reference_values, text_reference_value,
     },
 };
 use oak_restricted_kernel_sdk::Attester;

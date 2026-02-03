@@ -15,9 +15,9 @@
 //
 
 use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, kernel_binary_reference_value, reference_values, text_reference_value,
     BinaryReferenceValue, KernelBinaryReferenceValue, OakContainersReferenceValues,
     OakRestrictedKernelReferenceValues, ReferenceValues, TextReferenceValue,
+    binary_reference_value, kernel_binary_reference_value, reference_values, text_reference_value,
 };
 use prost::Message;
 
@@ -41,7 +41,7 @@ pub fn get_rk_reference_values_mut(
 
 pub fn manipulate_kernel_image(rv: Option<&mut KernelBinaryReferenceValue>) {
     if let Some(stripped) = rv {
-        if let Some(kernel_binary_reference_value::Type::Digests(ref mut kernel_digests)) =
+        if let Some(kernel_binary_reference_value::Type::Digests(kernel_digests)) =
             &mut stripped.r#type
         {
             let d = kernel_digests.image.as_mut().expect("no kernel image");
@@ -55,7 +55,7 @@ pub fn manipulate_kernel_image(rv: Option<&mut KernelBinaryReferenceValue>) {
 
 pub fn manipulate_kernel_setup_data(rv: Option<&mut KernelBinaryReferenceValue>) {
     if let Some(stripped) = rv {
-        if let Some(kernel_binary_reference_value::Type::Digests(ref mut kernel_digests)) =
+        if let Some(kernel_binary_reference_value::Type::Digests(kernel_digests)) =
             &mut stripped.r#type
         {
             let d = kernel_digests.setup_data.as_mut().expect("no kernel setup data");
@@ -85,7 +85,7 @@ pub fn manipulate_kernel_cmd_line(rv: Option<&mut TextReferenceValue>) {
 
 pub fn manipulate_sha2_256(rv: Option<&mut BinaryReferenceValue>) {
     if let Some(stripped) = rv {
-        if let Some(binary_reference_value::Type::Digests(ref mut d)) = &mut stripped.r#type {
+        if let Some(binary_reference_value::Type::Digests(d)) = &mut stripped.r#type {
             let raw = d.digests.as_mut_slice().first_mut().expect("no digest");
             if !raw.sha2_256.is_empty() {
                 raw.sha2_256.as_mut_slice()[5] ^= 255;
@@ -96,7 +96,7 @@ pub fn manipulate_sha2_256(rv: Option<&mut BinaryReferenceValue>) {
 
 pub fn manipulate_sha2_384(rv: Option<&mut BinaryReferenceValue>) {
     if let Some(stripped) = rv {
-        if let Some(binary_reference_value::Type::Digests(ref mut d)) = &mut stripped.r#type {
+        if let Some(binary_reference_value::Type::Digests(d)) = &mut stripped.r#type {
             let raw = d.digests.as_mut_slice().first_mut().expect("no digest");
             if !raw.sha2_384.is_empty() {
                 raw.sha2_384.as_mut_slice()[5] ^= 255;

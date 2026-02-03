@@ -22,8 +22,8 @@ pub mod memory_cache;
 pub use crate::{
     database_with_cache::DatabaseWithCache,
     icing::{
-        calculate_memory_icing_size, IcingMetaDatabase, IcingTempDir, PageToken,
-        PendingLlmViewMetadata, PendingMetadata,
+        IcingMetaDatabase, IcingTempDir, PageToken, PendingLlmViewMetadata, PendingMetadata,
+        calculate_memory_icing_size,
     },
 };
 

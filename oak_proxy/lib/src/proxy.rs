@@ -25,7 +25,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
-use tokio_tungstenite::{tungstenite, MaybeTlsStream, WebSocketStream};
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, tungstenite};
 
 pub enum PeerRole {
     Client,

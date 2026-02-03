@@ -19,7 +19,7 @@ use core::{ffi::CStr, ops::Range};
 use x86_64::align_down;
 use zerocopy::IntoBytes;
 
-use crate::{fw_cfg::Firmware, Platform, ZeroPage};
+use crate::{Platform, ZeroPage, fw_cfg::Firmware};
 
 const PCI_MMIO32_HOLE_BASE_FILE_NAME: &CStr = c"etc/pci-mmio32-hole-base";
 const MMCFG_MEM_RESERVATION_FILE: &CStr = c"etc/mmcfg_mem_reservation";
@@ -142,7 +142,9 @@ impl Machine for I440fx {
         // But we should still print a warning if that file exists so that it wouldn't
         // come as a complete surprise.
         if firmware.find(c"etc/hardware-info").is_some() {
-            log::warn!("your VMM exposes `etc/hardware-info`; stage0 currently does not support parsing that file and will ignore it!");
+            log::warn!(
+                "your VMM exposes `etc/hardware-info`; stage0 currently does not support parsing that file and will ignore it!"
+            );
         }
 
         // EDK2 places the 64-bit hole at (2^(physmem_bits-3)..2^physmem_bits) (unless

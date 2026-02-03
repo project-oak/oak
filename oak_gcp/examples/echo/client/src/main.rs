@@ -21,7 +21,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use clap::Parser;
 use oak_proto_rust::oak::attestation::v1::{
-    collected_attestation::RequestMetadata, CollectedAttestation,
+    CollectedAttestation, collected_attestation::RequestMetadata,
 };
 use oak_session::session::{AttestationEvidence, AttestationPublisher};
 use oak_time_std::clock::SystemTimeClock;

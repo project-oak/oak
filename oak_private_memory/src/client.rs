@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use futures::{channel::mpsc, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, channel::mpsc};
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
+    Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    Session,
 };
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_client::SealedMemoryServiceClient;

@@ -15,16 +15,16 @@
 //
 
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
+        BinaryReferenceValue, ContainerLayerReferenceValues, Digests, InsecureReferenceValues,
+        KernelBinaryReferenceValue, KernelDigests, KernelLayerReferenceValues,
+        OakContainersReferenceValues, ReferenceValues, RootLayerReferenceValues,
+        Stage0Measurements, StringLiterals, SystemLayerReferenceValues, TextReferenceValue,
         binary_reference_value, kernel_binary_reference_value, reference_values,
-        text_reference_value, BinaryReferenceValue, ContainerLayerReferenceValues, Digests,
-        InsecureReferenceValues, KernelBinaryReferenceValue, KernelDigests,
-        KernelLayerReferenceValues, OakContainersReferenceValues, ReferenceValues,
-        RootLayerReferenceValues, Stage0Measurements, StringLiterals, SystemLayerReferenceValues,
-        TextReferenceValue,
+        text_reference_value,
     },
     session::v1::EndorsedEvidence,
-    RawDigest,
 };
 use oak_sdk_standalone::Standalone;
 use sha2::Digest;

@@ -29,7 +29,7 @@ use core::panic::PanicInfo;
 use linked_list_allocator::LockedHeap;
 use oak_attestation_types::{
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto, try_decode_length_delimited_proto},
 };
 use oak_dice::evidence::{
     DICE_DATA_ATTESTATION_PARAM, DICE_DATA_CMDLINE_PARAM, DICE_DATA_LENGTH_CMDLINE_PARAM,
@@ -37,9 +37,10 @@ use oak_dice::evidence::{
 };
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_proto_rust::oak::attestation::v1::DiceData;
-use oak_stage0_dice::{derive_sealing_cdi, DerivedKey};
+use oak_stage0_dice::{DerivedKey, derive_sealing_cdi};
 use sha2::{Digest, Sha256};
 use x86_64::{
+    PhysAddr, VirtAddr,
     instructions::{hlt, interrupts::int3},
     registers::segmentation::*,
     structures::{
@@ -47,7 +48,6 @@ use x86_64::{
         idt::InterruptDescriptorTable,
         paging::{PageSize, Size1GiB, Size4KiB},
     },
-    PhysAddr, VirtAddr,
 };
 use zerocopy::IntoBytes;
 use zeroize::Zeroize;
@@ -346,7 +346,9 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     // TODO: b/463325402 - Remove eventlog and dice data from kernel command-line
     // and only use the new DICE_DATA_ATTESTATION_PARAM arg with the serialized
     // attester.
-    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}");
+    let extra = format!(
+        "--{DICE_DATA_CMDLINE_PARAM}={attestation_data:p} --{EVENTLOG_CMDLINE_PARAM}={event_log_data:p} --{DICE_DATA_LENGTH_CMDLINE_PARAM}={sensitive_attestation_data_length}"
+    );
     let extra = if cfg!(feature = "cmdline_with_serialized_attestation_data") {
         format!("{extra} --{DICE_DATA_ATTESTATION_PARAM}={encoded_attestation_proto_data:p}")
     } else {

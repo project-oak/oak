@@ -23,7 +23,7 @@ use hex::FromHexError;
 use mockall::automock;
 use oak_proto_rust::oak::crypto::v1::ProofOfFreshness;
 use serde::{Deserialize, Serialize};
-use x509_cert::{der::DecodePem, Certificate};
+use x509_cert::{Certificate, der::DecodePem};
 
 const NIST_WEB_PREFIX: &str = "https://beacon.nist.gov";
 // TODO: b/424736845 - Add support for version 2.1

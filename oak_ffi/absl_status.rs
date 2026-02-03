@@ -69,7 +69,7 @@ impl Drop for AbslStatusPtr {
 }
 // See the implementations in cc/ffi/status.h
 #[link(name = "status")]
-extern "C" {
+unsafe extern "C" {
     fn absl_status_code(absl_status: *const AbslStatus) -> u32;
     fn absl_status_message(absl_status: *const AbslStatus) -> BytesView;
     fn free_absl_status(absl_status: *const AbslStatus);
@@ -81,7 +81,7 @@ mod test {
 
     use super::AbslStatusPtr;
 
-    extern "C" {
+    unsafe extern "C" {
         fn create_ok_status() -> AbslStatusPtr;
         fn create_internal_error(msg: BytesView) -> AbslStatusPtr;
     }

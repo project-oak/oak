@@ -52,7 +52,7 @@ impl BytesView {
         if self.data.is_null() {
             &[]
         } else {
-            std::slice::from_raw_parts(self.data, self.len)
+            unsafe { std::slice::from_raw_parts(self.data, self.len) }
         }
     }
 
@@ -105,7 +105,7 @@ impl RustBytes {
         if self.data.is_null() {
             &[]
         } else {
-            std::slice::from_raw_parts(self.data, self.len)
+            unsafe { std::slice::from_raw_parts(self.data, self.len) }
         }
     }
 
@@ -133,10 +133,12 @@ impl RustBytes {
 ///  * The provided [`Bytes`] is a valid, still allocated instance, containing
 ///    valid, allocated bytes.
 ///  * The instance should not be used anymore after calling this function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_rust_bytes(bytes: *const RustBytes) {
-    let bytes_boxed = Box::from_raw(bytes as *mut RustBytes);
-    free_rust_bytes_contents(*bytes);
+    let bytes_boxed = unsafe { Box::from_raw(bytes as *mut RustBytes) };
+    unsafe {
+        free_rust_bytes_contents(*bytes_boxed);
+    }
     drop(bytes_boxed)
 }
 
@@ -147,12 +149,12 @@ pub unsafe extern "C" fn free_rust_bytes(bytes: *const RustBytes) {
 ///  * The provided [`Bytes`] is a valid, still allocated instance, containing
 ///    valid, allocated bytes. It should not be used anymore after calling this
 ///    function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_rust_bytes_contents(bytes: RustBytes) {
     if bytes.data.is_null() {
         return;
     }
-    drop(Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)))
+    drop(unsafe { Box::from_raw(std::slice::from_raw_parts_mut(bytes.data as *mut u8, bytes.len)) })
 }
 
 #[cfg(test)]

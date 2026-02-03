@@ -31,11 +31,11 @@ use clap::Parser;
 use oak_proto_rust::{
     attestation::{CERTIFICATE_BASED_ATTESTATION_ID, CONFIDENTIAL_SPACE_ATTESTATION_ID},
     oak::{
+        Variant,
         attestation::v1::{
-            reference_values, CollectedAttestation, ReferenceValues, ReferenceValuesCollection,
+            CollectedAttestation, ReferenceValues, ReferenceValuesCollection, reference_values,
         },
         session::v1::EndorsedEvidence,
-        Variant,
     },
 };
 use oak_time::Instant;
@@ -125,9 +125,7 @@ fn process_attestation(
         CONFIDENTIAL_SPACE_ATTESTATION_ID => match reference_values {
             Some(ReferenceValues {
                 r#type:
-                    Some(reference_values::Type::ConfidentialSpace(
-                        ref confidential_space_reference_values,
-                    )),
+                    Some(reference_values::Type::ConfidentialSpace(confidential_space_reference_values)),
             }) => VerificationReport::confidential_space(
                 confidential_space_reference_values,
                 attestation_timestamp,
@@ -139,9 +137,7 @@ fn process_attestation(
         CERTIFICATE_BASED_ATTESTATION_ID => match reference_values {
             Some(ReferenceValues {
                 r#type:
-                    Some(reference_values::Type::CertificateBased(
-                        ref certificate_based_reference_values,
-                    )),
+                    Some(reference_values::Type::CertificateBased(certificate_based_reference_values)),
             }) => VerificationReport::certificate_based(
                 certificate_based_reference_values,
                 attestation_timestamp,

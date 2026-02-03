@@ -20,22 +20,22 @@ use log::debug;
 use metrics::RequestMetricName;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
+    ServerSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    ServerSession, Session,
 };
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
 };
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{net::TcpListener, sync::mpsc};
-use tokio_stream::{wrappers::TcpListenerStream, Stream, StreamExt};
+use tokio_stream::{Stream, StreamExt, wrappers::TcpListenerStream};
 
 use crate::{
-    context::UserSessionContext, db_client::SharedDbClient, handler::SealedMemorySessionHandler,
-    ApplicationConfig, IntoTonicResult,
+    ApplicationConfig, IntoTonicResult, context::UserSessionContext, db_client::SharedDbClient,
+    handler::SealedMemorySessionHandler,
 };
 
 // The struct that holds the service implementation.

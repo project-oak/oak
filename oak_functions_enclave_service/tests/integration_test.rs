@@ -27,14 +27,14 @@ use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_enclave_service::OakFunctionsService;
 use oak_micro_rpc::oak::functions::{
-    testing::TestModuleClient, OakFunctionsClient, OakFunctionsServer,
+    OakFunctionsClient, OakFunctionsServer, testing::TestModuleClient,
 };
 use oak_proto_rust::oak::{
     crypto::v1::EncryptedRequest,
     functions::{
-        extend_next_lookup_data_request::Data, testing::EchoAndPanicRequest,
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
-        LookupDataChunk, LookupDataEntry,
+        LookupDataChunk, LookupDataEntry, extend_next_lookup_data_request::Data,
+        testing::EchoAndPanicRequest,
     },
 };
 use prost::Message;

@@ -16,10 +16,10 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use oak_proto_rust::oak::functions::{
-    extend_next_lookup_data_request::Data, Empty, ExtendNextLookupDataRequest,
-    FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
+    Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
+    LookupDataEntry, extend_next_lookup_data_request::Data,
 };
 use prost::Message;
 use ubyte::ByteUnit;

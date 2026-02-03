@@ -21,9 +21,8 @@ use oak_client::transport::{EvidenceProvider, Transport};
 use oak_proto_rust::oak::{
     crypto::v1::{EncryptedRequest, EncryptedResponse},
     session::v1::{
-        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceRequest,
-        GetEndorsedEvidenceResponse, InvokeRequest, InvokeResponse, RequestWrapper,
-        ResponseWrapper,
+        EndorsedEvidence, GetEndorsedEvidenceRequest, GetEndorsedEvidenceResponse, InvokeRequest,
+        InvokeResponse, RequestWrapper, ResponseWrapper, request_wrapper, response_wrapper,
     },
 };
 

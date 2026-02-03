@@ -20,7 +20,7 @@
 //! that newer versions of the verification library continue to be able to
 //! verify older versions of these artifacts.
 
-use oak_attestation_integration_tests::{create, Snapshot, SnapshotPath};
+use oak_attestation_integration_tests::{Snapshot, SnapshotPath, create};
 
 // Constants that define the measurements for evidence.
 const SETUP_DATA_DIGEST: &[u8] = &[1u8; 32];

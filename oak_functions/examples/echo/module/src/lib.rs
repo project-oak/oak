@@ -16,7 +16,7 @@
 
 //! Oak Functions echo example.
 
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main() {
     let request = oak_functions_sdk::read_request().expect("couldn't read request body");
     let response = request;

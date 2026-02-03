@@ -27,11 +27,11 @@ use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
     functions::InvokeRequest,
     session::v1::{
-        request_wrapper, response_wrapper, EndorsedEvidence, GetEndorsedEvidenceResponse,
-        InvokeResponse, RequestWrapper, ResponseWrapper,
+        EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
+        ResponseWrapper, request_wrapper, response_wrapper,
     },
 };
-use tonic::{transport::Server, Request, Response, Status, Streaming};
+use tonic::{Request, Response, Status, Streaming, transport::Server};
 
 use crate::OakFunctionsClient;
 

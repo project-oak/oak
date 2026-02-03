@@ -16,19 +16,19 @@
 
 use alloc::{string::String, vec, vec::Vec};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use ciborium::Value;
-use coset::{cwt::ClaimName, CborSerializable, CoseKey};
+use coset::{CborSerializable, CoseKey, cwt::ClaimName};
 use oak_attestation_types::{
     attester::Attester,
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, try_decode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto, try_decode_length_delimited_proto},
 };
 use oak_dice::{
     cert::{
-        cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
+        SHA2_256_ID, cose_key_to_verifying_key, derive_verifying_key_id, generate_ecdsa_key_pair,
         generate_kem_certificate, generate_signing_certificate,
-        get_claims_set_from_certificate_bytes, SHA2_256_ID,
+        get_claims_set_from_certificate_bytes,
     },
     evidence::Stage0DiceData,
 };

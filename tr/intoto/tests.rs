@@ -21,7 +21,7 @@ use oak_file_utils::data_path;
 use oak_time::{Duration, Instant};
 use test_util::EndorsementData;
 
-use crate::statement::{get_hex_digest_from_statement, parse_statement, Validity};
+use crate::statement::{Validity, get_hex_digest_from_statement, parse_statement};
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";
 

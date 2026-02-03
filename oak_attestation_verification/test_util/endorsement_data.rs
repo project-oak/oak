@@ -20,11 +20,11 @@ use std::fs;
 
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
-    endorsement::Format, ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType,
-    Signature, SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey,
-    VerifyingKeyReferenceValue, VerifyingKeySet,
+    ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType, Signature,
+    SignedEndorsement, TransparentReleaseEndorsement, VerifyingKey, VerifyingKeyReferenceValue,
+    VerifyingKeySet, endorsement::Format,
 };
-use oak_time::{make_instant, Instant};
+use oak_time::{Instant, make_instant};
 use p256::pkcs8::Document;
 
 const ENDORSEMENT_PATH: &str = "oak_attestation_verification/testdata/endorsement.json";

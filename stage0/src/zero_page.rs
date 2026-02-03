@@ -22,9 +22,9 @@ use x86_64::PhysAddr;
 use zerocopy::{FromBytes, IntoBytes};
 
 use crate::{
+    BOOT_ALLOC, Measured,
     cmos::Cmos,
-    fw_cfg::{find_suitable_dma_address, FwCfg},
-    Measured, BOOT_ALLOC,
+    fw_cfg::{FwCfg, find_suitable_dma_address},
 };
 
 /// Boot metadata for the Linux kernel.

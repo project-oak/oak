@@ -25,17 +25,18 @@ use oak_attestation_verification_types::{
     verifier::AttestationVerifier,
 };
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results::Status, reference_values, AttestationResults, Endorsements,
-        EventAttestationResults, EventLog, Evidence, ReferenceValues,
-    },
     Variant,
+    attestation::v1::{
+        AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence,
+        ReferenceValues, attestation_results::Status, reference_values,
+    },
 };
 use oak_tdx_quote::TdxQuoteWrapper;
 use oak_time::{Clock, Instant};
 use sha2::{Digest, Sha384};
 
 use crate::{
+    IntelTdxPolicy,
     intel::RtmrEmulator,
     policy::{
         application::ApplicationPolicy,
@@ -46,8 +47,7 @@ use crate::{
         system::SystemPolicy,
     },
     results::get_initial_measurement,
-    verifier::{verify_dice_chain, EventLogType},
-    IntelTdxPolicy,
+    verifier::{EventLogType, verify_dice_chain},
 };
 
 // Base AMD SEV-SNP verifier that validates AMD SEV-SNP platform authenticity

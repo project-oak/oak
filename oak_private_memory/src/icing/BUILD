@@ -47,7 +47,6 @@ rust_library(
 rust_library(
     name = "icing_ffi_bridge",
     srcs = ["ffi_bridge.rs"],
-    edition = "2021",
     deps = [
         ":bridge",
         ":ffi_wrapper-sys",

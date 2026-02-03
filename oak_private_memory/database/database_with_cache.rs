@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
 use log::info;
@@ -21,9 +21,9 @@ use rand::Rng;
 use sealed_memory_rust_proto::prelude::v1::*;
 
 use crate::{
+    IcingTempDir, MemoryId,
     icing::{IcingMetaDatabase, PageToken},
     memory_cache::MemoryCache,
-    IcingTempDir, MemoryId,
 };
 
 const DATABASE_MAX_SIZE: usize = 1024 * 1024 * 1024; // 1 GB

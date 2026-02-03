@@ -21,13 +21,13 @@ use sha2::Sha256;
 use crate::{
     acpi::{
         commands::{
-            add_pci_root_stage1::{AllowlistOffset, PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT},
             Invoke, Pad, RomfileName,
+            add_pci_root_stage1::{AllowlistOffset, PCI_ROOT_STAGE1_ALLOWLIST_OFFSET_COUNT},
         },
         files::Files,
     },
     fw_cfg::Firmware,
-    pci::{read_pci_crs_allowlist, PciWindows, PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT},
+    pci::{PCI_CRS_ALLOWLIST_MAX_ENTRY_COUNT, PciWindows, read_pci_crs_allowlist},
 };
 
 const PCI_ROOT_STAGE2_ALLOWLIST_OFFSET_COUNT: usize =

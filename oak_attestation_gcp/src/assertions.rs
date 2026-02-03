@@ -16,27 +16,27 @@
 
 use alloc::string::String;
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use jwt::Token;
 use oak_attestation_types::assertion_generator::{AssertionGenerator, AssertionGeneratorError};
 use oak_attestation_verification_types::assertion_verifier::{
     AssertionVerifier, AssertionVerifierError,
 };
 use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, confidential_space_reference_values::ContainerImage, Assertion,
-    BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
-    ConfidentialSpaceReferenceValues, SignedEndorsement,
+    Assertion, BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
+    ConfidentialSpaceReferenceValues, SignedEndorsement, binary_reference_value,
+    confidential_space_reference_values::ContainerImage,
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use prost::Message;
 use sha2::Digest;
 use verify_endorsement::create_endorsement_reference_value;
-use x509_cert::{der::DecodePem, Certificate};
+use x509_cert::{Certificate, der::DecodePem};
 
 use crate::{
-    jwt::{verification::verify_attestation_token, Claims, Header},
-    policy::{verify_endorsement_wrapper, ConfidentialSpaceVerificationError},
+    jwt::{Claims, Header, verification::verify_attestation_token},
+    policy::{ConfidentialSpaceVerificationError, verify_endorsement_wrapper},
 };
 
 #[allow(dead_code)]
@@ -199,8 +199,8 @@ mod tests {
     use oak_attestation_verification_types::assertion_verifier::AssertionVerifierError;
     use oak_file_utils::{read_testdata, read_testdata_string};
     use oak_proto_rust::oak::attestation::v1::{
-        binary_reference_value, endorsement::Format, BinaryReferenceValue, CosignReferenceValues,
-        Endorsement, Signature, SignedEndorsement,
+        BinaryReferenceValue, CosignReferenceValues, Endorsement, Signature, SignedEndorsement,
+        binary_reference_value, endorsement::Format,
     };
     use oak_time::make_instant;
     use prost::Message;

@@ -12,6 +12,10 @@ build-and-test:
 style:
     bazel build -c opt --keep_going --config=rustfmt --config=clippy "$@" //...:all -- -//third_party/...
 
+format-rust:
+    bazel run --config=rustfmt @rules_rust//:rustfmt
+
+
 private-memory-server: (copy-artifact "private_memory_server" "private_memory_server")
 private-memory-enclave-app: (copy-artifact "bundle.tar" "private_memory_enclave_app")
 private-memory-enclave-bundle-tar: (copy-artifact "bundle.tar" "private_memory_enclave_bundle.tar")

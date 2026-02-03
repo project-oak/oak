@@ -33,11 +33,11 @@ impl Pic {
     }
 
     pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
-        self.command.try_write(command)
+        unsafe { self.command.try_write(command) }
     }
 
     pub unsafe fn write_data(&mut self, data: u8) -> Result<(), &'static str> {
-        self.data.try_write(data)
+        unsafe { self.data.try_write(data) }
     }
 
     pub unsafe fn init(
@@ -48,15 +48,15 @@ impl Pic {
     ) -> Result<(), &'static str> {
         // The initialization process is documented in https://wiki.osdev.org/8259_PIC
         // ICW1: ICW_INIT | ICW_ICW4
-        self.write_command(0x11)?;
+        unsafe { self.write_command(0x11) }?;
         // ICW2: the interrupt offset.
-        self.write_data(interrupt_offset)?;
+        unsafe { self.write_data(interrupt_offset) }?;
         // ICW3, chaining between PICs
-        self.write_data(chaining)?;
+        unsafe { self.write_data(chaining) }?;
         // ICW4, operation mode: ICW4_8086
-        self.write_data(0x01)?;
+        unsafe { self.write_data(0x01) }?;
         // OCW1: interrupt masking
-        self.write_data(mask)?;
+        unsafe { self.write_data(mask) }?;
         Ok(())
     }
 }
@@ -72,8 +72,8 @@ pub unsafe fn disable_pic8259<P: crate::Platform>() -> Result<(), &'static str> 
     let mut pic1 = Pic::new::<P>(PIC1_BASE);
 
     // PIC0 interrupts will start at 0x20 (32), PIC1 at IRQ2, disable all interrupts
-    pic0.init(0x20, 4, 0xFF)?;
+    unsafe { pic0.init(0x20, 4, 0xFF) }?;
     // PIC1 interrupts will start at 0x28 (40), cascade identity, and again disable
     // all interrupts
-    pic1.init(0x28, 2, 0xFF)
+    unsafe { pic1.init(0x28, 2, 0xFF) }
 }

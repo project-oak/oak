@@ -16,13 +16,13 @@
 
 use spinning_top::Spinlock;
 use x86_64::{
+    VirtAddr,
     instructions::tables::load_tss,
     registers::{model_specific::Star, segmentation::*},
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
         tss::TaskStateSegment,
     },
-    VirtAddr,
 };
 
 struct Descriptors {

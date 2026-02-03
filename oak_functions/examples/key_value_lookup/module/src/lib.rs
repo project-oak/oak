@@ -23,7 +23,7 @@
 #[cfg(test)]
 mod tests;
 
-#[cfg_attr(not(test), no_mangle)]
+#[cfg_attr(not(test), unsafe(no_mangle))]
 pub extern "C" fn main() {
     let request = oak_functions_sdk::read_request().expect("couldn't read request body");
     let response = oak_functions_sdk::storage_get_item(&request)

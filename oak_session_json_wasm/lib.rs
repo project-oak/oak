@@ -15,8 +15,8 @@
 //
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{
-    attestation::AttestationType, config::SessionConfig, handshake::HandshakeType, ClientSession,
-    ProtocolEngine, Session,
+    ClientSession, ProtocolEngine, Session, attestation::AttestationType, config::SessionConfig,
+    handshake::HandshakeType,
 };
 use prost::Message;
 use wasm_bindgen::prelude::*;

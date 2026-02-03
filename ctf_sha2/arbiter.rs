@@ -16,32 +16,33 @@
 
 use anyhow::Context;
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{
-    arbiter_input::TeeProof, ArbiterInput, AttestedSignature,
+    ArbiterInput, AttestedSignature, arbiter_input::TeeProof,
 };
 use clap::Parser;
 use jwt::{Token, Unverified};
 use log::info;
 use oak_attestation_gcp::{
+    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
     assertions::GcpAssertionVerifier,
     jwt::{Claims, Header},
-    CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
 };
 use oak_attestation_verification::verifier::verify;
 use oak_attestation_verification_types::assertion_verifier::AssertionVerifier;
 use oak_proto_rust::oak::attestation::v1::{
-    binary_reference_value, confidential_space_reference_values::ContainerImage,
-    kernel_binary_reference_value, reference_values, tcb_version_reference_value,
-    text_reference_value, AmdSevReferenceValues, Assertion, BinaryReferenceValue,
-    ConfidentialSpaceAssertion, ConfidentialSpaceReferenceValues, ContainerLayerReferenceValues,
-    Digests, Endorsements, KernelBinaryReferenceValue, KernelDigests, KernelLayerReferenceValues,
+    AmdSevReferenceValues, Assertion, BinaryReferenceValue, ConfidentialSpaceAssertion,
+    ConfidentialSpaceReferenceValues, ContainerLayerReferenceValues, Digests, Endorsements,
+    KernelBinaryReferenceValue, KernelDigests, KernelLayerReferenceValues,
     OakContainersReferenceValues, ReferenceValues, RootLayerReferenceValues, StringLiterals,
     SystemLayerReferenceValues, TcbVersion, TcbVersionReferenceValue, TextReferenceValue,
+    binary_reference_value, confidential_space_reference_values::ContainerImage,
+    kernel_binary_reference_value, reference_values, tcb_version_reference_value,
+    text_reference_value,
 };
 use oak_time::Instant;
 use p256::ecdsa::VerifyingKey;
 use prost::Message;
 use sha2::{Digest, Sha256};
-use x509_cert::{der::Decode, spki::EncodePublicKey, Certificate};
+use x509_cert::{Certificate, der::Decode, spki::EncodePublicKey};
 
 // See ctf_sha2/src/main.rs.
 const OAK_CTF_SHA2_AUDIENCE: &str = "z08381475938604996746";
@@ -122,7 +123,7 @@ fn verify_confidential_space_jwt(
         _ => {
             return Err(anyhow::anyhow!(
                 "Input does not contain confidential space reference values"
-            ))
+            ));
         }
     };
     Ok(GcpAssertionVerifier {
@@ -301,21 +302,20 @@ mod raw_digests {
 
 #[cfg(test)]
 mod tests {
-    use base64::{engine::general_purpose::STANDARD, Engine};
-    use coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseKey};
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use coset::{CborSerializable, CoseKey, cbor::value::Value, cwt::ClaimName};
     use jwt::{AlgorithmType, PKeyWithDigest, SignWithKey, SigningAlgorithm, Unsigned};
     use oak_dice::cert::{CONTAINER_IMAGE_LAYER_ID, KERNEL_LAYER_ID, SYSTEM_IMAGE_LAYER_ID};
     use oak_proto_rust::oak::{
-        attestation::v1::{
-            binary_reference_value, kernel_binary_reference_value, reference_values,
-            text_reference_value, ApplicationKeys, BinaryReferenceValue,
-            ContainerLayerReferenceValues, Endorsements, Evidence, KernelBinaryReferenceValue,
-            KernelLayerReferenceValues, LayerEvidence, OakContainersEndorsements,
-            OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements,
-            RootLayerEvidence, RootLayerReferenceValues, SystemLayerReferenceValues, TeePlatform,
-            TextReferenceValue,
-        },
         RawDigest,
+        attestation::v1::{
+            ApplicationKeys, BinaryReferenceValue, ContainerLayerReferenceValues, Endorsements,
+            Evidence, KernelBinaryReferenceValue, KernelLayerReferenceValues, LayerEvidence,
+            OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+            SystemLayerReferenceValues, TeePlatform, TextReferenceValue, binary_reference_value,
+            kernel_binary_reference_value, reference_values, text_reference_value,
+        },
     };
     use oak_time::{Duration, Instant};
     use openssl::{
@@ -325,7 +325,7 @@ mod tests {
         rsa::Rsa,
         x509::X509,
     };
-    use p256::ecdsa::{signature::Signer, SigningKey};
+    use p256::ecdsa::{SigningKey, signature::Signer};
     use sha2::{Digest, Sha256};
 
     use super::*;
@@ -342,19 +342,21 @@ mod tests {
         let private_key = PKeyWithDigest { digest: MessageDigest::sha256(), key: root_pkey };
         let signed_jwt = jwt.sign_with_key(&Rs256PKeyWithDigest { delegate: private_key })?;
 
-        assert!(verify_confidential_space_jwt(
-            now,
-            signed_jwt.as_str().to_string(),
-            flag,
-            confidential_space_reference_values(
-                String::from_utf8(root_cert.to_pem()?)?,
-                RawDigest {
-                    sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
-                    ..Default::default()
-                }
+        assert!(
+            verify_confidential_space_jwt(
+                now,
+                signed_jwt.as_str().to_string(),
+                flag,
+                confidential_space_reference_values(
+                    String::from_utf8(root_cert.to_pem()?)?,
+                    RawDigest {
+                        sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
+                        ..Default::default()
+                    }
+                )
             )
-        )
-        .is_ok());
+            .is_ok()
+        );
 
         Ok(())
     }
@@ -371,19 +373,21 @@ mod tests {
         let private_key = PKeyWithDigest { digest: MessageDigest::sha256(), key: attacker_pkey };
         let signed_jwt = jwt.sign_with_key(&Rs256PKeyWithDigest { delegate: private_key })?;
 
-        assert!(verify_confidential_space_jwt(
-            now,
-            signed_jwt.as_str().to_string(),
-            flag,
-            confidential_space_reference_values(
-                CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_string(),
-                RawDigest {
-                    sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
-                    ..Default::default()
-                }
+        assert!(
+            verify_confidential_space_jwt(
+                now,
+                signed_jwt.as_str().to_string(),
+                flag,
+                confidential_space_reference_values(
+                    CONFIDENTIAL_SPACE_ROOT_CERT_PEM.to_string(),
+                    RawDigest {
+                        sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
+                        ..Default::default()
+                    }
+                )
             )
-        )
-        .is_err());
+            .is_err()
+        );
 
         Ok(())
     }
@@ -404,20 +408,22 @@ mod tests {
         let private_key = PKeyWithDigest { digest: MessageDigest::sha256(), key: root_pkey };
         let signed_jwt = jwt.sign_with_key(&Rs256PKeyWithDigest { delegate: private_key })?;
 
-        assert!(verify_confidential_space_jwt(
-            now,
-            signed_jwt.as_str().to_string(),
-            // Supply a different flag than the one that Confidential Space signed.
-            b"this is a bad guess",
-            confidential_space_reference_values(
-                String::from_utf8(root_cert.to_pem()?)?,
-                RawDigest {
-                    sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
-                    ..Default::default()
-                }
+        assert!(
+            verify_confidential_space_jwt(
+                now,
+                signed_jwt.as_str().to_string(),
+                // Supply a different flag than the one that Confidential Space signed.
+                b"this is a bad guess",
+                confidential_space_reference_values(
+                    String::from_utf8(root_cert.to_pem()?)?,
+                    RawDigest {
+                        sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
+                        ..Default::default()
+                    }
+                )
             )
-        )
-        .is_err());
+            .is_err()
+        );
 
         Ok(())
     }
@@ -440,19 +446,21 @@ mod tests {
         let private_key = PKeyWithDigest { digest: MessageDigest::sha256(), key: root_pkey };
         let signed_jwt = jwt.sign_with_key(&Rs256PKeyWithDigest { delegate: private_key })?;
 
-        assert!(verify_confidential_space_jwt(
-            now,
-            signed_jwt.as_str().to_string(),
-            flag,
-            confidential_space_reference_values(
-                String::from_utf8(root_cert.to_pem()?)?,
-                RawDigest {
-                    sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
-                    ..Default::default()
-                }
+        assert!(
+            verify_confidential_space_jwt(
+                now,
+                signed_jwt.as_str().to_string(),
+                flag,
+                confidential_space_reference_values(
+                    String::from_utf8(root_cert.to_pem()?)?,
+                    RawDigest {
+                        sha2_256: hex::decode(EXPECTED_WORKLOAD_DIGEST)?,
+                        ..Default::default()
+                    }
+                )
             )
-        )
-        .is_err());
+            .is_err()
+        );
 
         Ok(())
     }
@@ -463,17 +471,19 @@ mod tests {
         let flag = b"here is a random flag";
         let signature: p256::ecdsa::Signature = signing_key.sign(&Sha256::digest(flag));
 
-        assert!(verify_attested_signature(
-            &oak_time_std::instant::now(),
-            &AttestedSignature {
-                evidence: Some(evidence),
-                endorsements: Some(empty_oak_containers_endorsements()),
-                signature: signature.to_der().to_bytes().to_vec(),
-            },
-            flag,
-            &insecure_oak_containers_reference_values()
-        )
-        .is_ok());
+        assert!(
+            verify_attested_signature(
+                &oak_time_std::instant::now(),
+                &AttestedSignature {
+                    evidence: Some(evidence),
+                    endorsements: Some(empty_oak_containers_endorsements()),
+                    signature: signature.to_der().to_bytes().to_vec(),
+                },
+                flag,
+                &insecure_oak_containers_reference_values()
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -481,18 +491,20 @@ mod tests {
         let (evidence, _signing_key) = generate_fake_amd_sev_snp_evidence();
         let flag = b"here is a random flag";
 
-        assert!(verify_attested_signature(
-            &oak_time_std::instant::now(),
-            &AttestedSignature {
-                evidence: Some(evidence),
-                endorsements: Some(empty_oak_containers_endorsements()),
-                // Provide an invalid signature
-                signature: vec![0u8; 64],
-            },
-            flag,
-            &insecure_oak_containers_reference_values()
-        )
-        .is_err());
+        assert!(
+            verify_attested_signature(
+                &oak_time_std::instant::now(),
+                &AttestedSignature {
+                    evidence: Some(evidence),
+                    endorsements: Some(empty_oak_containers_endorsements()),
+                    // Provide an invalid signature
+                    signature: vec![0u8; 64],
+                },
+                flag,
+                &insecure_oak_containers_reference_values()
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -501,18 +513,20 @@ mod tests {
         let flag = b"here is a random flag";
         let signature: p256::ecdsa::Signature = signing_key.sign(&Sha256::digest(flag));
 
-        assert!(verify_attested_signature(
-            &oak_time_std::instant::now(),
-            &AttestedSignature {
-                evidence: Some(evidence),
-                endorsements: Some(empty_oak_containers_endorsements()),
-                signature: signature.to_der().to_bytes().to_vec(),
-            },
-            // Supply a different flag than the one that the enclave app signed.
-            b"this is a bad guess",
-            &insecure_oak_containers_reference_values()
-        )
-        .is_err());
+        assert!(
+            verify_attested_signature(
+                &oak_time_std::instant::now(),
+                &AttestedSignature {
+                    evidence: Some(evidence),
+                    endorsements: Some(empty_oak_containers_endorsements()),
+                    signature: signature.to_der().to_bytes().to_vec(),
+                },
+                // Supply a different flag than the one that the enclave app signed.
+                b"this is a bad guess",
+                &insecure_oak_containers_reference_values()
+            )
+            .is_err()
+        );
     }
 
     fn confidential_space_reference_values(

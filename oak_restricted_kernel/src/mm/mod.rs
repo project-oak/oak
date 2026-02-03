@@ -17,16 +17,16 @@
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
-use oak_sev_guest::msr::{get_sev_status, SevStatus};
+use oak_sev_guest::msr::{SevStatus, get_sev_status};
 use x86_64::{
+    PhysAddr, VirtAddr,
     addr::{align_down, align_up},
     structures::paging::{
-        frame::PhysFrameRange,
-        mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
         Size2MiB, Size4KiB,
+        frame::PhysFrameRange,
+        mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
     },
-    PhysAddr, VirtAddr,
 };
 
 use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption};

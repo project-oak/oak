@@ -17,7 +17,7 @@
 use digest_util::raw_to_hex_digest;
 use oak_attestation_verification::verify_endorsement;
 use oak_proto_rust::oak::attestation::v1::{
-    verifying_key_reference_value, SkipVerification, VerifyingKeyReferenceValue,
+    SkipVerification, VerifyingKeyReferenceValue, verifying_key_reference_value,
 };
 use oak_time::{Duration, Instant};
 use test_util::endorsement_data::EndorsementData;

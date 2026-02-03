@@ -16,7 +16,7 @@
 
 use std::path::Path;
 
-use super::{has_extension, QuietSuccess};
+use super::{QuietSuccess, has_extension};
 
 pub struct KtfmtTool {}
 

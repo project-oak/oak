@@ -19,7 +19,7 @@
 
 use alloc::boxed::Box;
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use oak_channel::Channel;
 pub use oak_channel::{Read, Write};
 use oak_core::samplestore::SampleStore;

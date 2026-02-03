@@ -25,14 +25,14 @@ use core::panic::PanicInfo;
 use elf::parse_elf_file;
 use oak_linux_boot_params::BootParams;
 use x86_64::{
-    instructions::{hlt, interrupts::int3},
     VirtAddr,
+    instructions::{hlt, interrupts::int3},
 };
 
 /// Entry point for the 64-bit Rust code.
 ///
 /// We ignore the first parameter in the Linux boot protocol, which must be 0.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
     let payload = include_bytes!(env!("PAYLOAD_PATH"));
     let entry = parse_elf_file(payload, boot_params.e820_table(), boot_params.ramdisk());
@@ -51,17 +51,19 @@ pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
 ///
 /// This assumes that the kernel entry point is valid.
 unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
-    core::arch::asm!(
-        // Reset the boot stack.
-        "lea stack_start(%rip), %rsp",
-        // Set the address of the boot parameters.
-        "mov {1}, %rsi",
-        // Jump to the kernel entrypoint.
-        "jmp *{0}",
-        in(reg) entry_point.as_u64(),
-        in(reg) zero_page as u64,
-        options(noreturn, att_syntax)
-    );
+    unsafe {
+        core::arch::asm!(
+            // Reset the boot stack.
+            "lea stack_start(%rip), %rsp",
+            // Set the address of the boot parameters.
+            "mov {1}, %rsi",
+            // Jump to the kernel entrypoint.
+            "jmp *{0}",
+            in(reg) entry_point.as_u64(),
+            in(reg) zero_page as u64,
+            options(noreturn, att_syntax)
+        );
+    }
 }
 
 #[panic_handler]

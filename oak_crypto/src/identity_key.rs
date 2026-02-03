@@ -21,7 +21,7 @@ use alloc::vec::Vec;
 
 use anyhow::anyhow;
 
-use crate::noise_handshake::{client::P256_SCALAR_LEN, p256_scalar_mult, P256Scalar};
+use crate::noise_handshake::{P256Scalar, client::P256_SCALAR_LEN, p256_scalar_mult};
 
 pub trait IdentityKeyHandle: Send {
     fn get_public_key(&self) -> anyhow::Result<Vec<u8>>;

@@ -25,11 +25,11 @@ use oak_grpc::oak::containers::{
 use oak_proto_rust::oak::{
     attestation::v1::{Endorsements, Evidence},
     containers::{
+        GetApplicationConfigResponse,
         v1::{
             BindSessionRequest, BindSessionResponse, DeriveSessionKeysRequest,
             DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
         },
-        GetApplicationConfigResponse,
     },
     crypto::v1::Signature,
     session::v1::EndorsedEvidence,
@@ -37,7 +37,7 @@ use oak_proto_rust::oak::{
 use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;
-use tonic::{transport::Server, Request, Response};
+use tonic::{Request, Response, transport::Server};
 
 use crate::launcher_client::LauncherClient;
 

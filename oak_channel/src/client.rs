@@ -21,8 +21,8 @@ use alloc::boxed::Box;
 use oak_core::timer::Timer;
 
 use crate::{
-    message::{InvocationId, RequestMessage, ResponseMessage},
     Channel, InvocationChannel,
+    message::{InvocationId, RequestMessage, ResponseMessage},
 };
 
 pub struct ClientChannelHandle {

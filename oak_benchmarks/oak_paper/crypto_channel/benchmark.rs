@@ -27,7 +27,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use message_stream_client::{MessageStream, NoiseMessageStream};
 use oak_channel::message::RequestMessage;
 use oak_file_utils::data_path;
@@ -68,15 +68,17 @@ fn start_tcp_server(stream_creator: ServerStreamCreator) -> (SocketAddr, JoinHan
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind server");
     let addr = listener.local_addr().expect("failed to get local address");
     let stream_creator = stream_creator.clone();
-    let handle = thread::spawn(move || loop {
-        let (tcp_stream, _) = listener.accept().expect("failed to receive connection");
-        let stream = &mut stream_creator(tcp_stream);
+    let handle = thread::spawn(move || {
+        loop {
+            let (tcp_stream, _) = listener.accept().expect("failed to receive connection");
+            let stream = &mut stream_creator(tcp_stream);
 
-        let read_msg = stream.read_message();
-        if read_msg == b"exit" {
-            break;
+            let read_msg = stream.read_message();
+            if read_msg == b"exit" {
+                break;
+            }
+            stream.send_message(&read_msg);
         }
-        stream.send_message(&read_msg);
     });
     (addr, handle)
 }

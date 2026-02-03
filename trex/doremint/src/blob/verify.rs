@@ -19,8 +19,8 @@ use clap::Parser;
 use oak_digest::Digest;
 use oak_time::Instant;
 use trex_client::{
-    http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
     EndorsementVerifier,
+    http::{HttpBlobFetcher, HttpEndorsementIndex, fetch_index},
 };
 
 use crate::flags;

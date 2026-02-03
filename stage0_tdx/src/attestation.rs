@@ -19,13 +19,13 @@ use alloc::vec::Vec;
 use oak_attestation_types::{
     attester::Attester,
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto},
 };
 use oak_proto_rust::oak::attestation::v1::{
     DiceData, EventLog, Evidence, RootLayerEvidence, TeePlatform,
 };
 use oak_tdx_guest::tdcall::{
-    extend_rtmr, get_report, ExtensionBuffer, ExtraDataBuffer, RtmrIndex, TdReportBuffer,
+    ExtensionBuffer, ExtraDataBuffer, RtmrIndex, TdReportBuffer, extend_rtmr, get_report,
 };
 use sha2::{Digest, Sha384};
 

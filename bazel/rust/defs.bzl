@@ -47,7 +47,7 @@ STDLIBS_DEPS_VERSIONS = {
     "rustc-demangle": "0.1.24",
 }
 
-RUST_EDITION = "2021"
+RUST_EDITION = "2024"
 
 def setup_rust_dependencies(oak_repo_name = "oak"):
     """Set up the various rust-related dependencies. Call this after load_rust_repositories().

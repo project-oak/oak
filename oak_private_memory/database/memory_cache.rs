@@ -16,7 +16,7 @@
 use std::collections::HashMap;
 
 use ::encryption::{decrypt, encrypt, generate_nonce};
-use anyhow::{bail, Context};
+use anyhow::{Context, bail};
 use external_db_client::{BlobId, DataBlobHandler, ExternalDbClient};
 use prost::Message;
 use sealed_memory_rust_proto::prelude::v1::*;

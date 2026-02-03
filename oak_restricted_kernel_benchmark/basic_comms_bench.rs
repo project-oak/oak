@@ -16,7 +16,7 @@
 
 use std::time::{Duration, Instant};
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oak_file_utils::data_path;
 use oak_launcher_utils::launcher::{self, GuestInstance};
 

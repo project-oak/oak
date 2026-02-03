@@ -18,7 +18,7 @@ use alloc::{sync::Arc, vec::Vec};
 
 use anyhow::Context;
 use oak_crypto::{
-    encryption_key::EncryptionKeyHandle, encryptor::ServerEncryptor, EMPTY_ASSOCIATED_DATA,
+    EMPTY_ASSOCIATED_DATA, encryption_key::EncryptionKeyHandle, encryptor::ServerEncryptor,
 };
 use oak_proto_rust::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 

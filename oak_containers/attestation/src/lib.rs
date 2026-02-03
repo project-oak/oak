@@ -22,10 +22,10 @@ use bytes::Buf;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use oak_crypto::{
-    encryption_key::{generate_encryption_key_pair, EncryptionKey},
+    encryption_key::{EncryptionKey, generate_encryption_key_pair},
     encryptor::ServerEncryptor,
 };
-use oak_dice::cert::{generate_ecdsa_key_pair, SHA2_256_ID};
+use oak_dice::cert::{SHA2_256_ID, generate_ecdsa_key_pair};
 use oak_proto_rust::oak::{
     attestation::v1::{Event, SystemLayerData},
     crypto::v1::EncryptedRequest,

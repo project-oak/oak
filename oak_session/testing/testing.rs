@@ -18,7 +18,7 @@ use std::{
     vec::Vec,
 };
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use googletest::prelude::*;
 use mockall::mock;
 use oak_attestation_types::{
@@ -33,14 +33,15 @@ use oak_attestation_verification_types::{
 use oak_crypto::verifier::Verifier;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        attestation_results::Status, Assertion, AttestationResults, Endorsements, Evidence,
+        Assertion, AttestationResults, Endorsements, Evidence, attestation_results::Status,
     },
     session::v1::{
-        session_request::Request, session_response::Response, PlaintextMessage, SessionBinding,
-        SessionRequest, SessionResponse,
+        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        session_request::Request, session_response::Response,
     },
 };
 use oak_session::{
+    ClientSession, ProtocolEngine, ServerSession,
     attestation::AttestationType,
     config::SessionConfig,
     generator::{
@@ -55,9 +56,8 @@ use oak_session::{
         BoundAssertionVerificationError, BoundAssertionVerifier, SessionKeyBoundAssertionVerifier,
         VerifiedBoundAssertion,
     },
-    ClientSession, ProtocolEngine, ServerSession,
 };
-use oak_time::{clock::FixedClock, make_instant, Instant};
+use oak_time::{Instant, clock::FixedClock, make_instant};
 use p256::ecdsa::SigningKey;
 use rand_core::OsRng;
 
@@ -508,8 +508,8 @@ pub fn create_mock_session_binding_verifier_provider() -> Box<dyn SessionBinding
     Box::new(session_binding_verifier_provider)
 }
 
-pub fn create_failing_mock_session_binding_verifier_provider(
-) -> Box<dyn SessionBindingVerifierProvider> {
+pub fn create_failing_mock_session_binding_verifier_provider()
+-> Box<dyn SessionBindingVerifierProvider> {
     let mut session_binding_verifier = MockTestSessionBindingVerifier::new();
     session_binding_verifier
         .expect_verify_binding()

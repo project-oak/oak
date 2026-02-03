@@ -133,9 +133,9 @@ use cxx::UniquePtr;
 // Re-export all FFI functions and types
 pub use ffi::*;
 use icing_rust_proto::icing::lib::{
-    property_proto::VectorProto, DeleteResultProto, DocumentProto, InitializeResultProto,
-    OptimizeResultProto, PutResultProto, ResultSpecProto, SchemaProto, ScoringSpecProto,
-    SearchResultProto, SearchSpecProto, SetSchemaResultProto,
+    DeleteResultProto, DocumentProto, InitializeResultProto, OptimizeResultProto, PutResultProto,
+    ResultSpecProto, SchemaProto, ScoringSpecProto, SearchResultProto, SearchSpecProto,
+    SetSchemaResultProto, property_proto::VectorProto,
 };
 use prost::Message;
 

@@ -17,10 +17,10 @@
 //! This module provides an interface and an implementation of the Encryptor,
 //! which handles encrypted communication over a channel.
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use oak_crypto::{
     encryptor::{Encryptor, Payload},
-    noise_handshake::{OrderedCrypter, UnorderedCrypter, NONCE_LEN},
+    noise_handshake::{NONCE_LEN, OrderedCrypter, UnorderedCrypter},
 };
 
 // This is the default implementation of the encryptor to use for the Noise

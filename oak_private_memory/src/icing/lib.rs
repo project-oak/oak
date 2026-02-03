@@ -19,7 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 // Rexport the ffi functions from the bridge.
 pub use icing_ffi_bridge::*;
 use icing_rust_proto::icing::lib::scoring_spec_proto::ranking_strategy;

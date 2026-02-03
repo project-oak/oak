@@ -99,7 +99,10 @@ fn main() -> Result<()> {
             let key_content = std::fs::read_to_string(cosign_key_path)?;
             if key_content.contains("ENCRYPTED") && std::env::var("COSIGN_PASSWORD").is_err() {
                 let password = rpassword::prompt_password("Enter password for cosign key: ")?;
-                std::env::set_var("COSIGN_PASSWORD", password);
+                // Safety: this is a single-threaded deployment tool.
+                unsafe {
+                    std::env::set_var("COSIGN_PASSWORD", password);
+                }
             }
         }
     }

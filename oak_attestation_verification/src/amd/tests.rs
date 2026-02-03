@@ -19,17 +19,17 @@ extern crate std;
 use std::eprintln;
 
 use oak_sev_snp_attestation_report::AttestationReport;
-use oak_time::{make_instant, Instant};
+use oak_time::{Instant, make_instant};
 use test_util::attestation_data::AttestationData;
 use x509_cert::{
+    Certificate,
     certificate::{CertificateInner, Version},
     der::{Decode, DecodePem},
-    Certificate,
 };
 use zerocopy::FromBytes;
 
 use crate::{
-    amd::{get_product, AmdProduct},
+    amd::{AmdProduct, get_product},
     x509::{check_certificate_validity, verify_cert_signature},
 };
 

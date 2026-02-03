@@ -138,11 +138,7 @@ pub(crate) fn parse_bucket_name(arg: &str) -> Result<String, anyhow::Error> {
 }
 
 pub(crate) fn string_to_option_string(s: String) -> Option<String> {
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
-    }
+    if s.is_empty() { None } else { Some(s) }
 }
 
 // Parses command line arguments that represent URLs.

@@ -20,7 +20,7 @@ use anyhow::Context;
 use clap::Parser;
 use oak_proxy_lib::{
     config::{self, RestartPolicy, ServerConfig},
-    proxy::{proxy, PeerRole},
+    proxy::{PeerRole, proxy},
     websocket::{read_message, write_message},
 };
 use oak_session::{ProtocolEngine, ServerSession, Session};
@@ -28,7 +28,7 @@ use tokio::{
     net::{TcpListener, TcpStream},
     process::Command,
 };
-use tokio_tungstenite::{accept_async, MaybeTlsStream};
+use tokio_tungstenite::{MaybeTlsStream, accept_async};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

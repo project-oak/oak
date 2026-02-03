@@ -17,24 +17,24 @@
 use alloc::{format, string::String, vec, vec::Vec};
 
 use anyhow::Context;
-use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
+use coset::{CborSerializable, CoseKey, RegisteredLabelWithPrivate, cbor::Value, cwt::ClaimsSet};
 use oak_dice::cert::{
-    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
     ACPI_MEASUREMENT_ID, APPLICATION_KEY_ID, CONTAINER_IMAGE_LAYER_ID,
     ENCLAVE_APPLICATION_LAYER_ID, EVENT_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID,
     INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
     SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID, TRANSPARENT_EVENT_ID,
+    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
 };
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
-        extracted_evidence::EvidenceValues, root_layer_data::Report, ApplicationKeys,
-        ApplicationLayerData, CbData, ContainerLayerData, Event, EventData, Evidence,
-        ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
+        ApplicationKeys, ApplicationLayerData, CbData, ContainerLayerData, Event, EventData,
+        Evidence, ExtractedEvidence, FakeAttestationReport, KernelLayerData, OakContainersData,
         OakRestrictedKernelData, OrchestratorMeasurements, RootLayerData, RootLayerEvidence,
         Stage0Measurements, Stage1Measurements, SystemLayerData, TeePlatform,
+        extracted_evidence::EvidenceValues, root_layer_data::Report,
     },
-    RawDigest,
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;

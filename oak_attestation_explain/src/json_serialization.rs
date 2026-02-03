@@ -34,6 +34,7 @@
 //! more maintainable.
 
 use oak_proto_rust::oak::{
+    RawDigest,
     attestation::v1::{
         ApplicationLayerData, ApplicationLayerReferenceValues, ContainerLayerData,
         ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
@@ -41,7 +42,6 @@ use oak_proto_rust::oak::{
         OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues, *,
     },
-    RawDigest,
 };
 use prost_types::{Duration, Timestamp};
 use serde_json::json;

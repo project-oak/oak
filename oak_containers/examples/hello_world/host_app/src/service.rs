@@ -15,8 +15,8 @@
 
 use std::{pin::Pin, sync::Arc};
 
-use anyhow::{anyhow, Context};
-use futures::{channel::mpsc, Stream, StreamExt};
+use anyhow::{Context, anyhow};
+use futures::{Stream, StreamExt, channel::mpsc};
 use oak_hello_world_proto::oak::containers::example::{
     enclave_application_client::EnclaveApplicationClient,
     host_application_server::{HostApplication, HostApplicationServer},
@@ -24,7 +24,7 @@ use oak_hello_world_proto::oak::containers::example::{
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use tokio::{net::TcpListener, sync::Mutex, time::Duration};
 use tokio_stream::wrappers::TcpListenerStream;
-use tonic::transport::{channel::Channel, Endpoint};
+use tonic::transport::{Endpoint, channel::Channel};
 
 /// The sample application's implementation of Oak's streaming service protocol.
 struct HostApplicationImpl {

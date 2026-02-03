@@ -17,8 +17,8 @@
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{BinaryReferenceValue, EventAttestationResults, FirmwareEndorsement},
     Variant,
+    attestation::v1::{BinaryReferenceValue, EventAttestationResults, FirmwareEndorsement},
 };
 use oak_time::Instant;
 
@@ -63,7 +63,7 @@ impl Policy<[u8]> for FirmwarePolicy {
 
 #[cfg(test)]
 mod tests {
-    use test_util::{extract_attestation_report, get_oc_reference_values, AttestationData};
+    use test_util::{AttestationData, extract_attestation_report, get_oc_reference_values};
 
     use super::*;
 

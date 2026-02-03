@@ -69,6 +69,9 @@ fn set_protoc_env_if_unset() {
     if std::env::var("PROTOC").is_err() {
         // Use the system protoc if no override is set, so prost-build does not try to
         // use the bundled one that we remove as part of the vendoring process.
-        std::env::set_var("PROTOC", "protoc");
+        // Safety: this is a build-time utility.
+        unsafe {
+            std::env::set_var("PROTOC", "protoc");
+        }
     }
 }

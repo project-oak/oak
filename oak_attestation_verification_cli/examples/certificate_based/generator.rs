@@ -28,12 +28,13 @@ use oak_proto_rust::{
     attestation::CERTIFICATE_BASED_ATTESTATION_ID,
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
     oak::{
+        Validity,
         attestation::v1::{
-            collected_attestation::RequestMetadata, reference_values,
             CertificateAuthorityEndorsement, CertificateAuthorityReferenceValue,
             CertificateBasedReferenceValues, CollectedAttestation, Endorsements, Event, EventLog,
             Evidence, ReferenceValues, ReferenceValuesCollection, SessionBindingPublicKeyData,
-            SessionBindingPublicKeyEndorsement,
+            SessionBindingPublicKeyEndorsement, collected_attestation::RequestMetadata,
+            reference_values,
         },
         crypto::v1::{
             Certificate, CertificatePayload,
@@ -41,11 +42,10 @@ use oak_proto_rust::{
             SubjectPublicKeyInfo,
         },
         session::v1::{EndorsedEvidence, SessionBinding},
-        Validity,
     },
 };
 use oak_time::Duration;
-use p256::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
+use p256::ecdsa::{Signature, SigningKey, VerifyingKey, signature::Signer};
 use prost::Message;
 
 #[derive(Parser, Debug)]
@@ -158,18 +158,21 @@ fn sign_with_tink(message: &[u8]) -> anyhow::Result<SignatureWrapper> {
 fn evidence(verifying_key: &VerifyingKey) -> Evidence {
     Evidence {
         event_log: Some(EventLog {
-            encoded_events: vec![Event {
-                tag: "session_binding_key".to_string(),
-                event: Some(prost_types::Any {
-                    type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
-                        .to_string(),
-                    value: SessionBindingPublicKeyData {
-                        session_binding_public_key: verifying_key.to_sec1_bytes().to_vec(),
-                    }
-                    .encode_to_vec(),
-                }),
-            }
-            .encode_to_vec()],
+            encoded_events: vec![
+                Event {
+                    tag: "session_binding_key".to_string(),
+                    event: Some(prost_types::Any {
+                        type_url:
+                            "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
+                                .to_string(),
+                        value: SessionBindingPublicKeyData {
+                            session_binding_public_key: verifying_key.to_sec1_bytes().to_vec(),
+                        }
+                        .encode_to_vec(),
+                    }),
+                }
+                .encode_to_vec(),
+            ],
         }),
         ..Default::default()
     }
@@ -180,19 +183,21 @@ fn endorsements(
     certificate_payload_signature: Vec<u8>,
 ) -> Endorsements {
     Endorsements {
-        events: vec![SessionBindingPublicKeyEndorsement {
-            ca_endorsement: Some(CertificateAuthorityEndorsement {
-                certificate: Some(Certificate {
-                    serialized_payload: certificate_payload,
-                    signature_info: Some(SignatureInfo {
-                        signature: certificate_payload_signature,
+        events: vec![
+            SessionBindingPublicKeyEndorsement {
+                ca_endorsement: Some(CertificateAuthorityEndorsement {
+                    certificate: Some(Certificate {
+                        serialized_payload: certificate_payload,
+                        signature_info: Some(SignatureInfo {
+                            signature: certificate_payload_signature,
+                        }),
+                        serialized_payload_type: PayloadTypeSerializedCertificate.into(),
                     }),
-                    serialized_payload_type: PayloadTypeSerializedCertificate.into(),
                 }),
-            }),
-            ..Default::default()
-        }
-        .into()],
+                ..Default::default()
+            }
+            .into(),
+        ],
         ..Default::default()
     }
 }
@@ -221,6 +226,6 @@ struct SignatureStatusWrapper {
 
 // See the implementation in cc/crypto/tink/signature/testing/signature-ffi.h
 #[link(name = "signature-ffi")]
-extern "C" {
+unsafe extern "C" {
     fn SignWithTink(message: BytesView) -> SignatureStatusWrapper;
 }

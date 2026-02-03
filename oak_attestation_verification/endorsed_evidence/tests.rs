@@ -21,7 +21,7 @@ use oak_file_utils::data_path;
 use oak_proto_rust::oak::attestation::v1::{
     Assertion, EndorsedEvidenceAssertion, Endorsements, Evidence, ReferenceValues,
 };
-use oak_time::{clock::FixedClock, Instant};
+use oak_time::{Instant, clock::FixedClock};
 use prost::Message;
 use test_util::AttestationData;
 
@@ -46,9 +46,9 @@ fn verify_succeeds() -> Result<()> {
     };
     let assertion = Assertion { content: endorsed_evidence_assertion.encode_to_vec() };
 
-    assert!(assertion_verifier
-        .verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH)
-        .is_ok());
+    assert!(
+        assertion_verifier.verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH).is_ok()
+    );
     Ok(())
 }
 
@@ -70,9 +70,9 @@ fn verify_signature_mismatch_fails() -> Result<()> {
     };
     let assertion = Assertion { content: endorsed_evidence_assertion.encode_to_vec() };
 
-    assert!(assertion_verifier
-        .verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH)
-        .is_err());
+    assert!(
+        assertion_verifier.verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH).is_err()
+    );
     Ok(())
 }
 
@@ -95,9 +95,9 @@ fn verify_failed_attestation_fails() -> Result<()> {
     };
     let assertion = Assertion { content: endorsed_evidence_assertion.encode_to_vec() };
 
-    assert!(assertion_verifier
-        .verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH)
-        .is_err());
+    assert!(
+        assertion_verifier.verify(&assertion, &load_asserted_data()?, Instant::UNIX_EPOCH).is_err()
+    );
     Ok(())
 }
 

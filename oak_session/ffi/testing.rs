@@ -18,11 +18,11 @@ use anyhow::Result;
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_ffi_bytes::{BytesView, RustBytes};
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results, ApplicationKeys, AttestationResults, Endorsements, EventLog, Evidence,
-        ExtractedEvidence,
-    },
     Variant,
+    attestation::v1::{
+        ApplicationKeys, AttestationResults, Endorsements, EventLog, Evidence, ExtractedEvidence,
+        attestation_results,
+    },
 };
 use oak_session_ffi_config::FfiAttestationVerifier;
 use p256::ecdsa::SigningKey;
@@ -34,7 +34,7 @@ use rand_core::OsRng;
 /// # Safety
 /// * verifying_key_bytes is a valid ByteView
 /// * fake_event_log_data_bytes is a valid ByteView
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_fake_evidence(
     verifying_key_bytes: BytesView,
     fake_event_log_data_bytes: BytesView,
@@ -60,14 +60,14 @@ pub unsafe extern "C" fn new_fake_evidence(
 ///
 /// # Safety
 /// * fake_platform_value_bytes is a valid ByteView
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_fake_endorsements(fake_platform_value_bytes: BytesView) -> RustBytes {
     let endorsements = Endorsements {
         events: vec![],
         initial: None,
         platform: Some(Variant {
             id: b"fake".to_vec(),
-            value: fake_platform_value_bytes.as_slice().to_vec(),
+            value: unsafe { fake_platform_value_bytes.as_slice().to_vec() },
         }),
         r#type: None,
     };
@@ -101,14 +101,14 @@ impl FakeAttestationVerifier {
 /// # Safety
 ///  * fake_evidence_data is a valid ByteView
 ///  * fake_endorsement_platform_value is a valid ByteView
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_fake_attestation_verifier(
     fake_evidence_data: BytesView,
     fake_endorsement_platform_value: BytesView,
 ) -> FfiAttestationVerifier {
     FfiAttestationVerifier::new(Box::new(FakeAttestationVerifier::new(
-        fake_evidence_data.as_slice(),
-        fake_endorsement_platform_value.as_slice(),
+        unsafe { fake_evidence_data.as_slice() },
+        unsafe { fake_endorsement_platform_value.as_slice() },
     )))
 }
 
@@ -143,7 +143,7 @@ impl AttestationVerifier for FakeAttestationVerifier {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn new_random_signing_key() -> *mut SigningKey {
     Box::into_raw(Box::new(SigningKey::random(&mut OsRng)))
 }
@@ -153,11 +153,12 @@ pub extern "C" fn new_random_signing_key() -> *mut SigningKey {
 /// # Safety
 ///
 /// * signing_key_ptr was obtained from a suitable source and is still valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn signing_key_verifying_key_bytes(
     signing_key_ptr: *const SigningKey,
 ) -> RustBytes {
-    let verifying_key_bytes = (*signing_key_ptr).verifying_key().to_sec1_bytes().to_vec();
+    let verifying_key_bytes =
+        unsafe { (*signing_key_ptr).verifying_key().to_sec1_bytes().to_vec() };
     RustBytes::new(verifying_key_bytes.into_boxed_slice())
 }
 
@@ -166,7 +167,9 @@ pub unsafe extern "C" fn signing_key_verifying_key_bytes(
 /// # Safety
 ///
 /// * signing_key_ptr was obtained from a suitable source and is still valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn free_signing_key(key: *mut SigningKey) {
-    drop(Box::from_raw(key));
+    unsafe {
+        drop(Box::from_raw(key));
+    }
 }

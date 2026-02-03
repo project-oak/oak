@@ -16,7 +16,7 @@
 
 #![feature(exit_status_error)]
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
 use intoto::statement::DefaultStatement;
 use oak_proto_rust::oak::HexDigest;

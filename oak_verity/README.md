@@ -106,7 +106,7 @@ Functions ABI.
 ```rust
 use oak_functions_sdk;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn main() {
     let request = oak_functions_sdk::read_request()
         .expect("couldn't read request");

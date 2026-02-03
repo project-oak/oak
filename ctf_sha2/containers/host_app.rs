@@ -21,7 +21,7 @@ use log::info;
 use oak_file_utils::data_path;
 use tonic::transport::Endpoint;
 use tonic_service::oak::ctf_sha2::enclave::{
-    flag_digest_service_client::FlagDigestServiceClient, GenerateFlagDigestRequest,
+    GenerateFlagDigestRequest, flag_digest_service_client::FlagDigestServiceClient,
 };
 
 #[derive(Parser, Debug)]

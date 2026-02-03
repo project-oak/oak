@@ -16,7 +16,7 @@
 
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 
-use crate::{hal::Port, pci::device::Bdf, Platform};
+use crate::{Platform, hal::Port, pci::device::Bdf};
 
 #[cfg_attr(test, mockall::automock)]
 pub trait ConfigAccess {

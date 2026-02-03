@@ -18,11 +18,11 @@ use oak_attestation::dice::DiceAttester;
 use oak_attestation_types::{
     attester::Attester,
     transparent_attester::TransparentAttester,
-    util::{encode_length_delimited_proto, Serializable},
+    util::{Serializable, encode_length_delimited_proto},
 };
-use oak_attestation_verification::verifier::{verify_dice_chain, EventLogType};
+use oak_attestation_verification::verifier::{EventLogType, verify_dice_chain};
 use oak_dice::evidence::TeePlatform;
-use oak_proto_rust::oak::{attestation::v1::ApplicationLayerData, RawDigest};
+use oak_proto_rust::oak::{RawDigest, attestation::v1::ApplicationLayerData};
 use prost::Message;
 
 const TEST_APPLICATION_DIGEST: [u8; 4] = [0, 1, 2, 3];

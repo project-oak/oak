@@ -20,7 +20,7 @@ use anyhow::Context;
 use clap::Parser;
 use oak_proxy_lib::{
     config::{self, ClientConfig},
-    proxy::{proxy, PeerRole},
+    proxy::{PeerRole, proxy},
     websocket::{read_message, write_message},
 };
 use oak_session::{ClientSession, ProtocolEngine, Session};

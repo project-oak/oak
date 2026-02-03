@@ -17,8 +17,8 @@
 use alloc::{format, string::String};
 
 use oak_proto_rust::oak::{
-    crypto::v1::{Certificate, CertificatePayload, ProofOfFreshness, SubjectPublicKeyInfo},
     Validity,
+    crypto::v1::{Certificate, CertificatePayload, ProofOfFreshness, SubjectPublicKeyInfo},
 };
 use oak_time::{Duration, Instant};
 use prost::{DecodeError, Message};
@@ -37,7 +37,9 @@ pub enum CertificateVerificationError {
     SubjectPublicKeyMismatch { expected: String, actual: String },
     #[error("Purpose ID mismatch; expected {expected} but got {actual}")]
     PurposeIdMismatch { expected: String, actual: String },
-    #[error("Invalid certificate validity period; not_before {not_before} is after not_after {not_after}")]
+    #[error(
+        "Invalid certificate validity period; not_before {not_before} is after not_after {not_after}"
+    )]
     ValidityPeriodInvalid { not_before: Instant, not_after: Instant },
     #[error("Certificate validity period {period:?} exceeds the limit {limit:?}")]
     ValidityPeriodTooLong { period: Duration, limit: Duration },

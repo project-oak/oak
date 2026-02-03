@@ -30,7 +30,7 @@ pub mod oak {
 }
 
 pub mod base64data {
-    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     extern crate alloc;
     use alloc::{string::String, vec::Vec};
@@ -67,8 +67,8 @@ macro_rules! define_enum_element_deserializer {
         valid_variants = $valid_variants:expr
     ) => {
         use serde::{
-            de::{self, Visitor},
             Deserialize, Deserializer,
+            de::{self, Visitor},
         };
 
         struct EnumElement(pub i32);
@@ -232,7 +232,7 @@ macro_rules! vec_enum_converter {
         valid_variants = $valid_variants:expr
     ) => {
         pub mod $module_name {
-            use serde::{ser::SerializeSeq, Serializer};
+            use serde::{Serializer, ser::SerializeSeq};
             extern crate alloc;
             use alloc::vec::Vec;
 
@@ -357,7 +357,7 @@ pub mod timestamp_converter {
         timestamp: &Option<Timestamp>,
         s: S,
     ) -> Result<S::Ok, S::Error> {
-        if let Some(ref ts) = timestamp {
+        if let Some(ts) = timestamp {
             let datetime = DateTime::<Utc>::from_timestamp(ts.seconds, ts.nanos as u32)
                 .ok_or_else(|| serde::ser::Error::custom("invalid timestamp"))?;
             return String::serialize(&datetime.to_rfc3339(), s);

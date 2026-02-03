@@ -20,7 +20,7 @@ fn oak_exception<Error: Debug>(mut env: JNIEnv, message: &str, err: Error) {
         .expect(message);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClientSession(
     env: JNIEnv,
     _class: JClass,
@@ -39,7 +39,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeCreateClie
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomingMessage(
     env: JNIEnv,
     _class: JClass,
@@ -74,7 +74,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativePutIncomin
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetOutgoingMessage(
     env: JNIEnv,
     _class: JClass,
@@ -99,7 +99,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetOutgoin
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeIsSessionOpen(
     _env: JNIEnv,
     _class: JClass,
@@ -110,7 +110,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeIsSessionO
     session.is_open() as jboolean
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeRead(
     env: JNIEnv,
     _class: JClass,
@@ -134,7 +134,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeRead(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
     env: JNIEnv,
     _class: JClass,
@@ -165,7 +165,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeWrite(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetSessionBindingToken(
     env: JNIEnv,
     _class: JClass,
@@ -197,7 +197,7 @@ extern "system" fn Java_com_google_oak_session_OakClientSession_nativeGetSession
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakClientSession_nativeClose(
     _env: JNIEnv,
     _class: JClass,

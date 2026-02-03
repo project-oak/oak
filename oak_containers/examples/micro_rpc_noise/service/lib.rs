@@ -16,11 +16,11 @@
 use micro_rpc_noise_rust_proto::oak::containers::example::TrustedApplication;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
+    ServerSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    ServerSession, Session,
 };
 
 /// A simple single-session implementation of the service.

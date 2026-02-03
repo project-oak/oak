@@ -27,13 +27,13 @@ use core::{
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use spinning_top::Spinlock;
 use x86_64::{
-    structures::paging::{Page, PageSize, Size4KiB},
     VirtAddr,
+    structures::paging::{Page, PageSize, Size4KiB},
 };
 
 use crate::{
-    paging::{share_page, unshare_page},
     Platform,
+    paging::{share_page, unshare_page},
 };
 
 struct Inner<const N: usize> {
@@ -153,7 +153,7 @@ unsafe impl<A: Allocator, P: Platform> Allocator for SharedAllocator<A, P> {
                 ptr.as_ptr().add(offset)
             })))
         }
-        self.inner.deallocate(ptr, layout)
+        unsafe { self.inner.deallocate(ptr, layout) }
     }
 }
 
@@ -180,7 +180,7 @@ impl<T, A: Allocator, P: Platform> Shared<T, A, P> {
     ///
     /// Again, see `Box::from_raw_in` for more details.
     pub unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Shared<T, A, P> {
-        Self { inner: Box::from_raw_in(raw, SharedAllocator::new(alloc)) }
+        Self { inner: unsafe { Box::from_raw_in(raw, SharedAllocator::new(alloc)) } }
     }
 
     /// See `Box::leak` for documentation.

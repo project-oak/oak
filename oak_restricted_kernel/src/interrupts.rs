@@ -18,15 +18,15 @@ use core::{arch::naked_asm, ops::Deref};
 
 use log::error;
 use oak_sev_guest::{
-    interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
+    interrupts::{MutableInterruptStackFrame, mutable_interrupt_handler_with_error_code},
     io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
-    msr::{get_cpuid_for_vc_exception, SevStatus},
+    msr::{SevStatus, get_cpuid_for_vc_exception},
 };
 use spinning_top::Spinlock;
 use x86_64::{
+    VirtAddr,
     registers::{control::Cr2, mxcsr::read},
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
-    VirtAddr,
 };
 
 use crate::{shutdown, snp::CPUID_PAGE};
@@ -315,8 +315,10 @@ pub fn init_idt_early() {
 pub unsafe fn init_idt(double_fault_stack_index: u16) {
     let mut idt = IDT.lock();
     let opts = idt.double_fault.set_handler_fn(double_fault_handler);
-    opts.set_stack_index(double_fault_stack_index);
-    idt.load_unsafe();
+    unsafe {
+        opts.set_stack_index(double_fault_stack_index);
+        idt.load_unsafe();
+    }
 }
 
 struct Pic {
@@ -330,11 +332,11 @@ impl Pic {
     }
 
     pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
-        self.command.try_write(command)
+        unsafe { self.command.try_write(command) }
     }
 
     pub unsafe fn write_data(&mut self, data: u8) -> Result<(), &'static str> {
-        self.data.try_write(data)
+        unsafe { self.data.try_write(data) }
     }
 }
 
@@ -357,24 +359,26 @@ pub unsafe fn init_pic8259(sev_status: SevStatus) -> Result<(), &'static str> {
 
     // The initialization process is documented in https://wiki.osdev.org/8259_PIC
     // Tell the PICs we're going to start intializing them.
-    pic0.write_command(0x11)?; // ICW1_INIT | ICW1_ICW4
-    pic1.write_command(0x11)?;
+    unsafe {
+        pic0.write_command(0x11)?; // ICW1_INIT | ICW1_ICW4
+        pic1.write_command(0x11)?;
 
-    // Byte 1: the interrupt offsets.
-    pic0.write_data(0x20)?; // PIC0 interrupts start at vector 32
-    pic1.write_data(0x28)?; // PIC1 interrupts start at vector 40
+        // Byte 1: the interrupt offsets.
+        pic0.write_data(0x20)?; // PIC0 interrupts start at vector 32
+        pic1.write_data(0x28)?; // PIC1 interrupts start at vector 40
 
-    // Byte 2: chanining between PICs.
-    pic0.write_data(4)?; // PIC0: there's PIC1 at your IRQ 2
-    pic1.write_data(2)?; // PIC1: your cascade identity
+        // Byte 2: chanining between PICs.
+        pic0.write_data(4)?; // PIC0: there's PIC1 at your IRQ 2
+        pic1.write_data(2)?; // PIC1: your cascade identity
 
-    // Byte 3: operation mode.
-    pic0.write_data(0x01)?; // ICW4_8086
-    pic1.write_data(0x01)?;
+        // Byte 3: operation mode.
+        pic0.write_data(0x01)?; // ICW4_8086
+        pic1.write_data(0x01)?;
 
-    // Finally, mask all interrupts as we're not going to use the PICs.
-    pic0.write_data(0xFF)?;
-    pic1.write_data(0xFF)?;
+        // Finally, mask all interrupts as we're not going to use the PICs.
+        pic0.write_data(0xFF)?;
+        pic1.write_data(0xFF)?;
+    }
 
     Ok(())
 }

@@ -39,9 +39,9 @@ use oak_functions_abi::{Request, Response};
 use wasmi::Store;
 
 use crate::{
+    Handler, Observer,
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    Handler, Observer,
 };
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must

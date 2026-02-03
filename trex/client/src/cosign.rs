@@ -19,7 +19,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
 
 /// Verifies a blob and its signature bundle using the `cosign` CLI.

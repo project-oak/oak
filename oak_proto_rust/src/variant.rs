@@ -16,12 +16,12 @@
 use prost::Message;
 
 use crate::oak::{
+    Variant,
     attestation::v1::{
         AmdSevSnpEndorsement, ApplicationEndorsement, ConfidentialSpaceEndorsement,
         ContainerEndorsement, FirmwareEndorsement, KernelEndorsement,
         SessionBindingPublicKeyEndorsement, SystemEndorsement,
     },
-    Variant,
 };
 
 impl Variant {

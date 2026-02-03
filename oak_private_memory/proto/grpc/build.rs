@@ -15,7 +15,7 @@
 
 use std::env;
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
+use oak_grpc_utils::{CodegenOptions, ExternPath, generate_grpc_code};
 
 macro_rules! pathbufs {
     ( $( $x:expr ),* $(,)? ) => {

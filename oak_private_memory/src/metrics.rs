@@ -25,8 +25,8 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 use oak_containers_agent::metrics::OakObserver;
 use opentelemetry::{
-    metrics::{Counter, Gauge, Histogram},
     KeyValue, Value,
+    metrics::{Counter, Gauge, Histogram},
 };
 use prost::Name;
 use sealed_memory_rust_proto::prelude::v1::*;

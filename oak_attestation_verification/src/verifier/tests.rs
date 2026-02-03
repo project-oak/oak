@@ -22,19 +22,19 @@
 
 use digest_util::raw_to_hex_digest;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        binary_reference_value, extracted_evidence::EvidenceValues, kernel_binary_reference_value,
-        reference_values, tcb_version_reference_value, text_reference_value, AmdSevReferenceValues,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, BinaryReferenceValue,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, ExtractedEvidence,
-        KernelBinaryReferenceValue, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, SkipVerification, StringLiterals, SystemLayerEndorsements,
-        SystemLayerReferenceValues, TcbVersionReferenceValue, TextReferenceValue,
-        TransparentReleaseEndorsement,
-    },
     RawDigest,
+    attestation::v1::{
+        AmdSevReferenceValues, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        Endorsements, ExtractedEvidence, KernelBinaryReferenceValue, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringLiterals,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersionReferenceValue,
+        TextReferenceValue, TransparentReleaseEndorsement, binary_reference_value,
+        extracted_evidence::EvidenceValues, kernel_binary_reference_value, reference_values,
+        tcb_version_reference_value, text_reference_value,
+    },
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use test_util::attestation_data::AttestationData;
@@ -46,7 +46,7 @@ use crate::{
         binary_reference_value_for_endorser_pk, fake_endorsement, new_random_signing_keypair,
         serialize_and_sign_endorsement,
     },
-    verifier::{to_attestation_results, verify, Status},
+    verifier::{Status, to_attestation_results, verify},
 };
 
 // Pretend the tests run at this time: 2025-10-01, 08:00 UTC. This date
@@ -192,9 +192,15 @@ fn create_oc_endorsements_reference_values(
                 root_layer: Some(RootLayerReferenceValues {
                     amd_sev: Some(AmdSevReferenceValues {
                         min_tcb_version: Some(tcb_version),
-                        milan: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
-                        genoa: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
-                        turin: Some(TcbVersionReferenceValue { r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)) }),
+                        milan: Some(TcbVersionReferenceValue {
+                            r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)),
+                        }),
+                        genoa: Some(TcbVersionReferenceValue {
+                            r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)),
+                        }),
+                        turin: Some(TcbVersionReferenceValue {
+                            r#type: Some(tcb_version_reference_value::Type::Minimum(tcb_version)),
+                        }),
                         allow_debug: false,
                         check_vcek_cert_expiry: true,
                         stage0: Some(skip.clone()),
@@ -203,7 +209,9 @@ fn create_oc_endorsements_reference_values(
                 }),
                 kernel_layer: Some(KernelLayerReferenceValues {
                     kernel: Some(KernelBinaryReferenceValue {
-                        r#type: Some(kernel_binary_reference_value::Type::Skip(SkipVerification {})),
+                        r#type: Some(kernel_binary_reference_value::Type::Skip(
+                            SkipVerification {},
+                        )),
                     }),
                     kernel_cmd_line_text: Some(TextReferenceValue {
                         r#type: Some(text_reference_value::Type::StringLiterals(StringLiterals {

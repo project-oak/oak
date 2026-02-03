@@ -18,7 +18,7 @@
 use std::{io::Write, time::Duration};
 
 use oak_file_utils::data_path;
-use oak_functions_launcher::{update_lookup_data, LookupDataConfig};
+use oak_functions_launcher::{LookupDataConfig, update_lookup_data};
 use oak_launcher_utils::launcher;
 use oak_micro_rpc::oak::functions::OakFunctionsAsyncClient;
 use ubyte::ByteUnit;
@@ -92,7 +92,9 @@ async fn test_load_large_lookup_data() {
         data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel: data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),
@@ -166,7 +168,9 @@ async fn test_load_two_gib_lookup_data() {
         data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app");
 
     let params = launcher::Params {
-        kernel: data_path("oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin"),
+        kernel: data_path(
+            "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        ),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path),
         bios_binary: data_path("stage0_bin/stage0_bin"),

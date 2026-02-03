@@ -27,12 +27,12 @@ use sha2::{Digest, Sha256};
 use strum::FromRepr;
 
 use crate::{
+    Madt, ZeroPage,
     acpi_tables::{
         DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     fw_cfg::FwCfg,
     pci::PciWindows,
-    Madt, ZeroPage,
 };
 
 mod commands;
@@ -46,7 +46,7 @@ type LowMemoryAllocator = linked_list_allocator::LockedHeap;
 static LOW_MEMORY_ALLOCATOR: LowMemoryAllocator = LowMemoryAllocator::empty();
 
 /// EDBA is 128 KiB (0x2_0000).
-#[link_section = ".ebda"]
+#[unsafe(link_section = ".ebda")]
 static mut EBDA: [MaybeUninit<u8>; 0x2_0000] = [MaybeUninit::uninit(); 0x2_0000];
 
 /// How much memory to reserve for ACPI tables in "high" memory.

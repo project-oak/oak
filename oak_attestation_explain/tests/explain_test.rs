@@ -18,7 +18,7 @@
 use oak_attestation_explain::{HumanReadableExplanation, HumanReadableTitle};
 use oak_attestation_verification::extract_evidence;
 use oak_proto_rust::oak::attestation::v1::{
-    extracted_evidence::EvidenceValues, OakRestrictedKernelData,
+    OakRestrictedKernelData, extracted_evidence::EvidenceValues,
 };
 use test_util::{
     attestation_data::AttestationData, create_reference_values_for_extracted_evidence,

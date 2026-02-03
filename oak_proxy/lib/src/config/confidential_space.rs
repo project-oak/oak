@@ -18,9 +18,8 @@ use std::sync::Arc;
 
 use oak_attestation::public_key::{PublicKeyAttester, PublicKeyEndorser};
 use oak_attestation_gcp::{
-    attestation::request_attestation_token,
+    OAK_SESSION_NOISE_V1_AUDIENCE, attestation::request_attestation_token,
     policy_generator::confidential_space_policy_from_reference_values,
-    OAK_SESSION_NOISE_V1_AUDIENCE,
 };
 use oak_attestation_verification::EventLogVerifier;
 use oak_proto_rust::{
@@ -31,7 +30,7 @@ use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,
     session_binding::SignatureBinder,
 };
-use p256::ecdsa::{signature::rand_core::OsRng, SigningKey, VerifyingKey};
+use p256::ecdsa::{SigningKey, VerifyingKey, signature::rand_core::OsRng};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 

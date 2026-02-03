@@ -25,7 +25,7 @@ use oak_proto_rust::oak::{
     session::v1::{SessionBinding, SessionBindingKeyWrapperAssertion},
 };
 use oak_time::Clock;
-use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
+use p256::ecdsa::{Signature, VerifyingKey, signature::Verifier};
 use prost::{DecodeError, Message};
 use thiserror::Error;
 

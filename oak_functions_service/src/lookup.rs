@@ -22,7 +22,7 @@ use alloc::{
 };
 use core::array;
 
-use log::{info, Level};
+use log::{Level, info};
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 

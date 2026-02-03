@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::sync::atomic::{fence, AtomicBool, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering, fence};
 
 use x86_64::structures::paging::{PageSize, Size4KiB};
 

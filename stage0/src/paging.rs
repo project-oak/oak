@@ -25,15 +25,15 @@ use core::{
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
+    PhysAddr,
     instructions::tlb::flush_all,
     structures::paging::{
-        page_table::{PageTableEntry as BasePageTableEntry, PageTableFlags},
         Page, PageSize, PageTable as BasePageTable, PageTableIndex, Size2MiB, Size4KiB,
+        page_table::{PageTableEntry as BasePageTableEntry, PageTableFlags},
     },
-    PhysAddr,
 };
 
-use crate::{hal::PageAssignment, BootAllocator, Platform, BOOT_ALLOC};
+use crate::{BOOT_ALLOC, BootAllocator, Platform, hal::PageAssignment};
 
 /// The root page-map level 4 table coverting virtual memory ranges 0..128TiB
 /// and (16EiB-128TiB)..16EiB.

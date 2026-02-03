@@ -18,26 +18,26 @@ use std::sync::Arc;
 use encryption::{decrypt, encrypt, generate_nonce};
 use external_db_client::{BlobId, DataBlobHandler};
 use log::{debug, info, warn};
-use metrics::{get_global_metrics, RequestMetricName};
+use metrics::{RequestMetricName, get_global_metrics};
 use oak_private_memory_database::{
+    IcingTempDir, MemoryId,
     database_with_cache::DatabaseWithCache,
     encryption::decrypt_database,
     icing::{IcingMetaDatabase, PageToken},
-    IcingTempDir, MemoryId,
 };
 use prost::Message;
 use rand::Rng;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::prelude::v1::*;
 use tokio::{
-    sync::{mpsc, Mutex, MutexGuard},
+    sync::{Mutex, MutexGuard, mpsc},
     time::Instant,
 };
 use tonic::transport::Channel;
 
 use crate::{
-    context::UserSessionContext, db_client::SharedDbClient, packing::ResponsePacking,
-    IntoTonicResult, MessageType,
+    IntoTonicResult, MessageType, context::UserSessionContext, db_client::SharedDbClient,
+    packing::ResponsePacking,
 };
 // The implementation for one active Oak Private Memory session.
 // A new instances of this struct is created per-request.

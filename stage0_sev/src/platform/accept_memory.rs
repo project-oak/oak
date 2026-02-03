@@ -21,25 +21,25 @@ use core::{
 
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{
-    instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
-    msr::{change_snp_page_state, PageAssignment, SevStatus, SnpPageStateChangeRequest},
+    instructions::{InstructionError, PageSize as SevPageSize, Validation, pvalidate},
+    msr::{PageAssignment, SevStatus, SnpPageStateChangeRequest, change_snp_page_state},
 };
 use oak_stage0::paging::{
-    page_table_level::{Leaf, PD, PT},
     PageEncryption, PageTable,
+    page_table_level::{Leaf, PD, PT},
 };
 use x86_64::{
+    PhysAddr, VirtAddr,
     instructions::tlb,
     structures::paging::{
+        Page, PageSize, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
         frame::PhysFrameRange,
         page::{AddressNotAligned, NotGiantPageSize},
-        Page, PageSize, PageTableFlags, PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
-    PhysAddr, VirtAddr,
 };
 use zeroize::Zeroize;
 
-use crate::platform::{sev_status, Sev, GHCB_WRAPPER};
+use crate::platform::{GHCB_WRAPPER, Sev, sev_status};
 
 //
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However,

@@ -17,12 +17,12 @@
 use alloc::{vec, vec::Vec};
 
 use oak_proto_rust::oak::{
+    Validity,
     crypto::v1::{
         Certificate, CertificatePayload, ProofOfFreshness,
         SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
         SubjectPublicKeyInfo,
     },
-    Validity,
 };
 use oak_time::{Duration, Instant};
 use prost::Message;

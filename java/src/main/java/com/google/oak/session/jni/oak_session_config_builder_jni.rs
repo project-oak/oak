@@ -20,7 +20,7 @@ macro_rules! exception {
     };
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "system" fn Java_com_google_oak_session_OakSessionConfigBuilder_nativeCreateConfigBuilder(
     env: JNIEnv,
     _class: JClass,

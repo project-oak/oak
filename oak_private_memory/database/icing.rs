@@ -14,7 +14,7 @@
 // limitations under the License.
 use std::{collections::HashMap, time::SystemTime};
 
-use anyhow::{bail, ensure, Context};
+use anyhow::{Context, bail, ensure};
 use external_db_client::BlobId;
 use icing::{DocumentProto, IcingGroundTruthFilesHelper};
 use log::{debug, error, info};
@@ -22,8 +22,8 @@ use prost::Message;
 use rand::Rng;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, text_query, EmbeddingQuery, LlmView, MatchType, QueryClauses,
-        QueryOperator, SearchMemoryQuery, TextQuery,
+        EmbeddingQuery, LlmView, MatchType, QueryClauses, QueryOperator, SearchMemoryQuery,
+        TextQuery, search_memory_query, text_query,
     },
     prelude::v1::*,
 };
@@ -845,11 +845,7 @@ impl IcingMetaDatabase {
             projection,
         )?;
         let ids = Self::extract_memory_ids_from_search_result(search_result.clone());
-        if ids.is_empty() {
-            Ok((ids, PageToken::Start))
-        } else {
-            Ok((ids, next_page_token))
-        }
+        if ids.is_empty() { Ok((ids, PageToken::Start)) } else { Ok((ids, next_page_token)) }
     }
 
     pub fn reset(&mut self) -> anyhow::Result<()> {

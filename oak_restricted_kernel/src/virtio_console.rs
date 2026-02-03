@@ -21,24 +21,24 @@ use core::{
 };
 
 use aml::{
-    resource::{MemoryRangeDescriptor, Resource},
     AmlContext,
+    resource::{MemoryRangeDescriptor, Resource},
 };
 use anyhow::anyhow;
 use embedded_io::Read;
 use log::info;
 use spinning_top::Spinlock;
 use virtio_drivers::{
-    device::console::VirtIOConsole,
-    transport::{mmio::MmioTransport, DeviceType, Transport},
     BufferDirection, Hal, PAGE_SIZE,
+    device::console::VirtIOConsole,
+    transport::{DeviceType, Transport, mmio::MmioTransport},
 };
 use x86_64::{PhysAddr, VirtAddr};
 
 use crate::{
+    GUEST_HOST_HEAP, PAGE_TABLES,
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
-    GUEST_HOST_HEAP, PAGE_TABLES,
 };
 
 struct OakHal;
@@ -69,12 +69,14 @@ unsafe impl Hal for OakHal {
         vaddr: NonNull<u8>,
         pages: usize,
     ) -> i32 {
-        let vaddr_check = Self::mmio_phys_to_virt(paddr, 0);
+        let vaddr_check = unsafe { Self::mmio_phys_to_virt(paddr, 0) };
         assert_eq!(vaddr_check, vaddr, "dma buffer physical and virtual addresses don't match",);
-        GUEST_HOST_HEAP
-            .get()
-            .unwrap()
-            .deallocate(vaddr, Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap());
+        unsafe {
+            GUEST_HOST_HEAP
+                .get()
+                .unwrap()
+                .deallocate(vaddr, Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap());
+        }
 
         0
     }

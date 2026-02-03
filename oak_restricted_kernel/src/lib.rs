@@ -76,12 +76,12 @@ use mm::{
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
-use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+use oak_sev_guest::msr::{PageAssignment, SevStatus, change_snp_state_for_frame, get_sev_status};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
+    structures::paging::{Page, PageTable, Size2MiB},
 };
 use zerocopy::FromBytes;
 use zeroize::Zeroize;

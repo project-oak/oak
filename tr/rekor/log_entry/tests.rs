@@ -23,7 +23,7 @@ use test_util::EndorsementData;
 
 use super::*;
 use crate::log_entry::{
-    parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature, LogEntry,
+    LogEntry, parse_rekor_log_entry, verify_rekor_log_entry_ecdsa, verify_rekor_signature,
 };
 
 /// Shorthand to create a reference value proto from ingredients.

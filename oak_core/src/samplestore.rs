@@ -43,11 +43,7 @@ pub trait SampleStore {
 
 impl<const N: usize> StaticSampleStore<N> {
     pub fn new() -> Option<Self> {
-        if N == 0 {
-            None
-        } else {
-            Some(Self { data: [0; N], samples: 0 })
-        }
+        if N == 0 { None } else { Some(Self { data: [0; N], samples: 0 }) }
     }
 }
 

@@ -19,6 +19,7 @@
 
 load("@rules_rust//rust:defs.bzl", "rust_stdlib_filegroup")
 load("@rules_rust//rust:toolchain.bzl", "rust_toolchain")
+load("//bazel/rust:defs.bzl", "RUST_EDITION")
 load(":defs.bzl", "toolchain_sysroot", "with_stdlib_build")
 
 package(
@@ -51,7 +52,7 @@ toolchain_sysroot(
 rust_toolchain(
     name = "toolchain_rebuilt_x86_64-unknown-none_impl",
     binary_ext = "",
-    default_edition = "2021",
+    default_edition = RUST_EDITION,
     dylib_ext = ".so",
     exec_triple = "x86_64-unknown-linux-gnu",
     extra_rustc_flags = [

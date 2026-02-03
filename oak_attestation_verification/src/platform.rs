@@ -21,19 +21,19 @@ use alloc::format;
 use anyhow::Context;
 use digest_util::hash_sha2_256;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        tcb_version_expected_value, tdx_tcb_svn_expected_value, AmdAttestationReport,
-        AmdSevExpectedValues, InsecureExpectedValues, IntelTdxAttestationReport,
-        IntelTdxExpectedValues, RootLayerEvidence, TcbVersion, TdxTcbSvn, TeePlatform,
-    },
     RawDigest,
+    attestation::v1::{
+        AmdAttestationReport, AmdSevExpectedValues, InsecureExpectedValues,
+        IntelTdxAttestationReport, IntelTdxExpectedValues, RootLayerEvidence, TcbVersion,
+        TdxTcbSvn, TeePlatform, tcb_version_expected_value, tdx_tcb_svn_expected_value,
+    },
 };
 use oak_sev_snp_attestation_report::{AmdProduct, AttestationReport};
 use oak_tdx_quote::{ParsedTdxQuote, TdAttributes};
 use oak_time::Instant;
 use x509_cert::{
-    der::{Decode, DecodePem},
     Certificate,
+    der::{Decode, DecodePem},
 };
 use zerocopy::FromBytes;
 

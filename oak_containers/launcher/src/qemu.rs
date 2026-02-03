@@ -28,7 +28,7 @@ use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
 use tokio_vsock::VMADDR_CID_HOST;
 
-use crate::{path_exists, VM_HOST_ADDRESS, VM_HOST_PORT};
+use crate::{VM_HOST_ADDRESS, VM_HOST_PORT, path_exists};
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -242,8 +242,12 @@ impl Qemu {
                 let mut netdev_rules = vec![
                     "user".to_string(),
                     "id=netdev".to_string(),
-                    format!("guestfwd=tcp:{VM_HOST_ADDRESS}:{VM_HOST_PORT}-cmd:nc {host_address} {launcher_service_port}"),
-                    format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
+                    format!(
+                        "guestfwd=tcp:{VM_HOST_ADDRESS}:{VM_HOST_PORT}-cmd:nc {host_address} {launcher_service_port}"
+                    ),
+                    format!(
+                        "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
+                    ),
                 ];
 
                 if let Some(host_proxy_port) = host_proxy_port {

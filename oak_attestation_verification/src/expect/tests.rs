@@ -21,11 +21,11 @@ use digest_util::{
 };
 use intoto::statement::Validity;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        expected_digests, ExpectedDigests, FirmwareAttachment, KernelAttachment, RawDigests,
-        TransparentReleaseEndorsement,
-    },
     HexDigest,
+    attestation::v1::{
+        ExpectedDigests, FirmwareAttachment, KernelAttachment, RawDigests,
+        TransparentReleaseEndorsement, expected_digests,
+    },
 };
 use prost::Message;
 use verify_endorsement::{FIRMWARE_CLAIM_TYPE, KERNEL_CLAIM_TYPE};

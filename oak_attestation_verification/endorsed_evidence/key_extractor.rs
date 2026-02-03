@@ -19,7 +19,7 @@
 
 use alloc::boxed::Box;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use oak_attestation_verification_results::{
     unique_session_binding_public_key, unique_signing_public_key,
 };

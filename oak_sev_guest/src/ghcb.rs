@@ -20,19 +20,19 @@
 
 use bitflags::bitflags;
 use x86_64::{
-    structures::paging::{page::NotGiantPageSize, PageSize, PhysFrame, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
+    structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB, page::NotGiantPageSize},
 };
 use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
 use crate::{
+    Translator,
     cpuid::{CpuidInput, CpuidOutput},
     instructions::PageSize as SevPageSize,
     msr::{
-        register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, PageAssignment,
-        RegisterGhcbGpaError, RegisterGhcbGpaRequest,
+        GhcbGpa, PageAssignment, RegisterGhcbGpaError, RegisterGhcbGpaRequest,
+        register_ghcb_location, set_ghcb_address_and_exit,
     },
-    Translator,
 };
 
 /// The size of the GHCB page.

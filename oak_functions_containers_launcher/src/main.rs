@@ -20,10 +20,10 @@ use clap::Parser;
 use oak_containers_launcher::ChannelType;
 use oak_functions_launcher::LookupDataConfig;
 use oak_proto_rust::oak::functions::{
-    config::{
-        application_config::CommunicationChannel, ApplicationConfig, VsockCommunicationChannel,
-    },
     InitializeRequest,
+    config::{
+        ApplicationConfig, VsockCommunicationChannel, application_config::CommunicationChannel,
+    },
 };
 use prost::Message;
 use ubyte::ByteUnit;

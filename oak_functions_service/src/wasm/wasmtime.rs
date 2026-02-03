@@ -37,10 +37,10 @@ use oak_proto_rust::oak::functions::config::WasmtimeConfig;
 use wasmtime::{PoolingAllocationConfig, Store};
 
 use crate::{
+    Handler, Observer,
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    wasm::{api::StdWasmApiFactory, WasmApiFactory},
-    Handler, Observer,
+    wasm::{WasmApiFactory, api::StdWasmApiFactory},
 };
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must

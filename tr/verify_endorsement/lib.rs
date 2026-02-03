@@ -24,15 +24,15 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 
 use anyhow::Context;
-use intoto::statement::{parse_statement, DefaultStatement};
+use intoto::statement::{DefaultStatement, parse_statement};
 use key_util::{convert_pem_to_raw, verify_signature};
 use oak_proto_rust::oak::attestation::v1::{
-    endorsement::Format, verifying_key_reference_value, ClaimReferenceValue, Endorsement,
-    EndorsementReferenceValue, KeyType, Signature, SignedEndorsement, SkipVerification,
-    VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    ClaimReferenceValue, Endorsement, EndorsementReferenceValue, KeyType, Signature,
+    SignedEndorsement, SkipVerification, VerifyingKey, VerifyingKeyReferenceValue, VerifyingKeySet,
+    endorsement::Format, verifying_key_reference_value,
 };
 use oak_time::Instant;
-use rekor::log_entry::{verify_rekor_log_entry, LogEntry};
+use rekor::log_entry::{LogEntry, verify_rekor_log_entry};
 
 /// No attempt will be made to decode the attachment of a firmware-type
 /// binary unless this claim is present in the endorsement.

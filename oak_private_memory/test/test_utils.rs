@@ -21,7 +21,7 @@ use std::{
 use anyhow::Result;
 use private_memory_server_lib::{
     app,
-    app::{run_persistence_service, ApplicationConfig},
+    app::{ApplicationConfig, run_persistence_service},
 };
 use tokio::net::TcpListener;
 

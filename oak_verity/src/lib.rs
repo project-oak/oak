@@ -31,9 +31,9 @@ use oak_functions_service::{
     wasm::{WasmConfig, WasmHandler},
 };
 use oak_proto_rust::oak::{
+    RawDigest,
     functions::InitializeRequest,
     verity::{ExecuteRequest, ExecuteResponse, ExecutionManifest},
-    RawDigest,
 };
 use prost::Message;
 use sha2::{Digest, Sha256};

@@ -22,7 +22,7 @@ use core::{default::Default, marker::PhantomData};
 
 use oak_channel::{Read, Write};
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
-use oak_session::{config::SessionConfig, ClientSession, ProtocolEngine, ServerSession, Session};
+use oak_session::{ClientSession, ProtocolEngine, ServerSession, Session, config::SessionConfig};
 use prost::Message;
 
 // A trait for reading/writing length-prefixed messages.

@@ -25,7 +25,7 @@ extern crate alloc;
 
 use alloc::vec;
 
-use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
+use coset::{CborSerializable, cbor::Value, cwt::ClaimName};
 use hkdf::Hkdf;
 use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_dice::cert::SHA2_256_ID;

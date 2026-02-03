@@ -25,8 +25,8 @@ use core::arch::{asm, x86_64::CpuidResult};
 
 use bitflags::bitflags;
 use x86_64::{
-    structures::paging::{frame::PhysFrameRange, page::Size4KiB},
     PhysAddr,
+    structures::paging::{frame::PhysFrameRange, page::Size4KiB},
 };
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;

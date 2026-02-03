@@ -20,8 +20,8 @@
 use alloc::vec::Vec;
 
 use aes_gcm::{
-    aead::{Aead, Payload},
     Aes256Gcm, Key, KeyInit,
+    aead::{Aead, Payload},
 };
 use anyhow::anyhow;
 

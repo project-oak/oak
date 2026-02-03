@@ -231,17 +231,9 @@ pub fn get_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
 
     #[allow(clippy::collapsible_else_if)]
     if same > 0 {
-        if different > 0 {
-            MatchResult::Contradictory
-        } else {
-            MatchResult::Same
-        }
+        if different > 0 { MatchResult::Contradictory } else { MatchResult::Same }
     } else {
-        if different > 0 {
-            MatchResult::Different
-        } else {
-            MatchResult::Undecidable
-        }
+        if different > 0 { MatchResult::Different } else { MatchResult::Undecidable }
     }
 }
 

@@ -36,7 +36,7 @@ pub use core::result::{
 };
 
 use prost::Message;
-pub use proto::{response_wrapper, RequestWrapper, ResponseWrapper};
+pub use proto::{RequestWrapper, ResponseWrapper, response_wrapper};
 pub use status::{Status, StatusCode};
 
 /// A message-oriented transport that allows performing invocations.

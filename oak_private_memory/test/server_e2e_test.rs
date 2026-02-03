@@ -22,7 +22,7 @@ use client::{PrivateMemoryClient, SerializationFormat};
 use private_memory_test_utils::start_server;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        memory_value, text_query, Embedding, LlmView, LlmViews, MatchType, TextQuery,
+        Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value, text_query,
     },
     prelude::v1::*,
 };

@@ -19,13 +19,13 @@ use alloc::{string::String, vec};
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
+    Variant,
     attestation::v1::{
-        binary_reference_value, kernel_binary_reference_value, text_reference_value,
         BinaryReferenceValue, Digests, EventAttestationResults, KernelBinaryReferenceValue,
         KernelDigests, KernelEndorsement, KernelLayerReferenceValues, Stage0Measurements,
-        TextReferenceValue,
+        TextReferenceValue, binary_reference_value, kernel_binary_reference_value,
+        text_reference_value,
     },
-    Variant,
 };
 use oak_time::Instant;
 
@@ -63,9 +63,9 @@ impl KernelPolicy {
                         digests: vec![event.kernel_image.context("no kernel_image in evidence")?],
                     }),
                     setup_data: Some(Digests {
-                        digests: vec![event
-                            .kernel_setup_data
-                            .context("no kernel_setup_data in evidence")?],
+                        digests: vec![
+                            event.kernel_setup_data.context("no kernel_setup_data in evidence")?,
+                        ],
                     }),
                 })),
             }),
@@ -74,9 +74,7 @@ impl KernelPolicy {
             )),
             init_ram_fs: Some(BinaryReferenceValue {
                 r#type: Some(binary_reference_value::Type::Digests(Digests {
-                    digests: vec![event
-                        .init_ram_fs
-                        .context("no missing init_ram_fs in evidence")?],
+                    digests: vec![event.init_ram_fs.context("no missing init_ram_fs in evidence")?],
                 })),
             }),
             memory_map: Some(BinaryReferenceValue {
@@ -152,7 +150,7 @@ impl Policy<[u8]> for KernelPolicy {
 
 #[cfg(test)]
 mod tests {
-    use test_util::{get_oc_reference_values, get_rk_reference_values, AttestationData};
+    use test_util::{AttestationData, get_oc_reference_values, get_rk_reference_values};
 
     use super::*;
 

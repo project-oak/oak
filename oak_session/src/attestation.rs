@@ -93,21 +93,21 @@ use alloc::{
     vec::Vec,
 };
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use itertools::{EitherOrBoth, Itertools};
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, Assertion, AttestationResults},
+    attestation::v1::{Assertion, AttestationResults, attestation_results},
     session::v1::{AttestRequest, AttestResponse, EndorsedEvidence},
 };
 use prost::Message;
 
 use crate::{
+    ProtocolEngine,
     aggregators::AggregatedVerificationError,
     config::{AttestationHandlerConfig, PeerAttestationVerifier},
     generator::BindableAssertion,
     session_binding::SessionBindingVerifier,
     verifier::{BoundAssertionVerifier, BoundAssertionVerifierResult},
-    ProtocolEngine,
 };
 
 /// Represents the outcome of the attestation process.

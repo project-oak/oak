@@ -19,7 +19,7 @@
 use clap::Parser;
 use http::Uri;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
-use opentelemetry::{metrics::AsyncInstrument, KeyValue};
+use opentelemetry::{KeyValue, metrics::AsyncInstrument};
 use procfs::{Current, CurrentSI};
 use tokio::time::{self, Duration};
 

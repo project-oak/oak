@@ -14,22 +14,21 @@
 // limitations under the License.
 //
 
-use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
+use goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD, ProgramHeader};
 use x86_64::{
-    align_down, align_up,
+    PhysAddr, VirtAddr, align_down, align_up,
     registers::control::{Cr3, Cr3Flags},
     structures::paging::{
+        MappedPageTable, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
         frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         page::PageRange,
-        MappedPageTable, Page, PageSize, PageTable, PhysFrame, Size2MiB, Size4KiB,
     },
-    PhysAddr, VirtAddr,
 };
 
 use super::{
+    KERNEL_OFFSET, Mapper, PageTableFlags, Translator,
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
-    Mapper, PageTableFlags, Translator, KERNEL_OFFSET,
 };
 
 /// Map a region of physical memory to a virtual address using 2 MiB pages.
@@ -51,14 +50,16 @@ pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
         // page table entries, AMD ignores it in lower entries _except_ PML4 and
         // PML5); the `G` bit has semantic meaning only in the lowest level of
         // page tables.
-        mapper
-            .map_to_with_table_flags(
-                Page::<S>::from_start_address(offset + (i as u64) * S::SIZE).unwrap(),
-                frame,
-                flags,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
-            )?
-            .ignore();
+        unsafe {
+            mapper
+                .map_to_with_table_flags(
+                    Page::<S>::from_start_address(offset + (i as u64) * S::SIZE).unwrap(),
+                    frame,
+                    flags,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
+                )?
+                .ignore();
+        }
     }
     Ok(())
 }
@@ -130,7 +131,9 @@ pub unsafe fn create_kernel_map<M: Mapper<Size2MiB> + Mapper<Size4KiB>>(
                     },
             )
         })
-        .try_for_each(|(range, offset, flags)| create_offset_map(range, offset, flags, mapper))
+        .try_for_each(|(range, offset, flags)| unsafe {
+            create_offset_map(range, offset, flags, mapper)
+        })
 }
 
 pub struct RootPageTable {
@@ -218,14 +221,14 @@ impl Mapper<Size4KiB> for RootPageTable {
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -> Result<MapperFlush<Size4KiB>, MapToError<Size4KiB>> {
-        self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        unsafe { self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags) }
     }
 
     unsafe fn unmap(
         &self,
         page: Page<Size4KiB>,
     ) -> Result<(PhysFrame<Size4KiB>, MapperFlush<Size4KiB>), UnmapError> {
-        self.inner.unmap(page)
+        unsafe { self.inner.unmap(page) }
     }
 
     unsafe fn update_flags(
@@ -233,7 +236,7 @@ impl Mapper<Size4KiB> for RootPageTable {
         page: Page<Size4KiB>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<Size4KiB>, FlagUpdateError> {
-        self.inner.update_flags(page, flags)
+        unsafe { self.inner.update_flags(page, flags) }
     }
 }
 
@@ -245,14 +248,14 @@ impl Mapper<Size2MiB> for RootPageTable {
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
     ) -> Result<MapperFlush<Size2MiB>, MapToError<Size2MiB>> {
-        self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags)
+        unsafe { self.inner.map_to_with_table_flags(page, frame, flags, parent_table_flags) }
     }
 
     unsafe fn unmap(
         &self,
         page: Page<Size2MiB>,
     ) -> Result<(PhysFrame<Size2MiB>, MapperFlush<Size2MiB>), UnmapError> {
-        self.inner.unmap(page)
+        unsafe { self.inner.unmap(page) }
     }
 
     unsafe fn update_flags(
@@ -260,7 +263,7 @@ impl Mapper<Size2MiB> for RootPageTable {
         page: Page<Size2MiB>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<Size2MiB>, FlagUpdateError> {
-        self.inner.update_flags(page, flags)
+        unsafe { self.inner.update_flags(page, flags) }
     }
 }
 

@@ -21,7 +21,7 @@ use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_state_for_frame, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
+        PageAssignment, RegisterGhcbGpaRequest, change_snp_state_for_frame, register_ghcb_location,
     },
 };
 use spinning_top::Spinlock;
@@ -29,14 +29,14 @@ use x86_64::{
     addr::VirtAddr,
     registers::control::Cr3,
     structures::paging::{
-        mapper::PageTableFrameMapping, MappedPageTable, Page, PageSize, PhysFrame, Size2MiB,
-        Size4KiB,
+        MappedPageTable, Page, PageSize, PhysFrame, Size2MiB, Size4KiB,
+        mapper::PageTableFrameMapping,
     },
 };
 
 use crate::mm::{
+    ENCRYPTED_BIT_POSITION, Mapper, PageTableFlags, Translator,
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
-    Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
 };
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.
@@ -150,8 +150,8 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
 /// This must only be used during early boot when the identity-mapped page
 /// tables created by the stage 0 firmware is still active, and only if SEV,
 /// SEV-ES or SEV-SNP is active.
-fn get_identity_mapped_encrypted_page_table<'a>(
-) -> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
+fn get_identity_mapped_encrypted_page_table<'a>()
+-> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
     // We assume an identity mapping, so the offset is zero.
     let offset = VirtAddr::new(0);
     // We assume that this will only be used if memory encryption is enabled.

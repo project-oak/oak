@@ -18,19 +18,20 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
-    assertions::GcpAssertionVerifier, CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
-    OAK_SESSION_NOISE_V1_AUDIENCE,
+    CONFIDENTIAL_SPACE_ROOT_CERT_PEM, OAK_SESSION_NOISE_V1_AUDIENCE,
+    assertions::GcpAssertionVerifier,
 };
 use oak_gcp_echo_proto::oak::standalone::example::enclave_application_client::EnclaveApplicationClient;
 use oak_proto_rust::oak::{
     attestation::v1::{
-        confidential_space_reference_values::ContainerImage, ConfidentialSpaceReferenceValues,
-        CosignReferenceValues,
+        ConfidentialSpaceReferenceValues, CosignReferenceValues,
+        confidential_space_reference_values::ContainerImage,
     },
     session::v1::{SessionRequest, SessionResponse},
 };
 use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
 use oak_session::{
+    ClientSession, Session,
     aggregators::PassThrough,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
@@ -38,7 +39,6 @@ use oak_session::{
     handshake::HandshakeType,
     session::{AttestationEvidence, AttestationPublisher},
     verifier::SessionKeyBoundAssertionVerifier,
-    ClientSession, Session,
 };
 use oak_time::Clock;
 use p256::{ecdsa::VerifyingKey, pkcs8::DecodePublicKey};

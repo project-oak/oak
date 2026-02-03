@@ -17,7 +17,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
-use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
+use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
 use private_memory_server_lib::log::debug;
 use tokio::net::TcpListener;
 

@@ -22,21 +22,21 @@ use std::{
 
 use futures::channel::mpsc;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
-use oak_functions_standalone::{serve, AttestationArgs, OakFunctionsSessionArgs};
+use oak_functions_standalone::{AttestationArgs, OakFunctionsSessionArgs, serve};
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
 use oak_proto_rust::oak::functions::{
-    standalone::{OakSessionRequest, OakSessionResponse},
     InitializeRequest, LookupDataChunk, LookupDataEntry,
+    standalone::{OakSessionRequest, OakSessionResponse},
 };
 use oak_session::{
+    Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
-    Session,
 };
 use tokio::net::TcpListener;
-use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 #[tokio::test]

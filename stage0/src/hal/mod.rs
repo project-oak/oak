@@ -29,11 +29,11 @@ use oak_linux_boot_params::BootE820Entry;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWriter};
 use oak_stage0_dice::DerivedKey;
 use x86_64::{
+    PhysAddr,
     structures::{
         paging::{Page, PageSize, Size4KiB},
         port::{PortRead, PortWrite},
     },
-    PhysAddr,
 };
 use zerocopy::{FromBytes, IntoBytes};
 
@@ -237,7 +237,7 @@ impl Msr {
     ///
     /// The caller must guarantee that the MSR is valid.
     pub unsafe fn read<P: Platform>(&self) -> u64 {
-        P::read_msr(self.msr_id)
+        unsafe { P::read_msr(self.msr_id) }
     }
 
     /// Write the MSR.
@@ -246,7 +246,7 @@ impl Msr {
     ///
     /// The caller must guarantee that the MSR is valid.
     pub unsafe fn write<P: Platform>(&mut self, val: u64) {
-        P::write_msr(self.msr_id, val);
+        unsafe { P::write_msr(self.msr_id, val) };
     }
 }
 
@@ -312,12 +312,12 @@ impl<T: PortRead + PortWrite> Port<T> {
 
 impl<T: PortRead + PortWrite> PortReader<T> for Port<T> {
     unsafe fn try_read(&mut self) -> Result<T, &'static str> {
-        (self.read)(self.port)
+        unsafe { (self.read)(self.port) }
     }
 }
 
 impl<T: PortRead + PortWrite> PortWriter<T> for Port<T> {
     unsafe fn try_write(&mut self, value: T) -> Result<(), &'static str> {
-        (self.write)(self.port, value)
+        unsafe { (self.write)(self.port, value) }
     }
 }

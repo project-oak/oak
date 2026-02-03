@@ -21,12 +21,12 @@ extern crate alloc;
 use alloc::{borrow::ToOwned, format, string::ToString, vec};
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine};
+use base64::{Engine, prelude::BASE64_STANDARD};
 use endorscope::package::Package;
-use oci_client::{secrets::RegistryAuth, Client, Reference};
+use oci_client::{Client, Reference, secrets::RegistryAuth};
 use rekor::{
     get_rekor_v1_public_key_pem,
-    log_entry::{serialize_rekor_log_entry, LogEntry},
+    log_entry::{LogEntry, serialize_rekor_log_entry},
 };
 
 const SIMPLE_SIGNING_MIME_TYPE: &str = "application/vnd.dev.cosign.simplesigning.v1+json";

@@ -54,21 +54,25 @@ macro_rules! syscall {
 #[allow(dead_code)]
 pub unsafe fn syscall0(syscall: Syscall) -> isize {
     let mut ret: isize;
-    asm!("syscall",
-         out("rcx") _,
-         out("r11") _,
-         inout("rax") syscall as u64 => ret);
+    unsafe {
+        asm!("syscall",
+             out("rcx") _,
+             out("r11") _,
+             inout("rax") syscall as u64 => ret);
+    }
     ret
 }
 
 #[inline]
 pub unsafe fn syscall1(syscall: Syscall, arg1: usize) -> isize {
     let mut ret: isize;
-    asm!("syscall",
-         in("rdi") arg1,
-         out("rcx") _,
-         out("r11") _,
-         inout("rax") syscall as u64 => ret);
+    unsafe {
+        asm!("syscall",
+             in("rdi") arg1,
+             out("rcx") _,
+             out("r11") _,
+             inout("rax") syscall as u64 => ret);
+    }
     ret
 }
 
@@ -76,25 +80,29 @@ pub unsafe fn syscall1(syscall: Syscall, arg1: usize) -> isize {
 #[allow(dead_code)]
 pub unsafe fn syscall2(syscall: Syscall, arg1: usize, arg2: usize) -> isize {
     let mut ret: isize;
-    asm!("syscall",
-         in("rdi") arg1,
-         in("rsi") arg2,
-         out("rcx") _,
-         out("r11") _,
-         inout("rax") syscall as u64 => ret);
+    unsafe {
+        asm!("syscall",
+             in("rdi") arg1,
+             in("rsi") arg2,
+             out("rcx") _,
+             out("r11") _,
+             inout("rax") syscall as u64 => ret);
+    }
     ret
 }
 
 #[inline]
 pub unsafe fn syscall3(syscall: Syscall, arg1: usize, arg2: usize, arg3: usize) -> isize {
     let mut ret: isize;
-    asm!("syscall",
-         in("rdi") arg1,
-         in("rsi") arg2,
-         in("rdx") arg3,
-         out("rcx") _,
-         out("r11") _,
-         inout("rax") syscall as u64 => ret);
+    unsafe {
+        asm!("syscall",
+             in("rdi") arg1,
+             in("rsi") arg2,
+             in("rdx") arg3,
+             out("rcx") _,
+             out("r11") _,
+             inout("rax") syscall as u64 => ret);
+    }
     ret
 }
 
@@ -109,15 +117,17 @@ pub unsafe fn syscall6(
     arg6: usize,
 ) -> isize {
     let mut ret: isize;
-    asm!("syscall",
-         in("rdi") arg1,
-         in("rsi") arg2,
-         in("rdx") arg3,
-         in("r10") arg4,
-         in("r8") arg5,
-         in("r9") arg6,
-         out("rcx") _,
-         out("r11") _,
-         inout("rax") syscall as u64 => ret);
+    unsafe {
+        asm!("syscall",
+             in("rdi") arg1,
+             in("rsi") arg2,
+             in("rdx") arg3,
+             in("r10") arg4,
+             in("r8") arg5,
+             in("r9") arg6,
+             out("rcx") _,
+             out("r11") _,
+             inout("rax") syscall as u64 => ret);
+    }
     ret
 }

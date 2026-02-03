@@ -15,11 +15,11 @@
 //
 
 use x86_64::{
-    structures::paging::{
-        frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB,
-        Size4KiB,
-    },
     PhysAddr,
+    structures::paging::{
+        FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB, Size4KiB,
+        frame::PhysFrameRange,
+    },
 };
 
 use super::bitmap_frame_allocator::BitmapAllocator;
@@ -113,7 +113,9 @@ unsafe impl<const N: usize> FrameAllocator<Size2MiB> for PhysicalMemoryAllocator
 
 impl<const N: usize> FrameDeallocator<Size2MiB> for PhysicalMemoryAllocator<N> {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size2MiB>) {
-        self.large_frames.deallocate_frame(frame)
+        unsafe {
+            self.large_frames.deallocate_frame(frame);
+        }
     }
 }
 
@@ -137,7 +139,9 @@ unsafe impl<const N: usize> FrameAllocator<Size4KiB> for PhysicalMemoryAllocator
 
 impl<const N: usize> FrameDeallocator<Size4KiB> for PhysicalMemoryAllocator<N> {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
-        self.small_frames.as_mut().unwrap().deallocate_frame(frame)
+        unsafe {
+            self.small_frames.as_mut().unwrap().deallocate_frame(frame);
+        }
     }
 }
 

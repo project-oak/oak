@@ -18,13 +18,13 @@ use alloc::alloc::{alloc, dealloc};
 use core::{alloc::Layout, mem::size_of};
 
 use x86_64::{
+    PhysAddr, VirtAddr,
     instructions::tlb::flush_all,
     structures::paging::{PageSize, PageTableFlags, Size2MiB},
-    PhysAddr, VirtAddr,
 };
 
 use super::Base;
-use crate::paging::{page_table_level::PT, PageEncryption, PageTableEntry, PAGE_TABLE_REFS};
+use crate::paging::{PAGE_TABLE_REFS, PageEncryption, PageTableEntry, page_table_level::PT};
 
 pub struct Mmio<S: PageSize> {
     pub base_address: PhysAddr,
@@ -46,7 +46,7 @@ impl<S: PageSize> Mmio<S> {
         // will be a chunk of physical memory sitting unmapped and unused, but that
         // should not matter for our use case.
         let layout = Layout::from_size_align(S::SIZE as usize, S::SIZE as usize).unwrap();
-        let mmio_memory = VirtAddr::from_ptr(alloc(layout));
+        let mmio_memory = VirtAddr::from_ptr(unsafe { alloc(layout) });
 
         // Remap our mmio_memory to base_address.
         if mmio_memory.as_u64() > Size2MiB::SIZE {
@@ -88,7 +88,7 @@ impl<S: PageSize> crate::hal::Mmio<S> for Mmio<S> {
         //   - we've checked it's within the page size
         //   - when calling new() we were promised the memory is valid
         //   - the caller needs to guarantee the value makes sense
-        self.mmio_memory.as_mut_ptr::<u32>().add(offset).write_volatile(value)
+        unsafe { self.mmio_memory.as_mut_ptr::<u32>().add(offset).write_volatile(value) }
     }
 }
 

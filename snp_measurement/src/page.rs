@@ -22,8 +22,8 @@ use oak_sev_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};
 use strum::FromRepr;
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 use zerocopy::{Immutable, IntoBytes};
 

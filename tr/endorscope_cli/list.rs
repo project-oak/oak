@@ -141,7 +141,9 @@ pub(crate) fn list(current_time: Instant, p: ListArgs) {
             endorser_key_hashes =
                 list_keys_by_keyset(&loader, p.endorser_keyset_hash.unwrap().as_str());
         } else {
-            panic!("One of --subject-hash, --endorser-key-hash, or --endorser-keyset-hash must be specified.");
+            panic!(
+                "One of --subject-hash, --endorser-key-hash, or --endorser-keyset-hash must be specified."
+            );
         }
 
         for endorser_key_hash in endorser_key_hashes {

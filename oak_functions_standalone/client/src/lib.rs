@@ -16,11 +16,11 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use futures::channel::mpsc::{self, Sender};
 use oak_attestation_gcp::{
-    policy_generator::confidential_space_policy_from_reference_values,
     CONFIDENTIAL_SPACE_ROOT_CERT_PEM,
+    policy_generator::confidential_space_policy_from_reference_values,
 };
 use oak_attestation_verification::EventLogVerifier;
 use oak_grpc::oak::functions::standalone::oak_functions_session_client::OakFunctionsSessionClient;
@@ -28,19 +28,19 @@ use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{
         attestation::v1::{
-            collected_attestation::RequestMetadata, confidential_space_reference_values,
             CollectedAttestation, ConfidentialSpaceReferenceValues,
+            collected_attestation::RequestMetadata, confidential_space_reference_values,
         },
         functions::standalone::{OakSessionRequest, OakSessionResponse},
     },
 };
 use oak_session::{
+    ClientSession, Session,
     attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
     handshake::HandshakeType,
     key_extractor::DefaultBindingKeyExtractor,
-    ClientSession, Session,
 };
 use oak_time::Clock;
 use tonic::transport::{Channel, Uri};

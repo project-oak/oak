@@ -20,7 +20,7 @@ use oak_proto_rust::oak::{
     attestation::v1::Assertion,
     session::v1::{SessionBinding, SessionBindingKeyWrapperAssertion},
 };
-use p256::ecdsa::{signature::Signer, Signature, SigningKey};
+use p256::ecdsa::{Signature, SigningKey, signature::Signer};
 use prost::Message;
 use thiserror::Error;
 

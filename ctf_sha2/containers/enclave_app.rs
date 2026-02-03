@@ -21,15 +21,15 @@ use std::{
 use anyhow::Context;
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient;
 use oak_proto_rust::oak::containers::v1::{KeyOrigin, SignRequest};
-use oak_sdk_containers::{default_orchestrator_channel, OrchestratorClient};
-use p256::ecdsa::{signature::SignatureEncoding, Signature};
-use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
+use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
+use p256::ecdsa::{Signature, signature::SignatureEncoding};
+use rand::{CryptoRng, RngCore, SeedableRng, rngs::StdRng};
 use sha2::{Digest, Sha256};
 use tokio::{net::TcpListener, sync::Mutex};
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{Request, Response, Status, transport::Server};
 use tonic_service::oak::ctf_sha2::enclave::{
-    flag_digest_service_server::{FlagDigestService, FlagDigestServiceServer},
     GenerateFlagDigestRequest, GenerateFlagDigestResponse,
+    flag_digest_service_server::{FlagDigestService, FlagDigestServiceServer},
 };
 
 const ENCLAVE_APP_PORT: u16 = 8080;

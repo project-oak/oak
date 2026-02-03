@@ -18,22 +18,22 @@ use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use axum::{
+    Router,
     body::Body,
     extract::{Request, State},
     http::StatusCode,
     response::Response,
     routing::any,
-    Router,
 };
 use clap::Parser;
 use config::{Config, Filter};
-use digest::{compute_canonical_digest, Digest};
+use digest::{Digest, compute_canonical_digest};
 use oak_proto_rust::oak::HexDigest;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use trex_client::{
-    http::{fetch_index, HttpBlobFetcher, HttpEndorsementIndex},
     EndorsementVerifier,
+    http::{HttpBlobFetcher, HttpEndorsementIndex, fetch_index},
 };
 
 mod config;
@@ -265,8 +265,10 @@ async fn verify_endorsement(
             verifier.verify(&subject_digest, now, &required_claims, identity, issuer).await;
 
         if let Err(e) = result {
-            let err_msg = format!("Endorsement verification failed for subject digest: {subject_digest_local}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
-                filter.cosign_identity);
+            let err_msg = format!(
+                "Endorsement verification failed for subject digest: {subject_digest_local}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
+                filter.cosign_identity
+            );
             log::error!("{err_msg}");
             return Err((StatusCode::FORBIDDEN, err_msg));
         }

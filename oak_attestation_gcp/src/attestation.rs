@@ -146,7 +146,7 @@ fn http_request(
     let version = match parts.next() {
         Some("HTTP/1.1") => http::Version::HTTP_11,
         Some(version) => {
-            return Err(OtherError(format!("Unsupported or malformed HTTP version: {}", version)))
+            return Err(OtherError(format!("Unsupported or malformed HTTP version: {}", version)));
         }
         None => return Err(OtherError("Malformed HTTP response: missing version".to_string())),
     };

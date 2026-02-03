@@ -18,15 +18,15 @@ use core::ops::DerefMut;
 
 use spinning_top::Spinlock;
 use x86_64::{
+    PhysAddr, VirtAddr,
     structures::paging::{
+        FrameAllocator, FrameDeallocator, MappedPageTable, Mapper as BaseMapper, Page, PageSize,
+        PageTable, PhysFrame, Size4KiB, Translate as BaseTranslate,
         mapper::{
             FlagUpdateError, MapToError, MapperAllSizes, MapperFlush, PageTableFrameMapping,
             UnmapError,
         },
-        FrameAllocator, FrameDeallocator, MappedPageTable, Mapper as BaseMapper, Page, PageSize,
-        PageTable, PhysFrame, Size4KiB, Translate as BaseTranslate,
     },
-    PhysAddr, VirtAddr,
 };
 
 use super::{Mapper, PageTableFlags, Translator};
@@ -112,13 +112,15 @@ unsafe impl FrameAllocator<Size4KiB> for EncryptedFrameAllocator {
 
 impl FrameDeallocator<Size4KiB> for EncryptedFrameAllocator {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
-        FrameDeallocator::<Size4KiB>::deallocate_frame(
-            FRAME_ALLOCATOR.lock().deref_mut(),
-            PhysFrame::from_start_address(PhysAddr::new(
-                frame.start_address().as_u64() - self.encryption.bit(),
-            ))
-            .unwrap(),
-        )
+        unsafe {
+            FrameDeallocator::<Size4KiB>::deallocate_frame(
+                FRAME_ALLOCATOR.lock().deref_mut(),
+                PhysFrame::from_start_address(PhysAddr::new(
+                    frame.start_address().as_u64() - self.encryption.bit(),
+                ))
+                .unwrap(),
+            )
+        }
     }
 }
 
@@ -173,13 +175,15 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
             frame
         };
 
-        self.inner.lock().map_to_with_table_flags(
-            page,
-            frame,
-            flags.into(),
-            parent_table_flags.into(),
-            &mut EncryptedFrameAllocator::new(self.encryption),
-        )
+        unsafe {
+            self.inner.lock().map_to_with_table_flags(
+                page,
+                frame,
+                flags.into(),
+                parent_table_flags.into(),
+                &mut EncryptedFrameAllocator::new(self.encryption),
+            )
+        }
     }
 
     unsafe fn unmap(&self, page: Page<S>) -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError> {
@@ -199,7 +203,7 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
     ) -> Result<MapperFlush<S>, FlagUpdateError> {
         // `ENCRYPTED` requires special treatment, therefore it's easier to just re-map
         // the page.
-        let frame = match self.unmap(page) {
+        let frame = match unsafe { self.unmap(page) } {
             Err(UnmapError::ParentEntryHugePage) => Err(FlagUpdateError::ParentEntryHugePage),
             Err(UnmapError::PageNotMapped) => Err(FlagUpdateError::PageNotMapped),
             Err(UnmapError::InvalidFrameAddress(addr)) => {
@@ -208,7 +212,7 @@ impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPage
             Ok((frame, _)) => Ok(frame),
         }?;
 
-        match self.map_to_with_table_flags(page, frame, flags, PageTableFlags::empty()) {
+        match unsafe { self.map_to_with_table_flags(page, frame, flags, PageTableFlags::empty()) } {
             Ok(flush) => Ok(flush),
             // This should never happen, as we should not be allocating frames.
             Err(MapToError::FrameAllocationFailed) => {
@@ -243,8 +247,8 @@ impl<N: MapperAllSizes + BaseTranslate> Translator for EncryptedPageTable<N> {
 mod tests {
     extern crate std;
     use x86_64::structures::paging::{
-        mapper::{MappedFrame, TranslateResult},
         PageTableFlags as BasePageTableFlags, Size1GiB, Size2MiB,
+        mapper::{MappedFrame, TranslateResult},
     };
 
     use super::*;

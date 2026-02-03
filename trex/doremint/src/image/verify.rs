@@ -28,10 +28,10 @@ use clap::Parser;
 use cosign_util::pull_package;
 use oak_digest::Digest;
 use oak_time_std::instant::now;
-use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client};
+use oci_client::{Client, client::ClientConfig, secrets::RegistryAuth};
 use oci_spec::distribution::Reference;
 
-use crate::flags::{read_pem_file, Claims};
+use crate::flags::{Claims, read_pem_file};
 
 #[derive(Parser, Debug)]
 #[command(about = "Verify an endorsement for a container image")]

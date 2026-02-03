@@ -21,8 +21,8 @@ extern crate alloc;
 pub use dice::LayerData;
 use oak_attestation_types::attester::Attester;
 use oak_proto_rust::oak::{
-    attestation::v1::{EventLog, Evidence},
     RawDigest,
+    attestation::v1::{EventLog, Evidence},
 };
 use p256::ecdsa::VerifyingKey;
 use sha2::Digest;

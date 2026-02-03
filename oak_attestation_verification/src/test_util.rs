@@ -15,19 +15,19 @@
 //
 
 use intoto::statement::{
-    make_statement, serialize_statement, DefaultPredicate, DefaultStatement, Statement,
+    DefaultPredicate, DefaultStatement, Statement, make_statement, serialize_statement,
 };
 use oak_proto_rust::oak::{
+    HexDigest,
     attestation::v1::{
-        binary_reference_value, kernel_binary_reference_value, verifying_key_reference_value,
         BinaryReferenceValue, ClaimReferenceValue, EndorsementReferenceValue,
         KernelBinaryReferenceValue, KeyType, SkipVerification, VerifyingKey,
-        VerifyingKeyReferenceValue, VerifyingKeySet,
+        VerifyingKeyReferenceValue, VerifyingKeySet, binary_reference_value,
+        kernel_binary_reference_value, verifying_key_reference_value,
     },
-    HexDigest,
 };
-use oak_time::{make_instant, Instant};
-use p256::{ecdsa::signature::Signer, pkcs8::EncodePublicKey, NistP256, PublicKey};
+use oak_time::{Instant, make_instant};
+use p256::{NistP256, PublicKey, ecdsa::signature::Signer, pkcs8::EncodePublicKey};
 
 /// A simple fake endorsement for basic generic testing purposes.
 pub fn fake_endorsement(digest: &HexDigest, claim_types: Vec<&str>) -> DefaultStatement {

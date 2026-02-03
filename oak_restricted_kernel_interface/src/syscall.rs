@@ -17,12 +17,11 @@
 use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
 
 use crate::{
-    syscall,
+    Errno, Syscall, syscall,
     syscalls::{MmapFlags, MmapProtection},
-    Errno, Syscall,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
     unsafe { syscall!(Syscall::Read, fd, buf, count) }
 }
@@ -38,7 +37,7 @@ pub fn read(fd: i32, buf: &mut [u8]) -> Result<usize, Errno> {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
     unsafe { syscall!(Syscall::Write, fd, buf, count) }
 }
@@ -54,7 +53,7 @@ pub fn write(fd: i32, buf: &[u8]) -> Result<usize, Errno> {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_fsync(fd: c_int) -> c_ssize_t {
     unsafe { syscall!(Syscall::Fsync, fd) }
 }
@@ -71,7 +70,7 @@ pub fn fsync(fd: i32) -> Result<(), Errno> {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_mmap(
     addr: *const c_void,
     size: c_size_t,
@@ -110,7 +109,7 @@ pub fn mmap(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_exit(status: c_int) {
     unsafe { syscall!(Syscall::Exit, status) };
 }
@@ -120,7 +119,7 @@ pub fn exit(status: i32) -> ! {
     unreachable!();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_unstable_create_proccess(buf: *const c_void, count: c_size_t) -> c_ssize_t {
     unsafe { syscall!(Syscall::UnstableCreateProcess, buf, count) }
 }
@@ -136,7 +135,7 @@ pub fn unstable_create_proccess(buf: &[u8]) -> Result<usize, Errno> {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn sys_unstable_switch_proccess(pid: c_size_t) -> c_ssize_t {
     unsafe { syscall!(Syscall::UnstableSwitchProcess, pid) }
 }

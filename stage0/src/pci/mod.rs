@@ -21,12 +21,12 @@ use spinning_top::Spinlock;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 use crate::{
+    Platform, ZeroPage,
     fw_cfg::Firmware,
     pci::{
-        config_access::{ConfigAccess, CAM},
+        config_access::{CAM, ConfigAccess},
         device::{PciBar, PciClass, PciFunction, PciSubclass},
     },
-    Platform, ZeroPage,
 };
 
 mod config_access;
@@ -198,11 +198,7 @@ struct PciBus {
 impl PciBus {
     fn new(bus: u8, access: &mut dyn ConfigAccess) -> Result<Option<Self>, &'static str> {
         let root = PciAddress::new(bus, 0, 0)?;
-        if root.exists(access)? {
-            Ok(Some(Self { root }))
-        } else {
-            Ok(None)
-        }
+        if root.exists(access)? { Ok(Some(Self { root })) } else { Ok(None) }
     }
 
     fn init(

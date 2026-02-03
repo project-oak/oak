@@ -88,23 +88,23 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, sync::Arc, vec::Vec};
 use core::convert::TryInto;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use oak_crypto::{
     identity_key::IdentityKeyHandle,
     noise_handshake::{
-        client::HandshakeInitiator, respond_kk, respond_nk, respond_nn, OrderedCrypter, Response,
+        OrderedCrypter, Response, client::HandshakeInitiator, respond_kk, respond_nk, respond_nn,
     },
 };
 use oak_proto_rust::oak::session::v1::{
-    handshake_request, handshake_response, HandshakeRequest, HandshakeResponse,
-    NoiseHandshakeMessage, SessionBinding,
+    HandshakeRequest, HandshakeResponse, NoiseHandshakeMessage, SessionBinding, handshake_request,
+    handshake_response,
 };
 
 use crate::{
+    ProtocolEngine,
     attestation::AttestationState,
     config::HandshakeHandlerConfig,
-    session_binding::{create_session_binding_token, SessionBinder},
-    ProtocolEngine,
+    session_binding::{SessionBinder, create_session_binding_token},
 };
 
 /// Specifies the type of Noise Protocol Framework handshake pattern to be used.

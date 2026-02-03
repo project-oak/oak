@@ -26,7 +26,7 @@ use alloc::{string::ToString, sync::Arc};
 use oak_attestation_verification::verifier::verify;
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results, AttestationResults, Endorsements, Evidence, ReferenceValues,
+    AttestationResults, Endorsements, Evidence, ReferenceValues, attestation_results,
 };
 use oak_time::Clock;
 

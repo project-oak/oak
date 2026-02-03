@@ -16,7 +16,7 @@
 
 pub mod mmio;
 
-use core::arch::x86_64::{CpuidResult, __cpuid};
+use core::arch::x86_64::{__cpuid, CpuidResult};
 
 pub use mmio::*;
 use oak_attestation::dice::DiceAttester;
@@ -47,7 +47,7 @@ impl crate::Platform for Base {
     }
 
     unsafe fn mmio<S: PageSize>(base_address: x86_64::PhysAddr) -> Self::Mmio<S> {
-        mmio::Mmio::new(base_address)
+        unsafe { mmio::Mmio::new(base_address) }
     }
 
     fn port_factory() -> PortFactory {
@@ -118,11 +118,11 @@ impl crate::Platform for Base {
     }
 
     unsafe fn read_msr(msr: u32) -> u64 {
-        Msr::new(msr).read()
+        unsafe { Msr::new(msr).read() }
     }
 
     unsafe fn write_msr(msr: u32, value: u64) {
-        Msr::new(msr).write(value)
+        unsafe { Msr::new(msr).write(value) }
     }
 
     fn wbvind() {

@@ -19,15 +19,16 @@
 use alloc::{string::String, vec, vec::Vec};
 
 use coset::{
+    Algorithm, CborOrdering, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation,
+    KeyType, Label, RegisteredLabelWithPrivate,
     cbor::value::Value,
     cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
-    iana, Algorithm, CborOrdering, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation,
-    KeyType, Label, RegisteredLabelWithPrivate,
+    iana,
 };
 use hkdf::Hkdf;
 use p256::{
-    ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey},
     EncodedPoint, FieldBytes, U256,
+    ecdsa::{Signature, SigningKey, VerifyingKey, signature::Signer},
 };
 use rand_core::OsRng;
 use sha2::Sha256;

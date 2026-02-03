@@ -53,7 +53,7 @@ mod intro_import {
 use std::{str::FromStr, sync::Arc};
 
 use intro_import::*;
-use oak_time::{clock::FixedClock, Instant};
+use oak_time::{Instant, clock::FixedClock};
 
 // In this simple example, we show the basics of passing messages back and forth
 // bewteen an Oak ClientSession and an Oak ServerSession. In most real-world

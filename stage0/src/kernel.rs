@@ -19,9 +19,9 @@ use core::{ffi::c_void, slice};
 
 use x86_64::{PhysAddr, VirtAddr};
 
-use crate::{fw_cfg::FwCfg, Measured};
+use crate::{Measured, fw_cfg::FwCfg};
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "stack_start"]
     static BOOT_STACK_POINTER: c_void;
 }
@@ -93,18 +93,20 @@ impl Kernel {
         self,
         zero_page: Box<crate::zero_page::ZeroPage, &A>,
     ) -> ! {
-        core::arch::asm!(
-            // Boot stack pointer
-            "mov {1}, %rsp",
-            // Zero page address
-            "mov {2}, %rsi",
-            // ...and away we go!
-            "jmp *{0}",
-            in(reg) self.entry().as_u64(),
-            in(reg) &BOOT_STACK_POINTER as *const _ as u64,
-            in(reg) Box::leak(zero_page),
-            options(noreturn, att_syntax)
-        );
+        unsafe {
+            core::arch::asm!(
+                // Boot stack pointer
+                "mov {1}, %rsp",
+                // Zero page address
+                "mov {2}, %rsi",
+                // ...and away we go!
+                "jmp *{0}",
+                in(reg) self.entry().as_u64(),
+                in(reg) &BOOT_STACK_POINTER as *const _ as u64,
+                in(reg) Box::leak(zero_page),
+                options(noreturn, att_syntax)
+            );
+        }
     }
 }
 

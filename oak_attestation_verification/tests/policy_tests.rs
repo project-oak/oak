@@ -20,31 +20,31 @@ use core::iter::Iterator;
 use std::{fs, sync::Arc};
 
 use oak_attestation_verification::{
-    create_amd_verifier, create_insecure_verifier, create_intel_tdx_verifier,
-    verifier::{verify_dice_chain_and_extract_evidence, SoftwareRootedDiceAttestationVerifier},
     AmdSevSnpDiceAttestationVerifier, AmdSevSnpPolicy, ContainerPolicy, FirmwarePolicy,
-    IntelTdxAttestationVerifier, IntelTdxPolicy, KernelPolicy, SystemPolicy,
+    IntelTdxAttestationVerifier, IntelTdxPolicy, KernelPolicy, SystemPolicy, create_amd_verifier,
+    create_insecure_verifier, create_intel_tdx_verifier,
+    verifier::{SoftwareRootedDiceAttestationVerifier, verify_dice_chain_and_extract_evidence},
 };
 use oak_attestation_verification_types::{policy::EventPolicy, verifier::AttestationVerifier};
 use oak_file_utils::data_path;
 use oak_proto_rust::oak::{
-    attestation::v1::{
-        attestation_results, binary_reference_value, endorsements, AmdSevSnpEndorsement,
-        AttestationResults, Endorsements, Evidence, ReferenceValues, SkipVerification,
-    },
     Variant,
+    attestation::v1::{
+        AmdSevSnpEndorsement, AttestationResults, Endorsements, Evidence, ReferenceValues,
+        SkipVerification, attestation_results, binary_reference_value, endorsements,
+    },
 };
-use oak_time::{clock::FixedClock, Instant};
+use oak_time::{Instant, clock::FixedClock};
 use prost::Message;
 use test_util::{
-    allow_insecure, create_reference_values_for_extracted_evidence, get_cb_reference_values,
+    AttestationData, allow_insecure, create_reference_values_for_extracted_evidence,
+    get_cb_reference_values,
     manipulate::{
         get_acpi_rv, get_init_ram_fs_rv, get_kernel_cmd_line_rv, get_kernel_rv, get_oc_config_rv,
         get_oc_container_rv, get_oc_system_image_rv, get_rk_application_rv, get_rk_config_rv,
         get_stage0_rv, manipulate_kernel_cmd_line, manipulate_kernel_image,
         manipulate_kernel_setup_data, manipulate_sha2_256, manipulate_sha2_384,
     },
-    AttestationData,
 };
 
 use crate::attestation_results::Status;

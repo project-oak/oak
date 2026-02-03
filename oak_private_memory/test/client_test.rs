@@ -19,7 +19,7 @@ use std::collections::HashSet;
 use client::{PrivateMemoryClient, SerializationFormat};
 use private_memory_test_utils::{start_server, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
-    oak::private_memory::{text_query, LlmView, LlmViews, MatchType, TextQuery},
+    oak::private_memory::{LlmView, LlmViews, MatchType, TextQuery, text_query},
     prelude::v1::*,
 };
 

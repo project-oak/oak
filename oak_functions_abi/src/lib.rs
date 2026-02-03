@@ -143,7 +143,7 @@ impl Response {
 // WebAssembly modules running as Oak-Functions workloads.
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak_functions")]
-extern "C" {
+unsafe extern "C" {
     /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
         request_ptr: *const u8,

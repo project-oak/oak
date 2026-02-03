@@ -26,11 +26,11 @@ use oak_crypto::{
 use oak_proto_rust::{
     certificate::SESSION_BINDING_PUBLIC_KEY_PURPOSE_ID,
     oak::{
+        Variant,
         attestation::v1::{
             EventAttestationResults, SessionBindingPublicKeyData,
             SessionBindingPublicKeyEndorsement,
         },
-        Variant,
     },
 };
 use oak_time::Instant;
@@ -152,6 +152,7 @@ mod tests {
     use oak_attestation_verification_results::unique_session_binding_public_key;
     use oak_attestation_verification_types::verifier::AttestationVerifier;
     use oak_proto_rust::oak::{
+        Validity,
         attestation::v1::{
             CertificateAuthorityEndorsement, Endorsements, Event, EventLog, Evidence,
         },
@@ -160,7 +161,6 @@ mod tests {
             SerializedPayloadType::PayloadTypeSerializedCertificate, SignatureInfo,
             SubjectPublicKeyInfo,
         },
-        Validity,
     };
     use oak_time::clock::FixedClock;
     use prost::Message;

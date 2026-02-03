@@ -17,8 +17,8 @@ use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir, PageTo
 use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
-        search_memory_query, text_query, EmbeddingQuery, LlmView, LlmViews, MatchType, MemoryField,
-        QueryClauses, QueryOperator, SearchMemoryQuery, TextQuery,
+        EmbeddingQuery, LlmView, LlmViews, MatchType, MemoryField, QueryClauses, QueryOperator,
+        SearchMemoryQuery, TextQuery, search_memory_query, text_query,
     },
     prelude::v1::*,
 };

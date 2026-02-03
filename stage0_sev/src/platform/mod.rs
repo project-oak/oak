@@ -30,23 +30,23 @@ use oak_sev_guest::{
     ap_jump_table::ApJumpTable, cpuid::CpuidInput, ghcb::GhcbProtocol, msr::SevStatus,
 };
 use oak_stage0::{
+    BOOT_ALLOC, BootAllocator, Rsdp, ZeroPage,
     allocator::Shared,
     hal::{Base, PageAssignment, Platform, PortFactory},
     paging::PageEncryption,
-    BootAllocator, Rsdp, ZeroPage, BOOT_ALLOC,
 };
-use spinning_top::{lock_api::MutexGuard, RawSpinlock, Spinlock};
-use x86_64::{structures::paging::PageSize, PhysAddr, VirtAddr};
+use spinning_top::{RawSpinlock, Spinlock, lock_api::MutexGuard};
+use x86_64::{PhysAddr, VirtAddr, structures::paging::PageSize};
 use zerocopy::{FromBytes, IntoBytes};
 
-#[link_section = ".boot"]
-#[no_mangle]
+#[unsafe(link_section = ".boot")]
+#[unsafe(no_mangle)]
 static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
-#[link_section = ".boot"]
-#[no_mangle]
+#[unsafe(link_section = ".boot")]
+#[unsafe(no_mangle)]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
-#[no_mangle]
-#[link_section = ".ap_bss"]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".ap_bss")]
 pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
 
 static GHCB_WRAPPER: Ghcb = Ghcb::new();
@@ -86,15 +86,16 @@ impl Ghcb {
     }
 
     /// Deallocates the GHCB block.
-    ///
     /// # Safety
     ///
     /// The caller needs to guarantee that nobody has a reference to the GHCB
     /// when this function is called and that nobody will try to use the GHCB
     /// after the function returns.
     pub unsafe fn deinit(&self, alloc: &'static BootAllocator) {
-        let ghcb = self.ghcb.deinit().unwrap().into_inner().into_inner();
-        let _ = Shared::<_, _, Sev>::from_raw_in(ghcb, alloc);
+        unsafe {
+            let ghcb = self.ghcb.deinit().unwrap().into_inner().into_inner();
+            let _ = Shared::<_, _, Sev>::from_raw_in(ghcb, alloc);
+        }
     }
 
     pub fn get(
@@ -115,7 +116,7 @@ impl Ghcb {
 fn sev_status() -> SevStatus {
     // Will be set in the bootstrap assembly code where we have to read the MSR
     // anyway.
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     static mut SEV_STATUS: SevStatus = SevStatus::empty();
 
     // Safety: we don't allow mutation and this is initialized in the bootstrap
@@ -125,7 +126,7 @@ fn sev_status() -> SevStatus {
 
 /// Returns the location of the ENCRYPTED bit when running under AMD SEV.
 pub(crate) fn encrypted() -> u64 {
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     static mut ENCRYPTED: u64 = 0;
 
     // Safety: we don't allow mutation and this is initialized in the bootstrap
@@ -163,7 +164,7 @@ impl Platform for Sev {
     unsafe fn mmio<S: x86_64::structures::paging::PageSize>(
         base_address: PhysAddr,
     ) -> Self::Mmio<S> {
-        mmio::Mmio::new(base_address)
+        unsafe { mmio::Mmio::new(base_address) }
     }
 
     fn port_factory() -> PortFactory {
@@ -335,7 +336,7 @@ impl Platform for Sev {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             ghcb.msr_read(msr_id).expect("couldn't read the MSR using the GHCB protocol")
         } else {
-            Base::read_msr(msr_id)
+            unsafe { Base::read_msr(msr_id) }
         }
     }
 
@@ -343,7 +344,7 @@ impl Platform for Sev {
         if let Some(mut ghcb) = GHCB_WRAPPER.get() {
             ghcb.msr_write(msr_id, val).expect("couldn't write the MSR using the GHCB protocol")
         } else {
-            Base::write_msr(msr_id, val)
+            unsafe { Base::write_msr(msr_id, val) }
         }
     }
 

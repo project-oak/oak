@@ -22,12 +22,13 @@ use std::{
 use anyhow::{Context, Result};
 use futures::future::BoxFuture;
 use log::info;
-use oak_functions_service::{instance::OakFunctionsInstance, Handler};
+use oak_functions_service::{Handler, instance::OakFunctionsInstance};
 use oak_proto_rust::oak::functions::{
-    extend_next_lookup_data_request::Data, ExtendNextLookupDataRequest,
-    FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk, ReserveRequest,
+    ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, LookupDataChunk,
+    ReserveRequest, extend_next_lookup_data_request::Data,
 };
 use rmcp::{
+    ErrorData, RoleServer, ServerHandler,
     handler::server::{
         router::tool::{ToolRoute, ToolRouter},
         tool::ToolCallContext,
@@ -37,7 +38,7 @@ use rmcp::{
         JsonObject, ServerCapabilities, ServerInfo, Tool,
     },
     service::RequestContext,
-    tool_handler, ErrorData, RoleServer, ServerHandler,
+    tool_handler,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

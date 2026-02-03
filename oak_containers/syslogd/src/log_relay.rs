@@ -24,7 +24,7 @@ use oak_containers_orchestrator::launcher_client::LauncherClient;
 use opentelemetry::logs::{AnyValue, LogRecord, Logger, LoggerProvider, Severity};
 use opentelemetry_otlp::WithTonicConfig;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
-use tokio::sync::{mpsc, OnceCell};
+use tokio::sync::{OnceCell, mpsc};
 
 use crate::systemd_journal::{Journal, JournalOpenFlags};
 

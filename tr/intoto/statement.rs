@@ -26,11 +26,11 @@ use alloc::{
     vec::Vec,
 };
 
-use anyhow::{ensure, Context};
+use anyhow::{Context, ensure};
 use digest_util::{
-    hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, set_to_hex_digest, DigestSet,
+    DigestSet, hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, set_to_hex_digest,
 };
-use oak_proto_rust::oak::{attestation::v1::EndorsementDetails, HexDigest};
+use oak_proto_rust::oak::{HexDigest, attestation::v1::EndorsementDetails};
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};
 

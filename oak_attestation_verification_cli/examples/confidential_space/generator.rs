@@ -16,30 +16,30 @@
 
 use std::{collections::BTreeMap, fs::File, io::Write, path::PathBuf};
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use clap::Parser;
-use intoto::statement::{make_statement, serialize_statement, DefaultStatement, Subject};
+use intoto::statement::{DefaultStatement, Subject, make_statement, serialize_statement};
 use jwt::{
-    algorithm::{openssl::PKeyWithDigest, AlgorithmType},
-    token::Signed,
     SignWithKey, SigningAlgorithm, Token,
+    algorithm::{AlgorithmType, openssl::PKeyWithDigest},
+    token::Signed,
 };
 use oak_attestation_gcp::{
-    jwt::{Claims, Header},
     OAK_SESSION_NOISE_V1_AUDIENCE,
+    jwt::{Claims, Header},
 };
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
     oak::{
+        HexDigest,
         attestation::v1::{
-            collected_attestation::RequestMetadata,
-            confidential_space_reference_values::ContainerImage, reference_values,
             CollectedAttestation, ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
             CosignReferenceValues, Endorsements, Event, EventLog, Evidence, ReferenceValues,
             ReferenceValuesCollection, SessionBindingPublicKeyData, SignedEndorsement,
+            collected_attestation::RequestMetadata,
+            confidential_space_reference_values::ContainerImage, reference_values,
         },
         session::v1::{EndorsedEvidence, SessionBinding},
-        HexDigest,
     },
 };
 use oak_proto_rust_lib::p256_ecdsa_verifying_key_to_proto;
@@ -53,8 +53,8 @@ use openssl::{
 };
 use p256::{
     ecdsa::{
-        signature::{SignatureEncoding, Signer},
         Signature, SigningKey, VerifyingKey,
+        signature::{SignatureEncoding, Signer},
     },
     pkcs8::EncodePublicKey,
 };
@@ -318,20 +318,23 @@ fn generate_log_entry(
 fn generate_evidence(session_binding_public_key: &VerifyingKey) -> Evidence {
     Evidence {
         event_log: Some(EventLog {
-            encoded_events: vec![Event {
-                tag: "session_binding_key".to_string(),
-                event: Some(prost_types::Any {
-                    type_url: "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
-                        .to_string(),
-                    value: SessionBindingPublicKeyData {
-                        session_binding_public_key: session_binding_public_key
-                            .to_sec1_bytes()
-                            .to_vec(),
-                    }
-                    .encode_to_vec(),
-                }),
-            }
-            .encode_to_vec()],
+            encoded_events: vec![
+                Event {
+                    tag: "session_binding_key".to_string(),
+                    event: Some(prost_types::Any {
+                        type_url:
+                            "type.googleapis.com/oak.attestation.v1.SessionBindingPublicKeyData"
+                                .to_string(),
+                        value: SessionBindingPublicKeyData {
+                            session_binding_public_key: session_binding_public_key
+                                .to_sec1_bytes()
+                                .to_vec(),
+                        }
+                        .encode_to_vec(),
+                    }),
+                }
+                .encode_to_vec(),
+            ],
         }),
         ..Default::default()
     }
@@ -342,11 +345,13 @@ fn generate_endorsements(
     workload_endorsement: SignedEndorsement,
 ) -> Endorsements {
     Endorsements {
-        events: vec![ConfidentialSpaceEndorsement {
-            jwt_token: jwt.as_str().to_string(),
-            workload_endorsement: Some(workload_endorsement),
-        }
-        .into()],
+        events: vec![
+            ConfidentialSpaceEndorsement {
+                jwt_token: jwt.as_str().to_string(),
+                workload_endorsement: Some(workload_endorsement),
+            }
+            .into(),
+        ],
         ..Default::default()
     }
 }

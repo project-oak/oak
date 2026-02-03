@@ -22,7 +22,7 @@ use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_proto_rust::oak::functions::{InitializeRequest, LookupDataChunk};
 use prost::Message;
 use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager, StreamableHttpService,
+    StreamableHttpService, session::local::LocalSessionManager,
 };
 use tokio::net::TcpListener;
 
@@ -56,7 +56,10 @@ fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>>
 async fn main() -> anyhow::Result<()> {
     // TODO: b/469747147 - configure logging flags at the level of VM config
     if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info")
+        // Safety: this is a CLI tool.
+        unsafe {
+            std::env::set_var("RUST_LOG", "info");
+        }
     }
     env_logger::init();
     let args = Args::parse();

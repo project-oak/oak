@@ -20,8 +20,8 @@ use std::fs;
 
 use anyhow::Context;
 use oak_file_utils::data_path;
-use oak_proto_rust::oak::attestation::v1::{endorsements, Endorsements, Evidence, ReferenceValues};
-use oak_time::{make_instant, Instant};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ReferenceValues, endorsements};
+use oak_time::{Instant, make_instant};
 use prost::Message;
 
 use crate::factory::{create_oc_reference_values, create_rk_reference_values};

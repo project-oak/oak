@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(let_chains)]
-
 extern crate alloc;
 
 #[cfg(test)]
@@ -26,15 +24,15 @@ use std::fmt::Write;
 
 use anyhow::{Context, Result};
 use oak_proto_rust::oak::{
-    attestation,
+    RawDigest, attestation,
     attestation::v1::{
-        root_layer_data::Report, ApplicationLayerData, ApplicationLayerReferenceValues,
-        ContainerLayerData, ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
+        ApplicationLayerData, ApplicationLayerReferenceValues, ContainerLayerData,
+        ContainerLayerReferenceValues, ExtractedEvidence, KernelLayerData,
         KernelLayerReferenceValues, OakContainersData, OakContainersReferenceValues,
         OakRestrictedKernelData, OakRestrictedKernelReferenceValues, ReferenceValues,
         RootLayerData, RootLayerReferenceValues, SystemLayerData, SystemLayerReferenceValues,
+        root_layer_data::Report,
     },
-    RawDigest,
 };
 use sha2::{Digest, Sha256};
 use zerocopy::{FromBytes, KnownLayout};
@@ -47,8 +45,7 @@ const AMD_SEV_SNP_TITLE: &str = "AMD SEV-SNP";
 const INTEL_TDX_TITLE: &str = "Intel TDX";
 const INSECURE_TEE_TITLE: &str = "FAKE INSECURE";
 
-const ATTESTATIONS_INTRO: &str =
-    "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
+const ATTESTATIONS_INTRO: &str = "Attestations identifying artifacts accepted by the reference values for this layer are described below.\n";
 const REFERENCE_VALUES_INTRO: &str =
     "The reference values describing this layer are printed below.\n";
 
@@ -123,11 +120,13 @@ impl HumanReadableExplanation for ReferenceValues {
         match self {
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(OakRestrictedKernelReferenceValues {
-                        root_layer: Some(root_layer),
-                        kernel_layer: Some(kernel_layer),
-                        application_layer: Some(application_layer),
-                    })),
+                    Some(attestation::v1::reference_values::Type::OakRestrictedKernel(
+                        OakRestrictedKernelReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            application_layer: Some(application_layer),
+                        },
+                    )),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -139,12 +138,14 @@ impl HumanReadableExplanation for ReferenceValues {
             )),
             ReferenceValues {
                 r#type:
-                    Some(attestation::v1::reference_values::Type::OakContainers(OakContainersReferenceValues {
-                        root_layer: Some(root_layer),
-                        kernel_layer: Some(kernel_layer),
-                        system_layer: Some(system_layer),
-                        container_layer: Some(container_layer),
-                    })),
+                    Some(attestation::v1::reference_values::Type::OakContainers(
+                        OakContainersReferenceValues {
+                            root_layer: Some(root_layer),
+                            kernel_layer: Some(kernel_layer),
+                            system_layer: Some(system_layer),
+                            container_layer: Some(container_layer),
+                        },
+                    )),
             } => Ok(format!(
                 "_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}\n\n_____ {} _____\n\n{}",
                 root_layer.title()?,
@@ -304,7 +305,9 @@ impl HumanReadableExplanation for RootLayerReferenceValues {
                 format!("The attestation must be rooted in an {INTEL_TDX_TITLE} TEE.")
             }
             RootLayerReferenceValues { amd_sev: Some(_), intel_tdx: Some(_), insecure: None } => {
-                format!("The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE.")
+                format!(
+                    "The attestation must be rooted in an {AMD_SEV_SNP_TITLE} or {INTEL_TDX_TITLE} TEE."
+                )
             }
             RootLayerReferenceValues { insecure: Some(_), .. } => {
                 "The root of the attestation is not being verified.".to_owned()

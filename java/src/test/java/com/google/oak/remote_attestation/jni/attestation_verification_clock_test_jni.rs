@@ -22,7 +22,7 @@ use oak_jni_attestation_verification_clock::JNIClock;
 use oak_time::Clock;
 
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn Java_com_google_oak_remote_1attestation_AttestationVerificationClockTest_newRustJniClock(
     env: JNIEnv,
     _class: JClass,
@@ -34,7 +34,7 @@ fn Java_com_google_oak_remote_1attestation_AttestationVerificationClockTest_newR
 }
 
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn Java_com_google_oak_remote_1attestation_AttestationVerificationClockTest_rustJniClockGetTime(
     _env: JNIEnv,
     _class: JClass,

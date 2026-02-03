@@ -72,7 +72,7 @@
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use core::fmt::Debug;
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use derive_builder::Builder;
 #[cfg(test)]
 use mockall::automock;

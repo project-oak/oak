@@ -30,7 +30,7 @@ pub struct CxxString {
 
 // See the implementations in cc/ffi/cxx_string.h
 #[link(name = "cxx_string")]
-extern "C" {
+unsafe extern "C" {
     pub fn cxx_string_data(cxx_string: *const CxxString) -> *const u8;
     pub fn cxx_string_len(cxx_string: *const CxxString) -> usize;
     pub fn free_cxx_string(bytes: *const CxxString);
@@ -68,7 +68,7 @@ mod test {
 
     use super::CxxString;
 
-    extern "C" {
+    unsafe extern "C" {
         fn create_test_string(name: BytesView) -> CxxString;
     }
 

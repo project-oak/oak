@@ -19,7 +19,7 @@ use std::{
 
 use googletest::prelude::*;
 use oak_proto_rust::oak::{
-    attestation::v1::{attestation_results, AttestationResults, Endorsements, Evidence},
+    attestation::v1::{AttestationResults, Endorsements, Evidence, attestation_results},
     session::v1::EndorsedEvidence,
 };
 use oak_session::{

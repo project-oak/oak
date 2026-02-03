@@ -17,8 +17,8 @@
 use anyhow::Context;
 use oak_attestation_verification_types::policy::Policy;
 use oak_proto_rust::oak::{
-    attestation::v1::{EventAttestationResults, EventData, EventReferenceValues},
     Variant,
+    attestation::v1::{EventAttestationResults, EventData, EventReferenceValues},
 };
 use oak_time::Instant;
 

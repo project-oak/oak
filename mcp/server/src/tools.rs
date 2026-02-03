@@ -19,7 +19,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use log::info;
 use oak_functions_standalone_client_lib::{
-    default_oak_functions_standalone_reference_values, OakFunctionsClient,
+    OakFunctionsClient, default_oak_functions_standalone_reference_values,
 };
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceReferenceValues;
 use oak_session::attestation::AttestationType;

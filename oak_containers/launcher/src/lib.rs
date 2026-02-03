@@ -27,7 +27,7 @@ use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use oak_grpc::oak::key_provisioning::v1::key_provisioning_client::KeyProvisioningClient;
 use oak_proto_rust::oak::{
-    attestation::v1::{endorsements, Endorsements, Evidence, OakContainersEndorsements},
+    attestation::v1::{Endorsements, Evidence, OakContainersEndorsements, endorsements},
     key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
     session::v1::EndorsedEvidence,
 };
@@ -36,9 +36,9 @@ use tokio::{
     net::TcpListener,
     sync::{oneshot, watch},
     task::JoinHandle,
-    time::{timeout, Duration},
+    time::{Duration, timeout},
 };
-use tokio_vsock::{VsockAddr, VsockListener, VMADDR_CID_HOST};
+use tokio_vsock::{VMADDR_CID_HOST, VsockAddr, VsockListener};
 use tonic::transport::Channel as TonicChannel;
 
 /// IP address for the host on the virtual network.

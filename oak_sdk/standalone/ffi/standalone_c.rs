@@ -47,7 +47,7 @@ use prost::Message;
 ///     invocation.
 ///   * `private_key` is not null.
 ///   * `public_key` is not null.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn standalone_endorsed_evidence(
     callback_context: *mut c_void,
     private_key: BytesView,
@@ -59,12 +59,12 @@ pub unsafe extern "C" fn standalone_endorsed_evidence(
     // not want to clear out the C++ caller's private key.
     // This private key isn't really needed at all; so we could refactor this later
     // to avoid passing it at all.
-    let mut private_key_bytes = private_key.as_slice().to_vec();
+    let mut private_key_bytes = unsafe { private_key.as_slice().to_vec() };
     let private_key = EncryptionKey::deserialize(&mut private_key_bytes)
         .expect("Failed ot deserialize private key");
 
     // Read public key from args.
-    let public_key_bytes = public_key.as_slice();
+    let public_key_bytes = unsafe { public_key.as_slice() };
 
     let endorsed_evidence = Standalone::builder()
         .encryption_key_pair(Some((private_key, public_key_bytes.to_vec())))

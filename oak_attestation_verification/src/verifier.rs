@@ -19,13 +19,13 @@
 use alloc::{format, string::ToString, sync::Arc, vec};
 
 use anyhow::Context;
-use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
-use ecdsa::{signature::Verifier, Signature};
+use coset::{CborSerializable, CoseKey, cwt::ClaimsSet};
+use ecdsa::{Signature, signature::Verifier};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, endorsements, expected_values, AttestationResults, Endorsements,
-    EventLog, Evidence, ExpectedValues, ExtractedEvidence, LayerEvidence, ReferenceValues,
+    AttestationResults, Endorsements, EventLog, Evidence, ExpectedValues, ExtractedEvidence,
+    LayerEvidence, ReferenceValues, attestation_results::Status, endorsements, expected_values,
 };
 use oak_time::{Clock, Instant};
 use p256::ecdsa::VerifyingKey;
@@ -33,7 +33,7 @@ use p256::ecdsa::VerifyingKey;
 use crate::{
     compare::compare_expected_values,
     expect::get_expected_values,
-    extract::{claims_set_from_serialized_cert, extract_event_data, extract_evidence, EventIdType},
+    extract::{EventIdType, claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
 };
 
@@ -150,7 +150,7 @@ pub fn verify_software_rooted_dice_chain(evidence: &Evidence) -> anyhow::Result<
             &evidence.layers
         } else {
             &evidence.layers[1..] // Slice from the second element (index 1) to
-                                  // the end
+            // the end
         };
         validate_that_event_log_is_captured_in_dice_layers(
             event_log,

@@ -26,7 +26,7 @@ use oak_proto_rust::oak::key_provisioning::v1::{
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::sync::CancellationToken;
-use tonic::{transport::Server, Request, Response};
+use tonic::{Request, Response, transport::Server};
 
 struct KeyProvisioningService {
     group_keys: Arc<GroupKeys>,

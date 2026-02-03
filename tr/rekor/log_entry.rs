@@ -22,8 +22,8 @@ extern crate alloc;
 
 use alloc::borrow::ToOwned;
 
-use anyhow::{ensure, Context};
-use base64::{prelude::BASE64_STANDARD, Engine as _};
+use anyhow::{Context, ensure};
+use base64::{Engine as _, prelude::BASE64_STANDARD};
 use digest_util::hash_sha2_256;
 use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;

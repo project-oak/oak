@@ -29,7 +29,7 @@ static SERIAL_BASE: u16 = 0x3f8;
 
 static SERIAL_PORT: Spinlock<OnceCell<SerialPort>> = Spinlock::new(OnceCell::new());
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust64_start(_rdi: u64, _rsi: &BootParams) -> ! {
     let mut serial = SERIAL_PORT.lock();
     serial

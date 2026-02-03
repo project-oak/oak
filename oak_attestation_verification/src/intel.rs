@@ -19,18 +19,18 @@
 
 use core::convert::Into;
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use digest_util::hash_sha2_256;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::Instant;
 use p256::{
-    ecdsa::{signature::Verifier, Signature, VerifyingKey},
     EncodedPoint,
+    ecdsa::{Signature, VerifyingKey, signature::Verifier},
 };
 use sha2::{Digest, Sha384};
 use x509_cert::{
-    der::{referenced::OwnedToRef, DecodePem},
     Certificate,
+    der::{DecodePem, referenced::OwnedToRef},
 };
 
 use crate::x509::{check_certificate_validity, verify_cert_signature};

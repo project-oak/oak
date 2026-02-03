@@ -15,7 +15,7 @@
 
 use anyhow::Context;
 use hyper_util::rt::TokioIo;
-use tokio_vsock::{VsockAddr, VsockStream, VMADDR_CID_HOST};
+use tokio_vsock::{VMADDR_CID_HOST, VsockAddr, VsockStream};
 use tonic::transport::Channel;
 use tower::service_fn;
 
@@ -83,7 +83,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio_stream::wrappers::TcpListenerStream;
     #[cfg(feature = "vsock")]
-    use tokio_vsock::{VsockListener, VMADDR_CID_LOCAL};
+    use tokio_vsock::{VMADDR_CID_LOCAL, VsockListener};
     use tonic::{Request, Response, Status};
 
     use super::*;

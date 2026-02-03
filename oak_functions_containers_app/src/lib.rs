@@ -24,7 +24,7 @@ use std::{
 use anyhow::Context;
 use oak_containers_agent::metrics::OakObserver;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, encryptor::ServerEncryptor};
-use oak_functions_service::{instance::OakFunctionsInstance, Handler, Observer};
+use oak_functions_service::{Handler, Observer, instance::OakFunctionsInstance};
 use oak_grpc::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 use oak_proto_rust::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,

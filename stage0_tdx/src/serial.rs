@@ -16,7 +16,7 @@
 
 use oak_stage0::hal::PortFactory;
 use oak_tdx_guest::vmcall::{
-    io_read_u16, io_read_u32, io_read_u8, io_write_u16, io_write_u32, io_write_u8,
+    io_read_u8, io_read_u16, io_read_u32, io_write_u8, io_write_u16, io_write_u32,
 };
 
 /// Creates a new [`PortFactory`] using the stage0 HAL interface.

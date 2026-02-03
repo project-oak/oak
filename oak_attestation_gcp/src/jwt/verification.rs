@@ -16,13 +16,13 @@
 
 use alloc::fmt;
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use jwt::{Token, Unverified, Verified, VerifyWithKey};
 use oak_time::Instant;
-use x509_cert::{der::Decode, Certificate};
+use x509_cert::{Certificate, der::Decode};
 use x509_verify::VerifyingKey;
 
-use crate::jwt::{algorithm::CertificateAlgorithm, Claims, Header};
+use crate::jwt::{Claims, Header, algorithm::CertificateAlgorithm};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AttestationVerificationError {
@@ -343,19 +343,19 @@ mod tests {
     use googletest::prelude::*;
     use jwt::{Token, Unverified};
     use oak_file_utils::data_path;
-    use oak_time::{make_instant, Duration, Instant};
-    use x509_cert::{der::DecodePem, Certificate};
+    use oak_time::{Duration, Instant, make_instant};
+    use x509_cert::{Certificate, der::DecodePem};
 
     use crate::{
-        jwt::{
-            verification::{
-                report_attestation_token, verify_attestation_token,
-                AttestationTokenVerificationReport, AttestationVerificationError,
-                CertificateReport, IssuerReport,
-            },
-            Claims, Header,
-        },
         OAK_SESSION_NOISE_V1_AUDIENCE,
+        jwt::{
+            Claims, Header,
+            verification::{
+                AttestationTokenVerificationReport, AttestationVerificationError,
+                CertificateReport, IssuerReport, report_attestation_token,
+                verify_attestation_token,
+            },
+        },
     };
 
     // The time has been set inside the validity interval of the test token.

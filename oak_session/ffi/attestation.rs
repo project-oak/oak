@@ -41,11 +41,11 @@ impl ErrorOrFfiAttester {
 /// # Safety
 ///
 /// * evidence_proto_bytes is a valid, non-null, aligned BytesView instances.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_simple_attester(
     evidence_proto_bytes: BytesView,
 ) -> ErrorOrFfiAttester {
-    match Evidence::decode(evidence_proto_bytes.as_slice()) {
+    match Evidence::decode(unsafe { evidence_proto_bytes.as_slice() }) {
         Ok(evidence) => {
             ErrorOrFfiAttester::ok(FfiAttester::new(Box::new(StaticAttester::new(evidence))))
         }
@@ -74,11 +74,11 @@ impl ErrorOrFfiEndorser {
 ///
 /// * eneodrsements_proto_bytes is a valid, non-null, aligned BytesView
 ///   instances.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn new_simple_endorser(
     endorsements_proto_bytes: BytesView,
 ) -> ErrorOrFfiEndorser {
-    match Endorsements::decode(endorsements_proto_bytes.as_slice()) {
+    match Endorsements::decode(unsafe { endorsements_proto_bytes.as_slice() }) {
         Ok(endorsements) => {
             ErrorOrFfiEndorser::ok(FfiEndorser::new(Box::new(StaticEndorser::new(endorsements))))
         }

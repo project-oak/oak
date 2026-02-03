@@ -23,13 +23,17 @@ use x86_64::VirtAddr;
 /// Safety: this virtual address must be valid and contain ELF headers and
 /// program headers.
 pub unsafe fn get_phdrs(addr: VirtAddr) -> &'static [ProgramHeader] {
-    let raw_header = core::slice::from_raw_parts(
-        addr.as_u64() as *const u8,
-        goblin::elf::header::header64::SIZEOF_EHDR,
-    );
+    let raw_header = unsafe {
+        core::slice::from_raw_parts(
+            addr.as_u64() as *const u8,
+            goblin::elf::header::header64::SIZEOF_EHDR,
+        )
+    };
     let header = goblin::elf::Elf::parse_header(raw_header).unwrap();
-    ProgramHeader::from_raw_parts(
-        (addr.as_u64() + header.e_phoff) as *const ProgramHeader,
-        header.e_phnum as usize,
-    )
+    unsafe {
+        ProgramHeader::from_raw_parts(
+            (addr.as_u64() + header.e_phoff) as *const ProgramHeader,
+            header.e_phnum as usize,
+        )
+    }
 }

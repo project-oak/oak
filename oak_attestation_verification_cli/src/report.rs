@@ -30,9 +30,9 @@ use oak_crypto::certificate::certificate_verifier::{
 };
 use oak_crypto_tink::signature_verifier::SignatureVerifier;
 use oak_proto_rust::oak::{
+    Variant,
     attestation::v1::{CertificateBasedReferenceValues, ConfidentialSpaceReferenceValues},
     session::v1::SessionBinding,
-    Variant,
 };
 use oak_session::session_binding::{SessionBindingVerifier, SignatureBindingVerifierBuilder};
 use oak_time::Instant;
@@ -284,16 +284,16 @@ mod tests {
     use core::str::FromStr;
 
     use jwt::{
-        algorithm::{openssl::PKeyWithDigest, AlgorithmType},
         SignWithKey, SigningAlgorithm, Token, Verified, VerifyWithKey, VerifyingAlgorithm,
+        algorithm::{AlgorithmType, openssl::PKeyWithDigest},
     };
     use oak_attestation_gcp::{
         jwt::{
+            Claims, Header,
             verification::{
                 AttestationTokenVerificationReport, AttestationVerificationError,
                 CertificateReport, IssuerReport,
             },
-            Claims, Header,
         },
         policy::{ConfidentialSpaceVerificationError, ConfidentialSpaceVerificationReport},
     };
@@ -302,7 +302,7 @@ mod tests {
         CertificateVerificationError, CertificateVerificationReport,
     };
     use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa};
-    use p256::ecdsa::{signature::SignerMut, Signature, SigningKey};
+    use p256::ecdsa::{Signature, SigningKey, signature::SignerMut};
 
     use super::*;
 

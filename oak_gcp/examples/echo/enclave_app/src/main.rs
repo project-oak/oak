@@ -16,11 +16,11 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use cosign_util::pull_package;
-use oak_attestation_gcp::{attestation::request_attestation_token, OAK_SESSION_NOISE_V1_AUDIENCE};
+use oak_attestation_gcp::{OAK_SESSION_NOISE_V1_AUDIENCE, attestation::request_attestation_token};
 use oak_gcp_examples_echo_enclave_app::{app, app_service, gcp};
 use oak_proto_rust::oak::attestation::v1::ConfidentialSpaceEndorsement;
-use oci_client::{client::ClientConfig, secrets::RegistryAuth, Client, Reference};
-use p256::ecdsa::{signature::rand_core::OsRng, SigningKey};
+use oci_client::{Client, Reference, client::ClientConfig, secrets::RegistryAuth};
+use p256::ecdsa::{SigningKey, signature::rand_core::OsRng};
 use sha2::Digest;
 use tokio::net::TcpListener;
 

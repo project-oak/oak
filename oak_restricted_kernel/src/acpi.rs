@@ -19,15 +19,15 @@ use core::ptr::NonNull;
 
 use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 use aml::{
-    resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
-    value::Args,
     AmlContext, AmlError, AmlName, AmlValue, LevelType, NamespaceLevel,
+    resource::{MemoryRangeDescriptor, Resource, resource_descriptor_list},
+    value::Args,
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use oak_linux_boot_params::BootParams;
 use x86_64::PhysAddr;
 
-use crate::{mm::Translator, PAGE_TABLES};
+use crate::{PAGE_TABLES, mm::Translator};
 
 /// Table of well-known ACPI devices (or, rather, well-known to us)
 const ACPI_GED: &str = "ACPI0013";
@@ -59,22 +59,24 @@ impl AcpiHandler for Handler {
         physical_address: usize,
         size: usize,
     ) -> PhysicalMapping<Self, T> {
-        PhysicalMapping::new(
-            physical_address,
-            NonNull::new(
-                PAGE_TABLES
-                    .lock()
-                    .get()
-                    .unwrap()
-                    .translate_physical(PhysAddr::new(physical_address as u64))
-                    .unwrap()
-                    .as_mut_ptr(),
+        unsafe {
+            PhysicalMapping::new(
+                physical_address,
+                NonNull::new(
+                    PAGE_TABLES
+                        .lock()
+                        .get()
+                        .unwrap()
+                        .translate_physical(PhysAddr::new(physical_address as u64))
+                        .unwrap()
+                        .as_mut_ptr(),
+                )
+                .unwrap(),
+                size,
+                size,
+                *self,
             )
-            .unwrap(),
-            size,
-            size,
-            *self,
-        )
+        }
     }
 
     fn unmap_physical_region<T>(_region: &acpi::PhysicalMapping<Self, T>) {

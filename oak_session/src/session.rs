@@ -65,18 +65,19 @@ use alloc::{
 };
 use core::mem;
 
-use anyhow::{anyhow, Context, Error, Ok};
+use anyhow::{Context, Error, Ok, anyhow};
 use oak_crypto::{encryptor::Encryptor, noise_handshake::session_binding_token_hash};
 use oak_proto_rust::oak::{
     attestation::v1::Assertion,
     session::v1::{
-        session_request::Request, session_response::Response, EncryptedMessage, EndorsedEvidence,
-        PlaintextMessage, SessionBinding, SessionRequest, SessionResponse,
+        EncryptedMessage, EndorsedEvidence, PlaintextMessage, SessionBinding, SessionRequest,
+        SessionResponse, session_request::Request, session_response::Response,
     },
 };
 use prost::Message;
 
 use crate::{
+    ProtocolEngine,
     attestation::{
         AttestationHandler, AttestationState, ClientAttestationHandler, PeerAttestationVerdict,
         ServerAttestationHandler, VerifierResult,
@@ -87,9 +88,8 @@ use crate::{
         HandshakeHandlerBuilder, HandshakeState, ServerHandshakeHandler,
         ServerHandshakeHandlerBuilder,
     },
-    session_binding::{create_session_binding_token, SessionBindingVerifier},
+    session_binding::{SessionBindingVerifier, create_session_binding_token},
     verifier::BoundAssertionVerifierResult,
-    ProtocolEngine,
 };
 
 pub const DEFAULT_MAX_MESSAGE_QUEUE_LEN: usize = 1000;
@@ -411,7 +411,7 @@ impl<AP: AttestationHandler, H: HandshakeHandler> Step<AP, H> {
                 };
             }
             Step::Open { .. } => {
-                return Err(anyhow!("there is no next step when the session is open"))
+                return Err(anyhow!("there is no next step when the session is open"));
             }
             Step::Invalid => return Err(anyhow!("session is currently in an invalid state")),
             Step::Error { .. } => return Err(anyhow!("session initialization already failed")),
@@ -599,7 +599,7 @@ impl ProtocolEngine<SessionResponse, SessionRequest> for ClientSession {
             }
             Step::Open { .. } => {}
             Step::Invalid | Step::Error { .. } => {
-                return Err(anyhow!("session is in an invalid state"))
+                return Err(anyhow!("session is in an invalid state"));
             }
         }
 

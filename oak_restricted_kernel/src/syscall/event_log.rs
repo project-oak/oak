@@ -16,9 +16,9 @@
 
 use alloc::{boxed::Box, vec::Vec};
 
-use oak_restricted_kernel_interface::{Errno, EVENT_LOG_FD};
+use oak_restricted_kernel_interface::{EVENT_LOG_FD, Errno};
 
-use super::fd::{copy_max_slice, FileDescriptor};
+use super::fd::{FileDescriptor, copy_max_slice};
 
 const MAX_EVENT_LOG_SIZE: usize = 4096; // 4 KiB
 

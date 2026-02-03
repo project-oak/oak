@@ -19,7 +19,7 @@ use alloc::vec::Vec;
 use anyhow::Context;
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 
-use crate::{session::Session, ClientSession, ProtocolEngine, ServerSession};
+use crate::{ClientSession, ProtocolEngine, ServerSession, session::Session};
 
 /// A convenience implementation for encryption/decryption for a session.
 ///

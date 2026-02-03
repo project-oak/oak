@@ -15,7 +15,7 @@
 
 use std::{path::PathBuf, sync::Arc};
 
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use clap::Parser;
 use launcher_client::LauncherClient;
 #[allow(deprecated)]
@@ -55,9 +55,12 @@ struct Args {
 }
 
 #[allow(deprecated)]
-pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static>(
-) -> anyhow::Result<()> {
-    std::env::set_var("RUST_BACKTRACE", "1");
+pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static>()
+-> anyhow::Result<()> {
+    // Safety: this is a container orchestrator.
+    unsafe {
+        std::env::set_var("RUST_BACKTRACE", "1");
+    }
     crate::logging::setup()?;
 
     let args = Args::parse();

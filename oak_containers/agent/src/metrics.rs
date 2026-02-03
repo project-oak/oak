@@ -16,12 +16,11 @@
 use std::{future::Future, pin::Pin, time::Instant};
 
 use opentelemetry::{
-    global,
+    KeyValue, global,
     metrics::{
         Counter, Gauge, Histogram, Meter, MeterProvider, ObservableCounter, ObservableGauge,
         ObservableUpDownCounter, UpDownCounter,
     },
-    KeyValue,
 };
 use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
 use opentelemetry_sdk::metrics::{Aggregation, Instrument, SdkMeterProvider, Stream};

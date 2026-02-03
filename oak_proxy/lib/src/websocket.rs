@@ -20,7 +20,7 @@ use futures::{SinkExt, StreamExt};
 use prost::Message;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{
-    tungstenite::protocol::Message as TungsteniteMessage, MaybeTlsStream, WebSocketStream,
+    MaybeTlsStream, WebSocketStream, tungstenite::protocol::Message as TungsteniteMessage,
 };
 
 /// Writes a Protobuf message to the given WebSocket stream.
