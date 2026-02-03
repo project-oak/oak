@@ -53,7 +53,7 @@ def _common_crates(std):
         ),
         "bytes": crate.spec(
             default_features = std,
-            version = "1.6.1",
+            version = "1.11.0",
         ),
         "chrono": crate.spec(
             default_features = std,

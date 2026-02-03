@@ -1,5 +1,5 @@
 {
-  "checksum": "28200196f096c2f8e57f98857a2a7d8c6717d3230f9064b270a8841197e35665",
+  "checksum": "8722379684e99a288825786e9067c5c501d3923c8174609f8cee8058dd72fd10",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1164,14 +1164,14 @@
       ],
       "license_file": "LICENSE-MIT"
     },
-    "bytes 1.10.1": {
+    "bytes 1.11.1": {
       "name": "bytes",
-      "version": "1.10.1",
+      "version": "1.11.1",
       "package_url": "https://github.com/tokio-rs/bytes",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/bytes/1.10.1/download",
-          "sha256": "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+          "url": "https://static.crates.io/crates/bytes/1.11.1/download",
+          "sha256": "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
         }
       },
       "targets": [
@@ -1193,8 +1193,8 @@
         "compile_data_glob": [
           "**"
         ],
-        "edition": "2018",
-        "version": "1.10.1"
+        "edition": "2021",
+        "version": "1.11.1"
       },
       "license": "MIT",
       "license_ids": [
@@ -2914,7 +2914,7 @@
               "target": "bitvec"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -6933,7 +6933,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             }
           ],
@@ -11407,7 +11407,7 @@
     "base64 0.21.7",
     "bitflags 2.10.0",
     "bitvec 1.0.1",
-    "bytes 1.10.1",
+    "bytes 1.11.1",
     "chrono 0.4.41",
     "ciborium 0.2.2",
     "const-oid 0.9.6",

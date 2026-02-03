@@ -1,5 +1,5 @@
 {
-  "checksum": "a503b61d1d60b931ccc6a59be382f34adf6546c6960fef1d24bed0f24da0b507",
+  "checksum": "1ce6bea615e1f1f766458226108138ff504ab4dac67696f673e96185c105bdd8",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1746,7 +1746,7 @@
               "target": "axum_core"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -1898,7 +1898,7 @@
               "target": "axum_core"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -2011,7 +2011,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -2111,7 +2111,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -3006,14 +3006,14 @@
       ],
       "license_file": "LICENSE-MIT"
     },
-    "bytes 1.10.1": {
+    "bytes 1.11.1": {
       "name": "bytes",
-      "version": "1.10.1",
+      "version": "1.11.1",
       "package_url": "https://github.com/tokio-rs/bytes",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/bytes/1.10.1/download",
-          "sha256": "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+          "url": "https://static.crates.io/crates/bytes/1.11.1/download",
+          "sha256": "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
         }
       },
       "targets": [
@@ -3042,8 +3042,8 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "1.10.1"
+        "edition": "2021",
+        "version": "1.11.1"
       },
       "license": "MIT",
       "license_ids": [
@@ -4131,7 +4131,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -7665,7 +7665,7 @@
               "target": "bitvec"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -11617,7 +11617,7 @@
               "target": "atomic_waker"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -12368,7 +12368,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -12472,7 +12472,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -12529,7 +12529,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -12811,7 +12811,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -13084,7 +13084,7 @@
               "target": "base64"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -17249,7 +17249,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -17325,7 +17325,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -18355,7 +18355,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -19249,7 +19249,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -22738,7 +22738,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             }
           ],
@@ -22802,7 +22802,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             }
           ],
@@ -22865,7 +22865,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -23597,7 +23597,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -23712,7 +23712,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -25263,7 +25263,7 @@
               "target": "base64"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -25753,7 +25753,7 @@
               "target": "base64"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -29745,7 +29745,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -32234,7 +32234,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -32615,7 +32615,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -32684,7 +32684,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -33020,7 +33020,7 @@
               "target": "base64"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -33221,7 +33221,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -33363,7 +33363,7 @@
               "target": "base64"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -33657,7 +33657,7 @@
               "target": "bitflags"
             },
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -34129,7 +34129,7 @@
         "deps": {
           "common": [
             {
-              "id": "bytes 1.10.1",
+              "id": "bytes 1.11.1",
               "target": "bytes"
             },
             {
@@ -43307,7 +43307,7 @@
     "base64 0.21.7",
     "bitflags 2.9.1",
     "bitvec 1.0.1",
-    "bytes 1.10.1",
+    "bytes 1.11.1",
     "chrono 0.4.41",
     "ciborium 0.2.2",
     "clap 4.5.40",
