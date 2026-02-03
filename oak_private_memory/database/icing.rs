@@ -2303,4 +2303,47 @@ mod tests {
 
         Ok(())
     }
+
+    /// Test that delete_memories correctly deletes a memory by MemoryId and
+    /// that get_blob_id_by_memory_id returns None after deletion.
+    /// This verifies the fix for the bug where cache deletion was passing
+    /// MemoryId instead of BlobId.
+    #[gtest]
+    fn delete_memories_uses_correct_id_types_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Add a memory with a distinct memory_id and blob_id
+        let memory_id = "test_memory_id".to_string();
+        let blob_id = "test_blob_id_12345".to_string();
+        let memory = Memory {
+            id: memory_id.clone(),
+            tags: vec!["test_tag".to_string()],
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        // Verify the memory was added and blob_id can be looked up
+        expect_that!(
+            icing_database.get_blob_id_by_memory_id(memory_id.clone())?,
+            eq(&Some(blob_id.clone()))
+        );
+
+        // Verify we can find this memory by tag search
+        let (results, _) = icing_database.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
+        expect_that!(results, contains(eq(&blob_id)));
+
+        // Now delete the memory using memory_id (not blob_id!)
+        icing_database.delete_memories(&[memory_id.clone()])?;
+
+        // After deletion, get_blob_id_by_memory_id should return None.
+        // This is the key lookup that DatabaseWithCache uses to get the
+        // correct BlobId for cache deletion.
+        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
+
+        // Verify the memory is no longer findable by tag search
+        let (results, _) = icing_database.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
+        expect_that!(results, is_empty());
+
+        Ok(())
+    }
 }

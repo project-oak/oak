@@ -242,8 +242,17 @@ impl DatabaseWithCache {
     }
 
     pub async fn delete_memories(&mut self, ids: Vec<MemoryId>) -> anyhow::Result<()> {
+        // First, look up the BlobIds for each MemoryId before deleting from meta_db.
+        // The cache is keyed by BlobId, not MemoryId.
+        let blob_ids: Vec<BlobId> = ids
+            .iter()
+            .filter_map(|memory_id| {
+                self.meta_db().get_blob_id_by_memory_id(memory_id.clone()).ok().flatten()
+            })
+            .collect();
+
         self.meta_db().delete_memories(&ids)?;
-        self.cache.delete_memories(&ids).await?;
+        self.cache.delete_memories(&blob_ids).await?;
         Ok(())
     }
 
