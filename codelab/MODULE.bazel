@@ -43,3 +43,6 @@ llvm.sysroot(
     label = "@oak_cc_toolchain_sysroot//:sysroot",
     targets = ["linux-x86_64"],
 )
+
+acr = use_extension("@oak_bzlmod//bazel/crates:extensions.bzl", "aliased_crates_repository")
+use_repo(acr, "oak_crates_index")

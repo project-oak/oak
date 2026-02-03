@@ -51,11 +51,11 @@ rust_library(
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:rand",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@pm_crates//:rand",
     ],
 )

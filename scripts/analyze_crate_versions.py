@@ -66,52 +66,67 @@ def fmt_col(val, width, color=RESET, truncate=False):
 
 
 def parse_oak_crates(file_path):
-  """Parse the bazel/crates/oak_crates.bzl file to extract crate names and requested versions."""
+  """Parse the MODULE.bazel file to extract crate names and requested versions."""
   with open(file_path, "r") as f:
     content = f.read()
 
   crates = {}
-  # Match "name": crate.spec(...)
-  pattern = r'"([^"]+)":\s*crate\.spec\((.*?)\s*\),'
-  for name, spec_content in re.findall(pattern, content, re.DOTALL):
+  # Match crate.spec( ... package = "name", ... version = "version", ... )
+  # package and version can be in any order.
+  pattern = r"crate\.spec\((.*?)\)"
+  for spec_content in re.findall(pattern, content, re.DOTALL):
+    package_match = re.search(r'package\s*=\s*"([^"]+)"', spec_content)
     version_match = re.search(r'version\s*=\s*"([^"]+)"', spec_content)
-    if version_match:
-      version = version_match.group(1)
-      if name not in crates or version_key(version) > version_key(crates[name]):
-        crates[name] = version
-    elif "git =" in spec_content:
-      crates[name] = "git"
+    git_match = re.search(r'git\s*=\s*"([^"]+)"', spec_content)
+
+    if package_match:
+      name = package_match.group(1)
+      if version_match:
+        version = version_match.group(1)
+        if name not in crates or version_key(version) > version_key(crates[name]):
+          crates[name] = version
+      elif git_match:
+        crates[name] = "git"
 
   return crates
 
 
 def parse_cargo_lock(file_path):
-  """Parse Cargo.lock to extract actual crate versions currently installed."""
+  """Parse MODULE.bazel.lock to extract actual crate versions currently installed."""
   if not os.path.exists(file_path):
     return {}
   with open(file_path, "r") as f:
-    lines = f.readlines()
+    try:
+      lock_data = json.load(f)
+    except json.JSONDecodeError:
+      return {}
 
   packages = {}
-  current_package = None
-  current_version = None
 
-  for line in lines:
-    line = line.strip()
-    if line == "[[package]]":
-      if current_package and current_version:
-        packages.setdefault(current_package, []).append(current_version)
-      current_package = None
-      current_version = None
-    elif line.startswith("name = "):
-      current_package = line.split("=")[1].strip().strip('"')
-    elif line.startswith("version = "):
-      current_version = line.split("=")[1].strip().strip('"')
+  def find_repo_specs(d):
+    if isinstance(d, dict):
+      if "generatedRepoSpecs" in d:
+        yield d["generatedRepoSpecs"]
+      for v in d.values():
+        yield from find_repo_specs(v)
+    elif isinstance(d, list):
+      for item in d:
+        yield from find_repo_specs(item)
 
-  if current_package and current_version:
-    packages.setdefault(current_package, []).append(current_version)
+  for repo_specs in find_repo_specs(lock_data):
+    for repo_name in repo_specs:
+      # Match oak_(?:std|no_std(?:_no_avx)?)_crates_index__<crate>-<version>
+      if "__" in repo_name and "_crates_index__" in repo_name:
+        crate_and_version = repo_name.split("__")[1]
+        # Look for the first hyphen that is followed by a digit
+        match = re.search(r"-(?=\d)", crate_and_version)
+        if match:
+          idx = match.start()
+          name = crate_and_version[:idx]
+          version = crate_and_version[idx + 1 :]
+          packages.setdefault(name, set()).add(version)
 
-  return packages
+  return {k: sorted(list(v), key=version_key) for k, v in packages.items()}
 
 
 def is_pre_release(v):
@@ -508,8 +523,8 @@ A dash (-) indicates that no update of that type is available (e.g., you are alr
   parser.add_argument(
       "lock_file",
       nargs="?",
-      default="Cargo.bazel.lock",
-      help="Path to Cargo.lock or Cargo.bazel.lock",
+      default="MODULE.bazel.lock",
+      help="Path to MODULE.bazel.lock",
   )
   parser.add_argument(
       "--versions_file", help="Path to a custom versions cache file"
@@ -530,7 +545,7 @@ A dash (-) indicates that no update of that type is available (e.g., you are alr
   )
   args = parser.parse_args()
 
-  bzl_file = "bazel/crates/oak_crates.bzl"
+  bzl_file = "MODULE.bazel"
 
   default_cache_path = (
       pathlib.Path.home() / ".cache" / "oak" / "crate_cache.json"

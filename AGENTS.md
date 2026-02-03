@@ -91,18 +91,15 @@ bazel run oak_proto_rust:copy_generated_files
 
 To add a new crate dependency to the project, you need to:
 
-1. **Add the crate to `bazel/crates/oak_crates.bzl`**. Be mindful of the
-   following:
-   - **Dependency Group:** Add the crate to the appropriate dictionary.
-     - `_common_crates`: For crates that are used in both `std` and `no_std`
-       environments.
-     - `OAK_NO_STD_CRATES`: For crates that are only used in `no_std`
-       environments.
-     - `OAK_STD_CRATES`: For crates that are only used in `std` environments.
+1. **Add the crate to `bazel/crates/oak_crate_specs.MODULE.bazel`**. Be mindful
+   of the following:
+   - **Dependency Group:** Assign the crate to the appropriate symbolic
+     repository or group (e.g., `STD`, `NO_STD`, `ALL_REPOSITORIES`).
    - **Features:** Carefully select the features for each crate. For `no_std`
-     builds, it's critical to set `default_features = False` and only enable the
+     builds, it's critical to set `default_features = False` and only enable
      features that are compatible with a `no_std` environment (e.g., `alloc`).
-2. **Run `just crates repin`** to update the lockfiles and BUILD files.
+2. **Run `just bazel-lockfile-all`** to update the lockfiles for all Bazel
+   modules in the project. Commit the updated lockfiles along with your changes.
 
 ## Documentation
 

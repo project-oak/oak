@@ -42,6 +42,7 @@ rust_library(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
         "@pm_crates//:cxx",
+        "@pm_crates//:rand",
     ],
 )
 

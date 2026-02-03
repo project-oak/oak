@@ -26,20 +26,3 @@ local_repository(
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
-
-load("@oak//bazel/crates:patched_crates.bzl", "load_patched_crates")
-
-load_patched_crates()
-
-load("@oak//bazel/crates:repositories.bzl", "create_oak_crate_repositories")
-load("@rules_rust//crate_universe:defs.bzl", "crate")
-
-create_oak_crate_repositories(
-    extra_packages = {
-        "aes-gcm-siv": crate.spec(version = "0.11.1"),
-    },
-)
-
-load("@oak//bazel/crates:crates.bzl", "load_oak_crate_repositories")
-
-load_oak_crate_repositories()

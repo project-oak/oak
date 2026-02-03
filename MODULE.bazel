@@ -324,3 +324,1399 @@ http_file(
     sha256 = NVIDIA_BASE_IMAGE_SHA256,
     url = "https://storage.googleapis.com/oak-bins/nvidia-base-image/{}.tar.xz".format(NVIDIA_BASE_IMAGE_SHA256),
 )
+
+git_repository(
+    name = "jemalloc",
+    build_file = "@oak//bazel:jemalloc.BUILD",
+    # jemalloc pointer for tikv-jemalloc-sys submodule pointer at 0.5.3
+    commit = "e13ca993e8ccb9ba9847cc330696e02839f328f7",
+
+    # Fix an issue when building jemalloc with gcc 10.3 (which is the version we
+    # currently use due to the aspect_gcc target)
+    # There's a target in the Makefile that uses the -MM flag, and
+    # when it does that, it doesn't include the $(CFLAGS).
+    # This results in __GNUC_PREREQ not being defined, which causes compiler
+    # failures.
+    # As a workaround, we patch that line in the Makefile.in to include the CFLAGS.
+    # TODO: b/341166977 Remove this when we can.
+    patch_cmds = ["sed -i '481s/-MM/$(CFLAGS) -MM/' Makefile.in"],
+    remote = "https://github.com/tikv/jemalloc",
+)
+
+load_patched_crates = use_extension("//bazel/crates:extensions.bzl", "load_patched_crates")
+use_repo(
+    load_patched_crates,
+    "prost_types_oak_patched",
+)
+
+aliased_crates_repository = use_extension("//bazel/crates:extensions.bzl", "aliased_crates_repository")
+use_repo(
+    aliased_crates_repository,
+    "oak_crates_index",
+)
+
+###############################################################################
+# Rust Crate Specifications
+#
+# This section defines the external Rust crates used in the project.
+# To maintain compatibility with older Bazel versions, these definitions
+# must remain in the main MODULE.bazel file.
+###############################################################################
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+
+inject_repo(crate, "jemalloc")
+
+# Repository Symbolic Names
+# -------------------------
+# These constants represent the different crate indexes used in the project.
+STD = "oak_std_crates_index"
+
+NO_STD = "oak_no_std_crates_index"
+
+NO_STD_NO_AVX = "oak_no_std_no_avx_crates_index"
+
+# Repository Groups
+# -----------------
+# Common combinations of repositories for easier assignment.
+ALL_REPOSITORIES = [
+    STD,
+    NO_STD,
+    NO_STD_NO_AVX,
+]
+
+ALL_NO_STD = [
+    NO_STD,
+    NO_STD_NO_AVX,
+]
+
+ALL_STD = [STD]
+
+ONLY_NO_STD = [NO_STD]
+
+ONLY_NO_STD_NO_AVX = [NO_STD_NO_AVX]
+
+# Repository Definitions
+# ----------------------
+# Define the repositories using the collected specifications.
+
+crate.from_specs(
+    name = STD,
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+        "wasm32-unknown-unknown",
+    ],
+)
+use_repo(crate, STD)
+
+crate.from_specs(
+    name = NO_STD,
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+        "wasm32-unknown-unknown",
+    ],
+)
+use_repo(crate, NO_STD)
+
+crate.from_specs(
+    name = NO_STD_NO_AVX,
+    supported_platform_triples = [
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-none",
+        "wasm32-unknown-unknown",
+    ],
+)
+use_repo(crate, NO_STD_NO_AVX)
+
+# Crate Specifications and Annotations
+# -------------------------------------
+# This section lists all external crates and their project-specific configurations.
+# Entries are sorted alphabetically by package name.
+#
+# NOTE: These specifications are parsed by a simple Starlark-based parser in
+# bazel/crates/extensions.bzl. To ensure the parser succeeds:
+# 1. Each specification MUST use the `crate.spec(` call.
+# 2. Both `package = "..."` and `repositories = ...` MUST be present within the call.
+# 3. `repositories` MUST be one of the constants: ALL_REPOSITORIES, ALL_NO_STD,
+#    ALL_STD, ONLY_NO_STD, or ONLY_NO_STD_NO_AVX.
+# 4. Do not use nested parentheses within the `crate.spec(...)` arguments.
+
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "acpi",
+    repositories = ALL_REPOSITORIES,
+    version = "5.0.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "aead",
+    repositories = ALL_REPOSITORIES,
+    version = "0.5.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "aes",
+        "alloc",
+    ],
+    package = "aes-gcm",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "aml",
+    repositories = ALL_REPOSITORIES,
+    version = "0.16.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "anyhow",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.87",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "arrayvec",
+    repositories = ALL_REPOSITORIES,
+    version = "0.7.4",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "assert-json-diff",
+    repositories = ALL_STD,
+    version = "2.0.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "assertables",
+    repositories = ALL_STD,
+    version = "7.0.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "async-stream",
+    repositories = ALL_STD,
+    version = "0.3.5",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "async-trait",
+    repositories = ALL_STD,
+    version = "0.1.77",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "atomic_refcell",
+    repositories = ALL_REPOSITORIES,
+    version = "0.1.13",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "http2",
+        "tokio",
+    ],
+    package = "axum",
+    repositories = ALL_STD,
+    version = "0.7.9",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "base64",
+    repositories = ALL_REPOSITORIES,
+    version = "0.21.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "bitflags",
+    repositories = ALL_REPOSITORIES,
+    version = "2.4.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "bitvec",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "bytes",
+    repositories = ALL_STD,
+    version = "1.11.0",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "bytes",
+    repositories = ALL_NO_STD,
+    version = "1.11.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "alloc",
+        "serde",
+    ],
+    package = "chrono",
+    repositories = ALL_STD,
+    version = "0.4.31",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "serde",
+    ],
+    package = "chrono",
+    repositories = ALL_NO_STD,
+    version = "0.4.31",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "ciborium",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.1",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "derive",
+        "env",
+    ],
+    package = "clap",
+    repositories = ALL_STD,
+    version = "4.4.17",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "colored",
+    repositories = ALL_STD,
+    version = "2.1.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["tokio"],
+    package = "command-fds",
+    repositories = ALL_STD,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "command-group",
+    repositories = ALL_STD,
+    version = "5.0.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "const-oid",
+    repositories = ALL_REPOSITORIES,
+    version = "0.9.6",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "coset",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "criterion",
+    repositories = ALL_STD,
+    version = "0.5.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "criterion-macro",
+    repositories = ALL_STD,
+    version = "0.4.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "derive_builder",
+    repositories = ALL_REPOSITORIES,
+    version = "0.20.0",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "der",
+        "pem",
+        "pkcs8",
+        "signing",
+    ],
+    package = "ecdsa",
+    repositories = ALL_REPOSITORIES,
+    version = "0.16.9",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "ed25519-dalek",
+    repositories = ALL_REPOSITORIES,
+    version = "2.2.0",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "elf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.7.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "embedded-io",
+    repositories = ONLY_NO_STD,
+    version = "0.6.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "env_logger",
+    repositories = ALL_STD,
+    version = "0.11.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "futures",
+    repositories = ALL_STD,
+    version = "0.3.31",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "futures-util",
+    repositories = ALL_STD,
+    version = "0.3.31",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "getrandom",
+    repositories = ALL_STD,
+    version = "0.2.12",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "js",
+        "rdrand",
+    ],
+    package = "getrandom",
+    repositories = ALL_NO_STD,
+    version = "0.2.12",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "elf32",
+        "elf64",
+        "endian_fd",
+    ],
+    package = "goblin",
+    repositories = ALL_REPOSITORIES,
+    version = "0.8.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "googletest",
+    repositories = ALL_STD,
+    version = "0.14.2",
+)
+crate.spec(
+    default_features = False,
+    features = ["ahash"],
+    package = "hashbrown",
+    repositories = ALL_REPOSITORIES,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "hex",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.3",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "hkdf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.12.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "hmac",
+    repositories = ALL_REPOSITORIES,
+    version = "0.12.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "x25519",
+    ],
+    package = "hpke",
+    repositories = ALL_REPOSITORIES,
+    version = "0.11.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "http",
+    repositories = ALL_STD,
+    version = "1.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "http-body-util",
+    repositories = ALL_STD,
+    version = "0.1.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "humantime-serde",
+    repositories = ALL_STD,
+    version = "1.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "hyper",
+    repositories = ALL_STD,
+    version = "1.4.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "hyper-util",
+    repositories = ALL_STD,
+    version = "0.1.7",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "indicatif",
+    repositories = ALL_STD,
+    version = "0.17.8",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "itertools",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "jni",
+    repositories = ALL_STD,
+    version = "0.21.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["openssl"],
+    package = "jwt",
+    repositories = ALL_STD,
+    version = "0.16.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "lazy_static",
+    repositories = ALL_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["spin_no_std"],
+    package = "lazy_static",
+    repositories = ALL_NO_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "libm",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.8",
+)
+crate.spec(
+    default_features = True,
+    features = ["alloc_ref"],
+    package = "linked_list_allocator",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.5",
+)
+crate.annotation(
+    crate = "linked_list_allocator",
+    disable_pipelining = False,
+    repositories = ONLY_NO_STD,
+    rustc_flags = ["--codegen=overflow-checks=false"],
+)
+crate.spec(
+    default_features = True,
+    features = ["arc_lock"],
+    package = "lock_api",
+    repositories = ALL_STD,
+    version = "0.4.11",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "lock_api",
+    repositories = ALL_NO_STD,
+    version = "0.4.11",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "log",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.20",
+)
+crate.annotation(
+    build_script_env = {"LZMA_API_STATIC": "true"},
+    crate = "lzma-sys",
+    disable_pipelining = False,
+    repositories = ALL_STD,
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "maplit",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "mockall",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "fs",
+        "mman",
+        "mount",
+        "process",
+        "signal",
+        "term",
+        "ucontext",
+        "user",
+    ],
+    package = "nix",
+    repositories = ALL_STD,
+    version = "0.27.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "nom",
+    repositories = ALL_REPOSITORIES,
+    version = "8.0.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["rustls-tls"],
+    package = "oci-client",
+    repositories = ALL_STD,
+    version = "0.15.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "oci-spec",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "once_cell",
+    repositories = ALL_STD,
+    version = "1.19.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "openssl",
+    repositories = ALL_STD,
+    version = "0.10.73",
+)
+crate.spec(
+    default_features = True,
+    features = ["trace"],
+    package = "opentelemetry",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "opentelemetry-appender-tracing",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "grpc-tonic",
+        "logs",
+        "metrics",
+        "trace",
+    ],
+    package = "opentelemetry-otlp",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "gen-tonic",
+        "logs",
+        "metrics",
+    ],
+    package = "opentelemetry-proto",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "logs",
+        "metrics",
+        "rt-tokio",
+        "spec_unstable_metrics_views",
+        "trace",
+    ],
+    package = "opentelemetry_sdk",
+    repositories = ALL_STD,
+    version = "0.31.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "os_pipe",
+    repositories = ALL_STD,
+    version = "1.1.5",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ouroboros",
+    repositories = ALL_STD,
+    version = "0.18.4",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "alloc",
+        "ecdsa",
+        "pem",
+    ],
+    package = "p256",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ecdsa",
+        "pem",
+    ],
+    package = "p384",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "parking_lot",
+    repositories = ALL_STD,
+    version = "0.12.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "pem",
+    repositories = ALL_STD,
+    version = "3.0.4",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "pkcs8",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "port_check",
+    repositories = ALL_STD,
+    version = "0.1.5",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "portpicker",
+    repositories = ALL_STD,
+    version = "0.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "criterion",
+        "flamegraph",
+        "frame-pointer",
+        "prost-codec",
+    ],
+    package = "pprof",
+    repositories = ALL_STD,
+    version = "0.15.0",
+)
+crate.annotation(
+    crate = "pprof",
+    disable_pipelining = False,
+    patch_args = [
+        "-u",
+        "-p0",
+    ],
+    patches = ["@oak//third_party/pprof:pprof-prost13.patch"],
+    repositories = ALL_STD,
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "pretty_assertions",
+    repositories = ALL_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "primeorder",
+    repositories = ALL_REPOSITORIES,
+    version = "0.13.6",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "procfs",
+    repositories = ALL_STD,
+    version = "0.16.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "proptest",
+    repositories = ALL_STD,
+    version = "1.4.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "prost",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "prost",
+    repositories = ALL_NO_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-build",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-derive",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "prost-types",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "quote",
+    repositories = ALL_STD,
+    version = "1.0.35",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rand",
+    repositories = ALL_STD,
+    version = "0.9.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rand_chacha",
+    repositories = ALL_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "rand_chacha",
+    repositories = ALL_NO_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["getrandom"],
+    package = "rand_core",
+    repositories = ALL_REPOSITORIES,
+    version = "0.6.4",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "regex",
+    repositories = ALL_STD,
+    version = "1.10.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "std",
+        "string",
+    ],
+    package = "regex-lite",
+    repositories = ALL_STD,
+    version = "0.1.6",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "regex-lite",
+    repositories = ALL_NO_STD,
+    version = "0.1.6",
+)
+crate.spec(
+    default_features = False,
+    features = ["rustls-tls"],
+    package = "reqwest",
+    repositories = ALL_STD,
+    version = "0.12.22",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rlsf",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "base64",
+        "macros",
+        "server",
+        "transport-streamable-http-server",
+        "transport-worker",
+    ],
+    package = "rmcp",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "rmcp-macros",
+    repositories = ALL_STD,
+    version = "0.8.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rpassword",
+    repositories = ALL_STD,
+    version = "7.3.1",
+)
+crate.spec(
+    default_features = False,
+    features = ["sha2"],
+    package = "rsa",
+    repositories = ALL_REPOSITORIES,
+    version = "0.9.6",
+)
+crate.spec(
+    default_features = False,
+    package = "rs_merkle",
+    repositories = ALL_STD,
+    version = "1.5.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rtnetlink",
+    repositories = ALL_STD,
+    version = "0.14.1",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ring",
+        "std",
+    ],
+    package = "rustls",
+    repositories = ALL_STD,
+    version = "0.23.36",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rustls-pemfile",
+    repositories = ALL_STD,
+    version = "2.1.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "rustls-pki-types",
+    repositories = ALL_STD,
+    version = "1.14.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "self_cell",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.4",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "serde",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.210",
+)
+crate.spec(
+    default_features = False,
+    features = ["alloc"],
+    package = "serde_json",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.111",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "sha2",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.8",
+)
+crate.annotation(
+    crate = "sha2",
+    crate_features = ["force-soft"],
+    disable_pipelining = False,
+    repositories = ONLY_NO_STD_NO_AVX,
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "sha3",
+    repositories = ALL_REPOSITORIES,
+    version = "0.10.8",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "signal-hook",
+    repositories = ALL_STD,
+    version = "0.3.17",
+)
+crate.spec(
+    default_features = True,
+    features = ["futures-v0_3"],
+    package = "signal-hook-tokio",
+    repositories = ALL_STD,
+    version = "0.3.1",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "spinning_top",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "static_assertions",
+    repositories = ALL_REPOSITORIES,
+    version = "1.1.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "strum",
+    repositories = ALL_REPOSITORIES,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = ["full"],
+    package = "syn",
+    repositories = ALL_STD,
+    version = "2.0.48",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "syslog",
+    repositories = ALL_STD,
+    version = "6.1.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tar",
+    repositories = ALL_STD,
+    version = "0.4.40",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tempfile",
+    repositories = ALL_STD,
+    version = "3.10.1",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "thiserror",
+    repositories = ALL_REPOSITORIES,
+    version = "2.0.12",
+)
+crate.annotation(
+    build_script_data = ["@jemalloc//:gen_dir"],
+    build_script_env = {"JEMALLOC_OVERRIDE": "$(execpath @jemalloc//:gen_dir)/lib/libjemalloc.a"},
+    crate = "tikv-jemalloc-sys",
+    data = ["@jemalloc//:gen_dir"],
+    disable_pipelining = False,
+    repositories = ALL_STD,
+    deps = ["@jemalloc"],
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tikv-jemallocator",
+    repositories = ALL_STD,
+    version = "0.5.4",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "fs",
+        "io-std",
+        "io-util",
+        "macros",
+        "net",
+        "parking_lot",
+        "process",
+        "rt",
+        "rt-multi-thread",
+        "signal",
+        "sync",
+        "time",
+    ],
+    package = "tokio",
+    repositories = ALL_STD,
+    version = "1.41.0",
+)
+crate.annotation(
+    crate = "tokio",
+    disable_pipelining = False,
+    repositories = ALL_STD,
+    rustc_flags = ["--cfg=tokio_unstable"],
+)
+crate.spec(
+    default_features = True,
+    features = ["net"],
+    package = "tokio-stream",
+    repositories = ALL_STD,
+    version = "0.1.14",
+)
+crate.spec(
+    default_features = True,
+    features = ["rustls-tls-native-roots"],
+    package = "tokio-tungstenite",
+    repositories = ALL_STD,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tokio-util",
+    repositories = ALL_STD,
+    version = "0.7.10",
+)
+crate.spec(
+    default_features = True,
+    features = ["tonic014"],
+    package = "tokio-vsock",
+    repositories = ALL_STD,
+    version = "*",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "toml",
+    repositories = ALL_STD,
+    version = "0.8.12",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "gzip",
+        "tls-webpki-roots",
+    ],
+    package = "tonic",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tonic-prost",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tonic-prost-build",
+    repositories = ALL_STD,
+    version = "0.14.3",
+)
+crate.spec(
+    default_features = True,
+    features = [
+        "load-shed",
+        "util",
+    ],
+    package = "tower",
+    repositories = ALL_STD,
+    version = "0.4",
+)
+crate.spec(
+    default_features = True,
+    features = ["trace"],
+    package = "tower-http",
+    repositories = ALL_STD,
+    version = "0.6",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "tracing",
+    repositories = ALL_STD,
+    version = "0.1.40",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "ansi",
+        "fmt",
+        "smallvec",
+        "std",
+    ],
+    package = "tracing-subscriber",
+    repositories = ALL_STD,
+    version = "0.3.22",
+)
+crate.spec(
+    default_features = True,
+    features = ["url"],
+    package = "tungstenite",
+    repositories = ALL_STD,
+    version = "0.27.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "uart_16550",
+    repositories = ALL_REPOSITORIES,
+    version = "0.3.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ubyte",
+    repositories = ALL_STD,
+    version = "0.10.4",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "ureq",
+    repositories = ALL_STD,
+    version = "2.12.1",
+)
+crate.spec(
+    default_features = True,
+    features = ["serde"],
+    package = "url",
+    repositories = ALL_STD,
+    version = "2.5.2",
+)
+crate.spec(
+    default_features = True,
+    features = ["embedded-io"],
+    git = "https://github.com/rcore-os/virtio-drivers.git",
+    package = "virtio-drivers",
+    repositories = ONLY_NO_STD,
+    rev = "dd8772498d581ae8d5644806c0072d3dc6f94118",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "walkdir",
+    repositories = ALL_STD,
+    version = "2.5.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasm-bindgen",
+    repositories = ONLY_NO_STD,
+    version = "=0.2.105",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "wasmi",
+    repositories = ALL_STD,
+    version = "0.31.2",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "wasmi",
+    repositories = ALL_NO_STD,
+    version = "0.31.2",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "async",
+        "cache",
+        "cranelift",
+        "gc",
+        "parallel-compilation",
+        "pooling-allocator",
+        "runtime",
+    ],
+    package = "wasmtime",
+    repositories = ALL_STD,
+    version = "25.0.3",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "which",
+    repositories = ALL_STD,
+    version = "5.0.0",
+)
+crate.spec(
+    default_features = False,
+    features = ["pem"],
+    package = "x509-cert",
+    repositories = ALL_REPOSITORIES,
+    version = "0.2.5",
+)
+crate.spec(
+    default_features = False,
+    features = [
+        "p256",
+        "pem",
+        "rsa",
+        "sha2",
+        "x509",
+    ],
+    package = "x509-verify",
+    repositories = ALL_REPOSITORIES,
+    version = "0.4.8",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "x86_64",
+    repositories = ALL_REPOSITORIES,
+    version = "0.15.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "xz2",
+    repositories = ALL_STD,
+    version = "0.1.7",
+)
+crate.spec(
+    default_features = False,
+    features = ["derive"],
+    package = "zerocopy",
+    repositories = ALL_REPOSITORIES,
+    version = "0.8.25",
+)
+crate.spec(
+    default_features = True,
+    features = ["derive"],
+    package = "zeroize",
+    repositories = ALL_REPOSITORIES,
+    version = "1.7.0",
+)
+
+###############################################################################
+# NOTE: Keep crate spec definitions at the end of this file.
+###############################################################################

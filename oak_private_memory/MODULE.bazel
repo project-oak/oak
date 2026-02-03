@@ -126,7 +126,18 @@ crate.spec(
     package = "cxx",
     version = "1.0.194",
 )
+crate.spec(
+    package = "aes-gcm-siv",
+    version = "0.11.1",
+)
+crate.spec(
+    package = "rand",
+    version = "0.9.1",
+)
 crate.from_specs(
     name = "pm_crates",
 )
-use_repo(crate, "pm_crates")
+use_repo(crate, "oak_std_crates_index", "pm_crates")
+
+acr = use_extension("@oak_bzlmod//bazel/crates:extensions.bzl", "aliased_crates_repository")
+use_repo(acr, "oak_crates_index")

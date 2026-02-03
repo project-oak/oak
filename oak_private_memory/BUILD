@@ -42,10 +42,10 @@ rust_library(
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
-        "@oak_crates_index//:rand",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-stream",
         "@oak_crates_index//:tonic",
+        "@pm_crates//:rand",
     ],
 )
 
@@ -87,8 +87,8 @@ rust_library(
     name = "encryption",
     srcs = ["src/encryption.rs"],
     deps = [
-        "@oak_crates_index//:aes-gcm-siv",
         "@oak_crates_index//:anyhow",
+        "@pm_crates//:aes-gcm-siv",
     ],
 )
 
@@ -129,9 +129,9 @@ rust_library(
         "@oak_crates_index//:futures",
         "@oak_crates_index//:opentelemetry",
         "@oak_crates_index//:prost",
-        "@oak_crates_index//:rand",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
+        "@pm_crates//:rand",
     ],
 )
 

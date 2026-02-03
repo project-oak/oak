@@ -51,10 +51,11 @@ def _load_patched_prost_types():
     would need to include some more overrides here.
 
     Note: The `crate.annotation` helper in crates universe provides an
-    `override_target` which allows you to replace the rules_rust-generated
-    target with any arbitrary target label of your choosing. Unforunately, it
-    does not lead to the crate_universe logic skipping the feature resolution
-    logic, so the same issue still ends up applying.
+    `override_target` which allows you to patch the crate, or to replace the
+    rules_rust-generated target with any arbitrary target label of your
+    choosing. Unforunately, it does not lead to the crate_universe logic
+    skipping the feature resolution logic, so the same issue still ends up
+    applying. So we must apply the patch outside of the crate_universe logic.
     """
 
     # This must match the version the crates repository uses.
