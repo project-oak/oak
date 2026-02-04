@@ -30,8 +30,6 @@ use tokio::net::TcpListener;
 pub struct Args {
     #[arg(short, long, default_value = "127.0.0.1:8080")]
     listen_address: String,
-    // Currently only a key-value lookup is supported.
-    // TODO: b/469747147 - Support arbitrary Wasm logic.
     #[arg(
         long,
         help = "The URI for fetching the wasm logic",
