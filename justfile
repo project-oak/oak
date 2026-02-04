@@ -17,6 +17,7 @@ import? "~/.oak_justfile.local"
 
 # Convenience bundle of tests and checks prior to sending a change for review.
 presubmit: \
+    verify-bazelisk \
     format \
     build-and-test \
     clippy \
@@ -32,6 +33,10 @@ build-linter:
 
 format: build-linter
     bazel-bin/external/oak_linter+/linter --fix
+
+verify-bazelisk:
+    rm -r ~/.cache/bazelisk
+    bazel --version
 
 # -- End Developer Workflow Tools --
 

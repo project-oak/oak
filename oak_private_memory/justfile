@@ -1,4 +1,8 @@
-presubmit: style build-and-test
+presubmit: verify-bazelisk style build-and-test
+
+verify-bazelisk:
+    rm -r ~/.cache/bazelisk
+    bazel --version
 
 build-and-test-and-copy: style build-and-test private-memory-server private-memory-enclave-app
 
