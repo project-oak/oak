@@ -1,5 +1,5 @@
 {
-  "checksum": "cec3e661e51fdf7fb441ecdc9653d4f094c0c04b66df3a70d6b9a717684f304a",
+  "checksum": "306a567b05084891d3edaf3e90ef04cdd4c79cdec4f6be5175588742055ec1b3",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -22397,6 +22397,10 @@
         "Http": {
           "url": "https://static.crates.io/crates/pprof/0.15.0/download",
           "sha256": "38a01da47675efa7673b032bf8efd8214f1917d89685e07e395ab125ea42b187",
+          "patch_args": [
+            "--verbose",
+            "-p0"
+          ],
           "patches": [
             "@//third_party/pprof:pprof-prost13.patch"
           ]

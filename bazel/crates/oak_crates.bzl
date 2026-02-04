@@ -345,6 +345,7 @@ OAK_STD_ANNOTATIONS = {
         patches = [
             "@//third_party/pprof:pprof-prost13.patch",
         ],
+        patch_args = ["--verbose", "-p0"],
     )],
     "tikv-jemalloc-sys": [crate.annotation(
         build_script_data = [

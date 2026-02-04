@@ -193,21 +193,6 @@ bare-metal-clippy:
 wasm-clippy:
     bazel query "{{wasm_crates_query}}" | xargs bazel build --config=clippy --config=release --keep_going --platforms=//:wasm32-unknown-unknown
 
-bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
-
-[working-directory: 'codelab']
-bazel-repin-codelab:
-    env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
-
-bazel-repin:
-    env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
-
-# Examples:
-# just bazel-update-crate curve25519-dalek
-# just bazel-update-crate curve25519-dalek@4.1.3
-bazel-update-crate crate:
-    env CARGO_BAZEL_REPIN={{crate}} bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
-
 bazel-rustfmt:
     bazel build --config=rustfmt //...:all -- -third_party/...
 
@@ -255,10 +240,37 @@ private_memory_presubmit:
 private-memory-build-and-copy:
     nix develop --command just build-and-test-and-copy
 
-[working-directory: 'oak_private_memory']
-bazel-repin-private-memory:
-     env CARGO_BAZEL_REPIN=true bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
+
+##################
+# CRATE VERSIONS #
+##################
+bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
+update-crates-all: bazel-repin-update bazel-repin-update-private-memory bazel-repin-update-codelab
+
+repin-cmd arg:
+    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+
+bazel-repin: (repin-cmd "true")
+
+[working-directory: 'codelab']
+bazel-repin-codelab: (repin-cmd "true")
+
+[working-directory: 'oak_private_memory']
+bazel-repin-private-memory: (repin-cmd "true")
+
+# Examples:
+# just bazel-update-crate curve25519-dalek
+# just bazel-update-crate curve25519-dalek@4.1.3
+bazel-update-crate crate: (repin-cmd crate)
+
+bazel-repin-update: (repin-cmd "full")
+
+[working-directory: 'codelab']
+bazel-repin-update-codelab: (repin-cmd "full")
+
+[working-directory: 'oak_private_memory']
+bazel-repin-update-private-memory: (repin-cmd "full")
 
 ####################
 # ARTIFACT COPYING #
