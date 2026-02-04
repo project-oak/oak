@@ -26,8 +26,7 @@ use oak_proto_rust::oak::functions::{
 use rmcp::{
     handler::server::wrapper::Parameters,
     model::{
-        Implementation, InitializeRequestParam, InitializeResult, ProtocolVersion,
-        ServerCapabilities, ServerInfo,
+        Implementation, InitializeRequestParam, InitializeResult, ServerCapabilities, ServerInfo,
     },
     schemars,
     schemars::JsonSchema,
@@ -164,10 +163,14 @@ where
 {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            protocol_version: ProtocolVersion::V_2025_06_18,
-            capabilities: ServerCapabilities::builder().build(),
             server_info: Implementation::from_build_env(),
             instructions: Some(INSTRUCTIONS.into()),
+            capabilities: ServerCapabilities {
+                tools: Some(rmcp::model::ToolsCapability::default()),
+                ..Default::default()
+            },
+            // Note that this uses the latest protocol version.
+            ..Default::default()
         }
     }
 
