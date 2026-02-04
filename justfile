@@ -253,13 +253,15 @@ private-memory-build-and-copy:
 bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
 update-crates-all: bazel-repin-update bazel-repin-update-private-memory bazel-repin-update-codelab
 
-repin-cmd arg:
-    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=oak_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
+[no-cd]
+@repin-cmd arg:
+    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=oak_std_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
 
 bazel-repin: (repin-cmd "true")
 
 [working-directory: 'codelab']
-bazel-repin-codelab: (repin-cmd "true")
+bazel-repin-codelab:
+    just repin-cmd "true"
 
 [working-directory: 'oak_private_memory']
 bazel-repin-private-memory: (repin-cmd "true")
