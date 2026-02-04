@@ -15,7 +15,6 @@
 //
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(assert_matches)]
 #![feature(let_chains)]
 
 extern crate alloc;
