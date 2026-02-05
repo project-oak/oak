@@ -1,5 +1,5 @@
 {
-  "checksum": "7bb51faa1690fe5b2778c13f208fc49042ceb2b2d683996e62c83a0b61147f84",
+  "checksum": "ee477f6cc7ec33449fc66f8d28e529c5faef2fc24558bad09d3f583380201a80",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1733,6 +1733,77 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "const_fn 0.4.11": {
+      "name": "const_fn",
+      "version": "0.4.11",
+      "package_url": "https://github.com/taiki-e/const_fn",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/const_fn/0.4.11/download",
+          "sha256": "2f8a2ca5ac02d09563609681103aada9e1777d54fc57a5acd7a41404f9c93b6e"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "const_fn",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "const_fn",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "const_fn 0.4.11",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.4.11"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ]
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
     "coset 0.3.8": {
       "name": "coset",
       "version": "0.3.8",
@@ -3126,7 +3197,7 @@
               "target": "x509_verify"
             },
             {
-              "id": "x86_64 0.15.2",
+              "id": "x86_64 0.15.4",
               "target": "x86_64"
             },
             {
@@ -10991,14 +11062,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.15.2": {
+    "x86_64 0.15.4": {
       "name": "x86_64",
-      "version": "0.15.2",
+      "version": "0.15.4",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.15.2/download",
-          "sha256": "0f042214de98141e9c8706e8192b73f56494087cc55ebec28ce10f26c5c364ae"
+          "url": "https://static.crates.io/crates/x86_64/0.15.4/download",
+          "sha256": "f7841fa0098ceb15c567d93d3fae292c49e10a7662b4936d5f6a9728594555ba"
         }
       },
       "targets": [
@@ -11053,13 +11124,18 @@
         "proc_macro_deps": {
           "common": [
             {
+              "id": "const_fn 0.4.11",
+              "target": "const_fn",
+              "alias": "dep_const_fn"
+            },
+            {
               "id": "rustversion 1.0.22",
               "target": "rustversion"
             }
           ],
           "selects": {}
         },
-        "version": "0.15.2"
+        "version": "0.15.4"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -11525,7 +11601,7 @@
     "wasmi 0.31.2",
     "x509-cert 0.2.5",
     "x509-verify 0.4.8",
-    "x86_64 0.15.2",
+    "x86_64 0.15.4",
     "zerocopy 0.8.38",
     "zeroize 1.8.2"
   ],

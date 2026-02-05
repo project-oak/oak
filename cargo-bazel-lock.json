@@ -1,5 +1,5 @@
 {
-  "checksum": "8447c47889d39f52745402ba8122a96e4de3d4b6497bff2fcc1d87003bc3b24e",
+  "checksum": "31b60a9588a23e4b1548d4080f0f0a2355a3512834f7fdb306350cf549ec0d24",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -4170,14 +4170,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "command-fds 0.3.0": {
+    "command-fds 0.3.2": {
       "name": "command-fds",
-      "version": "0.3.0",
+      "version": "0.3.2",
       "package_url": "https://github.com/google/command-fds/",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/command-fds/0.3.0/download",
-          "sha256": "7bb11bd1378bf3731b182997b40cefe00aba6a6cc74042c8318c1b271d3badf7"
+          "url": "https://static.crates.io/crates/command-fds/0.3.2/download",
+          "sha256": "f849b92c694fe237ecd8fafd1ba0df7ae0d45c1df6daeb7f68ed4220d51640bd"
         }
       },
       "targets": [
@@ -4202,31 +4202,29 @@
         "crate_features": {
           "common": [
             "default",
-            "tokio",
-            "tokio-crate"
+            "tokio"
           ],
           "selects": {}
         },
         "deps": {
           "common": [
             {
-              "id": "nix 0.27.1",
+              "id": "nix 0.30.1",
               "target": "nix"
             },
             {
-              "id": "thiserror 1.0.69",
+              "id": "thiserror 2.0.18",
               "target": "thiserror"
             },
             {
               "id": "tokio 1.49.0",
-              "target": "tokio",
-              "alias": "tokio_crate"
+              "target": "tokio"
             }
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "version": "0.3.0"
+        "edition": "2024",
+        "version": "0.3.2"
       },
       "license": "Apache-2.0",
       "license_ids": [
@@ -4507,6 +4505,77 @@
         },
         "edition": "2021",
         "version": "0.9.6"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE-APACHE"
+    },
+    "const_fn 0.4.11": {
+      "name": "const_fn",
+      "version": "0.4.11",
+      "package_url": "https://github.com/taiki-e/const_fn",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/const_fn/0.4.11/download",
+          "sha256": "2f8a2ca5ac02d09563609681103aada9e1777d54fc57a5acd7a41404f9c93b6e"
+        }
+      },
+      "targets": [
+        {
+          "ProcMacro": {
+            "crate_name": "const_fn",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "const_fn",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "deps": {
+          "common": [
+            {
+              "id": "const_fn 0.4.11",
+              "target": "build_script_build"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "0.4.11"
+      },
+      "build_script_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "compile_data_glob_excludes": [
+          "**/*.rs"
+        ],
+        "data_glob": [
+          "**"
+        ]
       },
       "license": "Apache-2.0 OR MIT",
       "license_ids": [
@@ -7790,7 +7859,7 @@
               "target": "colored"
             },
             {
-              "id": "command-fds 0.3.0",
+              "id": "command-fds 0.3.2",
               "target": "command_fds"
             },
             {
@@ -8290,7 +8359,7 @@
               "target": "x509_verify"
             },
             {
-              "id": "x86_64 0.15.2",
+              "id": "x86_64 0.15.4",
               "target": "x86_64"
             },
             {
@@ -17671,6 +17740,7 @@
         "crate_features": {
           "common": [
             "default",
+            "fs",
             "ioctl",
             "memoffset",
             "socket"
@@ -42380,14 +42450,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "x86_64 0.15.2": {
+    "x86_64 0.15.4": {
       "name": "x86_64",
-      "version": "0.15.2",
+      "version": "0.15.4",
       "package_url": "https://github.com/rust-osdev/x86_64",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/x86_64/0.15.2/download",
-          "sha256": "0f042214de98141e9c8706e8192b73f56494087cc55ebec28ce10f26c5c364ae"
+          "url": "https://static.crates.io/crates/x86_64/0.15.4/download",
+          "sha256": "f7841fa0098ceb15c567d93d3fae292c49e10a7662b4936d5f6a9728594555ba"
         }
       },
       "targets": [
@@ -42442,13 +42512,18 @@
         "proc_macro_deps": {
           "common": [
             {
+              "id": "const_fn 0.4.11",
+              "target": "const_fn",
+              "alias": "dep_const_fn"
+            },
+            {
               "id": "rustversion 1.0.22",
               "target": "rustversion"
             }
           ],
           "selects": {}
         },
-        "version": "0.15.2"
+        "version": "0.15.4"
       },
       "license": "MIT/Apache-2.0",
       "license_ids": [
@@ -43823,7 +43898,7 @@
     "ciborium 0.2.2",
     "clap 4.5.57",
     "colored 2.2.0",
-    "command-fds 0.3.0",
+    "command-fds 0.3.2",
     "command-group 5.0.1",
     "const-oid 0.9.6",
     "coset 0.3.8",
@@ -43953,7 +44028,7 @@
     "which 5.0.0",
     "x509-cert 0.2.5",
     "x509-verify 0.4.8",
-    "x86_64 0.15.2",
+    "x86_64 0.15.4",
     "xz2 0.1.7",
     "zerocopy 0.8.38",
     "zeroize 1.8.2"
