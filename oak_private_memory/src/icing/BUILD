@@ -38,9 +38,9 @@ rust_library(
         ":icing_ffi_bridge",
         "//proto:sealed_memory_rust_proto",
         "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@pm_crates//:cxx",
     ],
 )
 
@@ -51,9 +51,9 @@ rust_library(
         ":bridge",
         ":ffi_wrapper-sys",
         "//src/icing/proto:icing_rust_proto",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
+        "@pm_crates//:cxx",
     ],
 )
 

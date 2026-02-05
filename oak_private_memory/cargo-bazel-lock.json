@@ -1,5 +1,5 @@
 {
-  "checksum": "fd1ef4ba2c0d9bc50aa5065142cf18f943bbeb0f0699a270aec1c50f18ac09a8",
+  "checksum": "3be10f40091fc6b864ea39af788673c81bcaf9f13b2662495eafff3d6786889c",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3209,15 +3209,10 @@
           "**"
         ],
         "crate_features": {
-          "common": [],
-          "selects": {
-            "aarch64-apple-darwin": [
-              "parallel"
-            ],
-            "x86_64-unknown-linux-gnu": [
-              "parallel"
-            ]
-          }
+          "common": [
+            "parallel"
+          ],
+          "selects": {}
         },
         "deps": {
           "common": [
@@ -3226,32 +3221,19 @@
               "target": "find_msvc_tools"
             },
             {
+              "id": "jobserver 0.1.34",
+              "target": "jobserver"
+            },
+            {
+              "id": "libc 0.2.180",
+              "target": "libc"
+            },
+            {
               "id": "shlex 1.3.0",
               "target": "shlex"
             }
           ],
-          "selects": {
-            "aarch64-apple-darwin": [
-              {
-                "id": "jobserver 0.1.34",
-                "target": "jobserver"
-              },
-              {
-                "id": "libc 0.2.180",
-                "target": "libc"
-              }
-            ],
-            "x86_64-unknown-linux-gnu": [
-              {
-                "id": "jobserver 0.1.34",
-                "target": "jobserver"
-              },
-              {
-                "id": "libc 0.2.180",
-                "target": "libc"
-              }
-            ]
-          }
+          "selects": {}
         },
         "edition": "2018",
         "version": "1.2.55"
@@ -4115,124 +4097,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "codespan-reporting 0.12.0": {
-      "name": "codespan-reporting",
-      "version": "0.12.0",
-      "package_url": "https://github.com/brendanzab/codespan",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/codespan-reporting/0.12.0/download",
-          "sha256": "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "codespan_reporting",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "codespan_reporting",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default",
-            "std",
-            "termcolor"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "termcolor 1.4.1",
-              "target": "termcolor"
-            },
-            {
-              "id": "unicode-width 0.2.2",
-              "target": "unicode_width"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.12.0"
-      },
-      "license": "Apache-2.0",
-      "license_ids": [
-        "Apache-2.0"
-      ],
-      "license_file": "LICENSE"
-    },
-    "codespan-reporting 0.13.1": {
-      "name": "codespan-reporting",
-      "version": "0.13.1",
-      "package_url": "https://github.com/brendanzab/codespan",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/codespan-reporting/0.13.1/download",
-          "sha256": "af491d569909a7e4dee0ad7db7f5341fef5c614d5b8ec8cf765732aba3cff681"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "codespan_reporting",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "codespan_reporting",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default",
-            "std",
-            "termcolor"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "termcolor 1.4.1",
-              "target": "termcolor"
-            },
-            {
-              "id": "unicode-width 0.2.2",
-              "target": "unicode_width"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.13.1"
-      },
-      "license": "Apache-2.0",
-      "license_ids": [
-        "Apache-2.0"
-      ],
-      "license_file": "LICENSE"
     },
     "colorchoice 1.0.4": {
       "name": "colorchoice",
@@ -6941,262 +6805,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "cxx 1.0.194": {
-      "name": "cxx",
-      "version": "1.0.194",
-      "package_url": "https://github.com/dtolnay/cxx",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/cxx/1.0.194/download",
-          "sha256": "747d8437319e3a2f43d93b341c137927ca70c0f5dabeea7a005a73665e247c7e"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "cxx",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "cxx",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "alloc",
-            "default",
-            "std"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "foldhash 0.2.0",
-              "target": "foldhash"
-            },
-            {
-              "id": "link-cplusplus 1.0.12",
-              "target": "link_cplusplus"
-            }
-          ],
-          "selects": {}
-        },
-        "extra_deps": {
-          "common": [
-            ":cxx_cc"
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "cxxbridge-macro 1.0.194",
-              "target": "cxxbridge_macro"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "1.0.194"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE",
-      "additive_build_file_content": "load(\"@rules_cc//cc:defs.bzl\", \"cc_library\")\ncc_library(\n    name = \"cxx_cc\",\n    srcs = [\"src/cxx.cc\"],\n    hdrs = [\"include/cxx.h\"],\n    include_prefix = \"rust\",\n    includes = [\"include\"],\n    linkstatic = True,\n    strip_include_prefix = \"include\",\n    visibility = [\"//visibility:public\"],\n)\n",
-      "extra_aliased_targets": {
-        "cxx_cc": "cxx_cc"
-      }
-    },
-    "cxx-build 1.0.194": {
-      "name": "cxx-build",
-      "version": "1.0.194",
-      "package_url": "https://github.com/dtolnay/cxx",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/cxx-build/1.0.194/download",
-          "sha256": "b0f4697d190a142477b16aef7da8a99bfdc41e7e8b1687583c0d23a79c7afc1e"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "cxx_build",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "cxx_build",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "cc 1.2.55",
-              "target": "cc"
-            },
-            {
-              "id": "codespan-reporting 0.13.1",
-              "target": "codespan_reporting"
-            },
-            {
-              "id": "indexmap 2.13.0",
-              "target": "indexmap"
-            },
-            {
-              "id": "proc-macro2 1.0.106",
-              "target": "proc_macro2"
-            },
-            {
-              "id": "quote 1.0.44",
-              "target": "quote"
-            },
-            {
-              "id": "scratch 1.0.9",
-              "target": "scratch"
-            },
-            {
-              "id": "syn 2.0.114",
-              "target": "syn"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "1.0.194"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "cxxbridge-flags 1.0.194": {
-      "name": "cxxbridge-flags",
-      "version": "1.0.194",
-      "package_url": "https://github.com/dtolnay/cxx",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/cxxbridge-flags/1.0.194/download",
-          "sha256": "23384a836ab4f0ad98ace7e3955ad2de39de42378ab487dc28d3990392cb283a"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "cxxbridge_flags",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "cxxbridge_flags",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default"
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "1.0.194"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "cxxbridge-macro 1.0.194": {
-      "name": "cxxbridge-macro",
-      "version": "1.0.194",
-      "package_url": "https://github.com/dtolnay/cxx",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/cxxbridge-macro/1.0.194/download",
-          "sha256": "e6acc6b5822b9526adfb4fc377b67128fdd60aac757cc4a741a6278603f763cf"
-        }
-      },
-      "targets": [
-        {
-          "ProcMacro": {
-            "crate_name": "cxxbridge_macro",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "cxxbridge_macro",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "indexmap 2.13.0",
-              "target": "indexmap"
-            },
-            {
-              "id": "proc-macro2 1.0.106",
-              "target": "proc_macro2"
-            },
-            {
-              "id": "quote 1.0.44",
-              "target": "quote"
-            },
-            {
-              "id": "syn 2.0.114",
-              "target": "syn"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "1.0.194"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "darling 0.20.11": {
       "name": "darling",
       "version": "0.20.11",
@@ -8263,10 +7871,6 @@
               "target": "clap"
             },
             {
-              "id": "codespan-reporting 0.12.0",
-              "target": "codespan_reporting"
-            },
-            {
               "id": "colored 2.2.0",
               "target": "colored"
             },
@@ -8299,14 +7903,6 @@
               "target": "curve25519_dalek"
             },
             {
-              "id": "cxx 1.0.194",
-              "target": "cxx"
-            },
-            {
-              "id": "cxx-build 1.0.194",
-              "target": "cxx_build"
-            },
-            {
               "id": "derive_builder 0.20.2",
               "target": "derive_builder"
             },
@@ -8321,10 +7917,6 @@
             {
               "id": "env_logger 0.11.8",
               "target": "env_logger"
-            },
-            {
-              "id": "foldhash 0.1.5",
-              "target": "foldhash"
             },
             {
               "id": "futures 0.3.31",
@@ -8529,10 +8121,6 @@
             {
               "id": "primeorder 0.13.6",
               "target": "primeorder"
-            },
-            {
-              "id": "proc-macro2 1.0.106",
-              "target": "proc_macro2"
             },
             {
               "id": "procfs 0.16.0",
@@ -8835,10 +8423,6 @@
             {
               "id": "rmcp-macros 0.8.5",
               "target": "rmcp_macros"
-            },
-            {
-              "id": "rustversion 1.0.22",
-              "target": "rustversion"
             },
             {
               "id": "strum_macros 0.25.3",
@@ -10606,59 +10190,8 @@
         "compile_data_glob": [
           "**"
         ],
-        "crate_features": {
-          "common": [
-            "default",
-            "std"
-          ],
-          "selects": {}
-        },
         "edition": "2021",
         "version": "0.1.5"
-      },
-      "license": "Zlib",
-      "license_ids": [
-        "Zlib"
-      ],
-      "license_file": "LICENSE"
-    },
-    "foldhash 0.2.0": {
-      "name": "foldhash",
-      "version": "0.2.0",
-      "package_url": "https://github.com/orlp/foldhash",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/foldhash/0.2.0/download",
-          "sha256": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "foldhash",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "foldhash",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "std"
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.2.0"
       },
       "license": "Zlib",
       "license_ids": [
@@ -16437,93 +15970,6 @@
         "MIT"
       ],
       "license_file": "LICENSE"
-    },
-    "link-cplusplus 1.0.12": {
-      "name": "link-cplusplus",
-      "version": "1.0.12",
-      "package_url": "https://github.com/dtolnay/link-cplusplus",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/link-cplusplus/1.0.12/download",
-          "sha256": "7f78c730aaa7d0b9336a299029ea49f9ee53b0ed06e9202e8cb7db9bae7b8c82"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "link_cplusplus",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        },
-        {
-          "BuildScript": {
-            "crate_name": "build_script_build",
-            "crate_root": "build.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "link_cplusplus",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "link-cplusplus 1.0.12",
-              "target": "build_script_build"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "1.0.12"
-      },
-      "build_script_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "compile_data_glob_excludes": [
-          "**/*.rs"
-        ],
-        "data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "cc 1.2.55",
-              "target": "cc"
-            }
-          ],
-          "selects": {}
-        },
-        "links": "cplusplus"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
     },
     "linked_list_allocator 0.10.5": {
       "name": "linked_list_allocator",
@@ -23122,8 +22568,7 @@
         "crate_features": {
           "common": [
             "default",
-            "proc-macro",
-            "span-locations"
+            "proc-macro"
           ],
           "selects": {
             "aarch64-apple-darwin": [
@@ -28393,77 +27838,6 @@
         ],
         "edition": "2015",
         "version": "1.2.0"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
-    "scratch 1.0.9": {
-      "name": "scratch",
-      "version": "1.0.9",
-      "package_url": "https://github.com/dtolnay/scratch",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/scratch/1.0.9/download",
-          "sha256": "d68f2ec51b097e4c1a75b681a8bec621909b5e91f15bb7b840c4f2f7b01148b2"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "scratch",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        },
-        {
-          "BuildScript": {
-            "crate_name": "build_script_build",
-            "crate_root": "build.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "scratch",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "scratch 1.0.9",
-              "target": "build_script_build"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2015",
-        "version": "1.0.9"
-      },
-      "build_script_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "compile_data_glob_excludes": [
-          "**/*.rs"
-        ],
-        "data_glob": [
-          "**"
-        ]
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -44709,7 +44083,6 @@
     "chrono 0.4.43",
     "ciborium 0.2.2",
     "clap 4.5.56",
-    "codespan-reporting 0.12.0",
     "colored 2.2.0",
     "command-fds 0.3.0",
     "command-group 5.0.1",
@@ -44719,13 +44092,10 @@
     "criterion-macro 0.4.0",
     "crossbeam-channel 0.5.15",
     "curve25519-dalek 4.1.3",
-    "cxx 1.0.194",
-    "cxx-build 1.0.194",
     "derive_builder 0.20.2",
     "ecdsa 0.16.9",
     "elf 0.7.4",
     "env_logger 0.11.8",
-    "foldhash 0.1.5",
     "futures 0.3.31",
     "futures-util 0.3.31",
     "getrandom 0.2.17",
@@ -44777,7 +44147,6 @@
     "pprof 0.15.0",
     "pretty_assertions 1.4.1",
     "primeorder 0.13.6",
-    "proc-macro2 1.0.106",
     "procfs 0.16.0",
     "proptest 1.9.0",
     "proptest-derive 0.4.0",
@@ -44799,7 +44168,6 @@
     "rpassword 7.4.0",
     "rsa 0.9.10",
     "rtnetlink 0.14.1",
-    "rustversion 1.0.22",
     "self_cell 1.2.2",
     "serde 1.0.228",
     "serde-aux 4.7.0",

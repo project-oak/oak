@@ -23,7 +23,6 @@ local_repository(
     path = "..",
 )
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@oak//bazel/rust:defs.bzl", "setup_rust_dependencies")
 
 setup_rust_dependencies()
@@ -38,13 +37,7 @@ load("@rules_rust//crate_universe:defs.bzl", "crate")
 create_oak_crate_repositories(
     extra_packages = {
         "aes-gcm-siv": crate.spec(version = "0.11.1"),
-        "codespan-reporting": crate.spec(version = "0.12.0"),
-        "cxx": crate.spec(version = "1.0.157"),
-        "cxx-build": crate.spec(version = "1.0.157"),
-        "foldhash": crate.spec(version = "0.1.5"),
-        "proc-macro2": crate.spec(version = "1.0.95"),
         "rand": crate.spec(version = "0.9.1"),
-        "rustversion": crate.spec(version = "1.0.20"),
         "serde-aux": crate.spec(version = "4.6.0"),
     },
 )
@@ -52,12 +45,3 @@ create_oak_crate_repositories(
 load("@oak//bazel/crates:crates.bzl", "load_oak_crate_repositories")
 
 load_oak_crate_repositories()
-
-http_archive(
-    # Has to be `cxx.rs` as `cxx` hardcodes this name.
-    name = "cxx.rs",
-    patch_cmds = ["sed -i 's/@crates\\.io/@oak_crates_index/g' BUILD.bazel"],
-    sha256 = "91d29f7ddd9eedda896cfde88c9c96d796e217061195843511f403090d2248ca",
-    strip_prefix = "cxx-1.0.157",
-    url = "https://github.com/dtolnay/cxx/archive/refs/tags/1.0.157.tar.gz",
-)

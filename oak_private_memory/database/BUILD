@@ -29,7 +29,6 @@ rust_library(
         "//:external_db_client",
         "//proto:sealed_memory_rust_proto",
         "//src/icing",
-        "@cxx.rs//:cxx",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bytes",
         "@oak_crates_index//:hex",
@@ -43,6 +42,7 @@ rust_library(
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
+        "@pm_crates//:cxx",
     ],
 )
 

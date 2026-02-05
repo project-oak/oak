@@ -110,3 +110,15 @@ git_repository(
     commit = "c8263cfd12eacefde39cf16b2326fc3ca3fe934f",  # 2025-11-17
     remote = "https://android.googlesource.com/platform/external/icing",
 )
+
+bazel_dep(name = "cxx.rs", version = "1.0.194")
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.spec(
+    package = "cxx",
+    version = "1.0.194",
+)
+crate.from_specs(
+    name = "pm_crates",
+)
+use_repo(crate, "pm_crates")
