@@ -206,7 +206,9 @@ fn main() -> Result<()> {
         "| {:>12} | {:>18} | {:>15} | {:>15} | {:>15} |",
         "Embeddings", "Avg Latency (ms)", "Ground Truth", "Index Files", "Total Size"
     );
-    println!("|--------------|----------------------|-----------------|-----------------|-----------------|");
+    println!(
+        "|--------------|----------------------|-----------------|-----------------|-----------------|"
+    );
 
     for &target_count in &embedding_counts {
         // Create a temp directory and store its path before passing ownership
