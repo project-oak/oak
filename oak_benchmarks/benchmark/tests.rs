@@ -28,6 +28,7 @@ fn test_service_unsupported() {
         benchmark_type: BenchmarkType::P256Sign as i32,
         data_size: 1024,
         iterations: 100,
+        warmup_iterations: 0,
     };
 
     let response = svc.handle_request(request);

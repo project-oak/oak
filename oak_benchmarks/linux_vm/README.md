@@ -12,17 +12,20 @@ sudo apt install libguestfs-tools qemu-system-x86
 
 ## Quick Start
 
+> ⚠️ **IMPORTANT**: Always build with `-c opt` for benchmarks!
+
 ```bash
 # 1. Download the base image
 ./oak_benchmarks/linux_vm/download_base_image.sh ~/Downloads
 
-# 2. Build your application
-bazel build //oak_benchmarks/linux_app
+# 2. Build your application (RELEASE MODE - required for benchmarks!)
+bazel build -c opt //oak_benchmarks/linux_app
 
 # 3. Create VM image with your app
+# IMPORTANT: Use the explicit k8-opt path to ensure release binary
 ./oak_benchmarks/linux_vm/prepare_image.sh \
     --base-image=~/Downloads/debian-12-nocloud-amd64.qcow2 \
-    --binary=bazel-bin/oak_benchmarks/linux_app/linux_app \
+    --binary=bazel-out/k8-opt/bin/oak_benchmarks/linux_app/linux_app \
     --output=/tmp/benchmark-vm.qcow2 \
     --command="/opt/app/linux_app --server --port=5000" \
     --port=5000

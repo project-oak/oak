@@ -28,6 +28,8 @@ message RunBenchmarkRequest {
   uint32 data_size = 2;
   // Number of iterations.
   uint32 iterations = 3;
+  // Number of warmup iterations to run before measurement (not timed).
+  uint32 warmup_iterations = 4;
 }
 
 // Types of benchmarks supported.
@@ -38,18 +40,24 @@ enum BenchmarkType {
   BENCHMARK_TYPE_MEMORY_INSERT = 3;
   BENCHMARK_TYPE_MEMORY_LOOKUP = 4;
   BENCHMARK_TYPE_ARRAY_UPDATE = 5;
+  // Debug/connectivity test - returns dummy values without doing work.
+  BENCHMARK_TYPE_DEBUG = 100;
 }
 
 // Result of a benchmark run.
 message RunBenchmarkResponse {
-  // TSC ticks elapsed during the benchmark.
+  // TSC ticks elapsed during the benchmark (Oak enclave only).
+  // For Linux, this will be 0 - use elapsed_ns instead.
   uint64 elapsed_tsc = 1;
+  // Elapsed time in nanoseconds (Linux only).
+  // For Oak enclave, this will be 0 - use elapsed_tsc instead.
+  uint64 elapsed_ns = 2;
   // Number of iterations completed.
-  uint32 iterations_completed = 2;
+  uint32 iterations_completed = 3;
   // Total bytes processed.
-  uint64 bytes_processed = 3;
+  uint64 bytes_processed = 4;
   // Status code (0 = success).
-  uint32 status = 4;
+  uint32 status = 5;
 }
 
 // Benchmark service for Oak performance evaluation.

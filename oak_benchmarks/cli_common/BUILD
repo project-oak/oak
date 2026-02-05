@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -22,40 +22,15 @@ package(
 )
 
 rust_library(
-    name = "benchmark",
+    name = "cli_common",
     srcs = [
-        "cpu/mod.rs",
+        "cli.rs",
         "lib.rs",
-        "memory/mod.rs",
-        "service.rs",
-        "timer.rs",
+        "results.rs",
+        "tsc.rs",
     ],
-    crate_features = [],
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
-        "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:clap",
     ],
-)
-
-rust_library(
-    name = "benchmark_std",
-    srcs = [
-        "cpu/mod.rs",
-        "lib.rs",
-        "memory/mod.rs",
-        "service.rs",
-        "tests.rs",
-        "timer.rs",
-    ],
-    crate_features = ["std"],
-    crate_name = "benchmark",
-    deps = [
-        "//oak_benchmarks/proto:oak_benchmark_proto_rust",
-        "//oak_benchmarks/proto:service",
-    ],
-)
-
-rust_test(
-    name = "benchmark_test",
-    crate = ":benchmark_std",
 )

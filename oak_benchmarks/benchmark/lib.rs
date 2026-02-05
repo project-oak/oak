@@ -33,12 +33,14 @@ extern crate alloc;
 pub mod cpu;
 pub mod memory;
 pub mod service;
+pub mod timer;
 
 #[cfg(test)]
 mod tests;
 
 // Re-exports for convenience.
 pub use service::BenchmarkService;
+pub use timer::{DEFAULT_TSC_FREQ_HZ, read_tsc};
 
 /// Benchmark result returned on success.
 ///

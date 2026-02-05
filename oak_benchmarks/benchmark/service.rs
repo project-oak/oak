@@ -47,6 +47,15 @@ impl BenchmarkService {
     /// Handle a benchmark request and return the response.
     pub fn handle_request(&mut self, request: RunBenchmarkRequest) -> RunBenchmarkResponse {
         match request.benchmark_type() {
+            // Debug/connectivity test: return dummy success values.
+            BenchmarkType::Debug => RunBenchmarkResponse {
+                elapsed_tsc: 0,
+                elapsed_ns: 0,
+                iterations_completed: request.iterations,
+                bytes_processed: (request.iterations as u64) * (request.data_size as u64),
+                status: status::OK,
+            },
+            // All other benchmarks are not implemented yet.
             BenchmarkType::Sha256
             | BenchmarkType::P256Sign
             | BenchmarkType::MemoryInsert
@@ -54,6 +63,7 @@ impl BenchmarkService {
             | BenchmarkType::ArrayUpdate
             | BenchmarkType::Unspecified => RunBenchmarkResponse {
                 elapsed_tsc: 0,
+                elapsed_ns: 0,
                 iterations_completed: 0,
                 bytes_processed: 0,
                 status: BenchmarkError::UnsupportedBenchmark.as_status_code(),
