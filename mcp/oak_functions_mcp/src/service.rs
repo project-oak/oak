@@ -48,6 +48,8 @@ const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing
 /// Configuration for the dynamically created MCP tool.
 #[derive(Clone, Debug)]
 pub struct ToolConfig {
+    /// Tool name shown to MCP clients.
+    pub name: String,
     /// Description of the tool shown to MCP clients.
     pub description: String,
     /// JSON Schema defining the expected input parameters.
@@ -57,6 +59,7 @@ pub struct ToolConfig {
 impl Default for ToolConfig {
     fn default() -> Self {
         Self {
+            name: "key_value_lookup".to_string(),
             description: "Invoke Oak Functions with a key to look up a value".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
@@ -112,7 +115,7 @@ where
             .expect("input_schema must be a valid JSON object");
 
         // Create the Tool with dynamic description and schema
-        let tool = Tool::new("invoke", tool_config.description, Arc::new(input_schema));
+        let tool = Tool::new(tool_config.name, tool_config.description, Arc::new(input_schema));
 
         // Create a dynamic route with a closure that handles tool calls
         let route = ToolRoute::<Self>::new_dyn(tool, move |ctx: ToolCallContext<'_, Self>| {
