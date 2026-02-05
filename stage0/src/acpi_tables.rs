@@ -731,6 +731,167 @@ impl ProcessorLocalApic {
     }
 }
 
+/// I/O Apic Structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. There is at at least one or more IO APIC in an APIC implementation.
+/// Documented in section 5.2.12.3 of APIC Specification.
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct IoApic {
+    header: ControllerHeader,
+
+    /// Processor's local APIC ID.
+    pub io_apic_id: u8,
+
+    /// Should be set to zero
+    _reserved: u8,
+
+    /// 32-bit addr for this APIC. Each I/O APIC resides at a unique address.
+    io_apic_addr: u32,
+
+    /// Global interrupt number where the interrupt inputs start at
+    global_system_interrupt_base: u32,
+}
+
+// Because we cast pointers from *const ControllHeader:
+static_assertions::assert_eq_align!(IoApic, ControllerHeader);
+static_assertions::assert_eq_size!(IoApic, [u8; 12usize]);
+
+impl IoApic {
+    pub const STRUCTURE_TYPE: u8 = 1;
+    // Explicitly stated in the spec
+    pub const EXPECTED_LENGTH: u8 = 12;
+
+    pub fn new(header: &ControllerHeader) -> ResultStaticErr<&Self> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not an I/O APIC Structure");
+        }
+        header.validate()?;
+
+        if header.len != Self::EXPECTED_LENGTH {
+            log::error!("IO APIC struct expected length of {}, got {}", Self::EXPECTED_LENGTH, header.len);
+            return Err("IO APIC length is expected to be 12");
+        }
+
+        // Safety: we're verified that the structure type is correct.
+        let io_apic = unsafe { &*(header as *const _ as usize as *const Self) };
+        io_apic.validate()?;
+        Ok(io_apic)
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
+        if self.header.len != Self::EXPECTED_LENGTH {
+            log::error!("IO APIC struct expected length of {}, got {}", Self::EXPECTED_LENGTH, self.header.len);
+            return Err("IO APIC length is expected to be 12");
+        }
+        Ok(())
+    }
+}
+
+/// Interrupt Source Override structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. It describes variances between the IA-PC standard dual 8259 and
+/// the actual platform implementation.
+///
+/// Documented in section 5.2.12.5 of APIC Specification.
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct InterruptSourceOverride {
+    header: ControllerHeader,
+
+    // Should be set to zero for ISA
+    bus: u8,
+
+    // Bus-relative interrupt source (Interrupt request)
+    source: u8,
+
+    // Will signal this global system interrupt
+    global_system_interrupt: u32,
+
+    /// See documentation for the various bits set.
+    flags: u16,
+}
+static_assertions::assert_eq_size!(InterruptSourceOverride, [u8; 10usize]);
+
+impl InterruptSourceOverride {
+    pub const STRUCTURE_TYPE: u8 = 2;
+    // Explicitly stated in the spec
+    pub const EXPECTED_LENGTH: u8 = 10;
+
+    pub fn new(header: &ControllerHeader) -> ResultStaticErr<&Self> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not Interrupt Source Override Structure");
+        }
+        header.validate()?;
+
+        // Safety: we're verified that the structure type is correct.
+        let interrupt_source_override = unsafe { &*(header as *const _ as usize as *const Self) };
+        interrupt_source_override.validate()?;
+        Ok(interrupt_source_override)
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
+        if self.header.len != Self::EXPECTED_LENGTH {
+            log::error!("Interrupt source override struct expected length of {}, got {}", Self::EXPECTED_LENGTH, self.header.len);
+            return Err("Interrupt Source Override length is expected to be 10");
+        }
+
+        if self.bus != 0 {
+            // Stated in spec as 0 (constant) for ISA
+            return Err("Interrupt Source Override bus was not set to 0 for ISA");
+        }
+        Ok(())
+    }
+}
+
+/// Local APIC NMI (Non-Maskable Interrupt) structure.
+/// One of the possible structures in MADT's Interrupt Controller Structure
+/// field. If provided, describes the Local APIC interrupt input for a processor.
+/// It's needed by Linux to enable an appropriate APIC entry.
+///
+/// Documented in section 5.2.12.7 of APIC Specification.
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct LocalApicNmi {
+    header: ControllerHeader,
+
+    /// Deprecated; maps to a Processor object in the ACPI tree.
+    processor_uid: u8,
+
+    /// See documentation for the various bits set.
+    flags: u16,
+
+    /// Describe which local interrupt number is connected to NMI
+    local_apic_lint_num: u8,
+}
+static_assertions::assert_eq_size!(LocalApicNmi, [u8; 6usize]);
+
+impl LocalApicNmi {
+    pub const STRUCTURE_TYPE: u8 = 4;
+    // Explicitly stated in the spec
+    pub const EXPECTED_LENGTH: u8 = 6;
+
+    pub fn new(header: &ControllerHeader) -> ResultStaticErr<&Self> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not LocalApicNmi");
+        }
+        header.validate()?;
+
+        // Safety: we're verified that the structure type is correct.
+        let local_apic_nmi = unsafe { &*(header as *const _ as usize as *const Self) };
+        local_apic_nmi.validate()?;
+        Ok(local_apic_nmi)
+    }
+
+    fn validate(&self) -> ResultStaticErr<()> {
+        if self.header.len != Self::EXPECTED_LENGTH {
+            log::error!("Local APIC NMI struct expected length of {}, got {}", Self::EXPECTED_LENGTH, self.header.len);
+            return Err("Local APIC NMI length is expected to be 6");
+        }
+        Ok(())
+    }
+}
+
 /// Processor Local x2APIC structure.
 /// One of the possible structures in MADT's Interrupt Controller Structure
 /// field. Documented in section 5.2.12.12 of APIC Specification.
