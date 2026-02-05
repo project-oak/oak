@@ -13,23 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // This gets the "well known descriptor" protos and the base protos.
+    let mut included_protos = oak_proto_build_utils::get_common_proto_path(".");
+    // This adds the protos included from the "proto" project.
+    included_protos.push(std::path::PathBuf::from("../.."));
 
-//! Tests for BenchmarkService.
+    let proto_paths = &[std::path::PathBuf::from("benchmark.proto")];
 
-use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
+    let mut config = prost_build::Config::new();
 
-use super::service::BenchmarkService;
-use crate::BenchmarkError;
+    config.btree_map(["."]);
 
-#[test]
-fn test_service_unsupported() {
-    let mut svc = BenchmarkService::new(0);
-    let request = RunBenchmarkRequest {
-        benchmark_type: BenchmarkType::P256Sign as i32,
-        data_size: 1024,
-        iterations: 100,
-    };
+    config
+        .compile_protos(proto_paths, included_protos.as_slice())
+        .expect("proto compilation failed");
 
-    let response = svc.handle_request(request);
-    assert_eq!(response.status, BenchmarkError::UnsupportedBenchmark.as_status_code());
+    Ok(())
 }

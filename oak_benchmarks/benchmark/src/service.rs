@@ -17,7 +17,9 @@
 //! Main benchmark service that dispatches requests to benchmark
 //! implementations.
 
-use service::oak::benchmark::{BenchmarkType, RunBenchmarkRequest, RunBenchmarkResponse};
+use oak_benchmark_proto_rust::oak::benchmark::{
+    BenchmarkType, RunBenchmarkRequest, RunBenchmarkResponse,
+};
 
 use crate::BenchmarkError;
 

@@ -32,6 +32,7 @@ rust_library(
     ],
     crate_features = [],
     deps = [
+        "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
     ],
 )
@@ -49,6 +50,7 @@ rust_library(
     crate_features = ["std"],
     crate_name = "benchmark",
     deps = [
+        "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
     ],
 )

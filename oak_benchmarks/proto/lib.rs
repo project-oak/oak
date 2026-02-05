@@ -12,24 +12,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-//! Tests for BenchmarkService.
+// Prost generated code cannot build on its own: it needs to be
+// included into a manually crafted module structure. With crypto_rust_prost,
+// this is not needed.
 
-use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
+// TODO: b/333064338 - Remove this crate once we've stopped using cargo.
 
-use super::service::BenchmarkService;
-use crate::BenchmarkError;
+#![cfg_attr(not(feature = "std"), no_std)]
+#![feature(never_type)]
 
-#[test]
-fn test_service_unsupported() {
-    let mut svc = BenchmarkService::new(0);
-    let request = RunBenchmarkRequest {
-        benchmark_type: BenchmarkType::P256Sign as i32,
-        data_size: 1024,
-        iterations: 100,
+macro_rules! include_proto {
+    ($package: tt) => {
+        include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
     };
+}
 
-    let response = svc.handle_request(request);
-    assert_eq!(response.status, BenchmarkError::UnsupportedBenchmark.as_status_code());
+pub mod oak {
+    pub mod benchmark {
+        include_proto!("oak.benchmark");
+    }
 }

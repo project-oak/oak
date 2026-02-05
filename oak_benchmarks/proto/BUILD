@@ -15,6 +15,8 @@
 #
 
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 load("//micro_rpc_build:build_defs.bzl", "rust_micro_rpc_service")
 
 package(
@@ -30,7 +32,45 @@ proto_library(
     ],
 )
 
+rust_library(
+    name = "oak_benchmark_proto_rust",
+    srcs = ["lib.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:prost-derive",
+    ],
+    deps = [
+        ":build",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
+    ],
+)
+
+cargo_build_script(
+    name = "build",
+    srcs = ["build.rs"],
+    build_script_env = {
+        "PROTOC": "$(execpath @com_google_protobuf//:protoc)",
+        "DESCRIPTOR_PROTO_PATH": "$(location @com_google_protobuf//:descriptor_proto_srcs)",
+    },
+    data = [
+        "benchmark.proto",
+        "//proto/micro_rpc:options.proto",
+        "@com_google_protobuf//:descriptor_proto_srcs",
+    ],
+    tools = [
+        "@com_google_protobuf//:protoc",
+    ],
+    deps = [
+        "//oak_proto_build_utils",
+        "@oak_crates_index//:prost-build",
+    ],
+)
+
 rust_micro_rpc_service(
     name = "service",
     srcs = [":proto"],
+    extern_paths = {
+        ".oak.benchmark": ":oak_benchmark_proto_rust::oak::benchmark",
+    },
+    deps = [":oak_benchmark_proto_rust"],
 )
