@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+for file in "$@"; do
+    if ! head -n 50 "$file" | grep "Apache License" > /dev/null
+    then
+        echo "ERROR: Missing Apache License in $file"
+        exit 1
+    fi
+done

@@ -28,14 +28,13 @@ presubmit-full: \
     presubmit \
     kokoro_verify_buildconfigs
 
-build-linter:
-    bazel build @oak_linter//:linter
+# Format only files changed in the current commit.
+format:
+    time pre-commit run
 
-# TODO: b/483469797 - Add the nix fmt commands to the oak_linter instead of inlining them here.
-format: build-linter
-    nix fmt flake.nix
-    nix fmt oak_private_memory/flake.nix
-    bazel-bin/external/oak_linter+/linter --fix
+# Format all files.
+format-all:
+    time pre-commit run --all-files
 
 verify-bazelisk:
     rm -r ~/.cache/bazelisk
@@ -125,9 +124,6 @@ oak_attestation_explain_wasm:
     --no-pack # prevents generating a package.json, we don't need it since we don't use a web bundler
 
 # --- KOKORO CI Entry Points ---
-
-check-format: build-linter
-    bazel-bin/external/oak_linter+/linter
 
 kokoro_verify_buildconfigs:
     ./scripts/test_buildconfigs buildconfigs/*.sh

@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+package(licenses = ["notice"])
+
 # This rule captures _way_ too much.
 #
 # The only files excluded are ones that confuse bazel (eg they've got a '\' or ':' in the file name; for the former, systemd is the main culprit, for the latter, Perl).

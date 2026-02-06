@@ -10,7 +10,7 @@ source ./kokoro/runners/helpers.sh
 
 trap collect_test_logs ERR
 
-run_as_test_case "check-format" "just format"
+run_as_test_case "check-format" "just format-all"
 run_as_test_case "clippy" "just bazel-clippy"
 run_as_test_case "build-and-test-linux-targets" "just std-crates"
 run_as_test_case "build-bare-metal-crates" "just bare-metal-crates"

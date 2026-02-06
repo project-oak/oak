@@ -132,6 +132,7 @@
                 nodePackages.prettier
                 nodePackages.markdownlint-cli
                 shellcheck
+                pre-commit
               ];
             };
             # Minimal shell with only the dependencies needed to run the bazel steps.
