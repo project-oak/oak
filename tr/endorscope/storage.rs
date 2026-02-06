@@ -44,6 +44,7 @@ use alloc::{
 
 use anyhow::{Context, Result};
 use intoto::statement::{get_hex_digest_from_statement, parse_statement};
+use oak_digest::Sha256;
 use url::Url;
 
 use crate::package::Package;
@@ -61,6 +62,7 @@ const LOG_ENTRY_FOR_ENDORSEMENT_LINK: &str = "15";
 const PUBLIC_KEY_FOR_SIGNATURE_LINK: &str = "16";
 const ENDORSEMENTS_FOR_KEY_LINK: &str = "21";
 const KEYS_FOR_KEYSET_LINK: &str = "22";
+const ENDORSEMENTS_FOR_CLAIM_LINK: &str = "36";
 
 /// ContentAddressable is a trait that defines the interface for a
 /// content-addressable storage layer.
@@ -178,6 +180,30 @@ impl EndorsementLoader {
             .storage
             .get_link(subject_hash, ENDORSEMENT_FOR_SUBJECT_LINK)
             .with_context(|| format!("reading endorsements by subject {}", subject_hash))
+            .or_else(|err| match err.downcast_ref::<ureq::Error>() {
+                // If the link file for the endorsement list is not found in
+                // the index, we assume the subject has never been endorsed.
+                // So we return an empty list.
+                Some(ureq::Error::Status(404, _)) => Ok(String::new()),
+                _ => Err(err),
+            })?;
+
+        Ok(endorsements.split_terminator("\n").map(|s| s.to_string()).collect())
+    }
+
+    /// Lists all endorsement hashes for the given claim.
+    ///
+    /// The endorsement hashes are sorted by date of issuance (`issuedOn`)
+    /// such that the most recent endorsement comes last.
+    ///
+    /// Returns:
+    /// - The list of endorsement hashes.
+    pub fn list_endorsements_by_claim(&self, claim_type: &str) -> Result<Vec<String>> {
+        let claim_hash = Sha256::from_contents(claim_type.as_bytes());
+        let endorsements = self
+            .storage
+            .get_link(&claim_hash.to_typed_hash(), ENDORSEMENTS_FOR_CLAIM_LINK)
+            .with_context(|| format!("reading endorsements by claim {}", claim_type))
             .or_else(|err| match err.downcast_ref::<ureq::Error>() {
                 // If the link file for the endorsement list is not found in
                 // the index, we assume the subject has never been endorsed.

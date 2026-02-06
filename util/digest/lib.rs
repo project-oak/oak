@@ -95,7 +95,7 @@ impl Sha256 {
     }
 
     pub fn to_typed_hash(&self) -> String {
-        format!("sha256:{}", hex::encode(self.0))
+        format!("sha2-256:{}", hex::encode(self.0))
     }
 }
 
@@ -110,7 +110,7 @@ impl Sha384 {
     }
 
     pub fn to_typed_hash(&self) -> String {
-        format!("sha384:{}", hex::encode(self.0))
+        format!("sha2-384:{}", hex::encode(self.0))
     }
 }
 
@@ -125,7 +125,7 @@ impl Sha512 {
     }
 
     pub fn to_typed_hash(&self) -> String {
-        format!("sha512:{}", hex::encode(self.0))
+        format!("sha2-512:{}", hex::encode(self.0))
     }
 }
 
@@ -134,7 +134,7 @@ pub struct Sha3_224([u8; 28]);
 
 impl Sha3_224 {
     pub fn to_typed_hash(&self) -> String {
-        format!("sha3_224:{}", hex::encode(self.0))
+        format!("sha3-224:{}", hex::encode(self.0))
     }
 }
 
@@ -143,7 +143,7 @@ pub struct Sha3_256([u8; 32]);
 
 impl Sha3_256 {
     pub fn to_typed_hash(&self) -> String {
-        format!("sha3_256:{}", hex::encode(self.0))
+        format!("sha3-256:{}", hex::encode(self.0))
     }
 }
 
@@ -152,7 +152,7 @@ pub struct Sha3_384([u8; 48]);
 
 impl Sha3_384 {
     pub fn to_typed_hash(&self) -> String {
-        format!("sha3_384:{}", hex::encode(self.0))
+        format!("sha3-384:{}", hex::encode(self.0))
     }
 }
 
@@ -161,7 +161,7 @@ pub struct Sha3_512([u8; 64]);
 
 impl Sha3_512 {
     pub fn to_typed_hash(&self) -> String {
-        format!("sha3_512:{}", hex::encode(self.0))
+        format!("sha3-512:{}", hex::encode(self.0))
     }
 }
 
@@ -498,7 +498,7 @@ mod tests {
         let typed_hash = digest.to_typed_hash();
         assert_eq!(
             typed_hash,
-            "sha256:e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7"
+            "sha2-256:e27c682357589ac66bf06573da908469aeaeae5e73e4ecc525ac5d4b888822e7"
         );
         let back_again = Digest::from_typed_hash(&typed_hash).expect("conversion failed");
         assert_eq!(digest, back_again);

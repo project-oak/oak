@@ -29,6 +29,7 @@ rust_library(
         "//tr/intoto",
         "//tr/rekor",
         "//tr/verify_endorsement",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:ureq",
