@@ -12,24 +12,28 @@ extern "C" {
  * Method:    nativeSeal
  * Signature: ([B[B[B)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeSeal
-  (JNIEnv *, jobject, jbyteArray, jbyteArray, jbyteArray);
+JNIEXPORT jbyteArray JNICALL
+Java_com_google_oak_crypto_hpke_SenderContext_nativeSeal(JNIEnv*, jobject,
+                                                         jbyteArray, jbyteArray,
+                                                         jbyteArray);
 
 /*
  * Class:     com_google_oak_crypto_hpke_SenderContext
  * Method:    nativeOpen
  * Signature: ([B[B[B)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeOpen
-  (JNIEnv *, jobject, jbyteArray, jbyteArray, jbyteArray);
+JNIEXPORT jbyteArray JNICALL
+Java_com_google_oak_crypto_hpke_SenderContext_nativeOpen(JNIEnv*, jobject,
+                                                         jbyteArray, jbyteArray,
+                                                         jbyteArray);
 
 /*
  * Class:     com_google_oak_crypto_hpke_SenderContext
  * Method:    nativeDestroy
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeDestroy
-  (JNIEnv *, jobject);
+JNIEXPORT void JNICALL
+Java_com_google_oak_crypto_hpke_SenderContext_nativeDestroy(JNIEnv*, jobject);
 
 #ifdef __cplusplus
 }

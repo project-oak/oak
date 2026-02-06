@@ -12,8 +12,8 @@ extern "C" {
  * Method:    nativeGenerate
  * Signature: ()Lcom/google/oak/crypto/hpke/KeyPair;
  */
-JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate
-  (JNIEnv *, jclass);
+JNIEXPORT jobject JNICALL
+Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate(JNIEnv*, jclass);
 
 #ifdef __cplusplus
 }

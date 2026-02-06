@@ -1,5 +1,5 @@
 third_party/
 **/generated/
-**/jni/
 stage0_bin/supply-chain
 linter/tests/testdata
+cc/crypto/hpke/jni

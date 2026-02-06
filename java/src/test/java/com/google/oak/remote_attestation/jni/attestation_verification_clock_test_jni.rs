@@ -14,9 +14,9 @@
 //
 
 use jni::{
+    JNIEnv,
     objects::{JClass, JObject},
     sys::jlong,
-    JNIEnv,
 };
 use oak_jni_attestation_verification_clock::JNIClock;
 use oak_time::Clock;
