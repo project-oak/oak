@@ -1,5 +1,5 @@
 {
-  "checksum": "31b60a9588a23e4b1548d4080f0f0a2355a3512834f7fdb306350cf549ec0d24",
+  "checksum": "4a67ee4f51a7c8645e389c625b410731261c283c8d0125491f7ba8804a034154",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -8177,6 +8177,18 @@
             {
               "id": "rtnetlink 0.14.1",
               "target": "rtnetlink"
+            },
+            {
+              "id": "rustls 0.23.36",
+              "target": "rustls"
+            },
+            {
+              "id": "rustls-pemfile 2.2.0",
+              "target": "rustls_pemfile"
+            },
+            {
+              "id": "rustls-pki-types 1.14.0",
+              "target": "rustls_pki_types"
             },
             {
               "id": "self_cell 1.2.2",
@@ -27198,6 +27210,63 @@
       ],
       "license_file": "LICENSE"
     },
+    "rustls-pemfile 2.2.0": {
+      "name": "rustls-pemfile",
+      "version": "2.2.0",
+      "package_url": "https://github.com/rustls/pemfile",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rustls-pemfile/2.2.0/download",
+          "sha256": "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rustls_pemfile",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rustls_pemfile",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "rustls-pki-types 1.14.0",
+              "target": "rustls_pki_types",
+              "alias": "pki_types"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "2.2.0"
+      },
+      "license": "Apache-2.0 OR ISC OR MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "ISC",
+        "MIT"
+      ],
+      "license_file": "LICENSE"
+    },
     "rustls-pki-types 1.14.0": {
       "name": "rustls-pki-types",
       "version": "1.14.0",
@@ -43982,6 +44051,9 @@
     "rpassword 7.4.0",
     "rsa 0.9.10",
     "rtnetlink 0.14.1",
+    "rustls 0.23.36",
+    "rustls-pemfile 2.2.0",
+    "rustls-pki-types 1.14.0",
     "self_cell 1.2.2",
     "serde 1.0.228",
     "serde_json 1.0.149",

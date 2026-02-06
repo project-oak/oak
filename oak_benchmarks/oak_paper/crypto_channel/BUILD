@@ -51,6 +51,7 @@ rust_binary(
     crate_root = "benchmark.rs",
     data = [
         ":enclave_app",
+        ":generate_certs",
         "//enclave_apps/oak_orchestrator",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
@@ -68,9 +69,28 @@ rust_binary(
         "//oak_session",
         "@oak_crates_index//:criterion",
         "@oak_crates_index//:futures",
+        "@oak_crates_index//:openssl",
+        "@oak_crates_index//:rustls",
+        "@oak_crates_index//:rustls-pemfile",
+        "@oak_crates_index//:rustls-pki-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:which",
     ],
+)
+
+rust_binary(
+    name = "cert_gen",
+    srcs = ["cert_gen.rs"],
+    deps = [
+        "@oak_crates_index//:openssl",
+    ],
+)
+
+genrule(
+    name = "generate_certs",
+    outs = ["certs.pem"],
+    cmd = "$(location :cert_gen) $@",
+    tools = [":cert_gen"],
 )
 
 rust_binary(

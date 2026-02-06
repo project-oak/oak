@@ -22,16 +22,45 @@ use std::{
     cell::RefCell,
     net::{SocketAddr, TcpListener, TcpStream},
     rc::Rc,
-    sync::Arc,
+    sync::{Arc, Once},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+
+static INIT_RUSTLS: Once = Once::new();
+
+fn init_rustls() {
+    INIT_RUSTLS.call_once(|| {
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .expect("failed to install rustls crypto provider");
+    });
+}
+
+use std::{fs::File, io::BufReader};
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use message_stream_client::{MessageStream, NoiseMessageStream};
 use oak_channel::message::RequestMessage;
 use oak_file_utils::data_path;
 use oak_launcher_utils::launcher;
+use rustls::{ClientConfig, ServerConfig};
+use rustls_pki_types::{CertificateDer, PrivateKeyDer, ServerName};
+
+fn load_certs_and_key() -> (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>) {
+    let cert_path = data_path("oak_benchmarks/oak_paper/crypto_channel/certs.pem");
+    let mut reader = BufReader::new(File::open(cert_path).expect("cannot open certs file"));
+    let mut certs = Vec::new();
+    let mut key = None;
+    for item in rustls_pemfile::read_all(&mut reader) {
+        match item.expect("pem error") {
+            rustls_pemfile::Item::X509Certificate(cert) => certs.push(cert),
+            rustls_pemfile::Item::Pkcs8Key(k) => key = Some(PrivateKeyDer::Pkcs8(k)),
+            _ => {}
+        }
+    }
+    (certs, key.expect("no key found"))
+}
 
 type ServerStreamCreator = Arc<dyn Fn(TcpStream) -> Box<dyn MessageStream> + Send + Sync + 'static>;
 
@@ -134,7 +163,7 @@ fn create_message(size: usize) -> Vec<u8> {
     message
 }
 
-const TEST_SIZES: &[usize] = &[1, 100, 10_000, 1_000_000, 100_000_000];
+const TEST_SIZES: &[usize] = &[1, 1000, 100_000, 1_000_000, 10_000_000];
 
 fn benchmark_wrapper(
     sizes: &[usize],
@@ -204,13 +233,52 @@ fn noise_local_tcp_benchmark(c: &mut Criterion) {
     server_handle.join().unwrap();
 }
 
+fn boringssl_local_tcp_benchmark(c: &mut Criterion) {
+    init_rustls();
+    let (certs, key) = load_certs_and_key();
+
+    let server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs.clone(), key)
+        .expect("bad certificate/key");
+    let server_config = Arc::new(server_config);
+
+    let (addr, server_handle) =
+        start_tcp_server(Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+            let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
+            let stream = rustls::StreamOwned::new(conn, tcp_stream);
+            Box::new(stream)
+        }));
+
+    let mut root_store = rustls::RootCertStore::empty();
+    root_store.add(certs[0].clone()).unwrap();
+    let client_config =
+        ClientConfig::builder().with_root_certificates(root_store).with_no_client_auth();
+    let client_config = Arc::new(client_config);
+
+    benchmark_wrapper(TEST_SIZES, "Local TCP BoringSSL Message Exchange", c, || {
+        let tcp_stream = TcpStream::connect(addr).expect("couldn't connect to server");
+        let server_name = ServerName::try_from("localhost").unwrap().to_owned();
+        let conn = rustls::ClientConnection::new(client_config.clone(), server_name).unwrap();
+        let stream = rustls::StreamOwned::new(conn, tcp_stream);
+        Box::new(stream)
+    });
+
+    let tcp_stream = TcpStream::connect(addr).expect("couldn't connect to server");
+    let server_name = ServerName::try_from("localhost").unwrap().to_owned();
+    let conn = rustls::ClientConnection::new(client_config.clone(), server_name).unwrap();
+    let mut stream = rustls::StreamOwned::new(conn, tcp_stream);
+    stream.send_message(b"exit");
+    server_handle.join().unwrap();
+}
+
 fn plaintext_rk_benchmark(c: &mut Criterion) {
     // Start the enclave app.
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     let (guest_instance, oak_client_channel) =
         rt.block_on(async { start_rk_enclave_server(b"plaintext").await });
 
-    benchmark_wrapper(&[1, 1_000_000], "RK Plaintext Message Exchange", c, || {
+    benchmark_wrapper(TEST_SIZES, "RK Plaintext Message Exchange", c, || {
         Box::new(OakClientChannelMessageStream::new(&oak_client_channel))
     });
     futures::executor::block_on(async { guest_instance.kill().await })
@@ -223,7 +291,7 @@ fn noise_rk_benchmark(c: &mut Criterion) {
     let (guest_instance, oak_client_channel) =
         rt.block_on(async { start_rk_enclave_server(b"noise").await });
 
-    benchmark_wrapper(&[1, 1_000_000], "RK Noise Message Exchange", c, || {
+    benchmark_wrapper(TEST_SIZES, "RK Noise Message Exchange", c, || {
         Box::new(NoiseMessageStream::new_client(OakClientChannelMessageStream::new(
             &oak_client_channel,
         )))
@@ -237,6 +305,7 @@ criterion_group!(
     plaintext_rk_benchmark,
     noise_rk_benchmark,
     plaintext_local_tcp_benchmark,
-    noise_local_tcp_benchmark
+    noise_local_tcp_benchmark,
+    boringssl_local_tcp_benchmark
 );
 criterion_main!(benches);

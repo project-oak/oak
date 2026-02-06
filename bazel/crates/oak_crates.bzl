@@ -541,6 +541,13 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.12.22",
     ),
     "rpassword": crate.spec(version = "7.3.1"),
+    "rustls": crate.spec(
+        default_features = False,
+        features = ["std", "ring"],
+        version = "0.23.36",
+    ),
+    "rustls-pemfile": crate.spec(version = "2.1.1"),
+    "rustls-pki-types": crate.spec(version = "1.14.0"),
     "ring": crate.spec(version = "0.17.14"),
     "rmcp": crate.spec(
         default_features = False,
