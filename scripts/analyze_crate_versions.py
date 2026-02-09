@@ -8,20 +8,17 @@ Usage Examples:
     crates.io:
     python3 scripts/analyze_crate_versions.py
 
-    # Run analysis and save the results to a file for later use:
-    python3 scripts/analyze_crate_versions.py --save crate_report.json
-
-    # Load previously saved data to explore the report without re-fetching from
-    crates.io:
-    python3 scripts/analyze_crate_versions.py --load crate_report.json
-
     # Analyze a specific lock file:
     python3 scripts/analyze_crate_versions.py path/to/Cargo.lock
+
+    # Force update the versions cache:
+    python3 scripts/analyze_crate_versions.py --update
 """
 
 import argparse
 import json
 import os
+import pathlib
 import re
 import ssl
 import sys
@@ -138,9 +135,7 @@ def get_crate_versions(crate_name):
   req = urllib.request.Request(
       url, headers={"User-Agent": "Oak-Crate-Analyzer/0.1"}
   )
-  with urllib.request.urlopen(
-      req, timeout=5, context=ssl_context
-  ) as response:
+  with urllib.request.urlopen(req, timeout=5, context=ssl_context) as response:
     data = json.loads(response.read().decode())
     # Return list of (version_string, is_yanked)
     return [(v["num"], v["yanked"]) for v in data.get("versions", [])]
@@ -180,7 +175,9 @@ def find_latest_updates(actual_v, all_versions):
   return {k: v for k, v in updates.items() if v}
 
 
-def collect_crate_data(bzl_file, lock_file, filter_str=None):
+def collect_crate_data(
+    bzl_file, lock_file, filter_str=None, cached_versions=None
+):
   """Collect crate version data from Bazel config, Cargo.lock, and crates.io."""
   requested_crates = parse_oak_crates(bzl_file)
   actual_crates = parse_cargo_lock(lock_file)
@@ -191,18 +188,25 @@ def collect_crate_data(bzl_file, lock_file, filter_str=None):
 
   total = len(crate_names)
   data = []
+  cached_versions = cached_versions or {}
+
+  fetched_any = False
   for i, name in enumerate(crate_names, 1):
-    print(
-        f"[{i}/{total}] Fetching versions for {name}...",
-        end="\r",
-        file=sys.stderr,
-    )
     requested = requested_crates[name]
     actual_list = actual_crates.get(name, [])
 
-    versions = get_crate_versions(name)
-    # Small delay to be nice to crates.io
-    time.sleep(0.05)
+    if name in cached_versions:
+      versions = cached_versions[name]
+    else:
+      fetched_any = True
+      print(
+          f"[{i}/{total}] Fetching versions for {name}...",
+          end="\r",
+          file=sys.stderr,
+      )
+      versions = get_crate_versions(name)
+      # Small delay to be nice to crates.io
+      time.sleep(0.05)
 
     data.append({
         "name": name,
@@ -210,16 +214,30 @@ def collect_crate_data(bzl_file, lock_file, filter_str=None):
         "actual": actual_list,
         "versions": versions,
     })
-  print(f"\nFinished fetching data for {total} crates.", file=sys.stderr)
+  if fetched_any:
+    print(f"\nFinished fetching data for {total} crates.", file=sys.stderr)
   return data
 
 
-def print_report(data, total_count=None, exclude_pre_release=False):
+def strip_metadata(v):
+  """Remove build metadata (anything after +) from a version string."""
+  if not isinstance(v, str) or v == "*" or v == "git":
+    return v
+  return v.split("+", 1)[0]
+
+
+def print_report(
+    data,
+    total_count=None,
+    include_pre_release=False,
+    versions_path=None,
+    cache_age=None,
+):
   """Print a report of crate versions and available updates."""
   # Define a shared format string for the table to ensure perfect alignment
   row_fmt = "{:<30} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12}"
 
-  if exclude_pre_release:
+  if not include_pre_release:
     data = [d for d in data if not is_pre_release(d["requested"])]
 
   print(
@@ -238,14 +256,14 @@ def print_report(data, total_count=None, exclude_pre_release=False):
 
   for entry in data:
     name = entry["name"]
-    requested = entry["requested"]
+    requested = strip_metadata(entry["requested"])
     actual_list = entry["actual"]
     versions_info = entry.get("versions", [])
 
     # Filter out yanked versions
     all_versions = [v for v, yanked in versions_info if not yanked]
 
-    if exclude_pre_release:
+    if not include_pre_release:
       all_versions = [v for v in all_versions if not is_pre_release(v)]
       actual_list = [v for v in actual_list if not is_pre_release(v)]
 
@@ -255,19 +273,19 @@ def print_report(data, total_count=None, exclude_pre_release=False):
 
     if not actual_list:
       max_v = max(all_versions, key=version_key) if all_versions else "N/A"
-      l_major = max_v
+      l_major = strip_metadata(max_v)
     else:
       highest_actual = max(actual_list, key=version_key)
       updates = find_latest_updates(highest_actual, all_versions)
 
       if updates.get("Patch"):
-        l_patch = updates["Patch"]
+        l_patch = strip_metadata(updates["Patch"])
         summary["Patch"] += 1
       if updates.get("Minor"):
-        l_minor = updates["Minor"]
+        l_minor = strip_metadata(updates["Minor"])
         summary["Minor"] += 1
       if updates.get("Major"):
-        l_major = updates["Major"]
+        l_major = strip_metadata(updates["Major"])
         summary["Major"] += 1
 
     if not actual_list:
@@ -276,10 +294,15 @@ def print_report(data, total_count=None, exclude_pre_release=False):
       )
     else:
       for i, v in enumerate(actual_list):
+        display_v = strip_metadata(v)
         if i == 0:
-          print(row_fmt.format(name, requested, v, l_patch, l_minor, l_major))
+          print(
+              row_fmt.format(
+                  name, requested, display_v, l_patch, l_minor, l_major
+              )
+          )
         else:
-          print(row_fmt.format("", "", v, "", "", ""))
+          print(row_fmt.format("", "", display_v, "", "", ""))
 
   print("-" * 110)
   print("\nUpdate Summary:")
@@ -292,12 +315,32 @@ def print_report(data, total_count=None, exclude_pre_release=False):
   else:
     print(f"  Total Crates Analyzed:     {len(data)}")
 
+  if versions_path:
+    age_str = (
+        f" (updated {format_age(cache_age)} ago)"
+        if cache_age is not None
+        else ""
+    )
+    print(f"\nVersions Cache: {versions_path}{age_str}")
+    print("To update the cache, run with the --update or -u flag.")
+
+
+def format_age(seconds):
+  """Format a time duration in seconds into a human-readable string."""
+  if seconds < 60:
+    return f"{int(seconds)}s"
+  if seconds < 3600:
+    return f"{int(seconds // 60)}m"
+  if seconds < 86400:
+    return f"{int(seconds // 3600)}h"
+  return f"{int(seconds // 86400)}d"
+
 
 def main():
   parser = argparse.ArgumentParser(
       description=(
-          "Analyze crate versions and generate reports. This tool can create"
-          " JSON data structures for offline analysis."
+          "Analyze crate versions and generate reports. Uses a local cache to"
+          " store internet data."
       ),
       epilog="""
 Report columns:
@@ -315,48 +358,92 @@ A dash (-) indicates that no update of that type is available (e.g., you are alr
       default="Cargo.bazel.lock",
       help="Path to Cargo.lock or Cargo.bazel.lock",
   )
-  parser.add_argument("--save", help="Save crate data to a JSON file")
-  parser.add_argument("--load", help="Load crate data from a JSON file")
+  parser.add_argument(
+      "--versions_file", help="Path to a custom versions cache file"
+  )
+  parser.add_argument(
+      "--update",
+      "-u",
+      action="store_true",
+      help="Force update the versions cache from crates.io",
+  )
   parser.add_argument(
       "--filter", "-f", help="Filter report by crate name (substring match)"
   )
   parser.add_argument(
-      "--exclude-pre-release",
+      "--include-pre-release",
       action="store_true",
-      help="Exclude pre-release versions from the report",
+      help="Include pre-release versions in the report",
   )
   args = parser.parse_args()
 
   bzl_file = "bazel/crates/oak_crates.bzl"
 
-  if args.load:
-    if not os.path.exists(args.load):
-      print(f"Error: {args.load} not found")
-      sys.exit(1)
-    with open(args.load, "r") as f:
-      data = json.load(f)
+  default_cache_path = (
+      pathlib.Path.home() / ".cache" / "oak" / "crate_cache.json"
+  )
+  versions_path = (
+      pathlib.Path(args.versions_file)
+      if args.versions_file
+      else default_cache_path
+  )
+
+  cached_versions = {}
+  cache_age = None
+  if versions_path.exists() and not args.update:
+    cache_age = time.time() - versions_path.stat().st_mtime
+    with open(versions_path, "r") as f:
+      loaded_data = json.load(f)
+      if isinstance(loaded_data, list):
+        # Support old format (list of dicts)
+        for entry in loaded_data:
+          if "name" in entry and "versions" in entry:
+            cached_versions[entry["name"]] = entry["versions"]
+      elif isinstance(loaded_data, dict):
+        # New format (dict of name -> versions)
+        cached_versions = loaded_data
+  elif args.update:
+    print(
+        f"Forcing update of versions from crates.io to {versions_path}...",
+        file=sys.stderr,
+    )
   else:
-    if not os.path.exists(bzl_file):
-      print(f"Error: {bzl_file} not found")
-      sys.exit(1)
-    if not os.path.exists(args.lock_file):
-      print(f"Error: {args.lock_file} not found")
-      sys.exit(1)
+    print(
+        f"Versions cache {versions_path} not found. Fetching from crates.io...",
+        file=sys.stderr,
+    )
 
-    # If saving, we collect everything.
-    # If not, we can speed up by filtering during collection.
-    collect_filter = None if args.save else args.filter
-    try:
-      data = collect_crate_data(
-          bzl_file, args.lock_file, filter_str=collect_filter
-      )
-    except Exception as e:   # pylint: disable=broad-exception-caught
-      print(f"Error during data collection: {e}")
-      sys.exit(1)
+  if not os.path.exists(bzl_file):
+    print(f"Error: {bzl_file} not found")
+    sys.exit(1)
+  if not os.path.exists(args.lock_file):
+    print(f"Error: {args.lock_file} not found")
+    sys.exit(1)
 
-  if args.save:
-    with open(args.save, "w") as f:
-      json.dump(data, f, indent=2)
+  # If we need to populate or update the cache, we collect everything.
+  # If we have a cache and are not updating, we can filter during collection.
+  need_full_fetch = not versions_path.exists() or args.update
+  collect_filter = None if need_full_fetch else args.filter
+
+  try:
+    data = collect_crate_data(
+        bzl_file,
+        args.lock_file,
+        filter_str=collect_filter,
+        cached_versions=cached_versions,
+    )
+  except Exception as e:  # pylint: disable=broad-exception-caught
+    print(f"Error during data collection: {e}")
+    sys.exit(1)
+
+  # Save/Update the cache if we did a full fetch or it was missing
+  if need_full_fetch:
+    # Ensure directory exists for the cache
+    versions_path.parent.mkdir(parents=True, exist_ok=True)
+    save_data = {entry["name"]: entry["versions"] for entry in data}
+    with open(versions_path, "w") as f:
+      json.dump(save_data, f, indent=2)
+    cache_age = 0
 
   total_count = len(data)
   report_data = data
@@ -366,7 +453,9 @@ A dash (-) indicates that no update of that type is available (e.g., you are alr
   print_report(
       report_data,
       total_count=total_count,
-      exclude_pre_release=args.exclude_pre_release,
+      include_pre_release=args.include_pre_release,
+      versions_path=versions_path,
+      cache_age=cache_age,
   )
 
 
