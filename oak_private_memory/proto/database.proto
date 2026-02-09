@@ -84,6 +84,41 @@ message WriteMetadataBlobRequest {
 
 message WriteMetadataBlobResponse {}
 
+message ReadMetadataBlobStreamRequest {
+  string id = 1;
+}
+
+message ReadMetadataBlobStreamResponse {
+  oneof response {
+    // The initial response containing the metadata. The blob field in the
+    // data_blob can be empty or contain the first chunk.
+    //
+    // This variant should only be sent once, as the first request. Sending it
+    // more than once will result in an error.
+    MetadataBlob metadata_blob = 1;
+
+    // Subsequent chunks of the blob. These will be concatenated in the order
+    // received to construct the final payload. Sending this variant before
+    // sending the metadata_blob will result in an error.
+    bytes chunk = 2;
+  }
+}
+
+message WriteMetadataBlobStreamRequest {
+  oneof request {
+    // The initial request containing the metadata. The blob field in the
+    // data_blob can be empty or contain the first chunk.
+    MetadataBlob metadata_blob = 1;
+
+    // Subsequent chunks of the blob. They can be concatenated in the order
+    // received to construct the final payload. The server will indicate the end
+    // of the file by sending a half-close.
+    bytes chunk = 2;
+  }
+}
+
+message WriteMetadataBlobStreamResponse {}
+
 message ResetDatabaseRequest {}
 
 message ResetDatabaseResponse {}
@@ -120,6 +155,26 @@ service SealedMemoryDatabaseService {
   // changes are to be committed.
   rpc ReadMetadataBlob(ReadMetadataBlobRequest)
       returns (ReadMetadataBlobResponse) {}
+
+  // Write a metadata blob to the database using a stream.
+  // The first request message must contain the metadata_blob.
+  // Subsequent request messages should contain chunks of the blob.
+  //
+  // There's no requirement on the chunk szies; they can very from
+  // request-to-request, and be of any size, as llong as it fits in the message
+  // size limit.
+  rpc WriteMetadataBlobStream(stream WriteMetadataBlobStreamRequest)
+      returns (WriteMetadataBlobStreamResponse) {}
+
+  // Read a metadata blob from the database using a stream.
+  // The first response message will contain the metadata_blob.
+  // Subsequent response messages will contain chunks of the blob.
+  //
+  // The returned chunks can be of any size, and the size can vary from
+  // response-to-response. The client should concatenate them in the order
+  // received to construct the final payload.
+  rpc ReadMetadataBlobStream(ReadMetadataBlobStreamRequest)
+      returns (stream ReadMetadataBlobStreamResponse) {}
 
   // Writes an unencrypted data blob to the database.
   rpc WriteUnencryptedDataBlob(WriteUnencryptedDataBlobRequest)

@@ -15,20 +15,26 @@
 
 use anyhow::Context;
 use async_trait::async_trait;
+use futures::StreamExt;
 use log::info;
 use prost::Message;
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_database_service_client::SealedMemoryDatabaseServiceClient;
 use sealed_memory_rust_proto::oak::private_memory::{
     DataBlob, DeleteBlobsRequest, EncryptedDataBlob, EncryptedMetadataBlob, MetadataBlob,
     ReadDataBlobRequest, ReadMetadataBlobRequest, ReadMetadataBlobResponse,
-    ReadUnencryptedDataBlobRequest, WriteDataBlobRequest, WriteMetadataBlobRequest,
-    WriteUnencryptedDataBlobRequest,
+    ReadMetadataBlobStreamRequest, ReadUnencryptedDataBlobRequest, WriteDataBlobRequest,
+    WriteMetadataBlobRequest, WriteMetadataBlobStreamRequest, WriteUnencryptedDataBlobRequest,
+    read_metadata_blob_stream_response, write_metadata_blob_stream_request,
 };
 use tonic::{Code, transport::Channel};
 
 pub type ExternalDbClient = SealedMemoryDatabaseServiceClient<Channel>;
 // The unique id for a opaque blob stored in the disk.
 pub type BlobId = String;
+
+// The size of the chunks to use when streaming data to/from the external
+// database. 1MB.
+const CHUNK_SIZE: usize = 1024 * 1024;
 
 // A non-fatal result from an attempt to persist the metadata db.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -65,6 +71,15 @@ pub trait DataBlobHandler {
         metadata_blob: EncryptedMetadataBlob,
     ) -> anyhow::Result<MetadataPersistResult>;
     async fn get_metadata_blob(
+        &mut self,
+        id: &BlobId,
+    ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
+    async fn add_metadata_blob_stream(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: EncryptedMetadataBlob,
+    ) -> anyhow::Result<MetadataPersistResult>;
+    async fn get_metadata_blob_stream(
         &mut self,
         id: &BlobId,
     ) -> anyhow::Result<Option<EncryptedMetadataBlob>>;
@@ -127,6 +142,51 @@ impl DataBlobHandler for ExternalDbClient {
                 }),
             })
             .await;
+
+        if let Err(ref status) = write_result {
+            if status.code() == Code::FailedPrecondition {
+                return Ok(MetadataPersistResult::RetryNeeded);
+            }
+            write_result?;
+        }
+
+        let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+        if elapsed_time == 0 {
+            elapsed_time = 1;
+        }
+        let speed = blob_size / 1024 / elapsed_time;
+        metrics::get_global_metrics().record_db_save_speed(speed);
+        Ok(MetadataPersistResult::Succeeded)
+    }
+
+    async fn add_metadata_blob_stream(
+        &mut self,
+        id: &BlobId,
+        metadata_blob: EncryptedMetadataBlob,
+    ) -> anyhow::Result<MetadataPersistResult> {
+        let blob =
+            metadata_blob.encrypted_data_blob.as_ref().context("no blob contents")?.encode_to_vec();
+        let blob_size = blob.len() as u64;
+
+        let mut chunks = blob.chunks(CHUNK_SIZE);
+        let first_chunk = chunks.next().unwrap_or_default();
+        let mut messages = vec![WriteMetadataBlobStreamRequest {
+            request: Some(write_metadata_blob_stream_request::Request::MetadataBlob(
+                MetadataBlob {
+                    data_blob: Some(DataBlob { id: id.clone(), blob: first_chunk.to_vec() }),
+                    version: metadata_blob.version,
+                },
+            )),
+        }];
+
+        for chunk in chunks {
+            messages.push(WriteMetadataBlobStreamRequest {
+                request: Some(write_metadata_blob_stream_request::Request::Chunk(chunk.to_vec())),
+            });
+        }
+
+        let start_time = tokio::time::Instant::now();
+        let write_result = self.write_metadata_blob_stream(futures::stream::iter(messages)).await;
 
         if let Err(ref status) = write_result {
             if status.code() == Code::FailedPrecondition {
@@ -227,6 +287,68 @@ impl DataBlobHandler for ExternalDbClient {
                     return Ok(Some(metadata_blob));
                 }
                 Ok(None)
+            }
+            Err(status) => {
+                if status.code() == Code::NotFound {
+                    Ok(None)
+                } else {
+                    Err(status.into())
+                }
+            }
+        }
+    }
+
+    async fn get_metadata_blob_stream(
+        &mut self,
+        id: &BlobId,
+    ) -> anyhow::Result<Option<EncryptedMetadataBlob>> {
+        let start_time = tokio::time::Instant::now();
+        match self.read_metadata_blob_stream(ReadMetadataBlobStreamRequest { id: id.clone() }).await
+        {
+            Ok(response) => {
+                let mut response_stream = response.into_inner();
+                let mut full_blob = Vec::new();
+
+                let first_response = match response_stream.next().await {
+                    Some(res) => res?,
+                    None => return Ok(None),
+                };
+
+                let version = match first_response.response {
+                    Some(read_metadata_blob_stream_response::Response::MetadataBlob(metadata)) => {
+                        if let Some(data_blob) = metadata.data_blob {
+                            full_blob.extend_from_slice(&data_blob.blob);
+                        }
+                        metadata.version
+                    }
+                    _ => anyhow::bail!("Expected MetadataBlob as the first message in the stream"),
+                };
+
+                while let Some(response) = response_stream.next().await {
+                    let response = response?;
+                    match response.response {
+                        Some(read_metadata_blob_stream_response::Response::Chunk(chunk)) => {
+                            full_blob.extend_from_slice(&chunk);
+                        }
+                        _ => anyhow::bail!("Expected Chunk message in the stream"),
+                    }
+                }
+
+                let metadata_blob = EncryptedMetadataBlob {
+                    encrypted_data_blob: Some(
+                        EncryptedDataBlob::decode(&*full_blob)
+                            .context("Failed to decode EncryptedMetadataBlob")?,
+                    ),
+                    version,
+                };
+
+                let mut elapsed_time = start_time.elapsed().as_millis() as u64;
+                if elapsed_time == 0 {
+                    elapsed_time = 1;
+                }
+                let speed = full_blob.len() as u64 / 1024 / elapsed_time;
+                metrics::get_global_metrics().record_db_load_speed(speed);
+                Ok(Some(metadata_blob))
             }
             Err(status) => {
                 if status.code() == Code::NotFound {
