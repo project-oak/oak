@@ -26,8 +26,9 @@ use crate::{
     memory_cache::MemoryCache,
 };
 
-const DATABASE_MAX_SIZE: usize = 1024 * 1024 * 1024; // 1 GB
-
+// We limit the decode size to 100 MB and use this limit as the max size of the
+// database.
+pub const MAX_DECODE_SIZE: usize = 100 * 1024 * 1024; // 100 MB
 /// A database with cache. It loads the meta database of the user at start,
 /// then loads documents at request. The loaded documents will be then cached
 /// in memory.
@@ -52,7 +53,7 @@ impl DatabaseWithCache {
             cache: MemoryCache::new(db_client, dek),
             key_derivation_info,
             current_size: initial_size,
-            max_size: DATABASE_MAX_SIZE,
+            max_size: MAX_DECODE_SIZE,
         }
     }
 
