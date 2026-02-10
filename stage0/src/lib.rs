@@ -18,7 +18,6 @@
 #![feature(int_roundings)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
-#![feature(let_chains)]
 #![allow(static_mut_refs)]
 
 extern crate alloc;

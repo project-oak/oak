@@ -148,14 +148,11 @@ pub fn cose_key_to_hpke_public_key(cose_key: &CoseKey) -> Result<Vec<u8>, &'stat
     cose_key
         .params
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &Label::Int(iana::OkpKeyParameter::X as i64)
-            {
+        .find_map(|(label, value)| match value {
+            Value::Bytes(bytes) if label == &Label::Int(iana::OkpKeyParameter::X as i64) => {
                 Some(bytes.to_vec())
-            } else {
-                None
             }
+            _ => None,
         })
         .ok_or("public key not found")
 }
@@ -198,14 +195,11 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
     let x = cose_key
         .params
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &Label::Int(iana::Ec2KeyParameter::X as i64)
-            {
+        .find_map(|(label, value)| match value {
+            Value::Bytes(bytes) if label == &Label::Int(iana::Ec2KeyParameter::X as i64) => {
                 Some(bytes.clone())
-            } else {
-                None
             }
+            _ => None,
         })
         .ok_or("x component of public key not found")?;
     if x.len() != U256::BYTES {
@@ -214,14 +208,11 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
     let y = cose_key
         .params
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &Label::Int(iana::Ec2KeyParameter::Y as i64)
-            {
+        .find_map(|(label, value)| match value {
+            Value::Bytes(bytes) if label == &Label::Int(iana::Ec2KeyParameter::Y as i64) => {
                 Some(bytes.clone())
-            } else {
-                None
             }
+            _ => None,
         })
         .ok_or("y component of public key not found")?;
     if y.len() != U256::BYTES {
@@ -372,14 +363,13 @@ pub fn get_public_key_from_claims_set(claims: &ClaimsSet) -> Result<CoseKey, &'s
     let public_key_bytes = claims
         .rest
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &RegisteredLabelWithPrivate::PrivateUse(SUBJECT_PUBLIC_KEY_ID)
+        .find_map(|(label, value)| match value {
+            Value::Bytes(bytes)
+                if label == &RegisteredLabelWithPrivate::PrivateUse(SUBJECT_PUBLIC_KEY_ID) =>
             {
                 Some(bytes)
-            } else {
-                None
             }
+            _ => None,
         })
         .ok_or("public key not found")?;
     CoseKey::from_slice(public_key_bytes).map_err(|_cose_err| "couldn't deserialize public key")

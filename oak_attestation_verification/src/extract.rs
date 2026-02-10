@@ -73,11 +73,14 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
     let root_layer =
         Some(extract_root_values(evidence.root_layer.as_ref().context("no root layer evidence")?)?);
 
-    if let Some(event_log) = &evidence.event_log
-        && !event_log.encoded_events.is_empty()
-    {
-        let decoded_events: Vec<Event> = event_log
-            .encoded_events
+    let encoded_events = evidence
+        .event_log
+        .as_ref()
+        .map(|event_log| event_log.encoded_events.clone())
+        .unwrap_or_default();
+
+    if !encoded_events.is_empty() {
+        let decoded_events: Vec<Event> = encoded_events
             .iter()
             .enumerate()
             .map(|(index, encoded_event)| {
@@ -222,7 +225,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
             }
             EvidenceType::CB => {
                 let mut layers = Vec::new();
-                for event in &event_log.encoded_events {
+                for event in encoded_events {
                     layers.push(EventData {
                         event: Some(RawDigest {
                             sha2_256: sha2::Sha256::digest(event).to_vec(),
@@ -514,14 +517,9 @@ fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<
     claims
         .rest
         .iter()
-        .find_map(|(label, value)| {
-            if let Value::Map(map) = value
-                && label == &target
-            {
-                Some(map)
-            } else {
-                None
-            }
+        .find_map(|(label, value)| match value {
+            Value::Map(map) if label == &target => Some(map),
+            _ => None,
         })
         .context("couldn't find layer values")
 }

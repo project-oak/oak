@@ -109,14 +109,14 @@ impl Machine for I440fx {
                 Err("could not find memory region for 32-bit PCI MMIO hole")
             })?;
 
-        if let Some(file) = firmware.find(MMCFG_MEM_RESERVATION_FILE)
-            && file.size() <= core::mem::size_of::<u64>()
-        {
-            let mut should_reserve: u64 = 0;
-            firmware.read_file(&file, should_reserve.as_mut_bytes())?;
-            if should_reserve == 1 {
-                // Bump the base by 256 MoB
-                mmio32_hole_base += 0x10000000;
+        if let Some(file) = firmware.find(MMCFG_MEM_RESERVATION_FILE) {
+            if file.size() <= core::mem::size_of::<u64>() {
+                let mut should_reserve: u64 = 0;
+                firmware.read_file(&file, should_reserve.as_mut_bytes())?;
+                if should_reserve == 1 {
+                    // Bump the base by 256 MoB
+                    mmio32_hole_base += 0x10000000;
+                }
             }
         }
 

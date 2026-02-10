@@ -87,10 +87,12 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(system_image_file);
 
         let response_stream = async_stream::try_stream! {
-            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+            let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+            while reader.read_buf(&mut buffer).await? > 0 {
                 yield GetImageResponse {
                     image_chunk: buffer.freeze()
                 };
+                buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
             }
         };
 
@@ -106,10 +108,12 @@ impl Launcher for LauncherServerImplementation {
         let mut reader = BufReader::new(container_bundle_file);
 
         let response_stream = async_stream::try_stream! {
-            while let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE) && reader.read_buf(&mut buffer).await? > 0 {
+            let mut buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
+            while reader.read_buf(&mut buffer).await? > 0 {
                 yield GetImageResponse {
                     image_chunk: buffer.freeze()
                 };
+                buffer = BytesMut::with_capacity(MAX_RESPONSE_SIZE);
             }
         };
 
