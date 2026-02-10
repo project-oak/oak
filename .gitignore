@@ -155,3 +155,6 @@ terraform.tfstate.backup
 #
 # For more info see comments in justfile.
 /proto_schema_out
+
+# Local temporary files.
+/tmp/
