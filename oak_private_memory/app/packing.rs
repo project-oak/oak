@@ -125,3 +125,5 @@ impl_packing!(Response => GetMemoryByIdResponse);
 impl_packing!(Response => SearchMemoryResponse);
 impl_packing!(Response => DeleteMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
+impl_packing!(Request => GetMemoriesByIdRequest);
+impl_packing!(Response => GetMemoriesByIdResponse);

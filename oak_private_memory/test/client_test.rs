@@ -783,3 +783,93 @@ async fn search_test_embedding_with_expired_memories() {
         assert_eq!(returned_ids.len(), 2);
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_memories_by_id() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_get_memories_by_id_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        // Add three memories
+        let memory1 = Memory {
+            id: "memory1".to_string(),
+            tags: vec!["tag1".to_string()],
+            ..Default::default()
+        };
+        let memory2 = Memory {
+            id: "memory2".to_string(),
+            tags: vec!["tag2".to_string()],
+            ..Default::default()
+        };
+        let memory3 = Memory {
+            id: "memory3".to_string(),
+            tags: vec!["tag3".to_string()],
+            ..Default::default()
+        };
+
+        client.add_memory(memory1).await.unwrap();
+        client.add_memory(memory2).await.unwrap();
+        client.add_memory(memory3).await.unwrap();
+
+        // Test fetching multiple memories by ID
+        let response = client
+            .get_memories_by_id(
+                vec!["memory3".to_string(), "memory1".to_string(), "memory2".to_string()],
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.memories.len(), 3);
+        assert!(response.not_found_ids.is_empty());
+        let returned_ids: HashSet<String> =
+            response.memories.iter().map(|m| m.id.clone()).collect();
+        assert!(returned_ids.contains("memory1"));
+        assert!(returned_ids.contains("memory2"));
+        assert!(returned_ids.contains("memory3"));
+
+        // Test fetching a single memory by ID
+        let response = client.get_memories_by_id(vec!["memory2".to_string()], None).await.unwrap();
+        assert_eq!(response.memories.len(), 1);
+        assert_eq!(response.memories[0].id, "memory2");
+        assert!(response.not_found_ids.is_empty());
+
+        // Test fetching with a non-existent ID - should return found ones and report
+        // not found
+        let response = client
+            .get_memories_by_id(
+                vec![
+                    "memory1".to_string(),
+                    "non_existent_id".to_string(),
+                    "memory3".to_string(),
+                    "another_missing".to_string(),
+                ],
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.memories.len(), 2);
+        let returned_ids: HashSet<String> =
+            response.memories.iter().map(|m| m.id.clone()).collect();
+        assert!(returned_ids.contains("memory1"));
+        assert!(returned_ids.contains("memory3"));
+        assert_eq!(response.not_found_ids.len(), 2);
+        assert!(response.not_found_ids.contains(&"non_existent_id".to_string()));
+        assert!(response.not_found_ids.contains(&"another_missing".to_string()));
+
+        // Test with all non-existent IDs
+        let response = client
+            .get_memories_by_id(vec!["missing1".to_string(), "missing2".to_string()], None)
+            .await
+            .unwrap();
+        assert!(response.memories.is_empty());
+        assert_eq!(response.not_found_ids.len(), 2);
+    }
+}

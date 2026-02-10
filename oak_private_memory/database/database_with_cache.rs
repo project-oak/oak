@@ -166,6 +166,31 @@ impl DatabaseWithCache {
         }
     }
 
+    /// Returns memories for the given IDs.
+    /// Memories can be returned in an arbitrary order.
+    /// If any memory is not found, it will be skipped and its ID collected in
+    /// the second return value.
+    pub async fn get_memories_by_id(
+        &mut self,
+        ids: Vec<MemoryId>,
+        result_mask: &Option<ResultMask>,
+    ) -> anyhow::Result<(Vec<Memory>, Vec<MemoryId>)> {
+        let mut found_blob_ids: Vec<BlobId> = Vec::new();
+        let mut not_found_ids: Vec<MemoryId> = Vec::new();
+
+        for id in ids {
+            match self.meta_db().get_blob_id_by_memory_id(id.clone())? {
+                Some(blob_id) => found_blob_ids.push(blob_id),
+                None => not_found_ids.push(id),
+            }
+        }
+
+        let mut memories = self.cache.get_memories_by_blob_ids(&found_blob_ids).await?;
+        Self::apply_mask_to_memories(&mut memories, result_mask);
+
+        Ok((memories, not_found_ids))
+    }
+
     pub async fn reset_memory(&mut self) -> anyhow::Result<()> {
         let all_memory_ids = self.meta_db().get_all_memory_ids()?;
         if !all_memory_ids.is_empty() {

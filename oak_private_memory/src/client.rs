@@ -295,4 +295,15 @@ impl PrivateMemoryClient {
             self.invoke(sealed_memory_request::Request::ResetMemoryRequest(request)).await?;
         expect_response_type!(response, sealed_memory_response::Response::ResetMemoryResponse)
     }
+
+    pub async fn get_memories_by_id(
+        &mut self,
+        ids: Vec<String>,
+        result_mask: Option<ResultMask>,
+    ) -> Result<GetMemoriesByIdResponse> {
+        let request = GetMemoriesByIdRequest { ids, result_mask };
+        let response =
+            self.invoke(sealed_memory_request::Request::GetMemoriesByIdRequest(request)).await?;
+        expect_response_type!(response, sealed_memory_response::Response::GetMemoriesByIdResponse)
+    }
 }

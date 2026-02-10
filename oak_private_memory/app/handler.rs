@@ -179,6 +179,21 @@ impl SealedMemorySessionHandler {
         Ok(GetMemoryByIdResponse { memory, success })
     }
 
+    pub async fn get_memories_by_id_handler(
+        &self,
+        request: GetMemoriesByIdRequest,
+    ) -> tonic::Result<GetMemoriesByIdResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+
+        let (memories, not_found_ids) = database
+            .get_memories_by_id(request.ids, &request.result_mask)
+            .await
+            .into_internal_error("failed to get memories by id")?;
+        Ok(GetMemoriesByIdResponse { memories, not_found_ids })
+    }
+
     pub async fn reset_memory_handler(
         &self,
         _request: ResetMemoryRequest,
@@ -480,6 +495,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::DeleteMemoryRequest(request) => {
                 self.delete_memory_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetMemoriesByIdRequest(request) => {
+                self.get_memories_by_id_handler(request).await?.into_response()
             }
         };
         let elapsed_time = start_time.elapsed().as_millis() as u64;

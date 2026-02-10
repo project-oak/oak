@@ -394,6 +394,7 @@ impl RequestMetricName {
             sealed_memory_request::Request::GetMemoryByIdRequest(r) => get_name(r),
             sealed_memory_request::Request::SearchMemoryRequest(r) => get_name(r),
             sealed_memory_request::Request::DeleteMemoryRequest(r) => get_name(r),
+            sealed_memory_request::Request::GetMemoriesByIdRequest(r) => get_name(r),
         }))
     }
 }
