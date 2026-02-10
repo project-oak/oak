@@ -56,7 +56,7 @@ llvm.toolchain(
     # to properly respect exec vs target platform separation.
     extra_cxx_flags = {
         "linux-x86_64": [
-            "--gcc-install-dir=external/+_repo_rules2+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12",
+            "--gcc-install-dir=external/+oak_toolchains+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12",
         ],
     },
     link_flags = {
@@ -165,7 +165,7 @@ oci.pull(
 use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
 
 oak_toolchains = use_extension("//bazel:extensions.bzl", "oak_toolchains")
-use_repo(oak_toolchains, "umoci")
+use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 
 # On macOS, uses system-installed umoci (via Nix). See umoci_toolchain.bzl.
 register_toolchains("@umoci//:umoci_toolchain", "@umoci//:umoci_toolchain_darwin")
@@ -295,24 +295,6 @@ http_archive(
 )
 
 ##### Base Image Files and Sysroot Files #####
-
-# Experimental sysroot for the build toolchain, based on Oak Containers sysimage.
-#
-# Rebuild it using:
-# $ oak_containers/system_image/build-base.sh sysroot
-#
-# Upload it using:
-# $ oak_containers/system_image/push-base.sh sysroot
-#
-# (See oak_containers/system_image/README.md for more details.)
-SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
-
-http_archive(
-    name = "oak_cc_toolchain_sysroot",
-    build_file = "//:toolchain/sysroot.BUILD",
-    sha256 = SYSROOT_SHA256,
-    url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
-)
 
 # The binary is used for stage0 tdx measurement test
 # (//tdx_measurement:tdx_measurement_test) only.

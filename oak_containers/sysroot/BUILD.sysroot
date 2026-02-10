@@ -1,5 +1,4 @@
-#
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 package(licenses = ["notice"])
 
-# This rule captures _way_ too much.
-#
-# The only files excluded are ones that confuse bazel (eg they've got a '\' or ':' in the file name; for the former, systemd is the main culprit, for the latter, Perl).
-#
-# We should first figure out what files are _actually_ needed by the compilers, and after that remove everything we don't need from the sysroot.
+# This rule captures the entire sysroot for use in the CC toolchain.
+# Currently, this includes more files than strictly necessary for compilation.
 filegroup(
     name = "sysroot",
-    srcs = glob(
-        ["**"],
-        exclude = [
-            "lib/systemd/**",
-            "usr/lib/systemd/**",
-            "usr/share/man/**",
-            "var/lib/dpkg/**",
-        ],
-    ),
+    srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
 
@@ -39,7 +26,7 @@ filegroup(
 filegroup(
     name = "linker_library",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+        "lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
     ],
     visibility = ["//visibility:public"],
 )
@@ -48,9 +35,9 @@ filegroup(
 filegroup(
     name = "stage1_shared_libraries",
     srcs = [
-        "usr/lib/x86_64-linux-gnu/libc.so.6",
-        "usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
-        "usr/lib/x86_64-linux-gnu/libm.so.6",
+        "lib/x86_64-linux-gnu/libc.so.6",
+        "lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "lib/x86_64-linux-gnu/libm.so.6",
     ],
     visibility = ["//visibility:public"],
 )

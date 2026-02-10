@@ -11,7 +11,6 @@ set -o pipefail
 
 # Compatibility with older versions of Docker daemon as the Docker we get from
 # nix might be too new.
-export DOCKER_API_VERSION=1.41
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 
@@ -19,18 +18,23 @@ cd "${SCRIPTS_DIR}"
 
 mkdir --parent target
 
-LINUX_KERNEL_VERSION=$(cat ../../kernel/kernel_version.txt)
-echo "VERSION: ${LINUX_KERNEL_VERSION}"
-cp --force ../../kernel/configs/6.12.74/minimal.config target/minimal.config
-# It would be nice if we could find the sources that nix has already downloaded,
-# but this will do for now.
-curl "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${LINUX_KERNEL_VERSION}.tar.xz" --output target/linux-"${LINUX_KERNEL_VERSION}".tar.xz
+function fetch_linux_sources {
+  LINUX_KERNEL_VERSION=$(cat ../../kernel/kernel_version.txt)
+  echo "VERSION: ${LINUX_KERNEL_VERSION}"
+  cp --force ../../kernel/configs/6.12.74/minimal.config target/minimal.config
+  # It would be nice if we could find the sources that nix has already downloaded,
+  # but this will do for now.
+  curl "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${LINUX_KERNEL_VERSION}.tar.xz" --output target/linux-"${LINUX_KERNEL_VERSION}".tar.xz
+}
 
 function build_base {
   local tag=$1
   local dockerfile=$2
   local tar_name=$3
 
+  fetch_linux_sources
+
+  docker version
   docker buildx build . \
     --build-arg LINUX_KERNEL_VERSION="${LINUX_KERNEL_VERSION}" \
     --tag="${tag}":latest \
@@ -68,38 +72,33 @@ function build_base {
 
 function build_vanilla_base {
   build_base "oak-containers-sysimage-base" "base_image.Dockerfile" "base-image.tar"
-
 }
 
 function build_nvidia_base {
   build_base "oak-containers-sysimage-nvidia-base" "nvidia_base_image.Dockerfile" "nvidia-base-image.tar"
 }
 
-function build_sysroot {
-  build_base "oak-sysroot" "sysroot.Dockerfile" "sysroot.tar"
-}
-
 if [ -z "${1:-}" ]; then
   set +o xtrace
   echo ""
-  echo "Building both vanilla and nvidia base images and the sysroot."
+  echo "Building both vanilla and nvidia base images."
   echo ""
   echo "If you want to build just one of the base image types, use one of the following:"
   echo "./scripts/build-bash.sh vanilla"
   echo "./scripts/build-bash.sh nvidia"
-  echo "./scripts/build-bash.sh sysroot"
   echo ""
   sleep 1
   set -o xtrace
   build_vanilla_base
   build_nvidia_base
-  build_sysroot
 elif [ "$1" == "vanilla" ]; then
   build_vanilla_base
 elif [ "$1" == "nvidia" ]; then
   build_nvidia_base
 elif [ "$1" == "sysroot" ]; then
-  build_sysroot
+  set +o xtrace
+  echo "See oak_containers/sysroot"
+  exit 1
 fi
 
 echo "To upload:"

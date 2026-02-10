@@ -16,10 +16,18 @@
 
 """Module extensions for Oak toolchains."""
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("//bazel/tools/umoci:umoci_toolchain.bzl", "umoci_toolchain_repo")
+
+SYSROOT_SHA256 = "232d0363c317c72266e872a7e17829e8f7819ac4f1a4cd229518c4d475277472"
 
 def _oak_toolchains_impl(_ctx):
     umoci_toolchain_repo(name = "umoci")
+    http_archive(
+        name = "oak_cc_toolchain_sysroot",
+        sha256 = SYSROOT_SHA256,
+        url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
+    )
 
 oak_toolchains = module_extension(
     implementation = _oak_toolchains_impl,

@@ -831,8 +831,8 @@
     },
     "@@oak+//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "K8S6G63fVpGgeNwRjwN43EdGoeACKWG4DxegI90p4Z4=",
-        "usagesDigest": "sHPdIqv1uYmhWe8cIhYNHQ7gqH+8zg3VjNGclkq2Ca0=",
+        "bzlTransitiveDigest": "OnrFkEhz5Nh5eY0L35WjXRAOY2V2LMhZkPrzA80DJR8=",
+        "usagesDigest": "LwbT+ChIiBq2e6F7PinIrBTrn5Yk/2TSG42mIwPNVG8=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -840,9 +840,22 @@
           "umoci": {
             "repoRuleId": "@@oak+//bazel/tools/umoci:umoci_toolchain.bzl%umoci_toolchain_repo",
             "attributes": {}
+          },
+          "oak_cc_toolchain_sysroot": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "sha256": "232d0363c317c72266e872a7e17829e8f7819ac4f1a4cd229518c4d475277472",
+              "url": "https://storage.googleapis.com/oak-bins/sysroot/232d0363c317c72266e872a7e17829e8f7819ac4f1a4cd229518c4d475277472.tar.xz"
+            }
           }
         },
-        "recordedRepoMappingEntries": []
+        "recordedRepoMappingEntries": [
+          [
+            "oak+",
+            "bazel_tools",
+            "bazel_tools"
+          ]
+        ]
       }
     },
     "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {

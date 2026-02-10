@@ -16,6 +16,9 @@ import? "~/.oak_justfile.local"
 # Recipes for detailing with Rust crate versioning.
 mod crates 'justfiles/crates.just'
 
+# Recipes for building Oak Containers images
+mod containers 'justfiles/containers.just'
+
 default:
     @just --list
 
@@ -257,21 +260,26 @@ private-memory-build-and-copy:
     nix develop --command just build-and-test-and-copy
 
 
+# Update Oak's bazel lockfile
 bazel-lockfile:
-    # Update Oak's bazel lockfile
     bazel mod deps
 
+# Update codelab's bazel lockfile
 [working-directory: 'codelab']
 bazel-lockfile-codelab:
-    # Update codelab's bazel lockfile
     bazel mod deps
 
+# Update private memory's bazel lockfile
 [working-directory: 'oak_private_memory']
 bazel-lockfile-private-memory:
-    # Update private memory's bazel lockfile
     bazel mod deps
 
-bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory
+# Update oak containers sysroot's bazel lockfile
+[working-directory: 'oak_containers/sysroot']
+bazel-lockfile-containers-sysroot:
+    bazel mod deps
+
+bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory bazel-lockfile-containers-sysroot
 
 ####################
 # ARTIFACT COPYING #

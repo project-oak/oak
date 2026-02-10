@@ -59,6 +59,11 @@ http_file(
     urls = ["https://storage.googleapis.com/oak-files/sha2-256:b46aa37e1b48e33138ea9e6fd127fb5f3b3cedc1cd1b9b5377bb6031515acb1b"],
 )
 
+oak_toolchains = use_extension("@oak_bzlmod//bazel:extensions.bzl", "oak_toolchains")
+use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
+
+register_toolchains("@umoci//:umoci_toolchain")
+
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
     name = "llvm_toolchain",
@@ -72,11 +77,6 @@ llvm.sysroot(
 use_repo(llvm, "llvm_toolchain")
 
 register_toolchains("@llvm_toolchain//:all")
-
-oak_toolchains = use_extension("@oak_bzlmod//bazel:extensions.bzl", "oak_toolchains")
-use_repo(oak_toolchains, "umoci")
-
-register_toolchains("@umoci//:umoci_toolchain")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(
@@ -100,22 +100,6 @@ python.toolchain(
     ignore_root_user_error = True,
     is_default = True,
     python_version = "3.11",
-)
-
-# Oak Sysroot for toolchain.
-# While we transition from WORKSPACE to bzlmod, it's not possible yet to depend
-# on Oak as a module, and so not possible to get the sysroot yet at this point.
-# So we just re-declare it here.
-# Once we depend on Oak as a module, we can remove this and depend on it via the
-# Oak module.
-
-SYSROOT_SHA256 = "d6f608cf14b27bd4ae68f135b601b86bb9157a1a7a8fc08e43d7ff4ab7a18665"
-
-http_archive(
-    name = "oak_cc_toolchain_sysroot",
-    build_file = "@oak_bzlmod//toolchain:sysroot.BUILD",
-    sha256 = SYSROOT_SHA256,
-    url = "https://storage.googleapis.com/oak-bins/sysroot/{}.tar.xz".format(SYSROOT_SHA256),
 )
 
 http_archive(

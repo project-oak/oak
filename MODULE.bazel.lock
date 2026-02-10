@@ -412,7 +412,7 @@
   "moduleExtensions": {
     "//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "K8S6G63fVpGgeNwRjwN43EdGoeACKWG4DxegI90p4Z4=",
+        "bzlTransitiveDigest": "OnrFkEhz5Nh5eY0L35WjXRAOY2V2LMhZkPrzA80DJR8=",
         "usagesDigest": "kgpXcu41GRm9tQE1Eh6l3xi40jpaA3De8zuBR5Z2FX0=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -421,9 +421,22 @@
           "umoci": {
             "repoRuleId": "@@//bazel/tools/umoci:umoci_toolchain.bzl%umoci_toolchain_repo",
             "attributes": {}
+          },
+          "oak_cc_toolchain_sysroot": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "sha256": "232d0363c317c72266e872a7e17829e8f7819ac4f1a4cd229518c4d475277472",
+              "url": "https://storage.googleapis.com/oak-bins/sysroot/232d0363c317c72266e872a7e17829e8f7819ac4f1a4cd229518c4d475277472.tar.xz"
+            }
           }
         },
-        "recordedRepoMappingEntries": []
+        "recordedRepoMappingEntries": [
+          [
+            "",
+            "bazel_tools",
+            "bazel_tools"
+          ]
+        ]
       }
     },
     "//bazel/nix:extensions.bzl%nix_repos": {

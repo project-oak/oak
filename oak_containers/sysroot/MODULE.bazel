@@ -1,5 +1,4 @@
-#
-# Copyright 2026 The Project Oak Authors
+# Copyright 2025 Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package(
-    default_visibility = ["//:internal"],
-    licenses = ["notice"],
+module(
+    name = "oak_sysroot",
+    version = "0.1.0",
 )
+
+bazel_dep(name = "rules_distroless", version = "0.6.1")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "sysroot",
+    lock = "@@//:sysroot.lock.json",
+    manifest = "//:sysroot.yaml",
+)
+use_repo(apt, "sysroot")
