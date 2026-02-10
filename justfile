@@ -31,7 +31,10 @@ presubmit-full: \
 build-linter:
     bazel build @oak_linter//:linter
 
+# TODO: b/483469797 - Add the nix fmt commands to the oak_linter instead of inlining them here.
 format: build-linter
+    nix fmt flake.nix
+    nix fmt oak_private_memory/flake.nix
     bazel-bin/external/oak_linter+/linter --fix
 
 verify-bazelisk:
