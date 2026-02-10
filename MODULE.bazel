@@ -60,13 +60,13 @@ bazel_dep(name = "boringssl", version = "0.20250415.0")
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")
 
 # https://github.com/google/googletest
-bazel_dep(name = "googletest", version = "1.16.0", repo_name = "com_google_googletest")
+bazel_dep(name = "googletest", version = "1.17.0", repo_name = "com_google_googletest")
 
 # https://github.com/google/re2
-bazel_dep(name = "re2", version = "2024-07-02", repo_name = "com_google_re2")
+bazel_dep(name = "re2", version = "2025-11-05", repo_name = "com_google_re2")
 
 # https://github.com/abseil/abseil-cpp
-bazel_dep(name = "abseil-cpp", version = "20250127.1", repo_name = "com_google_absl")
+bazel_dep(name = "abseil-cpp", version = "20250512.1", repo_name = "com_google_absl")
 
 # https://github.com/bazelbuild/rules_pkg
 bazel_dep(name = "rules_pkg", version = "1.0.1")
@@ -78,7 +78,7 @@ bazel_dep(name = "google_benchmark", version = "1.9.1", repo_name = "com_github_
 bazel_dep(name = "tink_cc", version = "2.4.0", repo_name = "com_github_tink_crypto_tink_cc")
 
 # https://github.com/bazel-contrib/rules_python
-bazel_dep(name = "rules_python", version = "1.4.1", dev_dependency = True)
+bazel_dep(name = "rules_python", version = "1.5.1", dev_dependency = True)
 bazel_dep(name = "oak_linter", version = "0.1", dev_dependency = True)
 local_path_override(
     module_name = "oak_linter",
@@ -113,7 +113,7 @@ bazel_dep(name = "rules_kotlin", version = "2.1.4")
 
 bazel_dep(name = "rules_nixpkgs_core", version = "0.13.0")
 
-nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos")
+nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos", dev_dependency = True)
 use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
 
 ##### OCI
@@ -235,19 +235,19 @@ bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
 # https://android.googlesource.com/platform/external/libcppbor
 git_repository(
     name = "libcppbor",
-    build_file = "@//:third_party/google/libcppbor/BUILD",
+    build_file = "//:third_party/google/libcppbor/BUILD",
     # Head commit on 202505-09
     commit = "b1b998be4ec447f3086e7fd6a7f78eaec66a1c45",
     patches = [
-        "@//:third_party/google/libcppbor/remove_macro.patch",
-        "@//:third_party/google/libcppbor/limits.patch",
+        "//:third_party/google/libcppbor/remove_macro.patch",
+        "//:third_party/google/libcppbor/limits.patch",
     ],
     remote = "https://android.googlesource.com/platform/external/libcppbor",
 )
 
 http_archive(
     name = "cose_lib",
-    build_file = "@//:third_party/BUILD.cose_lib",
+    build_file = "//:third_party/BUILD.cose_lib",
     sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
     strip_prefix = "cose-lib-2023.09.08",
     url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
@@ -255,7 +255,7 @@ http_archive(
 
 http_archive(
     name = "e2fsprogs",
-    build_file = "@//:third_party/BUILD.e2fsprogs",
+    build_file = "//:third_party/BUILD.e2fsprogs",
     sha256 = "144af53f2bbd921cef6f8bea88bb9faddca865da3fbc657cc9b4d2001097d5db",
     strip_prefix = "e2fsprogs-1.47.0",
     urls = ["https://mirrors.edge.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.xz"],
