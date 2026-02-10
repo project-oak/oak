@@ -27,7 +27,7 @@
           # Create a bazelisk package that can be called as "bazel".
           bazelisk-as-bazel = pkgs.symlinkJoin {
             name = "bazelisk-as-bazel";
-            paths = [ pkgs.bazelisk];
+            paths = [ pkgs.bazelisk ];
             postBuild = ''
               # Remove the original binary link if you only want the alias
               # or keep it. Here we explicitly create the alias link:
@@ -146,7 +146,7 @@
                 # https://github.com/NixOS/nix/issues/262
                 unset TMPDIR
 
-                export BAZELISK_VERIFY_SHA256=61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e
+                export BAZELISK_VERIFY_SHA256=${if stdenv.isDarwin then "cb6d2f19ad92157e7186f64151e665c1b0c3bacaa690784e66f446f1b7660140" else "61d89402f0368e64b6c827be5de79d8e65382e8124c3cbb97325611a1851392e"}
               '';
               packages = [
                 autoconf
