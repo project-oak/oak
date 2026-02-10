@@ -27,6 +27,7 @@ rust_binary(
         "//src/icing",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
+        "@oak_crates_index//:prost",
         "@oak_crates_index//:rand",
     ],
 )

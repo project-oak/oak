@@ -19,21 +19,17 @@
 //! This benchmark measures:
 //! 1. Embedding search latency at various scales (1k to 1M embeddings)
 //! 2. Icing directory size breakdown (ground truth vs indexing files)
+//! 3. Index rebuild time from ground truth files (initialization latency)
 
-use std::{
-    fs,
-    path::Path,
-    time::{Duration, Instant},
-};
+use std::{fs, path::Path, time::Instant};
 
 use anyhow::Result;
 use clap::Parser;
-use icing::set_logging;
-use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir, PageToken};
+use icing::{IcingGroundTruthFilesHelper, set_logging};
+use oak_private_memory_database::icing::{IcingMetaDatabase, IcingTempDir};
+use prost::Message;
 use rand::random;
-use sealed_memory_rust_proto::oak::private_memory::{
-    Embedding, EmbeddingQuery, LlmView, LlmViews, Memory,
-};
+use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};
 
 /// Icing database benchmark for embedding search latency and directory size.
 #[derive(Parser, Debug)]
@@ -50,6 +46,10 @@ struct Args {
     /// Maximum number of embeddings to test (will test powers of 2 up to this)
     #[arg(short, long, default_value_t = 1_048_576)]
     max_embeddings: u32,
+
+    /// Number of iterations for index rebuild benchmarking
+    #[arg(short = 'i', long, default_value_t = 5)]
+    rebuild_iterations: u32,
 
     /// Print verbose output
     #[arg(short = 'b', long)]
@@ -82,35 +82,6 @@ fn create_memory_with_embedding(index: u32, embedding_size: usize) -> Memory {
         }),
         ..Default::default()
     }
-}
-
-/// Create a random query embedding of the specified size.
-fn create_embedding_query(embedding_size: usize) -> EmbeddingQuery {
-    let values: Vec<f32> = (0..embedding_size).map(|_| random::<f32>()).collect();
-
-    EmbeddingQuery {
-        embedding: vec![Embedding { model_signature: "benchmark_model".to_string(), values }],
-        ..Default::default()
-    }
-}
-
-/// Measure search latency by running multiple queries.
-fn measure_search_latency(
-    db: &IcingMetaDatabase,
-    embedding_size: usize,
-    num_queries: u32,
-) -> Duration {
-    let mut total_duration = Duration::ZERO;
-
-    for _ in 0..num_queries {
-        let query = create_embedding_query(embedding_size);
-        let start = Instant::now();
-        // Use embedding_search directly with larger page_size for accurate measurements
-        let _ = db.embedding_search(&query, 100, PageToken::Start, true);
-        total_duration += start.elapsed();
-    }
-
-    total_duration / num_queries
 }
 
 /// Calculate the size of a directory recursively.
@@ -186,6 +157,68 @@ fn get_embedding_counts(max_embeddings: u32) -> Vec<u32> {
     counts
 }
 
+/// Statistics for index rebuild timing.
+struct RebuildStats {
+    /// Minimum external timing (wall clock)
+    min_external_ms: f64,
+    /// Maximum external timing (wall clock)
+    max_external_ms: f64,
+    /// Average external timing (wall clock)
+    avg_external_ms: f64,
+    /// Average internal Icing latency (from InitializeStatsProto.latency_ms)
+    avg_icing_internal_ms: f64,
+}
+
+/// Measure index rebuild time by running multiple iterations.
+/// This exports ground truth, then rebuilds the index from scratch multiple
+/// times. Reports both external (wall clock) and internal (Icing's
+/// InitializeStatsProto.latency_ms) timing.
+fn measure_rebuild_time(db: &IcingMetaDatabase, iterations: u32) -> Result<RebuildStats> {
+    use icing::{create_icing_search_engine, get_default_icing_options};
+
+    // Export ground truth files
+    let ground_truth = db.export()?;
+
+    let mut external_durations_ms = Vec::with_capacity(iterations as usize);
+    let mut internal_durations_ms = Vec::with_capacity(iterations as usize);
+
+    for _ in 0..iterations {
+        // Create a fresh temp directory for rebuild
+        let rebuild_dir = IcingTempDir::new("icing-rebuild-");
+
+        // Migrate ground truth files to the new directory
+        ground_truth.migrate(rebuild_dir.as_str())?;
+
+        // Measure external wall clock time
+        let start = Instant::now();
+
+        // Use low-level API to get InitializeResultProto with stats
+        let options_bytes = get_default_icing_options(rebuild_dir.as_str()).encode_to_vec();
+        let icing_search_engine = create_icing_search_engine(&options_bytes);
+        let init_result = icing_search_engine.initialize()?;
+
+        let external_elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+        external_durations_ms.push(external_elapsed_ms);
+
+        // Extract internal timing from InitializeStatsProto
+        let internal_latency_ms =
+            init_result.initialize_stats.and_then(|stats| stats.latency_ms).unwrap_or(0) as f64;
+        internal_durations_ms.push(internal_latency_ms);
+
+        // rebuild_dir is dropped here, cleaning up
+    }
+
+    let total_external_ms: f64 = external_durations_ms.iter().sum();
+    let min_external_ms = external_durations_ms.iter().cloned().fold(f64::INFINITY, f64::min);
+    let max_external_ms = external_durations_ms.iter().cloned().fold(0.0, f64::max);
+    let avg_external_ms = total_external_ms / iterations as f64;
+
+    let total_internal_ms: f64 = internal_durations_ms.iter().sum();
+    let avg_icing_internal_ms = total_internal_ms / iterations as f64;
+
+    Ok(RebuildStats { min_external_ms, max_external_ms, avg_external_ms, avg_icing_internal_ms })
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -195,19 +228,27 @@ fn main() -> Result<()> {
     println!("Icing Database Benchmark");
     println!("========================\n");
     println!(
-        "Configuration: embedding_size={}, queries_per_test={}\n",
-        args.embedding_size, args.queries
+        "Configuration: embedding_size={}, queries_per_test={}, rebuild_iterations={}\n",
+        args.embedding_size, args.queries, args.rebuild_iterations
     );
 
     let embedding_counts = get_embedding_counts(args.max_embeddings);
 
-    // Print combined table header for latency and storage
+    // Print combined table header for storage and rebuild time (external vs
+    // internal)
     println!(
-        "| {:>12} | {:>18} | {:>15} | {:>15} | {:>15} |",
-        "Embeddings", "Avg Latency (ms)", "Ground Truth", "Index Files", "Total Size"
+        "| {:>12} | {:>15} | {:>15} | {:>15} | {:>14} | {:>14} | {:>14} | {:>14} |",
+        "Embeddings",
+        "Ground Truth",
+        "Index Files",
+        "Total Size",
+        "Ext Min (ms)",
+        "Ext Avg (ms)",
+        "Ext Max (ms)",
+        "Icing Avg (ms)"
     );
     println!(
-        "|--------------|----------------------|-----------------|-----------------|-----------------|"
+        "|--------------|-----------------|-----------------|-----------------|----------------|----------------|----------------|----------------|"
     );
 
     for &target_count in &embedding_counts {
@@ -231,21 +272,26 @@ fn main() -> Result<()> {
         // Optimize before measuring
         db.optimize()?;
 
-        // Measure search latency
-        let avg_latency = measure_search_latency(&db, args.embedding_size, args.queries);
-        let latency_ms = avg_latency.as_secs_f64() * 1000.0;
-
         // Measure directory sizes
         let (ground_truth_size, index_size) = measure_directory_sizes(&dir_path)?;
         let total_size = ground_truth_size + index_size;
 
+        // Measure index rebuild time
+        if args.verbose {
+            println!("Measuring index rebuild time ({} iterations)...", args.rebuild_iterations);
+        }
+        let rebuild_stats = measure_rebuild_time(&db, args.rebuild_iterations)?;
+
         println!(
-            "| {:>12} | {:>18.3} | {:>15} | {:>15} | {:>15} |",
+            "| {:>12} | {:>15} | {:>15} | {:>15} | {:>14.1} | {:>14.1} | {:>14.1} | {:>14.1} |",
             target_count,
-            latency_ms,
             format_bytes(ground_truth_size),
             format_bytes(index_size),
-            format_bytes(total_size)
+            format_bytes(total_size),
+            rebuild_stats.min_external_ms,
+            rebuild_stats.avg_external_ms,
+            rebuild_stats.max_external_ms,
+            rebuild_stats.avg_icing_internal_ms,
         );
 
         // Database and temp_dir are dropped here, cleaning up the directory
