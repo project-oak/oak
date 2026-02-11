@@ -32,14 +32,21 @@ pub struct BenchmarkMetrics {
 impl BenchmarkMetrics {
     /// Calculate metrics from raw benchmark data.
     ///
-    /// This is proto-type agnostic - works with any source of benchmark data.
+    /// Supports hybrid timing:
+    /// - Oak enclave: provides `elapsed_tsc`, `elapsed_ns` is 0
+    /// - Linux runner: provides `elapsed_ns`, `elapsed_tsc` is 0
+    ///
+    /// When both are provided, `elapsed_ns` takes precedence.
     pub fn calculate(
         elapsed_tsc: u64,
+        elapsed_ns: u64,
         iterations_completed: u32,
         bytes_processed: u64,
         tsc_freq: u64,
     ) -> Self {
-        let elapsed_ns = tsc_to_nanos(elapsed_tsc, tsc_freq);
+        // Use elapsed_ns directly if available, otherwise convert from TSC.
+        let elapsed_ns =
+            if elapsed_ns > 0 { elapsed_ns } else { tsc_to_nanos(elapsed_tsc, tsc_freq) };
 
         let throughput_bps = if elapsed_ns > 0 {
             bytes_processed as f64 / (elapsed_ns as f64 / 1_000_000_000.0)
@@ -70,6 +77,7 @@ pub struct BenchmarkResult {
     pub data_size: u32,
     pub iterations_completed: u32,
     pub elapsed_tsc: u64,
+    pub elapsed_ns: u64,
     pub bytes_processed: u64,
     pub status: u32,
 }
@@ -82,12 +90,15 @@ pub fn format_result(
 ) -> String {
     match format {
         OutputFormat::Human => {
+            // Show whichever timing source is available.
+            let timing_label =
+                if result.elapsed_tsc > 0 { "Guest elapsed (TSC)" } else { "Guest elapsed" };
             format!(
                 "\n=== Benchmark Results ===\n\
                  Benchmark:           {}\n\
                  Data size:           {} bytes\n\
                  Iterations:          {}\n\
-                 Guest elapsed:       {:.3} ms\n\
+                 {}:  {:.3} ms\n\
                  Bytes processed:     {}\n\
                  Throughput:          {:.2} MB/s\n\
                  Operations/sec:      {:.0}\n\
@@ -95,6 +106,7 @@ pub fn format_result(
                 result.benchmark_name,
                 result.data_size,
                 result.iterations_completed,
+                timing_label,
                 metrics.elapsed_ns as f64 / 1_000_000.0,
                 result.bytes_processed,
                 metrics.throughput_mbps(),

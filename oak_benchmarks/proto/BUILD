@@ -18,6 +18,7 @@ load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 load("//micro_rpc_build:build_defs.bzl", "rust_micro_rpc_service")
+load("//oak_grpc_utils:build_defs.bzl", "rust_tonic_grpc_service")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -73,4 +74,16 @@ rust_micro_rpc_service(
         ".oak.benchmark": ":oak_benchmark_proto_rust::oak::benchmark",
     },
     deps = [":oak_benchmark_proto_rust"],
+)
+
+rust_tonic_grpc_service(
+    name = "grpc_service",
+    srcs = [":proto"],
+    crate_name = "oak_benchmark_grpc",
+    extern_paths = {
+        ".oak.benchmark": "::oak_benchmark_proto_rust::oak::benchmark",
+    },
+    deps = [
+        ":oak_benchmark_proto_rust",
+    ],
 )

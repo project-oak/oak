@@ -125,6 +125,7 @@ async fn main() -> Result<()> {
     });
     let metrics = BenchmarkMetrics::calculate(
         response.elapsed_tsc,
+        response.elapsed_ns,
         response.iterations_completed,
         response.bytes_processed,
         tsc_freq,
@@ -136,6 +137,7 @@ async fn main() -> Result<()> {
         data_size: args.data_size,
         iterations_completed: response.iterations_completed,
         elapsed_tsc: response.elapsed_tsc,
+        elapsed_ns: metrics.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
     };
