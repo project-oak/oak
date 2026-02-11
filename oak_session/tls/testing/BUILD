@@ -22,6 +22,8 @@ package(
 filegroup(
     name = "test_keys",
     srcs = [
+        "ca.key",
+        "ca.pem",
         "client.key",
         "client.pem",
         "server.key",

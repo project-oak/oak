@@ -33,6 +33,7 @@ constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/server.key";
 constexpr char kTestServerCertPath[] = "oak_session/tls/testing/server.pem";
 constexpr char kTestClientKeyPath[] = "oak_session/tls/testing/client.key";
 constexpr char kTestClientCertPath[] = "oak_session/tls/testing/client.pem";
+constexpr char kTestCaCertPath[] = "oak_session/tls/testing/ca.pem";
 
 void HandshakeToClientReady(OakSessionTlsInitializer& server_initializer,
                             OakSessionTlsInitializer& client_initializer);
@@ -60,7 +61,7 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestServerCertPath),
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
   auto client_ctx = OakSessionTlsContext::Create(client_config);
   ASSERT_THAT(client_ctx, IsOk());
@@ -113,13 +114,13 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
               .key_asn1 = *server_key,
               .cert_asn1 = *server_cert,
           },
-      .client_trust_anchor_path = std::string(kTestClientCertPath),
+      .client_trust_anchor_path = std::string(kTestCaCertPath),
   };
   auto server_ctx = OakSessionTlsContext::Create(server_config);
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestServerCertPath),
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
       .tls_identity =
           TlsIdentity{
               .key_asn1 = *client_key,
@@ -185,7 +186,7 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
 
   // Set client credentials.
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestServerCertPath),
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
       .tls_identity =
           TlsIdentity{
               .key_asn1 = *client_key,
@@ -230,14 +231,14 @@ TEST(OakSessionTlsTest,
               .key_asn1 = *server_key,
               .cert_asn1 = *server_cert,
           },
-      .client_trust_anchor_path = std::string(kTestClientCertPath),
+      .client_trust_anchor_path = std::string(kTestCaCertPath),
   };
   auto server_ctx = OakSessionTlsContext::Create(server_config);
   ASSERT_THAT(server_ctx, IsOk());
 
   // Don't set client credentials.
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestServerCertPath),
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
 
   };
   auto client_ctx = OakSessionTlsContext::Create(client_config);
@@ -281,7 +282,7 @@ TEST(OakSessionTlsTest, LargeDataTransfer) {
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
-      .server_trust_anchor_path = std::string(kTestServerCertPath),
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
   auto client_ctx = OakSessionTlsContext::Create(client_config);
   ASSERT_THAT(client_ctx, IsOk());
