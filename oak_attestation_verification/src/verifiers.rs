@@ -169,10 +169,24 @@ impl AttestationVerifier for AmdSevSnpDiceAttestationVerifier {
     }
 }
 
+/// Attestation verifier that verifies a transparent attestation (i.e. an
+/// attestation with a transparent event log) rooted in AMD SEV-SNP.
 pub struct AmdSevSnpTransparentDiceAttestationVerifier {
     base_verifier: BaseAmdSevSnpVerifier,
     event_policies: Vec<Box<dyn EventPolicy>>,
     clock: Arc<dyn Clock>,
+}
+
+impl AmdSevSnpTransparentDiceAttestationVerifier {
+    pub fn new(
+        platform_policy: AmdSevSnpPolicy,
+        firmware_policy: Box<dyn EventPolicy>,
+        event_policies: Vec<Box<dyn EventPolicy>>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        let base_verifier = BaseAmdSevSnpVerifier { platform_policy, firmware_policy };
+        Self { base_verifier, event_policies, clock }
+    }
 }
 
 impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
