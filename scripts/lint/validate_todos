@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
+set -o errexit
 
 readonly TODO_REGEX='(TODO\(#[0-9]+\)|TODO: .+ - [0-9A-Za-z]+)'
 
 for file in "$@"; do
-    grep "TODO" "$file" | while read -r line; do
-        if ! [[ $line =~ $TODO_REGEX ]]; then
+    while IFS= read -r line; do
+        if [[ $line =~ "TODO" ]] && ! [[ $line =~ $TODO_REGEX ]]; then
             echo "ERROR: Invalid TODO format in $file: $line"
             exit 1
         fi
-    done
+    done < "$file"
 done

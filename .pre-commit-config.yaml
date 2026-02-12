@@ -5,11 +5,21 @@ exclude: third_party/
 repos:
   - repo: local
     hooks:
-      - id: rustfmt
-        name: rustfmt (Rust)
-        entry: rustfmt
-        language: system
-        types: [rust]
+      # Keep these sorted by id alphabetically, except for `id` which should stay at the end.
+      - id: badtodo
+        name: Bad TODOs
+        language: script
+        exclude: '.pre-commit-config.yaml|validate_todos'
+        entry: ./scripts/lint/validate_todos
+        # prettier-ignore
+        types_or:
+          [rust, c, c++, proto, java, yaml, html, javascript, ts, css, scss, dockerfile, kotlin, markdown, shell]
+
+      - id: bazellic
+        name: Add notice license to all bazel packages
+        language: script
+        entry: ./scripts/lint/add_bazel_license
+        files: BUILD
 
       - id: buildifier
         name: buildifier (Bazel BUILD and .bzl files)
@@ -19,8 +29,8 @@ repos:
 
       - id: bzllock
         name: Make sure MODULE.bazel.lock files are fully up to date
-        entry: ./scripts/bazel_mod_deps
-        language: system
+        entry: ./scripts/lint/bazel_mod_deps
+        language: script
         files: MODULE.bazel$
 
       - id: clang-format
@@ -28,12 +38,6 @@ repos:
         entry: clang-format -i
         language: system
         types_or: [c, c++, proto, java]
-
-      - id: prettier
-        name: prettier (YAML, HTML, JS, TS, CSS, SCSS)
-        entry: prettier --write
-        language: system
-        types_or: [yaml, html, javascript, ts, css, scss]
 
       - id: hadolint
         name: hadolint (Dockerfiles)
@@ -53,61 +57,43 @@ repos:
         types: [markdown]
         language: system
 
-      - id: shellcheck
-        name: shellcheck (shell script files)
-        entry: shellcheck --external-sources --exclude=SC2155
-        language: system
-        types: [shell]
-
       - id: nix
         name: nixfmt (Nix)
         entry: nix fmt
         language: system
         types: [nix]
 
+      - id: prettier
+        name: prettier (YAML, HTML, JS, TS, CSS, SCSS)
+        entry: prettier --write
+        language: system
+        types_or: [yaml, html, javascript, ts, css, scss]
+
+      - id: rustfmt
+        name: rustfmt (Rust)
+        entry: rustfmt
+        language: system
+        types: [rust]
+
+      - id: shellcheck
+        name: shellcheck (shell script files)
+        entry: shellcheck --external-sources --exclude=SC2155
+        language: system
+        types: [shell]
+
+      - id: sourcelic
+        name: Add Apache License to source files
+        language: script
+        entry: ./scripts/lint/add_source_license
+        exclude: 'oak_proto_rust/generated|cc/crypto/hpke/jni'
+        types_or:
+          [rust, c, c++, proto, java, html, javascript, ts, css, scss, kotlin]
+
       - id: terraform fmt
         name: terraform fmt
         entry: terraform fmt --write=true
         language: system
         types: [terraform]
-
-      - id: badtodo
-        name: Bad TODOs
-        language: system
-        exclude: '.pre-commit-config.yaml|validate_todos'
-        entry: ./scripts/validate_todos
-        types_or:
-          [
-            rust,
-            c,
-            c++,
-            proto,
-            java,
-            yaml,
-            html,
-            javascript,
-            ts,
-            css,
-            scss,
-            dockerfile,
-            kotlin,
-            markdown,
-            shell,
-          ]
-
-      - id: bazellic
-        name: Add notice license to all bazel packages
-        language: system
-        entry: ./scripts/add_bazel_license
-        files: BUILD
-
-      - id: sourcelic
-        name: Add Apache License to source files
-        language: system
-        entry: ./scripts/add_source_license
-        exclude: 'oak_proto_rust/generated|cc/crypto/hpke/jni'
-        types_or:
-          [rust, c, c++, proto, java, html, javascript, ts, css, scss, kotlin]
 
       # Use this for debugging to make sure that expected files are covered.
       - id: id

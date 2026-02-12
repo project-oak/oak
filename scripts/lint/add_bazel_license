@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -o errexit
+set -o nounset
+set -o pipefail
+
+for file in "$@"; do
+    if ! buildozer "add licenses notice" "$file:__pkg__"; then
+        result=$?
+        # exit code 3 = success, no changes made. Annoying.
+        if [[ "$?" != "3" && "$?" != "0" ]]; then
+            echo "ERROR: Failed to add license to $file ($result)"
+            exit $result
+        fi
+    fi
+done

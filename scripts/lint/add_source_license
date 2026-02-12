@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -o errexit
+set -o nounset
+set -o pipefail
 
 for file in "$@"; do
     if ! head -n 50 "$file" | grep "Apache License" > /dev/null
