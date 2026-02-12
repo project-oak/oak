@@ -1,6 +1,7 @@
 exclude: third_party/
 
-# The hooks here are using tools that we have pre-installed using flake.nix.
+# The hooks here are using tools that we have pre-installed using flake.nix, or
+# they are scripts in our scripts/ directory.
 repos:
   - repo: local
     hooks:
@@ -9,51 +10,67 @@ repos:
         entry: rustfmt
         language: system
         types: [rust]
+
       - id: buildifier
         name: buildifier (Bazel BUILD and .bzl files)
         entry: buildifier
         language: system
         types: [bazel]
+
+      - id: bzllock
+        name: Make sure MODULE.bazel.lock files are fully up to date
+        entry: ./scripts/bazel_mod_deps
+        language: system
+        files: MODULE.bazel$
+
       - id: clang-format
         name: clang-format (C/C++, Java, Proto)
         entry: clang-format -i
         language: system
         types_or: [c, c++, proto, java]
+
       - id: prettier
         name: prettier (YAML, HTML, JS, TS, CSS, SCSS)
         entry: prettier --write
         language: system
         types_or: [yaml, html, javascript, ts, css, scss]
+
       - id: hadolint
         name: hadolint (Dockerfiles)
         entry: hadolint
         language: system
         types: [dockerfile]
+
       - id: ktfmt
         name: ktfmt (Kotlin)
         entry: ktfmt -F --google-style
         language: system
         types: [kotlin]
+
       - id: markdownlint (Markdown files)
         name: apply markdownlint for markdown files
         entry: markdownlint --fix
         types: [markdown]
         language: system
-      - id: shellcheck (Shell Script Files)
-        name: apply shellcheck for shell scripts
+
+      - id: shellcheck
+        name: shellcheck (shell script files)
         entry: shellcheck --external-sources --exclude=SC2155
         language: system
         types: [shell]
+
       - id: nix
         name: nixfmt (Nix)
         entry: nix fmt
         language: system
         types: [nix]
+
       - id: terraform fmt
         name: terraform fmt
         entry: terraform fmt --write=true
         language: system
         types: [terraform]
+
       - id: badtodo
         name: Bad TODOs
         language: system
@@ -77,11 +94,13 @@ repos:
             markdown,
             shell,
           ]
+
       - id: bazellic
         name: Add notice license to all bazel packages
         language: system
         entry: ./scripts/add_bazel_license
         files: BUILD
+
       - id: sourcelic
         name: Add Apache License to source files
         language: system
@@ -95,3 +114,4 @@ repos:
         name: id
         language: system
         entry: echo
+        files: MODULE.bazel$
