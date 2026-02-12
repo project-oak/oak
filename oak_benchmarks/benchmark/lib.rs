@@ -40,7 +40,9 @@ mod tests;
 
 // Re-exports for convenience.
 pub use service::BenchmarkService;
-pub use timer::{DEFAULT_TSC_FREQ_HZ, read_tsc};
+#[cfg(feature = "std")]
+pub use timer::NativeTimer;
+pub use timer::{BenchmarkTimer, DEFAULT_TSC_FREQ_HZ, TimerReading, TscTimer, read_tsc};
 
 /// Benchmark result returned on success.
 ///
@@ -48,8 +50,8 @@ pub use timer::{DEFAULT_TSC_FREQ_HZ, read_tsc};
 /// operations.
 #[derive(Debug, Clone, Copy)]
 pub struct BenchmarkResult {
-    /// TSC ticks elapsed during the benchmark.
-    pub elapsed_tsc: u64,
+    /// Timer reading from the benchmark (TSC and/or nanoseconds).
+    pub timing: TimerReading,
     /// Number of iterations actually completed.
     pub iterations_completed: u32,
     /// Total bytes processed.
@@ -58,8 +60,37 @@ pub struct BenchmarkResult {
 
 impl BenchmarkResult {
     /// Create a new benchmark result.
-    pub fn new(elapsed_tsc: u64, iterations: u32, bytes: u64) -> Self {
-        Self { elapsed_tsc, iterations_completed: iterations, bytes_processed: bytes }
+    pub fn new(timing: TimerReading, iterations: u32, bytes: u64) -> Self {
+        Self { timing, iterations_completed: iterations, bytes_processed: bytes }
+    }
+}
+
+/// Multiplier for the 64-bit LCG (Linear Congruential Generator).
+///
+/// This is the multiplier from Knuth's MMIX LCG, also used by the PCG
+/// family of random number generators. It has good statistical properties
+/// for generating pseudo-random sequences.
+///
+/// Source: Knuth, "The Art of Computer Programming", Vol. 2, 3rd ed., p. 106.
+/// See also: https://nuclear.llnl.gov/CNP/rng/rngman/node4.html
+const LCG_MULTIPLIER: u64 = 6364136223846793005;
+
+/// Fill a buffer with deterministic pseudo-random data.
+///
+/// Uses a simple LCG (Linear Congruential Generator) for reproducible data
+/// that works in no_std environments without external dependencies.
+///
+/// We use pseudo-random data rather than zeroed or constant buffers because
+/// some hash implementations and CPU hardware can optimize for patterned
+/// input (e.g. zero-byte shortcuts, branch prediction on repeated data).
+/// Pseudo-random data ensures the benchmark measures realistic throughput
+/// without triggering such optimizations. The data only needs to be
+/// "non-patterned", not cryptographically random, so a simple LCG suffices.
+pub fn generate_benchmark_data(buffer: &mut [u8], seed: u64) {
+    let mut state = seed;
+    for byte in buffer.iter_mut() {
+        state = state.wrapping_mul(LCG_MULTIPLIER).wrapping_add(1);
+        *byte = (state >> 33) as u8;
     }
 }
 
@@ -73,6 +104,8 @@ pub enum BenchmarkError {
     UnsupportedBenchmark = 2,
     /// Requested data size exceeds maximum.
     DataSizeTooLarge = 3,
+    /// Invalid parameter (e.g. iterations exceed pre-generated indices).
+    InvalidParameter = 4,
 }
 
 impl BenchmarkError {

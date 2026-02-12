@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "benchmark",
     srcs = [
+        "cpu/hashing.rs",
         "cpu/mod.rs",
         "lib.rs",
         "memory/mod.rs",
@@ -34,12 +35,15 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:sha3",
     ],
 )
 
 rust_library(
     name = "benchmark_std",
     srcs = [
+        "cpu/hashing.rs",
         "cpu/mod.rs",
         "lib.rs",
         "memory/mod.rs",
@@ -52,10 +56,13 @@ rust_library(
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
+        "@oak_crates_index//:sha2",
+        "@oak_crates_index//:sha3",
     ],
 )
 
 rust_test(
     name = "benchmark_test",
     crate = ":benchmark_std",
+    crate_features = ["std"],
 )

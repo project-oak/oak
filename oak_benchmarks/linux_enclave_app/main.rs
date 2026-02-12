@@ -24,9 +24,7 @@
 //!   - **Server**: starts a gRPC server so that `linux_cli` can send benchmark
 //!     requests remotely (e.g. to a VM with SEV-SNP enabled).
 
-use std::time::Instant;
-
-use benchmark::BenchmarkService;
+use benchmark::{BenchmarkService, NativeTimer};
 use clap::Parser;
 use cli_common::{
     BenchmarkMetrics, BenchmarkResult, DisplayBenchmarkType, OutputFormat, format_result,
@@ -71,15 +69,15 @@ struct Args {
 // ── gRPC server implementation ──
 
 mod grpc_server {
-    use std::{sync::Mutex, time::Instant};
+    use std::sync::Mutex;
 
-    use benchmark::BenchmarkService;
+    use benchmark::{BenchmarkService, NativeTimer};
     use oak_benchmark_grpc::oak::benchmark::benchmark_server::Benchmark;
     use oak_benchmark_proto_rust::oak::benchmark::{RunBenchmarkRequest, RunBenchmarkResponse};
     use tonic::{Request, Response, Status};
 
     pub struct BenchmarkGrpcService {
-        service: Mutex<BenchmarkService>,
+        service: Mutex<BenchmarkService<NativeTimer>>,
     }
 
     impl BenchmarkGrpcService {
@@ -95,14 +93,11 @@ mod grpc_server {
             request: Request<RunBenchmarkRequest>,
         ) -> Result<Response<RunBenchmarkResponse>, Status> {
             let req = request.into_inner();
-            let start = Instant::now();
-            let mut response = self
+            let response = self
                 .service
                 .lock()
                 .map_err(|e| Status::internal(format!("Lock error: {}", e)))?
                 .handle_request(req);
-            // Fill in wall-clock elapsed_ns for the Linux runner.
-            response.elapsed_ns = start.elapsed().as_nanos() as u64;
             Ok(Response::new(response))
         }
     }
@@ -154,7 +149,7 @@ fn run_standalone(args: &Args) {
         args.seed
     };
 
-    let mut service = BenchmarkService::new(seed);
+    let service = BenchmarkService::<NativeTimer>::new(seed);
 
     let request = RunBenchmarkRequest {
         benchmark_type: args.benchmark as i32,
@@ -163,14 +158,12 @@ fn run_standalone(args: &Args) {
         warmup_iterations: args.warmup_iterations,
     };
 
-    let start = Instant::now();
     let response = service.handle_request(request);
-    let elapsed_ns = start.elapsed().as_nanos() as u64;
 
     // Use cli_common for metrics calculation and formatting.
     let metrics = BenchmarkMetrics::calculate(
-        0, // elapsed_tsc — not used on Linux
-        elapsed_ns,
+        response.elapsed_tsc,
+        response.elapsed_ns,
         response.iterations_completed,
         response.bytes_processed,
         0, // tsc_freq — not used on Linux
@@ -179,8 +172,8 @@ fn run_standalone(args: &Args) {
         benchmark_name: DisplayBenchmarkType(args.benchmark).to_string(),
         data_size: args.data_size,
         iterations_completed: response.iterations_completed,
-        elapsed_tsc: 0,
-        elapsed_ns,
+        elapsed_tsc: response.elapsed_tsc,
+        elapsed_ns: response.elapsed_ns,
         bytes_processed: response.bytes_processed,
         status: response.status,
     };

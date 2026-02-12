@@ -40,6 +40,9 @@ enum BenchmarkType {
   BENCHMARK_TYPE_MEMORY_INSERT = 3;
   BENCHMARK_TYPE_MEMORY_LOOKUP = 4;
   BENCHMARK_TYPE_ARRAY_UPDATE = 5;
+  BENCHMARK_TYPE_SHA512 = 6;
+  BENCHMARK_TYPE_SHA3_256 = 7;
+  BENCHMARK_TYPE_SHA3_512 = 8;
   // Debug/connectivity test - returns dummy values without doing work.
   BENCHMARK_TYPE_DEBUG = 100;
 }

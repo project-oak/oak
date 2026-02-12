@@ -27,14 +27,17 @@ use oak_benchmark_proto_rust::oak::benchmark::BenchmarkType;
 pub fn parse_benchmark_type(s: &str) -> Result<BenchmarkType, String> {
     match s.to_lowercase().replace('-', "_").as_str() {
         "sha256" => Ok(BenchmarkType::Sha256),
+        "sha512" => Ok(BenchmarkType::Sha512),
+        "sha3_256" | "sha3256" => Ok(BenchmarkType::Sha3256),
+        "sha3_512" | "sha3512" => Ok(BenchmarkType::Sha3512),
         "p256_sign" | "p256sign" => Ok(BenchmarkType::P256Sign),
         "memory_insert" => Ok(BenchmarkType::MemoryInsert),
         "memory_lookup" => Ok(BenchmarkType::MemoryLookup),
         "array_update" => Ok(BenchmarkType::ArrayUpdate),
         "debug" => Ok(BenchmarkType::Debug),
         _ => Err(format!(
-            "Unknown benchmark type: '{}'. Valid options: sha256, p256-sign, \
-             memory-insert, memory-lookup, array-update, debug",
+            "Unknown benchmark type: '{}'. Valid options: sha256, sha512, sha3-256, sha3-512, \
+             p256-sign, memory-insert, memory-lookup, array-update, debug",
             s
         )),
     }
@@ -47,6 +50,9 @@ impl fmt::Display for DisplayBenchmarkType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self.0 {
             BenchmarkType::Sha256 => "SHA-256",
+            BenchmarkType::Sha512 => "SHA-512",
+            BenchmarkType::Sha3256 => "SHA3-256",
+            BenchmarkType::Sha3512 => "SHA3-512",
             BenchmarkType::P256Sign => "P-256 Sign",
             BenchmarkType::MemoryInsert => "Memory Insert",
             BenchmarkType::MemoryLookup => "Memory Lookup",

@@ -30,7 +30,7 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 
-use benchmark::{BenchmarkService, read_tsc};
+use benchmark::{BenchmarkService, TscTimer, read_tsc};
 use oak_benchmark_proto_rust::oak::benchmark::{RunBenchmarkRequest, RunBenchmarkResponse};
 use oak_restricted_kernel_sdk::{
     channel::{FileDescriptorChannel, start_blocking_server},
@@ -42,7 +42,7 @@ use service::oak::benchmark::{Benchmark, BenchmarkServer};
 /// Wrapper that implements the micro_rpc Benchmark trait using the shared
 /// service.
 struct BenchmarkServiceWrapper {
-    service: BenchmarkService,
+    service: BenchmarkService<TscTimer>,
 }
 
 impl BenchmarkServiceWrapper {

@@ -19,11 +19,11 @@
 use oak_benchmark_proto_rust::oak::benchmark::{BenchmarkType, RunBenchmarkRequest};
 
 use super::service::BenchmarkService;
-use crate::BenchmarkError;
+use crate::{BenchmarkError, NativeTimer};
 
 #[test]
 fn test_service_unsupported() {
-    let mut svc = BenchmarkService::new(0);
+    let svc = BenchmarkService::<NativeTimer>::new(0);
     let request = RunBenchmarkRequest {
         benchmark_type: BenchmarkType::P256Sign as i32,
         data_size: 1024,

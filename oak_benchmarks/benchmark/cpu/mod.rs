@@ -14,23 +14,17 @@
 // limitations under the License.
 //
 
-//! CPU-bound benchmark implementations.
+//! CPU-bound benchmarks.
 
-use crate::{BenchmarkError, BenchmarkResult};
+pub mod hashing;
 
-/// Trait for CPU-bound benchmarks.
+/// Common interface for CPU-bound benchmarks.
 ///
-/// These benchmarks measure computational performance with relatively small
-/// data sizes and high iteration counts.
+/// CPU benchmarks use the `run_with_timer::<T>()` method on specific
+/// implementations, where `T` is a
+/// [`BenchmarkTimer`](crate::timer::BenchmarkTimer) chosen by the host
+/// application.
 pub trait CpuBenchmark {
-    /// Run the benchmark.
-    ///
-    /// # Arguments
-    /// * `data_size` - Size of data to process per iteration.
-    /// * `iterations` - Number of iterations to run.
-    fn run(&mut self, data_size: usize, iterations: u32)
-    -> Result<BenchmarkResult, BenchmarkError>;
-
     /// Maximum data size this benchmark supports.
     fn max_data_size(&self) -> usize;
 }
