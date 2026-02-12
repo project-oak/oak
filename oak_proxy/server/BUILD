@@ -23,16 +23,22 @@ package(
 
 rust_binary(
     name = "server",
-    srcs = ["src/main.rs"],
+    srcs = [
+        "src/main.rs",
+        "src/noise.rs",
+        "src/tls.rs",
+    ],
     deps = [
         "//oak_proto_rust",
         "//oak_proxy/lib:oak_proxy_lib",
         "//oak_session",
+        "//oak_session/tls/rust:oak_session_tls",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-tungstenite",
         "@oak_crates_index//:toml",

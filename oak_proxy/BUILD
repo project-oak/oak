@@ -30,6 +30,7 @@ rust_test_suite(
         "//oak_proxy/client",
         "//oak_proxy/server",
         "//oak_proxy/testdata",
+        "//oak_session/tls/testing:test_keys",
     ],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [

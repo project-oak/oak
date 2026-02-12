@@ -14,27 +14,21 @@
 // limitations under the License.
 //
 
+mod noise;
+mod tls;
+
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use clap::Parser;
-use oak_proxy_lib::{
-    config::{self, RestartPolicy, ServerConfig},
-    proxy::{PeerRole, proxy},
-    websocket::{read_message, write_message},
-};
-use oak_session::{ProtocolEngine, ServerSession, Session};
-use tokio::{
-    net::{TcpListener, TcpStream},
-    process::Command,
-};
-use tokio_tungstenite::{MaybeTlsStream, accept_async};
+use oak_proxy_lib::config::{RestartPolicy, ServerConfig};
+use tokio::{net::TcpListener, process::Command};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the TOML configuration file.
-    #[arg(long, value_parser = crate::config::load_toml::<ServerConfig>)]
+    #[arg(long, value_parser = oak_proxy_lib::config::load_toml::<ServerConfig>)]
     config: ServerConfig,
 
     /// The SocketAddr where the proxy should listen for client connections
@@ -48,82 +42,48 @@ struct Args {
     backend_address: Option<SocketAddr>,
 }
 
+impl Args {
+    fn get_config(mut self) -> anyhow::Result<ServerConfig> {
+        // The command-line arguments override the values from the config file.
+        if let Some(listen_address) = self.listen_address {
+            self.config.listen_address = Some(listen_address);
+        }
+        if let Some(backend_address) = self.backend_address {
+            self.config.backend_address = Some(backend_address);
+        }
+
+        self.config
+            .listen_address
+            .as_ref()
+            .context("listen_address must be specified in the config file or via an argument")?;
+        self.config
+            .backend_address
+            .as_ref()
+            .context("backend_address must be specified in the config file or via an argument")?;
+
+        Ok(self.config)
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { mut config, listen_address, backend_address } = Args::parse();
-
-    // The command-line arguments override the values from the config file.
-    if let Some(listen_address) = listen_address {
-        config.listen_address = Some(listen_address);
-    }
-    if let Some(backend_address) = backend_address {
-        config.backend_address = Some(backend_address);
-    }
-
-    let config = Arc::new(config);
+    let config = Arc::new(Args::parse().get_config()?);
 
     if config.backend_command.is_some() {
         tokio::spawn(backend_task(config.clone()));
     }
 
-    let listen_address = config
-        .listen_address
-        .context("listen_address must be specified in the config file or via an argument")?;
-    anyhow::ensure!(config.backend_address.is_some());
+    let listen_address = config.listen_address.unwrap();
     let listener = TcpListener::bind(listen_address).await?;
     log::info!("[Server] Listening on {}", listen_address);
 
-    loop {
-        let (stream, peer_address) = listener.accept().await?;
-        log::info!("[Server] Accepted connection from {}", peer_address);
-        let config = config.clone();
-        tokio::spawn(async move {
-            if let Err(err) = handle_connection(stream, config).await {
-                log::error!("[Server] Error handling connection: {:?}", err);
-            }
-        });
+    if config.experimental_tls_session {
+        tls::run_loop(listener, config).await
+    } else {
+        noise::run_loop(listener, config).await
     }
-}
-
-async fn handle_connection(
-    client_stream: TcpStream,
-    config: Arc<ServerConfig>,
-) -> anyhow::Result<()> {
-    let mut client_stream = accept_async(MaybeTlsStream::Plain(client_stream)).await?;
-    let server_config = config::build_session_config(
-        &config.attestation_generators,
-        &config.attestation_verifiers,
-        None,
-    )?;
-    let mut session = ServerSession::create(server_config)?;
-
-    while !session.is_open() {
-        let request = read_message(&mut client_stream).await?;
-        session.put_incoming_message(request)?;
-
-        if let Some(response) = session.get_outgoing_message()? {
-            write_message(&mut client_stream, &response).await?;
-        }
-    }
-
-    log::info!("[Server] Oak Session established with client proxy.");
-
-    let backend_address = config.backend_address.context("backend_address wasn't set")?;
-    let backend_stream = TcpStream::connect(backend_address)
-        .await
-        .context(format!("error connecting to backend {}", backend_address))?;
-    log::info!("[Server] Connected to backend server at {}", backend_address);
-
-    proxy::<ServerSession>(
-        PeerRole::Server,
-        session,
-        backend_stream,
-        client_stream,
-        config.keep_alive_interval,
-    )
-    .await
 }
 
 async fn backend_task(config: Arc<ServerConfig>) {

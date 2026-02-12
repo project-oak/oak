@@ -30,6 +30,7 @@ rust_library(
         "//oak_attestation_verification",
         "//oak_proto_rust",
         "//oak_session",
+        "//oak_session/tls/rust:oak_session_tls",
         "//oak_time",
         "//oak_time:oak_time_std",
         "@oak_crates_index//:anyhow",

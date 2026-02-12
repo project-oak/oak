@@ -53,6 +53,8 @@ async fn proxy_test() -> anyhow::Result<()> {
         attestation_verifiers: Vec::new(),
         keep_alive_interval: Duration::from_secs(10),
         attestation_output_file: None,
+        experimental_tls_session: false,
+        tls_ca: None,
     };
 
     let server_config = ServerConfig {
@@ -62,6 +64,9 @@ async fn proxy_test() -> anyhow::Result<()> {
         attestation_verifiers: Vec::new(),
         keep_alive_interval: Duration::from_secs(10),
         backend_command: None,
+        experimental_tls_session: false,
+        tls_cert: None,
+        tls_key: None,
     };
 
     std::fs::write("client.toml", toml::to_string(&client_config)?)?;
@@ -97,6 +102,94 @@ async fn proxy_test() -> anyhow::Result<()> {
     let mut buf = Vec::new();
     stream.read_to_end(&mut buf).await?;
     assert_eq!(buf, b"Hello, proxy!");
+
+    // Wait for the message to be processed
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    let _ = backend.await;
+
+    server_proxy.kill()?;
+    client_proxy.kill()?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tls_proxy_test() -> anyhow::Result<()> {
+    let client_port = find_free_port();
+    let server_proxy_port = find_free_port();
+    let backend_port = find_free_port();
+
+    let backend = tokio::spawn(async move {
+        let listener =
+            tokio::net::TcpListener::bind(format!("127.0.0.1:{}", backend_port)).await.unwrap();
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut buf = Vec::new();
+        socket.read_to_end(&mut buf).await.unwrap();
+        socket.write_all(&buf).await.unwrap();
+        socket.shutdown().await.unwrap();
+        assert_eq!(buf, b"Hello, TLS proxy!");
+    });
+
+    // Give the backend a moment to start up.
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    let client_config = ClientConfig {
+        listen_address: Some(format!("127.0.0.1:{}", client_port).parse()?),
+        server_proxy_url: Some(format!("ws://127.0.0.1:{}", server_proxy_port).parse()?),
+        attestation_generators: Vec::new(),
+        attestation_verifiers: Vec::new(),
+        keep_alive_interval: Duration::from_secs(10),
+        attestation_output_file: None,
+        experimental_tls_session: true,
+        tls_ca: Some("oak_session/tls/testing/test_ca.pem".to_string()),
+    };
+
+    let server_config = ServerConfig {
+        listen_address: Some(format!("127.0.0.1:{}", server_proxy_port).parse()?),
+        backend_address: Some(format!("127.0.0.1:{}", backend_port).parse()?),
+        attestation_generators: Vec::new(),
+        attestation_verifiers: Vec::new(),
+        keep_alive_interval: Duration::from_secs(10),
+        backend_command: None,
+        experimental_tls_session: true,
+        tls_cert: Some("oak_session/tls/testing/test_server.pem".to_string()),
+        tls_key: Some("oak_session/tls/testing/test_server.key".to_string()),
+    };
+
+    std::fs::write("client_tls.toml", toml::to_string(&client_config)?)?;
+    std::fs::write("server_tls.toml", toml::to_string(&server_config)?)?;
+
+    let mut server_proxy = Command::new("oak_proxy/server/server")
+        .args([
+            "--config",
+            "server_tls.toml",
+            "--listen-address",
+            &server_config.listen_address.unwrap().to_string(),
+        ])
+        .env("RUST_LOG", "debug")
+        .spawn()?;
+    let mut client_proxy = Command::new("oak_proxy/client/client")
+        .args([
+            "--config",
+            "client_tls.toml",
+            "--listen-address",
+            &client_config.listen_address.unwrap().to_string(),
+            "--server-proxy-url",
+            client_config.server_proxy_url.unwrap().as_ref(),
+        ])
+        .env("RUST_LOG", "debug")
+        .spawn()?;
+
+    // Wait for the processes to start
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    let mut stream = TcpStream::connect(format!("127.0.0.1:{}", client_port)).await?;
+    stream.write_all(b"Hello, TLS proxy!").await?;
+    stream.shutdown().await?;
+    let mut buf = Vec::new();
+    stream.read_to_end(&mut buf).await?;
+    assert_eq!(buf, b"Hello, TLS proxy!");
 
     // Wait for the message to be processed
     tokio::time::sleep(Duration::from_secs(2)).await;

@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+mod noise;
+mod tls;
+
 use std::{
     net::SocketAddr,
     path::PathBuf,
@@ -24,24 +27,17 @@ use std::{
 use anyhow::Context;
 use clap::Parser;
 use oak_proto_rust::oak::attestation::v1::{CollectedAttestation, collected_attestation};
-use oak_proxy_lib::{
-    config::{self, ClientConfig},
-    proxy::{PeerRole, proxy},
-    websocket::{read_message, write_message},
-};
-use oak_session::{
-    ClientSession, ProtocolEngine, Session,
-    session::{AttestationEvidence, AttestationPublisher},
-};
+use oak_proxy_lib::config::ClientConfig;
+use oak_session::session::{AttestationEvidence, AttestationPublisher};
 use prost::Message;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 use url::Url;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the TOML configuration file.
-    #[arg(long, value_parser = crate::config::load_toml::<ClientConfig>)]
+    #[arg(long, value_parser = oak_proxy_lib::config::load_toml::<ClientConfig>)]
     config: ClientConfig,
 
     /// The SocketAddr where the proxy should listen (e.g., "127.0.0.1:9090").
@@ -63,9 +59,9 @@ struct Args {
 /// An `AttestationPublisher` that serializes received attestation evidence
 /// to a file as a `CollectedAttestation` proto. Writes the evidence
 /// regardless of whether verification succeeded or failed.
-struct FileAttestationPublisher {
-    output_path: PathBuf,
-    server_proxy_url: String,
+pub(crate) struct FileAttestationPublisher {
+    pub(crate) output_path: PathBuf,
+    pub(crate) server_proxy_url: String,
 }
 
 impl AttestationPublisher for FileAttestationPublisher {
@@ -113,90 +109,45 @@ impl AttestationPublisher for FileAttestationPublisher {
     }
 }
 
+impl Args {
+    fn get_config(mut self) -> anyhow::Result<ClientConfig> {
+        // The command-line arguments override the values from the config file.
+        if let Some(listen_address) = self.listen_address {
+            self.config.listen_address = Some(listen_address);
+        }
+        if self.server_proxy_url.is_some() {
+            self.config.server_proxy_url = self.server_proxy_url.clone();
+        }
+        if let Some(attestation_output_file) = self.attestation_output_file {
+            self.config.attestation_output_file = Some(attestation_output_file);
+        }
+
+        self.config
+            .listen_address
+            .as_ref()
+            .context("listen_address must be specified in the config file or via an argument")?;
+        self.config
+            .server_proxy_url
+            .as_ref()
+            .context("server_proxy_url must be specified in the config file or via an argument")?;
+
+        Ok(self.config)
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { mut config, listen_address, server_proxy_url, attestation_output_file } =
-        Args::parse();
+    let config = Arc::new(Args::parse().get_config()?);
 
-    // The command-line arguments override the values from the config file.
-    if let Some(listen_address) = listen_address {
-        config.listen_address = Some(listen_address);
-    }
-    if let Some(server_proxy_url) = server_proxy_url {
-        config.server_proxy_url = Some(server_proxy_url);
-    }
-    if let Some(attestation_output_file) = attestation_output_file {
-        config.attestation_output_file = Some(attestation_output_file);
-    }
-
-    let listen_address = config
-        .listen_address
-        .context("listen_address must be specified in the config file or via an argument")?;
-    anyhow::ensure!(config.server_proxy_url.is_some());
+    let listen_address = config.listen_address.unwrap();
     let listener = TcpListener::bind(listen_address).await?;
     log::info!("[Client] Listening on {}", listen_address);
 
-    let config = Arc::new(config);
-    loop {
-        let (stream, peer_address) = listener.accept().await?;
-        log::info!("[Client] Accepted connection from {}", peer_address);
-        let config = config.clone();
-        tokio::spawn(async move {
-            if let Err(err) = handle_connection(stream, &config).await {
-                log::error!("[Client] Error handling connection: {:?}", err);
-            }
-        });
+    if config.experimental_tls_session {
+        tls::run_loop(listener, config).await
+    } else {
+        noise::run_loop(listener, config).await
     }
-}
-
-async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyhow::Result<()> {
-    let server_proxy_url =
-        config.server_proxy_url.as_ref().context("server_proxy_url wasn't set")?;
-    let (mut server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
-    log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
-
-    // Create an attestation publisher if an output file is configured.
-    let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
-        config.attestation_output_file.as_ref().map(|path| {
-            log::info!(
-                "[Client] Attestation publisher CREATED, will write to '{}'",
-                path.display()
-            );
-            Arc::new(FileAttestationPublisher {
-                output_path: path.clone(),
-                server_proxy_url: server_proxy_url.to_string(),
-            }) as Arc<dyn AttestationPublisher>
-        });
-
-    let client_config = config::build_session_config(
-        &config.attestation_generators,
-        &config.attestation_verifiers,
-        attestation_publisher.as_ref(),
-    )?;
-    let mut session = ClientSession::create(client_config)?;
-
-    // Handshake
-    while !session.is_open() {
-        if let Some(request) = session.get_outgoing_message()? {
-            write_message(&mut server_proxy_stream, &request).await?;
-        }
-
-        if !session.is_open() {
-            let response = read_message(&mut server_proxy_stream).await?;
-            session.put_incoming_message(response)?;
-        }
-    }
-
-    log::info!("[Client] Oak Session established with server proxy.");
-
-    proxy::<ClientSession>(
-        PeerRole::Client,
-        session,
-        app_stream,
-        server_proxy_stream,
-        config.keep_alive_interval,
-    )
-    .await
 }

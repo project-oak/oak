@@ -58,6 +58,10 @@ pub struct ClientConfig {
     /// The attestation is written regardless of verification success/failure.
     #[serde(default)]
     pub attestation_output_file: Option<PathBuf>,
+    #[serde(default)]
+    pub experimental_tls_session: bool,
+    #[serde(default)]
+    pub tls_ca: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -74,6 +78,12 @@ pub struct ServerConfig {
     pub attestation_verifiers: Vec<VerifierConfig>,
     #[serde(default)]
     pub backend_command: Option<CommandConfig>,
+    #[serde(default)]
+    pub experimental_tls_session: bool,
+    #[serde(default)]
+    pub tls_cert: Option<String>,
+    #[serde(default)]
+    pub tls_key: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, Default)]

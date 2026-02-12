@@ -18,7 +18,9 @@ use std::{collections::VecDeque, fmt, time::Duration};
 
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
+use oak_proto_rust::oak::session::v1::PlaintextMessage;
 use oak_session::{ProtocolEngine, Session};
+use oak_session_tls::OakSessionTls;
 use prost::Message;
 use rand::Rng;
 use tokio::{
@@ -41,24 +43,130 @@ impl fmt::Display for PeerRole {
     }
 }
 
+/// A trait that abstracts the session-specific logic for the proxy loop.
+pub trait ProxySession: Send + 'static {
+    /// Ingests data received from the remote peer.
+    fn put_incoming(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    /// Retrieves decrypted plaintext meant for the local application.
+    fn get_plaintext(&mut self) -> anyhow::Result<Option<Vec<u8>>>;
+    /// Ingests plaintext received from the local application.
+    fn put_plaintext(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    /// Retrieves encrypted data (frames) meant for the remote peer.
+    fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>>;
+}
+
+impl<P: ProxySession + ?Sized> ProxySession for Box<P> {
+    fn put_incoming(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        (**self).put_incoming(data)
+    }
+
+    fn get_plaintext(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        (**self).get_plaintext()
+    }
+
+    fn put_plaintext(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        (**self).put_plaintext(data)
+    }
+
+    fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        (**self).get_outgoing()
+    }
+}
+
+/// A ProxySession implementation for standard Noise-based Oak Sessions.
+pub struct NoiseProxySession<S> {
+    session: S,
+}
+
+impl<S> NoiseProxySession<S>
+where
+    S: ProtocolEngine + Session + Send + 'static,
+    S::Input: Message + Default + Send + 'static,
+    S::Output: Message + Default + Send + 'static,
+{
+    pub fn new(session: S) -> Self {
+        Self { session }
+    }
+}
+
+impl<S> ProxySession for NoiseProxySession<S>
+where
+    S: ProtocolEngine + Session + Send + 'static,
+    S::Input: Message + Default + Send + 'static,
+    S::Output: Message + Default + Send + 'static,
+{
+    fn put_incoming(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let message = S::Input::decode(data)?;
+        self.session.put_incoming_message(message)?;
+        Ok(())
+    }
+
+    fn get_plaintext(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(self.session.read()?.map(|m| m.plaintext))
+    }
+
+    fn put_plaintext(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        self.session.write(PlaintextMessage { plaintext: data.to_vec() })?;
+        Ok(())
+    }
+
+    fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(self.session.get_outgoing_message()?.map(|m| m.encode_to_vec()))
+    }
+}
+
+/// A ProxySession implementation for TLS-based Oak Sessions.
+pub struct TlsProxySession {
+    session: OakSessionTls,
+    plaintext_buffer: VecDeque<Vec<u8>>,
+    outgoing_buffer: VecDeque<Vec<u8>>,
+}
+
+impl TlsProxySession {
+    pub fn new(session: OakSessionTls) -> Self {
+        Self { session, plaintext_buffer: VecDeque::new(), outgoing_buffer: VecDeque::new() }
+    }
+}
+
+impl ProxySession for TlsProxySession {
+    fn put_incoming(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let plaintext = self.session.decrypt(data)?;
+        if !plaintext.is_empty() {
+            self.plaintext_buffer.push_back(plaintext);
+        }
+        Ok(())
+    }
+
+    fn get_plaintext(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(self.plaintext_buffer.pop_front())
+    }
+
+    fn put_plaintext(&mut self, data: &[u8]) -> anyhow::Result<()> {
+        let encrypted = self.session.encrypt(data)?;
+        if !encrypted.is_empty() {
+            self.outgoing_buffer.push_back(encrypted);
+        }
+        Ok(())
+    }
+
+    fn get_outgoing(&mut self) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(self.outgoing_buffer.pop_front())
+    }
+}
+
 /// Manages a bidirectional proxy between a local stream and a remote stream.
 ///
 /// - `plaintext_stream`: The stream connected to the local application or
 ///   backend.
 /// - `encrypted_stream`: The stream connected to the remote proxy.
-/// - `session`: The `oak_session` instance.
-pub async fn proxy<S>(
+/// - `session`: The `ProxySession` instance.
+pub async fn proxy<S: ProxySession>(
     role: PeerRole,
     mut session: S,
     plaintext_stream: TcpStream,
     encrypted_stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
     keep_alive_interval: Duration,
-) -> anyhow::Result<()>
-where
-    S: ProtocolEngine + Session + Send + 'static,
-    S::Input: prost::Message + Default,
-    S::Output: prost::Message,
-{
+) -> anyhow::Result<()> {
     let (mut plaintext_reader, mut plaintext_writer) = tokio::io::split(plaintext_stream);
     let (mut encrypted_writer, mut encrypted_reader) = encrypted_stream.split();
 
@@ -92,10 +200,9 @@ where
                         } else {
                             log::debug!("[{role}] Peer sent more data.");
                             // let mut session = session.lock().await;
-                            let message = S::Input::decode(data)?;
-                            session.put_incoming_message(message)?;
-                            if let Some(plaintext) = session.read()? {
-                                plaintext_writer.write_all(&plaintext.plaintext).await?;
+                            session.put_incoming(&data)?;
+                            while let Some(plaintext) = session.get_plaintext()? {
+                                plaintext_writer.write_all(&plaintext).await?;
                             }
                         }
                     }
@@ -122,13 +229,10 @@ where
                     application_done = true;
                     encrypted_writer.send(tungstenite::Message::Binary(Bytes::new())).await?;
                 } else {
-                    //let mut session = session.lock().await;
                     log::debug!("[{role}] Application sent {n} more bytes.");
-                    session.write(oak_proto_rust::oak::session::v1::PlaintextMessage {
-                        plaintext: plaintext_buffer[..n].to_vec(),
-                    })?;
-                    if let Some(encrypted) = session.get_outgoing_message()? {
-                        encrypted_writer.send(tungstenite::Message::Binary(encrypted.encode_to_vec().into())).await?;
+                    session.put_plaintext(&plaintext_buffer[..n])?;
+                    while let Some(encrypted) = session.get_outgoing()? {
+                        encrypted_writer.send(tungstenite::Message::Binary(encrypted.into())).await?;
                     }
                 }
             }
