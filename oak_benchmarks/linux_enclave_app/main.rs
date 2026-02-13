@@ -149,7 +149,7 @@ fn run_standalone(args: &Args) {
         args.seed
     };
 
-    let service = BenchmarkService::<NativeTimer>::new(seed);
+    let mut service = BenchmarkService::<NativeTimer>::new(seed);
 
     let request = RunBenchmarkRequest {
         benchmark_type: args.benchmark as i32,

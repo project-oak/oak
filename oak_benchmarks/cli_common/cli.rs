@@ -34,10 +34,11 @@ pub fn parse_benchmark_type(s: &str) -> Result<BenchmarkType, String> {
         "memory_insert" => Ok(BenchmarkType::MemoryInsert),
         "memory_lookup" => Ok(BenchmarkType::MemoryLookup),
         "array_update" => Ok(BenchmarkType::ArrayUpdate),
+        "alloc_churn" => Ok(BenchmarkType::AllocChurn),
         "debug" => Ok(BenchmarkType::Debug),
         _ => Err(format!(
             "Unknown benchmark type: '{}'. Valid options: sha256, sha512, sha3-256, sha3-512, \
-             p256-sign, memory-insert, memory-lookup, array-update, debug",
+             p256-sign, memory-insert, memory-lookup, array-update, alloc-churn, debug",
             s
         )),
     }
@@ -57,6 +58,7 @@ impl fmt::Display for DisplayBenchmarkType {
             BenchmarkType::MemoryInsert => "Memory Insert",
             BenchmarkType::MemoryLookup => "Memory Lookup",
             BenchmarkType::ArrayUpdate => "Array Update",
+            BenchmarkType::AllocChurn => "Alloc Churn",
             BenchmarkType::Debug => "Debug",
             BenchmarkType::Unspecified => "Unspecified",
         };

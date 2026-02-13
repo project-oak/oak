@@ -26,6 +26,10 @@ use oak_benchmark_proto_rust::oak::benchmark::{
 use crate::{
     BenchmarkError, BenchmarkResult,
     cpu::hashing::{HashAlgorithm, HashingBenchmark},
+    memory::{
+        AllocChurnBenchmark, ArrayUpdateBenchmark,
+        hashmap::{HashMapBenchmark, HashMapMode},
+    },
     timer::BenchmarkTimer,
 };
 
@@ -47,17 +51,31 @@ pub mod status {
 /// iterations.
 pub struct BenchmarkService<T: BenchmarkTimer> {
     hashing: HashingBenchmark,
+    array_update: ArrayUpdateBenchmark,
+    hashmap_insert: HashMapBenchmark,
+    hashmap_lookup: HashMapBenchmark,
+    alloc_churn: AllocChurnBenchmark,
     _timer: PhantomData<T>,
 }
 
 impl<T: BenchmarkTimer> BenchmarkService<T> {
     /// Create a new benchmark service with all benchmarks initialized.
     pub fn new(seed: u64) -> Self {
-        Self { hashing: HashingBenchmark::new(seed), _timer: PhantomData }
+        let mut hashmap_lookup = HashMapBenchmark::with_defaults(100_000, seed);
+        hashmap_lookup.populate();
+
+        Self {
+            hashing: HashingBenchmark::new(seed),
+            array_update: ArrayUpdateBenchmark::with_defaults(seed),
+            hashmap_insert: HashMapBenchmark::with_defaults(100_000, seed),
+            hashmap_lookup,
+            alloc_churn: AllocChurnBenchmark::with_defaults(),
+            _timer: PhantomData,
+        }
     }
 
     /// Handle a benchmark request and return the response.
-    pub fn handle_request(&self, request: RunBenchmarkRequest) -> RunBenchmarkResponse {
+    pub fn handle_request(&mut self, request: RunBenchmarkRequest) -> RunBenchmarkResponse {
         let result = match request.benchmark_type() {
             // Hashing benchmarks.
             BenchmarkType::Sha256 => self.hashing.run::<T>(
@@ -84,6 +102,27 @@ impl<T: BenchmarkTimer> BenchmarkService<T> {
                 request.iterations,
                 request.warmup_iterations,
             ),
+
+            // Memory benchmarks.
+            BenchmarkType::ArrayUpdate => {
+                self.array_update.run::<T>(request.iterations, request.warmup_iterations)
+            }
+            BenchmarkType::MemoryInsert => {
+                self.hashmap_insert.map_clear();
+                self.hashmap_insert.run::<T>(
+                    HashMapMode::Insert,
+                    request.iterations,
+                    request.warmup_iterations,
+                )
+            }
+            BenchmarkType::MemoryLookup => self.hashmap_lookup.run::<T>(
+                HashMapMode::Lookup,
+                request.iterations,
+                request.warmup_iterations,
+            ),
+            BenchmarkType::AllocChurn => {
+                self.alloc_churn.run::<T>(request.iterations, request.warmup_iterations)
+            }
 
             // Debug/connectivity test: return dummy success values.
             BenchmarkType::Debug => {

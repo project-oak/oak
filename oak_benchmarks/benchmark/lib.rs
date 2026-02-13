@@ -73,7 +73,7 @@ impl BenchmarkResult {
 ///
 /// Source: Knuth, "The Art of Computer Programming", Vol. 2, 3rd ed., p. 106.
 /// See also: https://nuclear.llnl.gov/CNP/rng/rngman/node4.html
-const LCG_MULTIPLIER: u64 = 6364136223846793005;
+pub const LCG_MULTIPLIER: u64 = 6364136223846793005;
 
 /// Fill a buffer with deterministic pseudo-random data.
 ///

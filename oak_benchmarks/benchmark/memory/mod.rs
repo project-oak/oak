@@ -17,26 +17,20 @@
 //! Memory-bound benchmark implementations.
 //!
 //! These benchmarks stress memory subsystem performance with large working
-//! sets (~1GB) to evaluate allocator efficiency and memory access patterns.
+//! sets to evaluate allocator efficiency and memory access patterns.
 
-use crate::{BenchmarkError, BenchmarkResult};
+pub mod alloc_churn;
+pub mod array_update;
+pub mod hashmap;
+
+pub use alloc_churn::AllocChurnBenchmark;
+pub use array_update::ArrayUpdateBenchmark;
+pub use hashmap::{HashMapBenchmark, HashMapMode};
 
 /// Trait for memory-bound benchmarks.
 ///
 /// These benchmarks use large working sets to stress the memory subsystem.
 pub trait MemoryBenchmark {
-    /// Run the benchmark.
-    ///
-    /// # Arguments
-    /// * `iterations` - Number of iterations to run.
-    fn run(&mut self, iterations: u32) -> Result<BenchmarkResult, BenchmarkError>;
-
     /// Size of the working set in bytes.
     fn working_set_size(&self) -> usize;
 }
-
-// Future implementations:
-// - RandomWriteBenchmark: Random writes to a fixed 1GB buffer.
-// - HashMapLookupBenchmark: Read-heavy hash map operations.
-// - HashMapModifyBenchmark: Mixed read/write/alloc hash map operations.
-// - AllocChurnBenchmark: Repeated allocation/deallocation stress test.
