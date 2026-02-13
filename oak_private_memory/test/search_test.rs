@@ -160,6 +160,289 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Regression test: when embedding search is involved in hybrid queries,
+// both clause orderings should sort by embedding similarity:
+//   - tag AND embedding -> sorts by embedding
+//   - embedding AND tag -> sorts by embedding
+// Previously, the last clause's scoring spec would win, causing
+// `embedding AND tag` to incorrectly sort by CreationTimestamp.
+#[gtest]
+fn test_hybrid_search_clause_order_does_not_affect_ranking() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("hybrid-order-test"))?;
+
+    // Add memories with embeddings that have different similarity scores to the
+    // query. memory1 has higher similarity (1.0+2.0+3.0=6.0) than memory2
+    // (0.1+0.2+0.3=0.6).
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 2.0, 3.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["test_tag".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![0.1, 0.2, 0.3],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["test_tag".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 1.0, 1.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let tag_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("test_tag".to_string())),
+        })),
+    };
+
+    // Test order 1: embedding AND tag
+    let query_embedding_first = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![embedding_query.clone(), tag_query.clone()],
+        })),
+    };
+
+    // Test order 2: tag AND embedding (this was buggy before the fix)
+    let query_tag_first = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![tag_query, embedding_query],
+        })),
+    };
+
+    let (results1, _) = icing_database.search(&query_embedding_first, 10, PageToken::Start)?;
+    let (results2, _) = icing_database.search(&query_tag_first, 10, PageToken::Start)?;
+
+    // Both should return the same results in the same order (sorted by embedding
+    // similarity).
+    let blob_ids1: Vec<String> = results1.items.iter().map(|r| r.blob_id.clone()).collect();
+    let blob_ids2: Vec<String> = results2.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    // memory1 (blob1) has higher embedding similarity, so it should come first.
+    assert_that!(blob_ids1, elements_are![eq(&"blob1"), eq(&"blob2")]);
+    assert_that!(blob_ids2, elements_are![eq(&"blob1"), eq(&"blob2")]);
+
+    // Verify scores are the same regardless of order.
+    let scores1: Vec<f32> = results1.items.iter().map(|r| r.score).collect();
+    let scores2: Vec<f32> = results2.items.iter().map(|r| r.score).collect();
+    assert_that!(scores1, eq(&scores2));
+
+    Ok(())
+}
+
+// Test nested clauses: { TAG AND { TAG AND EMBEDDING } }
+// Embedding is in a nested inner clause; should still sort by embedding.
+#[gtest]
+fn test_hybrid_search_nested_embedding_inner() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("nested-inner-test"))?;
+
+    // memory1 has higher embedding similarity (1.0+2.0+3.0=6.0)
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 2.0, 3.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["tag1".to_string(), "tag2".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // memory2 has lower embedding similarity (0.1+0.2+0.3=0.6)
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![0.1, 0.2, 0.3],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["tag1".to_string(), "tag2".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 1.0, 1.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let tag1_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("tag1".to_string())),
+        })),
+    };
+
+    let tag2_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("tag2".to_string())),
+        })),
+    };
+
+    // Build: { TAG1 AND { TAG2 AND EMBEDDING } }
+    let inner_clause = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![tag2_query, embedding_query],
+        })),
+    };
+    let outer_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![tag1_query, inner_clause],
+        })),
+    };
+
+    let (results, _) = icing_database.search(&outer_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    // Should be sorted by embedding similarity (blob1 first).
+    assert_that!(blob_ids, elements_are![eq(&"blob1"), eq(&"blob2")]);
+
+    Ok(())
+}
+
+// Test nested clauses: { { TAG AND EMBEDDING } AND TAG }
+// Embedding is in a nested inner clause with outer tag after.
+#[gtest]
+fn test_hybrid_search_nested_embedding_outer_tag() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("nested-outer-test"))?;
+
+    // memory1 has higher embedding similarity
+    let memory1 = Memory {
+        id: "memory1".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view1".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![1.0, 2.0, 3.0],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["tag1".to_string(), "tag2".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // memory2 has lower embedding similarity
+    let memory2 = Memory {
+        id: "memory2".to_string(),
+        views: Some(LlmViews {
+            llm_views: vec![LlmView {
+                id: "view2".to_string(),
+                embedding: Some(Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: vec![0.1, 0.2, 0.3],
+                }),
+                ..Default::default()
+            }],
+        }),
+        tags: vec!["tag1".to_string(), "tag2".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let embedding_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+            embedding: vec![Embedding {
+                model_signature: "test_model".to_string(),
+                values: vec![1.0, 1.0, 1.0],
+            }],
+            ..Default::default()
+        })),
+    };
+
+    let tag1_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("tag1".to_string())),
+        })),
+    };
+
+    let tag2_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("tag2".to_string())),
+        })),
+    };
+
+    // Build: { { TAG1 AND EMBEDDING } AND TAG2 }
+    let inner_clause = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![tag1_query, embedding_query],
+        })),
+    };
+    let outer_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses: vec![inner_clause, tag2_query],
+        })),
+    };
+
+    let (results, _) = icing_database.search(&outer_query, 10, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    // Should be sorted by embedding similarity (blob1 first).
+    assert_that!(blob_ids, elements_are![eq(&"blob1"), eq(&"blob2")]);
+
+    Ok(())
+}
+
 #[gtest]
 fn test_search_views() -> anyhow::Result<()> {
     let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;

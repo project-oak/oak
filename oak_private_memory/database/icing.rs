@@ -1064,15 +1064,15 @@ impl IcingMetaDatabase {
             _ => bail!("unsupported operator"),
         };
 
+        // Check upfront if any clause involves embedding search.
+        // If so, use embedding-based scoring; otherwise use text-based scoring.
+        let has_embedding_search = clauses.clauses.iter().any(Self::is_embedding_search);
+
         let mut sub_queries = Vec::new();
-        let mut score_spec = icing::ScoringSpecProto::default();
         let mut embedding_vectors = Vec::new();
         let mut metric_type = None;
         for clause in &clauses.clauses {
-            let (spec, sub_score_spec) = self.build_query_specs(clause, schema_name)?;
-            if let Some(sub_score_spec) = sub_score_spec {
-                score_spec = sub_score_spec;
-            }
+            let (spec, _) = self.build_query_specs(clause, schema_name)?;
             if spec.embedding_query_metric_type.is_some() {
                 metric_type = spec.embedding_query_metric_type;
             }
@@ -1095,7 +1095,21 @@ impl IcingMetaDatabase {
         if !schema_name.is_empty() {
             search_spec.schema_type_filters.push(schema_name.to_string());
         }
-        Ok((search_spec, Some(score_spec)))
+
+        // Use embedding scoring if any clause involves embedding search,
+        // otherwise use text-based CreationTimestamp scoring.
+        let score_spec = if has_embedding_search {
+            Some(self.build_scoring_spec())
+        } else {
+            Some(icing::ScoringSpecProto {
+                rank_by: Some(
+                    icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
+                ),
+                ..Default::default()
+            })
+        };
+
+        Ok((search_spec, score_spec))
     }
 
     fn build_text_query_specs(

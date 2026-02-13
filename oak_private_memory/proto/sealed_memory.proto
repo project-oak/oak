@@ -295,6 +295,14 @@ enum QueryOperator {
   QUERY_OPERATOR_OR = 2;   // Any clause can match.
 }
 
+// Query for searching memories. Supports text-based queries, embedding-based
+// (semantic) queries, and combinations using QueryClauses.
+//
+// Sorting behavior:
+// - If the query involves any embedding search (at any nesting level), results
+//   are sorted by embedding similarity (highest score first).
+// - If the query involves only text-based queries, results are sorted by
+//   creation timestamp (newest first).
 message SearchMemoryQuery {
   oneof clause {
     EmbeddingQuery embedding_query = 1;
