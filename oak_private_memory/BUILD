@@ -265,6 +265,18 @@ rust_test(
     ],
 )
 
+rust_test(
+    name = "search_test",
+    srcs = ["test/search_test.rs"],
+    deps = [
+        "//database",
+        "//proto:sealed_memory_rust_proto",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:googletest",
+        "@oak_crates_index//:prost-types",
+    ],
+)
+
 pkg_tar(
     name = "tar",
     srcs = [":private_memory_server"],
