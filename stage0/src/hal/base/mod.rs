@@ -135,4 +135,11 @@ impl crate::Platform for Base {
             }
         }
     }
+
+    fn validate_measured_boot(
+       _cmdline: &[u8], _initrd_digest: &[u8], _kernel_setup_data: &[u8], _kernel_bytes: &[u8]
+    ) -> bool {
+        log::debug!("Empty implementation for measured boot");
+        true
+    }
 }

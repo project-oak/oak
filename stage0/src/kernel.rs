@@ -116,6 +116,13 @@ impl Measured for Kernel {
     }
 }
 
+impl Kernel {
+    #[allow(dead_code)]
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0
+    }
+}
+
 #[derive(Default)]
 pub struct KernelCmdLine {
     kernel_cmdline: String,
