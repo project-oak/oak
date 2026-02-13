@@ -24,8 +24,9 @@ use ecdsa::{Signature, signature::Verifier};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 use oak_proto_rust::oak::attestation::v1::{
-    AttestationResults, Endorsements, EventLog, Evidence, ExpectedValues, ExtractedEvidence,
-    LayerEvidence, ReferenceValues, attestation_results::Status, endorsements, expected_values,
+    AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence, ExpectedValues,
+    ExtractedEvidence, LayerEvidence, ReferenceValues, attestation_results::Status, endorsements,
+    expected_values,
 };
 use oak_time::{Clock, Instant};
 use p256::ecdsa::VerifyingKey;
@@ -35,6 +36,7 @@ use crate::{
     expect::get_expected_values,
     extract::{EventIdType, claims_set_from_serialized_cert, extract_event_data, extract_evidence},
     platform::verify_root_attestation_signature,
+    results::set_user_data_payload,
 };
 
 // We don't use additional authenticated data.
@@ -431,6 +433,39 @@ pub fn verify_dice_chain_and_extract_evidence(
         .context("validating that event log is captured in DICE layers")?
     }
     extract_evidence(evidence)
+}
+
+/// Verifies the signed user data certificate and returns an
+/// [`EventAttestationResults`] containing the payload bytes.
+///
+/// Parses the provided `signed_user_data_certificate` bytes as a COSE_Sign1
+/// structure, verifies its signature using the given `verifying_key`, and
+/// returns the payload as an `EventAttestationResults` with the
+/// `user-data-payload` artifact key.
+pub fn verify_user_data_certificate(
+    signed_user_data_certificate: &[u8],
+    verifying_key: &VerifyingKey,
+) -> anyhow::Result<EventAttestationResults> {
+    // Parse the signed user data certificate as a COSE_Sign1 structure.
+    let user_data_cert = coset::CoseSign1::from_slice(signed_user_data_certificate)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse signed user data certificate"))?;
+
+    // Verify the signature using the provided verification key.
+    user_data_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))
+        .context("verifying signed user data certificate signature")?;
+
+    // Extract the payload bytes and wrap in an EventAttestationResults.
+    let payload = user_data_cert
+        .payload
+        .ok_or_else(|| anyhow::anyhow!("no payload in signed user data certificate"))?;
+    let mut results = EventAttestationResults::default();
+    set_user_data_payload(&mut results, &payload);
+    Ok(results)
 }
 
 /// Validates that the digest of the events captured in the event log are

@@ -39,6 +39,10 @@ const HYBRID_ENCRYPTION_PUBLIC_KEY_ID: &str = "oak-hybrid-encryption-public-key:
 /// signed by the enclave.
 const SIGNING_PUBLIC_KEY_ID: &str = "oak-signing-public-key:ecdsa-p256";
 
+/// Denotes an artifact ID of the user data payload extracted from the signed
+/// user data certificate in the attestation evidence.
+const USER_DATA_PAYLOAD_ID: &str = "user-data-payload";
+
 pub fn get_initial_measurement(results: &EventAttestationResults) -> Option<&Vec<u8>> {
     results.artifacts.get(INITIAL_MEASUREMENT_ID)
 }
@@ -83,6 +87,10 @@ pub fn unique_signing_public_key(results: &AttestationResults) -> Result<&Vec<u8
 
 pub fn set_signing_public_key(results: &mut EventAttestationResults, key: &[u8]) {
     results.artifacts.insert(SIGNING_PUBLIC_KEY_ID.to_string(), key.to_vec());
+}
+
+pub fn set_user_data_payload(results: &mut EventAttestationResults, payload: &[u8]) {
+    results.artifacts.insert(USER_DATA_PAYLOAD_ID.to_string(), payload.to_vec());
 }
 
 /// Returns a reference to the event artifact in the attestation results

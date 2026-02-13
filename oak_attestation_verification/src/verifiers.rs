@@ -47,7 +47,7 @@ use crate::{
         system::SystemPolicy,
     },
     results::get_initial_measurement,
-    verifier::{EventLogType, verify_dice_chain},
+    verifier::{EventLogType, verify_dice_chain, verify_user_data_certificate},
 };
 
 // Base AMD SEV-SNP verifier that validates AMD SEV-SNP platform authenticity
@@ -203,10 +203,11 @@ impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
             .context("verifying platform policy")?;
 
         // Verify DICE chain integrity.
-        // The output argument is ommited because last layer's certificate authority key
-        // is not used to sign anything.
-        let _ = verify_dice_chain(evidence, EventLogType::TransparentEventLog)
-            .context("verifying DICE chain")?;
+        // The output argument is recorded because it can be used to verify the
+        // `Evidence.signed_user_data_certificate` structure.
+        let last_layer_verifying_key =
+            verify_dice_chain(evidence, EventLogType::TransparentEventLog)
+                .context("verifying DICE chain")?;
 
         let firmware_results = self
             .base_verifier
@@ -229,6 +230,17 @@ impl AttestationVerifier for AmdSevSnpTransparentDiceAttestationVerifier {
             .context("verifying event log")?;
 
             event_attestation_results.extend(results);
+        }
+
+        // Attestation has been verified. We now verify the signed user data
+        // certificate, if present.
+        if !evidence.signed_user_data_certificate.is_empty() {
+            let user_data_result = verify_user_data_certificate(
+                &evidence.signed_user_data_certificate,
+                &last_layer_verifying_key,
+            )
+            .context("verifying signed user data certificate")?;
+            event_attestation_results.push(user_data_result);
         }
 
         Ok(AttestationResults {
