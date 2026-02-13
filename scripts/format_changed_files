@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# This script formats files that have changed since a base commit.
+# It supports both jj (Jujutsu) and git repositories.
+# It uses pre-commit to run the formatting hooks.
+
+set -o nounset
+set -o errexit
+set -o pipefail
+
+readonly BASE="${1:-main}"
+
+# Detect repository types once
+if command -v jj >/dev/null 2>&1 && jj root >/dev/null 2>&1; then
+  readonly IS_JJ=true
+else
+  readonly IS_JJ=false
+fi
+
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  readonly IS_GIT=true
+else
+  readonly IS_GIT=false
+fi
+
+# Function to run pre-commit on a list of files
+run_pre_commit() {
+  local files="$1"
+  local source_desc="$2"
+
+  # Filter out empty lines
+  local filtered_files
+  filtered_files=$(echo "${files}" | grep -v '^$' || true)
+
+  if [[ -z ${filtered_files} ]]; then
+    echo "No changed files detected based on ${source_desc}."
+    return
+  fi
+
+  local count
+  count=$(echo "${filtered_files}" | wc -l)
+
+  # Pass the list of files to pre-commit.
+  # xargs handles potential command line length limits.
+  echo "${filtered_files}" | xargs pre-commit run --files
+
+  echo ""
+  echo "Checked ${count} files based on ${source_desc}"
+}
+
+clean_temp_git() {
+  echo "Cleaning up temporary git repository..."
+  rm -rf .git
+}
+
+# Use detected repository type
+if [[ ${IS_JJ} == "true" ]]; then
+  # pre-commit often needs a .git directory to function correctly (e.g., to find
+  # the project root or for certain hooks). If this is a jj-only workspace,
+  # we initialize a dummy git repository.
+  if [[ ${IS_GIT} == "false" ]]; then
+    echo ""
+    echo "jj workspace with no .git dir. Creating an empty git repository so that pre-commit will work."
+    echo ""
+    git init
+    trap clean_temp_git EXIT
+  fi
+  files=$(jj diff --name-only --from "${BASE}")
+  run_pre_commit "${files}" "jj diff --from ${BASE}"
+
+elif [[ ${IS_GIT} == "true" ]]; then
+  # Only format files that still exist (exclude deleted files)
+  files=$(git diff --name-only --diff-filter=d "${BASE}")
+  run_pre_commit "${files}" "git diff ${BASE}"
+
+# Fallback for non-repo environments
+else
+  echo "Not in a git or jj repository, formatting all files..."
+  just format-all
+fi

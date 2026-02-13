@@ -28,11 +28,20 @@ presubmit-full: \
     presubmit \
     kokoro_verify_buildconfigs
 
-# Format only files changed in the current commit.
-format:
-    time pre-commit run
+[doc("""
+Format files that have changed since the provided base commit.
 
-# Format all files.
+The default base is "main".
+
+This command detects if you are in a jj or git repository and formats only
+the changed files. If neither is detected, it falls back to formatting all
+files in the project.
+""")]
+format base="main":
+    ./scripts/format_changed_files {{base}}
+
+
+[doc("Format all files in the repository using pre-commit.")]
 format-all:
     time pre-commit run --all-files
 
