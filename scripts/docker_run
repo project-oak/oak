@@ -99,4 +99,4 @@ else
 fi
 
 # Run the provided command.
-docker run "${docker_run_flags[@]}" "$DOCKER_IMAGE_ID" "$@"
+docker run "${docker_run_flags[@]}" "${DOCKER_IMAGE_REPO_DIGEST}" "$@"
