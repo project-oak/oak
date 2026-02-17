@@ -19,15 +19,15 @@ sudo apt install libguestfs-tools qemu-system-x86
 ./oak_benchmarks/linux_vm/download_base_image.sh ~/Downloads
 
 # 2. Build your application (RELEASE MODE - required for benchmarks!)
-bazel build -c opt //oak_benchmarks/linux_app
+bazel build -c opt //oak_benchmarks/linux_enclave_app
 
 # 3. Create VM image with your app
 # IMPORTANT: Use the explicit k8-opt path to ensure release binary
 ./oak_benchmarks/linux_vm/prepare_image.sh \
     --base-image=~/Downloads/debian-12-nocloud-amd64.qcow2 \
-    --binary=bazel-out/k8-opt/bin/oak_benchmarks/linux_app/linux_app \
+    --binary=bazel-out/k8-opt/bin/oak_benchmarks/linux_enclave_app/linux_enclave_app \
     --output=/tmp/benchmark-vm.qcow2 \
-    --command="/opt/app/linux_app --server --port=5000" \
+    --command="/opt/app/linux_enclave_app --serve 5000" \
     --port=5000
 
 # 4. Run the VM
@@ -54,7 +54,7 @@ Creates a VM image with an application binary pre-installed.
     --base-image=<path>       # Required: Debian nocloud qcow2
     --binary=<path>           # Required: Application binary
     --output=<path>           # Required: Output image path
-    --command=<cmd>           # Optional: ExecStart for systemd service (include args like --server)
+    --command=<cmd>           # Optional: ExecStart for systemd service (include args like --serve)
     --service-name=<name>     # Optional: systemd service name (default: app)
     --port=<port>             # Optional: Port for documentation (default: 5000)
     --install-path=<path>     # Optional: Where to install (default: /opt/app)
