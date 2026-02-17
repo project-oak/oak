@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Generate Rust Crates dependency version report.
 
 Analyze crate versions by comparing requested versions in Bazel config, actual
@@ -295,6 +296,8 @@ def print_report(
     else:
       for i, v in enumerate(actual_list):
         display_v = strip_metadata(v)
+        if is_lower(v, requested):
+          display_v += " (<)"
         if i == 0:
           print(
               row_fmt.format(
