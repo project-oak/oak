@@ -21,12 +21,13 @@ package(
     licenses = ["notice"],
 )
 
+# Ideally, the target name should be just `digest`, and `crate_name`
+# should be `oak_digest`, but `crate_name` is not supported internally.
 rust_library(
-    name = "digest",
+    name = "oak_digest",
     srcs = [
         "lib.rs",
     ],
-    crate_name = "oak_digest",
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:hex",
@@ -37,5 +38,5 @@ rust_library(
 
 rust_test(
     name = "digest_test",
-    crate = ":digest",
+    crate = ":oak_digest",
 )

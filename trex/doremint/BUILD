@@ -30,7 +30,7 @@ rust_binary(
         "//tr/intoto",
         "//trex/client",
         "//trex/cosign_util",
-        "//util/digest",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:clap",

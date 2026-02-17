@@ -37,7 +37,7 @@ rust_library(
         "//tr/intoto",
         "//tr/rekor",
         "//tr/verify_endorsement",
-        "//util/digest",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:const-oid",
