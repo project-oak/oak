@@ -107,3 +107,56 @@ async fn proxy_test() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn http_failure_test() -> anyhow::Result<()> {
+    let client_port = find_free_port();
+    let server_proxy_port = find_free_port(); // We won't start a server here
+
+    let client_config = ClientConfig {
+        listen_address: Some(format!("127.0.0.1:{}", client_port).parse()?),
+        server_proxy_url: Some(format!("ws://127.0.0.1:{}", server_proxy_port).parse()?),
+        attestation_generators: Vec::new(),
+        attestation_verifiers: Vec::new(),
+        keep_alive_interval: Duration::from_secs(10),
+    };
+
+    let config_path = format!("client_http_fail_{}.toml", client_port);
+    std::fs::write(&config_path, toml::to_string(&client_config)?)?;
+
+    let mut client_proxy = Command::new("oak_proxy/client/client")
+        .args([
+            "--config",
+            &config_path,
+            "--listen-address",
+            &client_config.listen_address.unwrap().to_string(),
+            "--server-proxy-url",
+            client_config.server_proxy_url.unwrap().as_ref(),
+            "--http-error-on-fail",
+        ])
+        .env("RUST_LOG", "debug")
+        .spawn()?;
+
+    // Wait for process to start
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // Connect and send simple HTTP request
+    let connect_result = async {
+         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", client_port)).await?;
+         stream.write_all(b"GET / HTTP/1.1\r\n\r\n").await?;
+         let mut buf = Vec::new();
+         stream.read_to_end(&mut buf).await?;
+         Ok::<Vec<u8>, anyhow::Error>(buf)
+    }.await;
+
+    // Cleanup first to ensure we don't leave processes running if assert fails
+    let _ = client_proxy.kill();
+    let _ = std::fs::remove_file(config_path);
+
+    let buf = connect_result?;
+    let response = String::from_utf8_lossy(&buf);
+    println!("Response: {}", response);
+    assert!(response.contains("HTTP/1.1 502 Bad Gateway"));
+
+    Ok(())
+}
