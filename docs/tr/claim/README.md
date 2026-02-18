@@ -43,6 +43,10 @@ printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
   [Binary reproducibly buildable](https://github.com/project-oak/oak/blob/main/docs/tr/claim/26208.md)
 - `68317`
   [Binary runnable by user](https://github.com/project-oak/oak/blob/main/docs/tr/claim/68317.md)
+- `42362`
+  [Configuration](https://github.com/project-oak/oak/blob/main/docs/tr/claim/42362.md)
+- `31544`
+  [File in MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31544.md)
 - `77149`
   [Inline-type binary](https://github.com/project-oak/oak/blob/main/docs/tr/claim/77149.md)
 - `98982`
@@ -51,6 +55,8 @@ printf "%05d\n" $(shuf --input-range=0-99999 --head-count=1)
   [MCP Tool Description](https://github.com/project-oak/oak/blob/main/docs/tr/claim/94503.md)
 - `31543`
   [MPM](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31543.md)
+- `31545`
+  [MPM Version](https://github.com/project-oak/oak/blob/main/docs/tr/claim/31545.md)
 - `19224`
   [OCI container image](https://github.com/project-oak/oak/blob/main/docs/tr/claim/19224.md)
 - `39284`
