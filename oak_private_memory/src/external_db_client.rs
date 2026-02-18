@@ -65,11 +65,13 @@ pub trait DataBlobHandler {
         id: &BlobId,
         strong_read: bool,
     ) -> anyhow::Result<Option<EncryptedDataBlob>>;
+    #[deprecated(note = "Use add_metadata_blob_stream instead")]
     async fn add_metadata_blob(
         &mut self,
         id: &BlobId,
         metadata_blob: EncryptedMetadataBlob,
     ) -> anyhow::Result<MetadataPersistResult>;
+    #[deprecated(note = "Use get_metadata_blob_stream instead")]
     async fn get_metadata_blob(
         &mut self,
         id: &BlobId,

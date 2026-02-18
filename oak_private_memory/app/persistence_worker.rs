@@ -60,7 +60,7 @@ async fn try_persist_database(
     let now = Instant::now();
     let result = user_context
         .database_service_client
-        .add_metadata_blob(
+        .add_metadata_blob_stream(
             &user_context.uid,
             EncryptedMetadataBlob {
                 encrypted_data_blob: Some(database),
@@ -98,7 +98,7 @@ async fn persist_database(user_context: &mut UserSessionContext) -> anyhow::Resu
                 // rebase the database and try again
                 let refreshed_blob = user_context
                     .database_service_client
-                    .get_metadata_blob(&user_context.uid)
+                    .get_metadata_blob_stream(&user_context.uid)
                     .await?
                     .context("no blob found")?;
 

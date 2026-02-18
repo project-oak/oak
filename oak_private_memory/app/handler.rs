@@ -516,7 +516,10 @@ async fn get_or_create_db(
     dek: &[u8],
 ) -> tonic::Result<(IcingMetaDatabase, String, usize)> {
     if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
-        db_client.get_metadata_blob(uid).await.into_internal_error("Failed to get metadata blob")?
+        db_client
+            .get_metadata_blob_stream(uid)
+            .await
+            .into_internal_error("Failed to get metadata blob")?
     {
         info!("Loaded database from blob: Length: {}", encrypted_data_blob.data.len());
         let encrypted_info = decrypt_database(encrypted_data_blob, dek)
