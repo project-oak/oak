@@ -89,6 +89,10 @@ pub fn set_signing_public_key(results: &mut EventAttestationResults, key: &[u8])
     results.artifacts.insert(SIGNING_PUBLIC_KEY_ID.to_string(), key.to_vec());
 }
 
+pub fn get_user_data_payload(results: &EventAttestationResults) -> Option<&Vec<u8>> {
+    results.artifacts.get(USER_DATA_PAYLOAD_ID)
+}
+
 pub fn set_user_data_payload(results: &mut EventAttestationResults, payload: &[u8]) {
     results.artifacts.insert(USER_DATA_PAYLOAD_ID.to_string(), payload.to_vec());
 }
