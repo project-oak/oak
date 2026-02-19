@@ -22,11 +22,11 @@ BAZEL_RUNFILES_TESTDATA=$(bazel info bazel-bin)/oak_attestation_integration_test
 SRC_TESTDATA=$(bazel info workspace)/oak_attestation_integration_tests/testdata/snapshots
 
 # Copy any new testdata into the source code where it can be committed.
-for file in "$BAZEL_RUNFILES_TESTDATA"/*; do
-    if [ -f "$file" ]; then
-        filename=$(basename "$file")
-        if [ ! -e "$SRC_TESTDATA/$filename" ]; then
-            cp -r "$file" "$SRC_TESTDATA/$filename"
-        fi
+for file in "${BAZEL_RUNFILES_TESTDATA}"/*; do
+  if [ -f "${file}" ]; then
+    filename=$(basename "${file}")
+    if [ ! -e "${SRC_TESTDATA}/${filename}" ]; then
+      cp -r "${file}" "${SRC_TESTDATA}/${filename}"
     fi
+  fi
 done

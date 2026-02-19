@@ -36,7 +36,7 @@ OUTPUT_DIR="${1:-$(pwd)}"
 OUTPUT_FILE="${OUTPUT_DIR}/${IMAGE_NAME}"
 
 usage() {
-    cat <<EOF
+  cat <<EOF
 Usage: $0 [output_directory]
 
 Downloads the Debian 12 nocloud base image for use with create_image.sh.
@@ -47,25 +47,25 @@ Arguments:
 Example:
   $0 ~/Downloads
 EOF
-    exit 1
+  exit 1
 }
 
-if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
-    usage
+if [[ ${1:-} == "--help" ]] || [[ ${1:-} == "-h" ]]; then
+  usage
 fi
 
 # Create output directory if needed.
 mkdir -p "${OUTPUT_DIR}"
 
 echo "Downloading ${IMAGE_NAME}..."
-echo "  URL:    $IMAGE_URL"
-echo "  Output: $OUTPUT_FILE"
+echo "  URL:    ${IMAGE_URL}"
+echo "  Output: ${OUTPUT_FILE}"
 echo ""
 
 # Download image.
-if ! command -v wget &> /dev/null; then
-    echo "Error: wget not found"
-    exit 1
+if ! command -v wget &>/dev/null; then
+  echo "Error: wget not found"
+  exit 1
 fi
 wget -O "${OUTPUT_FILE}" "${IMAGE_URL}"
 
@@ -75,17 +75,17 @@ echo "Verifying SHA512 checksum..."
 
 ACTUAL_SHA512=$(sha512sum "${OUTPUT_FILE}" | awk '{print $1}')
 
-if [[ "${EXPECTED_SHA512}" == "${ACTUAL_SHA512}" ]]; then
-    echo "  ✓ Checksum verified"
+if [[ ${EXPECTED_SHA512} == "${ACTUAL_SHA512}" ]]; then
+  echo "  ✓ Checksum verified"
 else
-    echo "  ✗ Checksum mismatch!"
-    echo "    Expected: ${EXPECTED_SHA512}"
-    echo "    Actual:   ${ACTUAL_SHA512}"
-    echo ""
-    echo "The image may have been updated. To get the new hash:"
-    echo "  curl -sL https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS | grep nocloud-amd64"
-    rm "${OUTPUT_FILE}"
-    exit 1
+  echo "  ✗ Checksum mismatch!"
+  echo "    Expected: ${EXPECTED_SHA512}"
+  echo "    Actual:   ${ACTUAL_SHA512}"
+  echo ""
+  echo "The image may have been updated. To get the new hash:"
+  echo "  curl -sL https://cloud.debian.org/images/cloud/bookworm/latest/SHA512SUMS | grep nocloud-amd64"
+  rm "${OUTPUT_FILE}"
+  exit 1
 fi
 
 echo ""

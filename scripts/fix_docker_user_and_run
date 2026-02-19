@@ -14,7 +14,7 @@ set -o pipefail
 groupmod --gid="${HOST_GID}" docker
 usermod --uid="${HOST_UID}" --gid="${HOST_GID}" docker
 
-if [[ -n "${HOST_KVM_GID+x}" ]]; then
+if [[ -n ${HOST_KVM_GID+x} ]]; then
   groupadd --gid="${HOST_KVM_GID}" kvm
   usermod --groups="${HOST_KVM_GID}" docker
 fi

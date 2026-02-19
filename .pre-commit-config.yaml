@@ -77,8 +77,14 @@ repos:
 
       - id: shellcheck
         name: shellcheck (shell script files)
-        entry: shellcheck --external-sources --exclude=SC2155
+        entry: shellcheck
         language: system
+        types: [shell]
+
+      - id: shfmt
+        name: shfmt (shell script files)
+        language: system
+        entry: shfmt --indent 2 --case-indent --binary-next-line --simplify -w
         types: [shell]
 
       - id: sourcelic

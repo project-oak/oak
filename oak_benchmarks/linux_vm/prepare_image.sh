@@ -34,7 +34,7 @@ PORT="5000"
 INSTALL_PATH="/opt/app"
 
 usage() {
-    cat <<EOF
+  cat <<EOF
 Usage: $0 --base-image=<path> --binary=<path> --output=<path> [options]
 
 Required:
@@ -54,77 +54,77 @@ Example:
      --output=/tmp/my-vm.qcow2 \\
      --port=8080
 EOF
-    exit 1
+  exit 1
 }
 
 # Parse arguments.
 for arg in "$@"; do
-    case ${arg} in
-        --base-image=*)
-            BASE_IMAGE="${arg#*=}"
-            ;;
-        --binary=*)
-            BINARY="${arg#*=}"
-            ;;
-        --output=*)
-            OUTPUT="${arg#*=}"
-            ;;
-        --command=*)
-            COMMAND="${arg#*=}"
-            ;;
-        --service-name=*)
-            SERVICE_NAME="${arg#*=}"
-            ;;
-        --port=*)
-            PORT="${arg#*=}"
-            ;;
-        --install-path=*)
-            INSTALL_PATH="${arg#*=}"
-            ;;
-        --help|-h)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: ${arg}"
-            usage
-            ;;
-    esac
+  case ${arg} in
+    --base-image=*)
+      BASE_IMAGE="${arg#*=}"
+      ;;
+    --binary=*)
+      BINARY="${arg#*=}"
+      ;;
+    --output=*)
+      OUTPUT="${arg#*=}"
+      ;;
+    --command=*)
+      COMMAND="${arg#*=}"
+      ;;
+    --service-name=*)
+      SERVICE_NAME="${arg#*=}"
+      ;;
+    --port=*)
+      PORT="${arg#*=}"
+      ;;
+    --install-path=*)
+      INSTALL_PATH="${arg#*=}"
+      ;;
+    --help | -h)
+      usage
+      ;;
+    *)
+      echo "Unknown argument: ${arg}"
+      usage
+      ;;
+  esac
 done
 
 # Validate required arguments.
-if [[ -z "${BASE_IMAGE}" ]] || [[ -z "${BINARY}" ]] || [[ -z "${OUTPUT}" ]]; then
-    echo "Error: Missing required arguments"
-    echo ""
-    usage
+if [[ -z ${BASE_IMAGE} ]] || [[ -z ${BINARY} ]] || [[ -z ${OUTPUT} ]]; then
+  echo "Error: Missing required arguments"
+  echo ""
+  usage
 fi
 
 # Expand tilde in paths.
-BASE_IMAGE="${BASE_IMAGE/#\~/$HOME}"
-BINARY="${BINARY/#\~/$HOME}"
-OUTPUT="${OUTPUT/#\~/$HOME}"
+BASE_IMAGE="${BASE_IMAGE/#\~/${HOME}}"
+BINARY="${BINARY/#\~/${HOME}}"
+OUTPUT="${OUTPUT/#\~/${HOME}}"
 
 # Create command based on the binary name.
 BINARY_BASENAME=$(basename "${BINARY}")
-if [[ -z "${COMMAND}" ]]; then
-    COMMAND="${INSTALL_PATH}/${BINARY_BASENAME}"
+if [[ -z ${COMMAND} ]]; then
+  COMMAND="${INSTALL_PATH}/${BINARY_BASENAME}"
 fi
 
 # Verify inputs exist.
-if [[ ! -f "${BASE_IMAGE}" ]]; then
-    echo "Error: Base image not found: ${BASE_IMAGE}"
-    exit 1
+if [[ ! -f ${BASE_IMAGE} ]]; then
+  echo "Error: Base image not found: ${BASE_IMAGE}"
+  exit 1
 fi
 
-if [[ ! -f "${BINARY}" ]]; then
-    echo "Error: Binary not found: ${BINARY}"
-    exit 1
+if [[ ! -f ${BINARY} ]]; then
+  echo "Error: Binary not found: ${BINARY}"
+  exit 1
 fi
 
 # Check for required tools.
-if ! command -v guestfish &> /dev/null; then
-    echo "Error: guestfish not found. Install libguestfs-tools:"
-    echo "  sudo apt install libguestfs-tools"
-    exit 1
+if ! command -v guestfish &>/dev/null; then
+  echo "Error: guestfish not found. Install libguestfs-tools:"
+  echo "  sudo apt install libguestfs-tools"
+  exit 1
 fi
 
 echo "Creating VM image..."
@@ -139,7 +139,7 @@ echo "  Install path:  ${INSTALL_PATH}"
 TEMP_DIR=$(mktemp -d)
 
 cleanup() {
-    rm -rf "${TEMP_DIR}"
+  rm -rf "${TEMP_DIR}"
 }
 trap cleanup EXIT
 
@@ -152,7 +152,7 @@ cp "${BASE_IMAGE}" "${OUTPUT}"
 
 # Create systemd service file.
 SERVICE_FILE="${TEMP_DIR}/${SERVICE_NAME}.service"
-cat > "${SERVICE_FILE}" << SERVICEEOF
+cat >"${SERVICE_FILE}" <<SERVICEEOF
 [Unit]
 Description=${SERVICE_NAME} service
 After=network.target
@@ -172,7 +172,7 @@ SERVICEEOF
 echo "Injecting files into VM image..."
 
 GF_SCRIPT="${TEMP_DIR}/guestfish_commands"
-cat > "${GF_SCRIPT}" << EOF
+cat >"${GF_SCRIPT}" <<EOF
 mkdir-p ${INSTALL_PATH}
 upload ${TEMP_DIR}/${BINARY_BASENAME} ${INSTALL_PATH}/${BINARY_BASENAME}
 chmod 0755 ${INSTALL_PATH}/${BINARY_BASENAME}
@@ -181,7 +181,7 @@ ln-sf /etc/systemd/system/${SERVICE_NAME}.service /etc/systemd/system/multi-user
 EOF
 
 # Execute guestfish.
-guestfish -a "${OUTPUT}" -i < "${GF_SCRIPT}"
+guestfish -a "${OUTPUT}" -i <"${GF_SCRIPT}"
 
 echo ""
 echo "Done! Image created: ${OUTPUT}"

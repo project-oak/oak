@@ -2,7 +2,7 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 # Solves the following error when running on GitHub Actions:
 #
@@ -17,10 +17,10 @@ git config --global --add safe.directory "${KOKORO_ROOT_DIR}src/git/oak"
 
 # Check that any generated files match those that are checked in.
 if [[ $(git status --short) ]]; then
-    echo "Some files are either modified or newly generated, please commit them and try again."
-    echo "Here is a list of files that are different:"
-    git status
-    git diff
-    # One or more files are either modified or newly generated, exit with an error code
-    exit 1
+  echo "Some files are either modified or newly generated, please commit them and try again."
+  echo "Here is a list of files that are different:"
+  git status
+  git diff
+  # One or more files are either modified or newly generated, exit with an error code
+  exit 1
 fi

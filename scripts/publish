@@ -13,8 +13,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly FBUCKET=oak-files  # File bucket on GCS
-readonly IBUCKET=oak-index  # Index bucket on GCS
+readonly FBUCKET=oak-files # File bucket on GCS
+readonly IBUCKET=oak-index # Index bucket on GCS
 
 # ID of index to access binaries by commit hash and package name.
 readonly BINARY_FOR_COMMIT=6
@@ -51,7 +51,7 @@ upload_file() {
     --retry 3 \
     --retry-delay 2 \
     --retry-all-errors \
-    https://api.static.space/v1/snapshot > /dev/null || true
+    https://api.static.space/v1/snapshot >/dev/null || true
 
   echo "${hash}"
 }
@@ -64,8 +64,8 @@ publish() {
 
   local bhash_path=$(mktemp)
   local phash_path=$(mktemp)
-  upload_file "${binary_path}" > "${bhash_path}"
-  upload_file "${provenance_path}" > "${phash_path}"
+  upload_file "${binary_path}" >"${bhash_path}"
+  upload_file "${provenance_path}" >"${phash_path}"
   bhash=$(cat "${bhash_path}")
 
   copy_file \

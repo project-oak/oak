@@ -132,6 +132,7 @@
                 nodePackages.prettier
                 nodePackages.markdownlint-cli
                 shellcheck
+                shfmt
                 pre-commit
               ];
             };

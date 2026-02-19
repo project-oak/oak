@@ -13,10 +13,10 @@ TAP="oak0"
 HOSTADDR="10.0.2.100/24"
 HOSTADDR_6="fdd2:a994:f3c5:1:10:0:2:64/64"
 
-ip tuntap add dev $TAP mode tap
-ip addr flush dev $TAP
-ip addr add $HOSTADDR dev $TAP
-ip addr add $HOSTADDR_6 dev $TAP nodad
-ip link set dev $TAP up
+ip tuntap add dev ${TAP} mode tap
+ip addr flush dev ${TAP}
+ip addr add ${HOSTADDR} dev ${TAP}
+ip addr add ${HOSTADDR_6} dev ${TAP} nodad
+ip link set dev ${TAP} up
 
 exec "$@"

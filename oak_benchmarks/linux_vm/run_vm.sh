@@ -34,7 +34,7 @@ ENABLE_SNP=false
 QEMU_BINARY="qemu-system-x86_64"
 
 usage() {
-    cat <<EOF
+  cat <<EOF
 Usage: $0 --image=<path> [options]
 
 Required:
@@ -59,7 +59,7 @@ Examples:
   # With SEV-SNP enabled
   $0 --image=/tmp/my-vm.qcow2 --port=5000 --enable-snp
 EOF
-    exit 1
+  exit 1
 }
 
 # Collect port forwards.
@@ -67,132 +67,132 @@ PORTS=()
 
 # Parse arguments.
 for arg in "$@"; do
-    case ${arg} in
-        --image=*)
-            IMAGE="${arg#*=}"
-            ;;
-        --memory=*)
-            MEMORY="${arg#*=}"
-            ;;
-        --cpus=*)
-            CPUS="${arg#*=}"
-            ;;
-        --port=*)
-            PORTS+=("${arg#*=}")
-            ;;
-        --interactive)
-            INTERACTIVE=true
-            ;;
-        --headless)
-            HEADLESS=true
-            ;;
-        --enable-snp)
-            ENABLE_SNP=true
-            ;;
-        --qemu=*)
-            QEMU_BINARY="${arg#*=}"
-            ;;
-        --help|-h)
-            usage
-            ;;
-        *)
-            echo "Unknown argument: ${arg}"
-            usage
-            ;;
-    esac
+  case ${arg} in
+    --image=*)
+      IMAGE="${arg#*=}"
+      ;;
+    --memory=*)
+      MEMORY="${arg#*=}"
+      ;;
+    --cpus=*)
+      CPUS="${arg#*=}"
+      ;;
+    --port=*)
+      PORTS+=("${arg#*=}")
+      ;;
+    --interactive)
+      INTERACTIVE=true
+      ;;
+    --headless)
+      HEADLESS=true
+      ;;
+    --enable-snp)
+      ENABLE_SNP=true
+      ;;
+    --qemu=*)
+      QEMU_BINARY="${arg#*=}"
+      ;;
+    --help | -h)
+      usage
+      ;;
+    *)
+      echo "Unknown argument: ${arg}"
+      usage
+      ;;
+  esac
 done
 
 # Validate required arguments.
-if [[ -z "${IMAGE}" ]]; then
-    echo "Error: --image is required"
-    echo ""
-    usage
+if [[ -z ${IMAGE} ]]; then
+  echo "Error: --image is required"
+  echo ""
+  usage
 fi
 
-if [[ ! -f "${IMAGE}" ]]; then
-    echo "Error: Image not found: ${IMAGE}"
-    exit 1
+if [[ ! -f ${IMAGE} ]]; then
+  echo "Error: Image not found: ${IMAGE}"
+  exit 1
 fi
 
 # Default to interactive if not headless.
-if [[ "${HEADLESS}" == false ]]; then
-    INTERACTIVE=true
+if [[ ${HEADLESS} == false ]]; then
+  INTERACTIVE=true
 fi
 
 # Check for QEMU.
-if ! command -v "${QEMU_BINARY}" &> /dev/null; then
-    echo "Error: QEMU not found: ${QEMU_BINARY}"
-    echo "Install with: sudo apt install qemu-system-x86"
-    exit 1
+if ! command -v "${QEMU_BINARY}" &>/dev/null; then
+  echo "Error: QEMU not found: ${QEMU_BINARY}"
+  echo "Install with: sudo apt install qemu-system-x86"
+  exit 1
 fi
 
 # Build QEMU arguments.
 QEMU_ARGS=(
-    "-enable-kvm"
-    "-cpu" "host"
-    "-m" "${MEMORY}"
-    "-smp" "${CPUS}"
-    "-drive" "file=${IMAGE},format=qcow2"
-    "-net" "nic,model=virtio"
+  "-enable-kvm"
+  "-cpu" "host"
+  "-m" "${MEMORY}"
+  "-smp" "${CPUS}"
+  "-drive" "file=${IMAGE},format=qcow2"
+  "-net" "nic,model=virtio"
 )
 
 # Build network arguments with port forwards.
 NET_USER_ARGS="user"
 for port in "${PORTS[@]}"; do
-    NET_USER_ARGS+=",hostfwd=tcp::${port}-:${port}"
+  NET_USER_ARGS+=",hostfwd=tcp::${port}-:${port}"
 done
 QEMU_ARGS+=("-net" "${NET_USER_ARGS}")
 
 # Add SEV-SNP if requested.
-if [[ "${ENABLE_SNP}" == true ]]; then
-    echo "Enabling SEV-SNP..."
-    QEMU_ARGS+=(
-        "-machine" "q35,confidential-guest-support=sev0,memory-encryption=sev0"
-        "-object" "sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1"
-    )
+if [[ ${ENABLE_SNP} == true ]]; then
+  echo "Enabling SEV-SNP..."
+  QEMU_ARGS+=(
+    "-machine" "q35,confidential-guest-support=sev0,memory-encryption=sev0"
+    "-object" "sev-snp-guest,id=sev0,cbitpos=51,reduced-phys-bits=1"
+  )
 else
-    QEMU_ARGS+=("-machine" "q35")
+  QEMU_ARGS+=("-machine" "q35")
 fi
 
 # Console settings.
-if [[ "${INTERACTIVE}" == true ]]; then
-    QEMU_ARGS+=("-nographic")
-    echo "Starting VM (interactive mode)..."
-    echo "  Image:  ${IMAGE}"
-    echo "  Memory: ${MEMORY}"
-    echo "  CPUs:   ${CPUS}"
-    if [[ ${#PORTS[@]} -gt 0 ]]; then
-        echo "  Ports:  ${PORTS[*]}"
-    fi
-    if [[ "${ENABLE_SNP}" == true ]]; then
-        echo "  SEV-SNP: enabled"
-    fi
-    echo ""
-    echo "Press Ctrl+A, X to exit the VM."
-    echo ""
+if [[ ${INTERACTIVE} == true ]]; then
+  QEMU_ARGS+=("-nographic")
+  echo "Starting VM (interactive mode)..."
+  echo "  Image:  ${IMAGE}"
+  echo "  Memory: ${MEMORY}"
+  echo "  CPUs:   ${CPUS}"
+  if [[ ${#PORTS[@]} -gt 0 ]]; then
+    echo "  Ports:  ${PORTS[*]}"
+  fi
+  if [[ ${ENABLE_SNP} == true ]]; then
+    echo "  SEV-SNP: enabled"
+  fi
+  echo ""
+  echo "Press Ctrl+A, X to exit the VM."
+  echo ""
 
-    exec "${QEMU_BINARY}" "${QEMU_ARGS[@]}"
+  exec "${QEMU_BINARY}" "${QEMU_ARGS[@]}"
 else
-    # Headless mode.
-    QEMU_ARGS+=(
-        "-nographic"
-        "-serial" "none"
-        "-monitor" "none"
-    )
+  # Headless mode.
+  QEMU_ARGS+=(
+    "-nographic"
+    "-serial" "none"
+    "-monitor" "none"
+  )
 
-    echo "Starting VM (headless mode)..."
-    echo "  Image:  ${IMAGE}"
-    echo "  Memory: ${MEMORY}"
-    echo "  CPUs:   ${CPUS}"
-    if [[ ${#PORTS[@]} -gt 0 ]]; then
-        echo "  Ports:  ${PORTS[*]}"
-    fi
-    if [[ "${ENABLE_SNP}" == true ]]; then
-        echo "  SEV-SNP: enabled"
-    fi
-    echo ""
-    echo "Press Ctrl+C to stop the VM."
-    echo ""
+  echo "Starting VM (headless mode)..."
+  echo "  Image:  ${IMAGE}"
+  echo "  Memory: ${MEMORY}"
+  echo "  CPUs:   ${CPUS}"
+  if [[ ${#PORTS[@]} -gt 0 ]]; then
+    echo "  Ports:  ${PORTS[*]}"
+  fi
+  if [[ ${ENABLE_SNP} == true ]]; then
+    echo "  SEV-SNP: enabled"
+  fi
+  echo ""
+  echo "Press Ctrl+C to stop the VM."
+  echo ""
 
-    exec "${QEMU_BINARY}" "${QEMU_ARGS[@]}"
+  exec "${QEMU_BINARY}" "${QEMU_ARGS[@]}"
 fi

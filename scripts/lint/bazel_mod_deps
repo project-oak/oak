@@ -5,7 +5,7 @@ set -o pipefail
 
 # Run bazel mod deps on each provided MODULE.bazel file to ensure that the lock file is fully up to date.
 for file in "$@"; do
-    pushd "$(dirname "$file")"
-    bazel mod deps
-    popd
+  pushd "$(dirname "${file}")"
+  bazel mod deps
+  popd
 done

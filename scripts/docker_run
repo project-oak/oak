@@ -5,15 +5,15 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
 # The directory of the workspace on the host. Normally this is just the PWD, but in Kokoro it is
 # different.
 HOST_WORKSPACE_DIR=''
-if [[ -n "${KOKORO_HOST_ROOT_DIR:-}" ]]; then
-  HOST_WORKSPACE_DIR="$KOKORO_HOST_ROOT_DIR/src/git/oak"
+if [[ -n ${KOKORO_HOST_ROOT_DIR:-} ]]; then
+  HOST_WORKSPACE_DIR="${KOKORO_HOST_ROOT_DIR}/src/git/oak"
 else
-  HOST_WORKSPACE_DIR="$PWD"
+  HOST_WORKSPACE_DIR="${PWD}"
 fi
 
 docker_run_flags=(
@@ -30,7 +30,7 @@ docker_run_flags=(
   '--security-opt=seccomp=unconfined'
 
   # BIND MOUNTS - Make host directories available in container.
-  "--mount=type=bind,source=$HOST_WORKSPACE_DIR,target=/workspace"
+  "--mount=type=bind,source=${HOST_WORKSPACE_DIR},target=/workspace"
   # The container uses the host docker daemon, so docker commands running in
   # the container actually access the host filesystem. Thus mount the /tmp
   # directory as a volume in the container so that it can access the outputs of
@@ -82,7 +82,7 @@ if [[ -e "/dev/vsock" ]]; then
 fi
 
 # Some CI systems (GitHub actions) do not run with an interactive TTY attached.
-if [[ -n "${CI:-}" ]]; then
+if [[ -n ${CI:-} ]]; then
   # When a CI environment variable is present, assume that we only have basic log output.
   docker_run_flags+=(
     # Prevent ANSI escape sequences in Nix; prevents a large amount of log noise

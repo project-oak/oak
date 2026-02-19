@@ -14,7 +14,7 @@
 
 readonly SCRIPTS_DIR="$(dirname "$0")"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "${SCRIPTS_DIR}/common"
 
-docker pull "$DOCKER_IMAGE_NAME"
-docker pull "$DOCKER_IMAGE_REPO_DIGEST"
+docker pull "${DOCKER_IMAGE_NAME}"
+docker pull "${DOCKER_IMAGE_REPO_DIGEST}"

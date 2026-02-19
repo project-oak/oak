@@ -51,17 +51,17 @@ echo "Instance ID: ${INSTANCE_ID}"
 
 # Fetch logs containing the attestation token. Repeat until the relevant log entry appears.
 while true; do
-    # Find the attestation token log entry.
-    LOG_ENTRIES=$(gcloud logging read "resource.type=\"gce_instance\" AND resource.labels.instance_id=\"${INSTANCE_ID}\" AND jsonPayload.MESSAGE:\"attestation_token\"" --project="${GCP_PROJECT_ID}" --format=json)
-    LOG_ENTRIES_LENGTH=$(echo "$LOG_ENTRIES" | jq 'length')
-    if [[ "$LOG_ENTRIES_LENGTH" -gt 0 ]]; then
-        # The token is in a JSON object which is itself string-encoded inside the JSON log entry.
-        ATTESTATION_TOKEN=$(echo "$LOG_ENTRIES" | jq -r '.[0].jsonPayload.MESSAGE' | jq -r '.attestation_token')
-        break
-    else
-        echo "⏳ Waiting for more logs..."
-        sleep 5
-    fi
+  # Find the attestation token log entry.
+  LOG_ENTRIES=$(gcloud logging read "resource.type=\"gce_instance\" AND resource.labels.instance_id=\"${INSTANCE_ID}\" AND jsonPayload.MESSAGE:\"attestation_token\"" --project="${GCP_PROJECT_ID}" --format=json)
+  LOG_ENTRIES_LENGTH=$(echo "${LOG_ENTRIES}" | jq 'length')
+  if [[ ${LOG_ENTRIES_LENGTH} -gt 0 ]]; then
+    # The token is in a JSON object which is itself string-encoded inside the JSON log entry.
+    ATTESTATION_TOKEN=$(echo "${LOG_ENTRIES}" | jq -r '.[0].jsonPayload.MESSAGE' | jq -r '.attestation_token')
+    break
+  else
+    echo "⏳ Waiting for more logs..."
+    sleep 5
+  fi
 done
 
 terraform -chdir="${TF_DIR}" destroy \

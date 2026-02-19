@@ -24,4 +24,8 @@ SERVER_PORT=$(grep "Server listening on port" "${SERVER_LOG}" | awk '{print $NF}
 # Stop the server
 kill "${SERVER_PID}"
 
-grep "Received: Hello world" "${CLIENT_LOG}" || (echo "Client log did not contain expected output"; cat "${CLIENT_LOG}"; exit 1)
+grep "Received: Hello world" "${CLIENT_LOG}" || (
+  echo "Client log did not contain expected output"
+  cat "${CLIENT_LOG}"
+  exit 1
+)

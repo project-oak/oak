@@ -15,7 +15,7 @@ export JUST_TIMESTAMP_FORMAT=JUST:%H:%M:%S%.3f
 
 failures=()
 
-check_buildconfig () {
+check_buildconfig() {
   buildconfig="$1"
 
   # shellcheck source=/dev/null
@@ -42,8 +42,7 @@ done
 failure_count="${#failures[@]}"
 echo ""
 echo ""
-for f in "${failures[@]}"
-do
-  echo "******Missing Output - $f"
+for f in "${failures[@]}"; do
+  echo "******Missing Output - ${f}"
 done
-exit "$failure_count"
+exit "${failure_count}"
