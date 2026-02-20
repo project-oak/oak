@@ -17,6 +17,8 @@
 //! This module implements the `list` command. It lists all endorsements for a
 //! given endorser key.
 
+use std::collections::HashSet;
+
 use anyhow::Context;
 use clap::Args;
 use endorscope::{
@@ -110,55 +112,33 @@ pub(crate) struct ListArgs {
     limit: usize,
 }
 
+/// Represents actual search criteria, all of which are concatenated by a
+/// logical AND.
 #[derive(Args)]
-#[group(required = true, multiple = false)]
 pub(crate) struct ListMode {
     #[arg(
         long,
-        help = "Typed hash of the endorsed subject.",
+        help = "List by typed hash of the endorsed subject.",
         value_parser = parse_typed_hash,
     )]
     subject_hash: Option<String>,
 
     #[arg(
         long,
-        help = "Typed hash of the verifying key used to sign endorsements.",
+        help = "List by typed hash of the verifying key.",
         value_parser = parse_typed_hash,
     )]
     endorser_key_hash: Option<String>,
 
     #[arg(
         long,
-        help = "Typed hash of the endorser keyset used to sign endorsements.",
+        help = "List by typed hash of the verifying key set.",
         value_parser = parse_typed_hash,
     )]
     endorser_keyset_hash: Option<String>,
 
-    #[arg(long, help = "Lists all endorsements which contain the given claim.")]
-    claim: Option<String>,
-}
-
-pub(crate) enum Mode {
-    SubjectHash(String),
-    EndorserKeyHash(String),
-    EndorserKeysetHash(String),
-    Claim(String),
-}
-
-impl ListMode {
-    pub fn get(self) -> Mode {
-        if let Some(hash) = self.subject_hash {
-            Mode::SubjectHash(hash)
-        } else if let Some(hash) = self.endorser_key_hash {
-            Mode::EndorserKeyHash(hash)
-        } else if let Some(hash) = self.endorser_keyset_hash {
-            Mode::EndorserKeysetHash(hash)
-        } else if let Some(claim_type) = self.claim {
-            Mode::Claim(claim_type)
-        } else {
-            panic!("Exactly one mode must be specified");
-        }
-    }
+    #[arg(long, help = "List by claim.")]
+    claim: Vec<String>,
 }
 
 /// Lists endorsements depending on arguments.
@@ -166,47 +146,73 @@ pub(crate) fn list(current_time: Instant, p: ListArgs) {
     let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
     let loader = EndorsementLoader::new(Box::new(storage));
 
-    match p.mode.get() {
-        Mode::SubjectHash(hash) => {
-            list_endorsements_by_subject(
-                current_time,
-                &loader,
-                hash.as_str(),
-                string_to_option_string(p.rekor_public_key),
-                p.limit,
-            );
+    let mut final_hashes: Option<Vec<String>> = None;
+
+    let mut intersect = |hashes: Vec<String>| match final_hashes.as_mut() {
+        Some(current) => {
+            let set: HashSet<String> = hashes.into_iter().collect();
+            current.retain(|h| set.contains(h));
         }
-        Mode::EndorserKeyHash(hash) => {
-            list_endorsements_by_key(
-                current_time,
-                &loader,
-                hash.as_str(),
-                string_to_option_string(p.rekor_public_key),
-                p.limit,
-            );
+        None => {
+            final_hashes = Some(hashes);
         }
-        Mode::EndorserKeysetHash(hash) => {
-            let endorser_key_hashes = list_keys_by_keyset(&loader, hash.as_str());
-            for endorser_key_hash in endorser_key_hashes {
-                list_endorsements_by_key(
-                    current_time,
-                    &loader,
-                    endorser_key_hash.as_str(),
-                    string_to_option_string(p.rekor_public_key.clone()),
-                    p.limit,
-                );
+    };
+
+    if p.mode.subject_hash.is_none()
+        && p.mode.endorser_key_hash.is_none()
+        && p.mode.endorser_keyset_hash.is_none()
+        && p.mode.claim.is_empty()
+    {
+        panic!("At least one list mode must be specified");
+    }
+
+    if let Some(hash) = &p.mode.subject_hash {
+        let hashes =
+            loader.list_endorsements_by_subject(hash).expect("listing endorsements by subject");
+        intersect(hashes);
+    }
+
+    if let Some(hash) = &p.mode.endorser_key_hash {
+        let hashes = loader.list_endorsements_by_key(hash).expect("listing endorsements by key");
+        println!("🧲  Found {} endorsements for endorser key {}", hashes.len(), hash);
+        intersect(hashes);
+    }
+
+    if let Some(hash) = &p.mode.endorser_keyset_hash {
+        let hashes = list_endorsements_by_keyset(&loader, hash);
+        intersect(hashes);
+    }
+
+    for hash in &p.mode.claim {
+        let hashes =
+            loader.list_endorsements_by_claim(hash).expect("listing endorsements by claim");
+        intersect(hashes);
+    }
+
+    list_endorsement_hashes(
+        current_time,
+        &loader,
+        final_hashes.unwrap_or_default(),
+        string_to_option_string(p.rekor_public_key),
+        p.limit,
+    );
+}
+
+fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) -> Vec<String> {
+    let keys = list_keys_by_keyset(loader, keyset_hash);
+    let mut keyset_hashes = HashSet::new();
+    let mut keyset_vec = Vec::new();
+    for key_hash in keys {
+        if let Ok(hashes) = loader.list_endorsements_by_key(&key_hash) {
+            println!("🧲  Found {} endorsements for endorser key {}", hashes.len(), key_hash);
+            for h in hashes {
+                if keyset_hashes.insert(h.clone()) {
+                    keyset_vec.push(h);
+                }
             }
         }
-        Mode::Claim(claim_type) => {
-            list_endorsements_by_claim(
-                current_time,
-                &loader,
-                claim_type.as_str(),
-                string_to_option_string(p.rekor_public_key),
-                p.limit,
-            );
-        }
     }
+    keyset_vec
 }
 
 fn list_endorsement_hashes(
@@ -232,28 +238,6 @@ fn list_endorsement_hashes(
     }
 }
 
-fn list_endorsements_by_subject(
-    current_time: Instant,
-    loader: &EndorsementLoader,
-    subject_hash: &str,
-    rekor_public_key: Option<String>,
-    limit: usize,
-) {
-    let endorsement_hashes = loader.list_endorsements_by_subject(subject_hash);
-    if endorsement_hashes.is_err() {
-        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
-        return;
-    }
-
-    list_endorsement_hashes(
-        current_time,
-        loader,
-        endorsement_hashes.unwrap(),
-        rekor_public_key,
-        limit,
-    );
-}
-
 fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -> Vec<String> {
     let endorser_keys = loader.list_keys_by_keyset(endorser_keyset_hash);
     if endorser_keys.is_err() {
@@ -269,51 +253,6 @@ fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -
         println!("✅  {}", endorser_key);
     }
     endorser_keys
-}
-
-fn list_endorsements_by_key(
-    current_time: Instant,
-    loader: &EndorsementLoader,
-    endorser_key_hash: &str,
-    rekor_public_key: Option<String>,
-    limit: usize,
-) {
-    let endorsement_hashes = loader.list_endorsements_by_key(endorser_key_hash);
-    if endorsement_hashes.is_err() {
-        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
-        return;
-    }
-    let endorsement_hashes = endorsement_hashes.unwrap();
-
-    println!(
-        "🧲  Found {} endorsements for endorser key {}",
-        endorsement_hashes.len(),
-        endorser_key_hash
-    );
-
-    list_endorsement_hashes(current_time, loader, endorsement_hashes, rekor_public_key, limit);
-}
-
-fn list_endorsements_by_claim(
-    current_time: Instant,
-    loader: &EndorsementLoader,
-    claim_type: &str,
-    rekor_public_key: Option<String>,
-    limit: usize,
-) {
-    let endorsement_hashes = loader.list_endorsements_by_claim(claim_type);
-    if endorsement_hashes.is_err() {
-        println!("❌  Failed to list endorsements: {:?}", endorsement_hashes.err().unwrap());
-        return;
-    }
-
-    list_endorsement_hashes(
-        current_time,
-        loader,
-        endorsement_hashes.unwrap(),
-        rekor_public_key,
-        limit,
-    );
 }
 
 /// Verifies an endorsement package and pretty-prints it to stdout.
