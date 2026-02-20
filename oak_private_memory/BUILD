@@ -62,7 +62,11 @@ rust_library(
     name = "attestation",
     srcs = ["src/attestation.rs"],
     deps = [
+        "@oak//oak_attestation_types",
+        "@oak//oak_proto_rust",
         "@oak//oak_session",
+        "@oak//oak_session/endorsed_evidence:oak_session_endorsed_evidence",
+        "@oak_crates_index//:anyhow",
     ],
 )
 

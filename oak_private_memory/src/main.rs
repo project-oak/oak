@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use anyhow::Context;
 use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
@@ -44,6 +47,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::from_slice(application_config_bytes.as_slice())
             .expect("Invalid application config");
 
+    // Prefetch endorsed evidence (DICE chain) once at startup and share via Arc.
+    let endorsed_evidence = orchestrator_client
+        .get_endorsed_evidence()
+        .await
+        .context("failed to get endorsed evidence")?;
+    let evidence = Arc::new(endorsed_evidence.evidence.context("missing evidence")?);
+    let endorsements = Arc::new(endorsed_evidence.endorsements.context("missing endorsements")?);
+
+    // Each new session gets cheap Arc clones of the prefetched
+    // evidence/endorsements.
+    let session_config_factory = {
+        let evidence = evidence.clone();
+        let endorsements = endorsements.clone();
+        Arc::new(move || {
+            attestation::orchestrator_session_config(
+                evidence.clone(),
+                endorsements.clone(),
+                // TODO: b/397193509 - Replace with real InstanceSessionBinder
+                // once we create our own indirect binder.
+                Box::new(attestation::NoOpSessionBinder),
+            )
+        })
+    };
+
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
 
@@ -56,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_config,
         metrics,
         persistence_tx,
-        std::sync::Arc::new(attestation::default_server_session_config),
+        session_config_factory,
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");
