@@ -105,24 +105,33 @@ pub struct PrivateMemoryClient {
 }
 
 impl PrivateMemoryClient {
+    /// Returns the default `SessionConfig` using `Unattested` attestation.
+    ///
+    /// This will be upgraded to use real attestation once evidence is
+    /// available.
+    pub fn default_session_config() -> SessionConfig {
+        SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build()
+    }
+
     pub async fn new(
         mut transport: Box<dyn Transport + Send>,
         pm_uid: &str,
         kek: &[u8],
         format: SerializationFormat,
+        session_config: SessionConfig,
     ) -> Result<Self> {
-        let mut client_session = oak_session::ClientSession::create(
-            SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-        )
-        .context("failed to create client session")?;
+        let mut client_session = oak_session::ClientSession::create(session_config)
+            .context("failed to create client session")?;
 
         while !client_session.is_open() {
             let request =
                 client_session.next_init_message().context("failed to get next init message")?;
+            println!("Sending init message: {:?}", request);
             transport.send(request).await.context("failed to send init message")?;
             if !client_session.is_open() {
                 let response =
                     transport.receive().await.context("failed to receive init message")?;
+                println!("Received init response: {:?}", response);
                 client_session
                     .handle_init_message(response)
                     .context("failed to handle init message")?;
@@ -145,6 +154,24 @@ impl PrivateMemoryClient {
         kek: &[u8],
         format: SerializationFormat,
     ) -> Result<Self> {
+        Self::create_with_start_session_config(
+            server_addr,
+            pm_uid,
+            kek,
+            format,
+            Self::default_session_config(),
+        )
+        .await
+    }
+
+    /// Creates a client with a custom `SessionConfig`.
+    pub async fn create_with_start_session_config(
+        server_addr: &str,
+        pm_uid: &str,
+        kek: &[u8],
+        format: SerializationFormat,
+        session_config: SessionConfig,
+    ) -> Result<Self> {
         let channel = Channel::from_shared(server_addr.to_string())
             .context("failed to create shared channel")?
             .connect()
@@ -157,7 +184,7 @@ impl PrivateMemoryClient {
 
         let transport = Box::new(TonicStartSessionTransport { tx, rx });
 
-        Self::new(transport, pm_uid, kek, format).await
+        Self::new(transport, pm_uid, kek, format, session_config).await
     }
 
     async fn invoke(

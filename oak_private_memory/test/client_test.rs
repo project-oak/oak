@@ -16,7 +16,12 @@
 
 use std::collections::HashSet;
 
+use attestation_testing::{
+    DUMMY_ATTESTATION_ID, DummySessionBindingVerifierProvider, RejectingVerifier,
+    dummy_client_session_config,
+};
 use client::{PrivateMemoryClient, SerializationFormat};
+use oak_session::{attestation::AttestationType, config::SessionConfig, handshake::HandshakeType};
 use private_memory_test_utils::{start_server, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
     oak::private_memory::{LlmView, LlmViews, MatchType, TextQuery, text_query},
@@ -61,6 +66,70 @@ async fn test_client() {
         assert!(response.success);
         assert_eq!(response.memory.unwrap().id, memory_id);
     }
+}
+
+/// Verifies that the dummy attested handshake (SelfUnidirectional server +
+/// PeerUnidirectional client) completes successfully.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_client_with_dummy_attestation() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_dummy_attested_user";
+
+    let mut client = PrivateMemoryClient::create_with_start_session_config(
+        &url,
+        pm_uid,
+        TEST_EK,
+        SerializationFormat::BinaryProto,
+        dummy_client_session_config(),
+    )
+    .await
+    .unwrap();
+
+    let memory_id = "unattested_test_memory";
+    let memory_to_add = Memory {
+        id: memory_id.to_string(),
+        tags: vec!["test_tag".to_string()],
+        ..Default::default()
+    };
+
+    let response = client.add_memory(memory_to_add).await.unwrap();
+    assert_eq!(response.id, memory_id);
+
+    let response = client.get_memory_by_id(memory_id, None).await.unwrap();
+    assert!(response.success);
+    assert_eq!(response.memory.unwrap().id, memory_id);
+}
+
+/// Verifies that the client aborts when attestation evidence fails
+/// verification.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_client_rejects_bad_evidence() {
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server().await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_client_reject_user";
+
+    let rejecting_config =
+        SessionConfig::builder(AttestationType::PeerUnidirectional, HandshakeType::NoiseNN)
+            .add_peer_verifier_with_binding_verifier_provider(
+                DUMMY_ATTESTATION_ID.to_string(),
+                Box::new(RejectingVerifier),
+                Box::new(DummySessionBindingVerifierProvider),
+            )
+            .build();
+
+    let result = PrivateMemoryClient::create_with_start_session_config(
+        &url,
+        pm_uid,
+        TEST_EK,
+        SerializationFormat::BinaryProto,
+        rejecting_config,
+    )
+    .await;
+
+    assert!(result.is_err(), "client should fail when evidence is rejected");
 }
 
 #[tokio::test(flavor = "multi_thread")]

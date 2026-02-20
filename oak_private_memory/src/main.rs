@@ -56,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_config,
         metrics,
         persistence_tx,
+        std::sync::Arc::new(attestation::default_server_session_config),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");

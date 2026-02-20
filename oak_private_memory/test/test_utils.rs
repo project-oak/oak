@@ -51,7 +51,13 @@ pub async fn start_server() -> Result<(
     let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
     Ok((
         addr,
-        tokio::spawn(app::service::create(listener, application_config, metrics, persistence_tx)),
+        tokio::spawn(app::service::create(
+            listener,
+            application_config,
+            metrics,
+            persistence_tx,
+            std::sync::Arc::new(attestation_testing::dummy_server_session_config),
+        )),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
     ))

@@ -21,10 +21,8 @@ use metrics::RequestMetricName;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     ServerSession, Session,
-    attestation::AttestationType,
     channel::{SessionChannel, SessionInitializer},
     config::SessionConfig,
-    handshake::HandshakeType,
 };
 use sealed_memory_grpc_proto::oak::private_memory::sealed_memory_service_server::{
     SealedMemoryService, SealedMemoryServiceServer,
@@ -44,6 +42,7 @@ struct SealedMemoryServiceImplementation {
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     db_client: Arc<SharedDbClient>,
+    session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -51,16 +50,23 @@ impl SealedMemoryServiceImplementation {
         application_config: ApplicationConfig,
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+        session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
     ) -> Self {
         Self {
             metrics,
             persistence_tx,
             db_client: Arc::new(SharedDbClient::new(application_config.database_service_host)),
+            session_config_factory,
         }
     }
 
     fn new_oak_session_handler(&self) -> tonic::Result<OakSessionHandler> {
-        OakSessionHandler::new(&self.metrics, &self.persistence_tx, self.db_client.clone())
+        OakSessionHandler::new(
+            &self.metrics,
+            &self.persistence_tx,
+            self.db_client.clone(),
+            (self.session_config_factory)(),
+        )
     }
 }
 
@@ -79,13 +85,12 @@ impl OakSessionHandler {
         metrics: &Arc<metrics::Metrics>,
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
+        session_config: SessionConfig,
     ) -> tonic::Result<Self> {
         Ok(Self {
             metrics: metrics.clone(),
-            server_session: ServerSession::create(
-                SessionConfig::builder(AttestationType::Unattested, HandshakeType::NoiseNN).build(),
-            )
-            .into_failed_precondition("failed to initialize oak session")?,
+            server_session: ServerSession::create(session_config)
+                .into_failed_precondition("failed to initialize oak session")?,
             application_handler: SealedMemorySessionHandler::new(
                 metrics.clone(),
                 persistence_tx.clone(),
@@ -228,6 +233,7 @@ pub async fn create(
     application_config: ApplicationConfig,
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(
@@ -235,6 +241,7 @@ pub async fn create(
                 application_config,
                 metrics,
                 persistence_tx,
+                session_config_factory,
             ))
             .max_decoding_message_size(crate::db_client::MAX_DECODE_SIZE),
         )

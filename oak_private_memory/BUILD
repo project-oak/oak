@@ -59,6 +59,27 @@ rust_test(
 )
 
 rust_library(
+    name = "attestation",
+    srcs = ["src/attestation.rs"],
+    deps = [
+        "@oak//oak_session",
+    ],
+)
+
+rust_library(
+    name = "attestation_testing",
+    testonly = True,
+    srcs = ["src/attestation_testing.rs"],
+    deps = [
+        "@oak//oak_attestation_types",
+        "@oak//oak_attestation_verification_types",
+        "@oak//oak_proto_rust",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+    ],
+)
+
+rust_library(
     name = "encryption",
     srcs = ["src/encryption.rs"],
     deps = [
@@ -148,6 +169,7 @@ rust_binary(
     name = "private_memory_server",
     srcs = ["src/main.rs"],
     deps = [
+        ":attestation",
         ":private_memory_server_lib",
         "@oak//oak_sdk/containers:oak_sdk_containers",
         "@oak//oak_session",
@@ -169,8 +191,10 @@ cc_test(
 
 rust_library(
     name = "private_memory_test_utils",
+    testonly = True,
     srcs = ["test/test_utils.rs"],
     deps = [
+        ":attestation_testing",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         "@oak_crates_index//:anyhow",
@@ -228,6 +252,7 @@ rust_test(
     srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
+        ":attestation_testing",
         ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
