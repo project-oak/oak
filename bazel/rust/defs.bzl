@@ -14,28 +14,52 @@ RUST_VERSIONS = [
     RUST_NIGHTLY_VERSION,
 ]
 
-# To get the latest SHA256, use the get_sha256s.sh helper script.
+SUPPORTED_HOST_TRIPLES = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+]
+
+SUPPORTED_TARGET_TRIPLES = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-unknown-none",
+    "wasm32-unknown-unknown",
+]
+
+SUPPORTED_RUST_COMPONENTS = [
+    "cargo",
+    "clippy",
+    "llvm-tools",
+    "rust-std",
+    "rustc",
+    "rustfmt",
+]
+
+# Note: be careful here: if a key is *absent* from this map, rules_rust just
+# assumes you don't want to verify that component, and will raise a warning but
+# will not fail the build. So when updating verions.
+# We have some backup checks to try to help make sure all keys are present.
 RUST_SHA256S = {
-    # Linux x86_64
-    "2025-04-03/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "adfe5bd8fb807bfd8fee2ede9d88853837ba9dcf14dd701edeb33a8c9d84a6f2",
-    "2025-04-03/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "06839db5cd1810032a3115211b558b257c75f8459645265e310f0c518c9ad2d8",
-    "2025-04-03/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "e2adf4c25541e7abf7e0c4e6586c94ac662fb9ae3e78b1f7310789bfc1cb5860",
-    "2025-04-03/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "6b3b7dc16ccb0204bcc2fc381ffe69d1eaddf326583c11d24699797ebd0778c6",
-    "2025-04-03/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "e9e98ec5cb439842c2eaa14abeaacbb22e0da169dadb18f1f6de7ffadb3b4829",
-    "2025-04-03/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "2418663236236373c3d278e6e602ef5ad3158b9cebd5c1095f7916dbd9c9b891",
-    "2025-04-03/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "f8876b429b1ad9dfd5ece1e47947b39b20a0ecc56b1c76a614c4af5797152d86",
-    # macOS ARM64
-    "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
-    "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+    # Linux x86_64 Host
     "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
-    "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+    "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
     "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
     "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+    "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+    "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+    # macOS ARM64 Host
+    "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+    "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+    "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+    "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+    "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+    "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+    # Target-only triples
+    "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+    "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0",
 }
 
-# To get the latest SHA256, use the get_sha256s.sh helper script.
-# curl https://static.rust-lang.org/dist/$RUST_NIGHTLY_VERSION/rustc-nightly-src.tar.gz.sha256
-STDLIBS_SHA256 = ""
+STDLIBS_SHA256 = "4743b974292186c91f4daba45de20edfbc6aa293671953aca30168608e69609e"
 
 # If updates change stdlib dependencies, you may need to update these. Hunt
 # around in your bazel cache's `$BAZEL_CACHE/external/stdlibs/vendor` path to see what's available.
@@ -49,6 +73,26 @@ STDLIBS_DEPS_VERSIONS = {
 
 RUST_EDITION = "2024"
 
+def _ensure_hashes():
+    # If a hash is *absent* from the list, a default is used. So we should make
+    # sure the expect hashes are *present*.
+    # Ensure that all hashes in RUST_SHA256S match the active date.
+    for key in RUST_SHA256S.keys():
+        if not key.startswith(RUST_NIGHTLY_DATE):
+            fail("Inconsistent RUST_SHA256S: Key '{}' does not match RUST_NIGHTLY_DATE '{}'. ".format(key, RUST_NIGHTLY_DATE))
+
+    # Enforce completeness for required platforms.
+    # Note: Target-only platforms only require rust-std.
+    for triple in SUPPORTED_HOST_TRIPLES:
+        for component in SUPPORTED_RUST_COMPONENTS:
+            key = "{}/{}-nightly-{}.tar.xz".format(RUST_NIGHTLY_DATE, component, triple)
+            if key not in RUST_SHA256S:
+                fail("Missing required Rust toolchain hash: '{}'.".format(key))
+    for triple in SUPPORTED_TARGET_TRIPLES:
+        key = "{}/rust-std-nightly-{}.tar.xz".format(RUST_NIGHTLY_DATE, triple)
+        if key not in RUST_SHA256S:
+            fail("Missing required Rust std hash: '{}'.".format(key))
+
 def setup_rust_dependencies(oak_repo_name = "oak"):
     """Set up the various rust-related dependencies. Call this after load_rust_repositories().
 
@@ -56,6 +100,8 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
     Args:
         oak_repo_name: to be used when Oak repo is renamed.
     """
+    _ensure_hashes()
+
     rules_rust_dependencies()
 
     rust_register_toolchains(
