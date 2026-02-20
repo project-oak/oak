@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
 use anyhow::{Context, bail};
 use external_db_client::{BlobId, ExternalDbClient};
 use icing::OptimizeResultProto;
@@ -22,6 +24,7 @@ use sealed_memory_rust_proto::prelude::v1::*;
 
 use crate::{
     IcingTempDir, MemoryId,
+    clock::{Clock, SystemClock, system_time_to_timestamp},
     icing::{IcingMetaDatabase, PageToken},
     memory_cache::MemoryCache,
 };
@@ -38,6 +41,7 @@ pub struct DatabaseWithCache {
     key_derivation_info: KeyDerivationInfo,
     current_size: usize,
     max_size: usize,
+    clock: Arc<dyn Clock>,
 }
 
 impl DatabaseWithCache {
@@ -54,7 +58,13 @@ impl DatabaseWithCache {
             key_derivation_info,
             current_size: initial_size,
             max_size: MAX_DECODE_SIZE,
+            clock: Arc::new(SystemClock),
         }
+    }
+
+    pub fn with_clock(mut self, clock: Arc<dyn Clock>) -> Self {
+        self.clock = clock;
+        self
     }
 
     pub fn meta_db(&mut self) -> &mut IcingMetaDatabase {
@@ -110,9 +120,14 @@ impl DatabaseWithCache {
         }
     }
 
+    fn add_created_timestamp(&mut self, memory: &mut Memory) {
+        memory.created_timestamp = Some(system_time_to_timestamp(self.clock.now()));
+    }
+
     pub async fn add_memory(&mut self, mut memory: Memory) -> anyhow::Result<MemoryId> {
         self.add_memory_id(&mut memory);
         self.add_llm_view_ids(&mut memory);
+        self.add_created_timestamp(&mut memory);
 
         let additional_size = crate::icing::calculate_memory_icing_size(&memory)?;
 

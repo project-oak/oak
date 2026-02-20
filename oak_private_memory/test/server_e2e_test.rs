@@ -15,11 +15,14 @@
 
 use std::{
     collections::HashMap,
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
 use client::{PrivateMemoryClient, SerializationFormat};
-use private_memory_test_utils::start_server;
+use private_memory_test_utils::{
+    MockClock, start_server, start_server_with_clock, system_time_to_timestamp,
+};
 use sealed_memory_rust_proto::{
     oak::private_memory::{
         Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value, text_query,
@@ -128,28 +131,28 @@ async fn test_standalone_text_query() {
 
         let memory1 = Memory {
             id: "memory1".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory1).await.unwrap();
 
         let memory2 = Memory {
             id: "memory2".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory2).await.unwrap();
 
         let memory3 = Memory {
             id: "memory3".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory3).await.unwrap();
 
         // Test timestamp filtering
         let gte_query = TextQuery {
-            field: MemoryField::CreatedTimestamp as i32,
+            field: MemoryField::EventTimestamp as i32,
             match_type: MatchType::Gte as i32,
             value: Some(text_query::Value::TimestampVal(prost_types::Timestamp {
                 seconds: 200,
@@ -404,20 +407,58 @@ async fn test_memory_expiration() {
     assert!(client2.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
 }
 
-fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
-    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => {
-            let seconds = duration.as_secs() as i64;
-            let nanos = duration.subsec_nanos() as i32;
-            (seconds, nanos)
-        }
-        Err(e) => {
-            let duration = e.duration();
-            let seconds = -(duration.as_secs() as i64);
-            let nanos = -(duration.subsec_nanos() as i32);
-            (seconds, nanos)
-        }
-    };
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
+    let mock_time = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(987654321);
+    let mock_clock = Arc::new(MockClock::new(mock_time));
 
-    prost_types::Timestamp { seconds, nanos }
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server_with_clock(Some(mock_clock.clone())).await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memory_sets_correct_created_timestamp_user";
+    let format = SerializationFormat::BinaryProto;
+
+    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    let memory = Memory { id: "memory_without_timestamp".to_string(), ..Default::default() };
+    let add_memory_response = client.add_memory(memory).await.unwrap();
+    let memory_id = add_memory_response.id;
+
+    let get_memory_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
+    assert!(get_memory_response.success);
+    let retrieved_memory = get_memory_response.memory.unwrap();
+    assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_overwrites_user_created_timestamp() {
+    let mock_time = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(111222333);
+    let mock_clock = Arc::new(MockClock::new(mock_time));
+
+    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
+        start_server_with_clock(Some(mock_clock.clone())).await.unwrap();
+    let url = format!("http://{}", addr);
+    let pm_uid = "test_add_memory_overwrites_user_created_timestamp_user";
+    let format = SerializationFormat::BinaryProto;
+
+    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+        .await
+        .unwrap();
+
+    let user_timestamp = prost_types::Timestamp { seconds: 123456789, nanos: 0 };
+    let memory = Memory {
+        id: "memory_with_timestamp".to_string(),
+        created_timestamp: Some(user_timestamp),
+        ..Default::default()
+    };
+    let add_memory_response = client.add_memory(memory).await.unwrap();
+    let memory_id = add_memory_response.id;
+
+    let get_memory_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
+    assert!(get_memory_response.success);
+    let retrieved_memory = get_memory_response.memory.unwrap();
+    assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
+    assert_ne!(retrieved_memory.created_timestamp, Some(user_timestamp));
 }

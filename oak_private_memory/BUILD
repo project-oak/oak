@@ -175,6 +175,7 @@ rust_binary(
     deps = [
         ":attestation",
         ":private_memory_server_lib",
+        "//database",
         "@oak//oak_sdk/containers:oak_sdk_containers",
         "@oak//oak_session",
         "@oak_crates_index//:anyhow",
@@ -201,6 +202,7 @@ rust_library(
         ":attestation_testing",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
+        "//database",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:prost-types",
@@ -217,6 +219,7 @@ rust_test(
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         ":private_memory_test_utils",
+        "//database",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_client",

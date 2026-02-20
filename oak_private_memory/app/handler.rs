@@ -21,6 +21,7 @@ use log::{debug, info, warn};
 use metrics::{RequestMetricName, get_global_metrics};
 use oak_private_memory_database::{
     IcingTempDir, MemoryId,
+    clock::Clock,
     database_with_cache::DatabaseWithCache,
     encryption::decrypt_database,
     icing::{IcingMetaDatabase, PageToken},
@@ -46,6 +47,7 @@ pub struct SealedMemorySessionHandler {
     db_client: Arc<SharedDbClient>,
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
+    clock: Arc<dyn Clock>,
 }
 
 impl Drop for SealedMemorySessionHandler {
@@ -64,8 +66,9 @@ impl SealedMemorySessionHandler {
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
-        Self { session_context: Default::default(), db_client, metrics, persistence_tx }
+        Self { session_context: Default::default(), db_client, metrics, persistence_tx, clock }
     }
 
     pub async fn session_context(&self) -> MutexGuard<'_, Option<UserSessionContext>> {
@@ -226,7 +229,8 @@ impl SealedMemorySessionHandler {
             db_client.clone(),
             key_derivation_info,
             initial_size,
-        );
+        )
+        .with_clock(self.clock.clone());
 
         *mutex_guard = Some(UserSessionContext {
             dek,

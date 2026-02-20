@@ -18,6 +18,7 @@ use std::{pin::Pin, sync::Arc};
 use anyhow::anyhow;
 use log::debug;
 use metrics::RequestMetricName;
+use oak_private_memory_database::clock::Clock;
 use oak_proto_rust::oak::session::v1::{SessionRequest, SessionResponse};
 use oak_session::{
     ServerSession, Session,
@@ -43,6 +44,7 @@ struct SealedMemoryServiceImplementation {
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     db_client: Arc<SharedDbClient>,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    clock: Arc<dyn Clock>,
 }
 
 impl SealedMemoryServiceImplementation {
@@ -51,12 +53,14 @@ impl SealedMemoryServiceImplementation {
         metrics: Arc<metrics::Metrics>,
         persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
         session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             metrics,
             persistence_tx,
             db_client: Arc::new(SharedDbClient::new(application_config.database_service_host)),
             session_config_factory,
+            clock,
         }
     }
 
@@ -66,6 +70,7 @@ impl SealedMemoryServiceImplementation {
             &self.persistence_tx,
             self.db_client.clone(),
             (self.session_config_factory)(),
+            self.clock.clone(),
         )
     }
 }
@@ -86,6 +91,7 @@ impl OakSessionHandler {
         persistence_tx: &mpsc::UnboundedSender<UserSessionContext>,
         db_client: Arc<SharedDbClient>,
         session_config: SessionConfig,
+        clock: Arc<dyn Clock>,
     ) -> tonic::Result<Self> {
         Ok(Self {
             metrics: metrics.clone(),
@@ -95,6 +101,7 @@ impl OakSessionHandler {
                 metrics.clone(),
                 persistence_tx.clone(),
                 db_client,
+                clock,
             ),
         })
     }
@@ -234,6 +241,7 @@ pub async fn create(
     metrics: Arc<metrics::Metrics>,
     persistence_tx: mpsc::UnboundedSender<UserSessionContext>,
     session_config_factory: Arc<dyn Fn() -> SessionConfig + Send + Sync>,
+    clock: Arc<dyn Clock>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(
@@ -242,6 +250,7 @@ pub async fn create(
                 metrics,
                 persistence_tx,
                 session_config_factory,
+                clock,
             ))
             .max_decoding_message_size(crate::db_client::MAX_DECODE_SIZE),
         )

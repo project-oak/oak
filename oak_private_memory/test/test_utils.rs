@@ -15,10 +15,12 @@
 //
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::{Arc, Mutex},
     time::SystemTime,
 };
 
 use anyhow::Result;
+pub use oak_private_memory_database::clock::{Clock, SystemClock, system_time_to_timestamp};
 use private_memory_server_lib::{
     app,
     app::{ApplicationConfig, run_persistence_service},
@@ -30,6 +32,17 @@ fn init_logging() {
 }
 
 pub async fn start_server() -> Result<(
+    SocketAddr,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<Result<()>>,
+    tokio::task::JoinHandle<()>,
+)> {
+    start_server_with_clock(None).await
+}
+
+pub async fn start_server_with_clock(
+    clock: Option<Arc<dyn Clock>>,
+) -> Result<(
     SocketAddr,
     tokio::task::JoinHandle<Result<()>>,
     tokio::task::JoinHandle<Result<()>>,
@@ -49,6 +62,9 @@ pub async fn start_server() -> Result<(
     let metrics = private_memory_server_lib::metrics::get_global_metrics();
     let (persistence_tx, persistence_rx) = tokio::sync::mpsc::unbounded_channel();
     let persistence_join_handle = tokio::spawn(run_persistence_service(persistence_rx));
+
+    let clock = clock.unwrap_or_else(|| Arc::new(SystemClock));
+
     Ok((
         addr,
         tokio::spawn(app::service::create(
@@ -57,26 +73,32 @@ pub async fn start_server() -> Result<(
             metrics,
             persistence_tx,
             std::sync::Arc::new(attestation_testing::dummy_server_session_config),
+            clock,
         )),
         tokio::spawn(private_memory_test_database_server_lib::service::create(db_listener)),
         persistence_join_handle,
     ))
 }
 
-pub fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
-    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => {
-            let seconds = duration.as_secs() as i64;
-            let nanos = duration.subsec_nanos() as i32;
-            (seconds, nanos)
-        }
-        Err(e) => {
-            let duration = e.duration();
-            let seconds = -(duration.as_secs() as i64);
-            let nanos = -(duration.subsec_nanos() as i32);
-            (seconds, nanos)
-        }
-    };
+/// A clock for testing that returns a fixed time.
+pub struct MockClock {
+    pub time: Arc<Mutex<SystemTime>>,
+}
 
-    prost_types::Timestamp { seconds, nanos }
+impl MockClock {
+    pub fn new(time: SystemTime) -> Self {
+        Self { time: Arc::new(Mutex::new(time)) }
+    }
+
+    pub fn set_time(&self, time: SystemTime) {
+        let mut guard = self.time.lock().unwrap();
+        *guard = time;
+    }
+}
+
+impl Clock for MockClock {
+    fn now(&self) -> SystemTime {
+        let guard = self.time.lock().unwrap();
+        *guard
+    }
 }

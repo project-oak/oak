@@ -28,7 +28,7 @@ use sealed_memory_rust_proto::{
     prelude::v1::*,
 };
 
-use crate::{MemoryId, ViewId};
+use crate::{MemoryId, ViewId, clock::system_time_to_timestamp};
 
 fn timestamp_to_i64(timestamp: &prost_types::Timestamp) -> i64 {
     timestamp.seconds * 1_000_000_000 + (timestamp.nanos as i64)
@@ -1425,24 +1425,6 @@ fn build_non_expired_query_str(property_name: &str, property_val: &str) -> Strin
     } else {
         format!("({}:{}) AND ({})", property_name, property_val, expiration_clause)
     }
-}
-
-fn system_time_to_timestamp(system_time: SystemTime) -> prost_types::Timestamp {
-    let (seconds, nanos) = match system_time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(duration) => {
-            let seconds = duration.as_secs() as i64;
-            let nanos = duration.subsec_nanos() as i32;
-            (seconds, nanos)
-        }
-        Err(e) => {
-            let duration = e.duration();
-            let seconds = -(duration.as_secs() as i64);
-            let nanos = -(duration.subsec_nanos() as i32);
-            (seconds, nanos)
-        }
-    };
-
-    prost_types::Timestamp { seconds, nanos }
 }
 
 #[derive(Debug, PartialEq, Eq)]

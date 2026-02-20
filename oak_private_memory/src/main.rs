@@ -84,6 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         metrics,
         persistence_tx,
         session_config_factory,
+        std::sync::Arc::new(oak_private_memory_database::clock::SystemClock),
     ));
     orchestrator_client.notify_app_ready().await.context("failed to notify that app is ready")?;
     debug!("Private memory is now serving!");

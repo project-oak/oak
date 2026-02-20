@@ -14,12 +14,14 @@
 // limitations under the License.
 #![feature(negative_impls)]
 
+pub mod clock;
 pub mod database_with_cache;
 pub mod encryption;
 pub mod icing;
 pub mod memory_cache;
 
 pub use crate::{
+    clock::{Clock, SystemClock, system_time_to_timestamp},
     database_with_cache::DatabaseWithCache,
     icing::{
         IcingMetaDatabase, IcingTempDir, PageToken, PendingLlmViewMetadata, PendingMetadata,

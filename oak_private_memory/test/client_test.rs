@@ -232,34 +232,35 @@ async fn test_client_text_query() {
 
         let memory1 = Memory {
             id: "memory1".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 100, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory1).await.unwrap();
 
         let memory2 = Memory {
             id: "memory2".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 200, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory2).await.unwrap();
 
         let memory3 = Memory {
             id: "memory3".to_string(),
-            created_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
+            event_timestamp: Some(prost_types::Timestamp { seconds: 300, nanos: 0 }),
             ..Default::default()
         };
         client.add_memory(memory3).await.unwrap();
 
         // Test timestamp filtering
         let gte_query = TextQuery {
-            field: MemoryField::CreatedTimestamp as i32,
+            field: MemoryField::EventTimestamp as i32,
             match_type: MatchType::Gte as i32,
             value: Some(text_query::Value::TimestampVal(prost_types::Timestamp {
                 seconds: 200,
                 nanos: 0,
             })),
         };
+
         let query = SearchMemoryQuery {
             clause: Some(
                 sealed_memory_rust_proto::oak::private_memory::search_memory_query::Clause::TextQuery(
