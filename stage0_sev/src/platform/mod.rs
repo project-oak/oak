@@ -19,6 +19,9 @@ mod dice_attestation;
 mod mmio;
 mod smp;
 
+#[cfg(feature = "sev_kernel_hashes")]
+mod kernel_hash_tables;
+
 use alloc::boxed::Box;
 use core::{arch::x86_64::CpuidResult, mem::MaybeUninit};
 
@@ -48,6 +51,10 @@ static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::un
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".ap_bss")]
 pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
+#[cfg(feature = "sev_kernel_hashes")]
+#[link_section = ".snp_hash_table"]
+#[no_mangle]
+static mut SEV_HASH_TABLE: MaybeUninit<kernel_hash_tables::PaddedSevHashTable> = MaybeUninit::uninit();
 
 static GHCB_WRAPPER: Ghcb = Ghcb::new();
 
@@ -350,5 +357,27 @@ impl Platform for Sev {
 
     fn wbvind() {
         Base::wbvind()
+    }
+
+    #[cfg(feature = "sev_kernel_hashes")]
+    fn validate_measured_boot(
+       cmdline: &[u8], initrd_digest: &[u8], kernel_setup_data: &[u8], kernel_bytes: &[u8]
+    ) -> bool {
+        log::debug!("validating measured boot primitives");
+        // This address is well-defined by UEFI:
+        // https://github.com/tianocore/edk2/blob/f98662c5e35b6ab60f46ee4350fa0e6eab0497cf/OvmfPkg/ResetVector/X64/OvmfSevMetadata.asm#L88-L91
+        let sev_hash_table = 0x10c00 as *mut kernel_hash_tables::PaddedSevHashTable;
+        let sev_hash_table = unsafe { &mut *sev_hash_table };
+        let res = kernel_hash_tables::validate_hash_table(&sev_hash_table, cmdline, initrd_digest, kernel_setup_data, kernel_bytes);
+        log::debug!("validated measured boot primitives");
+        res
+    }
+
+    #[cfg(not(feature = "sev_kernel_hashes"))]
+    fn validate_measured_boot(
+       _cmdline: &[u8], _initrd_digest: &[u8], _kernel_setup_data: &[u8], _kernel_bytes: &[u8]
+    ) -> bool {
+        log::debug!("sev_kernel_hashes is not compiled, skipping");
+        true
     }
 }
