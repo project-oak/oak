@@ -136,6 +136,27 @@ rust_library(
 )
 
 rust_library(
+    name = "session_binder",
+    srcs = ["src/session_binder.rs"],
+    proc_macro_deps = [
+        "@oak_crates_index//:async-trait",
+    ],
+    deps = [
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_proto_rust",
+        "@oak//oak_proto_rust/grpc",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:p256",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:rand",
+        "@oak_crates_index//:rand_core",
+        "@oak_crates_index//:serde",
+        "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_library(
     name = "private_memory_server_lib",
     srcs = [
         "src/lib.rs",
@@ -145,6 +166,7 @@ rust_library(
         ":external_db_client",
         ":log",
         ":metrics",
+        ":session_binder",
         "//app",
         "//database",
     ],
@@ -252,6 +274,20 @@ rust_library(
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
+    ],
+)
+
+rust_test(
+    name = "session_binder_test",
+    srcs = ["test/session_binder_test.rs"],
+    proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    deps = [
+        ":private_memory_server_lib",
+        "//proto:sealed_memory_rust_proto",
+        "@oak//oak_session",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tokio",
     ],
 )
 

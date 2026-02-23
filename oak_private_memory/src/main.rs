@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
@@ -38,6 +35,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut orchestrator_client = OrchestratorClient::create(&orchestrator_channel);
 
+    let session_binder =
+        private_memory_server_lib::session_binder::OrchestratorSessionBinder::create_from_channel(
+            &orchestrator_channel,
+        )
+        .await
+        .context("failed to create session binder")?;
+
     let application_config_bytes = orchestrator_client
         .get_application_config()
         .await
@@ -47,29 +51,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::from_slice(application_config_bytes.as_slice())
             .expect("Invalid application config");
 
-    // Prefetch endorsed evidence (DICE chain) once at startup and share via Arc.
+    // Prefetch endorsed evidence (DICE chain) once at startup.
     let endorsed_evidence = orchestrator_client
         .get_endorsed_evidence()
         .await
         .context("failed to get endorsed evidence")?;
-    let evidence = Arc::new(endorsed_evidence.evidence.context("missing evidence")?);
-    let endorsements = Arc::new(endorsed_evidence.endorsements.context("missing endorsements")?);
 
-    // Each new session gets cheap Arc clones of the prefetched
-    // evidence/endorsements.
-    let session_config_factory = {
-        let evidence = evidence.clone();
-        let endorsements = endorsements.clone();
-        Arc::new(move || {
-            attestation::orchestrator_session_config(
-                evidence.clone(),
-                endorsements.clone(),
-                // TODO: b/397193509 - Replace with real InstanceSessionBinder
-                // once we create our own indirect binder.
-                Box::new(attestation::NoOpSessionBinder),
-            )
-        })
-    };
+    let evidence = endorsed_evidence.evidence.context("missing evidence")?;
+    let endorsements = endorsed_evidence.endorsements.context("missing endorsements")?;
+
+    let session_config_factory = attestation::create_orchestrator_session_config_factory(
+        evidence,
+        endorsements,
+        session_binder,
+    );
 
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), ENCLAVE_APP_PORT);
     let listener = TcpListener::bind(addr).await?;

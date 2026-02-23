@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! # Future Work
-//!
-//! - TODO: b/486216666 - Replace `NoOpSessionBinder` with real
-//!   `InstanceSessionBinder` once we create our own indirect binder.
+//! Production attestation configuration.
 
 use std::sync::Arc;
 
@@ -31,21 +28,37 @@ const ATTESTATION_ID: &str = "oak-private-memory";
 
 /// Creates a server-side `SessionConfig` using real DICE chain evidence from
 /// the Oak orchestrator.
-/// TODO: b/486216666 - Should be `InstanceSessionBinder` once we create our
-/// own indirect binder. Currently a `NoOpSessionBinder` is passed.
 pub fn orchestrator_session_config(
-    evidence: Arc<Evidence>,
-    endorsements: Arc<Endorsements>,
-    session_binder: Box<dyn SessionBinder>,
+    attester: Arc<dyn Attester>,
+    endorser: Arc<dyn Endorser>,
+    session_binder: Arc<dyn SessionBinder>,
 ) -> SessionConfig {
     let assertion_generator = Box::new(EndorsedEvidenceBindableAssertionGenerator::new(
-        Arc::new(PrebuiltAttester { evidence }),
-        Arc::new(PrebuiltEndorser { endorsements }),
-        Arc::from(session_binder),
+        attester,
+        endorser,
+        session_binder,
     ));
     SessionConfig::builder(AttestationType::SelfUnidirectional, HandshakeType::NoiseNN)
         .add_self_assertion_generator(ATTESTATION_ID.to_string(), assertion_generator)
         .build()
+}
+
+/// Creates a factory that produces server-side `SessionConfig`s.
+///
+/// This helper takes ownership of the evidence, endorsements, and session
+/// binder, wraps them in `Arc`s, and returns a factory closure.
+pub fn create_orchestrator_session_config_factory(
+    evidence: Evidence,
+    endorsements: Endorsements,
+    session_binder: impl SessionBinder + 'static,
+) -> Arc<dyn Fn() -> SessionConfig + Send + Sync> {
+    let attester: Arc<dyn Attester> = Arc::new(PrebuiltAttester { evidence: Arc::new(evidence) });
+    let endorser: Arc<dyn Endorser> =
+        Arc::new(PrebuiltEndorser { endorsements: Arc::new(endorsements) });
+    let session_binder: Arc<dyn SessionBinder> = Arc::new(session_binder);
+    Arc::new(move || {
+        orchestrator_session_config(attester.clone(), endorser.clone(), session_binder.clone())
+    })
 }
 
 /// An [`Attester`] that returns pre-fetched [`Evidence`].
@@ -77,17 +90,5 @@ struct PrebuiltEndorser {
 impl Endorser for PrebuiltEndorser {
     fn endorse(&self, _evidence: Option<&Evidence>) -> anyhow::Result<Endorsements> {
         Ok((*self.endorsements).clone())
-    }
-}
-
-/// A no-op [`SessionBinder`] that returns an empty binding.
-///
-/// TODO: b/486216666 - Replace with real `InstanceSessionBinder` once we
-/// create our own indirect binder.
-pub struct NoOpSessionBinder;
-
-impl SessionBinder for NoOpSessionBinder {
-    fn bind(&self, _bound_data: &[u8]) -> Vec<u8> {
-        Vec::new()
     }
 }
