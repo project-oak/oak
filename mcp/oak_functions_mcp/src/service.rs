@@ -40,7 +40,6 @@ use rmcp::{
     service::RequestContext,
     tool_handler,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call.";
@@ -73,11 +72,6 @@ impl Default for ToolConfig {
             }),
         }
     }
-}
-
-#[derive(Serialize, Deserialize)]
-struct OakFunctionsMcpResponse {
-    value: String,
 }
 
 pub struct OakFunctionsMcpService<H: Handler> {
@@ -139,33 +133,28 @@ where
         // Extract the key from the request arguments
         // TODO: b/469747147 - Here we fetch the contents of 'key' but this should be
         // handled by the Wasm module in the future.
-        let key = ctx
+        let request_args = ctx
             .arguments
             .as_ref()
-            .and_then(|args| args.get("key"))
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| ErrorData::invalid_params("Missing required parameter: key", None))?
-            .to_string();
+            .ok_or_else(|| ErrorData::invalid_params("Missing Invoke request", None))?;
+        let wasm_request = serde_json::to_vec(request_args).map_err(|e| {
+            ErrorData::internal_error(format!("Failed to serialize request arguments: {e}"), None)
+        })?;
 
         let guard = instance.get();
         if let Some(oak_instance) = guard.as_ref() {
-            let response =
-                oak_instance.handle_user_request(key.as_bytes().to_vec()).map_err(|e| {
-                    ErrorData::internal_error(
-                        format!("Invoke failed with microRpc status: {e:?}"),
-                        None,
-                    )
-                })?;
-            // TODO: b/469747147 - Response should be generic JSON which is specified by the
-            // tool schema.
-            let result = OakFunctionsMcpResponse {
-                value: String::from_utf8(response).map_err(|e| {
-                    ErrorData::internal_error(
-                        format!("unable to convert response to string: {e}"),
-                        None,
-                    )
-                })?,
-            };
+            let response_bytes = oak_instance.handle_user_request(wasm_request).map_err(|e| {
+                ErrorData::internal_error(
+                    format!("Invoke failed with microRpc status: {e:?}"),
+                    None,
+                )
+            })?;
+            let response_str = String::from_utf8(response_bytes).map_err(|e| {
+                ErrorData::internal_error(format!("Response is not valid UTF-8: {e}"), None)
+            })?;
+            let result: Value = serde_json::from_str(&response_str).map_err(|e| {
+                ErrorData::internal_error(format!("Failed to parse response as JSON: {e}"), None)
+            })?;
             let content = Content::json(result).map_err(|e| {
                 ErrorData::internal_error(format!("JSON serialization failed: {e}"), None)
             })?;

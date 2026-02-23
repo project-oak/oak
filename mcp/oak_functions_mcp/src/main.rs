@@ -33,7 +33,7 @@ pub struct Args {
     #[arg(
         long,
         help = "The URI for fetching the wasm logic",
-        default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/wasm/key_value_lookup.wasm"
+        default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/wasm/key_value_lookup_with_json.wasm"
     )]
     wasm_uri: String,
     #[arg(
