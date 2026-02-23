@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Feeds oak_lint_runner with files changed since a base commit.
+# Detects jj or git and uses the appropriate command.
+#
+# Usage: format_changed [BASE]   (default: main)
+
+set -o nounset
+set -o errexit
+set -o pipefail
+
+# --- Build oak_lint_runner via Bazel ---
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RUNNER_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Build once; bazel caches so subsequent runs are near-instant.
+(cd "${RUNNER_DIR}" && bazel build //:oak_lint_runner 1>/dev/null)
+RUNNER_BIN="${RUNNER_DIR}/bazel-bin/oak_lint_runner"
+
+# --- Build file list (try jj, then git) ---
+
+readonly BASE="${1:-main}"
+
+files=$(jj diff --name-only --from "${BASE}" 2>/dev/null) \
+  || files=$(git diff --name-only --diff-filter=d "${BASE}") \
+  || {
+    echo "Error: not in a jj or git repository." >&2
+    exit 1
+  }
+
+# Filter to files that still exist on disk (handles deletions).
+existing=$(echo "${files}" | while IFS= read -r f; do
+  [[ -n ${f} && -e ${f} ]] && echo "${f}"
+done) || true
+
+if [[ -z ${existing} ]]; then
+  echo "No files to check."
+  exit 0
+fi
+
+echo "${existing}" | "${RUNNER_BIN}"

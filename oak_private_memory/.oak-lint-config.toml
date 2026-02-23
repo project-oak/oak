@@ -1,0 +1,84 @@
+exclude = "third_party/"
+
+# The tools here are using tools that we have pre-installed using flake.nix, or
+# they are scripts in our scripts/ directory.
+
+[tools.badtodo]
+name = "Bad TODOs"
+exclude = ".oak-lint-config.toml|validate_todos"
+entry = "./scripts/lint/validate_todos"
+types = [
+  "rust", "cpp", "protobuf", "java", "yaml", "html", "javascript",
+  "typescript", "css", "scss", "dockerfile", "kotlin", "markdown", "bash"
+]
+
+[tools.bazellic]
+name = "Add notice license to all bazel packages"
+entry = "./scripts/lint/add_bazel_license"
+files = "BUILD"
+
+[tools.buildifier]
+name = "buildifier (Bazel BUILD and .bzl files)"
+entry = "buildifier"
+exclude = "\\.bazelrc$"
+types = ["bazel", "bzl", "starlark"]
+
+[tools.bzllock]
+name = "Make sure MODULE.bazel.lock files are fully up to date"
+entry = "./scripts/lint/bazel_mod_deps"
+files = "MODULE.bazel$"
+
+[tools.clang-format]
+name = "clang-format (C/C++, Java, Proto)"
+entry = "clang-format -i"
+types = ["cpp", "protobuf", "java", "c"]
+
+[tools.hadolint]
+name = "hadolint (Dockerfiles)"
+entry = "hadolint"
+types = ["dockerfile"]
+
+[tools.ktfmt]
+name = "ktfmt (Kotlin)"
+entry = "ktfmt -F --google-style"
+types = ["kotlin"]
+
+[tools.markdownlint]
+name = "apply markdownlint for markdown files"
+entry = "markdownlint --fix"
+types = ["markdown"]
+
+[tools.nix]
+name = "nixfmt (Nix)"
+entry = "nix fmt"
+types = ["nix"]
+
+[tools.pyink]
+name = "Pyink (Python)"
+entry = "pyink"
+types = ["python"]
+
+[tools.rustfmt]
+name = "rustfmt (Rust)"
+entry = "rustfmt"
+types = ["rust"]
+
+[tools.sourcelic]
+name = "Add Apache License to source files"
+entry = "./scripts/lint/add_source_license"
+exclude = "oak_proto_rust/generated|cc/crypto/hpke/jni"
+types = [
+  "rust", "cpp", "protobuf", "java", "html", "javascript",
+  "typescript", "css", "scss", "kotlin", "c"
+]
+
+[tools.terraform]
+name = "terraform fmt"
+entry = "terraform fmt --write=true"
+types = ["hcl"]
+
+# Use this for debugging to make sure that expected files are covered.
+[tools.id]
+name = "id"
+entry = "echo"
+files = "MODULE.bazel$"

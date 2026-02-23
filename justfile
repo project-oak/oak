@@ -53,12 +53,12 @@ the changed files. If neither is detected, it falls back to formatting all
 files in the project.
 """)]
 format base="main":
-    ./scripts/format_changed_files {{base}}
+    ./tools/lint-runner/scripts/format_changed {{base}}
 
 
-[doc("Format all files in the repository using pre-commit.")]
+[doc("Format all files in the repository.")]
 format-all:
-    time pre-commit run --all-files
+    ./tools/lint-runner/scripts/format_all
 
 verify-bazelisk:
     rm -r ~/.cache/bazelisk
@@ -220,7 +220,12 @@ bazel-lockfile-private-memory:
 bazel-lockfile-containers-sysroot:
     bazel mod deps
 
-bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory bazel-lockfile-containers-sysroot
+# Update oak containers sysroot's bazel lockfile
+[working-directory: 'tools/lint-runner']
+bazel-lockfile-lint-runner:
+    bazel mod deps
+
+bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory bazel-lockfile-containers-sysroot bazel-lockfile-lint-runner
 
 ####################
 # ARTIFACT COPYING #

@@ -44,11 +44,11 @@ trap 'rm -rf -- "${BUNDLE_DIR}"' EXIT
     with(.mounts ; .[] | select(.options != null) | .options |= sort)
     ' "${BUNDLE_DIR}/config.json"
 
-if [[ -n "${CONFIG_PATCH}" ]]; then
+if [[ -n ${CONFIG_PATCH} ]]; then
   "${YQ}" -i -o=json "${CONFIG_PATCH}" "${BUNDLE_DIR}/config.json"
 fi
 
 # Pack the runtime bundle into a (reproducible) tar, excluding unnecessary files
 # added by umoci.
 tar --create --sort=name --mtime="2000-01-01Z" --owner=0 --group=0 --numeric-owner \
-    --file="$2" --directory="${BUNDLE_DIR}" --exclude=./umoci.json --exclude='./sha256_*.mtree' .
+  --file="$2" --directory="${BUNDLE_DIR}" --exclude=./umoci.json --exclude='./sha256_*.mtree' .
