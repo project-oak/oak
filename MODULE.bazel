@@ -287,7 +287,7 @@ http_file(
     url = "https://storage.googleapis.com/oak-bins/binary/{}/stage0_bin_tdx/binary".format(STAGE0_BIN_TDX_COMMIT),
 )
 
-BASE_IMAGE_SHA256 = "53e97815e12725b73a6bcf98ef0498c681843e0fbaed4449b48d6a247750f77a"
+BASE_IMAGE_SHA256 = "6d118b6ab663c3a4afd2f109d2cab75f17469eca99808b9090d56ae0df05cf9c"
 
 http_file(
     name = "oak_containers_system_image_base",

@@ -6,5 +6,8 @@
 #     between them
 # at the cost of
 # (c) making the VMMs use these predictable MAC addresses.
+[Match]
+OriginalName=*
+
 [Link]
 NamePolicy=mac

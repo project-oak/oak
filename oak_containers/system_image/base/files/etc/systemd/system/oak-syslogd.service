@@ -15,6 +15,7 @@ ProtectSystem=strict
 # is no point in it writing to the log as the log will never be exported.
 StandardOutput=tty
 StandardError=tty
+PassEnvironment=LAUNCHER_ADDR
 
 [Install]
 WantedBy=multi-user.target

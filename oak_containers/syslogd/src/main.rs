@@ -70,9 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     otel_logging::init();
 
     let term = Arc::new(OnceCell::new());
-    let launcher_client = LauncherClient::create(args.launcher_addr)
-        .await
-        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client =
+        LauncherClient::create(args.launcher_addr.clone()).await.map_err(|error| {
+            anyhow!("couldn't create client with addr {}: {:?}", args.launcher_addr, error)
+        })?;
 
     let signals = Signals::new([SIGTERM])?;
     let handle = signals.handle();

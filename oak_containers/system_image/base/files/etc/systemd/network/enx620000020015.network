@@ -1,5 +1,5 @@
 [Match]
-MACAddress=62:01:0a:00:02:0f
+MACAddress=62:00:00:02:00:15
 
 [Network]
 Address=FDD2:A994:F3C5:1:10:0:2:15/64
