@@ -122,7 +122,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 #[derive(Clone)]
 pub enum Channel {
     Network { host_proxy_port: u16, trusted_app_address: Option<SocketAddr> },
-    Tap { guest_address: IpAddr },
+    Tap { host_address: IpAddr, guest_address: IpAddr },
     VirtioVsock { trusted_app_address: Option<VsockAddr> },
 }
 
@@ -140,7 +140,7 @@ impl TryFrom<Channel> for TrustedApplicationAddress {
             Channel::Network { host_proxy_port: _, trusted_app_address } => {
                 trusted_app_address.map(TrustedApplicationAddress::Network)
             }
-            Channel::Tap { guest_address } => Some(TrustedApplicationAddress::Network(
+            Channel::Tap { guest_address, .. } => Some(TrustedApplicationAddress::Network(
                 SocketAddr::new(guest_address, VM_LOCAL_PORT),
             )),
             Channel::VirtioVsock { trusted_app_address } => {
@@ -224,8 +224,12 @@ impl Launcher {
                 let host_proxy_port = TcpListener::bind(sockaddr).await?.local_addr()?.port();
                 Channel::Network { host_proxy_port, trusted_app_address: None }
             }
-            ChannelType::Tap => Channel::Tap { guest_address: VM_LOCAL_ADDRESS },
-            ChannelType::TapV6 => Channel::Tap { guest_address: VM_LOCAL_ADDRESS_6 },
+            ChannelType::Tap => {
+                Channel::Tap { host_address: VM_HOST_ADDRESS, guest_address: VM_LOCAL_ADDRESS }
+            }
+            ChannelType::TapV6 => {
+                Channel::Tap { host_address: VM_HOST_ADDRESS_6, guest_address: VM_LOCAL_ADDRESS_6 }
+            }
             ChannelType::VirtioVsock => Channel::VirtioVsock { trusted_app_address: None },
         };
 
@@ -241,7 +245,9 @@ impl Launcher {
                         host_orchestrator_proxy_port,
                     }
                 }
-                Channel::Tap { guest_address } => qemu::Network::Tap { guest_address },
+                Channel::Tap { host_address, guest_address } => {
+                    qemu::Network::Tap { host_address, guest_address }
+                }
                 Channel::VirtioVsock { trusted_app_address: _ } => qemu::Network::Proxy {
                     launcher_service_port: port,
                     host_proxy_port: None,

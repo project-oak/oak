@@ -16,7 +16,7 @@
 
 use std::{
     io::{BufRead, BufReader},
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
@@ -26,7 +26,6 @@ use anyhow::Result;
 use clap::Parser;
 use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
-use tokio_vsock::VMADDR_CID_HOST;
 
 use crate::{VM_HOST_ADDRESS, VM_HOST_PORT, path_exists};
 
@@ -94,6 +93,7 @@ pub enum Network {
 
     // Set up TAP networking.
     Tap {
+        host_address: IpAddr,
         guest_address: IpAddr,
     },
 }
@@ -101,8 +101,16 @@ pub enum Network {
 impl Network {
     fn launcher_port(&self) -> u16 {
         match self {
-            Network::Proxy { launcher_service_port, .. } => *launcher_service_port,
+            Network::Proxy { .. } => VM_HOST_PORT,
             Network::Tap { .. } => VM_HOST_PORT,
+        }
+    }
+
+    /// Returns the address assigned to the host.
+    fn host_address(&self) -> IpAddr {
+        match self {
+            Network::Proxy { .. } => crate::VM_HOST_ADDRESS,
+            Network::Tap { host_address, .. } => *host_address,
         }
     }
 
@@ -110,7 +118,7 @@ impl Network {
     fn guest_address(&self) -> IpAddr {
         match self {
             Network::Proxy { .. } => crate::VM_LOCAL_ADDRESS,
-            Network::Tap { guest_address } => *guest_address,
+            Network::Tap { guest_address, .. } => *guest_address,
         }
     }
 
@@ -316,7 +324,10 @@ impl Qemu {
             "loglevel=7".to_string(),
             "--".to_string(),
             format!("--eth0-address={}", network.guest_eth0_address()),
-            format!("--launcher-addr=vsock://{VMADDR_CID_HOST}:{}", network.launcher_port()),
+            format!(
+                "--launcher-addr=http://{}",
+                SocketAddr::new(network.host_address(), network.launcher_port())
+            ),
         ];
 
         cmd.args(["-append", cmdline.join(" ").as_str()]);
