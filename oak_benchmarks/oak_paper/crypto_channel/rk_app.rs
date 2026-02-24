@@ -19,37 +19,12 @@
 #![feature(alloc_error_handler)]
 
 extern crate alloc;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 
 use log::error;
-use message_stream::{MessageStream, NoiseMessageStream};
-use oak_channel::{message::ResponseMessage, server::ServerChannelHandle};
+use message_stream::{MessageStream, NoiseMessageStream, OakServerChannelMessageStream};
+use oak_channel::server::ServerChannelHandle;
 use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
-
-pub struct OakServerChannelMessageStream {
-    oak_server_channel: ServerChannelHandle,
-}
-
-impl OakServerChannelMessageStream {
-    pub fn new(oak_server_channel: ServerChannelHandle) -> Self {
-        OakServerChannelMessageStream { oak_server_channel }
-    }
-}
-// Even though Channel implements Read + Write, the returned `Box<dyn Channel>`
-// does not satisfy the required trait boundaries above. I am not quite sure
-// why, or if this is even addressable.
-impl MessageStream for OakServerChannelMessageStream {
-    fn read_message(&mut self) -> Vec<u8> {
-        let (msg, _timer) = self.oak_server_channel.read_request().expect("failed to read message");
-        msg.body
-    }
-
-    fn send_message(&mut self, msg: &[u8]) {
-        self.oak_server_channel
-            .write_response(ResponseMessage { invocation_id: 0, body: msg.to_vec() })
-            .expect("failed to read message");
-    }
-}
 
 fn new_server_channel() -> OakServerChannelMessageStream {
     OakServerChannelMessageStream::new(ServerChannelHandle::new(

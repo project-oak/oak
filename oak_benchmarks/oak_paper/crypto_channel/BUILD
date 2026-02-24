@@ -43,6 +43,18 @@ rust_library(
     ],
 )
 
+rust_library(
+    name = "linux_server",
+    srcs = ["linux_server.rs"],
+    deps = [
+        ":message_stream_client",
+        "//oak_file_utils",
+        "@oak_crates_index//:rustls",
+        "@oak_crates_index//:rustls-pemfile",
+        "@oak_crates_index//:rustls-pki-types",
+    ],
+)
+
 rust_binary(
     name = "benchmark",
     srcs = [
@@ -50,8 +62,8 @@ rust_binary(
     ],
     crate_root = "benchmark.rs",
     data = [
-        ":enclave_app",
         ":generate_certs",
+        ":rk_app",
         "//enclave_apps/oak_orchestrator",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
@@ -61,7 +73,9 @@ rust_binary(
         "RUST_BACKTRACE": "1",
     },
     deps = [
+        ":linux_server",
         ":message_stream_client",
+        ":rk_launcher",
         "//oak_channel:oak_channel_client",
         "//oak_file_utils",
         "//oak_launcher_utils",
@@ -74,6 +88,34 @@ rust_binary(
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:which",
+    ],
+)
+
+rust_binary(
+    name = "crypto_channel_server",
+    srcs = [
+        "linux_main.rs",
+    ],
+    deps = [
+        ":linux_server",
+        ":message_stream_client",
+        "//oak_file_utils",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:rustls",
+        "@oak_crates_index//:rustls-pemfile",
+        "@oak_crates_index//:rustls-pki-types",
+    ],
+)
+
+rust_library(
+    name = "rk_launcher",
+    srcs = ["rk_launcher.rs"],
+    deps = [
+        ":message_stream_client",
+        "//oak_channel:oak_channel_client",
+        "//oak_file_utils",
+        "//oak_launcher_utils",
         "@oak_crates_index//:which",
     ],
 )
@@ -94,8 +136,8 @@ genrule(
 )
 
 rust_binary(
-    name = "enclave_app",
-    srcs = ["enclave_app.rs"],
+    name = "rk_app",
+    srcs = ["rk_app.rs"],
     platform = "//:x86_64-unknown-none",
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",

@@ -192,6 +192,10 @@ list-bare-metal-crates:
 rk-comms-benchmark:
     bazel run -c opt //oak_restricted_kernel_benchmark:basic_comms_bench -- --bench
 
+crypto-channel-benchmark:
+    bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+
+
 benchmarks: rk-comms-benchmark
 
 bazel-clippy: bare-metal-clippy std-clippy wasm-clippy

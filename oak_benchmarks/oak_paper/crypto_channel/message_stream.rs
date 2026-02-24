@@ -20,7 +20,7 @@ extern crate alloc;
 use alloc::{vec, vec::Vec};
 use core::default::Default;
 
-use oak_channel::{Read, Write};
+use oak_channel::{Read, Write, message::ResponseMessage, server::ServerChannelHandle};
 use oak_proto_rust::oak::session::v1::{PlaintextMessage, SessionRequest, SessionResponse};
 use oak_session::{ClientSession, ProtocolEngine, ServerSession, Session, config::SessionConfig};
 use prost::Message;
@@ -29,6 +29,29 @@ use prost::Message;
 pub trait MessageStream {
     fn send_message(&mut self, msg: &[u8]);
     fn read_message(&mut self) -> Vec<u8>;
+}
+
+pub struct OakServerChannelMessageStream {
+    oak_server_channel: ServerChannelHandle,
+}
+
+impl OakServerChannelMessageStream {
+    pub fn new(oak_server_channel: ServerChannelHandle) -> Self {
+        OakServerChannelMessageStream { oak_server_channel }
+    }
+}
+
+impl MessageStream for OakServerChannelMessageStream {
+    fn read_message(&mut self) -> Vec<u8> {
+        let (msg, _timer) = self.oak_server_channel.read_request().expect("failed to read message");
+        msg.body
+    }
+
+    fn send_message(&mut self, msg: &[u8]) {
+        self.oak_server_channel
+            .write_response(ResponseMessage { invocation_id: 0, body: msg.to_vec() })
+            .expect("failed to write message");
+    }
 }
 
 impl<T: Read + Write> MessageStream for T {

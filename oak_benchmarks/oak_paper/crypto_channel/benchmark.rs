@@ -19,141 +19,17 @@
 extern crate test;
 
 use std::{
-    cell::RefCell,
-    net::{SocketAddr, TcpListener, TcpStream},
-    rc::Rc,
-    sync::{Arc, Once},
-    thread::{self, JoinHandle},
+    net::{SocketAddr, TcpStream},
+    sync::Arc,
     time::{Duration, Instant},
 };
 
-static INIT_RUSTLS: Once = Once::new();
-
-fn init_rustls() {
-    INIT_RUSTLS.call_once(|| {
-        rustls::crypto::ring::default_provider()
-            .install_default()
-            .expect("failed to install rustls crypto provider");
-    });
-}
-
-use std::{fs::File, io::BufReader};
-
 use criterion::{Criterion, criterion_group, criterion_main};
+use linux_server::{init_rustls, load_certs_and_key};
 use message_stream_client::{MessageStream, NoiseMessageStream};
-use oak_channel::message::RequestMessage;
-use oak_file_utils::data_path;
-use oak_launcher_utils::launcher;
+use rk_launcher::{OakClientChannelMessageStream, start_rk_enclave_server};
 use rustls::{ClientConfig, ServerConfig};
-use rustls_pki_types::{CertificateDer, PrivateKeyDer, ServerName};
-
-fn load_certs_and_key() -> (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>) {
-    let cert_path = data_path("oak_benchmarks/oak_paper/crypto_channel/certs.pem");
-    let mut reader = BufReader::new(File::open(cert_path).expect("cannot open certs file"));
-    let mut certs = Vec::new();
-    let mut key = None;
-    for item in rustls_pemfile::read_all(&mut reader) {
-        match item.expect("pem error") {
-            rustls_pemfile::Item::X509Certificate(cert) => certs.push(cert),
-            rustls_pemfile::Item::Pkcs8Key(k) => key = Some(PrivateKeyDer::Pkcs8(k)),
-            _ => {}
-        }
-    }
-    (certs, key.expect("no key found"))
-}
-
-type ServerStreamCreator = Arc<dyn Fn(TcpStream) -> Box<dyn MessageStream> + Send + Sync + 'static>;
-
-pub struct OakClientChannelMessageStream {
-    oak_client_channel: Rc<RefCell<oak_channel::client::ClientChannelHandle>>,
-}
-
-impl OakClientChannelMessageStream {
-    pub fn new(
-        oak_client_channel: &Rc<RefCell<oak_channel::client::ClientChannelHandle>>,
-    ) -> OakClientChannelMessageStream {
-        OakClientChannelMessageStream { oak_client_channel: oak_client_channel.clone() }
-    }
-}
-// Even though Channel implements Read + Write, the returned `Box<dyn Channel>`
-// does not satisfy the required trait boundaries above. I am not quite sure
-// why, or if this is even addressable.
-impl MessageStream for OakClientChannelMessageStream {
-    fn read_message(&mut self) -> Vec<u8> {
-        let (msg, _timer) =
-            self.oak_client_channel.borrow_mut().read_response().expect("failed to read message");
-        msg.body
-    }
-
-    fn send_message(&mut self, msg: &[u8]) {
-        self.oak_client_channel
-            .borrow_mut()
-            .write_request(RequestMessage { invocation_id: 0, body: msg.to_vec() })
-            .expect("failed to read message");
-    }
-}
-
-fn start_tcp_server(stream_creator: ServerStreamCreator) -> (SocketAddr, JoinHandle<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind server");
-    let addr = listener.local_addr().expect("failed to get local address");
-    let stream_creator = stream_creator.clone();
-    let handle = thread::spawn(move || {
-        loop {
-            let (tcp_stream, _) = listener.accept().expect("failed to receive connection");
-            let stream = &mut stream_creator(tcp_stream);
-
-            let read_msg = stream.read_message();
-            if read_msg == b"exit" {
-                break;
-            }
-            stream.send_message(&read_msg);
-        }
-    });
-    (addr, handle)
-}
-
-async fn start_rk_enclave_server(
-    mode: &[u8],
-) -> (Box<dyn launcher::GuestInstance>, Rc<RefCell<oak_channel::client::ClientChannelHandle>>) {
-    let oak_restricted_kernel_orchestrator_app_path =
-        data_path("enclave_apps/oak_orchestrator/oak_orchestrator");
-
-    let initial_data_version = launcher::InitialDataVersion::V1;
-    let communication_channel = launcher::CommunicationChannel::VirtioConsole;
-    let kernel = data_path(
-        "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
-    );
-
-    let app = data_path("oak_benchmarks/oak_paper/crypto_channel/enclave_app");
-    let params = launcher::Params {
-        kernel,
-        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: Some(app),
-        bios_binary: data_path("stage0_bin/stage0_bin"),
-        gdb: None,
-        initrd: oak_restricted_kernel_orchestrator_app_path,
-        memory_size: Some("256M".to_string()),
-        pci_passthrough: None,
-        initial_data_version,
-        communication_channel,
-        vm_type: launcher::VmType::Default,
-    };
-    println!("launcher params: {:?}", params);
-
-    let (guest_instance, _connector_handle) =
-        launcher::launch(params).await.expect("failed to launch");
-
-    let oak_client_channel = Rc::new(RefCell::new(oak_channel::client::ClientChannelHandle::new(
-        guest_instance.connect().await.expect("couldn't get connector handle"),
-    )));
-
-    oak_client_channel
-        .borrow_mut()
-        .write_request(RequestMessage { invocation_id: 0, body: mode.to_vec() })
-        .expect("couldn't write initial request");
-
-    (guest_instance, oak_client_channel)
-}
+use rustls_pki_types::ServerName;
 
 fn create_message(size: usize) -> Vec<u8> {
     let mut message = vec![0u8; size];
@@ -199,10 +75,10 @@ fn benchmark_wrapper(
 }
 
 fn plaintext_local_tcp_benchmark(c: &mut Criterion) {
-    let (addr, server_handle) =
-        start_tcp_server(Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> {
-            Box::new(tcp_stream)
-        }));
+    let (addr, server_handle) = linux_server::start_tcp_server(
+        "127.0.0.1:0",
+        Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> { Box::new(tcp_stream) }),
+    );
 
     benchmark_wrapper(TEST_SIZES, "Local TCP Plaintext Message Exchange", c, || {
         Box::new(TcpStream::connect(addr).expect("couldn't connect to server"))
@@ -219,10 +95,12 @@ fn new_noise_client_stream(addr: SocketAddr) -> Box<dyn MessageStream> {
 }
 
 fn noise_local_tcp_benchmark(c: &mut Criterion) {
-    let (addr, server_handle) =
-        start_tcp_server(Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+    let (addr, server_handle) = linux_server::start_tcp_server(
+        "127.0.0.1:0",
+        Arc::new(|tcp_stream: TcpStream| -> Box<dyn MessageStream> {
             Box::new(NoiseMessageStream::new_server(tcp_stream))
-        }));
+        }),
+    );
 
     benchmark_wrapper(TEST_SIZES, "Local TCP Noise Message Exchange", c, || {
         new_noise_client_stream(addr)
@@ -243,12 +121,14 @@ fn boringssl_local_tcp_benchmark(c: &mut Criterion) {
         .expect("bad certificate/key");
     let server_config = Arc::new(server_config);
 
-    let (addr, server_handle) =
-        start_tcp_server(Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
+    let (addr, server_handle) = linux_server::start_tcp_server(
+        "127.0.0.1:0",
+        Arc::new(move |tcp_stream: TcpStream| -> Box<dyn MessageStream> {
             let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
             let stream = rustls::StreamOwned::new(conn, tcp_stream);
             Box::new(stream)
-        }));
+        }),
+    );
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store.add(certs[0].clone()).unwrap();
