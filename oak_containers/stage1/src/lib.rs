@@ -116,9 +116,7 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
     // `ip link show eth0`
     let mut links = handle.link().get().match_name("eth0".to_string()).execute();
 
-    let link = links.try_next().await?;
-
-    if let Some(ref link) = link {
+    let link = if let Ok(Some(link)) = links.try_next().await {
         for address in &args.eth0_address {
             let (address, prefix_len) = address.split_once('/').context("invalid IP address")?;
             let address = IpAddr::from_str(address).context("invalid IP address")?;
@@ -129,9 +127,11 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         }
         // `ip link set dev $INDEX up`
         handle.link().set(link.header.index).up().execute().await?;
+        Some(link)
     } else {
         eprintln!("warning: eth0 not found");
-    }
+        None
+    };
 
     let mut client = LauncherClient::new(args.launcher_addr.clone())
         .await
