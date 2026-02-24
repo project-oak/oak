@@ -122,6 +122,20 @@ impl Network {
             IpAddr::V6(guest_address) => format!("{}/64", guest_address),
         }
     }
+
+    /// Returns the MAC address to be assigned to the guest network interface.
+    fn guest_eth0_mac(&self) -> String {
+        match self.guest_address() {
+            IpAddr::V4(guest_address) => {
+                let [a, b, c, d] = guest_address.octets();
+                format!("42:00:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d)
+            }
+            IpAddr::V6(guest_address) => {
+                let [.., a, b, c, d, e] = guest_address.octets();
+                format!("62:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d, e)
+            }
+        }
+    }
 }
 
 pub struct Qemu {
@@ -269,7 +283,7 @@ impl Qemu {
         cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args([
             "-device",
-            "virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=",
+            &format!("virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=,mac={}", network.guest_eth0_mac()),
         ]);
         // The CID needs to be globally unique, so we default to the current thread ID
         // (which should be unique on the system). This may have interesting

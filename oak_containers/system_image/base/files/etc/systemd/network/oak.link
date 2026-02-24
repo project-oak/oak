@@ -1,0 +1,10 @@
+# Forces the system to name network interfaces based on the MAC address.
+# This ensures that:
+# (a) if the PCI device hierarchy is different between different VMMs we still
+#     have predictable network interface names, and
+# (b) if we have multiple network interfaces for any reason we can distinguish
+#     between them
+# at the cost of
+# (c) making the VMMs use these predictable MAC addresses.
+[Link]
+NamePolicy=mac
