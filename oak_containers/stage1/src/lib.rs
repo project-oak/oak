@@ -66,6 +66,20 @@ pub struct Args {
     pub event_log: PhysAddr,
 }
 
+async fn new_launcher(addr: Uri) -> anyhow::Result<LauncherClient> {
+    let mut error: Option<anyhow::Error> = None;
+    for _ in 0..3 {
+        match LauncherClient::new(addr.clone()).await {
+            Ok(client) => return Ok(client),
+            Err(err) => {
+                error = Some(err);
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+    }
+    Err(error.unwrap())
+}
+
 pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(), Box<dyn Error>> {
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
@@ -133,9 +147,11 @@ pub async fn main<A: Attester + Serializable + 'static>(args: &Args) -> Result<(
         None
     };
 
-    let mut client = LauncherClient::new(args.launcher_addr.clone())
-        .await
-        .context("error creating the launcher client")?;
+    // IPv6 addresses may take a moment or two to settle because of DAD, so if it
+    // fails, retry a couple of times.
+    let mut client = new_launcher(args.launcher_addr.clone()).await.with_context(|| {
+        format!("error creating the launcher client to address {}", args.launcher_addr)
+    })?;
 
     let buf = {
         let now = Instant::now();
