@@ -26,6 +26,7 @@ use anyhow::Result;
 use clap::Parser;
 use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
+use tokio_vsock::VMADDR_CID_HOST;
 
 use crate::{VM_HOST_ADDRESS, VM_HOST_PORT, path_exists};
 
@@ -96,53 +97,69 @@ pub enum Network {
         host_address: IpAddr,
         guest_address: IpAddr,
     },
+
+    // Don't set up networking at all (virtio-vsock is assumed).
+    None {
+        launcher_service_port: u16,
+    },
 }
 
 impl Network {
+    /// Port the launcher is listening on, on the interface visible to the
+    /// guest.
     fn launcher_port(&self) -> u16 {
         match self {
             Network::Proxy { .. } => VM_HOST_PORT,
             Network::Tap { .. } => VM_HOST_PORT,
+            Network::None { launcher_service_port } => *launcher_service_port,
         }
     }
 
     /// Returns the address assigned to the host.
-    fn host_address(&self) -> IpAddr {
+    fn host_address(&self) -> Option<IpAddr> {
         match self {
-            Network::Proxy { .. } => crate::VM_HOST_ADDRESS,
-            Network::Tap { host_address, .. } => *host_address,
+            Network::Proxy { .. } => Some(crate::VM_HOST_ADDRESS),
+            Network::Tap { host_address, .. } => Some(*host_address),
+            Network::None { .. } => None,
         }
     }
 
     /// Returns the address to be assigned to the guest.
-    fn guest_address(&self) -> IpAddr {
+    fn guest_address(&self) -> Option<IpAddr> {
         match self {
-            Network::Proxy { .. } => crate::VM_LOCAL_ADDRESS,
-            Network::Tap { guest_address, .. } => *guest_address,
+            Network::Proxy { .. } => Some(crate::VM_LOCAL_ADDRESS),
+            Network::Tap { guest_address, .. } => Some(*guest_address),
+            Network::None { .. } => None,
         }
     }
 
     /// Returns the address to be assigned to the guest with the correct
     /// netmask.
-    fn guest_eth0_address(&self) -> String {
+    fn guest_eth0_address(&self) -> Option<String> {
         match self.guest_address() {
-            IpAddr::V4(guest_address) => format!("{}/24", guest_address),
-            IpAddr::V6(guest_address) => format!("{}/64", guest_address),
+            Some(IpAddr::V4(guest_address)) => Some(format!("{}/24", guest_address)),
+            Some(IpAddr::V6(guest_address)) => Some(format!("{}/64", guest_address)),
+            None => None,
         }
     }
 
     /// Returns the MAC address to be assigned to the guest network interface.
     fn guest_eth0_mac(&self) -> String {
         match self.guest_address() {
-            IpAddr::V4(guest_address) => {
+            Some(IpAddr::V4(guest_address)) => {
                 let [a, b, c, d] = guest_address.octets();
                 format!("42:00:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d)
             }
-            IpAddr::V6(guest_address) => {
+            Some(IpAddr::V6(guest_address)) => {
                 let [.., a, b, c, d, e] = guest_address.octets();
                 format!("62:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", a, b, c, d, e)
             }
+            None => "42:00:0a:00:02:0f".to_string(),
         }
+    }
+
+    fn is_some(&self) -> bool {
+        !matches!(self, Network::None { .. })
     }
 }
 
@@ -257,7 +274,7 @@ impl Qemu {
                 host_proxy_port,
                 host_orchestrator_proxy_port,
             } => {
-                let vm_address = network.guest_address();
+                let vm_address = network.guest_address().unwrap();
                 let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
                 let host_address = Ipv4Addr::LOCALHOST;
 
@@ -287,12 +304,19 @@ impl Qemu {
                 "ifname=oak0".to_string(),
                 "script=no".to_string(),
             ],
+            Network::None { .. } => {
+                // Create a fake network interface just to placate systemd. We don't set up any
+                // forwarding rules so this interface can't be used for anything meaningful.
+                vec!["user".to_string(), "id=netdev".to_string()]
+            }
         };
+
         cmd.args(["-netdev", netdev_rules.join(",").as_str()]);
         cmd.args([
             "-device",
             &format!("virtio-net-pci,disable-legacy=on,iommu_platform=true,netdev=netdev,romfile=,mac={}", network.guest_eth0_mac()),
         ]);
+
         // The CID needs to be globally unique, so we default to the current thread ID
         // (which should be unique on the system). This may have interesting
         // interactions with async code though: if you start two VMMs in the same
@@ -314,7 +338,7 @@ impl Qemu {
         cmd.args(["-initrd", params.initrd.into_os_string().into_string().unwrap().as_str()]);
         let ramdrive_size = params.ramdrive_size;
 
-        let cmdline = vec![
+        let mut cmdline = vec![
             params.telnet_console.map_or_else(|| "", |_| "debug").to_string(),
             "console=ttyS0".to_string(),
             "panic=-1".to_string(),
@@ -323,12 +347,20 @@ impl Qemu {
             "brd.max_part=1".to_string(),
             "loglevel=7".to_string(),
             "--".to_string(),
-            format!("--eth0-address={}", network.guest_eth0_address()),
-            format!(
-                "--launcher-addr=http://{}",
-                SocketAddr::new(network.host_address(), network.launcher_port())
-            ),
         ];
+
+        if network.is_some() {
+            cmdline.push(format!("--eth0-address={}", network.guest_eth0_address().unwrap()));
+            cmdline.push(format!(
+                "--launcher-addr=http://{}",
+                SocketAddr::new(network.host_address().unwrap(), network.launcher_port())
+            ));
+        } else {
+            cmdline.push(format!(
+                "--launcher-addr=vsock://{VMADDR_CID_HOST}:{}",
+                network.launcher_port()
+            ));
+        };
 
         cmd.args(["-append", cmdline.join(" ").as_str()]);
 

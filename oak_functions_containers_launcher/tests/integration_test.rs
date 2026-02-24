@@ -35,14 +35,6 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
     assert_eq!(response, b"test_value");
 }
 
-/*
-
-This test is disabled for now, as pure virtio-vsock doesn't currently fully work yet:
-a) Oak Functions server needs to start listening on virtio-vsock
-b) systemd gets confused when it has no network devices
-This test used to work because we mixed virtio-vsock and network, but that had other unfortunate
-sside effects (you were never sure which channel which binary used).
-
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_virtio() {
@@ -53,7 +45,6 @@ async fn test_launcher_key_value_lookup_virtio() {
 
     run_key_value_lookup_test("virtio-vsock").await;
 }
-*/
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_network() {

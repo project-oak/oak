@@ -248,11 +248,9 @@ impl Launcher {
                 Channel::Tap { host_address, guest_address } => {
                     qemu::Network::Tap { host_address, guest_address }
                 }
-                Channel::VirtioVsock { trusted_app_address: _ } => qemu::Network::Proxy {
-                    launcher_service_port: port,
-                    host_proxy_port: None,
-                    host_orchestrator_proxy_port,
-                },
+                Channel::VirtioVsock { trusted_app_address: _ } => {
+                    qemu::Network::None { launcher_service_port: port }
+                }
             },
         )?;
 
