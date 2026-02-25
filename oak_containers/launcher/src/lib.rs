@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 mod qemu;
 mod server;
@@ -102,6 +103,11 @@ pub struct Args {
     pub container_bundle: std::path::PathBuf,
     #[clap(skip)]
     pub application_config: Vec<u8>,
+
+    /// Extra ports to forward from the guest to the host.
+    #[arg(long, value_delimiter = ',')]
+    pub extra_guest_to_host_ports: Vec<u16>,
+
     #[command(flatten)]
     pub qemu_params: qemu::Params,
 
@@ -177,6 +183,13 @@ pub struct Launcher {
 
 impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
+        if !args.extra_guest_to_host_ports.is_empty()
+            && args.communication_channel != ChannelType::Network
+        {
+            anyhow::bail!(
+                "extra_guest_to_host_ports is only supported for the Network communication channel"
+            );
+        }
         // Let the OS assign an open port for the launcher service.
         let sockaddr = match args.communication_channel {
             ChannelType::Network | ChannelType::VirtioVsock => {
@@ -243,6 +256,7 @@ impl Launcher {
                         launcher_service_port: port,
                         host_proxy_port: Some(host_proxy_port),
                         host_orchestrator_proxy_port,
+                        extra_guest_to_host_ports: args.extra_guest_to_host_ports,
                     }
                 }
                 Channel::Tap { host_address, guest_address } => {

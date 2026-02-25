@@ -90,6 +90,7 @@ pub enum Network {
         launcher_service_port: u16,
         host_proxy_port: Option<u16>,
         host_orchestrator_proxy_port: u16,
+        extra_guest_to_host_ports: Vec<u16>,
     },
 
     // Set up TAP networking.
@@ -273,6 +274,7 @@ impl Qemu {
                 launcher_service_port,
                 host_proxy_port,
                 host_orchestrator_proxy_port,
+                ref extra_guest_to_host_ports,
             } => {
                 let vm_address = network.guest_address().unwrap();
                 let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
@@ -288,6 +290,12 @@ impl Qemu {
                         "hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"
                     ),
                 ];
+
+                for port in extra_guest_to_host_ports {
+                    netdev_rules.push(format!(
+                        "guestfwd=tcp:{VM_HOST_ADDRESS}:{port}-cmd:nc {host_address} {port}"
+                    ));
+                }
 
                 if let Some(host_proxy_port) = host_proxy_port {
                     let vm_port = crate::VM_LOCAL_PORT;
