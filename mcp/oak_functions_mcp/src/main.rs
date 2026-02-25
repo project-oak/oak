@@ -17,7 +17,7 @@
 use axum::Router;
 use clap::Parser;
 use log::info;
-use oak_functions_mcp_lib::service::OakFunctionsMcpService;
+use oak_functions_mcp_lib::service::{OakFunctionsMcpService, ToolConfig};
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use oak_proto_rust::oak::functions::{InitializeRequest, LookupDataChunk};
 use prost::Message;
@@ -42,6 +42,12 @@ pub struct Args {
         default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/double_lookup_data.binarypb"
     )]
     lookup_data_uri: String,
+    #[arg(
+        long,
+        help = "The URI for fetching the ToolConfig JSON file",
+        default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/tool_config/key_value_lookup.json"
+    )]
+    tool_config_uri: String,
 }
 
 fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -81,13 +87,24 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
+    let tool_config: ToolConfig = if !args.tool_config_uri.is_empty() {
+        let config_bytes =
+            fetch_data_from_uri(&args.tool_config_uri).expect("unable to fetch tool config");
+        serde_json::from_slice(&config_bytes).expect("unable to parse tool config")
+    } else {
+        panic!("--tool_config_uri must be specified")
+    };
+
     let initialize_request =
         InitializeRequest { wasm_module: wasm_module_bytes, ..Default::default() };
 
     info!("Starting Oak Functions MCP server");
     let http_service = StreamableHttpService::new(
         move || {
-            let service = OakFunctionsMcpService::<WasmtimeHandler>::new(Default::default());
+            let service = OakFunctionsMcpService::<WasmtimeHandler>::new_with_config(
+                Default::default(),
+                tool_config.clone(),
+            );
             service.initialize(initialize_request.clone()).expect("could not initialize service");
             if let Some(lookup_data) = &lookup_data {
                 service.load_lookup_data(lookup_data.clone()).expect("could not load lookup data");

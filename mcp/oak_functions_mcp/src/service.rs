@@ -45,7 +45,7 @@ use serde_json::Value;
 const INSTRUCTIONS: &str = "An Oak Functions MCP server that provides sandboxing for arbitrary stateless logic that can be invoked via a tool call.";
 
 /// Configuration for the dynamically created MCP tool.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ToolConfig {
     /// Tool name shown to MCP clients.
     pub name: String,
