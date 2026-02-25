@@ -119,7 +119,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         excluded_metrics: None,
     };
 
-    let oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
+    let oak_observer = oak_containers_agent::metrics::init_metrics(
+        metrics_config,
+        tokio::runtime::Handle::current(),
+    );
 
     let orchestrator_channel =
         default_orchestrator_channel().await.context("failed to create channel to orchestrator")?;

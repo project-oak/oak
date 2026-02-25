@@ -24,7 +24,6 @@ use opentelemetry::{
 };
 use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
 use opentelemetry_sdk::metrics::{Aggregation, Instrument, SdkMeterProvider, Stream};
-use tokio::runtime::Handle;
 
 pub enum MeterInstrument {
     U64Counter(Counter<u64>),
@@ -91,6 +90,10 @@ impl OakObserver {
         global::set_meter_provider(provider.clone());
         let meter = provider.meter(scope);
 
+        if let Err(e) = provider.force_flush() {
+            eprintln!("failed to flush metrics: {:?}", e);
+        }
+
         Ok(Self { meter, metric_registry: Vec::new() })
     }
 
@@ -109,28 +112,31 @@ pub struct MetricsConfig {
     pub excluded_metrics: Option<Vec<String>>,
 }
 
-pub fn init_metrics(metrics_config: MetricsConfig) -> OakObserver {
+pub fn init_metrics(metrics_config: MetricsConfig, handle: tokio::runtime::Handle) -> OakObserver {
     let observer = OakObserver::create(
         metrics_config.launcher_addr,
         metrics_config.scope,
         metrics_config.excluded_metrics.unwrap_or_default(),
     );
     let mut observer = observer.unwrap();
-    if let Err(e) = add_base_metrics(&mut observer) {
+    if let Err(e) = add_base_metrics(&mut observer, handle) {
         eprintln!("Error adding base metrics: {:?}", e);
     }
     observer
 }
 
-fn add_base_metrics(observer: &mut OakObserver) -> Result<(), ()> {
+fn add_base_metrics(observer: &mut OakObserver, handle: tokio::runtime::Handle) -> Result<(), ()> {
     observer.register_metric(
         observer
             .meter
             .u64_observable_counter("tokio_workers_count")
             .with_description("Number of worker threads used by the runtime")
-            .with_callback(|counter| {
-                if let Ok(num_workers) = Handle::current().metrics().num_workers().try_into() {
-                    counter.observe(num_workers, &[]);
+            .with_callback({
+                let metrics = handle.metrics().clone();
+                move |counter| {
+                    if let Ok(num_workers) = metrics.num_workers().try_into() {
+                        counter.observe(num_workers, &[]);
+                    }
                 }
             })
             .build(),
@@ -141,55 +147,63 @@ fn add_base_metrics(observer: &mut OakObserver) -> Result<(), ()> {
             .meter
             .u64_observable_counter("tokio_blocking_threads_count")
             .with_description("Number of additional threads used by the runtime")
-            .with_callback(|counter| {
-                if let Ok(num_blocking_threads) =
-                    Handle::current().metrics().num_blocking_threads().try_into()
-                {
-                    counter.observe(num_blocking_threads, &[]);
+            .with_callback({
+                let metrics = handle.metrics().clone();
+                move |counter| {
+                    if let Ok(num_blocking_threads) = metrics.num_blocking_threads().try_into() {
+                        counter.observe(num_blocking_threads, &[]);
+                    }
                 }
             })
             .build(),
     );
+
     observer.register_metric(
         observer
             .meter
             .u64_observable_counter("tokio_active_tasks")
             .with_description("Number of active tasks in the runtime")
-            .with_callback(|counter| {
-                if let Ok(active_tasks_count) =
-                    Handle::current().metrics().num_alive_tasks().try_into()
-                {
-                    counter.observe(active_tasks_count, &[]);
+            .with_callback({
+                let metrics = handle.metrics().clone();
+                move |counter| {
+                    if let Ok(active_tasks_count) = metrics.num_alive_tasks().try_into() {
+                        counter.observe(active_tasks_count, &[]);
+                    }
                 }
             })
             .build(),
     );
+
     observer.register_metric(
         observer
             .meter
             .u64_observable_counter("tokio_injection_queue_depth")
             .with_description("Number of tasks currently in the runtime's injection queue")
-            .with_callback(|counter| {
-                if let Ok(injection_queue_depth) =
-                    Handle::current().metrics().global_queue_depth().try_into()
-                {
-                    counter.observe(injection_queue_depth, &[]);
+            .with_callback({
+                let metrics = handle.metrics().clone();
+                move |counter| {
+                    if let Ok(injection_queue_depth) = metrics.global_queue_depth().try_into() {
+                        counter.observe(injection_queue_depth, &[]);
+                    }
                 }
             })
             .build(),
     );
+
     observer.register_metric(
         observer
             .meter
             .u64_observable_counter("tokio_worker_local_queue_depth")
             .with_description("Number of tasks currently scheduled in the workers' local queue")
-            .with_callback(|counter| {
-                let metrics = Handle::current().metrics();
-                for worker in 0..metrics.num_workers() {
-                    if let (Ok(depth), Ok(worker)) =
-                        (metrics.worker_local_queue_depth(worker).try_into(), worker.try_into())
-                    {
-                        counter.observe(depth, &[KeyValue::new::<&str, i64>("worker", worker)])
+            .with_callback({
+                let metrics = handle.metrics().clone();
+                move |counter| {
+                    for worker in 0..metrics.num_workers() {
+                        if let (Ok(depth), Ok(worker)) =
+                            (metrics.worker_local_queue_depth(worker).try_into(), worker.try_into())
+                        {
+                            counter.observe(depth, &[KeyValue::new::<&str, i64>("worker", worker)])
+                        }
                     }
                 }
             })

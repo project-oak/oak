@@ -25,6 +25,7 @@ use oak_containers_agent::metrics::MetricsConfig;
 use oak_containers_attestation::generate_instance_keys;
 use oak_proto_rust::oak::containers::v1::KeyProvisioningRole;
 use prost::Message;
+use tokio::runtime::Handle;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Uri;
 
@@ -77,7 +78,8 @@ pub async fn main<A: Attester + ApplicationKeysAttester + Serializable + 'static
         excluded_metrics: None,
     };
 
-    let _oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
+    let _oak_observer =
+        oak_containers_agent::metrics::init_metrics(metrics_config, Handle::current());
 
     // Get key provisioning role.
     let key_provisioning_role = launcher_client

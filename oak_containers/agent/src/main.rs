@@ -21,7 +21,10 @@ use http::Uri;
 use oak_containers_agent::metrics::{MetricsConfig, OakObserver};
 use opentelemetry::{KeyValue, metrics::AsyncInstrument};
 use procfs::{Current, CurrentSI};
-use tokio::time::{self, Duration};
+use tokio::{
+    runtime::Handle,
+    time::{self, Duration},
+};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -286,7 +289,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         excluded_metrics: None,
     };
 
-    let mut oak_observer = oak_containers_agent::metrics::init_metrics(metrics_config);
+    let mut oak_observer =
+        oak_containers_agent::metrics::init_metrics(metrics_config, Handle::current());
     if let Err(e) = register_system_metrics(&mut oak_observer) {
         eprintln!("Error registering system metrics: {:?}", e);
     }
