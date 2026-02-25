@@ -10,6 +10,8 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 
 git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.19.3")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
@@ -33,6 +35,28 @@ bazel_dep(name = "oak", version = "0.0.0", repo_name = "oak_bzlmod")
 local_path_override(
     module_name = "oak",
     path = "..",
+)
+
+# Files needed to launch an Oak Containers binary in QEMU
+# Rather than trying to build these ourselves, we will use pre-built versions from Oak.
+http_file(
+    name = "oak_containers_kernel",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:1db2d2971c3fa4f182bd9316515cec48c15ceacf527d8cfd8408b08ce87ed404"],
+)
+
+http_file(
+    name = "oak_containers_system_image",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:ed97af8058dea6a037145eabe7f637cc08f759cb530645b251709291d9bdeb81"],
+)
+
+http_file(
+    name = "oak_containers_stage0",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:a064d89e570363bf6ff33f83c33158da7421b4b7a696d395ea3a1de4ec5e5330"],
+)
+
+http_file(
+    name = "oak_containers_stage1",
+    urls = ["https://storage.googleapis.com/oak-files/sha2-256:b46aa37e1b48e33138ea9e6fd127fb5f3b3cedc1cd1b9b5377bb6031515acb1b"],
 )
 
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")

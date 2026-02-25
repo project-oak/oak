@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg(test)]
+
 use std::{
     collections::HashMap,
     sync::Arc,
@@ -20,13 +22,9 @@ use std::{
 };
 
 use client::{PrivateMemoryClient, SerializationFormat};
-use private_memory_test_utils::{
-    MockClock, start_server, start_server_with_clock, system_time_to_timestamp,
-};
+use private_memory_test_utils::{MockClock, TestContext, system_time_to_timestamp};
 use sealed_memory_rust_proto::{
-    oak::private_memory::{
-        Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value, text_query,
-    },
+    oak::private_memory::{Embedding, LlmView, LlmViews, MatchType, TextQuery, memory_value},
     prelude::v1::*,
 };
 use tokio::time::sleep;
@@ -35,13 +33,13 @@ static TEST_EK: &[u8; 32] = b"aaaabbbbccccddddeeeeffffgggghhhh";
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_get_reset_memory_all_modes() {
-    let (addr, _db_addr, _server_join_handle, _db_join_handle) = start_server().await.unwrap();
-    let url = format!("http://{addr}");
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_add_get_reset_user";
 
     for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
         let mut client =
-            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                 .await
                 .unwrap();
 
@@ -114,18 +112,18 @@ async fn test_add_get_reset_memory_all_modes() {
         // Wait for the database to be deleted.
         sleep(Duration::from_secs(1)).await;
     }
+    ctx.teardown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_standalone_text_query() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_standalone_text_query_user";
 
     for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
         let mut client =
-            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                 .await
                 .unwrap();
 
@@ -154,10 +152,11 @@ async fn test_standalone_text_query() {
         let gte_query = TextQuery {
             field: MemoryField::EventTimestamp as i32,
             match_type: MatchType::Gte as i32,
-            value: Some(text_query::Value::TimestampVal(prost_types::Timestamp {
-                seconds: 200,
-                nanos: 0,
-            })),
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::text_query::Value::TimestampVal(
+                    prost_types::Timestamp { seconds: 200, nanos: 0 },
+                ),
+            ),
         };
         let query = SearchMemoryQuery {
             clause: Some(
@@ -176,7 +175,11 @@ async fn test_standalone_text_query() {
         let eq_query = TextQuery {
             field: MemoryField::Id as i32,
             match_type: MatchType::Equal as i32,
-            value: Some(text_query::Value::StringVal("memory1".to_string())),
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::text_query::Value::StringVal(
+                    "memory1".to_string(),
+                ),
+            ),
         };
         let query = SearchMemoryQuery {
             clause: Some(
@@ -189,18 +192,18 @@ async fn test_standalone_text_query() {
         assert_eq!(response.results.len(), 1);
         assert_eq!(response.results[0].memory.as_ref().unwrap().id, "memory1");
     }
+    ctx.teardown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_memory_search_only_return_views_with_highest_scores() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_embedding_search_with_pagination_user";
 
     for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
         let mut client =
-            PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                 .await
                 .unwrap();
 
@@ -282,28 +285,24 @@ async fn test_memory_search_only_return_views_with_highest_scores() {
         assert_eq!(views.llm_views.len(), 1);
         assert_eq!(views.llm_views[0].id, "view2b");
     }
+    ctx.teardown().await;
 }
 
-// Verify that multiple concurrent writes all get their changes written to the
-// db. Note that this only verifies against a test database implementation;
-// end-to-end implementations should create similar tests with their database
-// implementations to ensure concurrent writes function as expected.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_concurrent_write_sessions() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
-    let pm_uid = "test_embedding_search_with_pagination_user";
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_concurrent_write_sessions_user";
 
     for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
         // Part 1, concurrent add
         {
             let mut client1 =
-                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                     .await
                     .expect("failed to create client 1");
             let mut client2 =
-                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                     .await
                     .expect("failed to create client 2");
 
@@ -322,7 +321,7 @@ async fn test_concurrent_write_sessions() {
 
         {
             let mut client =
-                PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
+                PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
                     .await
                     .expect("failed to create readback client");
 
@@ -331,6 +330,7 @@ async fn test_concurrent_write_sessions() {
             expect_memory_by_id(&mut client, "memory3").await;
         }
     }
+    ctx.teardown().await;
 }
 
 async fn expect_memory_by_id(client: &mut PrivateMemoryClient, id: &str) {
@@ -361,15 +361,13 @@ fn create_test_memory(id: &str) -> Memory {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_memory_expiration() {
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server().await.unwrap();
-    let url = format!("http://{}", addr);
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_memory_expiration_user";
     let format = SerializationFormat::BinaryProto;
 
-    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
-        .await
-        .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
 
     let memory_expired = Memory {
         id: "memory_expired".to_string(),
@@ -398,29 +396,28 @@ async fn test_memory_expiration() {
 
     // Creating a new client will trigger a key sync which will run expired memories
     // deletion.
-    let mut client2 = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
-        .await
-        .unwrap();
+    let mut client2 =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
 
     assert!(!client2.get_memory_by_id("memory_expired", None).await.unwrap().success);
     assert!(client2.get_memory_by_id("memory_valid", None).await.unwrap().success);
     assert!(client2.get_memory_by_id("memory_no_expiration", None).await.unwrap().success);
+
+    ctx.teardown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
-    let mock_time = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(987654321);
+    let mock_time = SystemTime::UNIX_EPOCH + Duration::from_secs(987654321);
     let mock_clock = Arc::new(MockClock::new(mock_time));
 
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server_with_clock(Some(mock_clock.clone())).await.unwrap();
-    let url = format!("http://{}", addr);
+    let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_add_memory_sets_correct_created_timestamp_user";
     let format = SerializationFormat::BinaryProto;
 
-    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
-        .await
-        .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
 
     let memory = Memory { id: "memory_without_timestamp".to_string(), ..Default::default() };
     let add_memory_response = client.add_memory(memory).await.unwrap();
@@ -429,23 +426,28 @@ async fn test_add_memory_sets_correct_created_timestamp_with_mock_clock() {
     let get_memory_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(get_memory_response.success);
     let retrieved_memory = get_memory_response.memory.unwrap();
-    assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
+
+    if ctx.is_host() {
+        assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
+    } else {
+        assert!(retrieved_memory.created_timestamp.is_some());
+    }
+
+    ctx.teardown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_add_memory_overwrites_user_created_timestamp() {
-    let mock_time = SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(111222333);
+    let mock_time = SystemTime::UNIX_EPOCH + Duration::from_secs(111222333);
     let mock_clock = Arc::new(MockClock::new(mock_time));
 
-    let (addr, _server_join_handle, _db_join_handle, _persistence_join_handle) =
-        start_server_with_clock(Some(mock_clock.clone())).await.unwrap();
-    let url = format!("http://{}", addr);
+    let ctx = TestContext::setup_with_clock(mock_clock.clone()).await.unwrap();
+    let url = &ctx.url;
     let pm_uid = "test_add_memory_overwrites_user_created_timestamp_user";
     let format = SerializationFormat::BinaryProto;
 
-    let mut client = PrivateMemoryClient::create_with_start_session(&url, pm_uid, TEST_EK, format)
-        .await
-        .unwrap();
+    let mut client =
+        PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format).await.unwrap();
 
     let user_timestamp = prost_types::Timestamp { seconds: 123456789, nanos: 0 };
     let memory = Memory {
@@ -459,6 +461,13 @@ async fn test_add_memory_overwrites_user_created_timestamp() {
     let get_memory_response = client.get_memory_by_id(&memory_id, None).await.unwrap();
     assert!(get_memory_response.success);
     let retrieved_memory = get_memory_response.memory.unwrap();
-    assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
-    assert_ne!(retrieved_memory.created_timestamp, Some(user_timestamp));
+
+    if ctx.is_host() {
+        assert_eq!(retrieved_memory.created_timestamp, Some(system_time_to_timestamp(mock_time)));
+        assert_ne!(retrieved_memory.created_timestamp, Some(user_timestamp));
+    } else {
+        assert!(retrieved_memory.created_timestamp.is_some());
+    }
+
+    ctx.teardown().await;
 }

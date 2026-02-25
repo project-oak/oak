@@ -203,28 +203,42 @@ rust_library(
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         "//database",
+        "@oak//oak_containers/launcher:lib",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:prost-types",
+        "@oak_crates_index//:serde_json",
         "@oak_crates_index//:tokio",
+        "@oak_crates_index//:which",
+        "@rules_rust//tools/runfiles",
     ],
 )
 
-rust_test(
-    name = "server_e2e_test",
-    srcs = ["test/server_e2e_test.rs"],
+rust_library(
+    name = "server_e2e_test_lib",
+    testonly = True,
+    srcs = ["test/e2e_test.rs"],
+    data = [
+        ":bundle",
+        "@oak_containers_kernel//file",
+        "@oak_containers_stage0//file",
+        "@oak_containers_stage1//file",
+        "@oak_containers_system_image//file",
+    ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
     deps = [
         ":client",
         ":private_memory_server_lib",
         ":private_memory_test_database_server_lib",
         ":private_memory_test_utils",
+        "//app",
         "//database",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_client",
         "@oak//oak_client/tonic:oak_client_tonic",
         "@oak//oak_crypto",
+        "@oak//oak_file_utils",
         "@oak//oak_proto_rust",
         "@oak//oak_proto_rust/grpc",
         "@oak//oak_session",
@@ -239,6 +253,18 @@ rust_test(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
+)
+
+rust_test(
+    name = "server_e2e_test",
+    crate = ":server_e2e_test_lib",
+)
+
+rust_test(
+    name = "server_e2e_test_containers",
+    crate = ":server_e2e_test_lib",
+    env = {"OAK_E2E_BACKEND": "container"},
+    tags = ["requires-kvm"],
 )
 
 rust_test(
