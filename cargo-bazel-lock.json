@@ -1,5 +1,5 @@
 {
-  "checksum": "d6ea5d017f7b07ce3c9521708c7f2fd7722f7aee1419255c6c1e8f75b09eec65",
+  "checksum": "3902af82d17f5eec4fbf1f7f3c8dd950e17424a05f8dd0e1ccc876ae506b9ceb",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -8215,10 +8215,6 @@
             {
               "id": "serde_json 1.0.149",
               "target": "serde_json"
-            },
-            {
-              "id": "serde_yaml 0.9.34+deprecated",
-              "target": "serde_yaml"
             },
             {
               "id": "sha2 0.10.9",
@@ -29137,70 +29133,6 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "serde_yaml 0.9.34+deprecated": {
-      "name": "serde_yaml",
-      "version": "0.9.34+deprecated",
-      "package_url": "https://github.com/dtolnay/serde-yaml",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/serde_yaml/0.9.34+deprecated/download",
-          "sha256": "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "serde_yaml",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "serde_yaml",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "indexmap 2.13.0",
-              "target": "indexmap"
-            },
-            {
-              "id": "itoa 1.0.17",
-              "target": "itoa"
-            },
-            {
-              "id": "ryu 1.0.23",
-              "target": "ryu"
-            },
-            {
-              "id": "serde 1.0.228",
-              "target": "serde"
-            },
-            {
-              "id": "unsafe-libyaml 0.2.11",
-              "target": "unsafe_libyaml"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "0.9.34+deprecated"
-      },
-      "license": "MIT OR Apache-2.0",
-      "license_ids": [
-        "Apache-2.0",
-        "MIT"
-      ],
-      "license_file": "LICENSE-APACHE"
-    },
     "sha1 0.10.6": {
       "name": "sha1",
       "version": "0.10.6",
@@ -35546,44 +35478,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "unsafe-libyaml 0.2.11": {
-      "name": "unsafe-libyaml",
-      "version": "0.2.11",
-      "package_url": "https://github.com/dtolnay/unsafe-libyaml",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/unsafe-libyaml/0.2.11/download",
-          "sha256": "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "unsafe_libyaml",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "unsafe_libyaml",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "edition": "2021",
-        "version": "0.2.11"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": "LICENSE-MIT"
     },
     "untrusted 0.9.0": {
       "name": "untrusted",
@@ -45067,7 +44961,6 @@
     "self_cell 1.2.2",
     "serde 1.0.228",
     "serde_json 1.0.149",
-    "serde_yaml 0.9.34+deprecated",
     "sha2 0.10.9",
     "sha3 0.10.8",
     "signal-hook 0.3.18",

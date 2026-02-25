@@ -569,7 +569,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "0.8.1",
     ),
     "rtnetlink": crate.spec(version = "0.14.1"),
-    "serde_yaml": crate.spec(version = "0.9.30"),
     "signal-hook": crate.spec(version = "0.3.17"),
     "signal-hook-tokio": crate.spec(
         features = ["futures-v0_3"],
