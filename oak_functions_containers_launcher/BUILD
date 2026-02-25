@@ -80,7 +80,7 @@ rust_binary(
 )
 
 rust_test(
-    name = "oak_functions_containers_launcher_test_bin",
+    name = "oak_functions_containers_launcher_test",
     srcs = ["tests/integration_test.rs"],
     data = [
         ":oak_functions_containers_launcher",
@@ -92,8 +92,6 @@ rust_test(
         "//oak_functions_containers_app:bundle",
         "//oak_functions_launcher:mock_lookup_data",
     ],
-    # Don't run this test directly, as it requires nswrap to work.
-    tags = ["manual"],
     deps = [
         "//oak_client",
         "//oak_file_utils",
@@ -105,15 +103,5 @@ rust_test(
         "@oak_crates_index//:portpicker",
         "@oak_crates_index//:tempfile",
         "@oak_crates_index//:tokio",
-    ],
-)
-
-sh_test(
-    name = "oak_functions_containers_launcher_test",
-    srcs = ["tests/run_integration_test.sh"],
-    args = ["$(location :oak_functions_containers_launcher_test_bin)"],
-    data = [
-        ":oak_functions_containers_launcher_test_bin",
-        "//oak_containers/launcher:nswrap",
     ],
 )

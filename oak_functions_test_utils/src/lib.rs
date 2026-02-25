@@ -168,7 +168,7 @@ macro_rules! arg {
 pub fn run_oak_functions_containers_example_in_background(
     wasm_path: impl AsRef<Path>,
     lookup_data_path: impl AsRef<Path>,
-    communication_channel: impl AsRef<OsStr>,
+    communication_channel: &str,
     uri: Uri,
 ) -> BackgroundHandle {
     eprintln!("using Wasm module {:?}", wasm_path.as_ref());
@@ -176,7 +176,7 @@ pub fn run_oak_functions_containers_example_in_background(
     let wasm_path = data_path(wasm_path);
     let launch_bin =
         data_path("oak_functions_containers_launcher/oak_functions_containers_launcher");
-    let qemu = which::which("qemu-system-x86_64").unwrap();
+    let qemu = which::which("qemu-system-x86_64").expect("QEMU binary not found");
     let stage0_bin = data_path("stage0_bin/stage0_bin");
     let kernel = data_path("oak_containers/kernel/bzImage");
     let initrd = data_path("oak_containers/stage1_bin/stage1.cpio");
@@ -187,25 +187,70 @@ pub fn run_oak_functions_containers_example_in_background(
     let memory_size = "2G";
     let virtio_guest_cid = nix::unistd::gettid();
 
-    let child = std::process::Command::new(launch_bin)
-        .args(vec![
-            arg!("--vmm-binary=", qemu),
-            arg!("--stage0-binary=", stage0_bin),
-            arg!("--kernel=", kernel),
-            arg!("--initrd=", initrd),
-            arg!("--system-image=", system_image),
-            arg!("--container-bundle=", container_bundle),
-            arg!("--ramdrive-size=", ramdrive_size.to_string()),
-            arg!("--memory-size=", memory_size),
-            arg!("--wasm=", wasm_path),
-            arg!("--port=", uri.to_string()),
-            arg!("--lookup-data=", lookup_data_path),
-            arg!("--virtio-guest-cid=", virtio_guest_cid.to_string()),
-            arg!("--communication-channel=", communication_channel),
-        ])
-        .group_spawn()
-        .expect("didn't start oak functions containers launcher");
+    let mut args: Vec<OsString> = vec![
+        "--map-root-user".into(), // run as root in the namespace so we can create TAP device
+    ];
+    let mut commands: Vec<OsString> = vec![];
 
+    if communication_channel.starts_with("tap") {
+        // TAP network gets a network namespace, so that we could have a `oak0`
+        // interface.
+        args.push("--net".into()); // create a new network namespace
+        commands.push("ip link set lo up".into());
+        commands.push("ip tuntap add dev oak0 mode tap".into());
+        commands.push("ip addr flush dev oak0".into());
+
+        if communication_channel == "tap" {
+            commands.push("ip addr add 10.0.2.100/24 dev oak0".into());
+        } else {
+            commands.push("ip addr add fdd2:a994:f3c5:1:10:0:2:64/64 dev oak0 nodad".into());
+        }
+        commands.push("ip link set dev oak0 up".into());
+    }
+    if communication_channel == "virtio-vsock" {
+        // virtio-vsock: you only get a loopback interface. Ideally, not even that.
+        args.push("--net".into());
+        commands.push("ip link set lo up".into());
+    }
+
+    // This is a rather inconvenient way of doing it, but `write!` and `format!`
+    // don't know how to deal with OsString-s.
+    let mut cmd: OsString = OsString::new();
+    cmd.push(launch_bin);
+    cmd.push(" --vmm-binary=");
+    cmd.push(qemu);
+    cmd.push(" --stage0-binary=");
+    cmd.push(stage0_bin);
+    cmd.push(" --kernel=");
+    cmd.push(kernel);
+    cmd.push(" --initrd=");
+    cmd.push(initrd);
+    cmd.push(" --system-image=");
+    cmd.push(system_image);
+    cmd.push(" --container-bundle=");
+    cmd.push(container_bundle);
+    cmd.push(format!(" --ramdrive-size={ramdrive_size}"));
+    cmd.push(format!(" --memory-size={memory_size}"));
+    cmd.push(" --wasm=");
+    cmd.push(wasm_path);
+    cmd.push(format!(" --port={uri}"));
+    cmd.push(" --lookup-data=");
+    cmd.push(lookup_data_path);
+    cmd.push(format!(" --virtio-guest-cid={virtio_guest_cid}"));
+    cmd.push(format!(" --communication-channel={communication_channel}"));
+    commands.push(cmd);
+    let commands = commands.join(OsStr::new(";"));
+
+    args.push("bash".into());
+    args.push("-c".into());
+    args.push(commands);
+
+    let child = std::process::Command::new(
+        which::which("unshare").expect("could not find `unshare` binary"),
+    )
+    .args(args)
+    .group_spawn()
+    .expect("didn't start oak functions containers launcher");
     BackgroundHandle(child)
 }
 

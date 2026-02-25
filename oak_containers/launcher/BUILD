@@ -73,8 +73,3 @@ alias(
     name = "launcher",
     actual = ":oak_containers_launcher",
 )
-
-sh_binary(
-    name = "nswrap",
-    srcs = ["nswrap.sh"],
-)

@@ -25,7 +25,7 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
     let tempdir = TempDir::new().expect("unable to create temporary directory for UDS");
     let tempfile = tempdir.path().join("socket");
 
-    let uri: Uri = format!("{}", tempfile.to_str().unwrap()).parse().unwrap();
+    let uri: Uri = tempfile.to_str().unwrap().to_string().parse().unwrap();
 
     let mut _output = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
         &wasm_path,
