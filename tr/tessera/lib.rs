@@ -54,6 +54,8 @@ pub enum TLogProofError {
     SigVerify,
     #[error("root hash mismatch")]
     RootMismatch,
+    #[error("invalid Merkle chain")]
+    InvalidMerkleChain,
     #[error("malformed data")]
     Format(#[from] Box<dyn core::error::Error + Send + Sync>),
 }
@@ -266,6 +268,62 @@ impl TLogProof {
         Ok(TLogProof { index, proof_hashes, checkpoint })
     }
 
+    pub fn compute_root_hash(&self, entry: &[u8]) -> Result<Vec<u8>, TLogProofError> {
+        let mut tree_size = self.checkpoint.tree_size;
+        let mut leaf_index = self.index;
+        if leaf_index >= tree_size {
+            return Err(TLogProofError::InvalidMerkleChain);
+        }
+
+        // First, find the path to the (largest) perfect tree containing the
+        // leaf. While the tree isn't perfect...
+        let mut path = Vec::new();
+        while !tree_size.is_power_of_two() {
+            // If the node is in the left subtree, this step is complete.
+            let left_tree_size = 1u64 << (63 - tree_size.leading_zeros());
+            if leaf_index < left_tree_size {
+                path.push(false /* left */);
+                tree_size = left_tree_size;
+                break;
+            }
+
+            // Otherwise, descend into the right subtree and repeat.
+            path.push(true /* right */);
+            leaf_index -= left_tree_size;
+            tree_size -= left_tree_size;
+        }
+
+        // Next, find the path to the leaf node in the perfect subtree. The
+        // series of left and right branches is given by the leaf_index's
+        // bit pattern.
+        let mut it_size = tree_size >> 1;
+        while it_size > 0 {
+            path.push((leaf_index & it_size) != 0);
+            it_size >>= 1;
+        }
+
+        if self.proof_hashes.len() != path.len() {
+            return Err(TLogProofError::InvalidMerkleChain);
+        }
+
+        let mut hash =
+            Sha256Hasher::new().chain_update([0x00]).chain_update(entry).finalize().to_vec();
+        for (i, &is_right_child) in path.iter().rev().enumerate() {
+            let sibling = &self.proof_hashes[i];
+            let mut h = Sha256Hasher::new().chain_update([0x01]);
+            if is_right_child {
+                h.update(sibling);
+                h.update(&hash);
+            } else {
+                h.update(&hash);
+                h.update(sibling);
+            }
+            hash = h.finalize().to_vec();
+        }
+
+        Ok(hash)
+    }
+
     /// Verifies a C2SP tlog-proof bundle.
     ///
     /// # Arguments
@@ -325,21 +383,7 @@ impl TLogProof {
         }
 
         // Verify Merkle inclusion.
-        let mut index = self.index;
-        let mut hash =
-            Sha256Hasher::new().chain_update([0x00]).chain_update(entry).finalize().to_vec();
-        for sibling in &self.proof_hashes {
-            let mut h = Sha256Hasher::new().chain_update([0x01]);
-            if index & 1 == 0 {
-                h.update(&hash);
-                h.update(sibling);
-            } else {
-                h.update(sibling);
-                h.update(&hash);
-            }
-            hash = h.finalize().to_vec();
-            index >>= 1;
-        }
+        let hash = self.compute_root_hash(entry)?;
         if hash != self.checkpoint.root_hash.as_ref() {
             return Err(TLogProofError::RootMismatch);
         }
@@ -365,6 +409,20 @@ mod tests {
         "fake.log.origin/log+527eabb8+AddT9PtBhhNAsDYZ0V0euiRbXuvrLsw4L6vKARfipnmz";
     const TEST_WITNESS_VKEY: &str =
         "test-witness+26349ef0+BIQDFTUlktisMqJzWn8qhteWrRr4dLcQ9R37T+8LQyQF";
+
+    const TEST2_ENTRY: &[u8] = b"hello tesseroak\n";
+    const TEST2_PROOF_HASHES: &[&str] = &[
+        "fGRlLyuz+L9Jb8+uTSut/2aVc4z7fKFW+clvsb6xjEM=",
+        "F6LautOHD5eppkWC0xn/lz00X5g2yLlZAkl2jCI/wdE=",
+        "qH7OJxFNup+TDvJuohd2HphKVngfMeMzUK8QChEDcas=",
+        "+Y3g758yXtPCRh/eqhLTA3bdcx+cCV1Uah0JdgB0YEs=",
+        "vq8cJSjj8dPVmFBRUqDLlaMqW6aAYR2GKugVhgudXLs=",
+        "J0z3X5qTb9WFC1gABhVFx0bW1rVZRL+DAoBL2e2h4G4=",
+        "NmSbYg25xNFzTRerIsF3HbEMyTIDqW87AQd9ekzopE8=",
+        "L8BZipjURnkctkjJtGJs+YyTXMssvNKA7+a8nV2JT/s=",
+        "pva4RFzCejMkVMVmYc93As2lbk7WAyrw58TvrzEOjNc=",
+    ];
+    const TEST2_ROOT_HASH: &str = "QYfrD7XAd4qUHbRBs4dDyDZwpZN4M/cccXr2G56pxkY=";
 
     struct ReferenceValues {
         origin: String,
@@ -520,6 +578,31 @@ mod tests {
             proof.verify(&rvalues.origin, &[rvalues.verifying_key, witness_vkey], TEST_ENTRY);
 
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_compute_root_hash_test() {
+        let proof_hashes = TEST2_PROOF_HASHES
+            .iter()
+            .map(|h| Sha256::from(<[u8; 32]>::try_from(B64.decode(h).unwrap()).unwrap()))
+            .collect();
+        let root_hash =
+            Sha256::from(<[u8; 32]>::try_from(B64.decode(TEST2_ROOT_HASH).unwrap()).unwrap());
+        let proof = TLogProof {
+            index: 76958,
+            proof_hashes,
+            checkpoint: Checkpoint {
+                origin: FAKE_ORIGIN.into(),
+                tree_size: 76959,
+                root_hash,
+                signed_payload: String::new(),
+                signatures: Vec::new(),
+            },
+        };
+
+        let hash = proof.compute_root_hash(TEST2_ENTRY).unwrap();
+
+        assert_eq!(hash, root_hash.as_ref());
     }
 
     #[test]
