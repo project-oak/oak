@@ -189,12 +189,26 @@ impl SealedMemorySessionHandler {
         let mut mutex_guard = self.session_context().await;
         let database =
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
-
         let (memories, not_found_ids) = database
             .get_memories_by_id(request.ids, &request.result_mask)
             .await
             .into_internal_error("failed to get memories by id")?;
         Ok(GetMemoriesByIdResponse { memories, not_found_ids })
+    }
+
+    pub async fn get_memory_by_name_handler(
+        &self,
+        request: GetMemoryByNameRequest,
+    ) -> tonic::Result<GetMemoryByNameResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+        let memory = database
+            .get_memory_by_name(&request.name, &request.result_mask)
+            .await
+            .into_internal_error("failed to get memory by name")?;
+        let success = memory.is_some();
+        Ok(GetMemoryByNameResponse { memory, success })
     }
 
     pub async fn reset_memory_handler(
@@ -493,6 +507,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::GetMemoryByIdRequest(request) => {
                 self.get_memory_by_id_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::GetMemoryByNameRequest(request) => {
+                self.get_memory_by_name_handler(request).await?.into_response()
             }
             sealed_memory_request::Request::SearchMemoryRequest(request) => {
                 self.search_memory_handler(request).await?.into_response()

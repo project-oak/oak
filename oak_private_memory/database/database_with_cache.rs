@@ -206,6 +206,21 @@ impl DatabaseWithCache {
         Ok((memories, not_found_ids))
     }
 
+    pub async fn get_memory_by_name(
+        &mut self,
+        name: &str,
+        result_mask: &Option<ResultMask>,
+    ) -> anyhow::Result<Option<Memory>> {
+        if let Some(blob_id) = self.meta_db().get_memory_by_name(name)? {
+            self.cache.get_memory_by_blob_id(&blob_id).await.map(|mut m| {
+                Self::apply_mask_to_memory(&mut m, result_mask);
+                Some(m)
+            })
+        } else {
+            Ok(None)
+        }
+    }
+
     pub async fn reset_memory(&mut self) -> anyhow::Result<()> {
         let all_memory_ids = self.meta_db().get_all_memory_ids()?;
         if !all_memory_ids.is_empty() {

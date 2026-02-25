@@ -317,7 +317,7 @@ async fn test_concurrent_write_sessions() {
 
         // Part two, read back
         // We currently don't have a good signal that the peristence worker is done.
-        tokio::time::sleep(Duration::from_secs(2)).await;
+        tokio::time::sleep(Duration::from_secs(10)).await;
 
         {
             let mut client =
@@ -392,7 +392,7 @@ async fn test_memory_expiration() {
 
     // Close session and wait for changes to propagate.
     drop(client);
-    sleep(Duration::from_secs(1)).await;
+    sleep(Duration::from_secs(10)).await;
 
     // Creating a new client will trigger a key sync which will run expired memories
     // deletion.

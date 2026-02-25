@@ -132,6 +132,7 @@ impl !Sync for IcingMetaDatabase {}
 const NAMESPACE_NAME: &str = "namespace";
 const SCHEMA_NAME: &str = "Memory";
 const TAG_NAME: &str = "tag";
+const NAME_NAME: &str = "name";
 const MEMORY_ID_NAME: &str = "memoryId";
 const BLOB_ID_NAME: &str = "blobId";
 const EMBEDDING_NAME: &str = "embedding";
@@ -179,6 +180,7 @@ impl PendingMetadata {
     #[allow(deprecated)]
     pub fn new(memory: &Memory, blob_id: &BlobId) -> anyhow::Result<Self> {
         let memory_id = &memory.id;
+        let name: &String = &memory.name;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let document_builder = icing::create_document_builder();
         let document_builder = document_builder
@@ -187,6 +189,10 @@ impl PendingMetadata {
             .add_string_property(TAG_NAME.as_bytes(), &tags)
             .add_string_property(MEMORY_ID_NAME.as_bytes(), &[memory_id.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()]);
+
+        if !name.is_empty() {
+            document_builder.add_string_property(NAME_NAME.as_bytes(), &[name.as_bytes()]);
+        }
 
         if let Some(ref created_timestamp) = memory.created_timestamp {
             let timestamp_ms = (created_timestamp.seconds * 1000
@@ -232,6 +238,7 @@ impl PendingLlmViewMetadata {
     pub fn new(memory: &Memory, view: &LlmView, blob_id: &BlobId) -> anyhow::Result<Option<Self>> {
         let memory_id = &memory.id;
         let view_id = &view.id;
+        let name = &memory.name;
         let tags: Vec<&[u8]> = memory.tags.iter().map(|x| x.as_bytes()).collect();
         let embedding = if let Some(e) = view.embedding.as_ref() {
             e
@@ -249,6 +256,10 @@ impl PendingLlmViewMetadata {
             .add_string_property(VIEW_ID_NAME.as_bytes(), &[view_id.as_bytes()])
             .add_string_property(BLOB_ID_NAME.as_bytes(), &[blob_id.as_bytes()])
             .add_vector_property(EMBEDDING_NAME.as_bytes(), &embeddings);
+
+        if !name.is_empty() {
+            document_builder.add_string_property(NAME_NAME.as_bytes(), &[name.as_bytes()]);
+        }
 
         if let Some(ref created_timestamp) = memory.created_timestamp {
             document_builder.add_int64_property(
@@ -355,6 +366,17 @@ impl IcingMetaDatabase {
             )
             .add_property(
                 icing::create_property_config_builder()
+                    .set_name(NAME_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
                     .set_name(BLOB_ID_NAME.as_bytes())
                     // We don't need to index blob id
                     // TODO: yongheng - Use String type instead of Int64.
@@ -411,6 +433,17 @@ impl IcingMetaDatabase {
             .add_property(
                 icing::create_property_config_builder()
                     .set_name(MEMORY_ID_NAME.as_bytes())
+                    .set_data_type_string(
+                        icing::term_match_type::Code::ExactOnly.into(),
+                        icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
+                    )
+                    .set_cardinality(
+                        icing::property_config_proto::cardinality::Code::Optional.into(),
+                    ),
+            )
+            .add_property(
+                icing::create_property_config_builder()
+                    .set_name(NAME_NAME.as_bytes())
                     .set_data_type_string(
                         icing::term_match_type::Code::ExactOnly.into(),
                         icing::string_indexing_config::tokenizer_type::Code::Plain.into(),
@@ -639,6 +672,49 @@ impl IcingMetaDatabase {
             return Ok((blob_ids, PageToken::Start));
         }
         Ok((blob_ids, next_page_token))
+    }
+
+    pub fn get_memory_by_name(&self, name: &str) -> anyhow::Result<Option<BlobId>> {
+        let query_str = build_non_expired_query_str(NAME_NAME, name);
+
+        let search_spec = icing::SearchSpecProto {
+            query: Some(query_str),
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            schema_type_filters: vec![SCHEMA_NAME.to_string()],
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
+            ],
+            ..Default::default()
+        };
+
+        let result_spec = icing::ResultSpecProto {
+            num_per_page: Some(2), // We expect at most one result, but set to two to detect errors.
+            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
+            ..Default::default()
+        };
+
+        let search_result: icing::SearchResultProto = self.icing_search_engine.search(
+            &search_spec,
+            &icing::get_default_scoring_spec(), // Scoring doesn't matter much here
+            &result_spec,
+        )?;
+
+        if search_result.status.clone().context("no status")?.code
+            != Some(icing::status_proto::Code::Ok.into())
+        {
+            bail!("Icing search failed: {:?}", search_result.status);
+        }
+
+        if search_result.results.is_empty() {
+            return Ok(None);
+        }
+
+        if search_result.results.len() > 1 {
+            bail!("Two memories with the same name found: {:?}", search_result.results)
+        }
+        Ok(search_result.results.first().and_then(Self::extract_blob_id_from_doc))
     }
 
     pub fn get_blob_id_by_memory_id(&self, memory_id: MemoryId) -> anyhow::Result<Option<BlobId>> {
@@ -2165,6 +2241,48 @@ mod tests {
         // Try to retrieve the memory using the public API, it should not be found
         // because it's expired
         expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memory_by_name_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id = "memory_id".to_string();
+        let memory_name = "memory_name".to_string();
+        let blob_id = "blob_id".to_string();
+
+        let memory =
+            Memory { id: memory_id.clone(), name: memory_name.clone(), ..Default::default() };
+        icing_database.add_memory(&memory, blob_id.clone())?;
+
+        expect_that!(icing_database.get_memory_by_name(&memory_name)?, eq(&Some(blob_id.clone())));
+
+        let wrong_memory_name: String = "memory_name_wrong".to_string();
+        expect_that!(icing_database.get_memory_by_name(&wrong_memory_name)?, eq(&None));
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn icing_get_memory_by_name_duplicate_error_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory_id1 = "memory_id1".to_string();
+        let memory_id2 = "memory_id2".to_string();
+        let memory_name = "memory_name".to_string();
+        let blob_id = "blob_id".to_string();
+
+        let memory1 =
+            Memory { id: memory_id1.clone(), name: memory_name.clone(), ..Default::default() };
+        icing_database.add_memory(&memory1, blob_id.clone())?;
+
+        let memory2 =
+            Memory { id: memory_id2.clone(), name: memory_name.clone(), ..Default::default() };
+        icing_database.add_memory(&memory2, blob_id.clone())?;
+
+        expect_that!(icing_database.get_memory_by_name(&memory_name), err(anything()));
 
         Ok(())
     }

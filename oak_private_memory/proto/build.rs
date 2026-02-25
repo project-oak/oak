@@ -46,6 +46,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.GetMemoryByIdResponse",
         "oak.private_memory.GetMemoriesByIdRequest",
         "oak.private_memory.GetMemoriesByIdResponse",
+        "oak.private_memory.GetMemoryByNameRequest",
+        "oak.private_memory.GetMemoryByNameResponse",
         "oak.private_memory.SearchMemoryRequest",
         "oak.private_memory.SearchMemoryResponse",
         "oak.private_memory.Embedding",

@@ -236,6 +236,18 @@ message GetMemoriesByIdResponse {
   repeated string not_found_ids = 2;
 }
 
+message GetMemoryByNameRequest {
+  string name = 1;
+  ResultMask result_mask = 2;
+}
+
+message GetMemoryByNameResponse {
+  // If the memory is found, the success field is true. Otherwise, the success
+  // field is false and the memory field is empty.
+  bool success = 1;
+  Memory memory = 2;
+}
+
 // Metric type for comparing embeddings.
 enum EmbeddingQueryMetricType {
   DOT_PRODUCT = 0;
@@ -421,6 +433,7 @@ message SealedMemoryRequest {
     ResetMemoryRequest reset_memory_request = 3;
     // Reserved 4 so the request and response have the same field numbers.
     GetMemoryByIdRequest get_memory_by_id_request = 5;
+    GetMemoryByNameRequest get_memory_by_name_request = 11;
 
     KeySyncRequest key_sync_request = 6;
     SearchMemoryRequest search_memory_request = 7;
@@ -441,6 +454,7 @@ message SealedMemoryResponse {
     ResetMemoryResponse reset_memory_response = 3;
     InvalidRequestResponse invalid_request_response = 4;
     GetMemoryByIdResponse get_memory_by_id_response = 5;
+    GetMemoryByNameResponse get_memory_by_name_response = 11;
 
     KeySyncResponse key_sync_response = 6;
     SearchMemoryResponse search_memory_response = 7;
