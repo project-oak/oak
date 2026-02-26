@@ -301,13 +301,16 @@ pub struct CaStorage {
 
     /// The name of the index bucket.
     pub ibucket: String,
+
+    /// Optional access token for authentication.
+    pub access_token: Option<String>,
 }
 
 impl ContentAddressable for CaStorage {
     fn get_file(&self, file_hash: &str) -> Result<Vec<u8>> {
         let suffix = format!("{}/{}", self.fbucket, file_hash);
         let url = self.url_prefix.join(&suffix)?;
-        fetch(&url)
+        fetch(&url, self.access_token.as_deref())
     }
 
     fn get_linked_file(&self, file_hash: &str, link_type: &str) -> Result<Vec<u8>> {
@@ -320,7 +323,7 @@ impl ContentAddressable for CaStorage {
     fn get_link(&self, file_hash: &str, link_type: &str) -> Result<String> {
         let suffix = format!("{}/{}/{}", self.ibucket, link_type, file_hash);
         let url = self.url_prefix.join(&suffix)?;
-        let fetch_result = fetch(&url)?;
+        let fetch_result = fetch(&url, self.access_token.as_deref())?;
         fetch_result
             .try_into()
             .with_context(|| format!("parsing link {link_type} for file {file_hash}"))
@@ -329,8 +332,13 @@ impl ContentAddressable for CaStorage {
 
 // Fetches the content of the given URL.
 // This probably should be a mockable trait of some kind to help with testing.
-fn fetch(url: &Url) -> Result<Vec<u8>> {
-    let response = ureq::get(url.as_ref()).call().with_context(|| format!("fetching URL {url}"))?;
+fn fetch(url: &Url, token: Option<&str>) -> Result<Vec<u8>> {
+    let mut request = ureq::get(url.as_str());
+    if let Some(token) = token {
+        request = request.set("Authorization", &format!("Bearer {}", token));
+    }
+    let response = request.call().with_context(|| format!("fetching URL {url}"))?;
+
     let mut buffer = Vec::new();
     response
         .into_reader()

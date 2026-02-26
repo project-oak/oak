@@ -208,8 +208,17 @@ pub(crate) fn verify_file(current_time: Instant, p: VerifyFileArgs) {
 }
 
 /// Verifies an endorsement package from a remote content addressable storage.
-pub(crate) fn verify_remote(current_time: Instant, p: VerifyRemoteArgs) {
-    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
+pub(crate) fn verify_remote(
+    current_time: Instant,
+    p: VerifyRemoteArgs,
+    access_token: Option<String>,
+) {
+    let storage = CaStorage {
+        url_prefix: p.url_prefix,
+        fbucket: p.fbucket,
+        ibucket: p.ibucket,
+        access_token,
+    };
     let loader = EndorsementLoader::new(Box::new(storage));
     let package = loader
         .load(p.endorsement_hash.as_str(), string_to_option_string(p.rekor_public_key))

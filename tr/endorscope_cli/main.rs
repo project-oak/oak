@@ -28,6 +28,9 @@ struct Params {
     #[arg(long, help = "Time in milliseconds UTC since Unix Epoch or current time if not set.")]
     now_utc_millis: Option<i64>,
 
+    #[arg(long, global = true, help = "Identity token for Cloud authentication")]
+    access_token: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -51,8 +54,10 @@ fn main() {
     match p.command {
         Commands::Verify { command } => match command {
             verify::VerifyCommands::File(args) => verify::verify_file(current_time, args),
-            verify::VerifyCommands::Remote(args) => verify::verify_remote(current_time, args),
+            verify::VerifyCommands::Remote(args) => {
+                verify::verify_remote(current_time, args, p.access_token)
+            }
         },
-        Commands::List(args) => list::list(current_time, args),
+        Commands::List(args) => list::list(current_time, args, p.access_token),
     }
 }

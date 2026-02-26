@@ -142,8 +142,13 @@ pub(crate) struct ListMode {
 }
 
 /// Lists endorsements depending on arguments.
-pub(crate) fn list(current_time: Instant, p: ListArgs) {
-    let storage = CaStorage { url_prefix: p.url_prefix, fbucket: p.fbucket, ibucket: p.ibucket };
+pub(crate) fn list(current_time: Instant, p: ListArgs, access_token: Option<String>) {
+    let storage = CaStorage {
+        url_prefix: p.url_prefix,
+        fbucket: p.fbucket,
+        ibucket: p.ibucket,
+        access_token,
+    };
     let loader = EndorsementLoader::new(Box::new(storage));
 
     let mut final_hashes: Option<Vec<String>> = None;
