@@ -222,17 +222,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c24e9d990669fbd16806bff449e4ac644fd9b1fca014760087732fe4102f131"
 
 [[package]]
-name = "async-recursion"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.116",
-]
-
-[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -478,16 +467,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "bstr"
-version = "1.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63044e1ae8e69f3b5a92c736ca6269b8d12fa7efe39bf34ddb06d102cf0e2cab"
-dependencies = [
- "memchr",
- "serde",
 ]
 
 [[package]]
@@ -1017,15 +996,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-channel"
-version = "0.5.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1293,7 +1263,6 @@ dependencies = [
  "arrayvec",
  "assert-json-diff",
  "assertables",
- "async-recursion",
  "async-stream",
  "async-trait",
  "atomic_refcell",
@@ -1312,8 +1281,6 @@ dependencies = [
  "coset",
  "criterion",
  "criterion-macro",
- "crossbeam-channel",
- "curve25519-dalek",
  "derive_builder",
  "ecdsa",
  "ed25519-dalek",
@@ -1335,7 +1302,6 @@ dependencies = [
  "humantime-serde",
  "hyper",
  "hyper-util",
- "ignore",
  "indicatif",
  "itertools 0.13.0",
  "jni",
@@ -1372,7 +1338,6 @@ dependencies = [
  "primeorder",
  "procfs",
  "proptest",
- "proptest-derive",
  "prost 0.14.3",
  "prost-build 0.14.3",
  "prost-derive 0.14.3",
@@ -1384,7 +1349,6 @@ dependencies = [
  "regex",
  "regex-lite",
  "reqwest",
- "ring",
  "rlsf",
  "rmcp",
  "rmcp-macros",
@@ -1401,7 +1365,6 @@ dependencies = [
  "sha3",
  "signal-hook",
  "signal-hook-tokio",
- "signature",
  "snafu",
  "spinning_top 0.3.0",
  "static_assertions",
@@ -1410,7 +1373,6 @@ dependencies = [
  "syn 2.0.116",
  "syslog",
  "tar",
- "temp-env",
  "tempfile",
  "thiserror 2.0.18",
  "tikv-jemallocator",
@@ -1423,7 +1385,6 @@ dependencies = [
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
- "tonic-web",
  "tower 0.4.13",
  "tower-http",
  "tracing",
@@ -1960,19 +1921,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
-name = "globset"
-version = "0.4.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52dfc19153a48bde0cbd630453615c8151bce3a5adfac7a0aebfbf0a1e1f57e3"
-dependencies = [
- "aho-corasick",
- "bstr",
- "log",
- "regex-automata",
- "regex-syntax",
-]
-
-[[package]]
 name = "goblin"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2440,22 +2388,6 @@ checksum = "3acae9609540aa318d1bc588455225fb2085b9ed0c4f6bd0d9d5bcd86f1a0344"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
-]
-
-[[package]]
-name = "ignore"
-version = "0.4.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3d782a365a015e0f5c04902246139249abf769125006fbe7649e2ee88169b4a"
-dependencies = [
- "crossbeam-deque",
- "globset",
- "log",
- "memchr",
- "regex-automata",
- "same-file",
- "walkdir",
- "winapi-util",
 ]
 
 [[package]]
@@ -3823,17 +3755,6 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
-]
-
-[[package]]
-name = "proptest-derive"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cf16337405ca084e9c78985114633b6827711d22b9e6ef6c6c0d665eb3f0b6e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -5209,15 +5130,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
-name = "temp-env"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
-dependencies = [
- "parking_lot",
-]
-
-[[package]]
 name = "tempfile"
 version = "3.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5584,24 +5496,6 @@ dependencies = [
  "syn 2.0.116",
  "tempfile",
  "tonic-build",
-]
-
-[[package]]
-name = "tonic-web"
-version = "0.14.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1d56db85992f978d0c35a091674c03d42c48e029357833d311e95c6f7ec8f5a"
-dependencies = [
- "base64 0.22.1",
- "bytes",
- "http",
- "http-body",
- "pin-project",
- "tokio-stream",
- "tonic",
- "tower-layer",
- "tower-service",
- "tracing",
 ]
 
 [[package]]

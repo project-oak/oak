@@ -1,5 +1,5 @@
 {
-  "checksum": "bb73880ea15c5c540aed917d0cf913c9356e40a8b03a79b43cfc3a8a2a1c4604",
+  "checksum": "288a22ffcbae9b073ff09c0a9960431f448b59149d2067c72016f97b0e45f9a0",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3015,10 +3015,6 @@
               "target": "coset"
             },
             {
-              "id": "curve25519-dalek 4.1.3",
-              "target": "curve25519_dalek"
-            },
-            {
               "id": "derive_builder 0.20.2",
               "target": "derive_builder"
             },
@@ -3161,10 +3157,6 @@
             {
               "id": "sha3 0.10.8",
               "target": "sha3"
-            },
-            {
-              "id": "signature 2.2.0",
-              "target": "signature"
             },
             {
               "id": "snafu 0.8.9",
@@ -11678,7 +11670,6 @@
     "ciborium 0.2.2",
     "const-oid 0.9.6",
     "coset 0.3.8",
-    "curve25519-dalek 4.1.3",
     "derive_builder 0.20.2",
     "ecdsa 0.16.9",
     "ed25519-dalek 2.2.0",
@@ -11715,7 +11706,6 @@
     "serde_json 1.0.149",
     "sha2 0.10.9",
     "sha3 0.10.8",
-    "signature 2.2.0",
     "snafu 0.8.9",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",

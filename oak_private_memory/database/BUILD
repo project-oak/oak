@@ -36,7 +36,6 @@ rust_library(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:rand",
-        "@oak_crates_index//:ring",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
         "@oak_crates_index//:sha2",

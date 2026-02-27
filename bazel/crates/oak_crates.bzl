@@ -75,10 +75,6 @@ def _common_crates(std):
             default_features = False,
             version = "0.3.7",
         ),
-        "curve25519-dalek": crate.spec(
-            default_features = False,
-            version = "*",
-        ),
         "derive_builder": crate.spec(
             default_features = False,
             features = ["alloc"],
@@ -249,7 +245,6 @@ def _common_crates(std):
             default_features = False,
             version = "0.10.8",
         ),
-        "signature": crate.spec(version = "2.2.0"),
         "snafu": crate.spec(
             default_features = False,
             version = "0.8.0",
@@ -384,7 +379,6 @@ OAK_STD_ANNOTATIONS = {
 # Crates for the std crates index. Crates that are used in all
 # crate indexes should instead be added to _common_crates.
 OAK_STD_CRATES = _common_crates(std = True) | {
-    "async-recursion": crate.spec(version = "1.1.1"),
     "async-stream": crate.spec(version = "0.3.5"),
     "assertables": crate.spec(version = "7.0.1"),
     "assert-json-diff": crate.spec(version = "2.0.2"),
@@ -414,7 +408,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "command-group": crate.spec(version = "5.0.1"),
     "criterion": crate.spec(version = "0.5.1"),
     "criterion-macro": crate.spec(version = "0.4.0"),
-    "crossbeam-channel": crate.spec(version = "0.5.15"),
     "env_logger": crate.spec(version = "0.11.2"),
     "futures": crate.spec(version = "0.3.31"),
     "futures-util": crate.spec(version = "0.3.31"),
@@ -431,7 +424,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         version = "1.4.1",
     ),
     "hyper-util": crate.spec(version = "0.1.7", features = ["full"]),
-    "ignore": crate.spec(version = "0.4.22"),
     "indicatif": crate.spec(version = "0.17.8"),
     "jni": crate.spec(
         version = "0.21.1",
@@ -521,7 +513,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "pretty_assertions": crate.spec(version = "1.4.0"),
     "procfs": crate.spec(version = "0.16.0"),
     "proptest": crate.spec(version = "1.4.0"),
-    "proptest-derive": crate.spec(version = "0.4.0"),
     "prost-build": crate.spec(version = "0.14.3"),
     "prost-derive": crate.spec(version = "0.14.3"),
     "prost-types": crate.spec(version = "0.14.3"),
@@ -552,7 +543,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "rustls-pemfile": crate.spec(version = "2.1.1"),
     "rustls-pki-types": crate.spec(version = "1.14.0"),
-    "ring": crate.spec(version = "0.17.14"),
     "rmcp": crate.spec(
         default_features = False,
         features = [
@@ -581,7 +571,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "syslog": crate.spec(version = "6.1.0"),
     "tar": crate.spec(version = "0.4.40"),
-    "temp-env": crate.spec(version = "0.3.6"),
     "tempfile": crate.spec(version = "3.10.1"),
     "tikv-jemallocator": crate.spec(version = "0.5.4"),
     "tokio": crate.spec(
@@ -645,7 +634,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     ),
     "tonic-prost": crate.spec(version = "0.14.3"),
     "tonic-prost-build": crate.spec(version = "0.14.3"),
-    "tonic-web": crate.spec(version = "0.14.3"),
     "tower": crate.spec(
         features = ["load-shed", "util"],
         version = "0.4",
