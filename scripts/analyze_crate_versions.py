@@ -22,9 +22,47 @@ import os
 import pathlib
 import re
 import ssl
+import subprocess
 import sys
 import time
 import urllib.request
+
+
+# ANSI colors
+RED = "\033[91m"
+YELLOW = "\033[33m"
+GREEN = "\033[92m"
+CYAN = "\033[96m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+# Use 256-color grayscale for subtle highlights (232-255, where 232 is blackest)
+BG_SUBTLE = "\033[40m"
+
+
+def color_text(text, color):
+  """Wrap text in ANSI color codes if stdout is a TTY."""
+  if sys.stdout.isatty():
+    return f"{color}{text}{RESET}"
+  return text
+
+
+def apply_row_style(text, style):
+  """Apply a style (like underline or background) to text that may contain ANSI resets."""
+  if not sys.stdout.isatty() or not style:
+    return text
+  # Replace RESET with RESET + style to ensure style persists across colored fields
+  styled = text.replace(RESET, RESET + style)
+  return f"{style}{styled}{RESET}"
+
+
+def fmt_col(val, width, color=RESET, truncate=False):
+  """Format a value with fixed width and optional color, maintaining alignment."""
+  s = str(val)
+  if truncate and len(s) > width:
+    s = s[: width - 3] + "..."
+  padded = s.ljust(width)
+  return color_text(padded, color)
 
 
 def parse_oak_crates(file_path):
@@ -34,7 +72,7 @@ def parse_oak_crates(file_path):
 
   crates = {}
   # Match "name": crate.spec(...)
-  pattern = r'"([^"]+)":\s*crate\.spec\((.*?)\)'
+  pattern = r'"([^"]+)":\s*crate\.spec\((.*?)\s*\),'
   for name, spec_content in re.findall(pattern, content, re.DOTALL):
     version_match = re.search(r'version\s*=\s*"([^"]+)"', spec_content)
     if version_match:
@@ -138,8 +176,11 @@ def get_crate_versions(crate_name):
   )
   with urllib.request.urlopen(req, timeout=5, context=ssl_context) as response:
     data = json.loads(response.read().decode())
-    # Return list of (version_string, is_yanked)
-    return [(v["num"], v["yanked"]) for v in data.get("versions", [])]
+    # Return list of (version_string, is_yanked, created_at)
+    return [
+        (v["num"], v["yanked"], v["created_at"])
+        for v in data.get("versions", [])
+    ]
 
 
 def find_latest_updates(actual_v, all_versions):
@@ -176,12 +217,56 @@ def find_latest_updates(actual_v, all_versions):
   return {k: v for k, v in updates.items() if v}
 
 
+def get_crate_usage_counts():
+  """Get the number of targets using each crate via bazel query."""
+  print("Fetching crate usage counts via bazel query...", file=sys.stderr)
+  try:
+    # Query all rust targets and their build definitions
+    result = subprocess.run(
+        [
+            "bazel",
+            "query",
+            "kind('rust_.*', //...)",
+            "--output",
+            "build",
+            "--keep_going",
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    build_output = result.stdout
+  except Exception as e:
+    print(f"Warning: Failed to get crate usage counts: {e}", file=sys.stderr)
+    return {}
+
+  counts = {}
+  # Simple pattern to find unique occurrences per rule block
+  crate_pattern = r"@oak[a-z_]*_crates_index//:([a-zA-Z0-9_-]+)"
+
+  # Each rule in `bazel query --output build` is separated by rule headers.
+  # For example: '# /path/to/BUILD:line'
+  rules = re.split(r"^# .*", build_output, flags=re.MULTILINE)
+
+  for rule in rules:
+    rule = rule.strip()
+    if not rule:
+      continue
+    # One target (rule) can use a crate only once in its deps
+    found_crates = set(re.findall(crate_pattern, rule))
+    for crate in found_crates:
+      counts[crate] = counts.get(crate, 0) + 1
+
+  return counts
+
+
 def collect_crate_data(
     bzl_file, lock_file, filter_str=None, cached_versions=None
 ):
   """Collect crate version data from Bazel config, Cargo.lock, and crates.io."""
   requested_crates = parse_oak_crates(bzl_file)
   actual_crates = parse_cargo_lock(lock_file)
+  usage_counts = get_crate_usage_counts()
 
   crate_names = sorted(requested_crates.keys())
   if filter_str:
@@ -195,6 +280,7 @@ def collect_crate_data(
   for i, name in enumerate(crate_names, 1):
     requested = requested_crates[name]
     actual_list = actual_crates.get(name, [])
+    usage = usage_counts.get(name, 0)
 
     if name in cached_versions:
       versions = cached_versions[name]
@@ -214,6 +300,7 @@ def collect_crate_data(
         "requested": requested,
         "actual": actual_list,
         "versions": versions,
+        "usage": usage,
     })
   if fetched_any:
     print(f"\nFinished fetching data for {total} crates.", file=sys.stderr)
@@ -235,83 +322,146 @@ def print_report(
     cache_age=None,
 ):
   """Print a report of crate versions and available updates."""
-  # Define a shared format string for the table to ensure perfect alignment
-  row_fmt = "{:<30} | {:<12} | {:<12} | {:<12} | {:<12} | {:<12}"
+  # Column configuration: (Header, Width)
+  cols = [
+      ("Crate", 25),
+      ("Req", 10),
+      ("Act", 12),
+      ("Latest(P)", 10),
+      ("Latest(m)", 10),
+      ("Latest(M)", 10),
+      ("Usage", 5),
+      ("Latest Date", 12),
+  ]
 
   if not include_pre_release:
     data = [d for d in data if not is_pre_release(d["requested"])]
 
-  print(
-      row_fmt.format(
-          "Crate",
-          "Requested",
-          "Actual",
-          "Latest (P)",
-          "Latest (m)",
-          "Latest (M)",
-      )
-  )
-  print("-" * 110)
+  # Print header
+  header_parts = [fmt_col(h, w, BOLD) for h, w in cols]
+  print(" | ".join(header_parts))
+  print("-" * (sum(w for _, w in cols) + len(cols) * 3 - 1))
 
-  summary = {"Major": 0, "Minor": 0, "Patch": 0}
+  now = time.time()
+  ONE_YEAR_S = 365 * 24 * 3600
+  TWO_YEARS_S = 2 * ONE_YEAR_S
+  THREE_YEARS_S = 3 * ONE_YEAR_S
 
-  for entry in data:
+  for row_idx, entry in enumerate(data):
     name = entry["name"]
     requested = strip_metadata(entry["requested"])
     actual_list = entry["actual"]
     versions_info = entry.get("versions", [])
+    usage = entry.get("usage", 0)
 
-    # Filter out yanked versions
-    all_versions = [v for v, yanked in versions_info if not yanked]
+    # versions_info is list of (version, yanked, created_at)
+    all_versions_info = [v for v in versions_info if not v[1]]
+    all_versions = [v[0] for v in all_versions_info]
 
     if not include_pre_release:
-      all_versions = [v for v in all_versions if not is_pre_release(v)]
+      all_versions_info = [
+          v for v in all_versions_info if not is_pre_release(v[0])
+      ]
+      all_versions = [v[0] for v in all_versions_info]
       actual_list = [v for v in actual_list if not is_pre_release(v)]
+
+    # Absolute latest
+    abs_latest_v = "-"
+    abs_latest_date_str = "-"
+    date_color = RESET
+
+    if all_versions_info:
+      latest_v_info = max(all_versions_info, key=lambda x: version_key(x[0]))
+      abs_latest_v = strip_metadata(latest_v_info[0])
+      if len(latest_v_info) > 2:
+        date_str = latest_v_info[2].split("T")[0]
+        abs_latest_date_str = date_str
+        try:
+          v_time = time.mktime(time.strptime(date_str, "%Y-%m-%d"))
+          age = now - v_time
+          if age > THREE_YEARS_S:
+            date_color = RED
+          elif age > TWO_YEARS_S:
+            date_color = YELLOW
+        except Exception:
+          pass
 
     l_patch = "-"
     l_minor = "-"
     l_major = "-"
 
-    if not actual_list:
-      max_v = max(all_versions, key=version_key) if all_versions else "N/A"
-      l_major = strip_metadata(max_v)
-    else:
+    if actual_list:
       highest_actual = max(actual_list, key=version_key)
       updates = find_latest_updates(highest_actual, all_versions)
-
       if updates.get("Patch"):
         l_patch = strip_metadata(updates["Patch"])
-        summary["Patch"] += 1
       if updates.get("Minor"):
         l_minor = strip_metadata(updates["Minor"])
-        summary["Minor"] += 1
       if updates.get("Major"):
         l_major = strip_metadata(updates["Major"])
-        summary["Major"] += 1
+    else:
+      l_major = abs_latest_v
+
+    # Alternate background shading
+    highlight_row = row_idx % 2 == 1
 
     if not actual_list:
-      print(
-          row_fmt.format(name, requested, "MISSING", l_patch, l_minor, l_major)
-      )
+      row_vals = [
+          fmt_col(name, cols[0][1], truncate=True),
+          fmt_col(requested, cols[1][1]),
+          fmt_col("MISSING", cols[2][1], BOLD + RED),
+          fmt_col(l_patch, cols[3][1]),
+          fmt_col(l_minor, cols[4][1]),
+          fmt_col(l_major, cols[5][1]),
+          fmt_col(usage, cols[6][1]),
+          fmt_col(abs_latest_date_str, cols[7][1], date_color),
+      ]
+      line = " | ".join(row_vals)
+      if highlight_row:
+        line = apply_row_style(line, BG_SUBTLE)
+      print(line)
     else:
       for i, v in enumerate(actual_list):
         display_v = strip_metadata(v)
-        if is_lower(v, requested):
+        is_too_old = is_lower(v, requested)
+        if is_too_old:
           display_v += " (<)"
-        if i == 0:
-          print(
-              row_fmt.format(
-                  name, requested, display_v, l_patch, l_minor, l_major
-              )
-          )
-        else:
-          print(row_fmt.format("", "", display_v, "", "", ""))
 
-  print("-" * 110)
-  print("\nUpdate Summary:")
-  print(f"  Crates with Major Updates: {summary['Major']}")
-  print(f"  Crates with Minor Updates: {summary['Minor']}")
-  print(f"  Crates with Patch Updates: {summary['Patch']}")
+        # Priority: BOLD + RED if Act < Req, else reset
+        act_color = BOLD + RED if is_too_old else RESET
+
+        if i == 0:
+          row_vals = [
+              fmt_col(name, cols[0][1], truncate=True),
+              fmt_col(requested, cols[1][1]),
+              fmt_col(display_v, cols[2][1], act_color),
+              fmt_col(l_patch, cols[3][1]),
+              fmt_col(l_minor, cols[4][1]),
+              fmt_col(l_major, cols[5][1]),
+              fmt_col(usage, cols[6][1]),
+              fmt_col(abs_latest_date_str, cols[7][1], date_color),
+          ]
+        else:
+          row_vals = [
+              fmt_col("", cols[0][1]),
+              fmt_col("", cols[1][1]),
+              fmt_col(display_v, cols[2][1], act_color),
+              fmt_col("", cols[3][1]),
+              fmt_col("", cols[4][1]),
+              fmt_col("", cols[5][1]),
+              fmt_col("", cols[6][1]),
+              fmt_col("", cols[7][1]),
+          ]
+
+        line = " | ".join(row_vals)
+        if highlight_row:
+          line = apply_row_style(line, BG_SUBTLE)
+        print(line)
+
+  print("-" * (sum(w for _, w in cols) + len(cols) * 3 - 1))
+  print("\nUpdate Summary (Latest vs Actual):")
+  print("  Latest dates colored by age: Yellow > 2yrs, Red > 3yrs")
+  print("  Rows have alternating background shading.")
 
   if total_count is not None and total_count != len(data):
     print(f"  Showing {len(data)} crates (filtered from {total_count})")
