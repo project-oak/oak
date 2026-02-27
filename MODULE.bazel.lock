@@ -428,7 +428,7 @@
     },
     "//bazel/nix:extensions.bzl%nix_repos": {
       "general": {
-        "bzlTransitiveDigest": "lGNOdDCUkXYyCXaIXMwEuy+eZV5fVXxdPpvFOflwZTA=",
+        "bzlTransitiveDigest": "9j5qPGB0soEZiV4HIcBhsOVy952eQuKmltXer4UBJBQ=",
         "usagesDigest": "Y5BuCVh8D526J2NekQHwWVOoTCSBxCewDtn057FWBts=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -454,7 +454,7 @@
               "nix_file_deps": {
                 "@@//oak_containers/kernel:kernel-common.nix": "@//oak_containers/kernel:kernel-common.nix",
                 "@@//oak_containers/kernel:kernel_version.txt": "@//oak_containers/kernel:kernel_version.txt",
-                "@@//oak_containers/kernel/configs/6.12.25:minimal.config": "@//oak_containers/kernel/configs/6.12.25:minimal.config"
+                "@@//oak_containers/kernel/configs/6.12.74:minimal.config": "@//oak_containers/kernel/configs/6.12.74:minimal.config"
               },
               "nix_file_content": "",
               "repository": "@@+nix_repos+nixpkgs//:nixpkgs",
@@ -474,7 +474,7 @@
               "nix_file_deps": {
                 "@@//oak_containers/kernel:kernel-common.nix": "@//oak_containers/kernel:kernel-common.nix",
                 "@@//oak_containers/kernel:kernel_version.txt": "@//oak_containers/kernel:kernel_version.txt",
-                "@@//oak_containers/kernel/configs/6.12.25:minimal.config": "@//oak_containers/kernel/configs/6.12.25:minimal.config",
+                "@@//oak_containers/kernel/configs/6.12.74:minimal.config": "@//oak_containers/kernel/configs/6.12.74:minimal.config",
                 "@@//oak_containers/kernel/patches:virtio-dma.patch": "@//oak_containers/kernel/patches:virtio-dma.patch",
                 "@@//oak_containers/kernel/patches:tdx-probe-roms.patch": "@//oak_containers/kernel/patches:tdx-probe-roms.patch",
                 "@@//oak_containers/kernel/patches:rtmr-enable.patch": "@//oak_containers/kernel/patches:rtmr-enable.patch"

@@ -10,7 +10,7 @@ def setup_nix_kernels():
         nix_file_deps = [
             "@//oak_containers/kernel:kernel-common.nix",
             "@//oak_containers/kernel:kernel_version.txt",
-            "@//oak_containers/kernel/configs/6.12.25:minimal.config",
+            "@//oak_containers/kernel/configs/6.12.74:minimal.config",
         ],
         repository = "@nixpkgs",
     )
@@ -22,7 +22,7 @@ def setup_nix_kernels():
         nix_file_deps = [
             "@//oak_containers/kernel:kernel-common.nix",
             "@//oak_containers/kernel:kernel_version.txt",
-            "@//oak_containers/kernel/configs/6.12.25:minimal.config",
+            "@//oak_containers/kernel/configs/6.12.74:minimal.config",
             "@//oak_containers/kernel/patches:virtio-dma.patch",
             "@//oak_containers/kernel/patches:tdx-probe-roms.patch",
             "@//oak_containers/kernel/patches:rtmr-enable.patch",
