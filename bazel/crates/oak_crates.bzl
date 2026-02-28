@@ -245,10 +245,6 @@ def _common_crates(std):
             default_features = False,
             version = "0.10.8",
         ),
-        "snafu": crate.spec(
-            default_features = False,
-            version = "0.8.0",
-        ),
         "spinning_top": crate.spec(version = "0.3.0"),
         "static_assertions": crate.spec(version = "1.1.0"),
         "strum": crate.spec(
