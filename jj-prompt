@@ -1,0 +1,13 @@
+# This template pulls current desc, or falls back to the first parent's desc
+template='
+coalesce(
+  description.first_line(),
+  parents.map(|p| p.description()),
+  "(no description)"
+)
+'
+
+# We use --ignore-working-copy to keep it fast for your Oak builds
+jj_info=$(jj log -r @ -n 1 --no-graph --ignore-working-copy -T "$template")
+
+echo "RESULT: $jj_info"

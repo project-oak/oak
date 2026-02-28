@@ -1,5 +1,5 @@
 {
-  "checksum": "74f6c443d7fcf2c7e82c6659600fd6132362ad2047f122b0835edf4baa44c7f0",
+  "checksum": "a0bbf636994eecd93ed102f88ae34e44c81b821fc74b2ffed202847f7605ff9d",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -1080,14 +1080,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "bumpalo 3.20.1": {
+    "bumpalo 3.20.2": {
       "name": "bumpalo",
-      "version": "3.20.1",
+      "version": "3.20.2",
       "package_url": "https://github.com/fitzgen/bumpalo",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/bumpalo/3.20.1/download",
-          "sha256": "5c6f81257d10a0f602a294ae4182251151ff97dbb504ef9afcdda4a64b24d9b4"
+          "url": "https://static.crates.io/crates/bumpalo/3.20.2/download",
+          "sha256": "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
         }
       },
       "targets": [
@@ -1116,7 +1116,7 @@
           "selects": {}
         },
         "edition": "2021",
-        "version": "3.20.1"
+        "version": "3.20.2"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -4083,11 +4083,11 @@
             ],
             "wasm32-unknown-unknown": [
               {
-                "id": "js-sys 0.3.85",
+                "id": "js-sys 0.3.91",
                 "target": "js_sys"
               },
               {
-                "id": "wasm-bindgen 0.2.108",
+                "id": "wasm-bindgen 0.2.114",
                 "target": "wasm_bindgen"
               }
             ]
@@ -4896,14 +4896,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "js-sys 0.3.85": {
+    "js-sys 0.3.91": {
       "name": "js-sys",
-      "version": "0.3.85",
+      "version": "0.3.91",
       "package_url": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/js-sys/0.3.85/download",
-          "sha256": "8c942ebf8e95485ca0d52d97da7c5a2c387d0e7f0ba4c35e93bfcaee045955b3"
+          "url": "https://static.crates.io/crates/js-sys/0.3.91/download",
+          "sha256": "b49715b7073f385ba4bc528e5747d02e66cb39c6146efb66b781f131f0fb399c"
         }
       },
       "targets": [
@@ -4928,7 +4928,8 @@
         "crate_features": {
           "common": [
             "default",
-            "std"
+            "std",
+            "unsafe-eval"
           ],
           "selects": {}
         },
@@ -4939,14 +4940,14 @@
               "target": "once_cell"
             },
             {
-              "id": "wasm-bindgen 0.2.108",
+              "id": "wasm-bindgen 0.2.114",
               "target": "wasm_bindgen"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.3.85"
+        "version": "0.3.91"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -10004,14 +10005,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "wasm-bindgen 0.2.108": {
+    "wasm-bindgen 0.2.114": {
       "name": "wasm-bindgen",
-      "version": "0.2.108",
+      "version": "0.2.114",
       "package_url": "https://github.com/wasm-bindgen/wasm-bindgen",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasm-bindgen/0.2.108/download",
-          "sha256": "64024a30ec1e37399cf85a7ffefebdb72205ca1c972291c51512360d90bd8566"
+          "url": "https://static.crates.io/crates/wasm-bindgen/0.2.114/download",
+          "sha256": "6532f9a5c1ece3798cb1c2cfdba640b9b3ba884f5db45973a6f442510a87d38e"
         }
       },
       "targets": [
@@ -10062,11 +10063,11 @@
               "target": "once_cell"
             },
             {
-              "id": "wasm-bindgen 0.2.108",
+              "id": "wasm-bindgen 0.2.114",
               "target": "build_script_build"
             },
             {
-              "id": "wasm-bindgen-shared 0.2.108",
+              "id": "wasm-bindgen-shared 0.2.114",
               "target": "wasm_bindgen_shared"
             }
           ],
@@ -10076,13 +10077,13 @@
         "proc_macro_deps": {
           "common": [
             {
-              "id": "wasm-bindgen-macro 0.2.108",
+              "id": "wasm-bindgen-macro 0.2.114",
               "target": "wasm_bindgen_macro"
             }
           ],
           "selects": {}
         },
-        "version": "0.2.108"
+        "version": "0.2.114"
       },
       "build_script_attrs": {
         "compile_data_glob": [
@@ -10097,7 +10098,7 @@
         "link_deps": {
           "common": [
             {
-              "id": "wasm-bindgen-shared 0.2.108",
+              "id": "wasm-bindgen-shared 0.2.114",
               "target": "wasm_bindgen_shared"
             }
           ],
@@ -10121,14 +10122,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "wasm-bindgen-macro 0.2.108": {
+    "wasm-bindgen-macro 0.2.114": {
       "name": "wasm-bindgen-macro",
-      "version": "0.2.108",
+      "version": "0.2.114",
       "package_url": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasm-bindgen-macro/0.2.108/download",
-          "sha256": "008b239d9c740232e71bd39e8ef6429d27097518b6b30bdf9086833bd5b6d608"
+          "url": "https://static.crates.io/crates/wasm-bindgen-macro/0.2.114/download",
+          "sha256": "18a2d50fcf105fb33bb15f00e7a77b772945a2ee45dcf454961fd843e74c18e6"
         }
       },
       "targets": [
@@ -10157,14 +10158,14 @@
               "target": "quote"
             },
             {
-              "id": "wasm-bindgen-macro-support 0.2.108",
+              "id": "wasm-bindgen-macro-support 0.2.114",
               "target": "wasm_bindgen_macro_support"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.108"
+        "version": "0.2.114"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -10173,14 +10174,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "wasm-bindgen-macro-support 0.2.108": {
+    "wasm-bindgen-macro-support 0.2.114": {
       "name": "wasm-bindgen-macro-support",
-      "version": "0.2.108",
+      "version": "0.2.114",
       "package_url": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro-support",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasm-bindgen-macro-support/0.2.108/download",
-          "sha256": "5256bae2d58f54820e6490f9839c49780dff84c65aeab9e772f15d5f0e913a55"
+          "url": "https://static.crates.io/crates/wasm-bindgen-macro-support/0.2.114/download",
+          "sha256": "03ce4caeaac547cdf713d280eda22a730824dd11e6b8c3ca9e42247b25c631e3"
         }
       },
       "targets": [
@@ -10205,7 +10206,7 @@
         "deps": {
           "common": [
             {
-              "id": "bumpalo 3.20.1",
+              "id": "bumpalo 3.20.2",
               "target": "bumpalo"
             },
             {
@@ -10221,14 +10222,14 @@
               "target": "syn"
             },
             {
-              "id": "wasm-bindgen-shared 0.2.108",
+              "id": "wasm-bindgen-shared 0.2.114",
               "target": "wasm_bindgen_shared"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.108"
+        "version": "0.2.114"
       },
       "license": "MIT OR Apache-2.0",
       "license_ids": [
@@ -10237,14 +10238,14 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
-    "wasm-bindgen-shared 0.2.108": {
+    "wasm-bindgen-shared 0.2.114": {
       "name": "wasm-bindgen-shared",
-      "version": "0.2.108",
+      "version": "0.2.114",
       "package_url": "https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/wasm-bindgen-shared/0.2.108/download",
-          "sha256": "1f01b580c9ac74c8d8f0c0e4afb04eeef2acf145458e52c03845ee9cd23e3d12"
+          "url": "https://static.crates.io/crates/wasm-bindgen-shared/0.2.114/download",
+          "sha256": "75a326b8c223ee17883a4251907455a2431acc2791c98c26279376490c378c16"
         }
       },
       "targets": [
@@ -10285,14 +10286,14 @@
               "target": "unicode_ident"
             },
             {
-              "id": "wasm-bindgen-shared 0.2.108",
+              "id": "wasm-bindgen-shared 0.2.114",
               "target": "build_script_build"
             }
           ],
           "selects": {}
         },
         "edition": "2021",
-        "version": "0.2.108"
+        "version": "0.2.114"
       },
       "build_script_attrs": {
         "compile_data_glob": [

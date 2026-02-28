@@ -1,5 +1,5 @@
 {
-  "checksum": "776b6e7439268a9fa725cff474d85df5809bddf90002ee51a6da17dcee7e29b2",
+  "checksum": "8b6532e6204b1eb2a08a8bd6c809abcd6c3696b4e7ba87a0f5b75660b158192c",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -7897,7 +7897,7 @@
               "target": "quote"
             },
             {
-              "id": "rand 0.8.5",
+              "id": "rand 0.9.2",
               "target": "rand"
             },
             {
@@ -43423,7 +43423,7 @@
     "prost-derive 0.14.3",
     "prost-types 0.14.3",
     "quote 1.0.44",
-    "rand 0.8.5",
+    "rand 0.9.2",
     "rand_chacha 0.3.1",
     "rand_core 0.6.4",
     "regex 1.12.3",

@@ -139,7 +139,7 @@ where
 
                 // Send a randomly generated ping
                 let mut payload = vec![0u8; 8];
-                rand::thread_rng().fill(&mut payload[..]);
+                rand::rng().fill(&mut payload[..]);
                 log::debug!("[{role}] Ding, dong! It's pinging time! Sending ping {}", hex::encode(&payload));
                 ping_queue.push_front(payload.clone().into());
                 encrypted_writer.send(tungstenite::Message::Ping(payload.into())).await?;

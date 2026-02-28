@@ -37,7 +37,6 @@ load("@rules_rust//crate_universe:defs.bzl", "crate")
 create_oak_crate_repositories(
     extra_packages = {
         "aes-gcm-siv": crate.spec(version = "0.11.1"),
-        "rand": crate.spec(version = "0.9.1"),
     },
 )
 

@@ -77,7 +77,7 @@ impl FlagDigestService for FlagDigestServiceImpl {
     ) -> Result<Response<GenerateFlagDigestResponse>, Status> {
         // Generate a secret flag.
         let flag_digest = {
-            let flag = generate_flag(&mut StdRng::from_entropy());
+            let flag = generate_flag(&mut StdRng::from_os_rng());
             let mut hasher = Sha256::new();
             hasher.update(flag);
             hasher.finalize().to_vec()

@@ -1343,7 +1343,7 @@ dependencies = [
  "prost-derive 0.14.3",
  "prost-types 0.14.3",
  "quote",
- "rand 0.8.5",
+ "rand 0.9.2",
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
  "regex",

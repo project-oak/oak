@@ -517,7 +517,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
     "prost-derive": crate.spec(version = "0.14.3"),
     "prost-types": crate.spec(version = "0.14.3"),
     "quote": crate.spec(version = "1.0.35"),
-    "rand": crate.spec(version = "0.8.5"),
+    "rand": crate.spec(version = "0.9.0"),
     "regex": crate.spec(
         default_features = False,
         version = "1.10.2",

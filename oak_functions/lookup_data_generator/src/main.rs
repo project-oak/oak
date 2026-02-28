@@ -44,7 +44,7 @@ pub enum Command {
 
 fn main() -> anyhow::Result<()> {
     let opt = Opt::parse();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let buf = match opt.cmd {
         Command::Random { key_size_bytes, value_size_bytes, entries } => {
             generate_and_serialize_random_entries(
