@@ -114,7 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let int64_fields = ["oak.private_memory.MemoryValue.value.int64_val"];
 
     for message_type in int64_fields {
-        config.field_attribute(message_type, "#[serde(deserialize_with = \"serde_aux::field_attributes::deserialize_number_from_string\")]");
+        config.field_attribute(message_type, "#[serde(with=\"crate::js_int64_converter\")]");
     }
 
     // Enum converters

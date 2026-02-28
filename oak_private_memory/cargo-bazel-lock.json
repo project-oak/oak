@@ -1,5 +1,5 @@
 {
-  "checksum": "ae263d45f065171129f0ad25259e0df9252ebdd9ec3256d9f666d1c2b93e105b",
+  "checksum": "f1960b8775ebce608bd5b07f159c8141340ba757db0cf4d8f8b9d0cdb5c80717",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -8044,10 +8044,6 @@
             {
               "id": "serde 1.0.228",
               "target": "serde"
-            },
-            {
-              "id": "serde-aux 4.7.0",
-              "target": "serde_aux"
             },
             {
               "id": "serde_json 1.0.149",
@@ -19665,60 +19661,6 @@
       ],
       "license_file": null
     },
-    "ordered-float 2.10.1": {
-      "name": "ordered-float",
-      "version": "2.10.1",
-      "package_url": "https://github.com/reem/rust-ordered-float",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/ordered-float/2.10.1/download",
-          "sha256": "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "ordered_float",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "ordered_float",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "default",
-            "std"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "num-traits 0.2.19",
-              "target": "num_traits"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "2.10.1"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": "LICENSE-MIT"
-    },
     "os_pipe 1.2.3": {
       "name": "os_pipe",
       "version": "1.2.3",
@@ -28127,123 +28069,6 @@
         "MIT"
       ],
       "license_file": "LICENSE-APACHE"
-    },
-    "serde-aux 4.7.0": {
-      "name": "serde-aux",
-      "version": "4.7.0",
-      "package_url": "https://github.com/iddm/serde-aux",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/serde-aux/4.7.0/download",
-          "sha256": "207f67b28fe90fb596503a9bf0bf1ea5e831e21307658e177c5dfcdfc3ab8a0a"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "serde_aux",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "serde_aux",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "crate_features": {
-          "common": [
-            "chrono",
-            "default"
-          ],
-          "selects": {}
-        },
-        "deps": {
-          "common": [
-            {
-              "id": "chrono 0.4.43",
-              "target": "chrono"
-            },
-            {
-              "id": "serde 1.0.228",
-              "target": "serde"
-            },
-            {
-              "id": "serde-value 0.7.0",
-              "target": "serde_value"
-            },
-            {
-              "id": "serde_json 1.0.149",
-              "target": "serde_json"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2021",
-        "version": "4.7.0"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": "LICENSE"
-    },
-    "serde-value 0.7.0": {
-      "name": "serde-value",
-      "version": "0.7.0",
-      "package_url": "https://github.com/arcnmx/serde-value",
-      "repository": {
-        "Http": {
-          "url": "https://static.crates.io/crates/serde-value/0.7.0/download",
-          "sha256": "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
-        }
-      },
-      "targets": [
-        {
-          "Library": {
-            "crate_name": "serde_value",
-            "crate_root": "src/lib.rs",
-            "srcs": {
-              "allow_empty": true,
-              "include": [
-                "**/*.rs"
-              ]
-            }
-          }
-        }
-      ],
-      "library_target_name": "serde_value",
-      "common_attrs": {
-        "compile_data_glob": [
-          "**"
-        ],
-        "deps": {
-          "common": [
-            {
-              "id": "ordered-float 2.10.1",
-              "target": "ordered_float"
-            },
-            {
-              "id": "serde 1.0.228",
-              "target": "serde"
-            }
-          ],
-          "selects": {}
-        },
-        "edition": "2018",
-        "version": "0.7.0"
-      },
-      "license": "MIT",
-      "license_ids": [
-        "MIT"
-      ],
-      "license_file": null
     },
     "serde_core 1.0.228": {
       "name": "serde_core",
@@ -43701,7 +43526,6 @@
     "rustls-pki-types 1.14.0",
     "self_cell 1.2.2",
     "serde 1.0.228",
-    "serde-aux 4.7.0",
     "serde_json 1.0.149",
     "sha2 0.10.9",
     "sha3 0.10.8",
