@@ -43,7 +43,6 @@ rust_test(
         "//oak_functions_test_utils",
         "@oak_crates_index//:log",
         "@oak_crates_index//:maplit",
-        "@oak_crates_index//:pretty_assertions",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",

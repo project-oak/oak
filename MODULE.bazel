@@ -1215,13 +1215,6 @@ crate.annotation(
     repositories = ALL_STD,
 )
 crate.spec(
-    default_features = True,
-    features = [],
-    package = "pretty_assertions",
-    repositories = ALL_STD,
-    version = "1.4.0",
-)
-crate.spec(
     default_features = False,
     features = [],
     package = "primeorder",
