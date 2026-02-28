@@ -1,5 +1,5 @@
 {
-  "checksum": "0c092807d6647524a89920893d877cd39f30dfc4925b0df6a4c20ef6026d332b",
+  "checksum": "e9068bcf233a9a816a91ce18f5c62a3039ff33736dfdbf05ede94ad5f0fc1053",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -3096,7 +3096,7 @@
               "target": "static_assertions"
             },
             {
-              "id": "strum 0.26.3",
+              "id": "strum 0.27.2",
               "target": "strum"
             },
             {
@@ -8920,14 +8920,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "strum 0.26.3": {
+    "strum 0.27.2": {
       "name": "strum",
-      "version": "0.26.3",
+      "version": "0.27.2",
       "package_url": "https://github.com/Peternator7/strum",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/strum/0.26.3/download",
-          "sha256": "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+          "url": "https://static.crates.io/crates/strum/0.27.2/download",
+          "sha256": "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
         }
       },
       "targets": [
@@ -8956,17 +8956,17 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
+        "edition": "2021",
         "proc_macro_deps": {
           "common": [
             {
-              "id": "strum_macros 0.26.4",
+              "id": "strum_macros 0.27.2",
               "target": "strum_macros"
             }
           ],
           "selects": {}
         },
-        "version": "0.26.3"
+        "version": "0.27.2"
       },
       "license": "MIT",
       "license_ids": [
@@ -8974,14 +8974,14 @@
       ],
       "license_file": "LICENSE"
     },
-    "strum_macros 0.26.4": {
+    "strum_macros 0.27.2": {
       "name": "strum_macros",
-      "version": "0.26.4",
+      "version": "0.27.2",
       "package_url": "https://github.com/Peternator7/strum",
       "repository": {
         "Http": {
-          "url": "https://static.crates.io/crates/strum_macros/0.26.4/download",
-          "sha256": "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+          "url": "https://static.crates.io/crates/strum_macros/0.27.2/download",
+          "sha256": "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
         }
       },
       "targets": [
@@ -9024,17 +9024,8 @@
           ],
           "selects": {}
         },
-        "edition": "2018",
-        "proc_macro_deps": {
-          "common": [
-            {
-              "id": "rustversion 1.0.22",
-              "target": "rustversion"
-            }
-          ],
-          "selects": {}
-        },
-        "version": "0.26.4"
+        "edition": "2021",
+        "version": "0.27.2"
       },
       "license": "MIT",
       "license_ids": [
@@ -11370,7 +11361,7 @@
     "snafu 0.8.9",
     "spinning_top 0.3.0",
     "static_assertions 1.1.0",
-    "strum 0.26.3",
+    "strum 0.27.2",
     "thiserror 2.0.18",
     "uart_16550 0.3.2",
     "wasmi 0.31.2",

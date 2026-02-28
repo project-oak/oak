@@ -254,7 +254,7 @@ def _common_crates(std):
         "strum": crate.spec(
             default_features = False,
             features = ["derive"],
-            version = "0.26.3",
+            version = "0.27.0",
         ),
         "thiserror": crate.spec(
             default_features = False,
@@ -564,7 +564,6 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         features = ["futures-v0_3"],
         version = "0.3.1",
     ),
-    "strum_macros": crate.spec(version = "0.25"),
     "syn": crate.spec(
         features = ["full"],
         version = "2.0.48",
