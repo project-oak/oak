@@ -20,12 +20,14 @@ use std::{
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
+    sync::Arc,
 };
 
 use anyhow::Result;
 use clap::Parser;
 use command_fds::CommandFdExt;
 pub use oak_launcher_utils::launcher::VmType;
+use tokio::sync::{Notify, watch};
 use tokio_vsock::VMADDR_CID_HOST;
 
 use crate::{VM_HOST_ADDRESS, VM_HOST_PORT, path_exists};
@@ -164,7 +166,8 @@ impl Network {
 }
 
 pub struct Qemu {
-    instance: tokio::process::Child,
+    kill_notify: Arc<Notify>,
+    exit_status: watch::Receiver<Option<std::process::ExitStatus>>,
     guest_cid: Option<u32>,
 }
 
@@ -381,21 +384,54 @@ impl Qemu {
             });
         }
 
-        let instance = cmd.spawn()?;
+        let mut child = cmd.spawn()?;
+        let kill_notify = Arc::new(Notify::new());
+        let kill_notify_clone = kill_notify.clone();
+        let (exit_status_sender, exit_status_receiver) = watch::channel(None);
 
-        Ok(Self { instance, guest_cid: params.virtio_guest_cid })
+        tokio::spawn(async move {
+            let status = tokio::select! {
+                result = child.wait() => result,
+                _ = kill_notify_clone.notified() => {
+                    let _ = child.start_kill();
+                    child.wait().await
+                }
+            };
+            match status {
+                Ok(status) => {
+                    if !status.success() {
+                        log::error!("QEMU exited with status {status}");
+                    }
+                    let _ = exit_status_sender.send(Some(status));
+                }
+                Err(e) => {
+                    log::error!("failed to wait for QEMU: {e}");
+                }
+            }
+        });
+
+        Ok(Self {
+            kill_notify,
+            exit_status: exit_status_receiver,
+            guest_cid: params.virtio_guest_cid,
+        })
     }
 
     pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
-        self.instance.start_kill()?;
+        self.kill_notify.notify_one();
         self.wait().await
     }
 
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
-        self.instance.wait().await.map_err(anyhow::Error::from)
+        let mut rx = self.exit_status.clone();
+        rx.wait_for(|s| s.is_some()).await.map(|s| s.unwrap()).map_err(anyhow::Error::from)
     }
 
     pub fn guest_cid(&self) -> Option<u32> {
         self.guest_cid
+    }
+
+    pub fn subscribe_exit(&self) -> watch::Receiver<Option<std::process::ExitStatus>> {
+        self.exit_status.clone()
     }
 }

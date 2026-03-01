@@ -28,7 +28,6 @@ use std::{
     task::Poll,
 };
 
-use command_group::stdlib::CommandGroup;
 use http::uri::Uri;
 use oak_client::verifier::InsecureAttestationVerifier;
 use oak_file_utils::data_path;
@@ -245,21 +244,62 @@ pub fn run_oak_functions_containers_example_in_background(
     args.push("-c".into());
     args.push(commands);
 
-    let child = std::process::Command::new(
+    let mut cmd = tokio::process::Command::new(
         which::which("unshare").expect("could not find `unshare` binary"),
-    )
-    .args(args)
-    .group_spawn()
-    .expect("didn't start oak functions containers launcher");
-    BackgroundHandle(child)
+    );
+    cmd.args(args);
+    cmd.process_group(0);
+    cmd.kill_on_drop(true);
+    BackgroundHandle::spawn(cmd, "oak functions containers launcher")
 }
 
-/// A wrapper around a child process that kills it when its dropped.
-pub struct BackgroundHandle(pub command_group::GroupChild);
+/// A wrapper around a child process that kills it (and its entire process
+/// group) when dropped.
+///
+/// Uses [`tokio::process::Command`] internally so that the child's exit status
+/// can be awaited asynchronously via [`wait`](Self::wait).
+///
+/// # Example
+///
+/// Use [`wait`](Self::wait) in a `tokio::select!` to detect early exits:
+/// ```ignore
+/// let mut bg = run_oak_functions_containers_example_in_background(...);
+/// tokio::select! {
+///     status = bg.wait() => panic!("exited unexpectedly: {status:?}"),
+///     result = some_async_operation() => result,
+/// }
+/// ```
+pub struct BackgroundHandle {
+    /// The child process.
+    child: tokio::process::Child,
+    /// Process group leader PID, used to kill the entire group on drop.
+    pgid: nix::unistd::Pid,
+}
+
+impl BackgroundHandle {
+    /// Spawns the command, creating a new process group.
+    ///
+    /// The caller must have called `cmd.process_group(0)` and
+    /// `cmd.kill_on_drop(true)` before passing `cmd` here.
+    fn spawn(mut cmd: tokio::process::Command, name: &str) -> Self {
+        let child = cmd.spawn().unwrap_or_else(|e| panic!("didn't start {name}: {e}"));
+        let pid = child.id().expect("failed to get child PID");
+        let pgid = nix::unistd::Pid::from_raw(pid as i32);
+        Self { child, pgid }
+    }
+
+    /// Waits for the child process to exit.
+    ///
+    /// This is an async method designed for use with `tokio::select!` to race
+    /// the child's exit against other async operations.
+    pub async fn wait(&mut self) -> std::io::Result<std::process::ExitStatus> {
+        self.child.wait().await
+    }
+}
 
 impl std::ops::Drop for BackgroundHandle {
     fn drop(&mut self) {
-        self.0.kill().expect("Couldn't kill command group")
+        let _ = nix::sys::signal::killpg(self.pgid, nix::sys::signal::Signal::SIGKILL);
     }
 }
 
@@ -279,30 +319,28 @@ pub fn run_oak_functions_example_in_background(
         "oak_restricted_kernel_wrapper/oak_restricted_kernel_wrapper_virtio_console_channel_bin",
     );
 
-    let child =
-        std::process::Command::new(data_path("oak_functions_launcher/oak_functions_launcher"))
-            .args(vec![
-                arg!("--bios-binary=", stage0_bin),
-                arg!("--kernel=", kernel),
-                arg!(
-                    "--vmm-binary=",
-                    which::which("qemu-system-x86_64").unwrap().to_str().unwrap()
-                ),
-                arg!(
-                    "--app-binary=",
-                    data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app")
-                ),
-                arg!("--initrd=", data_path("enclave_apps/oak_orchestrator/oak_orchestrator")),
-                arg!("--wasm=", wasm_path),
-                arg!("--lookup-data=", lookup_data_path),
-                arg!("--port=", port.to_string()),
-                arg!("--memory-size=", "256M"),
-            ])
-            .stdout(Stdio::piped())
-            .group_spawn()
-            .expect("didn't start oak functions launcher");
+    let mut cmd =
+        tokio::process::Command::new(data_path("oak_functions_launcher/oak_functions_launcher"));
+    cmd.args(vec![
+        arg!("--bios-binary=", stage0_bin),
+        arg!("--kernel=", kernel),
+        arg!("--vmm-binary=", which::which("qemu-system-x86_64").unwrap().to_str().unwrap()),
+        arg!(
+            "--app-binary=",
+            data_path("enclave_apps/oak_functions_enclave_app/oak_functions_enclave_app")
+        ),
+        arg!("--initrd=", data_path("enclave_apps/oak_orchestrator/oak_orchestrator")),
+        arg!("--wasm=", wasm_path),
+        arg!("--lookup-data=", lookup_data_path),
+        arg!("--port=", port.to_string()),
+        arg!("--memory-size=", "256M"),
+    ]);
+    cmd.stdout(Stdio::piped());
+    cmd.process_group(0);
+    cmd.kill_on_drop(true);
 
-    (BackgroundHandle(child), format!("http://localhost:{port}").try_into().unwrap())
+    let bg = BackgroundHandle::spawn(cmd, "oak functions launcher");
+    (bg, format!("http://localhost:{port}").try_into().unwrap())
 }
 
 pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process::Output> {

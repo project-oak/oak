@@ -33,7 +33,7 @@ use private_memory_server_lib::{
     app::{ApplicationConfig, run_persistence_service},
 };
 use runfiles::Runfiles;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::watch};
 
 /// Initializes logging for tests if it hasn't been initialized already.
 fn init_logging() {
@@ -115,12 +115,13 @@ pub async fn start_server_with_clock(
 /// the Private Memory enclave application. It also starts a local test database
 /// service and configures QEMU to forward traffic to it.
 ///
-/// Returns the enclave URL, a handle to the database service, and the VM
-/// launcher.
+/// Returns the enclave URL, a handle to the database service, the VM
+/// launcher, and a receiver for QEMU exit notifications.
 pub async fn start_container_server() -> Result<(
     String,                              // Enclave URL
     tokio::task::JoinHandle<Result<()>>, // DB handle
     Launcher,
+    watch::Receiver<Option<std::process::ExitStatus>>, // QEMU exit receiver
 )> {
     let (db_addr, db_handle) = start_test_database().await?;
     let db_port = db_addr.port();
@@ -166,12 +167,13 @@ pub async fn start_container_server() -> Result<(
     };
 
     let mut launcher = Launcher::create(args).await?;
+    let exit_rx = launcher.subscribe_exit();
     let enclave_addr = match launcher.get_trusted_app_address().await? {
         TrustedApplicationAddress::Network(addr) => addr,
         _ => anyhow::bail!("Expected network address"),
     };
 
-    Ok((format!("http://{enclave_addr}"), db_handle, launcher))
+    Ok((format!("http://{enclave_addr}"), db_handle, launcher, exit_rx))
 }
 
 /// Represents the active test backend and its associated resources.
@@ -191,11 +193,17 @@ pub enum TestBackend {
 ///
 /// It uses the `OAK_E2E_BACKEND` environment variable to determine whether to
 /// start the server in `host` mode (default) or `container` mode.
+///
+/// In container mode, a background watchdog task automatically panics the test
+/// if QEMU exits unexpectedly. The watchdog is cancelled during [`teardown`].
 pub struct TestContext {
     /// The base URL of the running server.
     pub url: String,
     /// The specific backend handles for the current session.
     pub backend: TestBackend,
+    /// Background task that panics if QEMU exits unexpectedly (container mode
+    /// only).
+    guard_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl TestContext {
@@ -203,13 +211,22 @@ impl TestContext {
     /// mode.
     pub async fn setup() -> Result<Self> {
         if std::env::var("OAK_E2E_BACKEND").as_deref() == Ok("container") {
-            let (url, db_handle, launcher) = start_container_server().await?;
-            Ok(Self { url, backend: TestBackend::Container { launcher, db_handle } })
+            let (url, db_handle, launcher, mut exit_rx) = start_container_server().await?;
+            let guard_handle = tokio::spawn(async move {
+                let _ = exit_rx.changed().await;
+                panic!("QEMU exited unexpectedly: {:?}", *exit_rx.borrow());
+            });
+            Ok(Self {
+                url,
+                backend: TestBackend::Container { launcher, db_handle },
+                guard_handle: Some(guard_handle),
+            })
         } else {
             let (addr, server_handle, db_handle, persistence_handle) = start_server().await?;
             Ok(Self {
                 url: format!("http://{}", addr),
                 backend: TestBackend::Host { server_handle, db_handle, persistence_handle },
+                guard_handle: None,
             })
         }
     }
@@ -229,6 +246,7 @@ impl TestContext {
             Ok(Self {
                 url: format!("http://{}", addr),
                 backend: TestBackend::Host { server_handle, db_handle, persistence_handle },
+                guard_handle: None,
             })
         }
     }
@@ -241,6 +259,10 @@ impl TestContext {
     /// Cleans up the test environment, ensuring that the server and any
     /// associated VMs are properly terminated.
     pub async fn teardown(self) {
+        // Abort the watchdog before killing QEMU to avoid a spurious panic.
+        if let Some(handle) = self.guard_handle {
+            handle.abort();
+        }
         if let TestBackend::Container { mut launcher, .. } = self.backend {
             launcher.kill().await;
         }

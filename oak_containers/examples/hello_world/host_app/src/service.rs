@@ -17,6 +17,7 @@ use std::{pin::Pin, sync::Arc};
 
 use anyhow::{Context, anyhow};
 use futures::{Stream, StreamExt, channel::mpsc};
+use oak_containers_launcher::Launcher;
 use oak_hello_world_proto::oak::containers::example::{
     enclave_application_client::EnclaveApplicationClient,
     host_application_server::{HostApplication, HostApplicationServer},
@@ -73,13 +74,18 @@ pub async fn create(
     listener: TcpListener,
     launcher_args: oak_containers_launcher::Args,
 ) -> anyhow::Result<()> {
-    let mut launcher = oak_containers_launcher::Launcher::create(launcher_args)
+    let mut launcher = Launcher::create(launcher_args)
         .await
-        .map_err(|error| anyhow!("Failed to crate launcher: {error:?}"))?;
-    let enclave_app_address = launcher
-        .get_trusted_app_address()
-        .await
-        .map_err(|error| anyhow!("Failed to get app address: {error:?}"))?;
+        .map_err(|error| anyhow!("failed to create launcher: {error:?}"))?;
+
+    let mut exit_rx = launcher.subscribe_exit();
+    let shutdown_signal = async move {
+        let _ = exit_rx.changed().await;
+        eprintln!("QEMU exited, shutting down host app service.");
+    };
+
+    let enclave_app_address =
+        launcher.get_trusted_app_address().await.context("failed to get trusted app address")?;
     let channel = Endpoint::from_shared(format!("http://{enclave_app_address}"))
         .context("couldn't form channel")?
         .connect_timeout(Duration::from_secs(120))
@@ -89,7 +95,7 @@ pub async fn create(
     let app_client = EnclaveApplicationClient::new(channel);
     tonic::transport::Server::builder()
         .add_service(HostApplicationServer::new(HostApplicationImpl::new(app_client)))
-        .serve_with_incoming(TcpListenerStream::new(listener))
+        .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown_signal)
         .await
-        .map_err(|error| anyhow!("server error: {:?}", error))
+        .context("server error")
 }

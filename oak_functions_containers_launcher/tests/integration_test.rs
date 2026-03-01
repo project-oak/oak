@@ -27,16 +27,18 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
 
     let uri: Uri = tempfile.to_str().unwrap().to_string().parse().unwrap();
 
-    let mut _output = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+    let mut bg = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
         &wasm_path,
         "oak_functions_launcher/mock_lookup_data",
         communication_channel,
         uri.clone(),
     );
 
-    // Wait for the server to start up.
-    let mut client =
-        oak_functions_test_utils::create_client(uri, std::time::Duration::from_secs(120)).await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(uri, std::time::Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -136,17 +138,18 @@ async fn test_launcher_echo() {
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
 
     let addr: Uri = format!("http://[::]:{port}").parse().unwrap();
-    let _background = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
+    let mut bg = oak_functions_test_utils::run_oak_functions_containers_example_in_background(
         &wasm_path,
         "oak_functions_launcher/mock_lookup_data",
         "network",
         addr.clone(),
     );
 
-    // Wait for the server to start up.
-    let mut client =
-        oak_functions_test_utils::create_client(addr.clone(), std::time::Duration::from_secs(120))
-            .await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(addr.clone(), std::time::Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");

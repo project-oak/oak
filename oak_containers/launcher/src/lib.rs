@@ -341,6 +341,10 @@ impl Launcher {
         let _ = self.vmm.kill().await;
         self.server.abort();
     }
+
+    pub fn subscribe_exit(&self) -> watch::Receiver<Option<std::process::ExitStatus>> {
+        self.vmm.subscribe_exit()
+    }
 }
 
 fn get_endorsements() -> Endorsements {

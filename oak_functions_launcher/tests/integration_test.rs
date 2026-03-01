@@ -33,13 +33,16 @@ async fn test_launcher_key_value_lookup() {
 
     let wasm_path = "oak_functions/examples/key_value_lookup/key_value_lookup.wasm";
 
-    let (mut _child, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
+    let (mut bg, port) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         "oak_functions_launcher/mock_lookup_data",
     );
 
-    // Wait for the server to start up.
-    let mut client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)).await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(port, Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -55,14 +58,16 @@ async fn test_launcher_echo() {
 
     let wasm_path = "oak_functions/examples/echo/echo.wasm";
 
-    let (_child, addr) = oak_functions_test_utils::run_oak_functions_example_in_background(
+    let (mut bg, addr) = oak_functions_test_utils::run_oak_functions_example_in_background(
         wasm_path,
         "oak_functions_launcher/mock_lookup_data",
     );
 
-    // Wait for the server to start up.
-    let mut client =
-        oak_functions_test_utils::create_client(addr.clone(), Duration::from_secs(120)).await;
+    // Wait for the server to start up, but fail fast if the launcher exits.
+    let mut client = tokio::select! {
+        status = bg.wait() => panic!("launcher exited unexpectedly: {status:?}"),
+        client = oak_functions_test_utils::create_client(addr.clone(), Duration::from_secs(120)) => client,
+    };
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
