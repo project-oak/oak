@@ -14,11 +14,20 @@
 
 use clap::Parser;
 
+/// Predicate for the Unattested Noise Protocol NN Handshake Encryption and
+/// Decryption test.
+///
+/// Ensures that encryption and decryption flows behave deterministically and do
+/// not panic when supplied with valid or invalid inputs.
+struct NnPredicate;
+
+impl falsify::Claim for NnPredicate {
+    fn evaluate(&self, input: &[u8]) -> Result<falsify::Evaluation, Box<dyn core::error::Error>> {
+        oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(input.to_vec())?;
+        Ok(falsify::Evaluation::Intact)
+    }
+}
+
 fn main() {
-    falsify::falsify(
-        falsify::FalsifyArgs::parse(),
-        |input| -> Result<(), Box<dyn std::error::Error>> {
-            Ok(oak_session_testing::test_unattested_nn_encryption_and_decryption_inner(input)?)
-        },
-    );
+    falsify::falsify(falsify::FalsifyArgs::parse(), &NnPredicate);
 }

@@ -48,18 +48,24 @@ fn path_parser(arg_value: &str) -> Result<PathBuf, Infallible> {
     Ok(Path::new(&std::env::var("BUILD_WORKING_DIRECTORY").unwrap_or_default()).join(arg_value))
 }
 
+/// The status of a falsification run, serialized as part of the TOML output
+/// produced by the [`falsify()`] binary harness.
+///
+/// This is a flattened version of [`Evaluation`] and [`Error`] variants for
+/// ease of serialization into TOML.
 #[derive(Serialize)]
 pub enum Status {
-    // The claim was not falsified.
-    NotFalsified,
-    // There was an error due to some malformed input.
-    InputError { error_message: String },
-    // The claim returned an error.
-    ClaimError { error_message: String },
+    // The claim is intact (was not falsified).
+    Intact,
     // The claim was falsified.
     Falsified,
+    // There was an error due to some malformed input. (Inconclusive)
+    InputError { error_message: String },
+    // The claim returned an error during execution. (Inconclusive)
+    ClaimError { error_message: String },
 }
 
+/// The top-level structure of the TOML output file produced by [`falsify()`].
 #[derive(Serialize)]
 pub struct FalsifyResult {
     status: Status,
@@ -69,12 +75,34 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
     fs::read(input_file)
 }
 
+/// The result of evaluating a claim against a specific input.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Evaluation {
+    /// The claim held successfully for this input.
+    Intact,
+    /// The input falsified the claim. Usually means that an attacker found a
+    /// counterexample.
+    Falsified,
+}
+
+/// A claim that can be evaluated against a byte payload.
+pub trait Claim {
+    /// Evaluates the claim against the provided input bytes.
+    ///
+    /// - `Ok(Evaluation::Intact)`: The claim holds for this input.
+    /// - `Ok(Evaluation::Falsified)`: The claim is falsified by this input (a
+    ///   counterexample was found).
+    /// - `Err(e)`: An exception occurred, the result is inconclusive.
+    fn evaluate(&self, input: &[u8]) -> Result<Evaluation, Box<dyn core::error::Error>>;
+}
+
 /// Runs a falsification test.
 ///
-/// This function takes a test function `claim` and executes it with input
-/// bytes read from a file. The contract is that `claim` is expected to never
-/// panic, for all possible inputs. The goal of researchers is to find an input
-/// that falsifies the claim, i.e. makes it panic.
+/// This function takes a [`Claim`] instance and executes it with input
+/// bytes read from a file. The contract is that `claim.evaluate()` is expected
+/// to never panic, for all possible inputs. The goal of researchers is to find
+/// an input that falsifies the claim, i.e. makes it panic or return
+/// `Ok(Evaluation::Falsified)`.
 ///
 /// `claim` is expected to be deterministic, i.e. for a given input it should
 /// always behave identically. Common causes of non-determinism are:
@@ -85,14 +113,20 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 /// The input and output file paths are provided as
 /// command-line arguments `--input-file` and `--output-file-toml`.
 ///
-/// The `claim` fn is executed in a separate panic-catching scope.
+/// The `claim` is executed in a separate panic-catching scope.
 ///
-/// - If `claim` panics, the test is considered [`Status::Falsified`].
-/// - If `claim` completes successfully without panicking, the test is
-///   [`Status::NotFalsified`].
-/// - If `claim` returns an error, the test results in a [`Status::ClaimError`].
+/// - If `claim.evaluate()` panics or returns `Ok(Evaluation::Falsified)`, the
+///   test is considered [`Status::Falsified`].
+/// - If `claim.evaluate()` completes successfully with
+///   `Ok(Evaluation::Intact)`, the test is [`Status::Intact`].
+/// - If `claim.evaluate()` returns `Err(E)`, the test results in a
+///   [`Status::ClaimError`]. This is considered an *inconclusive* result.
 /// - If there is an error reading the input file, the test results in a
-///   [`Status::InputError`].
+///   [`Status::InputError`]. This is considered an *inconclusive* result.
+///
+/// Note: Falsification engines must treat `ClaimError` and `InputError` as
+/// inconclusive exceptions (e.g., malformed test inputs). They are NOT
+/// falsifications.
 ///
 /// The result is serialized as a [`FalsifyResult`] struct into the specified
 /// TOML output file.
@@ -101,17 +135,18 @@ fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
 ///
 /// This function will panic if it cannot serialize the result to TOML or if it
 /// cannot write to the output file.
-pub fn falsify<F>(args: FalsifyArgs, claim: F)
+pub fn falsify<C>(args: FalsifyArgs, claim: &C)
 where
-    F: FnOnce(Vec<u8>) -> Result<(), Box<dyn std::error::Error>> + panic::UnwindSafe,
+    C: Claim + panic::RefUnwindSafe,
 {
     let result = match get_input_bytes(&args.input_file) {
         Ok(input_bytes) => {
-            let panic_result = panic::catch_unwind(|| claim(input_bytes));
+            let panic_result = panic::catch_unwind(|| claim.evaluate(&input_bytes));
 
             match panic_result {
                 Ok(inner_result) => match inner_result {
-                    Ok(_) => FalsifyResult { status: Status::NotFalsified },
+                    Ok(Evaluation::Intact) => FalsifyResult { status: Status::Intact },
+                    Ok(Evaluation::Falsified) => FalsifyResult { status: Status::Falsified },
                     Err(e) => FalsifyResult {
                         status: Status::ClaimError {
                             error_message: format!("Claim returned an error: {}", e),
