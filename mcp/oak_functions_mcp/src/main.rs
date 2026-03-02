@@ -32,27 +32,30 @@ pub struct Args {
     listen_address: String,
     #[arg(
         long,
-        help = "The URI for fetching the wasm logic",
+        env = "WASM_URL",
+        help = "The URL for fetching the wasm logic",
         default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/wasm/key_value_lookup_with_json.wasm"
     )]
-    wasm_uri: String,
+    wasm_url: String,
     #[arg(
         long,
-        help = "The URI for fetching the serialized LookupDataChunk data",
+        env = "LOOKUP_DATA_URL",
+        help = "The URL for fetching the serialized LookupDataChunk data",
         default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/double_lookup_data.binarypb"
     )]
-    lookup_data_uri: String,
+    lookup_data_url: String,
     #[arg(
         long,
-        help = "The URI for fetching the ToolConfig JSON file",
+        env = "TOOL_CONFIG_URL",
+        help = "The URL for fetching the ToolConfig JSON file",
         default_value = "https://storage.googleapis.com/oak-functions-standalone-bucket/tool_config/key_value_lookup.json"
     )]
-    tool_config_uri: String,
+    tool_config_url: String,
 }
 
-fn fetch_data_from_uri(uri: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    info!("fetching data from uri: {uri}");
-    let response = ureq::get(uri).call()?;
+fn fetch_data_from_url(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    info!("fetching data from url: {url}");
+    let response = ureq::get(url).call()?;
     let mut buffer = Vec::new();
     response.into_reader().read_to_end(&mut buffer)?;
     Ok(buffer)
@@ -70,15 +73,15 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let args = Args::parse();
 
-    let wasm_module_bytes: Vec<u8> = if !args.wasm_uri.is_empty() {
-        fetch_data_from_uri(&args.wasm_uri).expect("unable to fetch Wasm data")
+    let wasm_module_bytes: Vec<u8> = if !args.wasm_url.is_empty() {
+        fetch_data_from_url(&args.wasm_url).expect("unable to fetch Wasm data")
     } else {
-        panic!("--wasm_uri must be specified")
+        panic!("--wasm_url must be specified")
     };
 
-    let lookup_data: Option<LookupDataChunk> = if !args.lookup_data_uri.is_empty() {
+    let lookup_data: Option<LookupDataChunk> = if !args.lookup_data_url.is_empty() {
         let lookup_data_bytes =
-            fetch_data_from_uri(&args.lookup_data_uri).expect("unable to fetch lookup data");
+            fetch_data_from_url(&args.lookup_data_url).expect("unable to fetch lookup data");
         Some(
             LookupDataChunk::decode(lookup_data_bytes.as_slice())
                 .expect("couldn't decode lookup data"),
@@ -87,12 +90,12 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let tool_config: ToolConfig = if !args.tool_config_uri.is_empty() {
+    let tool_config: ToolConfig = if !args.tool_config_url.is_empty() {
         let config_bytes =
-            fetch_data_from_uri(&args.tool_config_uri).expect("unable to fetch tool config");
+            fetch_data_from_url(&args.tool_config_url).expect("unable to fetch tool config");
         serde_json::from_slice(&config_bytes).expect("unable to parse tool config")
     } else {
-        panic!("--tool_config_uri must be specified")
+        panic!("--tool_config_url must be specified")
     };
 
     let initialize_request =

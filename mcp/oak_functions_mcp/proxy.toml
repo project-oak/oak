@@ -1,0 +1,12 @@
+listen_address = "0.0.0.0:8080"
+backend_address = "127.0.0.1:8081"
+attestation_generators = []
+attestation_verifiers = []
+
+[backend_command]
+cmd = "/bin/oak_functions_mcp_server"
+args = [
+    "--listen-address=127.0.0.1:8081",
+]
+env_passthrough = ["WASM_URL", "LOOKUP_DATA_URL", "TOOL_CONFIG_URL"]
+restart_policy = "always"
