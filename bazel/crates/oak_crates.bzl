@@ -434,6 +434,7 @@ OAK_STD_CRATES = _common_crates(std = True) | {
         ],
         version = "0.16.0",
     ),
+    "rs_merkle": crate.spec(version = "1.5.0"),
     "nix": crate.spec(
         features = [
             "fs",

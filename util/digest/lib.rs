@@ -60,6 +60,8 @@ pub enum DigestError {
         #[source]
         source: hex::FromHexError,
     },
+    #[error("invalid digest length: expected {expected}, got {actual}")]
+    InvalidDigestLength { expected: usize, actual: usize },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -175,6 +177,16 @@ impl From<[u8; 20]> for Sha1 {
         Self(v)
     }
 }
+impl TryFrom<Vec<u8>> for Sha256 {
+    type Error = DigestError;
+    fn try_from(v: Vec<u8>) -> Result<Self, Self::Error> {
+        let len = v.len();
+        Ok(Self(
+            v.try_into()
+                .map_err(|_| DigestError::InvalidDigestLength { expected: 32, actual: len })?,
+        ))
+    }
+}
 impl From<[u8; 32]> for Sha256 {
     fn from(v: [u8; 32]) -> Self {
         Self(v)
@@ -254,6 +266,12 @@ impl AsRef<[u8]> for Sha3_512 {
 impl AsRef<[u8]> for Psha2 {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<Sha256> for Vec<u8> {
+    fn from(val: Sha256) -> Self {
+        val.0.to_vec()
     }
 }
 

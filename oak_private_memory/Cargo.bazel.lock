@@ -1363,6 +1363,7 @@ dependencies = [
  "rmcp",
  "rmcp-macros",
  "rpassword",
+ "rs_merkle",
  "rsa",
  "rtnetlink",
  "rustls",
@@ -4308,6 +4309,15 @@ dependencies = [
  "libc",
  "rtoolbox",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "rs_merkle"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb09b49230ba22e8c676e7b75dfe2887dea8121f18b530ae0ba519ce442d2b21"
+dependencies = [
+ "sha2",
 ]
 
 [[package]]

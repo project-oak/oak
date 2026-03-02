@@ -31,6 +31,7 @@ use alloc::{
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use oak_digest::Sha256;
+use rs_merkle::Hasher;
 use sha2::{Digest, Sha256 as Sha256Hasher};
 use thiserror::Error;
 
@@ -268,60 +269,19 @@ impl TLogProof {
         Ok(TLogProof { index, proof_hashes, checkpoint })
     }
 
-    pub fn compute_root_hash(&self, entry: &[u8]) -> Result<Vec<u8>, TLogProofError> {
-        let mut tree_size = self.checkpoint.tree_size;
-        let mut leaf_index = self.index;
+    pub fn compute_root_hash(&self, entry: &[u8]) -> Result<Sha256, TLogProofError> {
+        let tree_size = self.checkpoint.tree_size;
+        let leaf_index = self.index;
         if leaf_index >= tree_size {
             return Err(TLogProofError::InvalidMerkleChain);
         }
 
-        // First, find the path to the (largest) perfect tree containing the
-        // leaf. While the tree isn't perfect...
-        let mut path = Vec::new();
-        while !tree_size.is_power_of_two() {
-            // If the node is in the left subtree, this step is complete.
-            let left_tree_size = 1u64 << (63 - tree_size.leading_zeros());
-            if leaf_index < left_tree_size {
-                path.push(false /* left */);
-                tree_size = left_tree_size;
-                break;
-            }
-
-            // Otherwise, descend into the right subtree and repeat.
-            path.push(true /* right */);
-            leaf_index -= left_tree_size;
-            tree_size -= left_tree_size;
-        }
-
-        // Next, find the path to the leaf node in the perfect subtree. The
-        // series of left and right branches is given by the leaf_index's
-        // bit pattern.
-        let mut it_size = tree_size >> 1;
-        while it_size > 0 {
-            path.push((leaf_index & it_size) != 0);
-            it_size >>= 1;
-        }
-
-        if self.proof_hashes.len() != path.len() {
-            return Err(TLogProofError::InvalidMerkleChain);
-        }
-
-        let mut hash =
-            Sha256Hasher::new().chain_update([0x00]).chain_update(entry).finalize().to_vec();
-        for (i, &is_right_child) in path.iter().rev().enumerate() {
-            let sibling = &self.proof_hashes[i];
-            let mut h = Sha256Hasher::new().chain_update([0x01]);
-            if is_right_child {
-                h.update(sibling);
-                h.update(&hash);
-            } else {
-                h.update(&hash);
-                h.update(sibling);
-            }
-            hash = h.finalize().to_vec();
-        }
-
-        Ok(hash)
+        let leaf_hash = C2spHasher::hash(entry);
+        let merkle_proof = rs_merkle::MerkleProof::<C2spHasher>::new(self.proof_hashes.clone());
+        let root = merkle_proof
+            .root(&[leaf_index as usize], &[leaf_hash], tree_size as usize)
+            .map_err(|_| TLogProofError::InvalidMerkleChain)?;
+        Ok(root)
     }
 
     /// Verifies a C2SP tlog-proof bundle.
@@ -384,11 +344,41 @@ impl TLogProof {
 
         // Verify Merkle inclusion.
         let hash = self.compute_root_hash(entry)?;
-        if hash != self.checkpoint.root_hash.as_ref() {
+        if hash != self.checkpoint.root_hash {
             return Err(TLogProofError::RootMismatch);
         }
 
         Ok(())
+    }
+}
+
+/// A C2SP/RFC 6962 compatible hasher for rs_merkle.
+#[derive(Clone)]
+struct C2spHasher;
+
+impl Hasher for C2spHasher {
+    type Hash = Sha256;
+
+    fn hash(data: &[u8]) -> Self::Hash {
+        // Leaf hash: SHA256(0x00 || data)
+        <Self::Hash>::from(<[u8; 32]>::from(
+            Sha256Hasher::new().chain_update([0x00]).chain_update(data).finalize(),
+        ))
+    }
+
+    fn concat_and_hash(left: &Self::Hash, right: Option<&Self::Hash>) -> Self::Hash {
+        match right {
+            // Node hash: SHA256(0x01 || left || right)
+            Some(right_hash) => <Self::Hash>::from(<[u8; 32]>::from(
+                Sha256Hasher::new()
+                    .chain_update([0x01])
+                    .chain_update(left)
+                    .chain_update(right_hash)
+                    .finalize(),
+            )),
+            // Promote the left child if there is no right child.
+            None => *left,
+        }
     }
 }
 
@@ -602,7 +592,7 @@ mod tests {
 
         let hash = proof.compute_root_hash(TEST2_ENTRY).unwrap();
 
-        assert_eq!(hash, root_hash.as_ref());
+        assert_eq!(hash, root_hash);
     }
 
     #[test]

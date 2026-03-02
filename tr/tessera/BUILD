@@ -29,6 +29,7 @@ rust_library(
         "@oak_crates_index//:base64",
         "@oak_crates_index//:ed25519-dalek",
         "@oak_crates_index//:hex",
+        "@oak_crates_index//:rs_merkle",
         "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
     ],

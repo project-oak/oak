@@ -1,5 +1,5 @@
 {
-  "checksum": "74155571c7bb0fcfe6783596be37960848905e276219d877e4f1d36ca0c88b2a",
+  "checksum": "2cd0fc1a08f511ac087aec5f8e7e36d9a27268a30abd3e4306195dc3be190ab5",
   "crates": {
     "acpi 5.2.0": {
       "name": "acpi",
@@ -8000,6 +8000,10 @@
             {
               "id": "rpassword 7.4.0",
               "target": "rpassword"
+            },
+            {
+              "id": "rs_merkle 1.5.0",
+              "target": "rs_merkle"
             },
             {
               "id": "rsa 0.9.10",
@@ -26238,6 +26242,61 @@
       ],
       "license_file": "LICENSE-APACHE"
     },
+    "rs_merkle 1.5.0": {
+      "name": "rs_merkle",
+      "version": "1.5.0",
+      "package_url": "https://github.com/antouhou/rs-merkle",
+      "repository": {
+        "Http": {
+          "url": "https://static.crates.io/crates/rs_merkle/1.5.0/download",
+          "sha256": "bb09b49230ba22e8c676e7b75dfe2887dea8121f18b530ae0ba519ce442d2b21"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "rs_merkle",
+            "crate_root": "src/lib.rs",
+            "srcs": {
+              "allow_empty": true,
+              "include": [
+                "**/*.rs"
+              ]
+            }
+          }
+        }
+      ],
+      "library_target_name": "rs_merkle",
+      "common_attrs": {
+        "compile_data_glob": [
+          "**"
+        ],
+        "crate_features": {
+          "common": [
+            "default",
+            "std"
+          ],
+          "selects": {}
+        },
+        "deps": {
+          "common": [
+            {
+              "id": "sha2 0.10.9",
+              "target": "sha2"
+            }
+          ],
+          "selects": {}
+        },
+        "edition": "2018",
+        "version": "1.5.0"
+      },
+      "license": "Apache-2.0/MIT",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "license_file": "LICENSE.md"
+    },
     "rsa 0.9.10": {
       "name": "rsa",
       "version": "0.9.10",
@@ -44213,6 +44272,7 @@
     "rmcp 0.8.5",
     "rmcp-macros 0.8.5",
     "rpassword 7.4.0",
+    "rs_merkle 1.5.0",
     "rsa 0.9.10",
     "rtnetlink 0.14.1",
     "rustls 0.23.36",
