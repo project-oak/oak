@@ -109,6 +109,20 @@ To add a new crate dependency to the project, you need to:
 If you learn anything new about the codebase, please update this file with those
 details.
 
+Additionally, many folders contain a `README.md` file that provides a high-level
+overview of the components in that folder. Before modifying any files in a
+folder, you should read its `README.md`. If you make changes that affect the
+high-level design or usage described in the `README.md`, you must update it.
+
+Guidelines for `README.md` files:
+
+- Keep them high-level and focused on intent and architecture.
+- Do not repeat the code, but feel free to refer to specific comments or
+  declarations.
+- Use code snippets with concrete types to illustrate usage patterns, avoiding
+  excessive abstraction or showing every single instruction.
+- Ensure they remain a single source of truth for the folder's purpose.
+
 ## Style Guide
 
 - Do not use the word "learning". Use "lesson" instead.
