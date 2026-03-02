@@ -64,10 +64,10 @@ repos:
         types: [nix]
 
       - id: prettier
-        name: prettier (YAML, HTML, JS, TS, CSS, SCSS)
+        name: prettier (YAML, HTML, JS, TS, CSS, SCSS, Markdown)
         entry: prettier --write
         language: system
-        types_or: [yaml, html, javascript, ts, css, scss]
+        types_or: [yaml, html, javascript, ts, css, scss, markdown]
 
       - id: rustfmt
         name: rustfmt (Rust)

@@ -38,7 +38,8 @@ oak_benchmarks/
    overhead between tests.
 
 2. **Code Sharing**: The `benchmark` crate is `#![no_std]` compatible. Both the
-   enclave and Linux app use the same code, ensuring apples-to-apples comparison.
+   enclave and Linux app use the same code, ensuring apples-to-apples
+   comparison.
 
 3. **micro_rpc Protocol**: Communication uses the `Benchmark` service defined in
    `proto/benchmark.proto`. This provides type-safe, proto-based messaging.
@@ -57,7 +58,7 @@ Measures throughput of cryptographic hash operations with configurable data
 sizes and iterations.
 
 | Algorithm | Description             |
-|-----------|-------------------------|
+| --------- | ----------------------- |
 | SHA-256   | Standard SHA-2, 256-bit |
 | SHA-512   | Standard SHA-2, 512-bit |
 | SHA3-256  | Keccak-based, 256-bit   |
@@ -66,7 +67,7 @@ sizes and iterations.
 ### Memory-Bound
 
 | Benchmark     | What it measures                                               |
-|---------------|----------------------------------------------------------------|
+| ------------- | -------------------------------------------------------------- |
 | Array Update  | Random writes to 256MB buffer — raw memory access latency      |
 | Memory Insert | HashMap insert (key + alloc value) — allocator + hashing       |
 | Memory Lookup | HashMap lookup (read-only) — hash + memory-read, no allocation |
@@ -127,8 +128,7 @@ Use `--enable-snp` for SEV-SNP measurements. See
 
 ### Oak Enclave
 
-> [!NOTE]
-> The enclave app is cross-compiled to a different platform. Use
+> [!NOTE] The enclave app is cross-compiled to a different platform. Use
 > `bazel cquery --output=files` to resolve its output path.
 
 ```bash
@@ -145,28 +145,25 @@ bazel-bin/oak_benchmarks/oak_cli/oak_cli \
 
 ## Notes
 
-> [!IMPORTANT]
-> **Warmup Iterations**: Use `--warmup-iterations` (default: 1000)
+> [!IMPORTANT] **Warmup Iterations**: Use `--warmup-iterations` (default: 1000)
 > to warm the CPU's branch predictor and caches before measurement. Without
 > warmup, the first ~1000 iterations can be 20-40% slower due to cold code
 > paths.
 
 <!-- -->
 
-> [!IMPORTANT]
-> **TSC Frequency**: The benchmarks assume a fixed TSC frequency
+> [!IMPORTANT] **TSC Frequency**: The benchmarks assume a fixed TSC frequency
 > (default 3.0 GHz). Adjust with `--tsc-freq` for your hardware. Check:
 > `dmesg | grep -i tsc`
 
 <!-- -->
 
-> [!IMPORTANT]
-> For accurate paper evaluation, the Linux baseline **must be run
-> inside an SEV-SNP VM** to include memory encryption overhead. Running
-> natively on the host gives an unfair advantage.
+> [!IMPORTANT] For accurate paper evaluation, the Linux baseline **must be run
+> inside an SEV-SNP VM** to include memory encryption overhead. Running natively
+> on the host gives an unfair advantage.
 
 ## Preparing a Linux VM
 
-See [`linux_vm/README.md`](linux_vm/README.md) for instructions on downloading
-a Debian base image, installing the benchmark binary, and running benchmarks
+See [`linux_vm/README.md`](linux_vm/README.md) for instructions on downloading a
+Debian base image, installing the benchmark binary, and running benchmarks
 inside a VM.
