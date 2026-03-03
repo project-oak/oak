@@ -192,6 +192,7 @@
                 autogen
                 automake
                 jdk17_headless
+                libxml2
                 bazelisk-as-bazel
                 androidSdk
                 bazel-buildtools
