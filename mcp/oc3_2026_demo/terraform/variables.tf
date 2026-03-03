@@ -1,7 +1,7 @@
 variable "gcp_project_id" {
   type        = string
   description = "The GCP project ID to deploy the resources in."
-  default     = "oak-functions-standalone"
+  default     = "YOUR_PROJECT_ID"
 }
 
 variable "zone" {
@@ -13,7 +13,7 @@ variable "zone" {
 variable "instance_name" {
   type        = string
   description = "The name of the VM instance."
-  default     = "oak-functions-mcp-server"
+  default     = "oak-functions-mcp-server-oc3-demo"
 }
 
 variable "machine_type" {
@@ -25,7 +25,6 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The image digest for the Oak Functions MCP server container."
-  default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp@sha256:8d936c1108fcce258456943e957d3602de2cb2262c1e46934869bebae467f438"
 }
 
 variable "wasm_url" {
@@ -37,13 +36,13 @@ variable "wasm_url" {
 variable "lookup_data_url" {
   type        = string
   description = "The URL for fetching the serialized LookupDataChunk data."
-  default     = "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/double_lookup_data.binarypb"
+  // example: "https://storage.googleapis.com/oak-functions-standalone-bucket/lookup_data/double_lookup_data.binarypb"
 }
 
 variable "tool_config_url" {
   type        = string
   description = "The URL for fetching the ToolConfig JSON file."
-  default     = "https://storage.googleapis.com/oak-functions-standalone-bucket/tool_config/key_value_lookup.json"
+  // example: "https://storage.googleapis.com/oak-functions-standalone-bucket/tool_config/key_value_lookup.json"
 }
 
 variable "use_debug_image" {

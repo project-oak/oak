@@ -142,16 +142,16 @@ pub fn build_session_config(
     let mut builder =
         SessionConfig::builder(attestation_type, oak_session::handshake::HandshakeType::NoiseNN);
 
+    if let Some(publisher) = attestation_publisher {
+        builder = builder.add_attestation_publisher(publisher);
+    }
+
     for generator in attestation_generators {
         builder = generator.apply(builder)?;
     }
 
     for verifier in attestation_verifiers {
         builder = verifier.apply(builder)?;
-    }
-
-    if let Some(publisher) = attestation_publisher {
-        builder = builder.add_attestation_publisher(publisher);
     }
 
     Ok(builder.build())

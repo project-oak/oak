@@ -1,0 +1,16 @@
+# Oak Proxy client configuration template.
+#
+# Copy this file and update the following fields for your deployment:
+#   - server_proxy_url:           Set to ws://EXTERNAL_IP:8080 using the IP from `terraform output external_ip`
+#   - root_certificate_pem_path:  Set to the absolute path of confidential_space_root.pem on your machine
+#   - container_reference_prefix: Set to your container image digest (from publish_docker.sh output)
+
+listen_address = "127.0.0.1:8080"
+server_proxy_url = "ws://[SERVER_EXTERNAL_IP]:8080"
+attestation_generators = []
+attestation_output_file = "/tmp/sample_attestation.pb"
+
+[[attestation_verifiers]]
+type = "confidential_space"
+root_certificate_pem_path = "[PATH_TO_OAK_REPO]/oak_attestation_gcp/data/confidential_space_root.pem"
+container_reference_prefix = "[YOUR_ARTIFACT_REGISTRY_REGION]-docker.pkg.dev/[YOUR_PROJECT_ID]/oak-functions-mcp-oc3-demo/oak-functions-mcp@sha256:[YOUR_IMAGE_SHA]"

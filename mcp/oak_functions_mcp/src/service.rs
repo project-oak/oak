@@ -85,8 +85,6 @@ where
     H::HandlerType: Send + Sync,
 {
     /// Creates a new service with the default tool configuration.
-    // TODO: b/469747147 - This should be removed once we generalize this
-    // service beyond the key-value lookup.
     pub fn new(handler_config: H::HandlerConfig) -> Self {
         Self::new_with_config(handler_config, ToolConfig::default())
     }
@@ -131,8 +129,6 @@ where
         info!("Invoking Oak Functions");
 
         // Extract the key from the request arguments
-        // TODO: b/469747147 - Here we fetch the contents of 'key' but this should be
-        // handled by the Wasm module in the future.
         let request_args = ctx
             .arguments
             .as_ref()
