@@ -52,6 +52,7 @@ async fn proxy_test() -> anyhow::Result<()> {
         attestation_generators: Vec::new(),
         attestation_verifiers: Vec::new(),
         keep_alive_interval: Duration::from_secs(10),
+        attestation_output_file: None,
     };
 
     let server_config = ServerConfig {

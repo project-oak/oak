@@ -16,11 +16,12 @@
 
 pub mod confidential_space;
 
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use oak_session::{
     attestation::AttestationType,
     config::{SessionConfig, SessionConfigBuilder},
+    session::AttestationPublisher,
 };
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -53,6 +54,10 @@ pub struct ClientConfig {
     pub attestation_generators: Vec<GeneratorConfig>,
     #[serde(default)]
     pub attestation_verifiers: Vec<VerifierConfig>,
+    /// Optional file path to write received attestation evidence to.
+    /// The attestation is written regardless of verification success/failure.
+    #[serde(default)]
+    pub attestation_output_file: Option<PathBuf>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -124,6 +129,7 @@ impl VerifierConfig {
 pub fn build_session_config(
     attestation_generators: &Vec<GeneratorConfig>,
     attestation_verifiers: &Vec<VerifierConfig>,
+    attestation_publisher: Option<&Arc<dyn AttestationPublisher>>,
 ) -> anyhow::Result<SessionConfig> {
     let attestation_type =
         match (attestation_generators.is_empty(), attestation_verifiers.is_empty()) {
@@ -142,6 +148,10 @@ pub fn build_session_config(
 
     for verifier in attestation_verifiers {
         builder = verifier.apply(builder)?;
+    }
+
+    if let Some(publisher) = attestation_publisher {
+        builder = builder.add_attestation_publisher(publisher);
     }
 
     Ok(builder.build())

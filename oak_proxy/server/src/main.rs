@@ -95,6 +95,7 @@ async fn handle_connection(
     let server_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
+        None,
     )?;
     let mut session = ServerSession::create(server_config)?;
 

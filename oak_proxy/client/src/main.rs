@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use anyhow::Context;
 use clap::Parser;
@@ -23,7 +23,11 @@ use oak_proxy_lib::{
     proxy::{PeerRole, proxy},
     websocket::{read_message, write_message},
 };
-use oak_session::{ClientSession, ProtocolEngine, Session};
+use oak_session::{
+    ClientSession, ProtocolEngine, Session,
+    session::{AttestationEvidence, AttestationPublisher},
+};
+use prost::Message;
 use tokio::net::{TcpListener, TcpStream};
 use url::Url;
 
@@ -43,13 +47,57 @@ struct Args {
     /// This will override the value in the config file.
     #[arg(long, env = "OAK_PROXY_SERVER_URL")]
     server_proxy_url: Option<Url>,
+
+    /// File path to write the received attestation evidence to.
+    /// This will override the value in the config file.
+    #[arg(long, env = "OAK_PROXY_ATTESTATION_OUTPUT_FILE")]
+    attestation_output_file: Option<PathBuf>,
+}
+
+/// An `AttestationPublisher` that serializes received attestation evidence
+/// to a file. Writes the evidence regardless of whether verification
+/// succeeded or failed.
+struct FileAttestationPublisher {
+    output_path: PathBuf,
+}
+
+impl AttestationPublisher for FileAttestationPublisher {
+    fn publish(&self, attestation_evidence: AttestationEvidence) {
+        let mut buf = Vec::new();
+        for (id, endorsed_evidence) in &attestation_evidence.evidence {
+            let encoded = endorsed_evidence.encode_to_vec();
+            log::info!(
+                "[Client] Serializing attestation evidence '{}' ({} bytes)",
+                id,
+                encoded.len()
+            );
+            buf.extend_from_slice(&encoded);
+        }
+
+        match std::fs::write(&self.output_path, &buf) {
+            Ok(()) => {
+                log::info!(
+                    "[Client] Attestation evidence written to '{}'",
+                    self.output_path.display()
+                );
+            }
+            Err(err) => {
+                log::error!(
+                    "[Client] Failed to write attestation evidence to '{}': {:?}",
+                    self.output_path.display(),
+                    err
+                );
+            }
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let Args { mut config, listen_address, server_proxy_url } = Args::parse();
+    let Args { mut config, listen_address, server_proxy_url, attestation_output_file } =
+        Args::parse();
 
     // The command-line arguments override the values from the config file.
     if let Some(listen_address) = listen_address {
@@ -57,6 +105,9 @@ async fn main() -> anyhow::Result<()> {
     }
     if let Some(server_proxy_url) = server_proxy_url {
         config.server_proxy_url = Some(server_proxy_url);
+    }
+    if let Some(attestation_output_file) = attestation_output_file {
+        config.attestation_output_file = Some(attestation_output_file);
     }
 
     let listen_address = config
@@ -85,9 +136,18 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
     let (mut server_proxy_stream, _) = tokio_tungstenite::connect_async(server_proxy_url).await?;
     log::info!("[Client] Connected to server proxy at {}", server_proxy_url);
 
+    // Create an attestation publisher if an output file is configured.
+    let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
+        config.attestation_output_file.as_ref().map(|path| {
+            log::info!("[Client] Attestation evidence will be written to '{}'", path.display());
+            Arc::new(FileAttestationPublisher { output_path: path.clone() })
+                as Arc<dyn AttestationPublisher>
+        });
+
     let client_config = config::build_session_config(
         &config.attestation_generators,
         &config.attestation_verifiers,
+        attestation_publisher.as_ref(),
     )?;
     let mut session = ClientSession::create(client_config)?;
 
