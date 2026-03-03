@@ -68,59 +68,58 @@ TlsOverGrpcServiceImpl::TlsOverGrpcServiceImpl(
 grpc::Status TlsOverGrpcServiceImpl::TlsSession(
     grpc::ServerContext* context,
     grpc::ServerReaderWriter<TlsSessionResponse, TlsSessionRequest>* stream) {
-  absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      context_->NewSession();
-  if (!initializer.ok()) {
+  // Use NewInitializedSession with blocking send/receive callbacks.
+  absl::StatusOr<InitializedSession> initialized_session =
+      context_->NewInitializedSession(
+          /*send=*/
+          [&](absl::string_view data) {
+            TlsSessionResponse response;
+            response.set_frame(std::string(data));
+            if (!stream->Write(response)) {
+              return absl::InternalError("Failed to write to stream");
+            }
+            return absl::OkStatus();
+          },
+          /*receive=*/
+          [&]() -> absl::StatusOr<std::string> {
+            TlsSessionRequest request;
+            if (!stream->Read(&request)) {
+              return absl::InternalError(
+                  "Stream closed unexpectedly during handshake");
+            }
+            return request.frame();
+          });
+  if (!initialized_session.ok()) {
     return grpc::Status(grpc::StatusCode::INTERNAL,
-                        "Failed to create TLS initializer");
+                        absl::StrCat("Failed to initialize TLS session: ",
+                                     initialized_session.status().message()));
   }
 
-  while (!(*initializer)->IsReady()) {
-    LOG(INFO) << "Waiting for next init message...";
-    TlsSessionRequest request;
-    if (!stream->Read(&request)) {
+  std::string initial_data = std::move(initialized_session->initial_data);
+  std::unique_ptr<OakSessionTls>& session = initialized_session->session;
+  LOG(INFO) << "Handshake complete, initial data size: " << initial_data.size();
+  // Only respond to initial_data if present (for backward compatibility with
+  // manual handshake API that bundles initial data with the handshake).
+  if (!initial_data.empty()) {
+    absl::Status send_response_status =
+        SendResponse(session.get(), stream, initial_data);
+    if (!send_response_status.ok()) {
       return grpc::Status(grpc::StatusCode::INTERNAL,
-                          "Stream closed unexpectedly during handshake");
+                          "Failed to send initial response");
     }
-    absl::Status status = (*initializer)->PutTLSFrame(request.frame());
-    if (!status.ok()) {
-      return grpc::Status(grpc::StatusCode::INTERNAL,
-                          "Failed to put TLS frame into initializer");
-    }
-
-    if (!(*initializer)->IsReady()) {
-      absl::StatusOr<std::string> response_frame =
-          (*initializer)->GetTLSFrame();
-      TlsSessionResponse response;
-      response.set_frame(*response_frame);
-      stream->Write(response);
-    }
-  }
-
-  std::string initial_data((*initializer)->initial_data());
-
-  absl::StatusOr<std::unique_ptr<OakSessionTls>> session =
-      (*initializer)->GetOpenSession();
-  LOG(INFO) << "Handshake complete, initial data size: "
-            << (*initializer)->initial_data().size();
-  absl::Status send_response_status =
-      SendResponse(session->get(), stream, initial_data);
-  if (!send_response_status.ok()) {
-    return grpc::Status(grpc::StatusCode::INTERNAL,
-                        "Failed to send initial response");
   }
 
   TlsSessionRequest request;
   while (stream->Read(&request)) {
     LOG(INFO) << "Got next message...";
 
-    absl::StatusOr<std::string> received = (*session)->Decrypt(request.frame());
+    absl::StatusOr<std::string> received = session->Decrypt(request.frame());
     if (!received.ok()) {
       return grpc::Status(grpc::StatusCode::INTERNAL,
                           "Failed to decrypt message");
     }
     absl::Status send_response_status =
-        SendResponse(session->get(), stream, *received);
+        SendResponse(session.get(), stream, *received);
     if (!send_response_status.ok()) {
       return grpc::Status(grpc::StatusCode::INTERNAL,
                           "Failed to send response");

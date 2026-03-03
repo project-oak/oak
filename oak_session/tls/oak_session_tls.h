@@ -17,10 +17,12 @@
 #ifndef OAK_TLS_SESSION_OAK_SESSION_TLS_INITIALIZER_H_
 #define OAK_TLS_SESSION_OAK_SESSION_TLS_INITIALIZER_H_
 
+#include <functional>
 #include <optional>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "openssl/base.h"
 
 namespace oak::session::tls {
@@ -29,6 +31,24 @@ class OakSessionTls;
 class OakSessionTlsInitializer;
 
 enum class OakSessionTlsMode { kClient, kServer };
+
+// Function type for sending data over the wire.
+// The callback should block until the data is sent.
+using SendFn = std::function<absl::Status(absl::string_view data)>;
+
+// Function type for receiving data from the wire.
+// The callback should block until data is available.
+using ReceiveFn = std::function<absl::StatusOr<std::string>()>;
+
+// Result of a successful handshake via NewInitializedSession.
+struct InitializedSession {
+  // The initialized session, ready for encrypt/decrypt operations.
+  std::unique_ptr<OakSessionTls> session;
+
+  // Application data received bundled with the final handshake message.
+  // This is typically only populated on the server side.
+  std::string initial_data;
+};
 
 // The public/private key pair that this node will use.
 // Both values should be non-empty.
@@ -64,7 +84,11 @@ struct ClientContextConfig {
 };
 
 /**
- * Managed an SSL Context that will be used to create Oak TLS sessions.
+ * Manages an SSL Context that will be used to create Oak TLS sessions.
+ *
+ * For most use cases, use NewInitializedSession() which handles the TLS
+ * handshake automatically. Use NewSession() only if you need fine-grained
+ * control over the handshake process (e.g., for async I/O or custom framing).
  */
 class OakSessionTlsContext {
  public:
@@ -73,12 +97,32 @@ class OakSessionTlsContext {
   static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> Create(
       const ServerContextConfig& config);
 
-  // Create a new OakSessionTlsInitializer for a new session using this
-  // context's current configuration.
+  // Create a new session and perform the TLS handshake using the provided
+  // send/receive callbacks. Returns an initialized session ready for use.
+  //
+  // This is the recommended API for most use cases. The callbacks should be
+  // blocking: send() should block until the data is sent, and receive() should
+  // block until data is available.
+  //
+  // Example:
+  //   auto result = context->NewInitializedSession(
+  //       [&](absl::string_view data) { return socket.Send(data); },
+  //       [&]() { return socket.Receive(); });
+  absl::StatusOr<InitializedSession> NewInitializedSession(SendFn send,
+                                                           ReceiveFn receive);
+
+  // Create a new OakSessionTlsInitializer for manual handshake control.
+  //
+  // Use this only if you need to drive the handshake yourself (e.g., for
+  // async I/O or custom transport framing). For most use cases, prefer
+  // NewInitializedSession() instead.
+  //
+  // When using this API, you must correctly implement the handshake loop:
+  // - Client: send initial frame, then loop (receive, process, send response)
+  // - Server: loop (receive, process, send response)
+  // - After IsReady(), call GetOpenSession() to get the initialized session
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> NewSession();
 
-  // Create a new OakSessionTlsInitializer for a new session using an
-  // already-configured ssl_ctx.
   OakSessionTlsContext(OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx)
       : mode_(mode), ssl_ctx_(std::move(ssl_ctx)) {}
 
@@ -88,14 +132,17 @@ class OakSessionTlsContext {
 };
 
 /**
- * Manage the initialization state of an opening Oak Session (TLS).
+ * Manages the initialization state of an opening Oak TLS session.
  *
- * While the session is not ready, incoming TLS frames should be provided to the
- * `PutTLSFrame` method, and the `GetTLSFrame` method should be checked to see
- * if there are additional outgoing messages.
+ * This class is used for manual handshake control. For most use cases,
+ * prefer OakSessionTlsContext::NewInitializedSession() instead.
  *
- * After putting or getting a frame, check the `IsReady` method to see if the is
- * ready. If it's ready,
+ * Handshake flow:
+ * 1. For clients: call GetTLSFrame() to get the initial ClientHello and send it
+ * 2. Loop until IsReady():
+ *    a. Receive data from peer and pass to PutTLSFrame()
+ *    b. If not ready, call GetTLSFrame() and send any response
+ * 3. Call GetOpenSession() to get the initialized session
  */
 class OakSessionTlsInitializer {
  public:
@@ -111,29 +158,21 @@ class OakSessionTlsInitializer {
   // used to get the open session for encrypting and decrypting application
   bool IsReady();
 
-  // If the handshake is complete, returns an open Oak TLS session that can be
-  // used to encrypt and decrypt application data.
+  // If the handshake is complete, returns an initialized session containing
+  // the open Oak TLS session and any initial application data received.
   //
   // Otherwise, returns an error.
   //
   // This method can only be called once. After calling this method the first
   // time, any subsequent calls will return an error.
-  //
-  // In some cases, the handshake completion may be accompanied by some initial
-  // data. So be sure to check the contents of `initial_data()` after retrieving
-  // the session, and before discarding the initializer.
-  absl::StatusOr<std::unique_ptr<OakSessionTls>> GetOpenSession();
+  absl::StatusOr<InitializedSession> GetOpenSession();
 
-  // Put an incoming TLS frame into the initializer.
+  // Put an incoming TLS frame into the initializer for processing.
   absl::Status PutTLSFrame(absl::string_view tlsFrame);
 
-  // Got the next outgoing TLS frame. If the session has already reached the
-  // ready state, this method will return an error.
+  // Get the next outgoing TLS frame to send to the peer.
+  // Returns an empty string if there is no pending outgoing data.
   absl::StatusOr<std::string> GetTLSFrame();
-
-  // If a handshake was completed as part of a compound message that also
-  // contained application data, this method will return the application data.
-  absl::string_view initial_data() const { return initial_data_; }
 
  private:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> Create(

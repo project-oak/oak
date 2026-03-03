@@ -67,48 +67,39 @@ void RunClient() {
   grpc::ClientContext grpc_context;
   auto stream = stub->TlsSession(&grpc_context);
 
-  absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      (*tls_context)->NewSession();
-  if (!initializer.ok()) {
-    LOG(FATAL) << "Failed to create TLS initializer: " << initializer.status();
+  // Use NewInitializedSession with blocking send/receive callbacks.
+  absl::StatusOr<InitializedSession> initialized_session =
+      (*tls_context)
+          ->NewInitializedSession(
+              /*send=*/
+              [&](absl::string_view data) {
+                TlsSessionRequest request;
+                request.set_frame(std::string(data));
+                if (!stream->Write(request)) {
+                  return absl::InternalError("Failed to write to stream");
+                }
+                return absl::OkStatus();
+              },
+              /*receive=*/
+              [&]() -> absl::StatusOr<std::string> {
+                TlsSessionResponse response;
+                if (!stream->Read(&response)) {
+                  return absl::InternalError(
+                      "Stream closed unexpectedly during handshake");
+                }
+                return response.frame();
+              });
+  if (!initialized_session.ok()) {
+    LOG(FATAL) << "Failed to initialize TLS session: "
+               << initialized_session.status();
   }
-
-  while (!(*initializer)->IsReady()) {
-    LOG(INFO) << "Send next init message";
-    absl::StatusOr<std::string> init_message = (*initializer)->GetTLSFrame();
-    if (!init_message.ok()) {
-      LOG(FATAL) << "Failed to get TLS frame from initializer: "
-                 << init_message.status();
-    }
-    LOG(INFO) << "Read " << init_message->size() << " bytes init message.";
-    TlsSessionRequest request;
-    request.set_frame(*init_message);
-    stream->Write(request);
-    LOG(INFO) << "Sent init message";
-
-    TlsSessionResponse response;
-    if (stream->Read(&response)) {
-      LOG(INFO) << "Got handshake response";
-      absl::Status status = (*initializer)->PutTLSFrame(response.frame());
-      if (!status.ok()) {
-        LOG(FATAL) << "Failed to put TLS frame into initializer: " << status;
-      }
-    } else {
-      LOG(FATAL) << "Stream closed unexpectedly during handshake";
-    }
-  }
-
   LOG(INFO) << "Client handshake complete.";
-  absl::StatusOr<std::unique_ptr<OakSessionTls>> session =
-      (*initializer)->GetOpenSession();
-  if (!session.ok()) {
-    LOG(FATAL) << "Failed to get open client session: " << session.status();
-  }
+  std::unique_ptr<OakSessionTls>& session = initialized_session->session;
 
   // Send a message to the server.
   std::string message = "world";
 
-  absl::StatusOr<std::string> encrypted_message = (*session)->Encrypt(message);
+  absl::StatusOr<std::string> encrypted_message = session->Encrypt(message);
   TlsSessionRequest request;
   request.set_frame(*encrypted_message);
   stream->Write(request);
@@ -120,7 +111,7 @@ void RunClient() {
   }
 
   absl::StatusOr<std::string> decrypted_message =
-      (*session)->Decrypt(response.frame());
+      session->Decrypt(response.frame());
   LOG(INFO) << "Received: " << decrypted_message;
 
   LOG(INFO) << "Completing session...";
