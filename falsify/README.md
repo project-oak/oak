@@ -6,9 +6,9 @@ A framework for writing falsification tests as binaries.
 
 A falsification test expresses a **claim** about a system -- a property that
 should hold for all possible inputs. The framework then evaluates the claim
-against a specific input provided via a file, and reports whether the claim
-was **intact**, **falsified**, or whether the evaluation was **inconclusive**
-due to an error.
+against a specific input provided via a file, and reports whether the claim was
+**intact**, **falsified**, or whether the evaluation was **inconclusive** due to
+an error.
 
 ## Usage
 
@@ -35,8 +35,8 @@ The binary reads `--input-file` and writes the result to `--output-file-toml`.
 
 ## Evaluation Semantics
 
-| Return value                    | Meaning                        |
-| ------------------------------- | ------------------------------ |
-| `Ok(Evaluation::Intact)`        | Claim holds for this input     |
-| `Ok(Evaluation::Falsified)`     | Counterexample found           |
-| `Err(..)`                       | Inconclusive (e.g. bad input)  |
+| Return value                | Meaning                       |
+| --------------------------- | ----------------------------- |
+| `Ok(Evaluation::Intact)`    | Claim holds for this input    |
+| `Ok(Evaluation::Falsified)` | Counterexample found          |
+| `Err(..)`                   | Inconclusive (e.g. bad input) |
