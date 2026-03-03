@@ -14,10 +14,16 @@
 // limitations under the License.
 //
 
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{
+    net::SocketAddr,
+    path::PathBuf,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use anyhow::Context;
 use clap::Parser;
+use oak_proto_rust::oak::attestation::v1::{CollectedAttestation, collected_attestation};
 use oak_proxy_lib::{
     config::{self, ClientConfig},
     proxy::{PeerRole, proxy},
@@ -55,35 +61,42 @@ struct Args {
 }
 
 /// An `AttestationPublisher` that serializes received attestation evidence
-/// to a file. Writes the evidence regardless of whether verification
-/// succeeded or failed.
+/// to a file as a `CollectedAttestation` proto. Writes the evidence
+/// regardless of whether verification succeeded or failed.
 struct FileAttestationPublisher {
     output_path: PathBuf,
+    server_proxy_url: String,
 }
 
 impl AttestationPublisher for FileAttestationPublisher {
     fn publish(&self, attestation_evidence: AttestationEvidence) {
-        let mut buf = Vec::new();
-        for (id, endorsed_evidence) in &attestation_evidence.evidence {
-            let encoded = endorsed_evidence.encode_to_vec();
-            log::info!(
-                "[Client] Serializing attestation evidence '{}' ({} bytes)",
-                id,
-                encoded.len()
-            );
-            buf.extend_from_slice(&encoded);
-        }
+        let request_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| prost_types::Timestamp {
+                seconds: d.as_secs() as i64,
+                nanos: d.subsec_nanos() as i32,
+            })
+            .ok();
+        let collected_attestation = CollectedAttestation {
+            request_metadata: Some(collected_attestation::RequestMetadata {
+                uri: self.server_proxy_url.clone(),
+                request_time,
+            }),
+            endorsed_evidence: attestation_evidence.evidence,
+            session_bindings: attestation_evidence.evidence_bindings,
+            handshake_hash: attestation_evidence.handshake_hash,
+        };
 
-        match std::fs::write(&self.output_path, &buf) {
+        match std::fs::write(&self.output_path, collected_attestation.encode_to_vec()) {
             Ok(()) => {
                 log::info!(
-                    "[Client] Attestation evidence written to '{}'",
+                    "[Client] CollectedAttestation written to '{}'",
                     self.output_path.display()
                 );
             }
             Err(err) => {
                 log::error!(
-                    "[Client] Failed to write attestation evidence to '{}': {:?}",
+                    "[Client] Failed to write CollectedAttestation to '{}': {:?}",
                     self.output_path.display(),
                     err
                 );
@@ -140,8 +153,10 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
     let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
         config.attestation_output_file.as_ref().map(|path| {
             log::info!("[Client] Attestation evidence will be written to '{}'", path.display());
-            Arc::new(FileAttestationPublisher { output_path: path.clone() })
-                as Arc<dyn AttestationPublisher>
+            Arc::new(FileAttestationPublisher {
+                output_path: path.clone(),
+                server_proxy_url: server_proxy_url.to_string(),
+            }) as Arc<dyn AttestationPublisher>
         });
 
     let client_config = config::build_session_config(

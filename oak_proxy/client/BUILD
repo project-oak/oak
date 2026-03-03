@@ -33,6 +33,7 @@ rust_binary(
         "@oak_crates_index//:env_logger",
         "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
+        "@oak_crates_index//:prost-types",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tokio-tungstenite",
         "@oak_crates_index//:toml",
