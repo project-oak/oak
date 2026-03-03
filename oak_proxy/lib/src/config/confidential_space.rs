@@ -24,7 +24,10 @@ use oak_attestation_gcp::{
 use oak_attestation_verification::EventLogVerifier;
 use oak_proto_rust::{
     attestation::CONFIDENTIAL_SPACE_ATTESTATION_ID,
-    oak::attestation::v1::{ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues},
+    oak::attestation::v1::{
+        ConfidentialSpaceEndorsement, ConfidentialSpaceReferenceValues,
+        confidential_space_reference_values,
+    },
 };
 use oak_session::{
     config::SessionConfigBuilder, key_extractor::DefaultBindingKeyExtractor,
@@ -74,6 +77,7 @@ impl ConfidentialSpaceGeneratorParams {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ConfidentialSpaceVerifierParams {
     pub root_certificate_pem_path: String,
+    pub container_reference_prefix: Option<String>,
 }
 
 impl ConfidentialSpaceVerifierParams {
@@ -83,7 +87,9 @@ impl ConfidentialSpaceVerifierParams {
 
         let reference_values = ConfidentialSpaceReferenceValues {
             root_certificate_pem: root_pem,
-            r#container_image: None,
+            r#container_image: self.container_reference_prefix.clone().map(
+                confidential_space_reference_values::ContainerImage::ContainerImageReferencePrefix,
+            ),
         };
         let policy = confidential_space_policy_from_reference_values(&reference_values)?;
         let attestation_verifier = EventLogVerifier::new(

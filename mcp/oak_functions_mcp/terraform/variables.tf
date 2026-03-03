@@ -25,7 +25,7 @@ variable "machine_type" {
 variable "image_digest" {
   type        = string
   description = "The image digest for the Oak Functions MCP server container."
-  default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp:latest"
+  default     = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp@sha256:8d936c1108fcce258456943e957d3602de2cb2262c1e46934869bebae467f438"
 }
 
 variable "wasm_url" {
