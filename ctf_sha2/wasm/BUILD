@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,20 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 package(
-    default_visibility = ["//:default_visibility"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "unattested_nn_encryption_and_decryption",
-    testonly = True,
-    srcs = ["unattested_nn_encryption_and_decryption.rs"],
-    deps = [
-        "//falsify",
-        "//falsify/native",
-        "//oak_session:oak_session_testing",
-        "@oak_crates_index//:clap",
-    ],
-)
+# TODO: b/489823557 - Uncomment once the ctf_sha2 library compiles to Wasm.
+# rust_shared_library(
+#     name = "arbiter_wasm",
+#     srcs = ["lib.rs"],
+#     platform = "//:wasm32-unknown-unknown",
+#     deps = [
+#         "//ctf_sha2",
+#         "//falsify/wasm_sdk",
+#     ],
+# )

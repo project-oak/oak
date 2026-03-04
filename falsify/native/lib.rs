@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! This crate provides a simple framework for writing falsification tests.
+//! Native runner for falsification tests.
 //!
-//! Falsification tests are tests that try to find inputs that cause a function
-//! to panic. The crate provides a single function, [`falsify()`], that takes a
-//! test function (claim) as an argument. Such a claim is expected to hold
-//! (specifically, not panic) for all possible input values.
-//!
-//! The claim is run with input from a file, and if it panics, the claim is
-//! considered "falsified". The result of the test is written to an output file
-//! in TOML format.
+//! Provides [`falsify()`] which takes a [`falsify::Claim`] implementation,
+//! evaluates it with input from a file, and writes the result to a TOML output
+//! file.
 // TODO: b/436216021 - Replace TOML with binary protobuf for the output file
 // format.
 
@@ -32,6 +27,7 @@ use std::{
 };
 
 use clap::Parser;
+use falsify::{Claim, Evaluation};
 use serde::Serialize;
 
 #[derive(Parser, Debug)]
@@ -68,32 +64,11 @@ pub enum Status {
 /// The top-level structure of the TOML output file produced by [`falsify()`].
 #[derive(Serialize)]
 pub struct FalsifyResult {
-    status: Status,
+    pub status: Status,
 }
 
 fn get_input_bytes(input_file: &PathBuf) -> Result<Vec<u8>, std::io::Error> {
     fs::read(input_file)
-}
-
-/// The result of evaluating a claim against a specific input.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Evaluation {
-    /// The claim held successfully for this input.
-    Intact,
-    /// The input falsified the claim. Usually means that an attacker found a
-    /// counterexample.
-    Falsified,
-}
-
-/// A claim that can be evaluated against a byte payload.
-pub trait Claim {
-    /// Evaluates the claim against the provided input bytes.
-    ///
-    /// - `Ok(Evaluation::Intact)`: The claim holds for this input.
-    /// - `Ok(Evaluation::Falsified)`: The claim is falsified by this input (a
-    ///   counterexample was found).
-    /// - `Err(e)`: An exception occurred, the result is inconclusive.
-    fn evaluate(&self, input: &[u8]) -> Result<Evaluation, Box<dyn core::error::Error>>;
 }
 
 /// Runs a falsification test.

@@ -1,5 +1,5 @@
 #
-# Copyright 2024 The Project Oak Authors
+# Copyright 2025 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,30 @@
 # limitations under the License.
 #
 
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_shared_library", "rust_test")
 
 package(
-    default_visibility = ["//:default_visibility"],
+    default_visibility = ["//:internal"],
     licenses = ["notice"],
 )
 
-rust_binary(
-    name = "unattested_nn_encryption_and_decryption",
-    testonly = True,
-    srcs = ["unattested_nn_encryption_and_decryption.rs"],
+rust_library(
+    name = "no_repeated_bytes",
+    srcs = ["lib.rs"],
+    deps = ["//falsify"],
+)
+
+rust_shared_library(
+    name = "no_repeated_bytes_wasm",
+    srcs = ["wasm.rs"],
+    platform = "//:wasm32-unknown-unknown",
     deps = [
-        "//falsify",
-        "//falsify/native",
-        "//oak_session:oak_session_testing",
-        "@oak_crates_index//:clap",
+        ":no_repeated_bytes",
+        "//falsify/wasm_sdk",
     ],
+)
+
+rust_test(
+    name = "no_repeated_bytes_test",
+    crate = ":no_repeated_bytes",
 )

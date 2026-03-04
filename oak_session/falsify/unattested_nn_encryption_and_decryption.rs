@@ -29,5 +29,5 @@ impl falsify::Claim for NnPredicate {
 }
 
 fn main() {
-    falsify::falsify(falsify::FalsifyArgs::parse(), &NnPredicate);
+    falsify_native::falsify(falsify_native::FalsifyArgs::parse(), &NnPredicate);
 }

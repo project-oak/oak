@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! CTF SHA-2 arbiter claim library.
+//!
+//! Contains the [`Arbiter`] claim implementation and all supporting
+//! verification logic for the CTF SHA-2 challenge.
+
 #![feature(try_blocks)]
 
 use anyhow::Context;
 use arbiter_rust_proto::oak::ctf_sha2::arbiter::{
     ArbiterInput, AttestedSignature, arbiter_input::TeeProof,
 };
-use clap::Parser;
 use jwt::{Token, Unverified};
 use log::info;
 use oak_attestation_gcp::{
@@ -66,7 +70,7 @@ const EXPECTED_WORKLOAD_DIGEST: &str =
 /// If the verification *succeeds*, it implies an attacker has successfully
 /// produced a forged or colliding proof, falsifying the security claim and
 /// "winning" the challenge.
-struct Arbiter;
+pub struct Arbiter;
 
 impl falsify::Claim for Arbiter {
     fn evaluate(&self, input: &[u8]) -> Result<falsify::Evaluation, Box<dyn core::error::Error>> {
@@ -124,11 +128,6 @@ impl falsify::Claim for Arbiter {
             }
         }
     }
-}
-
-fn main() {
-    env_logger::init();
-    falsify::falsify(falsify::FalsifyArgs::parse(), &Arbiter);
 }
 
 fn verify_confidential_space_jwt(
