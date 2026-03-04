@@ -534,13 +534,6 @@ impl IcingMetaDatabase {
         ground_truth.migrate(base_dir.as_str())?;
 
         let icing_search_engine = Self::initialize_icing_database(base_dir.as_str())?;
-        // Ensure schema is up-to-date after import (handles schema migrations).
-        let schema = Self::create_schema()?;
-        let result_proto = icing_search_engine.set_schema(&schema)?;
-        ensure!(
-            result_proto.status.context("no status")?.code
-                == Some(icing::status_proto::Code::Ok.into())
-        );
         Ok(Self { icing_search_engine, base_dir, applied_operations: vec![] })
     }
 
