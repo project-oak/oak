@@ -100,6 +100,59 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
                               /*receiver=*/**server_session, client_message2);
 }
 
+// Verify that PQC key exchange (X25519MLKEM768) is negotiated.
+TEST(OakSessionTlsTest, PqcKeyExchangeNegotiated) {
+  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
+  ASSERT_THAT(server_key, IsOk());
+  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
+  ASSERT_THAT(server_cert, IsOk());
+
+  ServerContextConfig server_config{
+      .tls_identity =
+          TlsIdentity{
+              .key_asn1 = *server_key,
+              .cert_asn1 = *server_cert,
+          },
+  };
+  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  ASSERT_THAT(server_ctx, IsOk());
+
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+  };
+  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  HandshakeToClientReady(**server_initializer, **client_initializer);
+
+  auto client_session = (*client_initializer)->GetOpenSession();
+  ASSERT_THAT(client_session, IsOk());
+
+  std::string client_message = "pqc test";
+  CompleteServerHandshakeWithData(**server_initializer, **client_session,
+                                  client_message);
+
+  auto server_session = (*server_initializer)->GetOpenSession();
+  ASSERT_THAT(server_session, IsOk());
+
+  // Verify that X25519MLKEM768 (hybrid PQC) was negotiated.
+  // SSL_GROUP_X25519_MLKEM768 = 0x11ec (4588)
+  uint16_t client_group = (*client_session)->GetNegotiatedGroup();
+  uint16_t server_group = (*server_session)->GetNegotiatedGroup();
+
+  EXPECT_EQ(client_group, SSL_GROUP_X25519_MLKEM768)
+      << "Expected PQC key exchange (X25519MLKEM768), got group ID: "
+      << client_group;
+  EXPECT_EQ(server_group, SSL_GROUP_X25519_MLKEM768)
+      << "Expected PQC key exchange (X25519MLKEM768), got group ID: "
+      << server_group;
+}
+
 constexpr char kTestUntrustedKeyPath[] =
     "oak_session/tls/testing/test_untrusted.key";
 constexpr char kTestUntrustedCertPath[] =

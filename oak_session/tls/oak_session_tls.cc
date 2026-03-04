@@ -48,6 +48,13 @@ OakSessionTlsContext::Create(const ServerContextConfig& config) {
 
   SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
 
+  // Enable PQC support with X25519MLKEM768 as preferred, fallback to X25519.
+  // This provides hybrid post-quantum security using ML-KEM-768 combined with
+  // classical X25519 key exchange.
+  static const uint16_t kGroups[] = {SSL_GROUP_X25519_MLKEM768,
+                                     SSL_GROUP_X25519};
+  SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
+
   absl::Status creds_status = SetTlsIdentity(ctx.get(), config.tls_identity);
   if (!creds_status.ok()) {
     return creds_status;
@@ -76,6 +83,13 @@ OakSessionTlsContext::Create(const ClientContextConfig& config) {
   }
 
   SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
+
+  // Enable PQC support with X25519MLKEM768 as preferred, fallback to X25519.
+  // This provides hybrid post-quantum security using ML-KEM-768 combined with
+  // classical X25519 key exchange.
+  static const uint16_t kGroups[] = {SSL_GROUP_X25519_MLKEM768,
+                                     SSL_GROUP_X25519};
+  SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
 
   SSL_CTX_load_verify_locations(
       ctx.get(), config.server_trust_anchor_path.c_str(), nullptr);
@@ -263,6 +277,10 @@ absl::StatusOr<std::string> OakSessionTls::Decrypt(
   }
 
   return SslReadAll(ssl_.get());
+}
+
+uint16_t OakSessionTls::GetNegotiatedGroup() const {
+  return SSL_get_group_id(ssl_.get());
 }
 
 namespace {

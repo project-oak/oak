@@ -162,6 +162,13 @@ class OakSessionTls {
   // returns the application level plaintext message.
   absl::StatusOr<std::string> Decrypt(absl::string_view tls_frame);
 
+  // Returns the TLS group ID (key exchange algorithm) negotiated during
+  // handshake. Returns 0 if no group was negotiated (e.g., for TLS < 1.3).
+  // Common values:
+  //   - SSL_GROUP_X25519_MLKEM768 (0x11ec / 4588): Hybrid PQC
+  //   - SSL_GROUP_X25519 (29): Classical X25519
+  uint16_t GetNegotiatedGroup() const;
+
  private:
   // Initializers construct sessions.
   friend class OakSessionTlsInitializer;
