@@ -135,12 +135,17 @@ register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
 
 bazel_dep(name = "rules_kotlin", version = "2.1.4")
 
-##### Nix pkgs
+##### Build linux kernel with nix
 
 bazel_dep(name = "rules_nixpkgs_core", version = "0.13.0")
 
-nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos", dev_dependency = True)
-use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
+nix_kernels = use_extension("//oak_containers/kernel/internal:extensions.bzl", "nix_kernels")
+nix_kernels.repository(
+    remote = "https://github.com/NixOS/nixpkgs",
+    revision = "nixos-24.05-small",
+    sha256 = "3d46aeea9dc75f3e87e70540c3eeb56c9c3a63baa2af8438f8bfab62a73e7337",
+)
+use_repo(nix_kernels, "nix_linux_kernel", "nix_vanilla_linux_kernel", "nixpkgs")
 
 ##### Container Management
 
