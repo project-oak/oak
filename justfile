@@ -316,7 +316,15 @@ copy-binaries target dest platform="":
         fi
     done
 
+copy-all target dest platform="":
+    mkdir --parents artifacts/{{dest}}
+    bazel build {{target}} --config=release --platforms={{platform}}
+    cp --recursive --force --preserve=timestamps --no-preserve=mode \
+        $(bazel cquery --config=release --platforms={{platform}} {{target}} --output files) \
+        artifacts/{{dest}}
+
 # These are all oak artifacts that Kokoro build-and-copy expects.
+# Included jemalloc to debug possible reproducibility issue.
 copy-oak-artifacts: \
     (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app") \
     (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
@@ -329,6 +337,7 @@ copy-oak-artifacts: \
     (copy-binary "oak_containers/stage1_bin:stage1.cpio" "oak_containers_stage1") \
     (copy-binary "oak_containers/syslogd" "oak_containers_syslogd") \
     (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image") \
+    (copy-all "@jemalloc" "jemalloc") \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app") \
     (copy-binary "enclave_apps/oak_echo_raw_enclave_app" "oak_echo_raw_enclave_app") \
     (copy-binary "enclave_apps/oak_logcabin_endorser_enclave_app" "oak_logcabin_endorser_enclave_app") \
@@ -380,8 +389,10 @@ github-stage1_cpio: \
 github-oak_containers_syslogd: \
     (copy-binary "oak_containers/syslogd" "oak_containers_syslogd")
 
+# Included jemalloc to debug possible reproducibility issue.
 github-oak_containers_system_image: \
-    (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image.tar.xz")
+    (copy-binary "oak_containers/system_image/oak_containers_system_image.tar.xz" "oak_containers_system_image.tar.xz") \
+    (copy-all "@jemalloc" "jemalloc")
 
 github-oak_echo_enclave_app: \
     (copy-binary "enclave_apps/oak_echo_enclave_app" "oak_echo_enclave_app")
