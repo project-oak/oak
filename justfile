@@ -13,6 +13,12 @@ import? "justfile.local"
 # Same, but for a user-wide local Oak justfile (works with Git worktrees).
 import? "~/.oak_justfile.local"
 
+# Recipes for detailing with Rust crate versioning.
+mod crates 'justfiles/crates.just'
+
+default:
+    @just --list
+
 # -- DEVELOPER WORKFLOW TOOLS --
 
 # Convenience bundle of tests and checks prior to sending a change for review.
@@ -248,36 +254,6 @@ private-memory-build-and-copy:
 
 
 
-##################
-# CRATE VERSIONS #
-##################
-bazel-repin-all: bazel-repin bazel-repin-private-memory bazel-repin-codelab
-bazel-repin-update-all: bazel-repin-update bazel-repin-update-private-memory bazel-repin-update-codelab
-
-repin-cmd arg:
-    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=oak_std_crates_index,oak_no_std_crates_index,oak_no_std_no_avx_crates_index
-
-[working-directory: 'codelab']
-repin-cmd-codelab arg:
-    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=//codelab:oak_std_crates_index,//codelab:oak_no_std_crates_index,//codelab:oak_no_std_no_avx_crates_index
-
-[working-directory: 'oak_private_memory']
-repin-cmd-private-memory arg:
-    env CARGO_BAZEL_REPIN={{arg}} bazel sync --only=//oak_private_memory:oak_std_crates_index,//oak_private_memory:oak_no_std_crates_index
-
-bazel-repin: (repin-cmd "true")
-bazel-repin-codelab: (repin-cmd-codelab "true")
-bazel-repin-private-memory: (repin-cmd-private-memory "true")
-
-bazel-repin-update: (repin-cmd "full")
-bazel-repin-update-codelab: (repin-cmd-codelab "full")
-bazel-repin-update-private-memory: (repin-cmd-private-memory "full")
-
-# Examples:
-# just bazel-update-crate curve25519-dalek
-# just bazel-update-crate curve25519-dalek@4.1.3
-bazel-update-crate crate: (repin-cmd crate)
-
 ####################
 # ARTIFACT COPYING #
 ####################
@@ -445,3 +421,7 @@ run-ctf-sha2-deploy:
 
 run-oak-verity-deploy:
     ./oak_verity/deploy.sh
+
+
+# To help ease the transition. We should eventually remove this.
+alias bazel-repin-all := crates::repin

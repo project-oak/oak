@@ -108,8 +108,7 @@ message. The WebSocket handling logic is located in the
 ### Prerequisites
 
 Ensure you have Bazel installed and the project dependencies are set up
-correctly by running `just bazel-repin-all` from the root of the `oak`
-repository.
+correctly by running `just crates repin` from the root of the `oak` repository.
 
 ### 1. Create Configuration Files
 

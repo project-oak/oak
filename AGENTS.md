@@ -102,7 +102,7 @@ To add a new crate dependency to the project, you need to:
    - **Features:** Carefully select the features for each crate. For `no_std`
      builds, it's critical to set `default_features = False` and only enable the
      features that are compatible with a `no_std` environment (e.g., `alloc`).
-2. **Run `just bazel-repin-all`** to update the lockfiles and BUILD files.
+2. **Run `just crates repin`** to update the lockfiles and BUILD files.
 
 ## Documentation
 
