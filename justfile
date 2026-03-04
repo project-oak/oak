@@ -253,6 +253,21 @@ private-memory-build-and-copy:
     nix develop --command just build-and-test-and-copy
 
 
+bazel-lockfile:
+    # Update Oak's bazel lockfile
+    bazel mod deps
+
+[working-directory: 'codelab']
+bazel-lockfile-codelab:
+    # Update codelab's bazel lockfile
+    bazel mod deps
+
+[working-directory: 'oak_private_memory']
+bazel-lockfile-private-memory:
+    # Update private memory's bazel lockfile
+    bazel mod deps
+
+bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory
 
 ####################
 # ARTIFACT COPYING #
