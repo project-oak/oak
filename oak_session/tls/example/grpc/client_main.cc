@@ -31,11 +31,11 @@
 #include "openssl/ssl.h"
 
 ABSL_FLAG(std::string, port, "8080", "Port for the server to listen on");
-ABSL_FLAG(std::string, server_cert, "oak_session/tls/testing/server.pem",
-          "Path to the server certificate");
-ABSL_FLAG(std::string, client_key, "oak_session/tls/testing/client.key",
+ABSL_FLAG(std::string, ca_cert, "oak_session/tls/testing/test_ca.pem",
+          "Path to the CA certificate (trust anchor for server verification)");
+ABSL_FLAG(std::string, client_key, "oak_session/tls/testing/test_client.key",
           "Path to the client key (for mTLS)");
-ABSL_FLAG(std::string, client_cert, "oak_session/tls/testing/client.pem",
+ABSL_FLAG(std::string, client_cert, "oak_session/tls/testing/test_client.pem",
           "Path to the client certificate (for mTLS)");
 
 using oak::session::tls::example::TlsOverGrpc;
@@ -57,7 +57,7 @@ void RunClient() {
 
   absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> tls_context =
       OakSessionTlsContext::Create(ClientContextConfig{
-          .server_trust_anchor_path = absl::GetFlag(FLAGS_server_cert),
+          .server_trust_anchor_path = absl::GetFlag(FLAGS_ca_cert),
           .tls_identity =
               TlsIdentity{
                   .key_asn1 = *client_key_asn1,

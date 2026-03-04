@@ -29,11 +29,13 @@ using ::absl_testing::IsOk;
 using ::absl_testing::StatusIs;
 using ::testing::Eq;
 
-constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/server.key";
-constexpr char kTestServerCertPath[] = "oak_session/tls/testing/server.pem";
-constexpr char kTestClientKeyPath[] = "oak_session/tls/testing/client.key";
-constexpr char kTestClientCertPath[] = "oak_session/tls/testing/client.pem";
-constexpr char kTestCaCertPath[] = "oak_session/tls/testing/ca.pem";
+constexpr char kTestServerKeyPath[] = "oak_session/tls/testing/test_server.key";
+constexpr char kTestServerCertPath[] =
+    "oak_session/tls/testing/test_server.pem";
+constexpr char kTestClientKeyPath[] = "oak_session/tls/testing/test_client.key";
+constexpr char kTestClientCertPath[] =
+    "oak_session/tls/testing/test_client.pem";
+constexpr char kTestCaCertPath[] = "oak_session/tls/testing/test_ca.pem";
 
 void HandshakeToClientReady(OakSessionTlsInitializer& server_initializer,
                             OakSessionTlsInitializer& client_initializer);
@@ -96,6 +98,57 @@ TEST(OakSessionTlsTest, CreateAndUseSession) {
   std::string client_message2 = "hello again client";
   SendReceiveAndVerifyMessage(/*sender=*/**client_session,
                               /*receiver=*/**server_session, client_message2);
+}
+
+constexpr char kTestUntrustedKeyPath[] =
+    "oak_session/tls/testing/test_untrusted.key";
+constexpr char kTestUntrustedCertPath[] =
+    "oak_session/tls/testing/test_untrusted.pem";
+
+// Verify that a server certificate not signed by the trusted CA is rejected.
+TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
+  // Server uses a self-signed certificate NOT in the client's trust anchor.
+  auto untrusted_key = util::LoadPrivateKeyFromFile(kTestUntrustedKeyPath);
+  ASSERT_THAT(untrusted_key, IsOk());
+  auto untrusted_cert = util::LoadCertificateFromFile(kTestUntrustedCertPath);
+  ASSERT_THAT(untrusted_cert, IsOk());
+
+  ServerContextConfig server_config{
+      .tls_identity =
+          TlsIdentity{
+              .key_asn1 = *untrusted_key,
+              .cert_asn1 = *untrusted_cert,
+          },
+  };
+  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  ASSERT_THAT(server_ctx, IsOk());
+
+  // Client trusts only the test CA, not the untrusted self-signed cert.
+  ClientContextConfig client_config{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+  };
+  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  ASSERT_THAT(client_ctx, IsOk());
+
+  auto server_initializer = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer, IsOk());
+  auto client_initializer = (*client_ctx)->NewSession();
+  ASSERT_THAT(client_initializer, IsOk());
+
+  // Client sends ClientHello
+  auto client_hello = (*client_initializer)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  // Server processes ClientHello
+  ASSERT_THAT((*server_initializer)->PutTLSFrame(*client_hello), IsOk());
+
+  // Server sends ServerHello + Certificate (untrusted)
+  auto server_hello = (*server_initializer)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  // Client should reject the untrusted certificate
+  auto result = (*client_initializer)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
 TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {

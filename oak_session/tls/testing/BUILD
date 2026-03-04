@@ -22,11 +22,13 @@ package(
 filegroup(
     name = "test_keys",
     srcs = [
-        "ca.key",
-        "ca.pem",
-        "client.key",
-        "client.pem",
-        "server.key",
-        "server.pem",
+        "test_ca.key",
+        "test_ca.pem",
+        "test_client.key",
+        "test_client.pem",
+        "test_server.key",
+        "test_server.pem",
+        "test_untrusted.key",
+        "test_untrusted.pem",
     ],
 )

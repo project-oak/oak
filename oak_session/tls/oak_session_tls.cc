@@ -46,6 +46,8 @@ OakSessionTlsContext::Create(const ServerContextConfig& config) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
+  SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
+
   absl::Status creds_status = SetTlsIdentity(ctx.get(), config.tls_identity);
   if (!creds_status.ok()) {
     return creds_status;
@@ -73,8 +75,15 @@ OakSessionTlsContext::Create(const ClientContextConfig& config) {
     return absl::InternalError("Failed to create SSL_CTX");
   }
 
+  SSL_CTX_set_min_proto_version(ctx.get(), TLS1_3_VERSION);
+
   SSL_CTX_load_verify_locations(
       ctx.get(), config.server_trust_anchor_path.c_str(), nullptr);
+
+  // Enable server certificate verification.
+  // Note: SSL_VERIFY_FAIL_IF_NO_PEER_CERT is only for servers requiring client
+  // certs.
+  SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
   if (config.tls_identity.has_value()) {
     absl::Status creds_status = SetTlsIdentity(ctx.get(), *config.tls_identity);

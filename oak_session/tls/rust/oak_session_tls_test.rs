@@ -73,8 +73,8 @@ async fn read_until_plaintext(
 
 #[tokio::test]
 async fn test_mtls_handshake() -> Result<(), Box<dyn std::error::Error>> {
-    let client_cert = load_test_cert("oak_session/tls/testing/client.pem");
-    let client_key = load_test_key("oak_session/tls/testing/client.key");
+    let client_cert = load_test_cert("oak_session/tls/testing/test_client.pem");
+    let client_key = load_test_key("oak_session/tls/testing/test_client.key");
 
     let pair =
         TestSessionPair::create(Some(TlsIdentity { key_der: client_key, cert_der: client_cert }));
@@ -137,9 +137,9 @@ struct TestSessionPair {
 
 impl TestSessionPair {
     fn create(client_identity: Option<TlsIdentity>) -> Self {
-        let ca_cert = load_test_cert("oak_session/tls/testing/ca.pem");
-        let server_cert = load_test_cert("oak_session/tls/testing/server.pem");
-        let server_key = load_test_key("oak_session/tls/testing/server.key");
+        let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
+        let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+        let server_key = load_test_key("oak_session/tls/testing/test_server.key");
 
         let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
             tls_identity: TlsIdentity { key_der: server_key, cert_der: server_cert },
