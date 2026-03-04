@@ -607,58 +607,30 @@ impl IcingMetaDatabase {
     pub fn get_memories_by_tag(
         &self,
         tag: &str,
-        mut page_size: i32,
+        page_size: i32,
         page_token: PageToken,
     ) -> anyhow::Result<(Vec<BlobId>, PageToken)> {
         if page_token == PageToken::Invalid {
             bail!("Invalid page token provided");
         }
 
-        let query_str = build_non_expired_query_str(TAG_NAME, tag);
-
-        let search_spec = icing::SearchSpecProto {
-            query: Some(query_str),
-            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
-            schema_type_filters: vec![SCHEMA_NAME.to_string()],
-            enabled_features: vec![
-                "NUMERIC_SEARCH".to_string(),
-                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
-                icing::HAS_PROPERTY_FUNCTION_FEATURE.to_string(),
-            ],
-            ..Default::default()
+        let query = SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+                field: MemoryField::Tags as i32,
+                match_type: MatchType::Equal as i32,
+                value: Some(text_query::Value::StringVal(tag.to_string())),
+            })),
         };
-
-        // Default to 10 if page size is 0.
-        if page_size <= 0 {
-            page_size = 10;
-        }
-
-        let result_spec = icing::ResultSpecProto {
-            // Request a large number to get all results in one go for simplicity.
-            // Consider pagination for very large datasets.
-            num_per_page: Some(page_size),
-            type_property_masks: vec![Self::create_blob_id_projection(SCHEMA_NAME)],
-            ..Default::default()
-        };
-
-        let search_result: icing::SearchResultProto = match page_token {
-            PageToken::Start => self.icing_search_engine.search(
-                &search_spec,
-                &icing::get_default_scoring_spec(), // Use default scoring for now
-                &result_spec,
-            )?,
-            PageToken::Token(token) => self.icing_search_engine.get_next_page(token)?,
-            PageToken::Invalid => unreachable!(), // Already handled
-        };
-
-        if search_result.status.clone().context("no status")?.code
-            != Some(icing::status_proto::Code::Ok.into())
-        {
-            bail!("Icing search failed: {:?}", search_result.status);
-        }
-
-        let next_page_token =
-            search_result.next_page_token.map(PageToken::from).unwrap_or(PageToken::Start);
+        let (search_spec, scoring_spec) =
+            self.build_query_specs_filtering_expired_memories(&query, SCHEMA_NAME)?;
+        let projection = Self::create_blob_id_projection(SCHEMA_NAME);
+        let (search_result, next_page_token) = self.execute_search(
+            &search_spec,
+            &scoring_spec.unwrap_or_default(),
+            page_size,
+            page_token,
+            projection,
+        )?;
         let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
         if blob_ids.is_empty() {
             return Ok((blob_ids, PageToken::Start));
@@ -2515,6 +2487,67 @@ mod tests {
         expect_that!(blob_ids.len(), eq(3));
         // Newest (3000) first, then middle (2000), then oldest (1000)
         expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_memories_by_tag_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        // Insert memories in non-sorted order with different created_timestamps.
+        let memory_old = Memory {
+            id: "memory_old".to_string(),
+            tags: vec!["sort_tag".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 1000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_old, "blob_old".to_string())?;
+
+        let memory_new = Memory {
+            id: "memory_new".to_string(),
+            tags: vec!["sort_tag".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 3000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_new, "blob_new".to_string())?;
+
+        let memory_mid = Memory {
+            id: "memory_mid".to_string(),
+            tags: vec!["sort_tag".to_string()],
+            created_timestamp: Some(prost_types::Timestamp { seconds: 2000, nanos: 0 }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory_mid, "blob_mid".to_string())?;
+
+        // Results should be sorted by created_timestamp descending (newest first).
+        let (blob_ids, _) = icing_database.get_memories_by_tag("sort_tag", 10, PageToken::Start)?;
+        expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
+
+        Ok(())
+    }
+
+    #[gtest]
+    fn get_memories_by_empty_tag_returns_all_memories_test() -> anyhow::Result<()> {
+        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+
+        let memory1 = Memory {
+            id: "memory1".to_string(),
+            tags: vec!["tag_a".to_string()],
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+        let memory2 = Memory {
+            id: "memory2".to_string(),
+            tags: vec!["tag_b".to_string()],
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+        // Empty tag should return all memories that have any tag.
+        let (results, _) = icing_database.get_memories_by_tag("", 10, PageToken::Start)?;
+        assert_that!(results, unordered_elements_are![eq("blob1"), eq("blob2")]);
 
         Ok(())
     }
