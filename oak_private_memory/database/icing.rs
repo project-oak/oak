@@ -379,8 +379,7 @@ impl IcingMetaDatabase {
                 icing::create_property_config_builder()
                     .set_name(BLOB_ID_NAME.as_bytes())
                     // We don't need to index blob id
-                    // TODO: yongheng - Use String type instead of Int64.
-                    .set_data_type(icing::property_config_proto::data_type::Code::Int64.into())
+                    .set_data_type(icing::property_config_proto::data_type::Code::String.into())
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
                     ),
