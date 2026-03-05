@@ -233,7 +233,7 @@ impl SealedMemorySessionHandler {
         is_json: bool,
     ) -> tonic::Result<()> {
         let (database, database_version, initial_size) =
-            get_or_create_db(&mut db_client, &uid, &dek).await?;
+            get_or_create_db(&mut db_client, &uid, &dek, self.clock.clone()).await?;
 
         let message_type = if is_json { MessageType::Json } else { MessageType::BinaryProto };
         let mut mutex_guard = self.session_context().await;
@@ -338,6 +338,8 @@ impl SealedMemorySessionHandler {
             .into_internal_error("Failed to write blobs")?;
 
         info!("Successfully registered new user {}", uid);
+        // All errors from setup_user_session_context are infrastructure failures
+        // (DB fetch, decryption, import) outside the caller's control.
         self.setup_user_session_context(
             uid.clone(),
             dek,
@@ -345,7 +347,8 @@ impl SealedMemorySessionHandler {
             db_client,
             is_json,
         )
-        .await?;
+        .await
+        .into_internal_error("Failed to setup user session context")?;
         Ok(UserRegistrationResponse {
             status: user_registration_response::Status::Success.into(),
             key_derivation_info: Some(boot_strap_info),
@@ -535,19 +538,32 @@ async fn get_or_create_db(
     db_client: &mut SealedMemoryDatabaseServiceClient<Channel>,
     uid: &BlobId,
     dek: &[u8],
+    clock: Arc<dyn Clock>,
 ) -> tonic::Result<(IcingMetaDatabase, String, usize)> {
+    let fetch_start = clock.now();
+    let metadata_blob = db_client
+        .get_metadata_blob_stream(uid)
+        .await
+        .into_internal_error("Failed to get metadata blob")?;
+    get_global_metrics().record_key_sync_db_fetch_latency(
+        fetch_start.elapsed().unwrap_or_default().as_millis() as u64,
+    );
+
     if let Some(EncryptedMetadataBlob { encrypted_data_blob: Some(encrypted_data_blob), version }) =
-        db_client
-            .get_metadata_blob_stream(uid)
-            .await
-            .into_internal_error("Failed to get metadata blob")?
+        metadata_blob
     {
         info!("Loaded database from blob: Length: {}", encrypted_data_blob.data.len());
+
+        let decrypt_start = clock.now();
         let encrypted_info = decrypt_database(encrypted_data_blob, dek)
             .inspect_err(|_| get_global_metrics().inc_db_decryption_failures())
             .into_internal_error("failed to decrypt database")?;
+        get_global_metrics().record_key_sync_decrypt_latency(
+            decrypt_start.elapsed().unwrap_or_default().as_millis() as u64,
+        );
+
         if let Some(icing_db) = encrypted_info.icing_db {
-            let now = Instant::now();
+            let import_start = clock.now();
             info!("Loaded database successfully!!");
             let encoded_db = icing_db.encode_to_vec();
             let initial_size = encoded_db.len();
@@ -556,8 +572,9 @@ async fn get_or_create_db(
                 encoded_db.as_slice(),
             )
             .into_internal_error("failed to import database")?;
-            let elapsed = now.elapsed();
-            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64);
+            let elapsed = import_start.elapsed().unwrap_or_default();
+            let db_size_bucket = metrics::bucket_db_size(initial_size);
+            get_global_metrics().record_db_init_latency(elapsed.as_millis() as u64, db_size_bucket);
             return Ok((db, version, initial_size));
         }
     } else {

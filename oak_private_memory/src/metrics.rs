@@ -66,6 +66,10 @@ pub struct Metrics {
     db_persist_queue_size: Gauge<u64>,
     // Optimize latency.
     db_optimize_latency: Histogram<u64>,
+    // Latency of fetching the metadata blob from external DB during key sync.
+    key_sync_db_fetch_latency: Histogram<u64>,
+    // Latency of decrypting the database during key sync.
+    key_sync_decrypt_latency: Histogram<u64>,
 }
 
 /// The possible metrics request types.
@@ -183,6 +187,18 @@ impl Metrics {
             .with_description("Latency of optimizing the database.")
             .with_unit("ms")
             .build();
+        let key_sync_db_fetch_latency = observer
+            .meter
+            .u64_histogram("key_sync_db_fetch_latency")
+            .with_description("Latency of fetching metadata blob from external DB.")
+            .with_unit("ms")
+            .build();
+        let key_sync_decrypt_latency = observer
+            .meter
+            .u64_histogram("key_sync_decrypt_latency")
+            .with_description("Latency of decrypting the database.")
+            .with_unit("ms")
+            .build();
 
         // Initialize the total count to 0 to trigger the metric registration.
         // Otherwise, the metric will only show up once it has been incremented.
@@ -190,7 +206,7 @@ impl Metrics {
         rpc_failure_count.add(0, &[KeyValue::new("request_type", "total")]);
         rpc_latency.record(1, &[KeyValue::new("request_type", "test")]);
         db_size.record(1, &[]);
-        db_init_latency.record(1, &[]);
+        db_init_latency.record(1, &[KeyValue::new("db_size_bucket", "0-100KB")]);
         db_cleanup_latency.record(0, &[]);
         db_cleanup_count.record(0, &[]);
         db_persist_latency.record(1, &[]);
@@ -203,6 +219,8 @@ impl Metrics {
         db_decryption_failures.add(0, &[]);
         db_persist_queue_size.record(0, &[]);
         db_optimize_latency.record(1, &[]);
+        key_sync_db_fetch_latency.record(0, &[]);
+        key_sync_decrypt_latency.record(0, &[]);
         observer.register_metric(rpc_count.clone());
         observer.register_metric(rpc_failure_count.clone());
         observer.register_metric(rpc_latency.clone());
@@ -220,6 +238,8 @@ impl Metrics {
         observer.register_metric(db_decryption_failures.clone());
         observer.register_metric(db_persist_queue_size.clone());
         observer.register_metric(db_optimize_latency.clone());
+        observer.register_metric(key_sync_db_fetch_latency.clone());
+        observer.register_metric(key_sync_decrypt_latency.clone());
         Self {
             rpc_count,
             rpc_failure_count,
@@ -238,6 +258,8 @@ impl Metrics {
             db_decryption_failures,
             db_persist_queue_size,
             db_optimize_latency,
+            key_sync_db_fetch_latency,
+            key_sync_decrypt_latency,
         }
     }
 
@@ -294,8 +316,9 @@ impl Metrics {
         self.db_size.record(size, &[]);
     }
 
-    pub fn record_db_init_latency(&self, latency: u64) {
-        self.db_init_latency.record(latency, &[]);
+    pub fn record_db_init_latency(&self, latency: u64, db_size_bucket: &str) {
+        self.db_init_latency
+            .record(latency, &[KeyValue::new("db_size_bucket", db_size_bucket.to_string())]);
     }
 
     pub fn record_db_cleanup_latency(&self, latency: u64) {
@@ -340,6 +363,34 @@ impl Metrics {
 
     pub fn record_db_persist_queue_size(&self, max: u64) {
         self.db_persist_queue_size.record(max, &[]);
+    }
+
+    pub fn record_key_sync_db_fetch_latency(&self, latency_ms: u64) {
+        self.key_sync_db_fetch_latency.record(latency_ms, &[]);
+    }
+
+    pub fn record_key_sync_decrypt_latency(&self, latency_ms: u64) {
+        self.key_sync_decrypt_latency.record(latency_ms, &[]);
+    }
+}
+
+/// Buckets a database size (in bytes) into a human-readable label for use as
+/// a metric attribute. Uses 10MB increments up to 100MB.
+pub fn bucket_db_size(size_bytes: usize) -> &'static str {
+    const MB: usize = 1_048_576;
+    match size_bytes {
+        0..=102_400 => "0-100KB",
+        102_401..=10_485_760 => "100KB-10MB",
+        _n if _n <= 20 * MB => "10MB-20MB",
+        _n if _n <= 30 * MB => "20MB-30MB",
+        _n if _n <= 40 * MB => "30MB-40MB",
+        _n if _n <= 50 * MB => "40MB-50MB",
+        _n if _n <= 60 * MB => "50MB-60MB",
+        _n if _n <= 70 * MB => "60MB-70MB",
+        _n if _n <= 80 * MB => "70MB-80MB",
+        _n if _n <= 90 * MB => "80MB-90MB",
+        _n if _n <= 100 * MB => "90MB-100MB",
+        _ => "100MB+",
     }
 }
 
