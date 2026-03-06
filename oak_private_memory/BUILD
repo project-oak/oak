@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-load("@oak//bazel:defs.bzl", "oci_runtime_bundle")
+load("@oak//oak_containers/app_base:defs.bzl", "app_bundle")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(
@@ -371,22 +369,7 @@ rust_test(
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [":private_memory_server"],
-    package_dir = "/usr/local/bin",
-    strip_prefix = "/oak_private_memory",
-)
-
-oci_image(
-    name = "image",
-    base = "@distroless_cc_debian12_linux_amd64",
-    entrypoint = ["/usr/local/bin/private_memory_server"],
-    tars = [":tar"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle",
-    config_patch = 'with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .hard = 524288) | with(.process.rlimits ; .[] | select(.type == "RLIMIT_NOFILE") | .soft = 524288)',
-    image = ":image",
+    binary = ":private_memory_server",
 )

@@ -22,7 +22,6 @@ bazel_dep(name = "grpc-java", version = "1.71.0", repo_name = "io_grpc_grpc_java
 bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
 bazel_dep(name = "rules_java", version = "8.14.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "rules_oci", version = "2.2.6")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_rust", version = "0.68.1")
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
@@ -76,8 +75,6 @@ http_file(
 oak_toolchains = use_extension("@oak//bazel:extensions.bzl", "oak_toolchains")
 use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 
-register_toolchains("@umoci//:umoci_toolchain")
-
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
     name = "llvm_toolchain",
@@ -92,14 +89,7 @@ use_repo(llvm, "llvm_toolchain")
 
 register_toolchains("@llvm_toolchain//:all")
 
-oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
-oci.pull(
-    name = "distroless_cc_debian12",
-    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
-    image = "gcr.io/distroless/cc-debian12",
-    platforms = ["linux/amd64"],
-)
-use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
+register_toolchains("@umoci//:umoci_toolchain")
 
 # Matches the version of protobuf used by Oak.
 bazel_dep(name = "protobuf", version = "30.0", repo_name = "com_google_protobuf")

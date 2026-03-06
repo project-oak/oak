@@ -23,6 +23,13 @@ package(
 
 exports_files(["config.json.tpl"])
 
+# Alias for the flattened base image, allowing external modules to reference it
+# as @oak_bzlmod//oak_containers/app_base:flat instead of @oak_containers_app_base//:flat.
+alias(
+    name = "flat",
+    actual = "@oak_containers_app_base//:flat",
+)
+
 oak_app_config(
     name = "config",
     args = ["/usr/local/bin/entrypoint"],

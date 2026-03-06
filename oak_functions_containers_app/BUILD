@@ -14,10 +14,8 @@
 # limitations under the License.
 #
 
-load("@rules_oci//oci:defs.bzl", "oci_image")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
-load("//bazel:defs.bzl", "oci_runtime_bundle")
+load("//oak_containers/app_base:defs.bzl", "app_bundle")
 
 package(
     default_visibility = ["//:internal"],
@@ -160,38 +158,12 @@ rust_test(
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [":oak_functions_containers_app"],
-    package_dir = "/usr/local/bin",
-)
-
-oci_image(
-    name = "image",
-    base = "@distroless_cc_debian12_linux_amd64",
-    entrypoint = ["/usr/local/bin/oak_functions_containers_app"],
-    tars = [":tar"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle",
-    image = ":image",
+    binary = ":oak_functions_containers_app",
 )
 
-pkg_tar(
-    name = "tar_insecure",
-    srcs = [":oak_functions_containers_app_insecure"],
-    package_dir = "/usr/local/bin",
-)
-
-oci_image(
-    name = "image_insecure",
-    base = "@distroless_cc_debian12_linux_amd64",
-    entrypoint = ["/usr/local/bin/oak_functions_containers_app_insecure"],
-    tars = [":tar_insecure"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle_insecure",
-    image = ":image_insecure",
+    binary = ":oak_functions_containers_app_insecure",
 )

@@ -73,7 +73,7 @@ oak_app_config = rule(
 def app_bundle(
         name,
         binary,
-        base_image = "@oak_containers_app_base//:flat",
+        base_image = None,
         args = None,
         env = None,
         entrypoint_path = "/usr/local/bin/",
@@ -90,7 +90,7 @@ def app_bundle(
         name: The name of the target.
         binary: The label of the binary target to include.
         base_image: The label of the base image target to use. If not provided,
-            it will default to @oak_containers/app_base:flat, a Debian 12 image with
+            it will default to //oak_containers/app_base:flat, a Debian 12 image with
             only the base-files package installed.
         args: Optional list of arguments to pass to the application. The first argument
             will always be the path to the binary.
@@ -102,6 +102,12 @@ def app_bundle(
             Defaults to "rootfs".
         **kwargs: Additional arguments to pass to the final flatten rule.
     """
+
+    # Use Label() to resolve the default base_image relative to this macro's package,
+    # not the caller's package. This is necessary for cross-module usage.
+    if base_image == None:
+        base_image = Label("//oak_containers/app_base:flat")
+
     binary_label = native.package_relative_label(binary)
     binary_name = paths.basename(binary_label.name)
 

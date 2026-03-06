@@ -422,7 +422,7 @@
   "moduleExtensions": {
     "//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "OnrFkEhz5Nh5eY0L35WjXRAOY2V2LMhZkPrzA80DJR8=",
+        "bzlTransitiveDigest": "klBsxihyJwfe3OXK0nOKBOl2uIW8XlDhojLCc+In168=",
         "usagesDigest": "kgpXcu41GRm9tQE1Eh6l3xi40jpaA3De8zuBR5Z2FX0=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

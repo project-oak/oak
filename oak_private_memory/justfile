@@ -17,8 +17,8 @@ format-rust:
 
 
 private-memory-server: (copy-artifact "private_memory_server" "private_memory_server")
-private-memory-enclave-app: (copy-artifact "bundle.tar" "private_memory_enclave_app")
-private-memory-enclave-bundle-tar: (copy-artifact "bundle.tar" "private_memory_enclave_bundle.tar")
+private-memory-enclave-app: (copy-artifact "bundle" "private_memory_enclave_app")
+private-memory-enclave-bundle-tar: (copy-artifact "bundle" "private_memory_enclave_bundle.tar")
 
 # This matches the logic in the parent copy-artifact rule.
 # See comment there for more details.

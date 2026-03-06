@@ -841,7 +841,7 @@
     },
     "@@oak+//bazel:extensions.bzl%oak_toolchains": {
       "general": {
-        "bzlTransitiveDigest": "OnrFkEhz5Nh5eY0L35WjXRAOY2V2LMhZkPrzA80DJR8=",
+        "bzlTransitiveDigest": "klBsxihyJwfe3OXK0nOKBOl2uIW8XlDhojLCc+In168=",
         "usagesDigest": "zysa/FzJODkwvk5gNb+IWyj7LXJUy2ETiTVMrxyp7k4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

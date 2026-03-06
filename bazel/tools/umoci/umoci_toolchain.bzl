@@ -13,7 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Defines a toolchain rule for umoci."""
+"""Defines a toolchain rule for umoci.
+
+DEPRECATED: This toolchain is deprecated and will be removed in a future release.
+It is only used by the deprecated `oci_runtime_bundle` rule. Use `app_bundle` from
+`//oak_containers/app_base:defs.bzl` instead, which does not require umoci.
+"""
 
 UmociInfo = provider(
     doc = "Information about how to invoke the umoci tool.",

@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Implementation details for the oci_runtime_bundle macro."""
+
+"""Implementation details for the oci_runtime_bundle macro.
+
+DEPRECATED: This rule is deprecated and will be removed in a future release.
+Use `app_bundle` from `//oak_containers/app_base:defs.bzl` instead, which
+provides a simpler API and does not require the umoci toolchain.
+"""
 
 def _oci_runtime_bundle_impl(ctx):
     image = ctx.file.image
@@ -69,8 +75,12 @@ _oci_runtime_bundle = rule(
     ],
 )
 
+# buildifier: disable=print
 def oci_runtime_bundle(name, image, **kwargs):
     """Converts an oci_image to a OCI runtime bundle tar.
+
+    DEPRECATED: This macro is deprecated and will be removed in a future release.
+    Use `app_bundle` from `//oak_containers/app_base:defs.bzl` instead.
 
     Args:
         name: the target name to produce. Building this target will generate a
@@ -78,6 +88,9 @@ def oci_runtime_bundle(name, image, **kwargs):
         image: the oci_image target to convert.
         **kwargs: additional arguments passed to the rule (e.g., visibility).
     """
+
+    # buildifier: disable=print
+    print("WARNING: oci_runtime_bundle is deprecated. Use app_bundle from //oak_containers/app_base:defs.bzl instead.")
     _oci_runtime_bundle(
         name = name,
         bundle = "{}.tar".format(name),
