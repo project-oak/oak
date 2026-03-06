@@ -1,4 +1,4 @@
-# Gemini Instructions
+# Agent Instructions
 
 ## Building and Running
 
