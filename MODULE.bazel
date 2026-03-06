@@ -142,7 +142,7 @@ bazel_dep(name = "rules_nixpkgs_core", version = "0.13.0")
 nix_repos = use_extension("//bazel/nix:extensions.bzl", "nix_repos", dev_dependency = True)
 use_repo(nix_repos, "nix_linux_kernel", "nix_vanilla_linux_kernel")
 
-##### OCI
+##### Container Management
 
 bazel_dep(name = "rules_oci", version = "2.2.6")
 
@@ -169,6 +169,16 @@ use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 
 # On macOS, uses system-installed umoci (via Nix). See umoci_toolchain.bzl.
 register_toolchains("@umoci//:umoci_toolchain", "@umoci//:umoci_toolchain_darwin")
+
+bazel_dep(name = "rules_distroless", version = "0.6.1")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "oak_containers_app_base",
+    lock = "//oak_containers/app_base:app_base.lock.json",
+    manifest = "//oak_containers/app_base:app_base.yaml",
+)
+use_repo(apt, "oak_containers_app_base")
 
 # Run clang-tidy on C++ code with the following command:
 # bazel build //cc/... \

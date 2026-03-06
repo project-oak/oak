@@ -333,7 +333,7 @@ copy-oak-artifacts: \
     (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app") \
     (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "oak_client_android_app") \
     (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent") \
-    (copy-binary "oak_containers/examples/hello_world/enclave_app:bundle.tar" "oak_containers_hello_world_container") \
+    (copy-binary "oak_containers/examples/hello_world/enclave_app:bundle" "oak_containers_hello_world_container") \
     (copy-binary "oak_containers/kernel" "oak_containers_kernel") \
     (copy-subjects "oak_containers/kernel:subjects" "oak_containers_kernel") \
     (copy-binary "oak_containers/system_image/oak_containers_nvidia_system_image.tar.xz" "oak_containers_nvidia_system_image") \

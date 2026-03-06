@@ -17,9 +17,7 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("@rules_oci//oci:defs.bzl", "oci_image")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-load("//bazel:defs.bzl", "oci_runtime_bundle")
+load("//oak_containers/app_base:defs.bzl", "app_bundle")
 
 package(licenses = ["notice"])
 
@@ -87,22 +85,9 @@ cc_binary(
     ],
 )
 
-pkg_tar(
-    name = "tar",
-    srcs = [":main"],
-    package_dir = "/usr/local/bin",
-)
-
-oci_image(
-    name = "image",
-    base = "@distroless_cc_debian12_linux_amd64",
-    entrypoint = ["/usr/local/bin/main"],
-    tars = [":tar"],
-)
-
-oci_runtime_bundle(
+app_bundle(
     name = "bundle",
-    image = ":image",
+    binary = ":main",
     visibility = [
         "//oak_containers/examples/hello_world/host_app:__subpackages__",
     ],
