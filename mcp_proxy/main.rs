@@ -27,7 +27,7 @@ use axum::{
 };
 use clap::Parser;
 use config::{Config, Filter};
-use digest::{Digest, compute_canonical_digest};
+use oak_digest::Digest;
 use thiserror::Error;
 use tokio::net::TcpListener;
 use trex_client::{
@@ -36,7 +36,6 @@ use trex_client::{
 };
 
 mod config;
-mod digest;
 
 #[derive(Error, Debug)]
 pub enum VerificationError {
@@ -192,7 +191,7 @@ async fn handle_request(
 
     // Cache the response
     let (digest, path) = cache_subject(&resp_body_bytes)?;
-    log::info!("   Digest: {}", digest);
+    log::info!("   Digest: {}", digest.to_typed_hash());
     log::info!("   Cached: {:?}", path);
 
     // Endorsement Verification
@@ -228,16 +227,9 @@ async fn handle_request(
 /// `cosign`.
 async fn verify_endorsement(
     filter: &Filter,
-    subject_digest_local: &Digest,
+    subject_digest: &Digest,
     subject_path: &PathBuf,
 ) -> Result<(), (StatusCode, String)> {
-    let subject_digest = oak_digest::Digest::from_typed_hash(&subject_digest_local.to_string())
-        .map_err(|e| {
-            let msg = format!("Failed to convert digest: {e}");
-            log::error!("{msg}");
-            (StatusCode::INTERNAL_SERVER_ERROR, msg)
-        })?;
-
     if let Some(endorsement_repository_url) = &filter.endorsement_repository_url {
         log::info!("   Loading endorsement repository from {endorsement_repository_url}");
 
@@ -252,12 +244,12 @@ async fn verify_endorsement(
         let issuer =
             filter.cosign_oidc_issuer.as_deref().unwrap_or("https://oauth2.sigstore.dev/auth");
 
-        let result =
-            verifier.verify(&subject_digest, now, &required_claims, identity, issuer).await;
+        let result = verifier.verify(subject_digest, now, &required_claims, identity, issuer).await;
 
         if let Err(e) = result {
             let err_msg = format!(
-                "Endorsement verification failed for subject digest: {subject_digest_local}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
+                "Endorsement verification failed for subject digest: {}.\nError: {e:?}\n\nThe response from the server was not endorsed by the expected identity ({:?}).\n\nTo endorse this content, run the endorsement tool on the saved subject file:\ndoremint blob endorse --file={subject_path:?} --repository=<path_to_repo> --valid-for=1d --claims=\"{MCP_TOOL_LIST_CLAIM_TYPE}\"\n",
+                subject_digest.to_typed_hash(),
                 filter.cosign_identity
             );
             log::error!("{err_msg}");
@@ -270,7 +262,7 @@ async fn verify_endorsement(
 /// Caches the subject (response body) to a temporary file and returns its
 /// digest and path.
 fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, String)> {
-    let digest = compute_canonical_digest(body_bytes);
+    let digest = Digest::Sha256(oak_digest::Sha256::from_contents(body_bytes));
 
     let temp_dir = PathBuf::from("/tmp/mcp_proxy");
     fs::create_dir_all(&temp_dir).map_err(|e| {
@@ -279,7 +271,7 @@ fn cache_subject(body_bytes: &[u8]) -> Result<(Digest, PathBuf), (StatusCode, St
         (StatusCode::INTERNAL_SERVER_ERROR, msg)
     })?;
 
-    let subject_filename = digest.to_string();
+    let subject_filename = digest.to_typed_hash();
     let subject_path = temp_dir.join(&subject_filename);
 
     if !subject_path.exists() {

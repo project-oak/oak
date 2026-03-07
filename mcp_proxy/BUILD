@@ -25,7 +25,6 @@ rust_binary(
     name = "mcp_proxy",
     srcs = [
         "config.rs",
-        "digest.rs",
         "main.rs",
     ],
     deps = [
@@ -37,7 +36,6 @@ rust_binary(
         "@oak_crates_index//:bytes",
         "@oak_crates_index//:clap",
         "@oak_crates_index//:env_logger",
-        "@oak_crates_index//:hex",
         "@oak_crates_index//:http",
         "@oak_crates_index//:http-body-util",
         "@oak_crates_index//:hyper",
@@ -46,7 +44,6 @@ rust_binary(
         "@oak_crates_index//:reqwest",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
