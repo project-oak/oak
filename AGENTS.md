@@ -142,12 +142,40 @@ verify_signature(evidence).context("verifying signature")?;
 let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
 ```
 
-## Git
+## Version Control
 
-We don't use git.
+This repo may be managed by **jj (Jujutsu)** or **git**, depending on the
+developer. Before running any version control commands, check which tool is in
+use by looking for a `.jj` directory at the repo root:
 
-Do not run any git commands, not even `git status`, and definitely not
-`git commit`, `git push` or `git checkout`.
+- **Important:** The `.jj` directory is gitignored, so file search tools (like
+  `fd` / `find_by_name`) will not find it. You must use `list_dir` on the repo
+  root directly, or check the path explicitly (e.g. `test -d .jj`).
+- Both `.jj` and `.git` will often coexist (jj uses git as a backend). Always
+  check for `.jj` **first**. If it exists, use **jj** for all version control
+  operations.
+- Only if `.jj` is absent, fall back to **git**.
+
+**Do not mix tools.** If jj is available, do not run any git commands, and vice
+versa.
+
+### Common operations with jj
+
+| Operation                     | Command                           |
+| ----------------------------- | --------------------------------- |
+| Status / diff of working copy | `jj diff`                         |
+| Log                           | `jj log` (or just `jj`)           |
+| Show a specific change        | `jj show <change_id>`             |
+| Diff between two revisions    | `jj diff --from=<rev> --to=<rev>` |
+| Create a new change           | `jj new`                          |
+| Squash into parent            | `jj squash`                       |
+| Describe (commit message)     | `jj describe -m "message"`        |
+
+Do not run `jj git push`, `jj git fetch`, or `jj gerrit upload` unless
+explicitly asked.
+
+Destructive operations (e.g. `jj squash`, `jj abandon`, `jj rebase`) modify
+history. Always ask the user for confirmation before running them.
 
 ### Commits
 
