@@ -71,7 +71,7 @@ impl LinuxVm {
             .stdout(Stdio::null())
             .stderr(Stdio::piped()) // Keep stderr for debugging
             .spawn()
-            .context("Failed to start run_vm.sh")?;
+            .context("starting run_vm.sh")?;
 
         Ok(Self { child })
     }

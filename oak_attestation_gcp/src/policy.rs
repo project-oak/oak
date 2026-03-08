@@ -79,29 +79,29 @@ impl ConfidentialSpaceVerificationReport {
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfidentialSpaceVerificationError {
-    #[error("Missing field: {0}")]
+    #[error("missing field: {0}")]
     MissingField(&'static str),
-    #[error("Invalid field: {0}")]
+    #[error("invalid field: {0}")]
     InvalidField(&'static str),
-    #[error("Failed to decode proto: {0}")]
+    #[error("could not decode proto: {0}")]
     ProtoDecodeError(#[from] anyhow::Error),
-    #[error("Failed to decode Variant: {0}")]
+    #[error("could not decode variant: {0}")]
     VariantDecodeError(&'static str),
-    #[error("Failed to parse Token: {0}")]
+    #[error("could not parse token: {0}")]
     TokenParseError(#[from] jwt::error::Error),
-    #[error("Token public key mismatch; expected {expected} but got {actual}")]
+    #[error("token public key mismatch; expected {expected} but got {actual}")]
     TokenClaimPublicKeyMismatch { expected: String, actual: String },
-    #[error("Failed to deserialize nonce: {0}")]
+    #[error("could not deserialize nonce: {0}")]
     NonceDeserializeError(#[from] serde_json::error::Error),
-    #[error("Failed to verify Token: {0}")]
+    #[error("could not verify token: {0}")]
     TokenVerificationError(#[from] AttestationVerificationError),
     #[error("missing workload endorsement")]
     MissingWorkloadEndorsementError,
-    #[error("Failed to parse OCI reference: {0}")]
+    #[error("could not parse OCI reference: {0}")]
     ParseError(#[from] oci_spec::distribution::ParseError),
-    #[error("Failed to verify endorsement: {0}")]
+    #[error("could not verify endorsement: {0}")]
     EndorsementVerificationError(String),
-    #[error("Failed to verify container image reference; {actual} is not prefixed by {prefix}")]
+    #[error("could not verify container image reference; {actual} is not prefixed by {prefix}")]
     EndorsementContainerImageVerifyError { actual: String, prefix: String },
 }
 

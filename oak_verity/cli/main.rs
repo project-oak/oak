@@ -78,15 +78,14 @@ fn main() -> Result<()> {
 
     // Create Oak Verity instance which handles Wasm execution and manifest
     // generation.
-    let oak_verity = OakVerity::new().context("Failed to create Oak Verity instance")?;
+    let oak_verity = OakVerity::new().context("creating Oak Verity instance")?;
 
     // Create the execution request with input data and Wasm module.
     let request = ExecuteRequest { input_data, wasm_module };
 
     // Execute the Wasm module with Oak Verity.
     // This runs the Wasm module and generates a manifest with SHA-256 digests.
-    let response =
-        oak_verity.execute(request).context("Failed to execute Wasm module with Oak Verity")?;
+    let response = oak_verity.execute(request).context("executing Wasm module with Oak Verity")?;
 
     println!("✅ Execution successful!");
 

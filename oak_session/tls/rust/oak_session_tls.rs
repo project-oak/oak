@@ -67,7 +67,7 @@ pub enum InitializationError {
     Tls(#[from] rustls::Error),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Unexpected EOF trying to write data into TLS buffer")]
+    #[error("unexpected EOF trying to write data into TLS buffer")]
     UnexpectedEof,
 }
 
@@ -87,9 +87,9 @@ pub enum SessionError {
     Tls(#[from] rustls::Error),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Could not write any more data into the TLS buffer")]
+    #[error("could not write any more data into the TLS buffer")]
     TLSBufferFull,
-    #[error("Unexpected EOF trying to write data into TLS buffer")]
+    #[error("unexpected EOF trying to write data into TLS buffer")]
     UnexpectedEof,
 }
 

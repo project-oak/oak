@@ -26,35 +26,35 @@ use crate::jwt::{Claims, Header, algorithm::CertificateAlgorithm};
 
 #[derive(thiserror::Error, Debug)]
 pub enum AttestationVerificationError {
-    #[error("Failed to verify JWT: {0}")]
+    #[error("could not verify JWT: {0}")]
     JWTError(#[from] jwt::Error),
-    #[error("Failed to decode x5c: {0}")]
+    #[error("could not decode x5c: {0}")]
     X5CDecodeError(#[from] serde_json::Error),
-    #[error("Failed to verify certificate: {0}")]
+    #[error("could not verify certificate: {0}")]
     X509VerificationError(x509_verify::Error),
-    #[error("Failed to decode base64: {0}")]
+    #[error("could not decode base64: {0}")]
     X509Base64DecodeError(#[from] base64::DecodeError),
-    #[error("Failed to decode der: {0}")]
+    #[error("could not decode DER: {0}")]
     X509DerDecodeError(x509_cert::der::Error),
-    #[error("Certificate validity not_before: {not_before} > {current_time}")]
+    #[error("certificate validity not_before: {not_before} > {current_time}")]
     X509ValidityNotBefore { not_before: Instant, current_time: Instant },
-    #[error("Certificate validity not_after: {not_after} > {current_time}")]
+    #[error("certificate validity not_after: {not_after} > {current_time}")]
     X509ValidityNotAfter { not_after: Instant, current_time: Instant },
-    #[error("Token validity nbf: {nbf} > {current_time}")]
+    #[error("token validity nbf: {nbf} > {current_time}")]
     JWTValidityNotBefore { nbf: Instant, current_time: Instant },
-    #[error("Token validity exp: {exp} < {current_time}")]
+    #[error("token validity exp: {exp} < {current_time}")]
     JWTValidityExpiration { exp: Instant, current_time: Instant },
-    #[error("Empty X509 certificate chain")]
+    #[error("empty x509 certificate chain")]
     EmptyX509Chain,
-    #[error("Invalid audience: want {want}, got {got}")]
+    #[error("invalid audience: want {want}, got {got}")]
     InvalidAudience { want: String, got: String },
-    #[error("Invalid debug status: want {want}, got {got}")]
+    #[error("invalid debug status: want {want}, got {got}")]
     InvalidDebugStatus { want: &'static str, got: String },
-    #[error("Invalid software name: want {want}, got {got}")]
+    #[error("invalid software name: want {want}, got {got}")]
     InvalidSoftwareName { want: &'static str, got: String },
     #[error("{want} is a required software attribute, but only got {got:?}")]
     MissingRequiredSupportAttribute { want: &'static str, got: Vec<String> },
-    #[error("Unknown error: {0}")]
+    #[error("unknown error: {0}")]
     UnknownError(&'static str),
 }
 

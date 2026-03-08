@@ -54,7 +54,7 @@ impl FileSystemEndorsementIndex {
     /// Ensures the repository directory structure exists.
     pub fn prepare(&self) -> Result<()> {
         let blobs_dir = self.repository_path.join("blobs");
-        fs::create_dir_all(&blobs_dir).context("Failed to create blobs directory")
+        fs::create_dir_all(&blobs_dir).context("creating blobs directory")
     }
 
     fn fetch_digests(&self, index_name: &str, key_digest: &Digest) -> Result<Vec<Digest>> {
@@ -79,7 +79,7 @@ impl FileSystemEndorsementIndex {
         let key_typed = key_digest.to_typed_hash();
         let value_typed = value_digest.to_typed_hash();
         let index_dir = self.repository_path.join(index_name);
-        fs::create_dir_all(&index_dir).context("Failed to create index directory")?;
+        fs::create_dir_all(&index_dir).context("creating index directory")?;
 
         let index_file_path = index_dir.join(&key_typed);
 
@@ -99,9 +99,9 @@ impl FileSystemEndorsementIndex {
             .create(true)
             .append(true)
             .open(&index_file_path)
-            .context("Failed to open index file")?;
+            .context("opening index file")?;
 
-        writeln!(file, "{}", value_typed).context("Failed to write to index file")?;
+        writeln!(file, "{}", value_typed).context("writing to index file")?;
         log::debug!("Added entry {} -> {} in index {}", key_typed, value_typed, index_name);
 
         Ok(())
@@ -148,7 +148,7 @@ impl FileSystemBlobStore {
     /// Ensures the blobs directory structure exists.
     pub fn prepare(&self) -> Result<()> {
         let blobs_dir = self.repository_path.join("blobs");
-        fs::create_dir_all(&blobs_dir).context("Failed to create blobs directory")
+        fs::create_dir_all(&blobs_dir).context("creating blobs directory")
     }
 }
 

@@ -32,15 +32,15 @@ use thiserror::Error;
 /// Errors that can occur during assertion verification.
 #[derive(Clone, Error, Debug)]
 pub enum BoundAssertionVerificationError {
-    #[error("Generic verification error: {error_msg}")]
+    #[error("generic verification error: {error_msg}")]
     GenericFailure { error_msg: String },
-    #[error("Binding verification error: {error_msg}")]
+    #[error("binding verification error: {error_msg}")]
     BindingVerificationFailure { error_msg: String },
-    #[error("Peer assertion missing")]
+    #[error("peer assertion missing")]
     PeerAssertionMissing,
-    #[error("Assertion parsing error: {0:?}")]
+    #[error("assertion parsing error: {0:?}")]
     AssertionParsingError(DecodeError),
-    #[error("Assertion missing expected fields: {error_msg}")]
+    #[error("assertion missing expected fields: {error_msg}")]
     AssertionMissingExpectedFields { error_msg: String },
 }
 

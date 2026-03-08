@@ -77,7 +77,7 @@ impl GrpcStreamingTransport {
     ) -> anyhow::Result<ResponseWrapper> {
         self.request_tx_channel
             .try_send(RequestWrapper { request: Some(request) })
-            .context("Couldn't send request")?;
+            .context("sending request")?;
         self.response_stream
             .message()
             .await
@@ -96,7 +96,7 @@ impl Transport for GrpcStreamingTransport {
                 encrypted_request: Some(encrypted_request.clone()),
             }))
             .await
-            .context("Sending invoke request")?;
+            .context("sending invoke request")?;
 
         match response_wrapper.response {
             Some(response_wrapper::Response::InvokeResponse(InvokeResponse {
@@ -117,7 +117,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
                 GetEndorsedEvidenceRequest {},
             ))
             .await
-            .context("Sending get_endorsed_evidence request")?;
+            .context("sending get_endorsed_evidence request")?;
 
         match response_wrapper.response {
             Some(response_wrapper::Response::GetEndorsedEvidenceResponse(

@@ -126,7 +126,7 @@ impl OakFunctionsClient {
                     )
                     .build(),
                 )
-                .context("Failed to create client session")?
+                .context("creating client session")?
             }
             AttestationType::SelfUnidirectional | AttestationType::Bidirectional => {
                 return Err(anyhow!("cannot generate client side attestation"));

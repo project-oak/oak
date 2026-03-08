@@ -22,11 +22,11 @@ use p256::{
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Unable to parse public key: {0}")]
+    #[error("unable to parse public key: {0}")]
     ParseError(p256::pkcs8::spki::Error),
-    #[error("Unable to convert to public key DER: {0}")]
+    #[error("unable to convert to public key DER: {0}")]
     ConversionToPublicKeyDerError(p256::pkcs8::spki::Error),
-    #[error("Unsupported key type: {0:?}")]
+    #[error("unsupported key type: {0:?}")]
     UnsupportedKeyType(KeyType),
 }
 

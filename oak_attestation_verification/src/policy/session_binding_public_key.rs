@@ -64,13 +64,13 @@ impl SessionBindingPublicKeyVerificationReport {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SessionBindingPublicKeyVerificationError {
-    #[error("Missing field: {0}")]
+    #[error("missing field: {0}")]
     MissingField(&'static str),
-    #[error("Failed to decode proto: {0}")]
+    #[error("could not decode proto: {0}")]
     ProtoDecodeError(#[from] anyhow::Error),
-    #[error("Failed to decode Variant: {0}")]
+    #[error("could not decode variant: {0}")]
     VariantDecodeError(&'static str),
-    #[error("Certificate verification failed: {0}")]
+    #[error("certificate verification failed: {0}")]
     CertificateVerificationError(#[from] CertificateVerificationError),
 }
 

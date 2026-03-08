@@ -45,7 +45,7 @@ async fn try_persist_database(
     let elapsed = now.elapsed();
     get_global_metrics().record_db_optimize_latency(elapsed.as_millis() as u64);
     let exported_db = user_context.database.export()?;
-    let encrypted_info = exported_db.encrypted_info.context("Encrypted info is empty")?;
+    let encrypted_info = exported_db.encrypted_info.context("encrypted info is empty")?;
     let database = encrypt_database(&encrypted_info, &user_context.dek)?;
 
     let db_size = database.data.len();

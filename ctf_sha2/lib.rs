@@ -75,7 +75,7 @@ pub struct Arbiter;
 impl falsify::Claim for Arbiter {
     fn evaluate(&self, input: &[u8]) -> Result<falsify::Evaluation, Box<dyn core::error::Error>> {
         let input_decoded = ArbiterInput::decode(input)?;
-        let tee_proof = input_decoded.tee_proof.context("Input does not contain tee_proof")?;
+        let tee_proof = input_decoded.tee_proof.context("input does not contain tee_proof")?;
         let reference_values = create_reference_values(&tee_proof);
         let verification_result = match tee_proof.clone() {
             TeeProof::ConfidentialSpaceJwt(confidential_space_jwt) => {
@@ -103,7 +103,7 @@ impl falsify::Claim for Arbiter {
                 let endorsements = attested_signature
                     .endorsements
                     .as_ref()
-                    .context("Input does not contain enclave endorsements")?;
+                    .context("input does not contain enclave endorsements")?;
                 let vcek_cert_not_before = vcek_cert_not_before(endorsements)?;
                 verify_attested_signature(
                     &vcek_cert_not_before,
@@ -169,11 +169,11 @@ fn verify_attested_signature(
 ) -> anyhow::Result<()> {
     // Verify Evidence
     let evidence =
-        attested_signature.evidence.as_ref().context("Input does not contain enclave evidence")?;
+        attested_signature.evidence.as_ref().context("input does not contain enclave evidence")?;
     let endorsements = attested_signature
         .endorsements
         .as_ref()
-        .context("Input does not contain enclave endorsements")?;
+        .context("input does not contain enclave endorsements")?;
     let extracted = verify(now.into_unix_millis(), evidence, endorsements, reference_values)?;
 
     // Verify signature over expected flag digest

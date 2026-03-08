@@ -145,19 +145,53 @@ fn download_url(&self) -> String { /* ... */ }
   `Copyright 2026 The Project Oak Authors`). Do not copy a stale year from an
   older file.
 
-### Errors
+### Errors and Log Messages
 
-Add `context("message")` to errors when it reduces ambiguity. Higher up in the
-stack, use a `message` that starts with a verb and use gerund. Fine to repeat a
-human readable version of the function name the context is attached to. Negative
-terms like "fail" or "missing" should only be used in actual errors at the
-deepest level. Don't be too verbose in these context messages.
+All error messages, log lines, and `context()` strings must follow these rules:
 
-Examples:
+- **Lowercase start.** Error messages are composed in chains like
+  `"verifying signature: parsing certificate: invalid PEM"`. Uppercase initial
+  letters break the chain's readability.
+- **No trailing period.** Sentences in error chains should not end with `.`.
+- **No "error:" or "failed to" prefixes.** The caller adds context; the message
+  describes what was being done or what went wrong.
+- **Use `thiserror`** (`#[derive(thiserror::Error)]`) for structured error
+  types. The project uses thiserror v2 with `default_features = False`, which is
+  `no_std`-compatible.
+
+#### `context()` messages
+
+Use gerund form. Fine to repeat a human-readable version of the function name.
+Negative terms like "missing" should only appear at the deepest error level.
 
 ```rust
 verify_signature(evidence).context("verifying signature")?;
 let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
+```
+
+#### `thiserror` `#[error]` messages
+
+Lowercase, no trailing period, describe the problem:
+
+```rust
+#[derive(thiserror::Error, Debug)]
+pub enum PolicyError {
+    #[error("missing workload endorsement")]
+    MissingWorkloadEndorsement,
+    #[error("could not decode field {name}: {value}")]
+    HexDecodingError { name: String, value: String },
+}
+```
+
+#### Log lines
+
+Same rules: lowercase, no trailing period. Use gerund for in-progress actions,
+past tense for completions.
+
+```rust
+log::info!("starting server on port {port}");
+log::info!("loaded {n} certificates");
+log::warn!("retrying after transient failure");
 ```
 
 ### CLI Flags

@@ -217,14 +217,14 @@ impl Snapshot {
             self_endorsed_evidence_json,
             &previous_endorsed_evidence_json,
         )
-        .context("Endorsed evidence mismatch")?;
+        .context("while verifying endorsed evidence")?;
 
         new_properties.extend(
             assert_existing_fields_unchanged_and_get_new_properties(
                 self_reference_values_json,
                 &previous_reference_values_json,
             )
-            .context("Reference values mismatch")?,
+            .context("while verifying reference values")?,
         );
 
         Ok(new_properties)

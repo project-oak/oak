@@ -169,7 +169,7 @@ where
         }
         let instance =
             OakFunctionsInstance::new(&initialize_request, None, self.handler_config.clone())
-                .context("Failed to initialize Oak Function MCP server.")?;
+                .context("initializing Oak Function MCP server")?;
         self.oak_functions_instance
             .set(instance)
             .map_err(|_| anyhow::anyhow!("instance already initialized"))?;

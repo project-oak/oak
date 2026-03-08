@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("Could not read tee-image-reference, are we running in Confidential Space?");
     let image_reference: Reference = image_reference
         .parse()
-        .context("Could not parse tee-image-reference into an OCI image reference")?;
+        .context("parsing tee-image-reference into an OCI image reference")?;
     anyhow::ensure!(
         image_reference.digest().is_some(),
         "Only images with digests are supported, not {image_reference}"

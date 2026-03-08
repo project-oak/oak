@@ -27,9 +27,9 @@ use thiserror::Error;
 /// Errors that can occur during assertion verification.
 #[derive(Error, Debug)]
 pub enum BindableAssertionGeneratorError {
-    #[error("Generic assertion generation error")]
+    #[error("generic assertion generation error")]
     GenericFailure { error_msg: String },
-    #[error("Assertion binding failure")]
+    #[error("assertion binding failure")]
     BindingGenerationFailure { error_msg: String },
     #[error(transparent)]
     AssertionGenerationFailure(#[from] AssertionGeneratorError),

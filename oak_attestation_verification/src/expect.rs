@@ -862,7 +862,7 @@ fn get_kernel_expected_values(
                 .setup_data
                 .ok_or_else(|| anyhow::anyhow!("no setup data digest in kernel attachment"))?;
 
-            let endorsement = endorsement.context("No endorsement provided")?;
+            let endorsement = endorsement.context("no endorsement provided")?;
             let statement = parse_statement(&endorsement.endorsement)
                 .context("parsing endorsement statement")?;
 

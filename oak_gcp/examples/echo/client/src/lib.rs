@@ -110,7 +110,7 @@ impl EchoClient {
         }
 
         let mut client_session = ClientSession::create(client_config_builder.build())
-            .context("Failed to create client session")?;
+            .context("creating client session")?;
 
         while !client_session.is_open() {
             let request = client_session.next_init_message().expect("expected client init message");

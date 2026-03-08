@@ -28,12 +28,12 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum AssertionVerifierError {
     #[error(
-        "Data in the assertion doesn't match the expected asserted data. Expected: {expected}, actual: {actual}"
+        "data in the assertion doesn't match the expected asserted data; expected: {expected}, actual: {actual}"
     )]
     AssertedDataMismatch { expected: String, actual: String },
-    #[error("Assertion parsing error: {0:?}")]
+    #[error("assertion parsing error: {0:?}")]
     AssertionParsingError(DecodeError),
-    #[error("Assertion missing expected fields: {error_msg}")]
+    #[error("assertion missing expected fields: {error_msg}")]
     AssertionMissingExpectedFields { error_msg: String },
     #[error(transparent)]
     Other(#[from] anyhow::Error),

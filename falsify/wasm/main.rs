@@ -68,8 +68,8 @@ fn main() {
 }
 
 fn run(args: &Args) -> Result<falsify_native::Status> {
-    let input_bytes = fs::read(&args.input_file).context("Could not read input file")?;
-    let wasm_bytes = fs::read(&args.wasm_module).context("Could not read Wasm module")?;
+    let input_bytes = fs::read(&args.input_file).context("reading input file")?;
+    let wasm_bytes = fs::read(&args.wasm_module).context("reading Wasm module")?;
 
     // Use OakFunctionsInstance — the same infrastructure as Oak Functions and
     // Oak Verity — to execute the Wasm module.
@@ -81,22 +81,22 @@ fn run(args: &Args) -> Result<falsify_native::Status> {
         None, // No observer.
         WasmConfig::default(),
     )
-    .context("Failed to create Oak Functions instance")?;
+    .context("creating Oak Functions instance")?;
 
-    info!("Executing Wasm claim...");
+    info!("executing Wasm claim");
     let response_bytes =
-        instance.handle_user_request(input_bytes).context("Wasm claim execution failed")?;
+        instance.handle_user_request(input_bytes).context("executing Wasm claim")?;
 
     // Decode the response byte using the shared wire constants.
     let byte =
         response_bytes.first().ok_or_else(|| anyhow!("Wasm module returned empty response"))?;
     match falsify::Evaluation::from_byte(*byte) {
         Some(falsify::Evaluation::Intact) => {
-            info!("Claim intact.");
+            info!("claim intact");
             Ok(falsify_native::Status::Intact)
         }
         Some(falsify::Evaluation::Falsified) => {
-            info!("Claim falsified!");
+            info!("claim falsified");
             Ok(falsify_native::Status::Falsified)
         }
         None => Err(anyhow!("Unexpected evaluation byte from Wasm module: {byte}")),

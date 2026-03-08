@@ -21,7 +21,7 @@ use prost::Message;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-#[error("AssertionGenerator error: {from:?}")]
+#[error("assertion generator error: {from:?}")]
 pub struct AssertionGeneratorError {
     #[from]
     pub from: anyhow::Error,

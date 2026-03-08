@@ -27,34 +27,34 @@ use crate::verifier::Verifier;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CertificateVerificationError {
-    #[error("Missing field: {0}")]
+    #[error("missing field: {0}")]
     MissingField(&'static str),
-    #[error("Failed to decode proto: {0}")]
+    #[error("could not decode proto: {0}")]
     ProtoDecodeError(DecodeError),
-    #[error("Signature verification failed: {0}")]
+    #[error("signature verification failed: {0}")]
     SignatureVerificationError(#[from] anyhow::Error),
-    #[error("Subject public key mismatch; expected {expected} but got {actual}")]
+    #[error("subject public key mismatch; expected {expected} but got {actual}")]
     SubjectPublicKeyMismatch { expected: String, actual: String },
-    #[error("Purpose ID mismatch; expected {expected} but got {actual}")]
+    #[error("purpose ID mismatch; expected {expected} but got {actual}")]
     PurposeIdMismatch { expected: String, actual: String },
     #[error(
-        "Invalid certificate validity period; not_before {not_before} is after not_after {not_after}"
+        "invalid certificate validity period; not_before {not_before} is after not_after {not_after}"
     )]
     ValidityPeriodInvalid { not_before: Instant, not_after: Instant },
-    #[error("Certificate validity period {period:?} exceeds the limit {limit:?}")]
+    #[error("certificate validity period {period:?} exceeds the limit {limit:?}")]
     ValidityPeriodTooLong { period: Duration, limit: Duration },
     #[error(
-        "Certificate validity period begins at (skewed) {skewed_not_before}, after {current_time}"
+        "certificate validity period begins at (skewed) {skewed_not_before}, after {current_time}"
     )]
     ValidityPeriodNotYetStarted { skewed_not_before: Instant, current_time: Instant },
     #[error(
-        "Certificate validity period ends at (skewed) {skewed_not_after}, before {current_time}"
+        "certificate validity period ends at (skewed) {skewed_not_after}, before {current_time}"
     )]
     ValidityPeriodExpired { skewed_not_after: Instant, current_time: Instant },
     // TODO: b/424736845 - Remove this once proof of freshness is implemented.
-    #[error("Proof of freshness verification is not implemented")]
+    #[error("proof of freshness verification is not implemented")]
     ProofOfFreshnessUnimplemented,
-    #[error("Unknown error: {0}")]
+    #[error("unknown error: {0}")]
     UnknownError(&'static str),
 }
 

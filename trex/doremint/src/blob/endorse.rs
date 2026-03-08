@@ -117,7 +117,7 @@ impl Endorse {
         );
 
         let statement_data =
-            serialize_statement(&statement).context("Failed to serialize endorsement statement")?;
+            serialize_statement(&statement).context("serializing endorsement statement")?;
 
         let statement_hex_digest = blob_store
             .store_blob(&statement_data)

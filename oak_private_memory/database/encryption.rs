@@ -50,6 +50,6 @@ pub fn decrypt_database(
         }
     };
     let user_db = EncryptedUserInfo::decode(decrypted_data.as_slice())
-        .context("Failed to decode EncryptedUserInfo")?;
+        .context("decoding EncryptedUserInfo")?;
     Ok(user_db)
 }

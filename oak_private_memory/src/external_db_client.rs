@@ -237,7 +237,7 @@ impl DataBlobHandler for ExternalDbClient {
                 if let Some(data_blob) = db_response.data_blob {
                     let blob_size = data_blob.blob.len() as u64;
                     let data_blob = EncryptedDataBlob::decode(&*data_blob.blob)
-                        .context("Failed to decode EncryptedDataBlob")?;
+                        .context("decoding EncryptedDataBlob")?;
 
                     let mut elapsed_time = start_time.elapsed().as_millis() as u64;
                     if elapsed_time == 0 {
@@ -275,7 +275,7 @@ impl DataBlobHandler for ExternalDbClient {
                     let metadata_blob = EncryptedMetadataBlob {
                         encrypted_data_blob: Some(
                             EncryptedDataBlob::decode(&*data_blob.blob)
-                                .context("Failed to decode EncryptedMetadataBlob")?,
+                                .context("decoding EncryptedMetadataBlob")?,
                         ),
                         version,
                     };
@@ -339,7 +339,7 @@ impl DataBlobHandler for ExternalDbClient {
                 let metadata_blob = EncryptedMetadataBlob {
                     encrypted_data_blob: Some(
                         EncryptedDataBlob::decode(&*full_blob)
-                            .context("Failed to decode EncryptedMetadataBlob")?,
+                            .context("decoding EncryptedMetadataBlob")?,
                     ),
                     version,
                 };

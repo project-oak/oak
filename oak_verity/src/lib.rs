@@ -89,12 +89,11 @@ impl OakVerity {
             None, // No observer for now.
             WasmConfig::default(),
         )
-        .context("Failed to create Oak Functions instance")?;
+        .context("creating Oak Functions instance")?;
 
         // Execute the Wasm module with the input data.
-        let response_bytes = instance
-            .handle_user_request(input_data.to_vec())
-            .context("Failed to execute Wasm module")?;
+        let response_bytes =
+            instance.handle_user_request(input_data.to_vec()).context("executing Wasm module")?;
 
         Ok(response_bytes)
     }

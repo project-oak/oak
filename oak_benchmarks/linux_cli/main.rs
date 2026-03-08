@@ -114,7 +114,7 @@ async fn run_benchmark(
         let attempt_start = Instant::now();
 
         let channel_result = Channel::from_shared(format!("http://{}", addr))
-            .context("Invalid address")?
+            .context("invalid address")?
             .connect()
             .await;
 
