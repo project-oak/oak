@@ -23,6 +23,9 @@ package(
     licenses = ["notice"],
 )
 
+# All targets in this file package Linux binaries (orchestrator, syslogd, agent)
+# and depend on Linux-specific base images. They are marked with
+# target_compatible_with to skip gracefully on non-Linux hosts.
 pkg_files(
     name = "orchestrator_files",
     srcs = [
@@ -32,6 +35,7 @@ pkg_files(
         mode = "0744",
     ),
     strip_prefix = "/oak_containers/orchestrator_bin/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_files(
@@ -43,6 +47,7 @@ pkg_files(
         mode = "0744",
     ),
     strip_prefix = "/oak_containers/syslogd",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_files(
@@ -54,6 +59,7 @@ pkg_files(
         mode = "0744",
     ),
     strip_prefix = "/oak_containers/agent/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_tar(
@@ -64,10 +70,12 @@ pkg_tar(
         ":syslogd_files",
     ],
     package_dir = "/usr/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_tar(
     name = "oak_containers_system_image_tar",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":rust_bins_tar",
         "@oak_containers_system_image_base//file:base-image.tar.xz",
@@ -78,10 +86,12 @@ xz_compress(
     name = "oak_containers_system_image",
     out = "oak_containers_system_image.tar.xz",
     target = ":oak_containers_system_image_tar",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_tar(
     name = "oak_containers_nvidia_system_image_tar",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":rust_bins_tar",
         "@oak_containers_nvidia_system_image_base//file:nvidia-base-image.tar.xz",
@@ -92,4 +102,5 @@ xz_compress(
     name = "oak_containers_nvidia_system_image",
     out = "oak_containers_nvidia_system_image.tar.xz",
     target = ":oak_containers_nvidia_system_image_tar",
+    target_compatible_with = ["@platforms//os:linux"],
 )

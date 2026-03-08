@@ -30,6 +30,9 @@ rust_library(
         "src/server.rs",
     ],
     crate_name = "oak_containers_launcher",
+    # Linux-only: depends on nix, command-fds, and tokio-vsock crates which
+    # use Linux-specific APIs (QEMU, vsock, etc.).
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_launcher_utils",
         "//oak_proto_rust",
@@ -56,6 +59,7 @@ rust_library(
 rust_binary(
     name = "oak_containers_launcher",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "@oak_crates_index//:anyhow",

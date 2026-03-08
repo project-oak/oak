@@ -344,7 +344,7 @@ pkg_tar(
 
 oci_image(
     name = "image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/private_memory_server"],
     tars = [":tar"],
 )

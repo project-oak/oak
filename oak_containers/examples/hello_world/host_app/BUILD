@@ -31,6 +31,9 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    # Linux-only: transitively depends on //oak_containers/launcher which uses
+    # nix, command-fds, and tokio-vsock (Linux-specific QEMU/vsock APIs).
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_client",
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
@@ -57,6 +60,8 @@ rust_library(
 rust_binary(
     name = "bin",
     srcs = ["src/main.rs"],
+    # Linux-only: see :oak_containers_examples_hello_world_host_app above.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_containers_examples_hello_world_host_app",
         "//oak_client",
@@ -82,6 +87,8 @@ rust_test_suite(
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
+    # Linux-only: integration test that requires QEMU, kernel, system image.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_containers_examples_hello_world_host_app",
         "//oak_client",

@@ -142,10 +142,23 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
         name = "rust_toolchain_repo_darwin_aarch64",
         edition = RUST_EDITION,
         exec_triple = "aarch64-apple-darwin",
+        extra_rustc_flags = {
+            "x86_64-unknown-none": [
+                "--codegen=relocation-model=static",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-cpu=x86-64-v3",
+            ],
+        },
         extra_target_triples = {
             "aarch64-apple-darwin": [
                 "@platforms//cpu:aarch64",
                 "@platforms//os:osx",
+            ],
+            "x86_64-unknown-none": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "@%s//bazel/rust:avx_ON" % oak_repo_name,
+                "@%s//bazel/rust:code_model_NORMAL" % oak_repo_name,
             ],
         },
         versions = RUST_VERSIONS,
@@ -160,6 +173,29 @@ def setup_rust_dependencies(oak_repo_name = "oak"):
             # Disabling AVX implies soft-float is needed.
             "x86_64-unknown-none": [
                 "--codegen=linker-flavor=gcc",
+                "--codegen=target-feature=+soft-float",
+            ],
+        },
+        extra_target_triples = {
+            "x86_64-unknown-none": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "@%s//bazel/rust:avx_OFF" % oak_repo_name,
+                "@%s//bazel/rust:code_model_NORMAL" % oak_repo_name,
+            ],
+        },
+        versions = RUST_VERSIONS,
+        sha256s = RUST_SHA256S,
+    )
+
+    # macOS ARM64 noavx toolchain
+    rust_repository_set(
+        name = "rust_noavx_toolchain_repo_darwin_aarch64",
+        edition = RUST_EDITION,
+        exec_triple = "aarch64-apple-darwin",
+        extra_rustc_flags = {
+            # Disabling AVX implies soft-float is needed.
+            "x86_64-unknown-none": [
                 "--codegen=target-feature=+soft-float",
             ],
         },

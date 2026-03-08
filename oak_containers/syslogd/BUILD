@@ -24,6 +24,9 @@ package(
 rust_binary(
     name = "oak_containers_syslogd",
     srcs = glob(["src/**"]),
+    # Linux-only: depends on nix, signal-hook crates and transitively on
+    # //oak_containers/orchestrator which uses procfs and Linux-specific APIs.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_containers/orchestrator",
         "@oak_crates_index//:anyhow",

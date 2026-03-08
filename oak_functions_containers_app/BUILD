@@ -168,7 +168,7 @@ pkg_tar(
 
 oci_image(
     name = "image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_functions_containers_app"],
     tars = [":tar"],
 )
@@ -186,7 +186,7 @@ pkg_tar(
 
 oci_image(
     name = "image_insecure",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_functions_containers_app_insecure"],
     tars = [":tar_insecure"],
 )

@@ -24,6 +24,9 @@ package(
 rust_binary(
     name = "bin/oak_containers_orchestrator",
     srcs = ["src/main.rs"],
+    # Linux-only: depends on jemalloc (git_repository), procfs, netlink_sys,
+    # and other Linux-specific crates via //oak_containers/orchestrator.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_containers/attester",
         "//oak_containers/orchestrator",

@@ -88,3 +88,43 @@ toolchain(
     toolchain = ":toolchain_rebuilt_x86_64-unknown-none_impl",
     toolchain_type = "@rules_rust//rust:toolchain_type",
 )
+
+# macOS ARM64 host variant of the rebuilt toolchain.
+rust_toolchain(
+    name = "toolchain_rebuilt_x86_64-unknown-none_impl_darwin",
+    binary_ext = "",
+    default_edition = RUST_EDITION,
+    dylib_ext = ".so",
+    exec_triple = "aarch64-apple-darwin",
+    extra_rustc_flags = [
+        "--codegen=relocation-model=static",
+        "--codegen=code-model=large",
+        "--codegen=target-feature=+rdrand",
+        "--codegen=opt-level=z",
+        "--cfg=aes_force_soft",
+        "--cfg=polyval_force_soft",
+    ],
+    rust_doc = "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools//:rustdoc",
+    rust_std = ":rust_stdlibs",
+    rustc = "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools//:rustc",
+    rustc_lib = "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools//:rustc_lib",
+    staticlib_ext = ".a",
+    stdlib_linkflags = [],
+    target_triple = "x86_64-unknown-none",
+)
+
+toolchain(
+    name = "toolchain_rebuilt_x86_64-unknown-none_darwin",
+    exec_compatible_with = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:osx",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_OFF",
+        "//bazel/rust:code_model_LARGE",
+    ],
+    toolchain = ":toolchain_rebuilt_x86_64-unknown-none_impl_darwin",
+    toolchain_type = "@rules_rust//rust:toolchain_type",
+)

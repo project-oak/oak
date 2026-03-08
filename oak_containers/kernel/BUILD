@@ -22,11 +22,18 @@ package(
     licenses = ["notice"],
 )
 
+# All targets in this file depend on @nix_linux_kernel or
+# @nix_vanilla_linux_kernel, which are fetched via rules_nixpkgs. These Nix
+# packages are only available on Linux, so all targets are marked with
+# target_compatible_with to skip gracefully on macOS.
+# See https://github.com/tweag/rules_nixpkgs/issues/330
+#
 # Copy the file to a nicely named spot.
 copy_file(
     name = "kernel",
     src = "@nix_linux_kernel//:bzImage",
     out = "bzImage",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 genrule(
@@ -34,6 +41,7 @@ genrule(
     srcs = ["@nix_linux_kernel//:bzImage"],
     outs = ["bzImage.sha256"],
     cmd = "sha256sum $(location @nix_linux_kernel//:bzImage) > $@",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 genrule(
@@ -41,6 +49,7 @@ genrule(
     srcs = ["@nix_vanilla_linux_kernel//:bzImage"],
     outs = ["vanilla_bzImage.sha256"],
     cmd = "sha256sum $(location @nix_vanilla_linux_kernel//:bzImage) > $@",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 write_source_files(
@@ -49,6 +58,7 @@ write_source_files(
         "generated/bzImage.sha256": ":generate_kernel_sha256",
         "generated/vanilla_bzImage.sha256": ":generate_vanilla_kernel_sha256",
     },
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 genrule(
@@ -65,4 +75,5 @@ genrule(
         --kernel=$(location :kernel) \
         --kernel-setup-data-output=$(@D)/oak_containers_kernel_setup_data \
         --kernel-image-output=$(@D)/oak_containers_kernel_image",
+    target_compatible_with = ["@platforms//os:linux"],
 )

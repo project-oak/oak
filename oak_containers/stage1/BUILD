@@ -24,6 +24,9 @@ package(
 rust_library(
     name = "oak_containers_stage1",
     srcs = glob(["src/**"]),
+    # Linux-only: depends on nix, rtnetlink, x86_64 crates which use
+    # Linux-specific networking and hardware APIs.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -57,4 +60,5 @@ alias(
 rust_test(
     name = "oak_containers_stage1_tests",
     crate = ":oak_containers_stage1",
+    target_compatible_with = ["@platforms//os:linux"],
 )

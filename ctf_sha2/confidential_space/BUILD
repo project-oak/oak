@@ -44,7 +44,7 @@ pkg_tar(
 
 oci_image(
     name = "workload_image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/workload"],
     exposed_ports = [],
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies

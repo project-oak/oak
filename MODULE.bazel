@@ -31,12 +31,43 @@ bazel_dep(name = "bazel_features", version = "1.39.0")
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
 llvm.toolchain(
     name = "llvm_toolchain",
+    # Enable C++ cross-compilation from macOS (aarch64-apple-darwin) to Linux
+    # (x86_64-linux).
+    #
+    # The oak_cc_toolchain_sysroot contains a Debian-based GCC 12 installation.
+    # When cross-compiling with clang + --sysroot, clang cannot automatically
+    # discover GCC's C++ headers (unlike when running natively on Linux).
+    # --gcc-install-dir tells clang exactly where the GCC installation lives
+    # within the sysroot, so it can compute the correct -isystem paths for
+    # libstdc++ headers.
+    #
+    # This path is determined by the sysroot layout:
+    #   external/+_repo_rules2+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12
+    #
+    # Note: toolchains_llvm's builtin-libc++ stdlib is automatically downgraded
+    # to stdc++ during cross-compilation (see cc_toolchain_config.bzl:250),
+    # so we explicitly set stdlib = "stdc++" to match the sysroot's GCC.
+    #
+    # TODO: b/490855139 - Full cross-compilation of oak_containers from macOS is
+    # blocked by a protobuf exec platform issue: protoc gets compiled as a Linux
+    # ELF binary instead of a macOS binary when using --platforms=//:x86_64-linux,
+    # causing "cannot execute binary file" errors during proto code generation.
+    # This needs to be fixed in the protobuf module's toolchain configuration
+    # to properly respect exec vs target platform separation.
+    extra_cxx_flags = {
+        "linux-x86_64": [
+            "--gcc-install-dir=external/+_repo_rules2+oak_cc_toolchain_sysroot/usr/lib/gcc/x86_64-linux-gnu/12",
+        ],
+    },
     link_flags = {
         "none-x86_64": [
             "-nostdlib",
         ],
     },
     llvm_version = "20.1.0",
+    stdlib = {
+        "linux-x86_64": "stdc++",
+    },
 )
 llvm.sysroot(
     name = "llvm_toolchain",
@@ -119,6 +150,12 @@ oci = use_extension("@rules_oci//oci:extensions.bzl", "oci", dev_dependency = Tr
 
 # This is the base docker image we use to bundle example apps like hello world
 # enclave apps. We don't build these, we pull them from the existing repo.
+#
+# rules_oci generates a platform-specific repo with a `_linux_amd64` suffix
+# from the `platforms` list. BUILD files should reference the platform-specific
+# `@distroless_cc_debian12_linux_amd64` to avoid host-platform matching issues
+# when building on macOS (the multi-platform index only resolves for the host).
+# See https://github.com/bazel-contrib/rules_oci/blob/main/docs/pull.md
 oci.pull(
     name = "distroless_cc_debian12",
     digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
@@ -130,7 +167,8 @@ use_repo(oci, "distroless_cc_debian12", "distroless_cc_debian12_linux_amd64")
 oak_toolchains = use_extension("//bazel:extensions.bzl", "oak_toolchains")
 use_repo(oak_toolchains, "umoci")
 
-register_toolchains("@umoci//:umoci_toolchain")
+# On macOS, uses system-installed umoci (via Nix). See umoci_toolchain.bzl.
+register_toolchains("@umoci//:umoci_toolchain", "@umoci//:umoci_toolchain_darwin")
 
 # Run clang-tidy on C++ code with the following command:
 # bazel build //cc/... \

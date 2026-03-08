@@ -33,7 +33,10 @@ def setup_rebuilt_rust_stdlibs(name = "unused"):
         sha256 = STDLIBS_SHA256,
     )
 
-    # Register a toolchain using the rebuilt std libraries.
+    # Register toolchains using the rebuilt std libraries.
+    # The _darwin variant enables building x86_64-unknown-none targets (like
+    # stage0_bin) from macOS hosts. See //bazel/rust/rebuilt_toolchain/BUILD.
     native.register_toolchains(
         "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none",
+        "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none_darwin",
     )

@@ -90,7 +90,7 @@ pkg_tar(
 
 oci_image(
     name = "image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_containers_examples_hello_world_enclave_app"],
     tars = [":tar"],
 )

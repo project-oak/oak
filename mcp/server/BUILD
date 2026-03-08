@@ -108,7 +108,7 @@ pkg_tar(
 
 oci_image(
     name = "mcp_server_image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = [
         "/bin/server",
         "--config=/etc/proxy.toml",

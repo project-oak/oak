@@ -48,12 +48,21 @@ umoci_toolchain = rule(
 )
 
 def _umoci_toolchain_repo_impl(repository_ctx):
-    repository_ctx.download(
-        url = "https://github.com/opencontainers/umoci/releases/download/v0.4.7/umoci.amd64",
-        output = "umoci.amd64",
-        executable = True,
-        sha256 = "6abecdbe7ac96a8e48fdb73fb53f08d21d4dc5e040f7590d2ca5547b7f2b2e85",
-    )
+    os_name = repository_ctx.os.name.lower()
+
+    if "linux" in os_name:
+        repository_ctx.download(
+            url = "https://github.com/opencontainers/umoci/releases/download/v0.4.7/umoci.amd64",
+            output = "umoci.amd64",
+            executable = True,
+            sha256 = "6abecdbe7ac96a8e48fdb73fb53f08d21d4dc5e040f7590d2ca5547b7f2b2e85",
+        )
+    else:
+        # On macOS, use the system-installed umoci (e.g. from Nix).
+        umoci = repository_ctx.which("umoci")
+        if umoci == None:
+            fail("umoci not found on PATH; install it (e.g. via nix)")
+        repository_ctx.symlink(umoci, "umoci.amd64")
 
     repository_ctx.symlink(
         Label("//bazel/tools/umoci:umoci_toolchain.bzl"),

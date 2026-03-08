@@ -47,7 +47,7 @@ pkg_tar(
 
 oci_image(
     name = "image",
-    base = "@distroless_cc_debian12",
+    base = "@distroless_cc_debian12_linux_amd64",
     entrypoint = ["/usr/local/bin/oak_verity_gcp"],
     exposed_ports = ["8080/tcp"],
     # https://cloud.google.com/confidential-computing/confidential-space/docs/create-customize-workloads#launch_policies

@@ -37,3 +37,13 @@ toolchain(
     toolchain = ":umoci",
     toolchain_type = ":toolchain_type",
 )
+
+toolchain(
+    name = "umoci_toolchain_darwin",
+    exec_compatible_with = [
+        "@platforms//os:osx",
+        "@platforms//cpu:aarch64",
+    ],
+    toolchain = ":umoci",
+    toolchain_type = ":toolchain_type",
+)

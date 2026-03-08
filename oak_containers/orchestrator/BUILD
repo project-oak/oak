@@ -37,6 +37,9 @@ rust_library(
     crate_features = [
         "application_keys",
     ],
+    # Linux-only: depends on procfs, nix, syslog, oci-spec crates and
+    # transitively on Linux-specific agent crate.
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -93,6 +96,7 @@ rust_library(
         "src/lib.rs",
         "src/logging.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -150,6 +154,7 @@ rust_test(
     data = [
         "//oak_containers/orchestrator/testdata:test_dice",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
     ],
