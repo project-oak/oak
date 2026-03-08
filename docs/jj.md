@@ -51,24 +51,14 @@ $ jj log
 ╷ │  remove an unused flag for cloud-hypervisor
 ```
 
-## Gerrit utils
+## Gerrit setup
 
-Append the following to your global config.
+Configure the Gerrit remote and target branch in your repo config (one-time
+setup):
 
 ```console
-jj config edit --user
-```
-
-```toml
-[aliases]
-cr = ["util", "exec", "--", "bash", "-c", """
-set -euo pipefail
-INPUT=${1:-"@-"}
-HASH=$(jj log --revisions="${INPUT}" --template=commit_id --no-graph)
-HASHINFO=$(git log --max-count=1 ${HASH} --oneline --color=always)
-echo "Pushing from commit ${HASHINFO}"
-git push origin "${HASH}":refs/for/main
-""", ""]
+jj config set --repo gerrit.default-remote "origin"
+jj config set --repo gerrit.default-remote-branch "main"
 ```
 
 Append the following to your repo-specific config (since you most likely don't
@@ -86,6 +76,19 @@ if(self.author().email() == "YOUR_EMAIL_HERE" &&
   format_gerrit_change_id_trailer(self)
 )
 '''
+```
+
+Optionally, add the following aliases to your global config for convenience:
+
+```console
+jj config edit --user
+```
+
+```toml
+[aliases]
+cr = ["gerrit", "upload", "--revisions=@-"]
+sync = ["git", "fetch", "--all-remotes"]
+evolve = ["rebase", "--destination=main"]
 ```
 
 ## First commit
@@ -165,11 +168,10 @@ top of that, you can run the following command:
 jj git fetch --all-remotes
 ```
 
-You can also turn this into an alias in `jj config edit --user`:
+Or if you added the alias above:
 
-```toml
-[aliases]
-sync = ['git', 'fetch', '--all-remotes']
+```console
+jj sync
 ```
 
 If you run `jj log` now, you will see that your current change still branches
@@ -200,11 +202,10 @@ To rebase it on top of the newly synced main, you can run
 jj rebase --destination=main
 ```
 
-This is also worth an alias for convenience:
+Or if you added the alias above:
 
-```toml
-[aliases]
-evolve = ['rebase', '--destination=main']
+```console
+jj evolve
 ```
 
 If there are no conflicts, your change now has the current upstream main as its
