@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
 
 package(
     default_visibility = ["//:default_visibility"],
@@ -155,4 +156,11 @@ rust_binary(
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:log",
     ],
+)
+
+vm_disk_image(
+    name = "crypto_channel_vm",
+    binary = ":crypto_channel_server",
+    command = "/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --boringssl-port 5002",
+    data = [":generate_certs"],
 )

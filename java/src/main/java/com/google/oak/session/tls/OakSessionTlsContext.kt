@@ -611,7 +611,12 @@ private fun buildTrustManagers(
 ): Array<TrustManager>? {
   if (trustAnchorsDer == null && customVerifier == null) return null
 
-  val baseTrustManager = trustAnchorsDer?.let { loadTrustManager(it, keyStoreType) }
+  val baseTrustManager =
+    if (trustAnchorsDer != null) {
+      loadTrustManager(trustAnchorsDer, keyStoreType)
+    } else {
+      loadDefaultTrustManager()
+    }
   return arrayOf(OakTrustManager(baseTrustManager, customVerifier))
 }
 
@@ -632,6 +637,14 @@ private fun loadTrustManager(certsDer: List<ByteArray>, keyStoreType: String): X
   val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
   tmf.init(trustStore)
 
+  return tmf.trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
+    ?: throw OakSessionTlsException("no X509TrustManager found")
+}
+
+/** Loads the default system trust manager. */
+private fun loadDefaultTrustManager(): X509TrustManager {
+  val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+  tmf.init(null as KeyStore?)
   return tmf.trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
     ?: throw OakSessionTlsException("no X509TrustManager found")
 }

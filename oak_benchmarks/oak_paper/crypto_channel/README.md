@@ -13,8 +13,10 @@ The underlying protocol is just a length-prefixed blob of bytes.
 
 We currently test the following combinations:
 
-- Plaintext protocol, Local TCP Server
-- NoiseNN encrypted protocol, Local TCP Server
+- Plaintext protocol, Local TCP Server (Host)
+- NoiseNN encrypted protocol, Local TCP Server (Host)
+- Plaintext protocol, VM TCP Server
+- NoiseNN encrypted protocol, VM TCP Server
 - Plaintext protocol, Restricted Kernel Server
 - NoiseNN encrypted protocol, Restricted Kernel Server
 
@@ -28,3 +30,95 @@ All measurements are taken on the host side.
   indicate complete reception of the data.
 - In tests that measure receive speeds, the host measures the time it takes to
   receive the expected amount of data.
+
+## Running VM TCP Benchmarks
+
+The VM TCP benchmarks require a VM running the `crypto_channel_server` binary.
+The server serves all three protocols simultaneously on different ports:
+
+| Protocol  | Default Port |
+| --------- | ------------ |
+| Plaintext | 5000         |
+| Noise     | 5001         |
+| BoringSSL | 5002         |
+
+### Prerequisites
+
+Install the required tools:
+
+```bash
+sudo apt install libguestfs-tools qemu-system-x86
+```
+
+### Option A: Using Bazel (Recommended)
+
+1. Build the VM image:
+
+```bash
+bazel build //oak_benchmarks/oak_paper/crypto_channel:crypto_channel_vm
+```
+
+1. Start the VM:
+
+```bash
+./oak_benchmarks/linux_vm/run_vm.sh \
+    --image=bazel-bin/oak_benchmarks/oak_paper/crypto_channel/crypto_channel_vm.qcow2 \
+    --port=5000 \
+    --port=5001 \
+    --port=5002 \
+    --headless
+```
+
+### Option B: Using `prepare_image.sh` (Manual)
+
+1. Build the server binary and locate the base image:
+
+```bash
+bazel build -c opt //oak_benchmarks/oak_paper/crypto_channel:crypto_channel_server
+BINARY=$(bazel cquery -c opt //oak_benchmarks/oak_paper/crypto_channel:crypto_channel_server --output=files)
+BASE_IMAGE=$(bazel cquery @debian_nocloud_qcow2//file --output=files)
+```
+
+1. Prepare the VM image:
+
+```bash
+./oak_benchmarks/linux_vm/prepare_image.sh \
+    --binary="${BINARY}" \
+    --base-image="${BASE_IMAGE}" \
+    --output=/tmp/crypto-channel.qcow2 \
+    --command="/opt/app/crypto_channel_server --host 0.0.0.0 --plaintext-port 5000 --noise-port 5001 --boringssl-port 5002"
+```
+
+1. Start the VM:
+
+```bash
+./oak_benchmarks/linux_vm/run_vm.sh \
+    --image=/tmp/crypto-channel.qcow2 \
+    --port=5000 \
+    --port=5001 \
+    --port=5002 \
+    --headless
+```
+
+### 3. Run the Benchmarks
+
+In another terminal, run the benchmarks:
+
+```bash
+bazel run -c opt //oak_benchmarks/oak_paper/crypto_channel:benchmark -- --bench
+```
+
+This will run all three protocol benchmarks (plaintext, noise, boringssl)
+automatically, connecting to the appropriate port for each.
+
+### 4. Stop the VM
+
+Press `Ctrl+C` in the terminal running the VM to stop it (or kill the process if
+running with `--headless`).
+
+## Environment Variables
+
+- `VM_HOST`: Host address of the VM (default: `127.0.0.1`)
+- `VM_PLAINTEXT_PORT`: Port for plaintext protocol (default: `5000`)
+- `VM_NOISE_PORT`: Port for Noise protocol (default: `5001`)
+- `VM_BORINGSSL_PORT`: Port for BoringSSL protocol (default: `5002`)

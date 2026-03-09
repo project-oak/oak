@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+//! Multi-port TCP server for crypto channel benchmarks.
+//!
+//! Serves all three protocols (plaintext, noise, boringssl) simultaneously
+//! on different ports, allowing benchmarks to run without restarting the VM.
+
 use std::sync::Arc;
 
 use clap::Parser;
@@ -21,38 +26,92 @@ use message_stream_client::NoiseMessageStream;
 use rustls::ServerConfig;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about = "Multi-port TCP server for crypto channel benchmarks")]
 struct Args {
-    #[arg(short, long, default_value = "127.0.0.1:8080")]
-    addr: String,
+    /// Host address to bind to.
+    #[arg(long, default_value = "0.0.0.0")]
+    host: String,
 
-    #[arg(short, long, default_value = "plaintext")]
-    mode: String,
+    /// Port for plaintext protocol (0 to disable).
+    #[arg(long, default_value_t = linux_server::DEFAULT_PLAINTEXT_PORT)]
+    plaintext_port: u16,
+
+    /// Port for Noise protocol (0 to disable).
+    #[arg(long, default_value_t = linux_server::DEFAULT_NOISE_PORT)]
+    noise_port: u16,
+
+    /// Port for BoringSSL/TLS protocol (0 to disable).
+    #[arg(long, default_value_t = linux_server::DEFAULT_BORINGSSL_PORT)]
+    boringssl_port: u16,
 }
 
 fn main() {
     let args = Args::parse();
 
-    let stream_creator: linux_server::ServerStreamCreator = match args.mode.as_str() {
-        "plaintext" => Arc::new(|tcp_stream| Box::new(tcp_stream)),
-        "noise" => Arc::new(|tcp_stream| Box::new(NoiseMessageStream::new_server(tcp_stream))),
-        "boringssl" => {
-            linux_server::init_rustls();
-            let (certs, key) = linux_server::load_certs_and_key();
-            let server_config = ServerConfig::builder()
-                .with_no_client_auth()
-                .with_single_cert(certs, key)
-                .expect("bad certificate/key");
-            let server_config = Arc::new(server_config);
-            Arc::new(move |tcp_stream| {
-                let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
-                Box::new(rustls::StreamOwned::new(conn, tcp_stream))
-            })
-        }
-        _ => panic!("unknown mode: {}", args.mode),
-    };
+    let mut handles = Vec::new();
 
-    let (addr, handle) = linux_server::start_tcp_server(&args.addr, stream_creator);
-    println!("Listening on {}", addr);
-    handle.join().expect("server thread panicked");
+    // Start plaintext server.
+    if args.plaintext_port != 0 {
+        let addr = format!("{}:{}", args.host, args.plaintext_port);
+        let stream_creator: linux_server::ServerStreamCreator =
+            Arc::new(|tcp_stream| Box::new(tcp_stream));
+        let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
+        println!("Plaintext server listening on {}", bound_addr);
+        handles.push(("plaintext", handle));
+    }
+
+    // Start Noise server.
+    if args.noise_port != 0 {
+        let addr = format!("{}:{}", args.host, args.noise_port);
+        let stream_creator: linux_server::ServerStreamCreator =
+            Arc::new(|tcp_stream| Box::new(NoiseMessageStream::new_server(tcp_stream)));
+        let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
+        println!("Noise server listening on {}", bound_addr);
+        handles.push(("noise", handle));
+    }
+
+    // Start BoringSSL/TLS server.
+    if args.boringssl_port != 0 {
+        // Try to load certs - this may fail if running outside Bazel (e.g., in a VM).
+        match std::panic::catch_unwind(|| {
+            linux_server::init_rustls();
+            linux_server::load_certs_and_key()
+        }) {
+            Ok((certs, key)) => {
+                let server_config = ServerConfig::builder()
+                    .with_no_client_auth()
+                    .with_single_cert(certs, key)
+                    .expect("bad certificate/key");
+                let server_config = Arc::new(server_config);
+
+                let addr = format!("{}:{}", args.host, args.boringssl_port);
+                let stream_creator: linux_server::ServerStreamCreator =
+                    Arc::new(move |tcp_stream| {
+                        let conn = rustls::ServerConnection::new(server_config.clone()).unwrap();
+                        Box::new(rustls::StreamOwned::new(conn, tcp_stream))
+                    });
+                let (bound_addr, handle) = linux_server::start_tcp_server(&addr, stream_creator);
+                println!("BoringSSL server listening on {}", bound_addr);
+                handles.push(("boringssl", handle));
+            }
+            Err(_) => {
+                eprintln!(
+                    "Warning: Could not load TLS certificates (runfiles not available). \
+                     BoringSSL server disabled."
+                );
+            }
+        }
+    }
+
+    if handles.is_empty() {
+        eprintln!("Error: No servers enabled. Set at least one port to non-zero.");
+        std::process::exit(1);
+    }
+
+    println!("\nAll servers started. Press Ctrl+C to stop.");
+
+    // Wait for all server threads.
+    for (name, handle) in handles {
+        handle.join().unwrap_or_else(|_| eprintln!("{} server panicked", name));
+    }
 }

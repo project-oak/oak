@@ -26,6 +26,10 @@ use message_stream_client::MessageStream;
 use oak_file_utils::data_path;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 
+pub const DEFAULT_PLAINTEXT_PORT: u16 = 5000;
+pub const DEFAULT_NOISE_PORT: u16 = 5001;
+pub const DEFAULT_BORINGSSL_PORT: u16 = 5002;
+
 static INIT_RUSTLS: Once = Once::new();
 
 pub fn init_rustls() {
@@ -37,8 +41,14 @@ pub fn init_rustls() {
 }
 
 pub fn load_certs_and_key() -> (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>) {
-    let cert_path = data_path("oak_benchmarks/oak_paper/crypto_channel/certs.pem");
-    let mut reader = BufReader::new(File::open(cert_path).expect("cannot open certs file"));
+    // Try runfiles path first (when running under Bazel), then fallback to VM path.
+    let cert_path =
+        std::panic::catch_unwind(|| data_path("oak_benchmarks/oak_paper/crypto_channel/certs.pem"))
+            .ok()
+            .filter(|p| std::path::Path::new(p).exists())
+            .unwrap_or_else(|| "/opt/app/certs.pem".into());
+
+    let mut reader = BufReader::new(File::open(&cert_path).expect("cannot open certs file"));
     let mut certs = Vec::new();
     let mut key = None;
     for item in rustls_pemfile::read_all(&mut reader) {

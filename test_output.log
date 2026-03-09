@@ -1,0 +1,6 @@
+warning: Git tree '/usr/local/google/home/jibbl/Projects/jj-oak' is dirty
+You need libxml2.so.2 to build some Bazel targets. It isn't provided by nix flakes. See scripts/install-libxml2-legacy for details.
+You need libxml2.so.2 to build some Bazel targets. It isn't provided by nix flakes. See scripts/install-libxml2-legacy for details.
+Another command (pid=316594) is running. Waiting for it to complete on the server (server_pid=185379)...
+Another command (pid=347812) is running. Waiting for it to complete on the server (server_pid=185379)...
+Server shut down explicitly by client pid=435128
