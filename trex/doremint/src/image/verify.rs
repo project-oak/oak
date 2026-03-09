@@ -58,11 +58,6 @@ impl VerifyCommand {
         let client = Client::new(ClientConfig::default());
 
         let package = pull_package(&client, &auth, &self.image, &self.endorser_public_key).await?;
-        let statement = package.verify(now().into_unix_millis())?;
-
-        // Need to verify the endorsement subject and the claims as well.
-        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
-        let digest = Digest::from_typed_hash(typed_hash)?;
 
         let claims_vec = self
             .claims
@@ -74,6 +69,11 @@ impl VerifyCommand {
         if claims_vec.is_empty() {
             anyhow::bail!("at least one claim must be provided");
         }
+        let statement = package.verify(now().into_unix_millis(), claims_vec.clone())?;
+
+        // Need to verify the endorsement subject and the claims as well.
+        let typed_hash = self.image.digest().context("missing digest in OCI reference")?;
+        let digest = Digest::from_typed_hash(typed_hash)?;
 
         let claims: Vec<&str> = claims_vec.iter().map(|s| s.as_str()).collect();
         statement

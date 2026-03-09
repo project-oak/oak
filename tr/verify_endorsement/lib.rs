@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::{vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::Context;
 use intoto::statement::{DefaultStatement, parse_statement};
@@ -76,6 +76,7 @@ pub fn create_signed_endorsement(
 /// Creates an `EndorsementReferenceValue` from ingredients.
 pub fn create_endorsement_reference_value(
     endorser_key: VerifyingKey,
+    claim_types: Vec<String>,
     rekor_key: Option<VerifyingKey>,
 ) -> EndorsementReferenceValue {
     let rekor_key_set =
@@ -84,7 +85,7 @@ pub fn create_endorsement_reference_value(
 
     EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
-        required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),
+        required_claims: Some(ClaimReferenceValue { claim_types }),
         rekor: Some(rekor),
         ..Default::default()
     }
@@ -123,7 +124,7 @@ pub fn create_endorsement_reference_value_from_raw(
 ) -> EndorsementReferenceValue {
     let endorser_key = create_verifying_key_from_raw(endorser_public_key, key_id);
     let rekor_key = create_verifying_key_from_raw(rekor_public_key, 1);
-    create_endorsement_reference_value(endorser_key, Some(rekor_key))
+    create_endorsement_reference_value(endorser_key, vec![], Some(rekor_key))
 }
 
 /// Verifies a signed endorsement against a reference value.

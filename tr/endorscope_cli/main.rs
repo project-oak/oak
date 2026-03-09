@@ -31,6 +31,13 @@ struct Params {
     #[arg(long, global = true, help = "Identity token for Cloud authentication")]
     access_token: Option<String>,
 
+    #[arg(
+        long,
+        global = true,
+        help = "Claims that are required to be present on all endorsements."
+    )]
+    required_claims: Vec<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -53,11 +60,13 @@ fn main() {
 
     match p.command {
         Commands::Verify { command } => match command {
-            verify::VerifyCommands::File(args) => verify::verify_file(current_time, args),
+            verify::VerifyCommands::File(args) => {
+                verify::verify_file(current_time, p.required_claims, args)
+            }
             verify::VerifyCommands::Remote(args) => {
-                verify::verify_remote(current_time, args, p.access_token)
+                verify::verify_remote(current_time, p.required_claims, args, p.access_token)
             }
         },
-        Commands::List(args) => list::list(current_time, args, p.access_token),
+        Commands::List(args) => list::list(current_time, p.required_claims, args, p.access_token),
     }
 }

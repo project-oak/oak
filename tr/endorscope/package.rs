@@ -80,17 +80,21 @@ impl Package {
     }
 
     /// Returns the reference value associated with the package.
-    pub fn get_reference_value(&self) -> EndorsementReferenceValue {
+    pub fn get_reference_value(&self, claim_types: Vec<String>) -> EndorsementReferenceValue {
         let endorser_key = create_verifying_key_from_pem(&self.endorser_public_key, KEY_ID);
         let rekor_key =
             self.rekor_public_key.as_ref().map(|pem| create_verifying_key_from_pem(pem, KEY_ID));
-        create_endorsement_reference_value(endorser_key, rekor_key)
+        create_endorsement_reference_value(endorser_key, claim_types, rekor_key)
     }
 
     /// Verifies the endorsement package.
-    pub fn verify(&self, now_utc_millis: i64) -> Result<DefaultStatement> {
+    pub fn verify(
+        &self,
+        now_utc_millis: i64,
+        claim_types: Vec<String>,
+    ) -> Result<DefaultStatement> {
         let signed_endorsement = self.get_signed_endorsement()?;
-        let ref_value = self.get_reference_value();
+        let ref_value = self.get_reference_value(claim_types);
         verify_endorsement(now_utc_millis, &signed_endorsement, &ref_value)
             .context("verifying endorsement")
     }

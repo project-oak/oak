@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 
 use anyhow::{Context, anyhow};
 use jwt::Token;
@@ -136,7 +136,7 @@ impl AssertionVerifier for GcpAssertionVerifier {
                         .clone();
                     let rekor_key = cosign_reference_values.rekor_public_key.clone();
                     let endorsement_ref_value =
-                        create_endorsement_reference_value(endorser_key, rekor_key);
+                        create_endorsement_reference_value(endorser_key, Vec::new(), rekor_key);
                     let image_reference_value = BinaryReferenceValue {
                         r#type: Some(binary_reference_value::Type::Endorsement(
                             endorsement_ref_value,
@@ -246,7 +246,7 @@ mod tests {
                 root_certificate_pem: read_testdata_string!("root_ca_cert.pem"),
                 container_image: Some(ContainerImage::ImageReferenceValue(BinaryReferenceValue {
                     r#type: Some(binary_reference_value::Type::Endorsement(
-                        create_endorsement_reference_value(developer_public_key, None),
+                        create_endorsement_reference_value(developer_public_key, Vec::new(), None),
                     )),
                 })),
             },

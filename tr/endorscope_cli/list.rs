@@ -50,9 +50,6 @@ const OPEN_SOURCE_CLAIM_TYPE: &str =
     "https://github.com/project-oak/oak/blob/main/docs/tr/claim/92939.md";
 const PI_CLAIM_TYPE: &str = "https://github.com/project-oak/oak/blob/main/docs/tr/claim/39284.md";
 
-const EXPECTED_CLAIMS: &[&str] =
-    &[OPEN_SOURCE_CLAIM_TYPE, RUNNABLE_CLAIM_TYPE, PUBLISHED_CLAIM_TYPE, PI_CLAIM_TYPE];
-
 fn prettify_claim(claim: &str) -> String {
     match claim {
         MPM_CLAIM_TYPE => format!("{claim} (Distributed as MPM)"),
@@ -142,7 +139,12 @@ pub(crate) struct ListMode {
 }
 
 /// Lists endorsements depending on arguments.
-pub(crate) fn list(current_time: Instant, p: ListArgs, access_token: Option<String>) {
+pub(crate) fn list(
+    current_time: Instant,
+    claim_types: Vec<String>,
+    p: ListArgs,
+    access_token: Option<String>,
+) {
     let storage = CaStorage {
         url_prefix: p.url_prefix,
         fbucket: p.fbucket,
@@ -196,6 +198,7 @@ pub(crate) fn list(current_time: Instant, p: ListArgs, access_token: Option<Stri
 
     list_endorsement_hashes(
         current_time,
+        claim_types,
         &loader,
         final_hashes.unwrap_or_default(),
         string_to_option_string(p.rekor_public_key),
@@ -222,6 +225,7 @@ fn list_endorsements_by_keyset(loader: &EndorsementLoader, keyset_hash: &str) ->
 
 fn list_endorsement_hashes(
     current_time: Instant,
+    claim_types: Vec<String>,
     loader: &EndorsementLoader,
     endorsement_hashes: Vec<String>,
     rekor_public_key: Option<String>,
@@ -234,7 +238,9 @@ fn list_endorsement_hashes(
             .load(endorsement_hash, rekor_public_key.clone())
             .with_context(|| format!("loading endorsement {endorsement_hash}"));
         match result {
-            Ok(package) => verify_print_package(current_time, &package, endorsement_hash),
+            Ok(package) => {
+                verify_print_package(current_time, claim_types.clone(), &package, endorsement_hash)
+            }
             Err(err) => println!("❌  Loading endorsement {} failed: {:?}", endorsement_hash, err),
         }
         if limit > 0 && index >= limit - 1 {
@@ -261,13 +267,18 @@ fn list_keys_by_keyset(loader: &EndorsementLoader, endorser_keyset_hash: &str) -
 }
 
 /// Verifies an endorsement package and pretty-prints it to stdout.
-fn verify_print_package(current_time: Instant, package: &Package, endorsement_hash: &str) {
+fn verify_print_package(
+    current_time: Instant,
+    claim_types: Vec<String>,
+    package: &Package,
+    endorsement_hash: &str,
+) {
     let signed_endorsement =
         package.get_signed_endorsement().expect("failed to get signed endorsement");
     let result = verify_endorsement(
         current_time.into_unix_millis(),
         &signed_endorsement,
-        &package.get_reference_value(),
+        &package.get_reference_value(claim_types),
     )
     .context("verifying endorsement");
     match result {
@@ -297,20 +308,12 @@ fn verify_print_package(current_time: Instant, package: &Package, endorsement_ha
                 let mpm_attachment = MpmAttachment::decode(subject.as_slice()).unwrap();
                 println!("        🍀  MPM version ID: {}", mpm_attachment.package_version);
             }
-            for e in EXPECTED_CLAIMS {
-                let claim = details.claim_types.iter().find(|c| c.as_str() == *e);
-                if claim.is_none() {
-                    println!("        ❌  {}", prettify_claim(e));
-                } else {
-                    println!("        🛄  {}", prettify_claim(e));
-                }
-            }
             for c in details.claim_types {
                 if c.starts_with(MPM_VERSION_CLAIM_TYPE) {
                     let mpm_version_id =
                         c.strip_prefix(MPM_VERSION_CLAIM_TYPE).unwrap().strip_prefix("?").unwrap();
                     println!("        🛠  {}", mpm_version_id);
-                } else if !EXPECTED_CLAIMS.contains(&c.as_str()) {
+                } else {
                     println!("        🛄  {}", prettify_claim(&c));
                 }
             }

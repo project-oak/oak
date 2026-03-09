@@ -317,7 +317,8 @@ mod tests {
     fn create_reference_value(key_id: u32) -> BinaryReferenceValue {
         let developer_public_key_pem = read_testdata_string!("developer_key.pub.pem");
         let developer_public_key = create_verifying_key_from_pem(&developer_public_key_pem, key_id);
-        let endorsement = create_endorsement_reference_value(developer_public_key, None);
+        let endorsement =
+            create_endorsement_reference_value(developer_public_key, Vec::new(), None);
         BinaryReferenceValue {
             r#type: Some(binary_reference_value::Type::Endorsement(endorsement)),
         }

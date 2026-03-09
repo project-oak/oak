@@ -202,14 +202,15 @@ impl VerifyFileArgs {
 }
 
 /// Verifies an endorsement package from local files.
-pub(crate) fn verify_file(current_time: Instant, p: VerifyFileArgs) {
+pub(crate) fn verify_file(current_time: Instant, claim_types: Vec<String>, p: VerifyFileArgs) {
     let package = p.load().expect("Failed to load endorsement");
-    display_verify_result(package.verify(current_time.into_unix_millis()));
+    display_verify_result(package.verify(current_time.into_unix_millis(), claim_types));
 }
 
 /// Verifies an endorsement package from a remote content addressable storage.
 pub(crate) fn verify_remote(
     current_time: Instant,
+    claim_types: Vec<String>,
     p: VerifyRemoteArgs,
     access_token: Option<String>,
 ) {
@@ -223,7 +224,7 @@ pub(crate) fn verify_remote(
     let package = loader
         .load(p.endorsement_hash.as_str(), string_to_option_string(p.rekor_public_key))
         .expect("Failed to load endorsement");
-    display_verify_result(package.verify(current_time.into_unix_millis()));
+    display_verify_result(package.verify(current_time.into_unix_millis(), claim_types));
 }
 
 /// Verifies an endorsement from a given endorsement loader.
