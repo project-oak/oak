@@ -139,7 +139,7 @@ QEMU_ARGS=(
 # Build network arguments with port forwards.
 NET_USER_ARGS="user"
 for port in "${PORTS[@]}"; do
-  NET_USER_ARGS+=",hostfwd=tcp::${port}-:${port}"
+  NET_USER_ARGS+=",hostfwd=tcp:127.0.0.1:${port}-:${port}"
 done
 QEMU_ARGS+=("-net" "${NET_USER_ARGS}")
 

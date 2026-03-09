@@ -68,7 +68,7 @@ pub async fn start_rk_enclave_server(
         bios_binary: data_path("stage0_bin/stage0_bin"),
         gdb: None,
         initrd: oak_restricted_kernel_orchestrator_app_path,
-        memory_size: Some("256M".to_string()),
+        memory_size: Some("1G".to_string()),
         pci_passthrough: None,
         initial_data_version,
         communication_channel,
