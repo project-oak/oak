@@ -132,7 +132,7 @@ QEMU_ARGS=(
   "-cpu" "host"
   "-m" "${MEMORY}"
   "-smp" "${CPUS}"
-  "-drive" "file=${IMAGE},format=qcow2"
+  "-drive" "file=${IMAGE},format=qcow2,snapshot=on"
   "-net" "nic,model=virtio"
 )
 

@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -33,4 +34,10 @@ rust_binary(
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:tonic",
     ],
+)
+
+vm_disk_image(
+    name = "linux_enclave_image",
+    binary = ":linux_enclave_app",
+    command = "/opt/app/linux_enclave_app --serve 5000",
 )

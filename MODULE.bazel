@@ -198,6 +198,27 @@ git_repository(
     remote = "https://github.com/erenon/bazel_clang_tidy.git",
 )
 
+##### Debian Base Image for VM Benchmarks #####
+
+# Debian 12 "nocloud" image for QEMU-based VM benchmarks.
+# This is a minimal Debian image without cloud-init, suitable for local VMs.
+# Pinned to a specific version for reproducibility.
+#
+# To update: check https://cloud.debian.org/images/cloud/bookworm/ for new versions
+# and update the version and SHA512 hash from the SHA512SUMS file.
+DEBIAN_NOCLOUD_VERSION = "20260225-2399"
+
+http_file(
+    name = "debian_nocloud_qcow2",
+    downloaded_file_path = "debian-12-nocloud-amd64.qcow2",
+    # Debian only provides SHA512 checksums, so we use integrity instead of sha256.
+    # From: https://cloud.debian.org/images/cloud/bookworm/{version}/SHA512SUMS
+    integrity = "sha512-6YtfYWpedctbX5BJDSh4QeWSLSQ6RzcdpFwUXyuCRZWx5I4cKZqxn0zPBkJTjldOo5AYV4hdGea8OO74j8iAHA==",
+    url = "https://cloud.debian.org/images/cloud/bookworm/{}/debian-12-nocloud-amd64-{}.qcow2".format(
+        DEBIAN_NOCLOUD_VERSION,
+        DEBIAN_NOCLOUD_VERSION,
+    ),
+)
 ##### Java Dependencies #####
 
 bazel_dep(name = "rules_jvm_external", version = "6.7")

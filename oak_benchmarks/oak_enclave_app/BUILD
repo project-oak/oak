@@ -15,6 +15,7 @@
 #
 
 load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -35,5 +36,23 @@ rust_binary(
         "//oak_benchmarks/proto:service",
         "//oak_restricted_kernel_sdk",
         "@oak_no_std_crates_index//:prost",
+    ],
+)
+
+# Provide the `oak_enclave_app_run` target to execute the benchmark seamlessly.
+sh_binary(
+    name = "oak_enclave_app_run",
+    srcs = ["//oak_benchmarks/oak_cli:run_oak_cli.sh"],
+    args = [
+        "$(rootpath //oak_benchmarks/oak_cli)",
+        "$(rootpath //oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin)",
+        "$(rootpath //stage0_bin:stage0_bin)",
+        "$(rootpath :oak_enclave_app)",
+    ],
+    data = [
+        ":oak_enclave_app",
+        "//oak_benchmarks/oak_cli",
+        "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
+        "//stage0_bin",
     ],
 )

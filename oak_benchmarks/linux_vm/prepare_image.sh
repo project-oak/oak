@@ -19,40 +19,48 @@
 # Creates a Debian VM image with an application binary pre-installed.
 # Uses guestfish to inject the binary into the image before booting.
 #
+# For Bazel targets, use the vm_disk_image() macro in defs.bzl instead.
+#
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
 # Default values.
-BASE_IMAGE=""
 BINARY=""
+BASE_IMAGE=""
 OUTPUT=""
 COMMAND=""
 SERVICE_NAME="app"
-PORT="5000"
 INSTALL_PATH="/opt/app"
+DATA_FILES=()
 
 usage() {
   cat <<EOF
-Usage: $0 --base-image=<path> --binary=<path> --output=<path> [options]
+Usage: $0 --binary=<path> --base-image=<path> --output=<path> [options]
 
 Required:
-  --base-image=PATH    Path to Debian nocloud qcow2 base image
   --binary=PATH        Path to the application binary to inject
+  --base-image=PATH    Path to the Debian qcow2 base image
   --output=PATH        Path for the output image (will be overwritten)
 
 Optional:
-  --command=CMD        Command to run the binary (default: binary path with no args)
+  --command=CMD        Command to run the binary (default: {install_path}/{binary})
+  --data=PATH          Additional file to inject (can be repeated)
   --service-name=NAME  Name for the systemd service (default: app)
-  --port=PORT          Port the service listens on (default: 5000)
   --install-path=PATH  Where to install the app in the VM (default: /opt/app)
 
+For Bazel targets, use the vm_disk_image() macro instead:
+
+    load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
+    vm_disk_image(name = "my_vm", binary = ":my_binary")
+
 Example:
-  $0 --base-image=debian-12-nocloud-amd64.qcow2 \\
-     --binary=bazel-bin/my_app/my_app \\
+  $0 --binary=/path/to/my_app \\
+     --base-image=/path/to/debian.qcow2 \\
      --output=/tmp/my-vm.qcow2 \\
-     --port=8080
+     --command="/opt/app/my_app --port 5000" \\
+     --data=/path/to/config.txt
 EOF
   exit 1
 }
@@ -60,11 +68,11 @@ EOF
 # Parse arguments.
 for arg in "$@"; do
   case ${arg} in
-    --base-image=*)
-      BASE_IMAGE="${arg#*=}"
-      ;;
     --binary=*)
       BINARY="${arg#*=}"
+      ;;
+    --base-image=*)
+      BASE_IMAGE="${arg#*=}"
       ;;
     --output=*)
       OUTPUT="${arg#*=}"
@@ -75,11 +83,11 @@ for arg in "$@"; do
     --service-name=*)
       SERVICE_NAME="${arg#*=}"
       ;;
-    --port=*)
-      PORT="${arg#*=}"
-      ;;
     --install-path=*)
       INSTALL_PATH="${arg#*=}"
+      ;;
+    --data=*)
+      DATA_FILES+=("${arg#*=}")
       ;;
     --help | -h)
       usage
@@ -92,16 +100,18 @@ for arg in "$@"; do
 done
 
 # Validate required arguments.
-if [[ -z ${BASE_IMAGE} ]] || [[ -z ${BINARY} ]] || [[ -z ${OUTPUT} ]]; then
+if [[ -z ${BINARY} ]] || [[ -z ${BASE_IMAGE} ]] || [[ -z ${OUTPUT} ]]; then
   echo "Error: Missing required arguments"
   echo ""
   usage
 fi
 
-# Expand tilde in paths.
-BASE_IMAGE="${BASE_IMAGE/#\~/${HOME}}"
-BINARY="${BINARY/#\~/${HOME}}"
-OUTPUT="${OUTPUT/#\~/${HOME}}"
+# Expand tilde in paths if HOME is set.
+if [[ -n ${HOME:-} ]]; then
+  BINARY="${BINARY/#\~/${HOME}}"
+  BASE_IMAGE="${BASE_IMAGE/#\~/${HOME}}"
+  OUTPUT="${OUTPUT/#\~/${HOME}}"
+fi
 
 # Create command based on the binary name.
 BINARY_BASENAME=$(basename "${BINARY}")
@@ -180,11 +190,14 @@ upload ${SERVICE_FILE} /etc/systemd/system/${SERVICE_NAME}.service
 ln-sf /etc/systemd/system/${SERVICE_NAME}.service /etc/systemd/system/multi-user.target.wants/${SERVICE_NAME}.service
 EOF
 
+# Add data files to guestfish commands.
+for data_file in "${DATA_FILES[@]}"; do
+  data_basename=$(basename "${data_file}")
+  echo "upload ${data_file} ${INSTALL_PATH}/${data_basename}" >>"${GF_SCRIPT}"
+done
+
 # Execute guestfish.
 guestfish -a "${OUTPUT}" -i <"${GF_SCRIPT}"
 
 echo ""
 echo "Done! Image created: ${OUTPUT}"
-echo ""
-echo "To run the VM:"
-echo "  ./oak_benchmarks/linux_vm/run_vm.sh --image=${OUTPUT} --port=${PORT}"

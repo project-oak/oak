@@ -1,84 +1,78 @@
 # Linux VM Tools
 
-Scripts for creating and running Linux VMs for benchmark testing.
+Tools for creating and running Linux VMs for benchmark testing.
 
 ## Prerequisites
-
-Install these packages before using the scripts:
 
 ```bash
 sudo apt install libguestfs-tools qemu-system-x86
 ```
 
-## Quick Start
+## Bazel Macro (Recommended)
 
-> ⚠️ **IMPORTANT**: Always build with `-c opt` for benchmarks!
+Use the `vm_disk_image` macro to define VM images in BUILD files.
+
+### Example
+
+In `oak_benchmarks/linux_enclave_app/BUILD`:
+
+```python
+load("//oak_benchmarks/linux_vm:defs.bzl", "vm_disk_image")
+
+vm_disk_image(
+    name = "linux_enclave_image",
+    binary = ":linux_enclave_app",
+    command = "/opt/app/linux_enclave_app --serve 5000",
+)
+```
+
+### Build
 
 ```bash
-# 1. Download the base image
-./oak_benchmarks/linux_vm/download_base_image.sh ~/Downloads
+bazel build //oak_benchmarks/linux_enclave_app:linux_enclave_image
+```
 
-# 2. Build your application (RELEASE MODE - required for benchmarks!)
-bazel build -c opt //oak_benchmarks/linux_enclave_app
+### Run Benchmarks
 
-# 3. Create VM image with your app
-# IMPORTANT: Use the explicit k8-opt path to ensure release binary
-./oak_benchmarks/linux_vm/prepare_image.sh \
-    --base-image=~/Downloads/debian-12-nocloud-amd64.qcow2 \
-    --binary=bazel-out/k8-opt/bin/oak_benchmarks/linux_enclave_app/linux_enclave_app \
-    --output=/tmp/benchmark-vm.qcow2 \
-    --command="/opt/app/linux_enclave_app --serve 5000" \
+The `vm_disk_image` macro automatically generates a `<name>_run` target that
+boots the VM and runs the benchmark in a single command.
+
+```bash
+bazel run //oak_benchmarks/linux_enclave_app:linux_enclave_image_run -- --benchmark=sha256
+```
+
+#### 2. Manual Run
+
+For manual interaction or custom scripts, you can use `run_vm.sh` directly.
+
+```bash
+./oak_benchmarks/linux_vm/run_vm.sh \
+    --image=bazel-bin/oak_benchmarks/linux_enclave_app/linux_enclave_image.qcow2 \
     --port=5000
-
-# 4. Run the VM
-# When prompted for login, type `root`
-./oak_benchmarks/linux_vm/run_vm.sh --image=/tmp/benchmark-vm.qcow2 --port=5000
 ```
 
-## Scripts
-
-### `download_base_image.sh`
-
-Downloads the Debian 12 "nocloud" base image with SHA512 verification.
-
-```bash
-./oak_benchmarks/linux_vm/download_base_image.sh [output_directory]
-```
+## Shell Scripts
 
 ### `prepare_image.sh`
 
-Creates a VM image with an application binary pre-installed.
+For ad-hoc image creation with explicit file paths:
 
 ```bash
 ./oak_benchmarks/linux_vm/prepare_image.sh \
-    --base-image=<path>       # Required: Debian nocloud qcow2
-    --binary=<path>           # Required: Application binary
-    --output=<path>           # Required: Output image path
-    --command=<cmd>           # Optional: ExecStart for systemd service (include args like --serve)
-    --service-name=<name>     # Optional: systemd service name (default: app)
-    --port=<port>             # Optional: Port for documentation (default: 5000)
-    --install-path=<path>     # Optional: Where to install (default: /opt/app)
+    --binary=/path/to/my_app \
+    --base-image=/path/to/debian.qcow2 \
+    --output=/tmp/my-vm.qcow2 \
+    --command="/opt/app/my_app --port 5000"
 ```
 
 ### `run_vm.sh`
 
-Runs a VM with various options.
+Runs a VM image:
 
 ```bash
 ./oak_benchmarks/linux_vm/run_vm.sh \
     --image=<path>            # Required: qcow2 image
-    --memory=<size>           # Optional: Memory (default: 1G)
-    --cpus=<n>                # Optional: CPU count (default: 2)
     --port=<port>             # Optional: Port forward (repeatable)
-    --interactive             # Optional: Attach console (default)
     --headless                # Optional: Run in background
     --enable-snp              # Optional: Enable AMD SEV-SNP
 ```
-
-## How It Works
-
-The `prepare_image.sh` script:
-
-1. Copies the binary to a staging directory
-2. Uses `guestfish` to inject the binary into the VM image without booting it
-3. Creates a systemd service for auto-start on boot

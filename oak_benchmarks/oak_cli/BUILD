@@ -21,6 +21,8 @@ package(
     licenses = ["notice"],
 )
 
+exports_files(["run_oak_cli.sh"])
+
 rust_binary(
     name = "oak_cli",
     srcs = ["main.rs"],
