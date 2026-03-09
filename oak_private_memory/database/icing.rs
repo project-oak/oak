@@ -966,7 +966,33 @@ impl IcingMetaDatabase {
             self.build_query_specs_filtering_expired_memories(query, schema_name)?;
         let scoring_spec = scoring_spec.unwrap_or_default();
         let mut page_token = page_token;
-        let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
+
+        // For text-only queries, Icing returns results already sorted by
+        // CreationTimestamp descending. We build results directly from the
+        // ordered output to preserve this ordering (a HashMap would lose it).
+        if !search_views {
+            let (search_result, next_page_token) = self.execute_search(
+                &search_spec,
+                &scoring_spec,
+                page_size,
+                page_token,
+                projection.clone(),
+            )?;
+            let mut search_result_ids = SearchResultIds::default();
+            for result in &search_result.results {
+                if let Some(blob_id) = Self::extract_blob_id_from_doc(result) {
+                    let score = result.score.map(|s| s as f32).unwrap_or(0.0);
+                    search_result_ids.items.push(SearchResultId {
+                        blob_id,
+                        score,
+                        view_ids: Vec::new(),
+                        view_scores: Vec::new(),
+                    });
+                }
+            }
+            return Ok((search_result_ids, next_page_token));
+        }
+
         // When embedding search is used, we are matching against views instead
         // of memories. Therefore, we might match mulitple views of the same memory.
         // We need to aggregate the results and scores by memory id.
@@ -980,35 +1006,27 @@ impl IcingMetaDatabase {
         // some items of a page instead of the whole page. But the OSS version
         // does not have it yet.
         // TODO: yongheng - Add support for Icing's new get_next_page api.
+        let mut id_maps: HashMap<BlobId, Vec<(ViewId, f32)>> = HashMap::new();
         loop {
-            let item_to_search = if search_views { 1 } else { page_size };
             let (search_result, next_page_token) = self.execute_search(
                 &search_spec,
                 &scoring_spec,
-                item_to_search,
+                1,
                 page_token,
                 projection.clone(),
             )?;
             page_token = next_page_token;
 
-            if search_views {
-                for result in &search_result.results {
-                    if let (Some(blob_id), Some(view_id), score) = (
-                        Self::extract_blob_id_from_doc(result),
-                        Self::extract_view_id_from_doc(result),
-                        result.score.map(|s| s as f32).unwrap_or(0.0),
-                    ) {
-                        id_maps.entry(blob_id).or_default().push((view_id, score));
-                    }
+            for result in &search_result.results {
+                if let (Some(blob_id), Some(view_id), score) = (
+                    Self::extract_blob_id_from_doc(result),
+                    Self::extract_view_id_from_doc(result),
+                    result.score.map(|s| s as f32).unwrap_or(0.0),
+                ) {
+                    id_maps.entry(blob_id).or_default().push((view_id, score));
                 }
-                if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
-                    break;
-                }
-            } else {
-                let blob_ids = Self::extract_blob_ids_from_search_result(search_result);
-                for blob_id in blob_ids.into_iter() {
-                    id_maps.insert(blob_id, Vec::default());
-                }
+            }
+            if id_maps.keys().len() == page_size as usize || page_token == PageToken::Start {
                 break;
             }
         }

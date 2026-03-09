@@ -773,3 +773,68 @@ fn test_search_with_pagination_returns_correct_view() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+/// Verify that `search()` with a tag-only text query returns memories sorted
+/// by `created_timestamp` descending (newest first).
+/// This test mirrors the user's exact scenario: 5 memories with the
+/// "ts_order_test" tag, content, and no embeddings.
+#[gtest]
+fn test_search_by_tag_sorts_by_created_timestamp() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("tag-ts-order-test"))?;
+
+    // Insert 5 memories in non-monotonic timestamp order to catch ordering bugs.
+    // Insertion order: 0, 3, 1, 4, 2
+    let insertion_order: Vec<usize> = vec![0, 3, 1, 4, 2];
+    let timestamps: Vec<i64> = vec![1000, 2000, 3000, 4000, 5000];
+
+    for &i in &insertion_order {
+        let memory = Memory {
+            id: format!("ts_order_test_ts_verify_{}", i),
+            tags: vec!["ts_order_test".to_string()],
+            created_timestamp: Some(Timestamp { seconds: timestamps[i], nanos: 0 }),
+            content: Some(MemoryContent {
+                contents: std::collections::HashMap::from([(
+                    "text_content".to_string(),
+                    MemoryValue {
+                        value: Some(
+                            sealed_memory_rust_proto::oak::private_memory::memory_value::Value::StringVal(
+                                format!("verify_content_{}", i),
+                            ),
+                        ),
+                        ..Default::default()
+                    },
+                )]),
+            }),
+            ..Default::default()
+        };
+        icing_database.add_memory(&memory, format!("blob_ts_verify_{}", i))?;
+    }
+
+    // Search using a tag text query (equivalent to SearchMemoryRequest with
+    // text_query { match_type: EQUAL, field: TAGS, string_val: "ts_order_test" })
+    let tag_query = SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal("ts_order_test".to_string())),
+        })),
+    };
+
+    let (results, _) = icing_database.search(&tag_query, 100, PageToken::Start)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+
+    assert_that!(blob_ids.len(), eq(5));
+    // Expect newest-first: 4 (5000s), 3 (4000s), 2 (3000s), 1 (2000s), 0 (1000s)
+    assert_that!(
+        blob_ids,
+        elements_are![
+            eq("blob_ts_verify_4"),
+            eq("blob_ts_verify_3"),
+            eq("blob_ts_verify_2"),
+            eq("blob_ts_verify_1"),
+            eq("blob_ts_verify_0"),
+        ]
+    );
+
+    Ok(())
+}
