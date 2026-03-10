@@ -34,6 +34,11 @@ proto_library(
     ],
 )
 
+cc_proto_library(
+    name = "assertion_cc_proto",
+    deps = [":assertion_proto"],
+)
+
 java_proto_library(
     name = "assertion_java_proto",
     deps = [":assertion_proto"],
@@ -247,6 +252,9 @@ build_test(
         ":attachment_proto",
         ":attachment_cc_proto",
         ":attachment_java_proto",
+        ":assertion_proto",
+        ":assertion_cc_proto",
+        ":assertion_java_proto",
         ":cb_eventlog_proto",
         ":cb_eventlog_cc_proto",
         ":dice_proto",
