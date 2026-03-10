@@ -613,16 +613,28 @@ fn combine_attestation_results(
             EitherOrBoth::Both((_, peer_verifier), (id, ee)) => {
                 match (ee.evidence.as_ref(), ee.endorsements.as_ref()) {
                     (Some(evidence), Some(endorsements)) => {
-                        let result = peer_verifier.verifier.verify(evidence, endorsements)?;
-                        Ok((
-                            id,
-                            match result.status() {
-                                attestation_results::Status::Success => {
-                                    VerifierResult::Success { evidence: ee, result }
-                                }
-                                _ => VerifierResult::Failure { evidence: ee, result },
-                            },
-                        ))
+                        match peer_verifier.verifier.verify(evidence, endorsements) {
+                            core::result::Result::Ok(result) => Ok((
+                                id,
+                                match result.status() {
+                                    attestation_results::Status::Success => {
+                                        VerifierResult::Success { evidence: ee, result }
+                                    }
+                                    _ => VerifierResult::Failure { evidence: ee, result },
+                                },
+                            )),
+                            core::result::Result::Err(err) => Ok((
+                                id,
+                                VerifierResult::Failure {
+                                    evidence: ee,
+                                    result: AttestationResults {
+                                        status: attestation_results::Status::GenericFailure.into(),
+                                        reason: format!("{:#}", err),
+                                        ..Default::default()
+                                    },
+                                },
+                            )),
+                        }
                     }
                     _ => Ok((
                         id,

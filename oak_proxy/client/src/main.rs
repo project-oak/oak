@@ -70,6 +70,12 @@ struct FileAttestationPublisher {
 
 impl AttestationPublisher for FileAttestationPublisher {
     fn publish(&self, attestation_evidence: AttestationEvidence) {
+        log::info!(
+            "[Client] publish() called! evidence_count={}, bindings_count={}, handshake_hash_len={}",
+            attestation_evidence.evidence.len(),
+            attestation_evidence.evidence_bindings.len(),
+            attestation_evidence.handshake_hash.len(),
+        );
         let request_time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| prost_types::Timestamp {
@@ -87,7 +93,9 @@ impl AttestationPublisher for FileAttestationPublisher {
             handshake_hash: attestation_evidence.handshake_hash,
         };
 
-        match std::fs::write(&self.output_path, collected_attestation.encode_to_vec()) {
+        let encoded = collected_attestation.encode_to_vec();
+        log::info!("[Client] Writing {} bytes to '{}'", encoded.len(), self.output_path.display());
+        match std::fs::write(&self.output_path, encoded) {
             Ok(()) => {
                 log::info!(
                     "[Client] CollectedAttestation written to '{}'",
@@ -152,7 +160,10 @@ async fn handle_connection(app_stream: TcpStream, config: &ClientConfig) -> anyh
     // Create an attestation publisher if an output file is configured.
     let attestation_publisher: Option<Arc<dyn AttestationPublisher>> =
         config.attestation_output_file.as_ref().map(|path| {
-            log::info!("[Client] Attestation evidence will be written to '{}'", path.display());
+            log::info!(
+                "[Client] Attestation publisher CREATED, will write to '{}'",
+                path.display()
+            );
             Arc::new(FileAttestationPublisher {
                 output_path: path.clone(),
                 server_proxy_url: server_proxy_url.to_string(),
