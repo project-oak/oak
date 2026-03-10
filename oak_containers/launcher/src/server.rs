@@ -232,7 +232,7 @@ impl LogsService for LauncherServerImplementation {
 #[allow(clippy::too_many_arguments)]
 pub async fn new(
     listener: TcpListener,
-    vsock_listener: VsockListener,
+    vsock_listener: Option<VsockListener>,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Vec<u8>,
@@ -260,14 +260,21 @@ pub async fn new(
             tcp_shutdown.changed().map(|_| ()),
         );
 
-    let mut virtio_shutdown = shutdown.clone();
-    let virtio_server = Server::builder()
-        .add_service(LauncherServer::from_arc(server_impl.clone()))
-        .add_service(LogsServiceServer::from_arc(server_impl.clone()))
-        .serve_with_incoming_shutdown(
-            vsock_listener.incoming(),
-            virtio_shutdown.changed().map(|_| ()),
-        );
+    let virtio_server = async {
+        if let Some(vsock_listener) = vsock_listener {
+            let mut virtio_shutdown = shutdown.clone();
+            Server::builder()
+                .add_service(LauncherServer::from_arc(server_impl.clone()))
+                .add_service(LogsServiceServer::from_arc(server_impl.clone()))
+                .serve_with_incoming_shutdown(
+                    vsock_listener.incoming(),
+                    virtio_shutdown.changed().map(|_| ()),
+                )
+                .await
+        } else {
+            Ok(())
+        }
+    };
 
     tokio::try_join!(tcp_server, virtio_server)
         .map(|((), ())| ())

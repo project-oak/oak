@@ -63,10 +63,6 @@ async fn test_launcher_key_value_lookup_network() {
     run_key_value_lookup_test("network").await;
 }
 
-// The TAP interface (oak0) is a global resource, and only one of the test may
-// use it at a time.
-static TAP_PERMIT: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1);
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_tap() {
     if oak_functions_test_utils::skip_test() {
@@ -74,9 +70,7 @@ async fn test_launcher_key_value_lookup_tap() {
         return;
     }
 
-    let permit = TAP_PERMIT.acquire().await.unwrap();
     run_key_value_lookup_test("tap").await;
-    drop(permit);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
@@ -86,9 +80,7 @@ async fn test_launcher_key_value_lookup_tap_v6() {
         return;
     }
 
-    let permit = TAP_PERMIT.acquire().await.unwrap();
     run_key_value_lookup_test("tap-v6").await;
-    drop(permit);
 }
 
 // Allow enough worker threads to collect output from background tasks.

@@ -197,8 +197,12 @@ impl Launcher {
         let port = listener.local_addr().context("failed to get local port")?.port();
 
         // Reuse the same port we got for the TCP socket for vsock.
-        let vsock_listener = VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
-            .expect("Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it.");
+        let vsock_listener = if args.communication_channel == ChannelType::VirtioVsock {
+            Some(VsockListener::bind(VsockAddr::new(VMADDR_CID_HOST, port.into()))
+            .expect("Bind failed. Check if kernel mod vhost_vsock is loaded. Try running `sudo modprobe vhost_vsock` to load it."))
+        } else {
+            None
+        };
         log::info!("Launcher service listening on port {port}");
         let (evidence_sender, evidence_receiver) = oneshot::channel::<Evidence>();
         let (shutdown_sender, mut shutdown_receiver) = watch::channel::<()>(());
@@ -250,9 +254,7 @@ impl Launcher {
                 Channel::Tap { host_address, guest_address } => {
                     qemu::Network::Tap { host_address, guest_address }
                 }
-                Channel::VirtioVsock { trusted_app_address: _ } => {
-                    qemu::Network::None { launcher_service_port: port }
-                }
+                Channel::VirtioVsock { .. } => qemu::Network::None { launcher_service_port: port },
             },
         )?;
 
