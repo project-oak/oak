@@ -103,18 +103,9 @@ def _aliased_crates_repository(ctx):
     oak_no_std_crates = crates.get("oak_no_std_crates_index", {})
     oak_no_std_no_avx_crates = crates.get("oak_no_std_no_avx_crates_index", {})
 
-    # A workaround for dependencies that are transitionally using both WORKSAPCE
-    # and MODULE.bazel to import Oak.
-    # The toolchains will be set up expecting constraints defined by @@oak, but
-    # the creates are set up earlier, before @@oak exists.
-    repo_name = ""
-    for m in ctx.modules:
-        if m.name == "oak" and not m.is_root:
-            repo_name = "@@oak"
-
-    x86_64_none_label = Label("{}//:x86_64-none-setting".format(repo_name))
-    wasm32_none_label = Label("{}//:wasm32-none-setting".format(repo_name))
-    x86_64_none_no_avx_label = Label("{}//:x86_64-none-no_avx-setting".format(repo_name))
+    x86_64_none_label = Label("//:x86_64-none-setting")
+    wasm32_none_label = Label("//:wasm32-none-setting")
+    x86_64_none_no_avx_label = Label("//:x86_64-none-no_avx-setting")
 
     aliasing_crates_repository(
         name = "oak_crates_index",

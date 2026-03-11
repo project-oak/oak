@@ -451,10 +451,10 @@
     },
     "//bazel/crates:extensions.bzl%aliased_crates_repository": {
       "general": {
-        "bzlTransitiveDigest": "idjdGMpqbnR2+5GLFB8NDgbIjKijssedgLd8NeH7xto=",
+        "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ffrD7viG/EiFoE/Z900CCeB39GTRKrpPHl2eqqG/Ynk=",
         "recordedFileInputs": {
-          "@@//MODULE.bazel": "9a8c2359ce2a48f5923f2af67950c427b2bddfb480e88727b2096f9a8c64502a"
+          "@@//MODULE.bazel": "687ade5ce221f9b8300f975d22daee1d71fd06502561a61ba9b457a28a5dfaa3"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},
@@ -486,7 +486,7 @@
     },
     "//bazel/crates:extensions.bzl%load_patched_crates": {
       "general": {
-        "bzlTransitiveDigest": "idjdGMpqbnR2+5GLFB8NDgbIjKijssedgLd8NeH7xto=",
+        "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ZsYJkhcENlG5v6kU2c9tzSfSUaoeFwb59yKdrcQFudk=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -585,6 +585,914 @@
             "rules_nixpkgs_core+",
             "bazel_skylib",
             "bazel_skylib+"
+          ]
+        ]
+      }
+    },
+    "//bazel/rust:extensions.bzl%rust_toolchains": {
+      "general": {
+        "bzlTransitiveDigest": "tl45uNsZZQ2C2uw2xj6jn9JLMCxVt5WRUmRLlVpEVjQ=",
+        "usagesDigest": "leIZNOhFDn0iyu6LcoD56P4NzpsrGs5AuKtwDdwV3xo=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "oak_rust_linux__x86_64-unknown-linux-gnu__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-linux-gnu",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_linux__x86_64-unknown-linux-gnu__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ]
+            }
+          },
+          "oak_rust_linux__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_linux__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_linux__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none"
+              ]
+            }
+          },
+          "oak_rust_linux__wasm32-unknown-unknown__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "wasm32-unknown-unknown",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_linux__wasm32-unknown-unknown__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_linux__wasm32-unknown-unknown__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:wasm32",
+                "@platforms//os:none"
+              ]
+            }
+          },
+          "oak_rust_linux": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:toolchain",
+                "@oak_rust_linux__x86_64-unknown-none__nightly//:toolchain",
+                "@oak_rust_linux__wasm32-unknown-unknown__nightly//:toolchain"
+              ]
+            }
+          },
+          "oak_rust_darwin__aarch64-apple-darwin__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "aarch64-apple-darwin",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_darwin__aarch64-apple-darwin__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_darwin__aarch64-apple-darwin__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ]
+            }
+          },
+          "oak_rust_darwin__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_darwin__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_darwin__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none"
+              ]
+            }
+          },
+          "oak_rust_darwin__wasm32-unknown-unknown__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "wasm32-unknown-unknown",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "oak_rust_darwin__wasm32-unknown-unknown__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@oak_rust_darwin__wasm32-unknown-unknown__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:wasm32",
+                "@platforms//os:none"
+              ]
+            }
+          },
+          "oak_rust_darwin": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@oak_rust_darwin__aarch64-apple-darwin__nightly//:toolchain",
+                "@oak_rust_darwin__x86_64-unknown-none__nightly//:toolchain",
+                "@oak_rust_darwin__wasm32-unknown-unknown__nightly//:toolchain"
+              ]
+            }
+          },
+          "rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-linux-gnu",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ]
+            }
+          },
+          "rust_toolchain_repo__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [
+                "--codegen=linker-flavor=gcc",
+                "--codegen=relocation-model=static",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-cpu=x86-64-v3",
+                "--codegen=link-arg=-Wl,-zmax-page-size=0x200000"
+              ],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_toolchain_repo__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_toolchain_repo__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "'@@//bazel/rust:avx_ON'",
+                "'@@//bazel/rust:code_model_NORMAL'"
+              ]
+            }
+          },
+          "rust_toolchain_repo": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:toolchain",
+                "@rust_toolchain_repo__x86_64-unknown-none__nightly//:toolchain"
+              ]
+            }
+          },
+          "rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "aarch64-apple-darwin",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ]
+            }
+          },
+          "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [
+                "--codegen=relocation-model=static",
+                "--codegen=target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float",
+                "--codegen=target-cpu=x86-64-v3"
+              ],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "'@@//bazel/rust:avx_ON'",
+                "'@@//bazel/rust:code_model_NORMAL'"
+              ]
+            }
+          },
+          "rust_toolchain_repo_darwin_aarch64": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:toolchain",
+                "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:toolchain"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-linux-gnu",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "x86_64-unknown-linux-gnu",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [
+                "--codegen=linker-flavor=gcc",
+                "--codegen=target-feature=+soft-float"
+              ],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_noavx_toolchain_repo__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_noavx_toolchain_repo__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:linux"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "'@@//bazel/rust:avx_OFF'",
+                "'@@//bazel/rust:code_model_NORMAL'"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:toolchain",
+                "@rust_noavx_toolchain_repo__x86_64-unknown-none__nightly//:toolchain"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "aarch64-apple-darwin",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_tools_repository",
+            "attributes": {
+              "exec_triple": "aarch64-apple-darwin",
+              "allocator_library": "",
+              "global_allocator_library": "",
+              "target_triple": "x86_64-unknown-none",
+              "version": "nightly/2025-03-01",
+              "rustfmt_version": "",
+              "edition": "2024",
+              "dev_components": false,
+              "extra_rustc_flags": [
+                "--codegen=target-feature=+soft-float"
+              ],
+              "extra_exec_rustc_flags": [],
+              "opt_level": {},
+              "strip_level": {},
+              "sha256s": {
+                "2025-03-01/cargo-nightly-x86_64-unknown-linux-gnu.tar.xz": "9dfde3b932a240ed7adbef95f9d1437681137c6e0b71ad95b2579cada0623e26",
+                "2025-03-01/clippy-nightly-x86_64-unknown-linux-gnu.tar.xz": "f5cb5053fee14e60bac386caf37a3542f6ac34fd73076e9329e4aac2e6caf640",
+                "2025-03-01/llvm-tools-nightly-x86_64-unknown-linux-gnu.tar.xz": "22ed657fa3092f172cda7ff2c68d560f03e312d0b0d643356d89f4254e858c92",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-linux-gnu.tar.xz": "bbfecef0f783ff9fde8485c3739ca71f549e44d9633e58ed5086cf7a09da3fd9",
+                "2025-03-01/rustc-nightly-x86_64-unknown-linux-gnu.tar.xz": "089b01d390bf42e40b2f1eb960033bba83b54c5b70c2d457e0a31ecb99e87f11",
+                "2025-03-01/rustfmt-nightly-x86_64-unknown-linux-gnu.tar.xz": "4f6b4fdcf919e8358b4001d220e2a62208765308dcc8504051c2d3c03efe7fce",
+                "2025-03-01/cargo-nightly-aarch64-apple-darwin.tar.xz": "a69239a4bd94c6b722a8236a24ee06a61da33ffca72fcb06eb75a64435a0952c",
+                "2025-03-01/clippy-nightly-aarch64-apple-darwin.tar.xz": "bb1a3f7683520e93ec083359cde495057a207ff231624d0d7ef802ecb5c18c07",
+                "2025-03-01/llvm-tools-nightly-aarch64-apple-darwin.tar.xz": "573fc4aa45b92b00a69f5b5ba80cc1b68b4c78ec2dad5af1311607ba34b3f5cb",
+                "2025-03-01/rust-std-nightly-aarch64-apple-darwin.tar.xz": "a18eee3a5df3966f11f719f6acadb7a7cc6e8cba590466ec418c7715e605cd52",
+                "2025-03-01/rustc-nightly-aarch64-apple-darwin.tar.xz": "a0b4dcdb53e8aa7604ce25a673e3429e7b66a6238f8cc798bf00d37d127e02c3",
+                "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
+                "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+                "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0"
+              },
+              "urls": [
+                "https://static.rust-lang.org/dist/{}.tar.xz"
+              ],
+              "auth": {},
+              "netrc": "",
+              "auth_patterns": []
+            }
+          },
+          "rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%toolchain_repository_proxy",
+            "attributes": {
+              "toolchain": "@rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools//:rust_toolchain",
+              "target_settings": [
+                "@rules_rust//rust/toolchain/channel:nightly"
+              ],
+              "toolchain_type": "@rules_rust//rust:toolchain",
+              "exec_compatible_with": [
+                "@platforms//cpu:aarch64",
+                "@platforms//os:osx"
+              ],
+              "target_compatible_with": [
+                "@platforms//cpu:x86_64",
+                "@platforms//os:none",
+                "'@@//bazel/rust:avx_OFF'",
+                "'@@//bazel/rust:code_model_NORMAL'"
+              ]
+            }
+          },
+          "rust_noavx_toolchain_repo_darwin_aarch64": {
+            "repoRuleId": "@@rules_rust+//rust:repositories.bzl%rust_toolchain_set_repository",
+            "attributes": {
+              "toolchains": [
+                "@rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:toolchain",
+                "@rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:toolchain"
+              ]
+            }
+          },
+          "stdlibs": {
+            "repoRuleId": "@@//bazel/rust:stdlibs.bzl%stdlibs",
+            "attributes": {
+              "build_file": "@@//bazel/rust:stdlibs.BUILD",
+              "nightly_date": "2025-03-01",
+              "sha256": "4743b974292186c91f4daba45de20edfbc6aa293671953aca30168608e69609e"
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "",
+            "rules_rust",
+            "rules_rust+"
+          ],
+          [
+            "rules_rust+",
+            "bazel_tools",
+            "bazel_tools"
           ]
         ]
       }

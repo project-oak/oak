@@ -29,12 +29,26 @@ bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
 bazel_dep(name = "googleapis", version = "0.0.0-20251211-05f65958")
 bazel_dep(name = "toolchains_llvm", version = "1.6.0")
 
-# We can't depend on Oak fully as a bzlmod yet, but we can start to reference
-# some things from it. But we need to provide a different repo_name for now so we don't clash with the one in WORKSPACE.
-bazel_dep(name = "oak", version = "0.0.0", repo_name = "oak_bzlmod")
+# Depend on Oak for shared toolchains and crates.
+bazel_dep(name = "oak", version = "0.0.0")
 local_path_override(
     module_name = "oak",
     path = "..",
+)
+
+##### Rust Toolchain Setup #####
+# Use Oak's Rust toolchain to ensure version consistency with the main Oak
+# project. This avoids potential issues from mismatched Rust versions when
+# depending on Oak crates.
+
+oak_rust = use_extension("@oak//bazel/rust:extensions.bzl", "rust_toolchains")
+use_repo(
+    oak_rust,
+    "oak_rust_linux__x86_64-unknown-linux-gnu__nightly",
+)
+
+register_toolchains(
+    "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:all",
 )
 
 # Files needed to launch an Oak Containers binary in QEMU
@@ -59,7 +73,7 @@ http_file(
     urls = ["https://storage.googleapis.com/oak-files/sha2-256:b46aa37e1b48e33138ea9e6fd127fb5f3b3cedc1cd1b9b5377bb6031515acb1b"],
 )
 
-oak_toolchains = use_extension("@oak_bzlmod//bazel:extensions.bzl", "oak_toolchains")
+oak_toolchains = use_extension("@oak//bazel:extensions.bzl", "oak_toolchains")
 use_repo(oak_toolchains, "oak_cc_toolchain_sysroot", "umoci")
 
 register_toolchains("@umoci//:umoci_toolchain")
@@ -139,5 +153,5 @@ crate.from_specs(
 )
 use_repo(crate, "oak_std_crates_index", "pm_crates")
 
-acr = use_extension("@oak_bzlmod//bazel/crates:extensions.bzl", "aliased_crates_repository")
+acr = use_extension("@oak//bazel/crates:extensions.bzl", "aliased_crates_repository")
 use_repo(acr, "oak_crates_index")

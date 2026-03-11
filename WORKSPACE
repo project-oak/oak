@@ -15,11 +15,3 @@
 #
 
 workspace(name = "oak")
-
-load("//bazel/rust:defs.bzl", "setup_rust_dependencies")
-
-setup_rust_dependencies()
-
-load("//bazel/rust:stdlibs.bzl", "setup_rebuilt_rust_stdlibs")
-
-setup_rebuilt_rust_stdlibs()

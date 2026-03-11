@@ -269,6 +269,53 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_rust", version = "0.68.1")
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.68.1")
 
+# All Rust toolchains are configured in //bazel/rust:extensions.bzl
+# which reads the version and SHA256s from //bazel/rust:defs.bzl
+rust_toolchains = use_extension("//bazel/rust:extensions.bzl", "rust_toolchains")
+use_repo(
+    rust_toolchains,
+    # Stdlibs for rebuilt stdlib
+    "stdlibs",
+    # Standard toolchains (for most Rust code)
+    "oak_rust_darwin__aarch64-apple-darwin__nightly",
+    "oak_rust_darwin__wasm32-unknown-unknown__nightly",
+    "oak_rust_darwin__x86_64-unknown-none__nightly",
+    "oak_rust_linux__wasm32-unknown-unknown__nightly",
+    "oak_rust_linux__x86_64-unknown-linux-gnu__nightly",
+    "oak_rust_linux__x86_64-unknown-none__nightly",
+    # Custom AVX toolchains (for restricted kernel)
+    "rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly",
+    "rust_noavx_toolchain_repo__x86_64-unknown-none__nightly",
+    "rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly",
+    "rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly",
+    "rust_toolchain_repo__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo__x86_64-unknown-none__nightly_tools",
+    "rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly",
+    "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly",
+    "rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly_tools",
+)
+
+register_toolchains(
+    "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none",
+    "//bazel/rust/rebuilt_toolchain:toolchain_rebuilt_x86_64-unknown-none_darwin",
+    "@rust_noavx_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:all",
+    "@rust_noavx_toolchain_repo__x86_64-unknown-none__nightly//:all",
+    "@rust_noavx_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:all",
+    "@rust_noavx_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:all",
+    "@rust_toolchain_repo__x86_64-unknown-linux-gnu__nightly//:all",
+    "@rust_toolchain_repo__x86_64-unknown-none__nightly//:all",
+    "@rust_toolchain_repo_darwin_aarch64__aarch64-apple-darwin__nightly//:all",
+    "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:all",
+    # Standard toolchains (wasm and fallback)
+    "@oak_rust_linux__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:all",
+    "@oak_rust_linux__x86_64-unknown-none__nightly//:all",
+    "@oak_rust_darwin__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_darwin__aarch64-apple-darwin__nightly//:all",
+    "@oak_rust_darwin__x86_64-unknown-none__nightly//:all",
+)
+
 ##### rules_foreign_cc packages #####
 
 # https://github.com/bazel-contrib/rules_foreign_cc
