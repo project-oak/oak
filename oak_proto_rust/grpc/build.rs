@@ -29,7 +29,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pathbufs!(
             "../../proto/containers/interfaces.proto",
             "../../proto/containers/orchestrator_crypto.proto",
-            "../../proto/containers/hostlib_key_provisioning.proto",
             "../../proto/session/service_streaming.proto",
             "../../proto/oak_debug/service/oak_debug.proto",
             "../../proto/oak_functions/service/oak_functions.proto",

@@ -35,7 +35,6 @@ namespace {
 using grpc::ClientContext;
 using ::oak::containers::v1::DeriveSessionKeysRequest;
 using ::oak::containers::v1::DeriveSessionKeysResponse;
-using ::oak::containers::v1::KeyOrigin;
 using ::oak::containers::v1::SignRequest;
 using ::oak::containers::v1::SignResponse;
 using ::oak::crypto::v1::SessionKeys;
@@ -47,7 +46,6 @@ absl::StatusOr<SessionKeys> OrchestratorCryptoClient::DeriveSessionKeys(
   ClientContext context;
   context.set_authority(kContextAuthority);
   DeriveSessionKeysRequest request;
-  request.set_key_origin(KeyOrigin::INSTANCE);
   request.set_serialized_encapsulated_public_key(
       serialized_encapsulated_public_key.data(),
       serialized_encapsulated_public_key.size());
@@ -68,7 +66,6 @@ absl::StatusOr<Signature> OrchestratorCryptoClient::Sign(
   ClientContext context;
   context.set_authority(kContextAuthority);
   SignRequest request;
-  request.set_key_origin(KeyOrigin::INSTANCE);
   request.set_message(message.data(), message.size());
   SignResponse response;
 

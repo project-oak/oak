@@ -34,7 +34,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient;
-use oak_proto_rust::oak::containers::v1::{KeyOrigin, SignRequest};
+use oak_proto_rust::oak::containers::v1::SignRequest;
 use oak_session::session_binding::SessionBinder;
 use p256::ecdsa::signature::Signer;
 use prost::Message;
@@ -70,8 +70,7 @@ impl OrchestratorClientWrapper {
 #[async_trait]
 impl OrchestratorSigner for OrchestratorClientWrapper {
     async fn sign(&mut self, message: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let request =
-            SignRequest { message: message.to_vec(), key_origin: KeyOrigin::Instance.into() };
+        let request = SignRequest { message: message.to_vec() };
         let response = self.crypto_client.sign(request).await?.into_inner();
         Ok(response.signature.context("signature was not provided by the Orchestrator")?.signature)
     }

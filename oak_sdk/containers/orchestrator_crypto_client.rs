@@ -20,7 +20,7 @@ use async_trait::async_trait;
 use oak_crypto::{encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext};
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient;
 use oak_proto_rust::oak::{
-    containers::v1::{BindSessionRequest, DeriveSessionKeysRequest, KeyOrigin, SignRequest},
+    containers::v1::{BindSessionRequest, DeriveSessionKeysRequest, SignRequest},
     crypto::v1::{SessionKeys, Signature},
 };
 use oak_session::session_binding::SessionBinder;
@@ -45,7 +45,6 @@ impl OrchestratorCryptoClient {
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
             .derive_session_keys(DeriveSessionKeysRequest {
-                key_origin: KeyOrigin::Instance.into(),
                 serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
             })
             .await?
@@ -59,7 +58,7 @@ impl OrchestratorCryptoClient {
         self.inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
-            .sign(SignRequest { message, key_origin: KeyOrigin::Instance.into() })
+            .sign(SignRequest { message })
             .await?
             .into_inner()
             .signature

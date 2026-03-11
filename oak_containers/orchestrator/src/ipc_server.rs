@@ -28,7 +28,7 @@ use oak_proto_rust::oak::{
         GetApplicationConfigResponse,
         v1::{
             BindSessionRequest, BindSessionResponse, DeriveSessionKeysRequest,
-            DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
+            DeriveSessionKeysResponse, SignRequest, SignResponse,
         },
     },
     crypto::v1::Signature,
@@ -59,15 +59,9 @@ impl OrchestratorCrypto for CryptoService {
     ) -> Result<Response<DeriveSessionKeysResponse>, tonic::Status> {
         let request = request.into_inner();
 
-        let encryption_key = match request.key_origin() {
-            KeyOrigin::Unspecified => {
-                Err(tonic::Status::invalid_argument("unspecified key origin"))?
-            }
-            KeyOrigin::Instance => &self.instance_keys.encryption_key,
-            KeyOrigin::Group => Err(tonic::Status::unimplemented("group key is not supported"))?,
-        };
-
-        let session_keys = encryption_key
+        let session_keys = self
+            .instance_keys
+            .encryption_key
             .generate_recipient_context(&request.serialized_encapsulated_public_key)
             .map_err(|err| tonic::Status::internal(format!("couldn't derive session keys: {err}")))?
             .serialize()

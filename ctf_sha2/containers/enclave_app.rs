@@ -20,7 +20,7 @@ use std::{
 
 use anyhow::Context;
 use oak_grpc::oak::containers::v1::orchestrator_crypto_client::OrchestratorCryptoClient;
-use oak_proto_rust::oak::containers::v1::{KeyOrigin, SignRequest};
+use oak_proto_rust::oak::containers::v1::SignRequest;
 use oak_sdk_containers::{OrchestratorClient, default_orchestrator_channel};
 use p256::ecdsa::{Signature, signature::SignatureEncoding};
 use rand::{CryptoRng, RngCore, SeedableRng, rngs::StdRng};
@@ -85,10 +85,7 @@ impl FlagDigestService for FlagDigestServiceImpl {
 
         // Sign the flag digest.
         let signature = {
-            let sign_req = SignRequest {
-                key_origin: KeyOrigin::Instance as i32,
-                message: flag_digest.clone(),
-            };
+            let sign_req = SignRequest { message: flag_digest.clone() };
             let sign_response = self
                 .crypto_client
                 .clone()

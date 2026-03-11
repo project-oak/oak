@@ -93,12 +93,6 @@ pub mod oak {
         }
     }
 
-    pub mod key_provisioning {
-        pub mod v1 {
-            include_proto!("oak.key_provisioning.v1");
-        }
-    }
-
     pub mod packages {
         include_proto!("oak.packages");
     }

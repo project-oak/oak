@@ -25,15 +25,6 @@ package(
 )
 
 proto_library(
-    name = "hostlib_key_provisioning_proto",
-    srcs = ["hostlib_key_provisioning.proto"],
-    deps = [
-        "//proto/key_provisioning:key_provisioning_proto",
-        "@com_google_protobuf//:empty_proto",
-    ],
-)
-
-proto_library(
     name = "interfaces_proto",
     srcs = ["interfaces.proto"],
     deps = [
@@ -78,17 +69,4 @@ cc_grpc_library(
     generate_mocks = True,
     grpc_only = True,
     deps = [":orchestrator_crypto_cc_proto"],
-)
-
-build_test(
-    name = "build_test",
-    targets = [
-        ":hostlib_key_provisioning_proto",
-        ":interfaces_proto",
-        ":interfaces_cc_proto",
-        ":interfaces_cc_grpc",
-        ":orchestrator_crypto_proto",
-        ":orchestrator_crypto_cc_proto",
-        ":orchestrator_crypto_cc_grpc",
-    ],
 )
