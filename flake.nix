@@ -61,6 +61,31 @@
             };
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
           src = ./.;
+          pyink = pkgs.python3Packages.buildPythonPackage rec {
+            pname = "pyink";
+            version = "24.10.0";
+            src = pkgs.fetchPypi {
+              inherit pname version;
+              hash = "sha256-MhcCPlh1wmnCz9WyK87Jc7fOs1krh7RbM3PynpVkfFQ=";
+            };
+            pyproject = true;
+            nativeBuildInputs = with pkgs.python3Packages; [
+              hatchling
+              hatch-vcs
+            ];
+            propagatedBuildInputs = with pkgs.python3Packages; [
+              click
+              mypy-extensions
+              packaging
+              pathspec
+              platformdirs
+              black
+            ];
+            postPatch = ''
+              sed -i 's/black==24.8.0/black/' pyproject.toml
+            '';
+            doCheck = false;
+          };
         in
         {
           formatter = pkgs.nixpkgs-fmt;
@@ -104,8 +129,8 @@
                 cargo-audit
                 protobuf
                 buf # utility to convert binary protobuf to json; for breaking change detection.
+                pyink
                 qemu_kvm
-                python312
                 wasm-pack
                 iconv
                 util-linux
@@ -131,6 +156,7 @@
                 nixpkgs-fmt
                 nodePackages.prettier
                 nodePackages.markdownlint-cli
+                pyink
                 shellcheck
                 shfmt
                 pre-commit

@@ -83,7 +83,9 @@ def parse_oak_crates(file_path):
       name = package_match.group(1)
       if version_match:
         version = version_match.group(1)
-        if name not in crates or version_key(version) > version_key(crates[name]):
+        if name not in crates or version_key(version) > version_key(
+            crates[name]
+        ):
           crates[name] = version
       elif git_match:
         crates[name] = "git"

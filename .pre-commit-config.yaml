@@ -69,6 +69,12 @@ repos:
         language: system
         types_or: [yaml, html, javascript, ts, css, scss, markdown]
 
+      - id: pyink
+        name: Pyink (Python)
+        entry: pyink
+        language: system
+        types: [python]
+
       - id: rustfmt
         name: rustfmt (Rust)
         entry: rustfmt
