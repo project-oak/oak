@@ -1,4 +1,10 @@
 [advisories]
 ignore = [
   "RUSTSEC-2023-0071", # b/352738504
+
+  # wasmtime is very outdated.
+  "RUSTSEC-2026-0020",
+  "RUSTSEC-2025-0046",
+  "RUSTSEC-2025-0118",
+  "RUSTSEC-2026-0021",
 ]

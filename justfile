@@ -218,12 +218,8 @@ bazel-rustfmt:
 clippy: bazel-clippy
 
 cargo-audit:
-    #!/bin/sh
-    for lockfile in Cargo*.lock
-    do
-        echo Cargo auditing: $lockfile
-        cargo-audit audit -f $lockfile
-    done
+    @echo "Running cargo audit..."
+    ./scripts/generate_cargo_lock.py | cargo audit -f -
 
 git-check-diff:
     ./scripts/git_check_diff
