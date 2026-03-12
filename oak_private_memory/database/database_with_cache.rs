@@ -277,6 +277,26 @@ impl DatabaseWithCache {
         Ok((results, next_page_token))
     }
 
+    /// Search API v2 entry point: delegates to
+    /// `IcingMetaDatabase::search_memories`.
+    pub async fn search_memories(
+        &mut self,
+        request: SearchMemoriesRequest,
+    ) -> anyhow::Result<(Vec<Memory>, PageToken)> {
+        let (search_results, next_page_token) = self.meta_db().search_memories(&request)?;
+
+        if search_results.items.is_empty() {
+            return Ok((Vec::new(), next_page_token));
+        }
+
+        let blob_ids: Vec<BlobId> =
+            search_results.items.iter().map(|item| item.blob_id.clone()).collect();
+        let mut memories = self.cache.get_memories_by_blob_ids(&blob_ids).await?;
+        Self::apply_mask_to_memories(&mut memories, &request.result_mask);
+
+        Ok((memories, next_page_token))
+    }
+
     pub async fn clean_expired_memories(&mut self) -> anyhow::Result<u64> {
         let mut current_token = PageToken::Start;
         let mut num_cleaned_memories: u64 = 0;

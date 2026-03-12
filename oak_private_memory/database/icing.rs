@@ -23,7 +23,7 @@ use rand::Rng;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
         EmbeddingQuery, LlmView, MatchType, QueryClauses, QueryOperator, SearchMemoryQuery,
-        TextQuery, search_memory_query, text_query,
+        TextQuery, search_memories_filter, search_memory_query, text_query,
     },
     prelude::v1::*,
 };
@@ -1297,6 +1297,102 @@ impl IcingMetaDatabase {
         }
 
         Ok((search_spec, Some(self.build_scoring_spec())))
+    }
+
+    // =========================================================================
+    // Search API v2 implementation
+    // =========================================================================
+
+    /// Entry point for the Search API v2.
+    ///
+    /// Translates a `SearchMemoriesRequest` into Icing search/scoring specs,
+    /// executes the query, and returns matching memory blob IDs with scores.
+    pub fn search_memories(
+        &self,
+        request: &SearchMemoriesRequest,
+    ) -> anyhow::Result<(SearchResultIds, PageToken)> {
+        let filter = request.filter.as_ref().context("SearchMemoriesRequest.filter is required")?;
+
+        // Build the Icing search spec from the filter tree.
+        let search_spec = self.build_search_memories_filter(filter, SCHEMA_NAME)?;
+
+        // Default scoring: sort by created_timestamp descending.
+        let scoring_spec = icing::ScoringSpecProto {
+            rank_by: Some(
+                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
+            ),
+            ..Default::default()
+        };
+
+        let page_size = request.page_size;
+        let page_token = PageToken::try_from(request.page_token.clone())
+            .map_err(|e| anyhow::anyhow!("invalid page token: {}", e))?;
+
+        let projection = icing::TypePropertyMask {
+            schema_type: Some(SCHEMA_NAME.to_string()),
+            paths: vec![BLOB_ID_NAME.to_string()],
+        };
+
+        let (search_result, next_page_token) =
+            self.execute_search(&search_spec, &scoring_spec, page_size, page_token, projection)?;
+
+        let mut search_result_ids = SearchResultIds::default();
+        for result in &search_result.results {
+            if let Some(blob_id) = Self::extract_blob_id_from_doc(result) {
+                let score = result.score.map(|s| s as f32).unwrap_or(0.0);
+                search_result_ids.items.push(SearchResultId {
+                    blob_id,
+                    score,
+                    view_ids: Vec::new(),
+                    view_scores: Vec::new(),
+                });
+            }
+        }
+
+        Ok((search_result_ids, next_page_token))
+    }
+
+    /// Recursively translate a `SearchMemoriesFilter` into an Icing
+    /// `SearchSpecProto`.
+    fn build_search_memories_filter(
+        &self,
+        filter: &SearchMemoriesFilter,
+        schema_name: &str,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
+        use search_memories_filter::Value;
+        let value = filter.value.as_ref().context("SearchMemoriesFilter.value is required")?;
+        match value {
+            Value::IdFilter(f) => {
+                self.build_string_filter_spec(MEMORY_ID_NAME, &f.value, schema_name)
+            }
+            Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value, schema_name),
+            Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value, schema_name),
+            _ => bail!("unsupported filter type in SearchMemoriesFilter"),
+        }
+    }
+
+    /// Build an Icing `SearchSpecProto` for an exact-match string property
+    /// filter.
+    fn build_string_filter_spec(
+        &self,
+        field_name: &str,
+        value: &str,
+        schema_name: &str,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
+        let query_string = format!("({field_name}:{value})");
+        let mut search_spec = icing::SearchSpecProto {
+            query: Some(query_string),
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            ..Default::default()
+        };
+        if !schema_name.is_empty() {
+            search_spec.schema_type_filters.push(schema_name.to_string());
+        }
+        Ok(search_spec)
     }
 
     /// Search based on the document embedding.

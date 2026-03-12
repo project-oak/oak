@@ -838,3 +838,207 @@ fn test_search_by_tag_sorts_by_created_timestamp() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+// =============================================================================
+// Search API v2: search_memories() tests
+// =============================================================================
+
+#[gtest]
+fn test_search_memories_v2_tag_filter() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-filter-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["alpha".to_string(), "beta".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["beta".to_string(), "gamma".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let memory3 =
+        Memory { id: "m3".to_string(), tags: vec!["gamma".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // Filter by tag "beta" — should match m1 and m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
+                    StringFilter { value: "beta".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_id_filter() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-id-filter-test"))?;
+
+    let memory1 = Memory { id: "m1".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory { id: "m2".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter by id "m2" — should match only m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::IdFilter(
+                    StringFilter { value: "m2".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_name_filter() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-name-filter-test"))?;
+
+    let memory1 =
+        Memory { id: "m1".to_string(), name: "grocery_list".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 =
+        Memory { id: "m2".to_string(), name: "todo_list".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter by name "grocery_list" — should match only m1.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::NameFilter(
+                    StringFilter { value: "grocery_list".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}
+#[gtest]
+fn test_search_memories_v2_tag_filter_with_missing_tags() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-missing-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["alpha".to_string(), "beta".to_string()],
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 =
+        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // m3: no tags at all.
+    let memory3 = Memory { id: "m3".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // Filter by tag "beta" — should match m1 and m2, but NOT m3 (no tags).
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
+                    StringFilter { value: "beta".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
+
+    // Filter by tag "alpha" — should match only m1.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
+                    StringFilter { value: "alpha".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
+
+    // Filter by a tag that nobody has — should return empty results.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
+                    StringFilter { value: "nonexistent".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    assert_that!(results.items, is_empty());
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-name-missing-test"))?;
+
+    let memory1 =
+        Memory { id: "m1".to_string(), name: "grocery_list".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // m2: no name set (empty string default).
+    let memory2 = Memory { id: "m2".to_string(), ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter by name "grocery_list" — should match only m1, not m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::NameFilter(
+                    StringFilter { value: "grocery_list".to_string() },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
+
+    Ok(())
+}

@@ -452,6 +452,21 @@ impl SealedMemorySessionHandler {
         Ok(SearchMemoryResponse { results, next_page_token: next_page_token.into() })
     }
 
+    pub async fn search_memories_handler(
+        &self,
+        request: SearchMemoriesRequest,
+    ) -> tonic::Result<SearchMemoriesResponse> {
+        let mut mutex_guard = self.session_context().await;
+        let database =
+            &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
+
+        let (memories, next_page_token) =
+            database.search_memories(request).await.into_internal_error("searching memories")?;
+        let results =
+            memories.into_iter().map(|m| SearchMemoriesResultItem { memory: Some(m) }).collect();
+        Ok(SearchMemoriesResponse { results, next_page_token: next_page_token.into() })
+    }
+
     pub async fn delete_memory_handler(
         &self,
         request: DeleteMemoryRequest,
@@ -524,8 +539,8 @@ impl SealedMemorySessionHandler {
             sealed_memory_request::Request::GetMemoriesByIdRequest(request) => {
                 self.get_memories_by_id_handler(request).await?.into_response()
             }
-            sealed_memory_request::Request::SearchMemoriesRequest(_request) => {
-                return Err(tonic::Status::unimplemented("SearchMemories is not yet implemented"));
+            sealed_memory_request::Request::SearchMemoriesRequest(request) => {
+                self.search_memories_handler(request).await?.into_response()
             }
         };
         let elapsed_time = start_time.elapsed().as_millis() as u64;
