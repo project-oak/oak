@@ -1313,3 +1313,238 @@ fn test_search_memories_v2_event_timestamp_eq_with_missing() -> anyhow::Result<(
     assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_and_filter() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["alpha".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["alpha".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let memory3 = Memory {
+        id: "m3".to_string(),
+        tags: vec!["beta".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // Filter: tag == "alpha" AND created_timestamp >= 200 — should match m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::AndOperator(SearchMemoriesFilters {
+                filters: vec![
+                    SearchMemoriesFilter {
+                        value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
+                    },
+                    SearchMemoriesFilter {
+                        value: Some(Value::CreatedTimestampFilter(TimeFilter {
+                            comparison: ComparisonType::Gte as i32,
+                            value: Some(Timestamp { seconds: 200, nanos: 0 }),
+                        })),
+                    },
+                ],
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_or_filter() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-or-filter-test"))?;
+
+    let memory1 =
+        Memory { id: "m1".to_string(), tags: vec!["alpha".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 =
+        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let memory3 =
+        Memory { id: "m3".to_string(), tags: vec!["gamma".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // Filter: tag == "alpha" OR tag == "gamma" — should match m1 and m3.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::OrOperator(SearchMemoriesFilters {
+                filters: vec![
+                    SearchMemoriesFilter {
+                        value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
+                    },
+                    SearchMemoriesFilter {
+                        value: Some(Value::TagsFilter(StringFilter { value: "gamma".to_string() })),
+                    },
+                ],
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_not_filter() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-not-filter-test"))?;
+
+    let memory1 =
+        Memory { id: "m1".to_string(), tags: vec!["alpha".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 =
+        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter: NOT tag == "alpha" — should match only m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::NotOperator(Box::new(SearchMemoriesFilter {
+                value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
+            }))),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+
+    Ok(())
+}
+#[gtest]
+fn test_search_memories_v2_nested_composite_filter() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-nested-composite"))?;
+
+    // m1: tag "alpha", created at t=100
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["alpha".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    // m2: tag "alpha", created at t=200
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["alpha".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // m3: tag "beta", created at t=300
+    let memory3 = Memory {
+        id: "m3".to_string(),
+        tags: vec!["beta".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // m4: tag "gamma", created at t=400
+    let memory4 = Memory {
+        id: "m4".to_string(),
+        tags: vec!["gamma".to_string()],
+        created_timestamp: Some(Timestamp { seconds: 400, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory4, "blob4".to_string())?;
+
+    // Nested: (tag="alpha" AND created_timestamp >= 150) OR tag="beta"
+    // Should match m2 (alpha, t=200>=150) and m3 (beta). NOT m1 (alpha, t=100<150),
+    // NOT m4 (gamma).
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::OrOperator(SearchMemoriesFilters {
+                filters: vec![
+                    SearchMemoriesFilter {
+                        value: Some(Value::AndOperator(SearchMemoriesFilters {
+                            filters: vec![
+                                SearchMemoriesFilter {
+                                    value: Some(Value::TagsFilter(StringFilter {
+                                        value: "alpha".to_string(),
+                                    })),
+                                },
+                                SearchMemoriesFilter {
+                                    value: Some(Value::CreatedTimestampFilter(TimeFilter {
+                                        value: Some(Timestamp { seconds: 150, nanos: 0 }),
+                                        comparison: ComparisonType::Gte as i32,
+                                    })),
+                                },
+                            ],
+                        })),
+                    },
+                    SearchMemoriesFilter {
+                        value: Some(Value::TagsFilter(StringFilter { value: "beta".to_string() })),
+                    },
+                ],
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob2"), eq("blob3")]);
+
+    // Nested: NOT (tag="alpha" OR tag="beta")
+    // Should match m4 (gamma) only. NOT m1, m2 (alpha), NOT m3 (beta).
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::NotOperator(Box::new(SearchMemoriesFilter {
+                value: Some(Value::OrOperator(SearchMemoriesFilters {
+                    filters: vec![
+                        SearchMemoriesFilter {
+                            value: Some(Value::TagsFilter(StringFilter {
+                                value: "alpha".to_string(),
+                            })),
+                        },
+                        SearchMemoriesFilter {
+                            value: Some(Value::TagsFilter(StringFilter {
+                                value: "beta".to_string(),
+                            })),
+                        },
+                    ],
+                })),
+            }))),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq("blob4")]);
+
+    Ok(())
+}

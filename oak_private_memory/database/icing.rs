@@ -1376,8 +1376,63 @@ impl IcingMetaDatabase {
             Value::ExpirationTimestampFilter(f) => {
                 self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f, schema_name)
             }
+            Value::AndOperator(filters) => {
+                self.build_composite_filter(&filters.filters, "AND", schema_name)
+            }
+            Value::OrOperator(filters) => {
+                self.build_composite_filter(&filters.filters, "OR", schema_name)
+            }
+            Value::NotOperator(inner) => {
+                let mut child = self.build_search_memories_filter(inner, schema_name)?;
+                let child_query = child.query.take().context("child filter produced no query")?;
+                child.query = Some(format!("NOT ({child_query})"));
+                Ok(child)
+            }
             _ => bail!("unsupported filter type in SearchMemoriesFilter"),
         }
+    }
+
+    /// Combine multiple sub-filters with a boolean operator (AND / OR).
+    fn build_composite_filter(
+        &self,
+        filters: &[SearchMemoriesFilter],
+        operator: &str,
+        schema_name: &str,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
+        ensure!(!filters.is_empty(), "composite filter must have at least one child");
+        let mut sub_queries = Vec::new();
+        let mut merged_features: Vec<String> = Vec::new();
+        let mut merged_spec = icing::SearchSpecProto::default();
+
+        for child_filter in filters {
+            let child = self.build_search_memories_filter(child_filter, schema_name)?;
+            if let Some(q) = child.query {
+                sub_queries.push(q);
+            }
+            for feat in child.enabled_features {
+                if !merged_features.contains(&feat) {
+                    merged_features.push(feat);
+                }
+            }
+            // Inherit schema_type_filters and term_match_type from children.
+            if merged_spec.term_match_type.is_none() {
+                merged_spec.term_match_type = child.term_match_type;
+            }
+            for st in child.schema_type_filters {
+                if !merged_spec.schema_type_filters.contains(&st) {
+                    merged_spec.schema_type_filters.push(st);
+                }
+            }
+        }
+
+        let combined = sub_queries
+            .iter()
+            .map(|q| format!("({q})"))
+            .collect::<Vec<_>>()
+            .join(&format!(" {operator} "));
+        merged_spec.query = Some(combined);
+        merged_spec.enabled_features = merged_features;
+        Ok(merged_spec)
     }
 
     /// Build an Icing `SearchSpecProto` for an exact-match string property
