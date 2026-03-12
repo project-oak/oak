@@ -134,6 +134,13 @@ profile_wasm:
     bazel run oak_functions_service:benches -- --bench --profile-time=5
     google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
 
+oak_attestation_explain_wasm:
+    env --chdir=oak_attestation_explain_wasm \
+    wasm-pack build \
+    --target web  # "web" bundles for native web use \
+    --release \
+    --no-pack # prevents generating a package.json, we don't need it since we don't use a web bundler
+
 # --- KOKORO CI Entry Points ---
 
 kokoro_verify_buildconfigs:

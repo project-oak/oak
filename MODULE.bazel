@@ -1359,6 +1359,13 @@ crate.spec(
     version = "1.0.111",
 )
 crate.spec(
+    default_features = True,
+    features = [],
+    package = "yaml_serde",
+    repositories = ALL_STD,
+    version = "0.10.4",
+)
+crate.spec(
     default_features = False,
     features = [],
     package = "sha2",
