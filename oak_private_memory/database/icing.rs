@@ -1367,6 +1367,15 @@ impl IcingMetaDatabase {
             }
             Value::NameFilter(f) => self.build_string_filter_spec(NAME_NAME, &f.value, schema_name),
             Value::TagsFilter(f) => self.build_string_filter_spec(TAG_NAME, &f.value, schema_name),
+            Value::CreatedTimestampFilter(f) => {
+                self.build_time_filter_spec(CREATED_TIMESTAMP_NAME, f, schema_name)
+            }
+            Value::EventTimestampFilter(f) => {
+                self.build_time_filter_spec(EVENT_TIMESTAMP_NAME, f, schema_name)
+            }
+            Value::ExpirationTimestampFilter(f) => {
+                self.build_time_filter_spec(EXPIRATION_TIMESTAMP_NAME, f, schema_name)
+            }
             _ => bail!("unsupported filter type in SearchMemoriesFilter"),
         }
     }
@@ -1380,6 +1389,38 @@ impl IcingMetaDatabase {
         schema_name: &str,
     ) -> anyhow::Result<icing::SearchSpecProto> {
         let query_string = format!("({field_name}:{value})");
+        let mut search_spec = icing::SearchSpecProto {
+            query: Some(query_string),
+            enabled_features: vec![
+                "NUMERIC_SEARCH".to_string(),
+                icing::LIST_FILTER_QUERY_LANGUAGE_FEATURE.to_string(),
+            ],
+            term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
+            ..Default::default()
+        };
+        if !schema_name.is_empty() {
+            search_spec.schema_type_filters.push(schema_name.to_string());
+        }
+        Ok(search_spec)
+    }
+
+    /// Build an Icing `SearchSpecProto` for a timestamp comparison filter.
+    fn build_time_filter_spec(
+        &self,
+        field_name: &str,
+        filter: &TimeFilter,
+        schema_name: &str,
+    ) -> anyhow::Result<icing::SearchSpecProto> {
+        let timestamp = filter.value.as_ref().context("TimeFilter.value is required")?;
+        let value = timestamp_to_i64(timestamp);
+        let op = match filter.comparison() {
+            ComparisonType::Unspecified | ComparisonType::Eq => "==",
+            ComparisonType::Gte => ">=",
+            ComparisonType::Lte => "<=",
+            ComparisonType::Lt => "<",
+            ComparisonType::Gt => ">",
+        };
+        let query_string = format!("({field_name} {op} {value})");
         let mut search_spec = icing::SearchSpecProto {
             query: Some(query_string),
             enabled_features: vec![

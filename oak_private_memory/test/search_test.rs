@@ -1042,3 +1042,274 @@ fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()>
 
     Ok(())
 }
+
+#[gtest]
+fn test_search_memories_v2_timestamp_gte() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-gte-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    let memory3 = Memory {
+        id: "m3".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // Filter: created_timestamp >= 200 — should match m2 and m3.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
+                    TimeFilter {
+                        comparison: ComparisonType::Gte as i32,
+                        value: Some(Timestamp { seconds: 200, nanos: 0 }),
+                    },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob2"), eq(&"blob3")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_timestamp_lt() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-lt-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter: created_timestamp < 200 — should match only m1.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
+                    TimeFilter {
+                        comparison: ComparisonType::Lt as i32,
+                        value: Some(Timestamp { seconds: 200, nanos: 0 }),
+                    },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_timestamp_eq() -> anyhow::Result<()> {
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-eq-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // Filter: created_timestamp == 100 — should match only m1.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(
+                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
+                    TimeFilter {
+                        comparison: ComparisonType::Eq as i32,
+                        value: Some(Timestamp { seconds: 100, nanos: 0 }),
+                    },
+                ),
+            ),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
+
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_event_timestamp_gte_with_missing() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-gte-missing-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // m3: no event_timestamp — should NOT match any numeric comparison.
+    let memory3 =
+        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // event_timestamp >= 200 — should match only m2.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EventTimestampFilter(TimeFilter {
+                comparison: ComparisonType::Gte as i32,
+                value: Some(Timestamp { seconds: 200, nanos: 0 }),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob2")]);
+
+    // event_timestamp >= 0 — should match m1 and m2 (both have the field), NOT m3.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EventTimestampFilter(TimeFilter {
+                comparison: ComparisonType::Gte as i32,
+                value: Some(Timestamp { seconds: 0, nanos: 0 }),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_event_timestamp_lt_with_missing() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-lt-missing-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // m3: no event_timestamp
+    let memory3 =
+        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // event_timestamp < 200 — should match only m1. m3 (no field) is excluded.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EventTimestampFilter(TimeFilter {
+                comparison: ComparisonType::Lt as i32,
+                value: Some(Timestamp { seconds: 200, nanos: 0 }),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_event_timestamp_eq_with_missing() -> anyhow::Result<()> {
+    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
+    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-eq-missing-test"))?;
+
+    let memory1 = Memory {
+        id: "m1".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory1, "blob1".to_string())?;
+
+    let memory2 = Memory {
+        id: "m2".to_string(),
+        tags: vec!["common".to_string()],
+        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
+        ..Default::default()
+    };
+    icing_database.add_memory(&memory2, "blob2".to_string())?;
+
+    // m3: no event_timestamp
+    let memory3 =
+        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
+    icing_database.add_memory(&memory3, "blob3".to_string())?;
+
+    // event_timestamp == 100 — should match m1 and m2. m3 (no field) is excluded.
+    let request = SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter {
+            value: Some(Value::EventTimestampFilter(TimeFilter {
+                comparison: ComparisonType::Eq as i32,
+                value: Some(Timestamp { seconds: 100, nanos: 0 }),
+            })),
+        }),
+        page_size: 10,
+        ..Default::default()
+    };
+    let (results, _) = icing_database.search_memories(&request)?;
+    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
+    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    Ok(())
+}
