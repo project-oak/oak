@@ -116,6 +116,8 @@ mod ffi {
 
         fn set_description<'a>(&'a self, description: &[u8]) -> &'a PropertyConfigBuilder;
 
+        fn set_scorable_type(&self, scorable_type: i32) -> &PropertyConfigBuilder;
+
         fn build(&self) -> UniquePtr<CxxVector<u8>>;
     }
 

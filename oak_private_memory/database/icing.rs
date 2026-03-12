@@ -402,6 +402,9 @@ impl IcingMetaDatabase {
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
+                    )
+                    .set_scorable_type(
+                        icing::property_config_proto::scorable_type::Code::Enabled.into(),
                     ),
             )
             .add_property(
@@ -412,6 +415,9 @@ impl IcingMetaDatabase {
                     )
                     .set_cardinality(
                         icing::property_config_proto::cardinality::Code::Optional.into(),
+                    )
+                    .set_scorable_type(
+                        icing::property_config_proto::scorable_type::Code::Enabled.into(),
                     ),
             );
 
@@ -1316,15 +1322,10 @@ impl IcingMetaDatabase {
         // Build the Icing search spec from the filter tree.
         let search_spec = self.build_search_memories_filter(filter, SCHEMA_NAME)?;
 
-        // Default scoring: sort by created_timestamp descending.
-        let scoring_spec = icing::ScoringSpecProto {
-            rank_by: Some(
-                icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
-            ),
-            ..Default::default()
-        };
+        let scoring_spec = Self::build_search_memories_sort_mode(&request.sort)?;
 
         let page_size = request.page_size;
+
         let page_token = PageToken::try_from(request.page_token.clone())
             .map_err(|e| anyhow::anyhow!("invalid page token: {}", e))?;
 
@@ -1350,6 +1351,124 @@ impl IcingMetaDatabase {
         }
 
         Ok((search_result_ids, next_page_token))
+    }
+
+    /// Translate `SearchMemoriesSort` into an Icing `ScoringSpecProto`.
+    ///
+    /// All sort modes use a single Icing query with `AdvancedScoringExpression`
+    /// and `getScorableProperty()` to read int64 property values at scoring
+    /// time. Memories **with** the sorted field always receive a higher score
+    /// than memories without it, so missing-field items naturally sort last.
+    fn build_search_memories_sort_mode(
+        sorts: &[SearchMemoriesSort],
+    ) -> anyhow::Result<icing::ScoringSpecProto> {
+        use sealed_memory_rust_proto::oak::private_memory::search_memories_sort::Sort;
+
+        if sorts.is_empty() {
+            // Default: created_timestamp descending.
+            return Ok(icing::ScoringSpecProto {
+                rank_by: Some(
+                    icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp.into(),
+                ),
+                ..Default::default()
+            });
+        }
+
+        ensure!(sorts.len() == 1, "Only one sort field is supported for now");
+        // Use only the first sort field (Icing supports a single ranking).
+        let sort = sorts[0].sort.as_ref().context("SearchMemoriesSort.sort is required")?;
+        match sort {
+            Sort::CreatedTimestampSort(ts) => {
+                if ts.order() == SortOrder::OrderAscending {
+                    Ok(icing::ScoringSpecProto {
+                        rank_by: Some(
+                            icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
+                        ),
+                        advanced_scoring_expression: Some(
+                            "-1 * this.creationTimestamp()".to_string(),
+                        ),
+                        ..Default::default()
+                    })
+                } else {
+                    Ok(icing::ScoringSpecProto {
+                        rank_by: Some(
+                            icing::scoring_spec_proto::ranking_strategy::Code::CreationTimestamp
+                                .into(),
+                        ),
+                        ..Default::default()
+                    })
+                }
+            }
+            Sort::EventTimestampSort(ts) => Ok(Self::build_scorable_property_sort(
+                SCHEMA_NAME,
+                EVENT_TIMESTAMP_NAME,
+                ts.order() == SortOrder::OrderAscending,
+            )),
+            Sort::ExpirationTimestampSort(ts) => Ok(Self::build_scorable_property_sort(
+                SCHEMA_NAME,
+                EXPIRATION_TIMESTAMP_NAME,
+                ts.order() == SortOrder::OrderAscending,
+            )),
+            Sort::EmbeddingSort(_) => {
+                bail!("embedding sort is not yet supported in this CL")
+            }
+        }
+    }
+
+    /// Build a `ScoringSpecProto` that sorts by a scorable int64 property.
+    ///
+    /// Uses `getScorableProperty(schema, property)` as the advanced scoring
+    /// expression. Memories without the property receive a sentinel score
+    /// via `maxOrDefault` so they always rank last.
+    ///
+    /// - Descending (default): higher property value → higher score → ranked
+    ///   first. Missing items get score -1 (via `maxOrDefault`), ranked last.
+    /// - Ascending: lower values come first via `order_by = ASC`. Missing items
+    ///   get score 1e18 (via `maxOrDefault`), ranked last.
+    fn build_scorable_property_sort(
+        schema_name: &str,
+        property_name: &str,
+        ascending: bool,
+    ) -> icing::ScoringSpecProto {
+        // `getScorableProperty` returns an empty list when the property is
+        // absent, so `maxOrDefault(list, default)` lets us assign a sentinel
+        // score that pushes missing items to the end regardless of direction.
+        //
+        // `this.creationTimestamp() / 1e18` is a tiebreaker that ensures
+        // deterministic ordering when multiple documents share the same
+        // property value (or are all missing it). Dividing by 1e18 keeps
+        // the tiebreaker magnitude negligible compared to timestamp values
+        // (~1e9–1e12), so it only affects ordering among ties.
+        let (default_val, order_by) = if ascending {
+            // Missing → huge value → sorted last in ASC.
+            ("1e18", Some(icing::scoring_spec_proto::order::Code::Asc.into()))
+        } else {
+            // Missing → -1 → sorted last in DESC.
+            ("-1", None)
+        };
+        let scorable_property =
+            format!("getScorableProperty(\"{schema_name}\", \"{property_name}\")");
+        let primary_score = format!("maxOrDefault({scorable_property}, {default_val})");
+        let tiebreaker = "this.creationTimestamp() / 1e18";
+        let expression = format!("{primary_score} + {tiebreaker}");
+        icing::ScoringSpecProto {
+            rank_by: Some(
+                icing::scoring_spec_proto::ranking_strategy::Code::AdvancedScoringExpression.into(),
+            ),
+            advanced_scoring_expression: Some(expression),
+            order_by,
+            scoring_feature_types_enabled: vec![
+                icing::ScoringFeatureType::ScorablePropertyRanking.into(),
+            ],
+            // Map the schema name used in getScorableProperty() to the actual
+            // Icing schema type. Required for the scoring visitor to resolve
+            // the schema type reference.
+            schema_type_alias_map_protos: vec![icing::SchemaTypeAliasMapProto {
+                alias_schema_type: Some(schema_name.to_string()),
+                schema_types: vec![schema_name.to_string()],
+            }],
+            ..Default::default()
+        }
     }
 
     /// Recursively translate a `SearchMemoriesFilter` into an Icing

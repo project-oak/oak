@@ -1548,3 +1548,253 @@ fn test_search_memories_v2_nested_composite_filter() -> anyhow::Result<()> {
 
     Ok(())
 }
+use sealed_memory_rust_proto::oak::private_memory::{
+    search_memories_filter::Value as FilterValue, search_memories_sort::Sort as SortValue,
+};
+
+/// Build a `SearchMemoriesRequest` with both a filter and a sort spec.
+fn sorted_request(value: FilterValue, sort: SortValue) -> SearchMemoriesRequest {
+    SearchMemoriesRequest {
+        filter: Some(SearchMemoriesFilter { value: Some(value) }),
+        sort: vec![SearchMemoriesSort { sort: Some(sort) }],
+        page_size: 10,
+        ..Default::default()
+    }
+}
+
+/// Execute `search_memories` and return the blob IDs in result order.
+fn search_blob_ids(
+    db: &IcingMetaDatabase,
+    request: &SearchMemoriesRequest,
+) -> anyhow::Result<Vec<String>> {
+    let (results, _) = db.search_memories(request)?;
+    Ok(results.items.iter().map(|r| r.blob_id.clone()).collect())
+}
+
+fn ts(seconds: i64) -> Option<Timestamp> {
+    Some(Timestamp { seconds, nanos: 0 })
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_created_timestamp_descending() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-desc-test"))?;
+
+    for i in 0..5 {
+        db.add_memory(
+            &Memory {
+                id: format!("m{i}"),
+                tags: vec!["common".into()],
+                created_timestamp: ts(100 * (i as i64 + 1)),
+                ..Default::default()
+            },
+            format!("blob{i}"),
+        )?;
+    }
+
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::CreatedTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
+    );
+    // Latest first: blob4, blob3, blob2, blob1, blob0
+    assert_that!(
+        search_blob_ids(&db, &req)?,
+        elements_are![eq("blob4"), eq("blob3"), eq("blob2"), eq("blob1"), eq("blob0")]
+    );
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_created_timestamp_ascending() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-asc-test"))?;
+
+    for i in 0..5 {
+        db.add_memory(
+            &Memory {
+                id: format!("m{i}"),
+                tags: vec!["common".into()],
+                created_timestamp: ts(100 * (i as i64 + 1)),
+                ..Default::default()
+            },
+            format!("blob{i}"),
+        )?;
+    }
+
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::CreatedTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
+    );
+    // Oldest first: blob0, blob1, blob2, blob3, blob4
+    assert_that!(
+        search_blob_ids(&db, &req)?,
+        elements_are![eq("blob0"), eq("blob1"), eq("blob2"), eq("blob3"), eq("blob4")]
+    );
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_event_timestamp_descending() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-desc-test"))?;
+
+    // m0: event_timestamp = 500
+    db.add_memory(
+        &Memory {
+            id: "m0".into(),
+            tags: vec!["common".into()],
+            event_timestamp: ts(500),
+            ..Default::default()
+        },
+        "blob0".into(),
+    )?;
+    // m1: event_timestamp = 100
+    db.add_memory(
+        &Memory {
+            id: "m1".into(),
+            tags: vec!["common".into()],
+            event_timestamp: ts(100),
+            ..Default::default()
+        },
+        "blob1".into(),
+    )?;
+    // m2: no event_timestamp — propertyWeights returns 0
+    db.add_memory(
+        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
+        "blob2".into(),
+    )?;
+
+    // Sort by event_timestamp descending: m0 (500) > m1 (100) > m2 (0/missing)
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
+    );
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob0"), eq("blob1"), eq("blob2")]);
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_event_timestamp_ascending() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-asc-test"))?;
+
+    // m0: event_timestamp = 500
+    db.add_memory(
+        &Memory {
+            id: "m0".into(),
+            tags: vec!["common".into()],
+            event_timestamp: ts(500),
+            ..Default::default()
+        },
+        "blob0".into(),
+    )?;
+    // m1: event_timestamp = 100
+    db.add_memory(
+        &Memory {
+            id: "m1".into(),
+            tags: vec!["common".into()],
+            event_timestamp: ts(100),
+            ..Default::default()
+        },
+        "blob1".into(),
+    )?;
+    // m2: no event_timestamp — propertyWeights returns 0
+    db.add_memory(
+        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
+        "blob2".into(),
+    )?;
+
+    // Sort by event_timestamp ascending: m1 (100) < m0 (500), then m2 (missing)
+    // last.
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
+    );
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1"), eq("blob0"), eq("blob2")]);
+    Ok(())
+}
+
+#[gtest]
+fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-exp-desc-test"))?;
+
+    db.add_memory(
+        &Memory {
+            id: "m0".into(),
+            tags: vec!["common".into()],
+            expiration_timestamp: ts(1000),
+            ..Default::default()
+        },
+        "blob0".into(),
+    )?;
+    db.add_memory(
+        &Memory {
+            id: "m1".into(),
+            tags: vec!["common".into()],
+            expiration_timestamp: ts(300),
+            ..Default::default()
+        },
+        "blob1".into(),
+    )?;
+    // m2: no expiration_timestamp
+    db.add_memory(
+        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
+        "blob2".into(),
+    )?;
+
+    // Sort by expiration_timestamp descending: m0 (1000) > m1 (300) > m2
+    // (0/missing)
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::ExpirationTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
+    );
+    assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob0"), eq("blob1"), eq("blob2")]);
+    Ok(())
+}
+
+/// Verifies that documents with the same event_timestamp are returned in a
+/// deterministic order (by creation timestamp, i.e. insertion order).
+#[gtest]
+fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-tiebreak-test"))?;
+
+    // Insert 5 memories all with the same event_timestamp.
+    // The tiebreaker (creationTimestamp / 1e18) should produce a deterministic
+    // order based on insertion order.
+    for i in 0..5 {
+        db.add_memory(
+            &Memory {
+                id: format!("m{i}"),
+                tags: vec!["common".into()],
+                event_timestamp: ts(1000),
+                ..Default::default()
+            },
+            format!("blob{i}"),
+        )?;
+    }
+
+    // Descending: all have the same primary score (1000). Tiebreaker is
+    // creationTimestamp DESC, so newer (later-inserted) items come first.
+    let req = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
+    );
+    let result = search_blob_ids(&db, &req)?;
+    assert_that!(
+        result,
+        elements_are![eq("blob4"), eq("blob3"), eq("blob2"), eq("blob1"), eq("blob0")]
+    );
+
+    // Run the same query again to confirm the order is stable.
+    let result2 = search_blob_ids(&db, &req)?;
+    assert_that!(result, eq(&result2));
+
+    // Ascending: same primary score (1000). Tiebreaker is creationTimestamp ASC,
+    // so older (earlier-inserted) items come first.
+    let req_asc = sorted_request(
+        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
+    );
+    let result_asc = search_blob_ids(&db, &req_asc)?;
+    assert_that!(
+        result_asc,
+        elements_are![eq("blob0"), eq("blob1"), eq("blob2"), eq("blob3"), eq("blob4")]
+    );
+    Ok(())
+}

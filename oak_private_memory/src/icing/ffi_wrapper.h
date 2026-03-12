@@ -303,6 +303,13 @@ class PropertyConfigBuilder {
     return *this;
   }
 
+  const PropertyConfigBuilder& set_scorable_type(int32_t scorable_type) const {
+    inner_->SetScorableType(
+        static_cast<icing::lib::PropertyConfigProto::ScorableType::Code>(
+            scorable_type));
+    return *this;
+  }
+
   std::unique_ptr<std::vector<uint8_t>> build() const {
     auto built_proto = inner_->Build();
     return ProtoToVec(built_proto);
