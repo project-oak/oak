@@ -260,6 +260,7 @@ impl PrivateMemoryClient {
         expect_response_type!(response, sealed_memory_response::Response::AddMemoryResponse)
     }
 
+    #[allow(deprecated)]
     pub async fn get_memories(
         &mut self,
         tag: &str,

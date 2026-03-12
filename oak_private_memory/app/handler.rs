@@ -502,6 +502,7 @@ impl SealedMemorySessionHandler {
             sealed_memory_request::Request::AddMemoryRequest(request) => {
                 self.add_memory_handler(request).await?.into_response()
             }
+            #[allow(deprecated)]
             sealed_memory_request::Request::GetMemoriesRequest(request) => {
                 self.get_memories_handler(request).await?.into_response()
             }
@@ -522,6 +523,9 @@ impl SealedMemorySessionHandler {
             }
             sealed_memory_request::Request::GetMemoriesByIdRequest(request) => {
                 self.get_memories_by_id_handler(request).await?.into_response()
+            }
+            sealed_memory_request::Request::SearchMemoriesRequest(_request) => {
+                return Err(tonic::Status::unimplemented("SearchMemories is not yet implemented"));
             }
         };
         let elapsed_time = start_time.elapsed().as_millis() as u64;

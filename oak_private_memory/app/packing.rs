@@ -34,6 +34,7 @@ pub trait ResponsePacking {
 macro_rules! impl_packing {
     (Request => $name:ident) => {
         impl RequestUnpacking for $name {
+            #[allow(deprecated)]
             fn from_request(x: SealedMemoryRequest) -> Option<Self> {
                 match x.request {
                     Some(sealed_memory_request::Request::$name(request)) => Some(request),
@@ -41,6 +42,7 @@ macro_rules! impl_packing {
                 }
             }
 
+            #[allow(deprecated)]
             fn into_request(self) -> SealedMemoryRequest {
                 SealedMemoryRequest {
                     request: Some(sealed_memory_request::Request::$name(self)),
@@ -52,6 +54,7 @@ macro_rules! impl_packing {
 
     (Response => $name:ident) => {
         impl ResponsePacking for $name {
+            #[allow(deprecated)]
             fn from_response(x: SealedMemoryResponse) -> Option<Self> {
                 match x.response {
                     Some(sealed_memory_response::Response::$name(response)) => Some(response),
@@ -59,6 +62,7 @@ macro_rules! impl_packing {
                 }
             }
 
+            #[allow(deprecated)]
             fn into_response(self) -> SealedMemoryResponse {
                 SealedMemoryResponse {
                     response: Some(sealed_memory_response::Response::$name(self)),
@@ -129,3 +133,5 @@ impl_packing!(Response => DeleteMemoryResponse);
 impl_packing!(Response => UserRegistrationResponse);
 impl_packing!(Request => GetMemoriesByIdRequest);
 impl_packing!(Response => GetMemoriesByIdResponse);
+impl_packing!(Request => SearchMemoriesRequest);
+impl_packing!(Response => SearchMemoriesResponse);

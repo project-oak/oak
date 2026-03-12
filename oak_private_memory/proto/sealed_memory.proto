@@ -139,6 +139,7 @@ enum MemoryField {
   EXPIRATION_TIMESTAMP = 7;  // The 'expiration_timestamp' field.
   NAME = 8;                  // The 'name' field.
   VIEWS = 9;                 // The 'views' field.
+  reserved 3;
 }
 
 message AddMemoryRequest {
@@ -336,6 +337,156 @@ message ResultMask {
   repeated MemoryField include_fields = 2;
 }
 
+// Search API v2. Examples:
+// Get all memories with a specific tag.
+// {
+//   filter {
+//     tags_filter {
+//       value: "tag1"
+//     }
+//   }
+// }
+// Get all memories that match either a name or a filter, most recent first.
+// {
+//   filter {
+//     or_operator {
+//       filters {
+//         name_filter {
+//           value: "name1"
+//         }
+//       }
+//       filters {
+//         tags_filter {
+//           value: "tag1"
+//         }
+//       }
+//     }
+//   }
+//   sort {
+//     created_timestamp_sort {
+//       order: ORDER_DESCENDING
+//     }
+//   }
+// }
+message SearchMemoriesRequest {
+  SearchMemoriesFilter filter = 1;
+
+  // Sort is repeated for tiebreaking.
+  // Memories with identical sort order will be returned in arbitrary (but
+  // consistent) order.
+  repeated SearchMemoriesSort sort = 2;
+
+  // If non-zero, limit responses to this number of memories total (across all
+  // pages). Fewer memories than this may be returned.
+  int32 limit = 3;
+
+  // For pagination, set page_size and provide the page token from the response
+  // on subsequent requests (no token will be present once no more results are
+  // available). Other fields must be identical across calls.
+  int32 page_size = 4;
+  string page_token = 5;
+
+  // If result_mask is set, only fields specified by it will be returned.
+  ResultMask result_mask = 6;
+}
+
+message SearchMemoriesFilter {
+  oneof value {
+    SearchMemoriesFilters and_operator = 1;
+    SearchMemoriesFilters or_operator = 2;
+    SearchMemoriesFilter not_operator = 3;
+
+    StringFilter id_filter = 10;
+    StringFilter name_filter = 11;
+    StringFilter tags_filter = 12;  // Will match if ANY of the tags match.
+    TimeFilter created_timestamp_filter = 13;
+    TimeFilter event_timestamp_filter = 14;
+    TimeFilter expiration_timestamp_filter = 15;
+    EmbeddingFilter embedding_filter = 16;
+  }
+
+  reserved 4 to 9;  // In case we want to add more operators, e.g. nand.
+}
+
+message SearchMemoriesFilters {
+  repeated SearchMemoriesFilter filters = 1;
+}
+
+message StringFilter {
+  string value = 1;  // Exact match.
+}
+
+message TimeFilter {
+  ComparisonType comparison = 1;
+  google.protobuf.Timestamp value = 2;  // Reference value for comparison.
+}
+
+message EmbeddingFilter {
+  Embedding embedding = 1;  // The embedding being compared to.
+  float minimum_score = 2;  // Similarity is calculated using dot product.
+  // If set, only embeddings for this type of LLMView will be considered.
+  string view_type = 3;
+}
+
+enum ComparisonType {
+  COMPARISON_TYPE_UNSPECIFIED = 0;  // EQ will be used.
+  COMPARISON_TYPE_EQ = 1;
+  COMPARISON_TYPE_GTE = 2;
+  COMPARISON_TYPE_LTE = 3;
+  COMPARISON_TYPE_LT = 4;
+  COMPARISON_TYPE_GT = 5;
+}
+
+message SearchMemoriesSort {
+  oneof sort {
+    // Memories that have no scores (e.g. b/c there is no timestamp or
+    // embedding) will be sorted at the end.
+    TimeSort created_timestamp_sort = 1;
+    TimeSort event_timestamp_sort = 2;
+    TimeSort expiration_timestamp_sort = 3;
+    EmbeddingSort embedding_sort = 4;
+  }
+}
+
+message TimeSort {
+  SortOrder order = 1;
+}
+
+message EmbeddingSort {
+  SortOrder order = 1;
+  Embedding embedding = 2;  // The embedding being compared to.
+  // If set, only embeddings for this type of LLMView will be considered.
+  string view_type = 3;
+}
+
+enum SortOrder {
+  // DESCENDING order will be used by default.
+  ORDER_UNSPECIFIED = 0;
+
+  // Largest value first.
+  // For timestamp sort, this means latest memory will be first.
+  // For embedding sort, this means the most similar memory will be first.
+  ORDER_DESCENDING = 1;
+
+  // Smallest value first.
+  ORDER_ASCENDING = 2;
+}
+
+message SearchMemoriesResponse {
+  // Responses (sorted according to requested sorting, if any).
+  repeated SearchMemoriesResultItem results = 1;
+
+  // A token to retrieve the next page of results.
+  // If this field is omitted, there are no more results.
+  string next_page_token = 2;
+}
+
+message SearchMemoriesResultItem {
+  Memory memory = 1;
+
+  // Sorting and scoring information to be added in the future, pending design.
+}
+
 message SearchMemoryRequest {
   SearchMemoryQuery query = 1;
   // The maximum number of memories to return. The service may return fewer than
@@ -428,19 +579,29 @@ message DeleteMemoryResponse {
 
 message SealedMemoryRequest {
   oneof request {
+    KeySyncRequest key_sync_request = 6;
+    UserRegistrationRequest user_registration_request = 8;
+
     AddMemoryRequest add_memory_request = 1;
-    GetMemoriesRequest get_memories_request = 2;
-    ResetMemoryRequest reset_memory_request = 3;
-    // Reserved 4 so the request and response have the same field numbers.
+    DeleteMemoryRequest delete_memory_request = 9;
+
     GetMemoryByIdRequest get_memory_by_id_request = 5;
+    GetMemoriesByIdRequest get_memories_by_id_request = 10;
     GetMemoryByNameRequest get_memory_by_name_request = 11;
 
-    KeySyncRequest key_sync_request = 6;
+    SearchMemoriesRequest search_memories_request = 12;
+    // Note: to be deprecated once SearchMemoriesRequest is implemented.
     SearchMemoryRequest search_memory_request = 7;
-    UserRegistrationRequest user_registration_request = 8;
-    DeleteMemoryRequest delete_memory_request = 9;
-    GetMemoriesByIdRequest get_memories_by_id_request = 10;
+
+    // Caution: this deletes all of the user's memories, across all products.
+    ResetMemoryRequest reset_memory_request = 3;
+
+    // Use SearchMemoryRequest.
+    GetMemoriesRequest get_memories_request = 2 [deprecated = true];
   }
+
+  // Reserved so that request and response have the same field order.
+  reserved 4;
 
   // Optional unique identifier for this request within the session.
   // It is set by the clients.
@@ -449,18 +610,26 @@ message SealedMemoryRequest {
 
 message SealedMemoryResponse {
   oneof response {
+    KeySyncResponse key_sync_response = 6;
+    UserRegistrationResponse user_registration_response = 8;
+
     AddMemoryResponse add_memory_response = 1;
-    GetMemoriesResponse get_memories_response = 2;
-    ResetMemoryResponse reset_memory_response = 3;
-    InvalidRequestResponse invalid_request_response = 4;
+    DeleteMemoryResponse delete_memory_response = 9;
+
     GetMemoryByIdResponse get_memory_by_id_response = 5;
+    GetMemoriesByIdResponse get_memories_by_id_response = 10;
     GetMemoryByNameResponse get_memory_by_name_response = 11;
 
-    KeySyncResponse key_sync_response = 6;
+    ResetMemoryResponse reset_memory_response = 3;
+
+    SearchMemoriesResponse search_memories_response = 12;
+    // Note: to be deprecated once SearchMemoriesRequest is implemented.
     SearchMemoryResponse search_memory_response = 7;
-    UserRegistrationResponse user_registration_response = 8;
-    DeleteMemoryResponse delete_memory_response = 9;
-    GetMemoriesByIdResponse get_memories_by_id_response = 10;
+
+    GetMemoriesResponse get_memories_response = 2 [deprecated = true];
+
+    // See "error" field below instead.
+    InvalidRequestResponse invalid_request_response = 4 [deprecated = true];
 
     // A non-OK status result for a given request.
     //

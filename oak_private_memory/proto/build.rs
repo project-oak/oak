@@ -72,6 +72,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.LLMViewContent",
         "oak.private_memory.LLMViewValue",
         "oak.private_memory.ParamValue",
+        // Search API v2 types
+        "oak.private_memory.SearchMemoriesRequest",
+        "oak.private_memory.SearchMemoriesResponse",
+        "oak.private_memory.SearchMemoriesFilter",
+        "oak.private_memory.SearchMemoriesFilters",
+        "oak.private_memory.SearchMemoriesSort",
+        "oak.private_memory.SearchMemoriesResultItem",
+        "oak.private_memory.StringFilter",
+        "oak.private_memory.TimeFilter",
+        "oak.private_memory.EmbeddingFilter",
+        "oak.private_memory.TimeSort",
+        "oak.private_memory.EmbeddingSort",
     ];
 
     let oneof_field_names = [
@@ -83,6 +95,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "oak.private_memory.LLMView.view",
         "oak.private_memory.LLMViewValue.value",
         "oak.private_memory.ParamValue.value",
+        // Search API v2 oneof fields
+        "oak.private_memory.SearchMemoriesFilter.value",
+        "oak.private_memory.SearchMemoriesSort.sort",
     ];
     for message_type in annotate_types.iter().chain(oneof_field_names.iter()) {
         config.type_attribute(message_type, "#[derive(serde::Serialize, serde::Deserialize)]");
@@ -159,6 +174,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.field_attribute(
         "oak.private_memory.TextQuery.value.timestamp_val",
         "#[serde(with=\"crate::non_optional_timestamp_converter\")]",
+    );
+    config.field_attribute(
+        "oak.private_memory.TimeFilter.value",
+        "#[serde(with=\"crate::timestamp_converter\")]",
     );
     config.field_attribute(
         "google.rpc.Status.details",
