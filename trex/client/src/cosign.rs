@@ -22,12 +22,52 @@
 //! A `cosign` binary must be available on `$PATH` at runtime.
 
 use std::{
-    fs,
+    fmt, fs,
     process::{Command, Stdio},
+    str::FromStr,
 };
 
 use anyhow::{Context, Result, anyhow};
 use tempfile::NamedTempFile;
+
+/// Controls the Fulcio OIDC authentication flow used by cosign for keyless
+/// signing.
+///
+/// This mirrors cosign's `--fulcio-auth-flow` flag. See
+/// <https://docs.sigstore.dev/cosign/signing/overview/> for details.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FulcioAuthFlow {
+    /// Opens a browser for interactive OAuth login. Suitable for local
+    /// developer use where a human is present.
+    Browser,
+    /// Uses ambient OIDC credentials (e.g., GCP workload identity,
+    /// `GOOGLE_APPLICATION_CREDENTIALS`). Suitable for CI and test
+    /// environments where no browser is available.
+    Token,
+}
+
+impl fmt::Display for FulcioAuthFlow {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FulcioAuthFlow::Browser => write!(f, "browser"),
+            FulcioAuthFlow::Token => write!(f, "token"),
+        }
+    }
+}
+
+impl FromStr for FulcioAuthFlow {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "browser" => Ok(FulcioAuthFlow::Browser),
+            "token" => Ok(FulcioAuthFlow::Token),
+            other => {
+                Err(format!("invalid fulcio auth flow '{other}', expected 'browser' or 'token'"))
+            }
+        }
+    }
+}
 
 /// Verifies a blob and its signature bundle using the `cosign` CLI.
 pub fn cosign_verify_blob(
@@ -63,7 +103,20 @@ pub fn cosign_verify_blob(
 }
 
 /// Signs a blob using the `cosign` CLI.
-pub fn cosign_sign_blob(blob_bytes: &[u8]) -> Result<Vec<u8>> {
+///
+/// This function uses keyless signing via Sigstore's Fulcio CA. It requires
+/// OIDC credentials to be available in the environment (e.g., via GCP workload
+/// identity, `GOOGLE_APPLICATION_CREDENTIALS`, or `gcloud auth
+/// application-default login`).
+///
+/// # Arguments
+///
+/// * `blob_bytes` - The blob data to sign.
+/// * `fulcio_auth_flow` - Controls the OIDC authentication method.
+///   [`FulcioAuthFlow::Browser`] opens a browser for interactive OAuth;
+///   [`FulcioAuthFlow::Token`] uses only ambient credentials and fails fast if
+///   none are available (suitable for CI/test environments).
+pub fn cosign_sign_blob(blob_bytes: &[u8], fulcio_auth_flow: FulcioAuthFlow) -> Result<Vec<u8>> {
     let mut blob_file = NamedTempFile::new().context("creating temp blob file")?;
     std::io::Write::write_all(&mut blob_file, blob_bytes).context("writing blob to temp file")?;
 
@@ -74,10 +127,43 @@ pub fn cosign_sign_blob(blob_bytes: &[u8]) -> Result<Vec<u8>> {
         .arg("sign-blob")
         .arg("--yes")
         .arg(format!("--bundle={}", temp_bundle_path.display()))
-        .arg(blob_file.path())
-        .stderr(Stdio::inherit());
+        .arg(blob_file.path());
 
-    command.status().context("failed to execute cosign")?.exit_ok()?;
+    command.arg(format!("--fulcio-auth-flow={fulcio_auth_flow}"));
 
-    fs::read(&temp_bundle_path).context("failed to read generated bundle")
+    match fulcio_auth_flow {
+        FulcioAuthFlow::Browser => {
+            command.stderr(Stdio::inherit());
+        }
+        FulcioAuthFlow::Token => {
+            command
+                // Close stdin to prevent any interactive prompts from blocking.
+                .stdin(Stdio::null())
+                // Capture stderr so we can provide a better error message.
+                .stderr(Stdio::piped());
+        }
+    }
+
+    let output = command.output().context("failed to execute cosign")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Provide a helpful error message for the common case of missing credentials.
+        if fulcio_auth_flow == FulcioAuthFlow::Token
+            && (stderr.contains("no identity token") || stderr.contains("could not find"))
+        {
+            return Err(anyhow!(
+                "cosign signing failed: no OIDC credentials available.\n\
+                 To fix this, either:\n\
+                 - Run `gcloud auth application-default login` to authenticate, or\n\
+                 - Set GOOGLE_APPLICATION_CREDENTIALS to a service account key file, or\n\
+                 - Run in an environment with workload identity (e.g., GCP CI)\n\n\
+                 Original error: {}",
+                stderr
+            ));
+        }
+        return Err(anyhow!("cosign signing failed: {}", stderr));
+    }
+
+    fs::read(&temp_bundle_path).context("reading generated bundle")
 }

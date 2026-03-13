@@ -128,7 +128,8 @@ test_blob_endorse() {
     --claims-toml="${CLAIMS_FILE}" \
     --valid-for=24h \
     --issued-on=2025-01-01T00:00:00Z \
-    --repository="${repository_dir}"
+    --repository="${repository_dir}" \
+    --fulcio-auth-flow=token
 
   # Check for existence of subject, statement, and bundle blobs.
   # These paths are derived from dummy_blob.txt content and hardcoded statement/bundle.
@@ -157,7 +158,8 @@ test_blob_endorse_digest() {
     --claims-toml="${CLAIMS_FILE}" \
     --valid-for=24h \
     --issued-on=2025-01-01T00:00:00Z \
-    --repository="${repository_dir}"
+    --repository="${repository_dir}" \
+    --fulcio-auth-flow=token
 
   # Subject blob should NOT exist when endorsing by digest.
   assert_file_not_exists "${repository_dir}/blobs/sha2-256:8185390ae641622463edb22af96b5e957759f639b27998d47e28b223916adb06"

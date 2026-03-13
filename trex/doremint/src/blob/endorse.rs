@@ -23,7 +23,7 @@ use oak_digest::Digest;
 use oak_time::{Duration, Instant};
 use trex_client::{
     BlobWriter, EndorsementIndexWriter,
-    cosign::cosign_sign_blob,
+    cosign::{FulcioAuthFlow, cosign_sign_blob},
     fs::{FileSystemBlobStore, FileSystemEndorsementIndex},
 };
 
@@ -53,6 +53,15 @@ pub struct Endorse {
         default_value = ""
     )]
     pub issued_on: Instant,
+
+    #[arg(
+        long,
+        default_value = "browser",
+        help = "The Fulcio OIDC authentication flow to use for cosign keyless signing. \
+                'browser' opens a browser for interactive OAuth login; \
+                'token' uses only ambient credentials (suitable for CI/test environments)."
+    )]
+    pub fulcio_auth_flow: FulcioAuthFlow,
 }
 
 #[derive(Parser, Debug)]
@@ -121,7 +130,7 @@ impl Endorse {
             .context("updating subject-to-statement index")?;
 
         // Sign statement (Create Signature Bundle).
-        let bundle_data = cosign_sign_blob(&statement_data)?;
+        let bundle_data = cosign_sign_blob(&statement_data, self.fulcio_auth_flow)?;
 
         let bundle_hex_digest =
             blob_store.store_blob(&bundle_data).await.context("storing signature bundle")?;
