@@ -26,4 +26,4 @@ If you're interested, just open a pull request!
 
 ## Contributing Internally
 
-If you are a Googler, see: go/contributing-to-oak
+If you are a Googler, see: http://go/contributing-to-oak
