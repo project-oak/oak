@@ -50,5 +50,5 @@ xz --force "${TARGET_DIR}/${source}"
 file="${TARGET_DIR}/${source}.xz"
 hash=$(sha256sum "${file}" | cut -d " " -f 1)
 # TODO: b/399705292 - In WORKSPACE, read from oak-files not from oak-bins.
-gsutil cp "${file}" "gs://oak-bins/${static_dir}/${hash}.tar.xz"
-gsutil cp "${file}" "gs://oak-files/sha2-256:${hash}"
+gcloud storage cp "${file}" "gs://oak-bins/${static_dir}/${hash}.tar.xz"
+gcloud storage cp "${file}" "gs://oak-files/sha2-256:${hash}"
