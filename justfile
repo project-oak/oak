@@ -181,7 +181,7 @@ std-crates:
 
 [working-directory: 'codelab']
 test-codelab:
-    bazel build //enclave_app:enclave_app
+    bazel build //...
 
 
 bare-metal-crates:
