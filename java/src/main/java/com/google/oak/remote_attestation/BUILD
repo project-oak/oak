@@ -53,9 +53,9 @@ java_library(
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:verification_java_proto",
-        "@co_nstant_in_cbor",
         "@com_google_protobuf//java/lite",
         "@cose_lib",
+        "@maven//:co_nstant_in_cbor",
     ],
 )
 
@@ -68,9 +68,9 @@ android_library(
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:verification_java_proto",
-        "@co_nstant_in_cbor",
         "@com_google_protobuf//java/lite",
         "@cose_lib",
+        "@maven//:co_nstant_in_cbor",
     ],
 )
 

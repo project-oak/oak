@@ -33,10 +33,10 @@ android_library(
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
         "//proto/session:service_streaming_java_grpc",
-        "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

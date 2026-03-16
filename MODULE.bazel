@@ -242,7 +242,6 @@ maven.install(
         "org.bouncycastle:bcprov-jdk18on:1.77",
         "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2",
     ],
-    generate_compat_repositories = True,
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",
@@ -251,18 +250,6 @@ maven.install(
 use_repo(
     maven,
     "maven",
-    # Unfortunately, we need to list each compat respository name that we want as well.
-    "co_nstant_in_cbor",
-    "com_google_code_gson_gson",
-    "com_google_crypto_tink_tink",
-    "com_google_guava_guava",
-    "com_google_truth_truth",
-    "javax_inject_javax_inject",
-    "junit_junit",
-    "org_bouncycastle_bcprov_jdk18on",
-    "org_jetbrains_kotlin_kotlin_test",
-    "org_mockito_kotlin_mockito_kotlin",
-    "org_mockito_mockito_core",
 )
 
 # https://github.com/bazelbuild/rules_java

@@ -12,9 +12,9 @@ java_library(
         allow_empty = True,
     ),
     deps = [
-        "@co_nstant_in_cbor",
-        "@com_google_crypto_tink_tink",
-        "@com_google_guava_guava",
-        "@org_bouncycastle_bcprov_jdk18on",
+        "@maven//:co_nstant_in_cbor",
+        "@maven//:com_google_crypto_tink_tink",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_bouncycastle_bcprov_jdk18on",
     ]
 )

@@ -37,7 +37,7 @@ java_test(
         "@io_grpc_grpc_java//core:inprocess",
         "@io_grpc_grpc_java//stub",
         "@io_grpc_grpc_java//testing",
-        "@junit_junit",
-        "@org_mockito_mockito_core",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )

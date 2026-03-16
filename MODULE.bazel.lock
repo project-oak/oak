@@ -454,7 +454,7 @@
         "bzlTransitiveDigest": "IIspOFb2zj/H+Hcij9i5MHLFU9VOavZTaA+///L/76w=",
         "usagesDigest": "ffrD7viG/EiFoE/Z900CCeB39GTRKrpPHl2eqqG/Ynk=",
         "recordedFileInputs": {
-          "@@//MODULE.bazel": "40a10366c7cc17f98be79a2a8cdf864501dc3cbce7804e059504386df5911917"
+          "@@//MODULE.bazel": "fc749fed0426d2a9ac4ffb6d87a6c3d6d8dd273e9e1084cb4e1be0fcd4a57dec"
         },
         "recordedDirentsInputs": {},
         "envVariables": {},

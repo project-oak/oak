@@ -37,6 +37,6 @@ java_test(
         "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
-        "@junit_junit",
+        "@maven//:junit_junit",
     ],
 )
