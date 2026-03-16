@@ -13,7 +13,8 @@ destructive and can live alongside your existing git setup.
 jj git init --git-repo .
 ```
 
-Tell `jj` to track the remote `main` branch when syncing:
+Tell `jj` to track the remote `main` branch when syncing (replace `origin` with
+your remote name):
 
 ```console
 jj bookmark track main --remote=origin
@@ -76,6 +77,12 @@ evolve = ["rebase", "--destination=main"]
 
 ## First commit
 
+If you hadn't before, sync to head:
+
+```console
+jj sync
+```
+
 Start a new change, branching from `main`:
 
 ```console
@@ -110,14 +117,13 @@ $ jj log
 │  test change
 │ ○  vpqyvtyn tzn@google.com 2025-07-03 22:33:58 7dc69c3d
 ├─╯  (no description set)
-◆  xkxnqpup ivanpetrov@google.com 2025-06-25 10:48:20 main main@origin e097debc
-│  Connect the agent to a Rust MCP server
-~  (elided revisions)
-│ ○  vvqlovtx tiziano88@gmail.com 2025-06-24 22:48:47 tzn_mac_shell_gemini d1b0faaa
-├─╯  Mac shell with Gemini
-◆  rwyqsvyz tbinder@google.com 2025-06-17 08:44:55 ef4fc17b
-│  Return endorsement claims as part of EndorsementDetails.
-~
+...
+```
+
+Upload your change:
+
+```console
+jj cr
 ```
 
 ## Sending for review to Gerrit
