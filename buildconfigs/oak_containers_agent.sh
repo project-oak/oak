@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_containers_agent
+  github oak_containers_agent
 )
 
 export SUBJECT_PATHS=(

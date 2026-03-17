@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_client_android_app
+  github oak_client_android_app
 )
 
 export SUBJECT_PATHS=(

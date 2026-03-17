@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-stage1_cpio
+  github stage1_cpio
 )
 
 export SUBJECT_PATHS=(

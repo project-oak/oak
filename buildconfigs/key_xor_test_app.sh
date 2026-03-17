@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-key_xor_test_app
+  github key_xor_test_app
 )
 
 export SUBJECT_PATHS=(

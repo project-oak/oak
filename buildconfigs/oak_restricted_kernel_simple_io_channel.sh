@@ -13,7 +13,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_restricted_kernel_wrapper_simple_io_channel
+  github oak_restricted_kernel_wrapper_simple_io_channel
 )
 
 # The first element must be the Transparent Release binary (the main binary).

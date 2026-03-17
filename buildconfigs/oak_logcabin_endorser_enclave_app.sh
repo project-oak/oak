@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_logcabin_endorser_enclave_app
+  github oak_logcabin_endorser_enclave_app
 )
 
 export SUBJECT_PATHS=(

@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-private_memory_server
+  github private_memory_server
 )
 
 export SUBJECT_PATHS=(

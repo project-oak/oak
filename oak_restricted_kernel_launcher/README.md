@@ -19,11 +19,7 @@ will use the default support dependencies, so you only need to provide the
 target of an enclave app to run.
 
 ```shell
-
-# These aren't built automatically every time, to make iterating faster.
-just oak-restricted-kernel-launcher-artifacts
-
-just run-oak-restricted-kernel-launcher
+just run oak-restricted-kernel-launcher
 ```
 
-(See the just command for details)
+Required artifacts are built automatically. See `just run --list` for details.

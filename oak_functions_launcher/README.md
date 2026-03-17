@@ -29,15 +29,12 @@ To launch the Oak Functions binary with the default support binaries, use the
 `just` command, providing a wasm target to run and a lookup data file.
 
 ```shell
-# These aren't built automatically every time, to make iterating faster.
-just oak-functions-launcher-artifacts
-
-just run-oak-functions-launcher \
+just run oak-functions-launcher \
     oak_functions_launcher/key_value_lookup \
     oak_functions_launcher/mock_lookup_data
 ```
 
-(See the just command for details)
+Required artifacts are built automatically. See `just run --list` for details.
 
 Output:
 

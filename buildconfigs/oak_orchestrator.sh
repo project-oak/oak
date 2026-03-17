@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_orchestrator
+  github oak_orchestrator
 )
 
 export SUBJECT_PATHS=(

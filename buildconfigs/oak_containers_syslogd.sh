@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_containers_syslogd
+  github oak_containers_syslogd
 )
 
 export SUBJECT_PATHS=(

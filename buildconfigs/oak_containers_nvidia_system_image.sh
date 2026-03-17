@@ -10,7 +10,7 @@ export BUILD_COMMAND=(
   .#default
   --command
   just
-  github-oak_containers_nvidia_system_image
+  github oak_containers_nvidia_system_image
 )
 
 export SUBJECT_PATHS=(
