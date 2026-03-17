@@ -29,7 +29,8 @@ use strum::FromRepr;
 use crate::{
     Madt, ZeroPage,
     acpi_tables::{
-        DescriptionHeader, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
+        DescriptionHeader, Fadt, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic,
+        Rsdp,
     },
     fw_cfg::FwCfg,
     pci::PciWindows,
@@ -238,6 +239,12 @@ fn print_system_data_table_entries<'a>(
                     }
                 }
             }
+        }
+        // FADT is always guaranteed in the RSDT/XSDT as per ACPI spec:
+        // https://uefi.org/htmlspecs/ACPI_Spec_6_4_html/05_ACPI_Software_Programming_Model/ACPI_Software_Programming_Model.html#overview-of-the-system-description-table-architecture
+        if header.signature == *Fadt::SIGNATURE {
+            let fadt = Fadt::new(header)?;
+            log::info!("FADT: {:?}", fadt);
         }
     }
     Ok(())
