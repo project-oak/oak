@@ -15,13 +15,13 @@
 
 use std::io::Write;
 
-use env_logger::Env;
 use log::LevelFilter;
 pub use log::{debug, error, info, warn};
 
 pub fn init_logging(enable_logging: bool) {
     if enable_logging {
         env_logger::Builder::new()
+            .target(env_logger::Target::Stdout)
             .format(|buf, record| {
                 writeln!(
                     buf,
@@ -35,9 +35,11 @@ pub fn init_logging(enable_logging: bool) {
             .filter(None, LevelFilter::Info)
             .init();
     } else {
+        // Explicitly register a no-op logger so the global logger slot is
+        // occupied. Any later attempt to register another logger will error,
+        // surfacing accidental double-init bugs.
+        env_logger::Builder::new().filter_level(LevelFilter::Off).init();
         disable_icing_logging();
-        let env = Env::default().filter_or("RUST_LOG", "off");
-        env_logger::init_from_env(env);
     }
 }
 
