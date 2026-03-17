@@ -61,23 +61,6 @@ jj config set --repo gerrit.default-remote "origin"
 jj config set --repo gerrit.default-remote-branch "main"
 ```
 
-Append the following to your repo-specific config (since you most likely don't
-want to add gerrit-style change-id headers to all your other repos).
-
-```console
-jj config edit --repo
-```
-
-```toml
-[templates]
-commit_trailers = '''
-if(self.author().email() == "YOUR_EMAIL_HERE" &&
-  !trailers.contains_key("Change-Id"),
-  format_gerrit_change_id_trailer(self)
-)
-'''
-```
-
 Optionally, add the following aliases to your global config for convenience:
 
 ```console
@@ -136,6 +119,20 @@ $ jj log
 │  Return endorsement claims as part of EndorsementDetails.
 ~
 ```
+
+## Sending for review to Gerrit
+
+You can send your changes to Gerrit to be reviewed.
+
+```console
+# Upload @ if it has a description, otherwise uploads @-
+$ jj gerrit upload
+
+# Or explicitly specify a revision to upload.
+$ jj gerrit upload -r @-
+```
+
+Use the `--dry-run` flag to preview the changes that will be uploaded.
 
 ## Addressing comments
 
