@@ -35,9 +35,9 @@ fn load_test_key(path: &str) -> PrivateKeyDer<'static> {
 #[tokio::test]
 async fn test_handshake() -> Result<(), Box<dyn std::error::Error>> {
     let pair = TestSessionPair::create(None);
-    let mut server = AsyncServer::spawn(pair.server);
+    let mut server = AsyncServer::spawn(pair.server_ctx);
 
-    let mut client = do_handshake(&mut server, pair.client).await;
+    let mut client = do_handshake(&mut server, &pair.client_ctx).await;
 
     let msg = b"hello world";
     let encrypted = client.encrypt(msg)?;
@@ -78,9 +78,9 @@ async fn test_mtls_handshake() -> Result<(), Box<dyn std::error::Error>> {
 
     let pair =
         TestSessionPair::create(Some(TlsIdentity { key_der: client_key, cert_der: client_cert }));
-    let mut server = AsyncServer::spawn(pair.server);
+    let mut server = AsyncServer::spawn(pair.server_ctx);
 
-    let mut client_session = do_handshake(&mut server, pair.client).await;
+    let mut client_session = do_handshake(&mut server, &pair.client_ctx).await;
 
     let msg = b"mtls test";
     let encrypted = client_session.encrypt(msg)?;
@@ -93,9 +93,9 @@ async fn test_mtls_handshake() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn test_large_data_transfer() -> Result<(), Box<dyn std::error::Error>> {
     let pair = TestSessionPair::create(None);
-    let mut server = AsyncServer::spawn(pair.server);
+    let mut server = AsyncServer::spawn(pair.server_ctx);
 
-    let mut client = do_handshake(&mut server, pair.client).await;
+    let mut client = do_handshake(&mut server, &pair.client_ctx).await;
 
     // Larger than one TLS record
     let msg = vec![0x42u8; 100 * 1024]; // 100 KB
@@ -111,9 +111,9 @@ async fn test_large_data_transfer() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn test_decrypt_invalid() -> Result<(), Box<dyn std::error::Error>> {
     let pair = TestSessionPair::create(None);
-    let mut server = AsyncServer::spawn(pair.server);
+    let mut server = AsyncServer::spawn(pair.server_ctx);
 
-    let mut client = do_handshake(&mut server, pair.client).await;
+    let mut client = do_handshake(&mut server, &pair.client_ctx).await;
 
     let msg = b"hello";
     let encrypted = client.encrypt(msg)?;
@@ -131,8 +131,8 @@ async fn test_decrypt_invalid() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 struct TestSessionPair {
-    pub server: OakSessionTlsInitializer,
-    pub client: OakSessionTlsInitializer,
+    pub server_ctx: OakSessionTlsServerContext,
+    pub client_ctx: OakSessionTlsClientContext,
 }
 
 impl TestSessionPair {
@@ -153,10 +153,7 @@ impl TestSessionPair {
         })
         .expect("failed to create client context");
 
-        let server = server_ctx.new_session().expect("failed to create server session");
-        let client = client_ctx.new_session().expect("failed to create client session");
-
-        Self { server, client }
+        Self { server_ctx, client_ctx }
     }
 }
 
@@ -184,7 +181,7 @@ struct AsyncServer {
 }
 
 impl AsyncServer {
-    fn spawn(init: OakSessionTlsInitializer) -> Self {
+    fn spawn(ctx: OakSessionTlsServerContext) -> Self {
         let (to_server_tls_tx, mut to_server_tls_rx) =
             tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
         let (from_server_tls_tx, from_server_tls_rx) =
@@ -195,8 +192,28 @@ impl AsyncServer {
             tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
 
         tokio::spawn(async move {
-            let (mut server, initial_data) =
-                handshake_loop(init, &from_server_tls_tx, &mut to_server_tls_rx).await;
+            let (mut server, initial_data) = {
+                let rx = Arc::new(Mutex::new(&mut to_server_tls_rx));
+                ctx.new_initialized_session(
+                    |frame| {
+                        let tx = from_server_tls_tx.clone();
+                        async move {
+                            tx.send(frame).map_err(|_| {
+                                std::io::Error::new(std::io::ErrorKind::Other, "send failed")
+                            })
+                        }
+                    },
+                    {
+                        let rx = rx.clone();
+                        move || {
+                            let rx = rx.clone();
+                            async move { Ok(rx.lock().await.recv().await) }
+                        }
+                    },
+                )
+                .await
+                .expect("server handshake failed")
+            };
 
             if !initial_data.is_empty() {
                 from_server_plaintext_tx
@@ -246,42 +263,33 @@ impl AsyncServer {
     }
 }
 
-async fn do_handshake(server: &mut AsyncServer, client: OakSessionTlsInitializer) -> OakSessionTls {
-    let (session, initial_data) =
-        handshake_loop(client, &server.to_server_tls_tx, &mut server.from_server_tls_rx).await;
+async fn do_handshake(
+    server: &mut AsyncServer,
+    client_ctx: &OakSessionTlsClientContext,
+) -> OakSessionTls {
+    let rx = Arc::new(Mutex::new(&mut server.from_server_tls_rx));
+    let (session, initial_data) = client_ctx
+        .new_initialized_session(
+            |frame| {
+                let tx = server.to_server_tls_tx.clone();
+                async move {
+                    tx.send(frame)
+                        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "send failed"))
+                }
+            },
+            {
+                let rx = rx.clone();
+                move || {
+                    let rx = rx.clone();
+                    async move { Ok(rx.lock().await.recv().await) }
+                }
+            },
+        )
+        .await
+        .expect("client handshake failed");
 
     if !initial_data.is_empty() {
         println!("Client: Received {} bytes of initial data during handshake", initial_data.len());
     }
     session
-}
-
-// A helper to wrap the handshake loop, which is used by both the client and
-// server tests. It takes care of
-async fn handshake_loop(
-    init: OakSessionTlsInitializer,
-    tx: &tokio::sync::mpsc::UnboundedSender<Vec<u8>>,
-    rx: &mut tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>,
-) -> (OakSessionTls, Vec<u8>) {
-    // We wrap the receiver in a Mutex so that the async closure can safely capture
-    // it. In a real application, you might have a more direct way to manage
-    // this.
-    let rx = Arc::new(Mutex::new(rx));
-    let mut sender = |frame| {
-        let tx = tx.clone();
-        async move {
-            tx.send(frame).map_err(|_| {
-                InitializationError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "send failed",
-                ))
-            })
-        }
-    };
-    let mut receiver = move || {
-        let rx = rx.clone();
-        async move { Ok(rx.lock().await.recv().await) }
-    };
-
-    init.handshake(&mut sender, &mut receiver).await.expect("handshake failed")
 }

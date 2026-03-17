@@ -152,20 +152,46 @@ impl OakSessionTlsClientContext {
 
     /// Create a new OakSessionTlsInitializer for a new client session using
     /// this context's current configuration.
+    ///
+    /// Use this only if you need to drive the handshake yourself (e.g., for
+    /// custom transport framing). For most use cases, prefer
+    /// [`new_initialized_session`](Self::new_initialized_session) instead.
     pub fn new_session(&self) -> Result<OakSessionTlsInitializer, InitializationError> {
-        // The server side currently does not validate the SNI, but rustls requires
-        // a server name to be provided for the client to initiate the handshake
-        // and perform certificate verification.
         Ok(OakSessionTlsInitializer {
             who: "client".to_string(),
             connection: Connection::Client(ClientConnection::new(
                 self.config.clone(),
-                // The server side currently does not validate the SNI, but rustls requires
-                // a server name to be provided for the client to initiate the handshake
-                // and perform certificate verification.
                 ServerName::try_from(OAK_SESSION_TLS_SERVER_NAME)?.to_owned(),
             )?),
         })
+    }
+
+    /// Create a new session and perform the TLS handshake using the provided
+    /// send/receive callbacks. Returns an initialized session ready for use.
+    ///
+    /// This is the recommended API for most use cases.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let (session, initial_data) = context.new_initialized_session(
+    ///     |frame| async { socket.send(frame).await },
+    ///     || async { socket.receive().await },
+    /// ).await?;
+    /// ```
+    pub async fn new_initialized_session<S, FutS, R, FutR, E>(
+        &self,
+        sender: S,
+        receiver: R,
+    ) -> Result<(OakSessionTls, Vec<u8>), HandshakeError<E>>
+    where
+        S: FnMut(Vec<u8>) -> FutS,
+        FutS: std::future::Future<Output = Result<(), E>>,
+        R: FnMut() -> FutR,
+        FutR: std::future::Future<Output = Result<Option<Vec<u8>>, E>>,
+        E: std::fmt::Display + std::fmt::Debug,
+    {
+        let initializer = self.new_session()?;
+        initializer.handshake(sender, receiver).await
     }
 }
 
@@ -201,24 +227,59 @@ impl OakSessionTlsServerContext {
 
     /// Create a new OakSessionTlsInitializer for a new server session using
     /// this context's current configuration.
+    ///
+    /// Use this only if you need to drive the handshake yourself (e.g., for
+    /// custom transport framing). For most use cases, prefer
+    /// [`new_initialized_session`](Self::new_initialized_session) instead.
     pub fn new_session(&self) -> Result<OakSessionTlsInitializer, InitializationError> {
         Ok(OakSessionTlsInitializer {
             who: "server".to_string(),
             connection: Connection::Server(ServerConnection::new(self.config.clone())?),
         })
     }
+
+    /// Create a new session and perform the TLS handshake using the provided
+    /// send/receive callbacks. Returns an initialized session ready for use.
+    ///
+    /// This is the recommended API for most use cases.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let (session, initial_data) = context.new_initialized_session(
+    ///     |frame| async { socket.send(frame).await },
+    ///     || async { socket.receive().await },
+    /// ).await?;
+    /// ```
+    pub async fn new_initialized_session<S, FutS, R, FutR, E>(
+        &self,
+        sender: S,
+        receiver: R,
+    ) -> Result<(OakSessionTls, Vec<u8>), HandshakeError<E>>
+    where
+        S: FnMut(Vec<u8>) -> FutS,
+        FutS: std::future::Future<Output = Result<(), E>>,
+        R: FnMut() -> FutR,
+        FutR: std::future::Future<Output = Result<Option<Vec<u8>>, E>>,
+        E: std::fmt::Display + std::fmt::Debug,
+    {
+        let initializer = self.new_session()?;
+        initializer.handshake(sender, receiver).await
+    }
 }
 
 /// Manages the initialization state and handshake of an Oak TLS Session.
 ///
+/// For most use cases, prefer
+/// [`OakSessionTlsClientContext::new_initialized_session`] or
+/// [`OakSessionTlsServerContext::new_initialized_session`] which handle
+/// the full handshake automatically. Use this type directly only if you need
+/// fine-grained control over the handshake process (e.g., for custom framing).
+///
 /// In this context, a "TLS frame" is an arbitrary slice of the TLS stream.
 ///
-/// While handshaking, provided incoming frames to `put_tls_frame` and retrieve
+/// While handshaking, provide incoming frames to `put_tls_frame` and retrieve
 /// outgoing frames via `get_tls_frame`. Check `is_ready` to determine when the
 /// handshake is complete.
-///
-/// Use either [`OakSessionTlsClientContext`] or [`OakSessionTlsServerContext`]
-/// to create an initializer.
 pub struct OakSessionTlsInitializer {
     pub connection: Connection,
     pub who: String,
@@ -268,7 +329,7 @@ impl OakSessionTlsInitializer {
 
     /// Drives the handshake to completion using the provided sender and
     /// receiver closures.
-    pub async fn handshake<S, FutS, R, FutR, E>(
+    pub(crate) async fn handshake<S, FutS, R, FutR, E>(
         mut self,
         mut sender: S,
         mut receiver: R,
