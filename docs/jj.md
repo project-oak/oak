@@ -16,7 +16,7 @@ jj git init --git-repo .
 Tell `jj` to track the remote `main` branch when syncing:
 
 ```console
-jj bookmark track main@origin
+jj bookmark track main --remote=origin
 ```
 
 Run the following to see the latest commits:
