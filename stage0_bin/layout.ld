@@ -60,6 +60,7 @@ HIDDEN(SEV_SECTION_CPUID = 0x3);
  */
 PHDRS
 {
+    bda PT_LOAD;
     boot PT_LOAD;
     ap_text PT_LOAD;
     ap_bss PT_LOAD;

@@ -125,7 +125,7 @@ pub fn rust64_start<P: hal::Platform>() -> ! {
     //
     // Safety: this is the only place where we access the BDA.
     unsafe {
-        BDA.fill(MaybeUninit::zeroed());
+        BDA.zeroize();
     }
     paging::init_page_table_refs::<P>();
 

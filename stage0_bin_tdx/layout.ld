@@ -60,6 +60,7 @@ HIDDEN(DESCRIPTOR_PRESENT = 1 << 47);
  */
 PHDRS
 {
+    bda PT_LOAD;
     bss PT_LOAD;
     data PT_LOAD;
     stack PT_LOAD;
