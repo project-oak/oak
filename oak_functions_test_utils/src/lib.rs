@@ -305,15 +305,6 @@ pub fn run_oak_functions_example_in_background(
     (BackgroundHandle(child), format!("http://localhost:{port}").try_into().unwrap())
 }
 
-pub fn run_java_client(addr: &str) -> std::io::Result<std::process::Output> {
-    std::process::Command::new(
-        PathBuf::from("java/src/main/java/com/google/oak/client/oak_functions_client")
-            .join("oak_functions_client"),
-    )
-    .arg(addr)
-    .output()
-}
-
 pub fn run_cc_client(addr: &str, request: &str) -> std::io::Result<std::process::Output> {
     std::process::Command::new(PathBuf::from("cc/client").join("cli"))
         .arg(addr)

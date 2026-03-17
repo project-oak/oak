@@ -85,7 +85,6 @@ rust_test(
     data = [
         ":oak_functions_containers_launcher",
         "//cc/client:cli",
-        "//java/src/main/java/com/google/oak/client/oak_functions_client",
         "//oak_containers/kernel",
         "//oak_functions/examples/echo",
         "//oak_functions/examples/key_value_lookup",

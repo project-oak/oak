@@ -12,9 +12,6 @@ default:
 key_xor_test_app: \
     (copy-binary "enclave_apps/key_xor_test_app" "key_xor_test_app")
 
-oak_client_android_app: \
-    (copy-binary "java/src/main/java/com/google/oak/client/android:client_app.apk" "client_app.apk")
-
 oak_containers_agent: \
     (copy-binary "oak_containers/agent:bin/oak_containers_agent" "oak_containers_agent")
 

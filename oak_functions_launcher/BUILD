@@ -90,7 +90,6 @@ rust_test(
         "//cc/client:cli",
         "//enclave_apps/oak_functions_enclave_app",
         "//enclave_apps/oak_orchestrator",
-        "//java/src/main/java/com/google/oak/client/oak_functions_client",
         "//oak_functions/examples/echo",
         "//oak_functions/examples/key_value_lookup",
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",

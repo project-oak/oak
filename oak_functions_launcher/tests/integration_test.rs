@@ -70,10 +70,6 @@ async fn test_launcher_echo() {
     let addr = addr.to_string();
 
     // TODO(#4177): Check response in the integration test.
-    // Run Java client via Bazel.
-    oak_functions_test_utils::run_java_client(&addr).expect("java client failed");
-
-    // TODO(#4177): Check response in the integration test.
     // Run C++ client via Bazel.
     let request = "--request={\"lat\":0,\"lng\":0}";
     oak_functions_test_utils::run_cc_client(&addr, request).expect("cc client failed");
