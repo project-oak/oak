@@ -23,7 +23,7 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, format, vec::Vec};
-use core::panic::PanicInfo;
+use core::{mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
 use oak_attestation_types::{
@@ -97,6 +97,10 @@ const PAGE_SIZE: usize = Size4KiB::SIZE as usize;
 // Double page size for items larger than the PAGE_SIZE limit.
 const DOUBLE_PAGE_SIZE: usize = PAGE_SIZE * 2;
 
+/// BDA is 256 bytes.
+#[unsafe(link_section = ".bda")]
+static mut BDA: [MaybeUninit<u8>; 0x100] = [MaybeUninit::uninit(); 0x100];
+
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
     let cs = gdt.append(Descriptor::kernel_code_segment());
     let ds = gdt.append(Descriptor::kernel_data_segment());
@@ -112,11 +116,23 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page
 ///   tables.
 pub fn rust64_start<P: hal::Platform>() -> ! {
+    // Ensure the BDA is zeroed out, lest some legacy code go looking for some data
+    // from there.
+    //
+    // This needs to happen before we initialize the page tables, as we leave the
+    // lower 4K unmapped when setting up the page tables (so that you'd crash when
+    // dereferencing a null pointer), but the BDA is at the 1K mark.
+    //
+    // Safety: this is the only place where we access the BDA.
+    unsafe {
+        BDA.fill(MaybeUninit::zeroed());
+    }
     paging::init_page_table_refs::<P>();
 
     P::early_initialize_platform();
     logging::init_logging::<P>();
     log::info!("starting...");
+
     // Safety: we assume there won't be any other hardware devices using the fw_cfg
     // IO ports.
     let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
