@@ -4,3 +4,4 @@ oak_private_memory
 linter
 oak_containers/sysroot
 tools/lint-runner
+tools/analyze_crate_versions

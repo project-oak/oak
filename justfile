@@ -16,6 +16,9 @@ import? "~/.oak_justfile.local"
 # Recipes for building Oak Containers images
 mod containers 'justfiles/containers.just'
 
+# Recipes for Crate Analysis
+mod crates 'justfiles/crates.just'
+
 # Recipes for running Oak launchers locally
 mod run 'justfiles/run.just'
 
@@ -225,7 +228,9 @@ bazel-lockfile-containers-sysroot:
 bazel-lockfile-lint-runner:
     bazel mod deps
 
-bazel-lockfile-all: bazel-lockfile bazel-lockfile-codelab bazel-lockfile-private-memory bazel-lockfile-containers-sysroot bazel-lockfile-lint-runner
+[working-directory: 'tools/analyze_crate_versions']
+bazel-lockfile-crate-analysis:
+    bazel mod deps
 
 ####################
 # ARTIFACT COPYING #
