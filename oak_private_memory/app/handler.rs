@@ -144,6 +144,22 @@ impl SealedMemorySessionHandler {
             &mut mutex_guard.as_mut().into_failed_precondition("call key sync first")?.database;
         let memory = request.memory.into_invalid_argument("memory not set in AddMemoryRequest")?;
 
+        if !memory.name.is_empty() {
+            // Verify that there is no conflicting memory with this name.
+            let existing_memory = database
+                .get_memory_by_name(&memory.name, &None)
+                .await
+                .into_internal_error("failed to check for existing named memory")?;
+            if let Some(existing_memory) = existing_memory {
+                if existing_memory.id != memory.id {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "Existing memory with name {}, existing {} -> new {}",
+                        memory.name, existing_memory.id, memory.id
+                    )));
+                }
+            }
+        }
+
         let memory_id =
             database.add_memory(memory).await.into_internal_error("failed to add memory")?;
         Ok(AddMemoryResponse { id: memory_id.to_string() })

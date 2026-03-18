@@ -471,3 +471,89 @@ async fn test_add_memory_overwrites_user_created_timestamp() {
 
     ctx.teardown().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_duplicate_name_throws_error() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_duplicate_name_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let memory1 =
+            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+
+        let memory2 =
+            Memory { id: "id2".to_string(), name: "shared_name".to_string(), ..Default::default() };
+
+        // Adding first memory should succeed
+        let response1 = client.add_memory(memory1.clone()).await;
+        assert!(response1.is_ok());
+
+        // Adding second memory with same name but different id should fail
+        let response2 = client.add_memory(memory2.clone()).await;
+        assert!(response2.is_err());
+    }
+
+    ctx.teardown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_duplicate_name_no_id_throws_error() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_duplicate_name_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let memory1 =
+            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+
+        let memory2 = Memory { name: "shared_name".to_string(), ..Default::default() };
+
+        // Adding first memory should succeed
+        let response1 = client.add_memory(memory1.clone()).await;
+        assert!(response1.is_ok());
+
+        // Adding second memory with same name and no id should fail
+        let response2 = client.add_memory(memory2.clone()).await;
+        assert!(response2.is_err());
+    }
+
+    ctx.teardown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_add_memory_duplicate_name_same_id_okay() {
+    let ctx = TestContext::setup().await.unwrap();
+    let url = &ctx.url;
+    let pm_uid = "test_duplicate_name_user";
+
+    for &format in [SerializationFormat::BinaryProto, SerializationFormat::Json].iter() {
+        let mut client =
+            PrivateMemoryClient::create_with_start_session(url, pm_uid, TEST_EK, format)
+                .await
+                .unwrap();
+
+        let memory1 =
+            Memory { id: "id1".to_string(), name: "shared_name".to_string(), ..Default::default() };
+
+        // Adding first memory should succeed
+        let response1 = client.add_memory(memory1.clone()).await;
+        assert!(response1.is_ok());
+
+        // Adding second memory with same name and same id should succeed
+        let response2 = client.add_memory(memory1.clone()).await;
+        assert!(response2.is_ok());
+    }
+
+    ctx.teardown().await;
+}
