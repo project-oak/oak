@@ -18,7 +18,7 @@ use anyhow::Result;
 use clap::Parser;
 use oak_private_memory_database::{IcingTempDir, icing::IcingMetaDatabase};
 use prost::Message;
-use rand::random;
+use rand::{random, seq::SliceRandom};
 use sealed_memory_rust_proto::oak::private_memory::{Embedding, LlmView, LlmViews, Memory};
 
 /// A tool for analyzing the size of the icing database.
@@ -49,6 +49,18 @@ struct Args {
     /// Print details log.
     #[arg(short = 'b', long)]
     verbose: bool,
+
+    /// Use the same tags across all memories
+    #[arg(long)]
+    same_tags: bool,
+
+    /// Target length for generated tags
+    #[arg(long, default_value_t = 10)]
+    tag_length: usize,
+
+    /// Number of unique tags to draw from
+    #[arg(long, default_value_t = 0)]
+    pool_size: usize,
 }
 
 fn get_db_size(db: &IcingMetaDatabase) -> Result<usize> {
@@ -57,8 +69,42 @@ fn get_db_size(db: &IcingMetaDatabase) -> Result<usize> {
     Ok(exported_data.len())
 }
 
-fn create_memory(index: u32, args: &Args) -> Memory {
-    let tags = (0..args.tags).map(|j| format!("tag_{}_{}", index, j)).collect();
+fn generate_random_string(len: usize) -> String {
+    let mut s = String::with_capacity(len);
+    while s.len() < len {
+        s.push_str(&format!("{:032x}", random::<u128>()));
+    }
+    s.truncate(len);
+    s
+}
+
+fn create_memory(index: u32, args: &Args, pool: &[String]) -> Memory {
+    let tags = if args.pool_size > 0 {
+        let mut rng = rand::rng();
+        let mut shuffled_pool = pool.to_vec();
+        shuffled_pool.shuffle(&mut rng);
+        shuffled_pool.into_iter().take(args.tags as usize).collect()
+    } else if args.same_tags {
+        (0..args.tags)
+            .map(|j| {
+                let mut s = format!("tag_{}", j);
+                if s.len() < args.tag_length {
+                    s.push_str(&generate_random_string(args.tag_length - s.len()));
+                }
+                s
+            })
+            .collect()
+    } else {
+        (0..args.tags)
+            .map(|j| {
+                let mut s = format!("tag_{}_{}", index, j);
+                if s.len() < args.tag_length {
+                    s.push_str(&generate_random_string(args.tag_length - s.len()));
+                }
+                s
+            })
+            .collect()
+    };
 
     let llm_views = (0..args.views)
         .map(|j| {
@@ -86,13 +132,12 @@ fn print_limit_analysis(limit_mb: u32, initial_size: usize, average_size_per_mem
         let available_size = limit_bytes - initial_size;
         let supported_memories =
             if average_size_per_memory > 0 { available_size / average_size_per_memory } else { 0 };
-        log::info!(
+        println!(
             "With a {}MB limit, the database can support approximately {} memories.",
-            limit_mb,
-            supported_memories
+            limit_mb, supported_memories
         );
     } else {
-        log::info!("The {}MB limit is smaller than the initial database size.", limit_mb);
+        println!("The {}MB limit is smaller than the initial database size.", limit_mb);
     }
 }
 
@@ -103,21 +148,19 @@ fn print_summary(
     total_size_change: usize,
     average_size_per_memory: usize,
 ) {
-    log::info!("\nSummary:");
+    println!("\nSummary:");
 
-    log::info!("Total memories added: {}", args.memories);
-    log::info!(
+    println!("Total memories added: {}", args.memories);
+    println!(
         "Each memory: {} tags, {} views, embedding size {}",
-        args.tags,
-        args.views,
-        args.embedding_size
+        args.tags, args.views, args.embedding_size
     );
 
-    log::info!("Final database size: {} bytes", final_size);
+    println!("Final database size: {} bytes", final_size);
 
-    log::info!("Total size increase: {} bytes", total_size_change);
+    println!("Total size increase: {} bytes", total_size_change);
 
-    log::info!("Average size per memory: {} bytes", average_size_per_memory);
+    println!("Average size per memory: {} bytes", average_size_per_memory);
 
     if let Some(limit_mb) = args.database_size_limit {
         print_limit_analysis(limit_mb, initial_size, average_size_per_memory);
@@ -125,9 +168,9 @@ fn print_summary(
 }
 
 fn print_optimization_details(before_size: usize, after_size: usize) {
-    log::info!("\nAfter optimization:");
-    log::info!("Optimized database size: {} bytes", after_size);
-    log::info!("Size reduction: {} bytes", before_size - after_size);
+    println!("\nAfter optimization:");
+    println!("Optimized database size: {} bytes", after_size);
+    println!("Size reduction: {} bytes", before_size - after_size);
 }
 
 fn main() -> Result<()> {
@@ -135,16 +178,30 @@ fn main() -> Result<()> {
 
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("analysis-"))?;
 
+    let pool: Vec<String> = if args.pool_size > 0 {
+        (0..args.pool_size)
+            .map(|j| {
+                let mut s = format!("tag_pool_{}", j);
+                if s.len() < args.tag_length {
+                    s.push_str(&generate_random_string(args.tag_length - s.len()));
+                }
+                s
+            })
+            .collect()
+    } else {
+        vec![]
+    };
+
     let initial_size = get_db_size(&db)?;
 
-    log::info!("Initial database size: {} bytes", initial_size);
+    println!("Initial database size: {} bytes", initial_size);
 
     let mut last_size = initial_size;
 
     let mut total_size_change = 0;
 
     for i in 1..=args.memories {
-        let memory = create_memory(i, &args);
+        let memory = create_memory(i, &args, &pool);
 
         db.add_memory(&memory, random::<u128>().to_string())?;
 
@@ -153,11 +210,9 @@ fn main() -> Result<()> {
         let size_change = current_size - last_size;
 
         if args.verbose {
-            log::info!(
+            println!(
                 "Added memory {}: size change: {} bytes, total size: {} bytes",
-                i,
-                size_change,
-                current_size
+                i, size_change, current_size
             );
         }
 
