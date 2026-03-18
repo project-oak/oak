@@ -29,8 +29,8 @@ use strum::FromRepr;
 use crate::{
     Madt, ZeroPage,
     acpi_tables::{
-        DescriptionHeader, Fadt, MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic,
-        Rsdp,
+        DescriptionHeader, Fadt, InterruptSourceOverride, IoApic, LocalApicNmi,
+        MultiprocessorWakeup, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp,
     },
     fw_cfg::FwCfg,
     pci::PciWindows,
@@ -230,6 +230,18 @@ fn print_system_data_table_entries<'a>(
                             "    -> MultiprocessorWakeup: {:?}",
                             MultiprocessorWakeup::from_header_cast(madt_entry)?
                         );
+                    }
+                    IoApic::STRUCTURE_TYPE => {
+                        log::info!("    -> I/O APIC: {:?}", IoApic::new(madt_entry)?);
+                    }
+                    InterruptSourceOverride::STRUCTURE_TYPE => {
+                        log::info!(
+                            "    -> Interrupt Source Override: {:?}",
+                            InterruptSourceOverride::new(madt_entry)?
+                        );
+                    }
+                    LocalApicNmi::STRUCTURE_TYPE => {
+                        log::info!("    -> Local APIC NMI: {:?}", LocalApicNmi::new(madt_entry)?);
                     }
                     _ => {
                         log::info!(
