@@ -26,6 +26,7 @@ rust_test(
     srcs = ["test.rs"],
     deps = [
         ":icing",
+        "@oak_crates_index//:log",
         "@oak_crates_index//:prost",
         "@oak_crates_index//:tempfile",
     ],

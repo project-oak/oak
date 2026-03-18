@@ -86,12 +86,13 @@ fn print_limit_analysis(limit_mb: u32, initial_size: usize, average_size_per_mem
         let available_size = limit_bytes - initial_size;
         let supported_memories =
             if average_size_per_memory > 0 { available_size / average_size_per_memory } else { 0 };
-        println!(
+        log::info!(
             "With a {}MB limit, the database can support approximately {} memories.",
-            limit_mb, supported_memories
+            limit_mb,
+            supported_memories
         );
     } else {
-        println!("The {}MB limit is smaller than the initial database size.", limit_mb);
+        log::info!("The {}MB limit is smaller than the initial database size.", limit_mb);
     }
 }
 
@@ -102,19 +103,21 @@ fn print_summary(
     total_size_change: usize,
     average_size_per_memory: usize,
 ) {
-    println!("\nSummary:");
+    log::info!("\nSummary:");
 
-    println!("Total memories added: {}", args.memories);
-    println!(
+    log::info!("Total memories added: {}", args.memories);
+    log::info!(
         "Each memory: {} tags, {} views, embedding size {}",
-        args.tags, args.views, args.embedding_size
+        args.tags,
+        args.views,
+        args.embedding_size
     );
 
-    println!("Final database size: {} bytes", final_size);
+    log::info!("Final database size: {} bytes", final_size);
 
-    println!("Total size increase: {} bytes", total_size_change);
+    log::info!("Total size increase: {} bytes", total_size_change);
 
-    println!("Average size per memory: {} bytes", average_size_per_memory);
+    log::info!("Average size per memory: {} bytes", average_size_per_memory);
 
     if let Some(limit_mb) = args.database_size_limit {
         print_limit_analysis(limit_mb, initial_size, average_size_per_memory);
@@ -122,9 +125,9 @@ fn print_summary(
 }
 
 fn print_optimization_details(before_size: usize, after_size: usize) {
-    println!("\nAfter optimization:");
-    println!("Optimized database size: {} bytes", after_size);
-    println!("Size reduction: {} bytes", before_size - after_size);
+    log::info!("\nAfter optimization:");
+    log::info!("Optimized database size: {} bytes", after_size);
+    log::info!("Size reduction: {} bytes", before_size - after_size);
 }
 
 fn main() -> Result<()> {
@@ -134,7 +137,7 @@ fn main() -> Result<()> {
 
     let initial_size = get_db_size(&db)?;
 
-    println!("Initial database size: {} bytes", initial_size);
+    log::info!("Initial database size: {} bytes", initial_size);
 
     let mut last_size = initial_size;
 
@@ -150,9 +153,11 @@ fn main() -> Result<()> {
         let size_change = current_size - last_size;
 
         if args.verbose {
-            println!(
+            log::info!(
                 "Added memory {}: size change: {} bytes, total size: {} bytes",
-                i, size_change, current_size
+                i,
+                size_change,
+                current_size
             );
         }
 

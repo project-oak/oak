@@ -126,12 +126,12 @@ impl PrivateMemoryClient {
         while !client_session.is_open() {
             let request =
                 client_session.next_init_message().context("failed to get next init message")?;
-            println!("Sending init message: {:?}", request);
+            log::info!("Sending init message: {:?}", request);
             transport.send(request).await.context("failed to send init message")?;
             if !client_session.is_open() {
                 let response =
                     transport.receive().await.context("failed to receive init message")?;
-                println!("Received init response: {:?}", response);
+                log::info!("Received init response: {:?}", response);
                 client_session
                     .handle_init_message(response)
                     .context("failed to handle init message")?;

@@ -225,18 +225,20 @@ fn main() -> Result<()> {
     // Disable icing verbose logging for cleaner output
     set_logging(false);
 
-    println!("Icing Database Benchmark");
-    println!("========================\n");
-    println!(
+    log::info!("Icing Database Benchmark");
+    log::info!("========================\n");
+    log::info!(
         "Configuration: embedding_size={}, queries_per_test={}, rebuild_iterations={}\n",
-        args.embedding_size, args.queries, args.rebuild_iterations
+        args.embedding_size,
+        args.queries,
+        args.rebuild_iterations
     );
 
     let embedding_counts = get_embedding_counts(args.max_embeddings);
 
     // Print combined table header for storage and rebuild time (external vs
     // internal)
-    println!(
+    log::info!(
         "| {:>12} | {:>15} | {:>15} | {:>15} | {:>14} | {:>14} | {:>14} | {:>14} |",
         "Embeddings",
         "Ground Truth",
@@ -247,7 +249,7 @@ fn main() -> Result<()> {
         "Ext Max (ms)",
         "Icing Avg (ms)"
     );
-    println!(
+    log::info!(
         "|--------------|-----------------|-----------------|-----------------|----------------|----------------|----------------|----------------|"
     );
 
@@ -260,7 +262,7 @@ fn main() -> Result<()> {
         let mut db = IcingMetaDatabase::new(temp_dir)?;
 
         if args.verbose {
-            println!("Populating database with {} embeddings...", target_count);
+            log::info!("Populating database with {} embeddings...", target_count);
         }
 
         // Add embeddings
@@ -278,11 +280,11 @@ fn main() -> Result<()> {
 
         // Measure index rebuild time
         if args.verbose {
-            println!("Measuring index rebuild time ({} iterations)...", args.rebuild_iterations);
+            log::info!("Measuring index rebuild time ({} iterations)...", args.rebuild_iterations);
         }
         let rebuild_stats = measure_rebuild_time(&db, args.rebuild_iterations)?;
 
-        println!(
+        log::info!(
             "| {:>12} | {:>15} | {:>15} | {:>15} | {:>14.1} | {:>14.1} | {:>14.1} | {:>14.1} |",
             target_count,
             format_bytes(ground_truth_size),

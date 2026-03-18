@@ -177,6 +177,7 @@ rust_library(
         "@oak_crates_index//:async-trait",
     ],
     deps = [
+        ":log",
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
         "@oak//oak_proto_rust",

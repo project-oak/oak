@@ -105,7 +105,7 @@ fn test_memory_with_timestamp_serialization() {
     let memory = Memory { created_timestamp: Some(timestamp), ..Default::default() };
     let json_str7 = r#"{"createdTimestamp":"2024-12-02T15:06:40+00:00"}"#;
     let timestamp_from_string_num = serde_json::from_str::<Memory>(json_str7).unwrap();
-    println!("timestamp: {:?}", timestamp);
-    println!("timestamp_from_string_num: {:?}", timestamp_from_string_num);
+    log::info!("timestamp: {:?}", timestamp);
+    log::info!("timestamp_from_string_num: {:?}", timestamp_from_string_num);
     assert_eq!(timestamp_from_string_num.encode_to_vec(), memory.encode_to_vec());
 }

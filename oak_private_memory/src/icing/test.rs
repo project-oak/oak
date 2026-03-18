@@ -69,7 +69,7 @@ mod tests {
 
         let result_proto = icing_search_engine.put(&doc1).unwrap();
         if result_proto.status.clone().unwrap().code != Some(status_proto::Code::Ok.into()) {
-            println!("Result {:?}", result_proto);
+            log::info!("Result {:?}", result_proto);
         }
         assert!(result_proto.status.unwrap().code == Some(status_proto::Code::Ok.into()));
 
