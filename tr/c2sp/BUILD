@@ -22,7 +22,7 @@ package(
 )
 
 rust_library(
-    name = "tessera",
+    name = "c2sp",
     srcs = glob(["**/*.rs"]),
     deps = [
         "//util/digest:oak_digest",
@@ -36,9 +36,9 @@ rust_library(
 )
 
 rust_test(
-    name = "tessera_tests",
+    name = "c2sp_tests",
     compile_data = [
         "testdata/test.tlog-proof",
     ],
-    crate = ":tessera",
+    crate = ":c2sp",
 )
