@@ -114,11 +114,13 @@ impl NoteVerifyingKey {
     pub fn verify(
         &self,
         signed_payload: &[u8],
-        signature: &NoteSignature,
+        raw_signature: &[u8],
     ) -> Result<(), TLogProofError> {
         let vkey = VerifyingKey::from_bytes(&self.raw)
             .map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        let sig = Signature::from_bytes(&signature.raw);
+        let sig = Signature::from_bytes(
+            raw_signature.try_into().map_err(|_| TLogProofError::MalformedSignature)?,
+        );
         vkey.verify(signed_payload, &sig).map_err(|_| TLogProofError::SigVerify)?;
         Ok(())
     }
@@ -129,8 +131,7 @@ impl NoteVerifyingKey {
 pub struct NoteSignature {
     pub origin: String,
     pub key_id_hint: [u8; 4],
-    pub timestamp: u64,
-    pub raw: [u8; 64],
+    pub sig_bytes: Vec<u8>,
 }
 
 impl NoteSignature {
@@ -144,25 +145,14 @@ impl NoteSignature {
         let strip = serialized.strip_prefix("— ").ok_or(TLogProofError::MalformedSignature)?;
         let (origin, encoded) = strip.split_once(' ').ok_or(TLogProofError::MalformedSignature)?;
         let b = B64.decode(encoded).map_err(|e| TLogProofError::Format(Box::new(e)))?;
-        // Since there is no type encoding, we use the length to distinguish
-        // between main and co-signature.
-        match b.len() {
-            // Main signature, see https://c2sp.org/signed-note.
-            68 => Ok(NoteSignature {
-                origin: origin.to_string(),
-                key_id_hint: b[0..4].try_into().unwrap(),
-                timestamp: 0,
-                raw: b[4..68].try_into().unwrap(),
-            }),
-            // Witness signature, see https://c2sp.org/tlog-cosignature.
-            76 => Ok(NoteSignature {
-                origin: origin.to_string(),
-                key_id_hint: b[0..4].try_into().unwrap(),
-                timestamp: u64::from_be_bytes(b[4..12].try_into().unwrap()),
-                raw: b[12..76].try_into().unwrap(),
-            }),
-            _ => Err(TLogProofError::MalformedSignature),
+        if b.len() < 4 {
+            return Err(TLogProofError::MalformedSignature);
         }
+        Ok(NoteSignature {
+            origin: origin.to_string(),
+            key_id_hint: b[0..4].try_into().unwrap(),
+            sig_bytes: b[4..].to_vec(),
+        })
     }
 }
 
@@ -313,19 +303,31 @@ impl TLogProof {
         for vkey in verifying_keys {
             let mut num_found: usize = 0;
             for sig in &self.checkpoint.signatures {
-                if sig.origin == vkey.origin {
-                    // If the signature contains a timestamp then it is a
-                    // witness signature. For details see
-                    // https://c2sp.org/tlog-cosignature.
-                    if sig.timestamp > 0 {
-                        let payload = format!(
-                            "cosignature/v1\ntime {}\n{}",
-                            sig.timestamp, self.checkpoint.signed_payload
-                        );
-                        vkey.verify(payload.as_bytes(), sig)?;
-                    } else {
-                        // Standard log signature.
-                        vkey.verify(self.checkpoint.signed_payload.as_bytes(), sig)?;
+                if sig.origin == vkey.origin && sig.key_id_hint == vkey.key_id_hint {
+                    match vkey.version {
+                        // See http://c2sp.org/signed-note#signature-types for the
+                        // meaning of the different signature types.
+                        0x01 => {
+                            if sig.sig_bytes.len() != 64 {
+                                return Err(TLogProofError::MalformedSignature);
+                            }
+                            vkey.verify(self.checkpoint.signed_payload.as_bytes(), &sig.sig_bytes)?;
+                        }
+                        0x04 => {
+                            if sig.sig_bytes.len() != 72 {
+                                return Err(TLogProofError::MalformedSignature);
+                            }
+                            let timestamp =
+                                u64::from_be_bytes(sig.sig_bytes[0..8].try_into().unwrap());
+                            let payload = format!(
+                                "cosignature/v1\ntime {}\n{}",
+                                timestamp, self.checkpoint.signed_payload
+                            );
+                            vkey.verify(payload.as_bytes(), &sig.sig_bytes[8..72])?;
+                        }
+                        _ => {
+                            return Err(TLogProofError::MalformedVerifyingKey);
+                        }
                     }
 
                     num_found += 1;
@@ -433,7 +435,7 @@ mod tests {
             let verifying_key = NoteVerifyingKey {
                 origin: FAKE_ORIGIN.into(),
                 key_id_hint: [99u8; 4], // Incorrect, but good enough.
-                version: 0,
+                version: 0x01,
                 raw: s.verifying_key().to_bytes(),
             };
             Self { origin: FAKE_ORIGIN.into(), signing_key: Some(signing_key), verifying_key }
@@ -446,8 +448,7 @@ mod tests {
             NoteSignature {
                 origin: self.origin.clone(),
                 key_id_hint: self.verifying_key.key_id_hint,
-                timestamp: 0,
-                raw: signature.to_bytes(),
+                sig_bytes: signature.to_bytes().to_vec(),
             }
         }
     }
@@ -499,10 +500,7 @@ mod tests {
         for sig in &checkpoint.signatures {
             let mut sig_bytes = Vec::new();
             sig_bytes.extend_from_slice(&sig.key_id_hint);
-            if sig.timestamp != 0 {
-                sig_bytes.extend_from_slice(&sig.timestamp.to_be_bytes());
-            }
-            sig_bytes.extend_from_slice(&sig.raw);
+            sig_bytes.extend_from_slice(&sig.sig_bytes);
             let sig_b64 = B64.encode(sig_bytes);
             sigs_str.push_str(&format!("— {} {}\n", sig.origin, sig_b64));
         }
@@ -630,7 +628,10 @@ mod tests {
         let checkpoint = make_checkpoint(&rvalues, 2, &root);
         let mut proof_str = make_proof(0, &[sibling], &checkpoint);
         let parts: Vec<&str> = proof_str.split("— ").collect();
-        let bad_sig = B64.encode([0xBB; 68]);
+        let mut bad_sig_bytes = vec![];
+        bad_sig_bytes.extend_from_slice(&rvalues.verifying_key.key_id_hint);
+        bad_sig_bytes.extend_from_slice(&[0xBB; 64]);
+        let bad_sig = B64.encode(bad_sig_bytes);
         proof_str = format!("{}— {} {}", parts[0], rvalues.origin, bad_sig);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
