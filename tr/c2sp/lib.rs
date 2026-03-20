@@ -14,8 +14,24 @@
 // limitations under the License.
 //
 
-//! Parses and verifies C2SP t-log proofs defined at
-//! https://c2sp.org/tlog-proof.
+//! Parses and verifies [C2SP t-log proofs](https://c2sp.org/tlog-proof).
+//!
+//! A t-log proof bundles an inclusion proof, a signed
+//! [checkpoint](https://c2sp.org/tlog-checkpoint), and optional witness
+//! [cosignatures](https://c2sp.org/tlog-cosignature) into a single
+//! offline-verifiable artifact attesting that an entry was logged.
+//!
+//! # Usage
+//!
+//! ```
+//! let vkey = NoteVerifyingKey::parse("example.com/log+abcd1234+A...")?;
+//! let proof = TLogProof::parse(&proof_text)?;
+//! proof.verify("example.com/log", &[vkey], &entry_bytes)?;
+//! ```
+//!
+//! Signature verification supports Ed25519 (type 0x01) and timestamped
+//! Ed25519 witness cosignatures (type 0x04) as defined by the
+//! [signed-note specification](https://c2sp.org/signed-note#signature-types).
 
 #![no_std]
 
@@ -47,12 +63,14 @@ pub enum TLogProofError {
     MalformedSignature,
     #[error("malformed verifying key")]
     MalformedVerifyingKey,
+    #[error("malformed proof")]
+    MalformedProof,
     #[error("checkpoint origin mismatch: expected {0}, got {1}")]
     OriginMismatch(String, String),
     #[error("mismatch between signatures and verifying keys")]
     SignatureMismatch,
     #[error("signature verification failed")]
-    SigVerify,
+    SignatureVerificationFailed,
     #[error("root hash mismatch")]
     RootMismatch,
     #[error("invalid Merkle chain")]
@@ -61,23 +79,53 @@ pub enum TLogProofError {
     Format(#[from] Box<dyn core::error::Error + Send + Sync>),
 }
 
+/// Signature type identifier as defined by the
+/// [C2SP signed-note specification](https://c2sp.org/signed-note#signature-types).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignatureType {
+    /// 0x01 — Ed25519 (RFC 8032) signature over the note text.
+    Ed25519,
+    /// 0x04 — Timestamped Ed25519 witness cosignature
+    /// ([c2sp.org/tlog-cosignature](https://c2sp.org/tlog-cosignature)).
+    CosignatureV1,
+}
+
+impl SignatureType {
+    fn from_byte(b: u8) -> Result<Self, TLogProofError> {
+        match b {
+            0x01 => Ok(SignatureType::Ed25519),
+            0x04 => Ok(SignatureType::CosignatureV1),
+            _ => Err(TLogProofError::MalformedVerifyingKey),
+        }
+    }
+}
+
 /// A signing key in note format.
 #[derive(Debug, Clone)]
 pub struct NoteSigningKey {
-    pub raw: [u8; 32],
+    // This is only (currently!) used by tests.
+    #[allow(dead_code)]
+    raw: [u8; 32],
 }
 
 /// A verifying key for a checkpoint signature in note format.
+///
+/// Supports Ed25519 signatures (type 0x01) and timestamped Ed25519 witness
+/// cosignatures (type 0x04) as defined by the
+/// [C2SP signed-note specification](https://c2sp.org/signed-note).
 #[derive(Debug, Clone)]
 pub struct NoteVerifyingKey {
     pub origin: String,
     pub key_id_hint: [u8; 4],
-    pub version: u8,
-    pub raw: [u8; 32],
+    pub signature_type: SignatureType,
+    raw: [u8; 32],
 }
 
 impl NoteVerifyingKey {
     /// Parses a verifying key in note format.
+    ///
+    /// The format is `<key name>+<hex key ID>+<base64(signature type || public
+    /// key)>`.
     ///
     /// Valid example input:
     /// ```text
@@ -89,10 +137,9 @@ impl NoteVerifyingKey {
         if parts.len() < 3 {
             return Err(TLogProofError::MalformedVerifyingKey);
         }
-        #[allow(clippy::get_first)]
-        let origin = parts.get(0).unwrap().to_string();
-        let id_encoded = parts.get(1).unwrap();
-        let key_encoded = parts.get(2).unwrap();
+        let origin = parts[0].to_string();
+        let id_encoded = parts[1];
+        let key_encoded = parts[2];
         let id_bytes =
             hex::decode(id_encoded).map_err(|_| TLogProofError::MalformedVerifyingKey)?;
         let key_bytes =
@@ -100,28 +147,43 @@ impl NoteVerifyingKey {
         if key_bytes.len() != 33 {
             return Err(TLogProofError::MalformedVerifyingKey);
         }
-        let version = key_bytes[0];
-        if version != 0x01 && version != 0x04 {
-            return Err(TLogProofError::MalformedVerifyingKey);
-        }
+        let signature_type = SignatureType::from_byte(key_bytes[0])?;
         let key_id_hint: [u8; 4] =
             id_bytes.as_slice().try_into().map_err(|_| TLogProofError::MalformedVerifyingKey)?;
         let raw: [u8; 32] =
             key_bytes[1..33].try_into().map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        Ok(NoteVerifyingKey { origin, key_id_hint, version, raw })
+        Ok(NoteVerifyingKey { origin, key_id_hint, signature_type, raw })
     }
 
-    pub fn verify(
-        &self,
-        signed_payload: &[u8],
-        raw_signature: &[u8],
-    ) -> Result<(), TLogProofError> {
+    /// Verifies that `sig` is a valid signature over the given checkpoint text
+    /// using this key, handling signature-type-specific payload framing.
+    pub fn verify(&self, checkpoint_text: &str, sig: &NoteSignature) -> Result<(), TLogProofError> {
+        match self.signature_type {
+            SignatureType::Ed25519 => {
+                if sig.sig_bytes.len() != 64 {
+                    return Err(TLogProofError::MalformedSignature);
+                }
+                self.verify_ed25519(checkpoint_text.as_bytes(), &sig.sig_bytes)
+            }
+            SignatureType::CosignatureV1 => {
+                if sig.sig_bytes.len() != 72 {
+                    return Err(TLogProofError::MalformedSignature);
+                }
+                let timestamp = u64::from_be_bytes(sig.sig_bytes[0..8].try_into().unwrap());
+                let payload = format!("cosignature/v1\ntime {}\n{}", timestamp, checkpoint_text);
+                self.verify_ed25519(payload.as_bytes(), &sig.sig_bytes[8..72])
+            }
+        }
+    }
+
+    /// Performs raw Ed25519 signature verification.
+    fn verify_ed25519(&self, message: &[u8], signature: &[u8]) -> Result<(), TLogProofError> {
         let vkey = VerifyingKey::from_bytes(&self.raw)
             .map_err(|_| TLogProofError::MalformedVerifyingKey)?;
         let sig = Signature::from_bytes(
-            raw_signature.try_into().map_err(|_| TLogProofError::MalformedSignature)?,
+            signature.try_into().map_err(|_| TLogProofError::MalformedSignature)?,
         );
-        vkey.verify(signed_payload, &sig).map_err(|_| TLogProofError::SigVerify)?;
+        vkey.verify(message, &sig).map_err(|_| TLogProofError::SignatureVerificationFailed)?;
         Ok(())
     }
 }
@@ -163,19 +225,24 @@ pub struct Checkpoint {
     pub tree_size: u64,
     pub root_hash: Sha256,
 
-    /// The full text of the checkpoint that is signed. Includes origin, size,
-    /// root hash, and any extra data.
+    /// The full text of the checkpoint body that is signed. Includes origin,
+    /// size, root hash, and any extension lines.
     pub signed_payload: String,
 
-    // Main signature and signatures from witnesses in no particular order.
+    /// Main signature and signatures from witnesses in no particular order.
     pub signatures: Vec<NoteSignature>,
 }
 
 impl Checkpoint {
     /// Parses the checkpoint section of a t-log proof.
+    ///
+    /// The checkpoint body consists of origin, tree size, base64-encoded root
+    /// hash, and optional extension lines, followed by a blank separator line
+    /// and then signature lines.
     pub fn parse(serialized: &str) -> Result<Self, TLogProofError> {
         let mut lines = serialized.lines();
-        // Read the checkpoint body.
+
+        // Read the required checkpoint body fields.
         let origin = lines.next().ok_or(TLogProofError::MalformedCheckpoint)?;
         let cp_size_str = lines.next().ok_or(TLogProofError::MalformedCheckpoint)?;
         let tree_size: u64 =
@@ -186,16 +253,24 @@ impl Checkpoint {
         let root_hash = Sha256::from(
             <[u8; 32]>::try_from(root_hash_raw).map_err(|_| TLogProofError::MalformedCheckpoint)?,
         );
-        let signed_payload = format!("{}\n{}\n{}\n", origin, cp_size_str, cp_root_str);
 
+        // Build signed payload from the body: the three required fields plus
+        // any extension lines, up to the blank separator.
+        let mut signed_payload = format!("{}\n{}\n{}\n", origin, cp_size_str, cp_root_str);
+        for line in lines.by_ref() {
+            if line.is_empty() {
+                break;
+            }
+            signed_payload.push_str(line);
+            signed_payload.push('\n');
+        }
+
+        // Parse signature lines after the blank separator.
         let mut signatures = Vec::new();
         for line in lines {
             if line.is_empty() {
                 continue;
             }
-            // If it doesn't start with "— ", then it is part of the
-            // checkpoint's extra data. Such extra data would be part of
-            // the signed payload. We ignore extra data.
             signatures.push(NoteSignature::parse(line)?);
         }
 
@@ -248,7 +323,7 @@ impl TLogProof {
             }
             let bytes = B64.decode(line).map_err(|e| TLogProofError::Format(Box::new(e)))?;
             proof_hashes.push(Sha256::from(
-                <[u8; 32]>::try_from(bytes).map_err(|_| TLogProofError::RootMismatch)?,
+                <[u8; 32]>::try_from(bytes).map_err(|_| TLogProofError::MalformedProof)?,
             ));
         }
 
@@ -257,21 +332,6 @@ impl TLogProof {
         let checkpoint = Checkpoint::parse(&checkpoint_str)?;
 
         Ok(TLogProof { index, proof_hashes, checkpoint })
-    }
-
-    pub fn compute_root_hash(&self, entry: &[u8]) -> Result<Sha256, TLogProofError> {
-        let tree_size = self.checkpoint.tree_size;
-        let leaf_index = self.index;
-        if leaf_index >= tree_size {
-            return Err(TLogProofError::InvalidMerkleChain);
-        }
-
-        let leaf_hash = C2spHasher::hash(entry);
-        let merkle_proof = rs_merkle::MerkleProof::<C2spHasher>::new(self.proof_hashes.clone());
-        let root = merkle_proof
-            .root(&[leaf_index as usize], &[leaf_hash], tree_size as usize)
-            .map_err(|_| TLogProofError::InvalidMerkleChain)?;
-        Ok(root)
     }
 
     /// Verifies a C2SP tlog-proof bundle.
@@ -304,32 +364,7 @@ impl TLogProof {
             let mut num_found: usize = 0;
             for sig in &self.checkpoint.signatures {
                 if sig.origin == vkey.origin && sig.key_id_hint == vkey.key_id_hint {
-                    match vkey.version {
-                        // See http://c2sp.org/signed-note#signature-types for the
-                        // meaning of the different signature types.
-                        0x01 => {
-                            if sig.sig_bytes.len() != 64 {
-                                return Err(TLogProofError::MalformedSignature);
-                            }
-                            vkey.verify(self.checkpoint.signed_payload.as_bytes(), &sig.sig_bytes)?;
-                        }
-                        0x04 => {
-                            if sig.sig_bytes.len() != 72 {
-                                return Err(TLogProofError::MalformedSignature);
-                            }
-                            let timestamp =
-                                u64::from_be_bytes(sig.sig_bytes[0..8].try_into().unwrap());
-                            let payload = format!(
-                                "cosignature/v1\ntime {}\n{}",
-                                timestamp, self.checkpoint.signed_payload
-                            );
-                            vkey.verify(payload.as_bytes(), &sig.sig_bytes[8..72])?;
-                        }
-                        _ => {
-                            return Err(TLogProofError::MalformedVerifyingKey);
-                        }
-                    }
-
+                    vkey.verify(&self.checkpoint.signed_payload, sig)?;
                     num_found += 1;
                     if vkey.origin == origin {
                         main_sig_found += 1;
@@ -351,6 +386,22 @@ impl TLogProof {
         }
 
         Ok(())
+    }
+
+    /// Computes the Merkle root hash from the proof hashes and the given entry.
+    fn compute_root_hash(&self, entry: &[u8]) -> Result<Sha256, TLogProofError> {
+        let tree_size = self.checkpoint.tree_size;
+        let leaf_index = self.index;
+        if leaf_index >= tree_size {
+            return Err(TLogProofError::InvalidMerkleChain);
+        }
+
+        let leaf_hash = C2spHasher::hash(entry);
+        let merkle_proof = rs_merkle::MerkleProof::<C2spHasher>::new(self.proof_hashes.clone());
+        let root = merkle_proof
+            .root(&[leaf_index as usize], &[leaf_hash], tree_size as usize)
+            .map_err(|_| TLogProofError::InvalidMerkleChain)?;
+        Ok(root)
     }
 }
 
@@ -390,7 +441,6 @@ mod tests {
 
     use base64::{Engine, engine::general_purpose::STANDARD as B64};
     use ed25519_dalek::{Signer, SigningKey};
-    use sha2::{Digest, Sha256 as Sha256Hasher};
 
     use super::*;
 
@@ -402,8 +452,8 @@ mod tests {
     const TEST_WITNESS_VKEY: &str =
         "test-witness+26349ef0+BIQDFTUlktisMqJzWn8qhteWrRr4dLcQ9R37T+8LQyQF";
 
-    const TEST2_ENTRY: &[u8] = b"hello tesseroak\n";
-    const TEST2_PROOF_HASHES: &[&str] = &[
+    const TEST_REAL_ENTRY: &[u8] = b"hello tesseroak\n";
+    const TEST_REAL_PROOF_HASHES: &[&str] = &[
         "fGRlLyuz+L9Jb8+uTSut/2aVc4z7fKFW+clvsb6xjEM=",
         "F6LautOHD5eppkWC0xn/lz00X5g2yLlZAkl2jCI/wdE=",
         "qH7OJxFNup+TDvJuohd2HphKVngfMeMzUK8QChEDcas=",
@@ -414,34 +464,48 @@ mod tests {
         "L8BZipjURnkctkjJtGJs+YyTXMssvNKA7+a8nV2JT/s=",
         "pva4RFzCejMkVMVmYc93As2lbk7WAyrw58TvrzEOjNc=",
     ];
-    const TEST2_ROOT_HASH: &str = "QYfrD7XAd4qUHbRBs4dDyDZwpZN4M/cccXr2G56pxkY=";
+    const TEST_REAL_ROOT_HASH: &str = "QYfrD7XAd4qUHbRBs4dDyDZwpZN4M/cccXr2G56pxkY=";
 
-    struct ReferenceValues {
+    /// A test identity bundling a signing key, verifying key, and origin.
+    struct TestIdentity {
         origin: String,
         signing_key: Option<NoteSigningKey>,
         verifying_key: NoteVerifyingKey,
     }
 
-    impl ReferenceValues {
-        fn make_test_example() -> Self {
+    impl TestIdentity {
+        /// Creates an identity from the real test-vector verifying key (no
+        /// signing capability).
+        fn real_log() -> Self {
             let verifying_key =
-                NoteVerifyingKey::parse(TEST_MAIN_VKEY).expect("failed to parse verifying key");
+                NoteVerifyingKey::parse(TEST_MAIN_VKEY).expect("parsing verifying key");
             Self { origin: verifying_key.origin.clone(), signing_key: None, verifying_key }
         }
 
-        fn make_fake_example() -> Self {
-            let signing_key = NoteSigningKey { raw: [42u8; 32] };
-            let s = SigningKey::from_bytes(&signing_key.raw);
-            let verifying_key = NoteVerifyingKey {
-                origin: FAKE_ORIGIN.into(),
-                key_id_hint: [99u8; 4], // Incorrect, but good enough.
-                version: 0x01,
-                raw: s.verifying_key().to_bytes(),
-            };
-            Self { origin: FAKE_ORIGIN.into(), signing_key: Some(signing_key), verifying_key }
+        /// Deterministic fake Ed25519 log identity.
+        fn fake_log() -> Self {
+            Self::fake(FAKE_ORIGIN, SignatureType::Ed25519, [42u8; 32])
         }
 
-        /// Imitates the main t-log signature.
+        /// Deterministic fake CosignatureV1 witness identity.
+        fn fake_witness() -> Self {
+            Self::fake("fake-witness", SignatureType::CosignatureV1, [43u8; 32])
+        }
+
+        fn fake(origin: &str, signature_type: SignatureType, seed: [u8; 32]) -> Self {
+            let signing_key = NoteSigningKey { raw: seed };
+            let s = SigningKey::from_bytes(&signing_key.raw);
+            let key_id_hint = [seed[0], seed[1], seed[2], seed[3]];
+            let verifying_key = NoteVerifyingKey {
+                origin: origin.into(),
+                key_id_hint,
+                signature_type,
+                raw: s.verifying_key().to_bytes(),
+            };
+            Self { origin: origin.into(), signing_key: Some(signing_key), verifying_key }
+        }
+
+        /// Creates an Ed25519 (type 0x01) signature over the given text.
         fn sign(&self, msg: &str) -> NoteSignature {
             let signing_key = SigningKey::from_bytes(&self.signing_key.as_ref().unwrap().raw);
             let signature = signing_key.sign(msg.as_bytes());
@@ -451,41 +515,67 @@ mod tests {
                 sig_bytes: signature.to_bytes().to_vec(),
             }
         }
+
+        /// Creates a timestamped cosignature (type 0x04) over the given
+        /// checkpoint text.
+        fn cosign(&self, checkpoint_text: &str, timestamp: u64) -> NoteSignature {
+            let signing_key = SigningKey::from_bytes(&self.signing_key.as_ref().unwrap().raw);
+            let payload = format!("cosignature/v1\ntime {}\n{}", timestamp, checkpoint_text);
+            let signature = signing_key.sign(payload.as_bytes());
+            let mut sig_bytes = Vec::new();
+            sig_bytes.extend_from_slice(&timestamp.to_be_bytes());
+            sig_bytes.extend_from_slice(&signature.to_bytes());
+            NoteSignature {
+                origin: self.origin.clone(),
+                key_id_hint: self.verifying_key.key_id_hint,
+                sig_bytes,
+            }
+        }
     }
 
-    fn hash_leaf(data: &[u8]) -> Sha256 {
-        let mut hasher = Sha256Hasher::new();
-        hasher.update([0x00]);
-        hasher.update(data);
-        Sha256::from(<[u8; 32]>::from(hasher.finalize()))
+    /// Helper for building Merkle trees with a known entry at a given index.
+    struct TestTree {
+        leaves: Vec<Sha256>,
+        tree: rs_merkle::MerkleTree<C2spHasher>,
     }
 
-    fn hash_node(left: &Sha256, right: &Sha256) -> Sha256 {
-        let mut hasher = Sha256Hasher::new();
-        hasher.update([0x01]);
-        hasher.update(left);
-        hasher.update(right);
-        Sha256::from(<[u8; 32]>::from(hasher.finalize()))
+    impl TestTree {
+        /// Returns a tree with `size` leaves, where the leaf at `entry_index`
+        /// is `entry` and all other leaves are unique fillers.
+        fn new(size: usize, entry_index: usize, entry: &[u8]) -> Self {
+            let mut leaves = vec![Sha256::from([0; 32]); size];
+            for (i, leaf) in leaves.iter_mut().enumerate().take(size) {
+                if i == entry_index {
+                    *leaf = C2spHasher::hash(entry);
+                } else {
+                    let mut data = [0u8; 32];
+                    data[0..8].copy_from_slice(&(i as u64).to_le_bytes());
+                    *leaf = C2spHasher::hash(&data);
+                }
+            }
+            let tree = rs_merkle::MerkleTree::<C2spHasher>::from_leaves(&leaves);
+            Self { leaves, tree }
+        }
+
+        fn root(&self) -> Sha256 {
+            self.tree.root().unwrap_or(Sha256::from([0; 32]))
+        }
+
+        fn proof(&self, index: usize) -> Vec<Sha256> {
+            if self.leaves.is_empty() {
+                return Vec::new();
+            }
+            self.tree.proof(&[index]).proof_hashes().to_vec()
+        }
     }
 
-    /// Creates a tree of size 2 where our entry is at index 0.
-    fn make_tree_size_2(entry: &[u8]) -> (Sha256, Sha256) {
-        let sibling_hash = Sha256::from([0xAA; 32]);
-        let leaf = hash_leaf(entry);
-        let root = hash_node(&leaf, &sibling_hash);
-        (root, sibling_hash)
-    }
-
-    fn make_checkpoint(
-        rvalues: &ReferenceValues,
-        tree_size: u64,
-        root_hash: &Sha256,
-    ) -> Checkpoint {
+    /// Builds a checkpoint with an Ed25519 log signature.
+    fn make_checkpoint(identity: &TestIdentity, tree_size: u64, root_hash: &Sha256) -> Checkpoint {
         let root_b64 = B64.encode(root_hash);
-        let signed_payload = format!("{}\n{}\n{}\n", rvalues.origin, tree_size, root_b64);
-        let sig = rvalues.sign(&signed_payload);
+        let signed_payload = format!("{}\n{}\n{}\n", identity.origin, tree_size, root_b64);
+        let sig = identity.sign(&signed_payload);
         Checkpoint {
-            origin: rvalues.origin.clone(),
+            origin: identity.origin.clone(),
             tree_size,
             root_hash: *root_hash,
             signed_payload,
@@ -493,9 +583,8 @@ mod tests {
         }
     }
 
-    fn make_proof(index: u64, proof_hashes: &[Sha256], checkpoint: &Checkpoint) -> String {
-        let hashes_str = proof_hashes.iter().map(|h| B64.encode(h)).collect::<Vec<_>>().join("\n");
-
+    /// Serialises a tlog proof bundle to its text format.
+    fn make_tlog_proof(index: u64, proof_hashes: &[Sha256], checkpoint: &Checkpoint) -> String {
         let mut sigs_str = String::new();
         for sig in &checkpoint.signatures {
             let mut sig_bytes = Vec::new();
@@ -505,50 +594,173 @@ mod tests {
             sigs_str.push_str(&format!("— {} {}\n", sig.origin, sig_b64));
         }
 
-        format!(
-            "c2sp.org/tlog-proof@v1\n\
-             index {}\n\
-             {}\n\
-             \n\
-             {}{}",
-            index, hashes_str, checkpoint.signed_payload, sigs_str
-        )
+        let mut result = format!("c2sp.org/tlog-proof@v1\nindex {}\n", index);
+        for hash in proof_hashes {
+            result.push_str(&B64.encode(hash));
+            result.push('\n');
+        }
+        // Blank line separating proof hashes from checkpoint.
+        result.push('\n');
+        // Checkpoint body (signed_payload ends with \n).
+        result.push_str(&checkpoint.signed_payload);
+        // Blank line separating checkpoint body from signatures.
+        result.push('\n');
+        result.push_str(&sigs_str);
+        result
     }
 
     #[test]
-    fn test_parse_test_example_success() {
-        let rvalues = ReferenceValues::make_test_example();
+    fn test_parse_signature_missing_prefix() {
+        assert!(matches!(
+            NoteSignature::parse("origin sig"),
+            Err(TLogProofError::MalformedSignature)
+        ));
+    }
 
-        let proof = TLogProof::parse(TEST_TLOG_PROOF).expect("failed to parse proof");
+    #[test]
+    fn test_parse_signature_invalid_base64() {
+        assert!(matches!(NoteSignature::parse("— origin @@@@"), Err(TLogProofError::Format(_))));
+    }
+
+    #[test]
+    fn test_parse_signature_too_short() {
+        // "AAAA" decodes to 3 bytes, below the 4-byte key ID minimum.
+        assert!(matches!(
+            NoteSignature::parse("— origin AAAA"),
+            Err(TLogProofError::MalformedSignature)
+        ));
+    }
+
+    #[test]
+    fn test_parse_verifying_key_too_few_parts() {
+        assert!(matches!(
+            NoteVerifyingKey::parse("origin+id"),
+            Err(TLogProofError::MalformedVerifyingKey)
+        ));
+    }
+
+    #[test]
+    fn test_parse_verifying_key_unsupported_version() {
+        let mut key_bytes = [0u8; 33];
+        key_bytes[0] = 0x02; // unsupported version
+        let key_b64 = B64.encode(key_bytes);
+        let serialized = format!("origin+12345678+{}", key_b64);
+        assert!(matches!(
+            NoteVerifyingKey::parse(&serialized),
+            Err(TLogProofError::MalformedVerifyingKey)
+        ));
+    }
+
+    #[test]
+    fn test_parse_verifying_key_wrong_length() {
+        let key_bytes = [0u8; 30]; // too short
+        let key_b64 = B64.encode(key_bytes);
+        let serialized = format!("origin+12345678+{}", key_b64);
+        assert!(matches!(
+            NoteVerifyingKey::parse(&serialized),
+            Err(TLogProofError::MalformedVerifyingKey)
+        ));
+    }
+
+    #[test]
+    fn test_verify_ed25519_wrong_key() {
+        let signer = TestIdentity::fake_log();
+        let other = TestIdentity::fake(FAKE_ORIGIN, SignatureType::Ed25519, [99u8; 32]);
+        let signed_text = "test message\n";
+        let sig = signer.sign(signed_text);
+
+        let result = other.verifying_key.verify(signed_text, &sig);
+        assert!(matches!(result, Err(TLogProofError::SignatureVerificationFailed)));
+    }
+
+    #[test]
+    fn test_parse_checkpoint_valid() {
+        let root = Sha256::from([0xAA; 32]);
+        let root_b64 = B64.encode(root);
+        let checkpoint_str = format!("example.com/log\n42\n{}\n\n", root_b64);
+
+        let cp = Checkpoint::parse(&checkpoint_str).unwrap();
+
+        assert_eq!(cp.origin, "example.com/log");
+        assert_eq!(cp.tree_size, 42);
+        assert_eq!(cp.root_hash, root);
+        assert!(cp.signatures.is_empty());
+    }
+
+    #[test]
+    fn test_parse_checkpoint_with_extension_lines() {
+        let root = Sha256::from([0xBB; 32]);
+        let root_b64 = B64.encode(root);
+        let checkpoint_str =
+            format!("example.com/log\n10\n{}\nextra-line-1\nextra-line-2\n\n", root_b64);
+
+        let cp = Checkpoint::parse(&checkpoint_str).unwrap();
+
+        assert_eq!(cp.tree_size, 10);
+        let expected_payload =
+            format!("example.com/log\n10\n{}\nextra-line-1\nextra-line-2\n", root_b64);
+        assert_eq!(cp.signed_payload, expected_payload);
+    }
+
+    #[test]
+    fn test_parse_checkpoint_missing_fields() {
+        assert!(matches!(
+            Checkpoint::parse("single-line"),
+            Err(TLogProofError::MalformedCheckpoint)
+        ));
+    }
+
+    #[test]
+    fn test_parse_checkpoint_invalid_tree_size() {
+        let checkpoint_str = "origin\nnot_a_number\nhash\n\n";
+        assert!(matches!(
+            Checkpoint::parse(checkpoint_str),
+            Err(TLogProofError::MalformedCheckpoint)
+        ));
+    }
+
+    #[test]
+    fn test_parse_checkpoint_invalid_root_hash() {
+        let checkpoint_str = "origin\n1\nnot_base64!\n\n";
+        assert!(matches!(
+            Checkpoint::parse(checkpoint_str),
+            Err(TLogProofError::MalformedCheckpoint)
+        ));
+    }
+
+    #[test]
+    fn test_parse_proof_real_vectors() {
+        let identity = TestIdentity::real_log();
+
+        let proof = TLogProof::parse(TEST_TLOG_PROOF).expect("parsing proof");
 
         assert_eq!(proof.index, 3);
         assert_eq!(proof.proof_hashes.len(), 2);
-        assert_eq!(proof.checkpoint.origin, rvalues.origin);
+        assert_eq!(proof.checkpoint.origin, identity.origin);
         assert_eq!(proof.checkpoint.tree_size, 4);
         assert_eq!(proof.checkpoint.signatures.len(), 2);
-        assert_eq!(proof.checkpoint.signatures[0].origin, rvalues.origin);
+        assert_eq!(proof.checkpoint.signatures[0].origin, identity.origin);
     }
 
     #[test]
-    fn test_parse_fake_example_success() {
-        let rvalues = ReferenceValues::make_fake_example();
+    fn test_parse_proof_synthetic() {
+        let identity = TestIdentity::fake_log();
         let root_hash = Sha256::from([0xCC; 32]);
-        let checkpoint = make_checkpoint(&rvalues, 456, &root_hash);
-        let proof_str = make_proof(123, &[Sha256::from([0xAA; 32])], &checkpoint);
+        let checkpoint = make_checkpoint(&identity, 456, &root_hash);
+        let proof_str = make_tlog_proof(123, &[Sha256::from([0xAA; 32])], &checkpoint);
 
-        let proof = TLogProof::parse(&proof_str).expect("failed to parse proof");
+        let proof = TLogProof::parse(&proof_str).expect("parsing proof");
 
         assert_eq!(proof.index, 123);
         assert_eq!(proof.proof_hashes.len(), 1);
-        assert_eq!(proof.checkpoint.origin, rvalues.origin);
+        assert_eq!(proof.checkpoint.origin, identity.origin);
         assert_eq!(proof.checkpoint.tree_size, 456);
         assert_eq!(proof.checkpoint.root_hash, root_hash);
         assert_eq!(proof.checkpoint.signatures.len(), 1);
-        assert_eq!(proof.checkpoint.signatures[0].origin, rvalues.origin);
     }
 
     #[test]
-    fn test_parse_invalid_header_failure() {
+    fn test_parse_proof_invalid_header() {
         let proof_str = "invalid-header\nindex 0\n";
 
         let result = TLogProof::parse(proof_str);
@@ -557,100 +769,269 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_test_example_success() {
-        let rvalues = ReferenceValues::make_test_example();
-        let proof = TLogProof::parse(TEST_TLOG_PROOF).unwrap();
+    fn test_parse_proof_invalid_index() {
+        assert!(matches!(
+            TLogProof::parse("c2sp.org/tlog-proof@v1\nindex abc\n"),
+            Err(TLogProofError::Format(_)) | Err(TLogProofError::InvalidIndex)
+        ));
+    }
+
+    #[test]
+    fn test_parse_proof_malformed_checkpoint() {
+        let proof_str = "c2sp.org/tlog-proof@v1\nindex 0\n\norigin\nnot_a_number\n";
+        assert!(matches!(TLogProof::parse(proof_str), Err(TLogProofError::MalformedCheckpoint)));
+
+        let proof_str2 = "c2sp.org/tlog-proof@v1\nindex 0\n\norigin\n1\nnot_b64\n";
+        assert!(matches!(TLogProof::parse(proof_str2), Err(TLogProofError::MalformedCheckpoint)));
+    }
+
+    #[test]
+    fn test_parse_proof_with_extra_data() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"entry-data";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+
+        // Insert an "extra" line after the header.
+        let proof_with_extra = proof_str.replacen(
+            "c2sp.org/tlog-proof@v1\n",
+            "c2sp.org/tlog-proof@v1\nextra dGVzdA==\n",
+            1,
+        );
+
+        let proof = TLogProof::parse(&proof_with_extra).unwrap();
+        assert_eq!(proof.index, 0);
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_real_vectors() {
+        let identity = TestIdentity::real_log();
         let witness_vkey = NoteVerifyingKey::parse(TEST_WITNESS_VKEY).unwrap();
+        let proof = TLogProof::parse(TEST_TLOG_PROOF).unwrap();
 
         let result =
-            proof.verify(&rvalues.origin, &[rvalues.verifying_key, witness_vkey], TEST_ENTRY);
+            proof.verify(&identity.origin, &[identity.verifying_key, witness_vkey], TEST_ENTRY);
 
         assert!(result.is_ok());
     }
 
     #[test]
-    fn test_compute_root_hash_test() {
-        let proof_hashes = TEST2_PROOF_HASHES
+    fn test_verify_real_merkle_vectors() {
+        let identity = TestIdentity::fake_log();
+        let proof_hashes: Vec<Sha256> = TEST_REAL_PROOF_HASHES
             .iter()
             .map(|h| Sha256::from(<[u8; 32]>::try_from(B64.decode(h).unwrap()).unwrap()))
             .collect();
         let root_hash =
-            Sha256::from(<[u8; 32]>::try_from(B64.decode(TEST2_ROOT_HASH).unwrap()).unwrap());
-        let proof = TLogProof {
-            index: 76958,
-            proof_hashes,
-            checkpoint: Checkpoint {
-                origin: FAKE_ORIGIN.into(),
-                tree_size: 76959,
-                root_hash,
-                signed_payload: String::new(),
-                signatures: Vec::new(),
-            },
+            Sha256::from(<[u8; 32]>::try_from(B64.decode(TEST_REAL_ROOT_HASH).unwrap()).unwrap());
+        let checkpoint = make_checkpoint(&identity, 76959, &root_hash);
+        let proof_str = make_tlog_proof(76958, &proof_hashes, &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], TEST_REAL_ENTRY).is_ok());
+    }
+
+    #[test]
+    fn test_verify_synthetic() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_cosignature() {
+        let log = TestIdentity::fake_log();
+        let witness = TestIdentity::fake_witness();
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        // Log signs with Ed25519 (type 0x01).
+        let log_sig = log.sign(&signed_payload);
+        // Witness cosigns with timestamp (type 0x04).
+        let witness_sig = witness.cosign(&signed_payload, 1700000000);
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
         };
 
-        let hash = proof.compute_root_hash(TEST2_ENTRY).unwrap();
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert_eq!(hash, root_hash);
+        assert!(
+            proof.verify(&log.origin, &[log.verifying_key, witness.verifying_key], entry).is_ok()
+        );
     }
 
     #[test]
-    fn test_verify_fake_example_success() {
-        let rvalues = ReferenceValues::make_fake_example();
-        let entry = b"valid-entry";
-        let (root, sibling) = make_tree_size_2(entry);
-        let checkpoint = make_checkpoint(&rvalues, 2, &root);
-        let proof_str = make_proof(0, &[sibling], &checkpoint);
+    fn test_verify_with_extension_lines() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"ext-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+
+        // Build signed_payload with an extension line.
+        let signed_payload = format!("{}\n{}\n{}\nextra-data\n", identity.origin, 2, root_b64);
+        let sig = identity.sign(&signed_payload);
+
+        let checkpoint = Checkpoint {
+            origin: identity.origin.clone(),
+            tree_size: 2,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![sig],
+        };
+
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert_eq!(proof.checkpoint.signed_payload, checkpoint.signed_payload);
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_single_leaf_tree() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"single-leaf";
+        let test_tree = TestTree::new(1, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 1, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(proof.verify(&rvalues.origin, &[rvalues.verifying_key], entry).is_ok());
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
     }
 
     #[test]
-    fn test_verify_wrong_entry_failure() {
-        let rvalues = ReferenceValues::make_fake_example();
+    fn test_verify_last_leaf() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"last-leaf";
+        let tree_size = 16;
+        let last_index = tree_size - 1;
+        let test_tree = TestTree::new(tree_size, last_index, entry);
+        let checkpoint = make_checkpoint(&identity, tree_size as u64, &test_tree.root());
+        let proof_str =
+            make_tlog_proof(last_index as u64, &test_tree.proof(last_index), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+    }
+
+    #[test]
+    fn test_verify_wrong_origin() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"data";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        let result = proof.verify("wrong.com/log", &[identity.verifying_key], entry);
+
+        assert!(matches!(result, Err(TLogProofError::OriginMismatch(..))));
+    }
+
+    #[test]
+    fn test_verify_wrong_entry() {
+        let identity = TestIdentity::fake_log();
         let entry = b"real-entry";
-        let (root, sibling) = make_tree_size_2(entry);
-        let checkpoint = make_checkpoint(&rvalues, 2, &root);
-        let proof_str = make_proof(0, &[sibling], &checkpoint);
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify(&rvalues.origin, &[rvalues.verifying_key], b"fake-entry");
+        let result = proof.verify(&identity.origin, &[identity.verifying_key], b"fake-entry");
 
         assert!(matches!(result, Err(TLogProofError::RootMismatch)));
     }
 
     #[test]
-    fn test_verify_tampered_signature_failure() {
-        let rvalues = ReferenceValues::make_fake_example();
+    fn test_verify_tampered_signature() {
+        let identity = TestIdentity::fake_log();
         let entry = b"data";
-        let (root, sibling) = make_tree_size_2(entry);
-        let checkpoint = make_checkpoint(&rvalues, 2, &root);
-        let mut proof_str = make_proof(0, &[sibling], &checkpoint);
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let mut proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+
+        // Replace the signature with garbage bytes.
         let parts: Vec<&str> = proof_str.split("— ").collect();
         let mut bad_sig_bytes = vec![];
-        bad_sig_bytes.extend_from_slice(&rvalues.verifying_key.key_id_hint);
+        bad_sig_bytes.extend_from_slice(&identity.verifying_key.key_id_hint);
         bad_sig_bytes.extend_from_slice(&[0xBB; 64]);
         let bad_sig = B64.encode(bad_sig_bytes);
-        proof_str = format!("{}— {} {}", parts[0], rvalues.origin, bad_sig);
+        proof_str = format!("{}— {} {}", parts[0], identity.origin, bad_sig);
+
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify(&rvalues.origin, &[rvalues.verifying_key], entry);
+        let result = proof.verify(&identity.origin, &[identity.verifying_key], entry);
 
-        assert!(matches!(result, Err(TLogProofError::SigVerify)));
+        assert!(matches!(result, Err(TLogProofError::SignatureVerificationFailed)));
     }
 
     #[test]
-    fn test_verify_wrong_origin_failure() {
-        let rvalues = ReferenceValues::make_fake_example();
-        let entry = b"data";
-        let (root, sibling) = make_tree_size_2(entry);
-        let checkpoint = make_checkpoint(&rvalues, 2, &root);
-        let proof_str = make_proof(0, &[sibling], &checkpoint);
+    fn test_verify_signature_mismatch() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify("wrong.com/log", &[rvalues.verifying_key], entry);
+        let mut wrong_vkey = identity.verifying_key.clone();
+        wrong_vkey.key_id_hint = [0xde, 0xad, 0xbe, 0xef];
 
-        assert!(matches!(result, Err(TLogProofError::OriginMismatch(..))));
+        assert!(matches!(
+            proof.verify(&identity.origin, &[wrong_vkey], entry),
+            Err(TLogProofError::SignatureMismatch)
+        ));
+    }
+
+    #[test]
+    fn test_verify_no_keys() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(2, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
+        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert!(matches!(
+            proof.verify(&identity.origin, &[], entry),
+            Err(TLogProofError::SignatureMismatch)
+        ));
+    }
+
+    #[test]
+    fn test_verify_invalid_merkle_chain() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(5, 0, entry);
+        let checkpoint = make_checkpoint(&identity, 5, &test_tree.root());
+        // Use index 5 which is >= tree_size 5, making the chain invalid.
+        let proof_str = make_tlog_proof(5, &test_tree.proof(0), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        assert!(matches!(
+            proof.verify(&identity.origin, &[identity.verifying_key], entry),
+            Err(TLogProofError::InvalidMerkleChain)
+        ));
     }
 }
