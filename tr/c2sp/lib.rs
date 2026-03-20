@@ -26,7 +26,7 @@
 //! ```
 //! let vkey = NoteVerifyingKey::parse("example.com/log+abcd1234+A...")?;
 //! let proof = TLogProof::parse(&proof_text)?;
-//! proof.verify("example.com/log", &[vkey], &entry_bytes)?;
+//! proof.verify(&vkey, &policy::WitnessPolicy::empty(), &entry_bytes)?;
 //! ```
 //!
 //! Signature verification supports Ed25519 (type 0x01) and timestamped
@@ -36,6 +36,8 @@
 #![no_std]
 
 extern crate alloc;
+
+pub mod policy;
 
 use alloc::{
     boxed::Box,
@@ -75,6 +77,8 @@ pub enum TLogProofError {
     RootMismatch,
     #[error("invalid Merkle chain")]
     InvalidMerkleChain,
+    #[error("witness quorum not satisfied")]
+    InsufficientWitnesses,
     #[error("malformed data")]
     Format(#[from] Box<dyn core::error::Error + Send + Sync>),
 }
@@ -113,15 +117,26 @@ pub struct NoteSigningKey {
 /// Supports Ed25519 signatures (type 0x01) and timestamped Ed25519 witness
 /// cosignatures (type 0x04) as defined by the
 /// [C2SP signed-note specification](https://c2sp.org/signed-note).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteVerifyingKey {
     pub origin: String,
     pub key_id_hint: [u8; 4],
     pub signature_type: SignatureType,
-    raw: [u8; 32],
+    pub raw: [u8; 32],
 }
 
 impl NoteVerifyingKey {
+    /// Creates a new `NoteVerifyingKey` from its constituent parts.
+    pub fn from_parts(origin: &str, signature_type: SignatureType, raw: [u8; 32]) -> Self {
+        let mut hasher = Sha256Hasher::new();
+        hasher.update(origin.as_bytes());
+        hasher.update(b"\n");
+        hasher.update(raw);
+        let hash = hasher.finalize();
+        let key_id_hint: [u8; 4] = hash[..4].try_into().unwrap();
+        Self { origin: origin.to_string(), key_id_hint, signature_type, raw }
+    }
+
     /// Parses a verifying key in note format.
     ///
     /// The format is `<key name>+<hex key ID>+<base64(signature type || public
@@ -153,6 +168,18 @@ impl NoteVerifyingKey {
         let raw: [u8; 32] =
             key_bytes[1..33].try_into().map_err(|_| TLogProofError::MalformedVerifyingKey)?;
         Ok(NoteVerifyingKey { origin, key_id_hint, signature_type, raw })
+    }
+
+    /// Serialises this verifying key back to note vkey string format:
+    /// `<origin>+<hex key ID>+<base64(signature type || public key)>`.
+    pub fn to_vkey_string(&self) -> String {
+        let sig_type_byte = match self.signature_type {
+            SignatureType::Ed25519 => 0x01u8,
+            SignatureType::CosignatureV1 => 0x04u8,
+        };
+        let mut key_material = alloc::vec![sig_type_byte];
+        key_material.extend_from_slice(&self.raw);
+        format!("{}+{}+{}", self.origin, hex::encode(self.key_id_hint), B64.encode(&key_material))
     }
 
     /// Verifies that `sig` is a valid signature over the given checkpoint text
@@ -215,6 +242,13 @@ impl NoteSignature {
             key_id_hint: b[0..4].try_into().unwrap(),
             sig_bytes: b[4..].to_vec(),
         })
+    }
+
+    /// Returns `true` if this signature's origin and key ID hint match the
+    /// given verifying key, i.e. this signature *could* have been produced
+    /// by that key.
+    pub fn matches_key(&self, vkey: &NoteVerifyingKey) -> bool {
+        self.origin == vkey.origin && self.key_id_hint == vkey.key_id_hint
     }
 }
 
@@ -338,45 +372,54 @@ impl TLogProof {
     ///
     /// # Arguments
     ///
-    /// * `origin`: The expected log origin (e.g., "example.com/log").
-    /// * `verifying_keys`: Verifying keys for log and witnesses, in arbitrary
-    ///   order. The t-log proof must contain signatures for all of these keys.
-    ///   It is fine to specify a subset only as long as a verifying key for the
-    ///   main signature is present.
+    /// * `log_key`: The expected log origin and the verifying key for the log.
+    ///   The t-log proof must contain exactly one valid signature corresponding
+    ///   to this key.
+    /// * `witness_policy`: The quorum policy determining which witness
+    ///   signatures are required. For verification to succeed, the collected
+    ///   valid witness signatures must satisfy this policy. If no witnesses are
+    ///   required, pass `WitnessPolicy::empty()`.
     /// * `entry`: The raw bytes of the entry or leaf that was logged.
     pub fn verify(
         &self,
-        origin: &str,
-        verifying_keys: &[NoteVerifyingKey],
+        log_key: &NoteVerifyingKey,
+        witness_policy: &policy::WitnessPolicy,
         entry: &[u8],
     ) -> Result<(), TLogProofError> {
         // Verify origin.
-        if self.checkpoint.origin != origin {
+        if self.checkpoint.origin != log_key.origin {
             return Err(TLogProofError::OriginMismatch(
-                origin.into(),
+                log_key.origin.clone(),
                 self.checkpoint.origin.clone(),
             ));
         }
 
-        // Verify signatures.
-        let mut main_sig_found: usize = 0;
-        for vkey in verifying_keys {
-            let mut num_found: usize = 0;
-            for sig in &self.checkpoint.signatures {
-                if sig.origin == vkey.origin && sig.key_id_hint == vkey.key_id_hint {
-                    vkey.verify(&self.checkpoint.signed_payload, sig)?;
-                    num_found += 1;
-                    if vkey.origin == origin {
-                        main_sig_found += 1;
-                    }
-                }
-            }
-            if num_found != 1 {
-                return Err(TLogProofError::SignatureMismatch);
+        // Verify log signature.
+        let mut num_found: usize = 0;
+        for sig in &self.checkpoint.signatures {
+            if sig.matches_key(log_key) {
+                log_key.verify(&self.checkpoint.signed_payload, sig)?;
+                num_found += 1;
             }
         }
-        if main_sig_found != 1 {
+        if num_found != 1 {
             return Err(TLogProofError::SignatureMismatch);
+        }
+
+        // Verify witness cosignatures and check quorum.
+        let mut verified_witnesses: Vec<&NoteVerifyingKey> = Vec::new();
+        for sig in &self.checkpoint.signatures {
+            for witness_key in witness_policy.witness_keys() {
+                if sig.matches_key(witness_key)
+                    && witness_key.verify(&self.checkpoint.signed_payload, sig).is_ok()
+                {
+                    verified_witnesses.push(witness_key);
+                    break;
+                }
+            }
+        }
+        if !witness_policy.check_quorum(&verified_witnesses) {
+            return Err(TLogProofError::InsufficientWitnesses);
         }
 
         // Verify Merkle inclusion.
@@ -802,7 +845,9 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_with_extra).unwrap();
         assert_eq!(proof.index, 0);
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+        assert!(
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
+        );
     }
 
     #[test]
@@ -811,8 +856,13 @@ mod tests {
         let witness_vkey = NoteVerifyingKey::parse(TEST_WITNESS_VKEY).unwrap();
         let proof = TLogProof::parse(TEST_TLOG_PROOF).unwrap();
 
-        let result =
-            proof.verify(&identity.origin, &[identity.verifying_key, witness_vkey], TEST_ENTRY);
+        let policy_str = alloc::format!(
+            concat!("witness w1 {}\n", "quorum w1\n"),
+            witness_vkey.to_vkey_string()
+        );
+        let policy = policy::WitnessPolicy::parse(&policy_str).unwrap();
+
+        let result = proof.verify(&identity.verifying_key, &policy, TEST_ENTRY);
 
         assert!(result.is_ok());
     }
@@ -831,7 +881,11 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], TEST_REAL_ENTRY).is_ok());
+        assert!(
+            proof
+                .verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), TEST_REAL_ENTRY)
+                .is_ok()
+        );
     }
 
     #[test]
@@ -844,7 +898,9 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+        assert!(
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
+        );
     }
 
     #[test]
@@ -873,9 +929,13 @@ mod tests {
         let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(
-            proof.verify(&log.origin, &[log.verifying_key, witness.verifying_key], entry).is_ok()
+        let policy_str = alloc::format!(
+            concat!("witness w1 {}\n", "quorum w1\n"),
+            witness.verifying_key.to_vkey_string()
         );
+        let policy = policy::WitnessPolicy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&log.verifying_key, &policy, entry,).is_ok());
     }
 
     #[test]
@@ -902,7 +962,9 @@ mod tests {
         let proof = TLogProof::parse(&proof_str).unwrap();
 
         assert_eq!(proof.checkpoint.signed_payload, checkpoint.signed_payload);
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+        assert!(
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
+        );
     }
 
     #[test]
@@ -915,7 +977,9 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+        assert!(
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
+        );
     }
 
     #[test]
@@ -931,7 +995,9 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        assert!(proof.verify(&identity.origin, &[identity.verifying_key], entry).is_ok());
+        assert!(
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
+        );
     }
 
     #[test]
@@ -943,7 +1009,10 @@ mod tests {
         let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify("wrong.com/log", &[identity.verifying_key], entry);
+        let mut wrong_origin_key = identity.verifying_key.clone();
+        wrong_origin_key.origin = "wrong.com/log".into();
+
+        let result = proof.verify(&wrong_origin_key, &policy::WitnessPolicy::empty(), entry);
 
         assert!(matches!(result, Err(TLogProofError::OriginMismatch(..))));
     }
@@ -957,7 +1026,8 @@ mod tests {
         let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify(&identity.origin, &[identity.verifying_key], b"fake-entry");
+        let result =
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), b"fake-entry");
 
         assert!(matches!(result, Err(TLogProofError::RootMismatch)));
     }
@@ -980,7 +1050,7 @@ mod tests {
 
         let proof = TLogProof::parse(&proof_str).unwrap();
 
-        let result = proof.verify(&identity.origin, &[identity.verifying_key], entry);
+        let result = proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry);
 
         assert!(matches!(result, Err(TLogProofError::SignatureVerificationFailed)));
     }
@@ -998,22 +1068,7 @@ mod tests {
         wrong_vkey.key_id_hint = [0xde, 0xad, 0xbe, 0xef];
 
         assert!(matches!(
-            proof.verify(&identity.origin, &[wrong_vkey], entry),
-            Err(TLogProofError::SignatureMismatch)
-        ));
-    }
-
-    #[test]
-    fn test_verify_no_keys() {
-        let identity = TestIdentity::fake_log();
-        let entry = b"valid-entry";
-        let test_tree = TestTree::new(2, 0, entry);
-        let checkpoint = make_checkpoint(&identity, 2, &test_tree.root());
-        let proof_str = make_tlog_proof(0, &test_tree.proof(0), &checkpoint);
-        let proof = TLogProof::parse(&proof_str).unwrap();
-
-        assert!(matches!(
-            proof.verify(&identity.origin, &[], entry),
+            proof.verify(&wrong_vkey, &policy::WitnessPolicy::empty(), entry),
             Err(TLogProofError::SignatureMismatch)
         ));
     }
@@ -1030,8 +1085,124 @@ mod tests {
         let proof = TLogProof::parse(&proof_str).unwrap();
 
         assert!(matches!(
-            proof.verify(&identity.origin, &[identity.verifying_key], entry),
+            proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry),
             Err(TLogProofError::InvalidMerkleChain)
         ));
+    }
+
+    #[test]
+    fn test_verify_with_policy_success() {
+        let log = TestIdentity::fake_log();
+        let witness1 = TestIdentity::fake_witness();
+        let witness2 =
+            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload);
+        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
+        let witness2_sig = witness2.cosign(&signed_payload, 1700000001);
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness1_sig, witness2_sig],
+        };
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Policy requiring any 1 of the 2 witnesses
+        let policy_str = format!(
+            concat!("witness w1 {}\n", "witness w2 {}\n", "group g any w1 w2\n", "quorum g\n",),
+            witness1.verifying_key.to_vkey_string(),
+            witness2.verifying_key.to_vkey_string()
+        );
+        let policy = policy::WitnessPolicy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&log.verifying_key, &policy, entry,).is_ok());
+    }
+
+    #[test]
+    fn test_verify_with_policy_any_single_signer() {
+        let log = TestIdentity::fake_log();
+        let witness1 = TestIdentity::fake_witness();
+        let witness2 =
+            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload);
+        // Only witness1 cosigns.
+        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness1_sig],
+        };
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Policy requiring any 1 of the 2 witnesses. witness1 signed, so this
+        // should succeed even though witness2 did not.
+        let policy_str = format!(
+            concat!("witness w1 {}\n", "witness w2 {}\n", "group g any w1 w2\n", "quorum g\n",),
+            witness1.verifying_key.to_vkey_string(),
+            witness2.verifying_key.to_vkey_string()
+        );
+        let policy = policy::WitnessPolicy::parse(&policy_str).unwrap();
+
+        assert!(proof.verify(&log.verifying_key, &policy, entry,).is_ok());
+    }
+
+    #[test]
+    fn test_verify_with_policy_failure() {
+        let log = TestIdentity::fake_log();
+        let witness1 = TestIdentity::fake_witness();
+        let witness2 =
+            TestIdentity::fake("fake-witness-2", SignatureType::CosignatureV1, [44u8; 32]);
+        let entry = b"valid-entry";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload);
+        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness1_sig], // Missing witness2 sig
+        };
+
+        let proof_str = make_tlog_proof(1, &test_tree.proof(1), &checkpoint);
+        let proof = TLogProof::parse(&proof_str).unwrap();
+
+        // Policy requiring ALL 2 witnesses
+        let policy_str = format!(
+            concat!("witness w1 {}\n", "witness w2 {}\n", "group g all w1 w2\n", "quorum g\n",),
+            witness1.verifying_key.to_vkey_string(),
+            witness2.verifying_key.to_vkey_string()
+        );
+        let policy = policy::WitnessPolicy::parse(&policy_str).unwrap();
+
+        let result = proof.verify(&log.verifying_key, &policy, entry);
+
+        assert!(matches!(result, Err(TLogProofError::InsufficientWitnesses)));
     }
 }
