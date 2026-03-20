@@ -91,6 +91,7 @@ rust_test(
         "//oak_functions_containers_app:bundle",
         "//oak_functions_launcher:mock_lookup_data",
     ],
+    shard_count = 5,
     deps = [
         "//oak_client",
         "//oak_file_utils",

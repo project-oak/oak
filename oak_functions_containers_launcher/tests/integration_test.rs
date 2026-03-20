@@ -42,9 +42,36 @@ async fn run_key_value_lookup_test(communication_channel: &str) {
     assert_eq!(response, b"test_value");
 }
 
+fn should_run_test(test_index: usize) -> bool {
+    let total_shards = match std::env::var("TEST_TOTAL_SHARDS") {
+        Ok(val) => match val.parse::<usize>() {
+            Ok(n) => n,
+            Err(_) => return true,
+        },
+        Err(_) => return true,
+    };
+
+    let shard_index = match std::env::var("TEST_SHARD_INDEX") {
+        Ok(val) => match val.parse::<usize>() {
+            Ok(n) => n,
+            Err(_) => return true,
+        },
+        Err(_) => return true,
+    };
+
+    if let Ok(status_file) = std::env::var("TEST_SHARD_STATUS_FILE") {
+        let _ = std::fs::File::create(status_file);
+    }
+
+    test_index % total_shards == shard_index
+}
+
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_virtio() {
+    if !should_run_test(0) {
+        return;
+    }
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
@@ -55,6 +82,9 @@ async fn test_launcher_key_value_lookup_virtio() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_network() {
+    if !should_run_test(1) {
+        return;
+    }
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
@@ -65,6 +95,9 @@ async fn test_launcher_key_value_lookup_network() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_tap() {
+    if !should_run_test(2) {
+        return;
+    }
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
@@ -75,6 +108,9 @@ async fn test_launcher_key_value_lookup_tap() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_tap_v6() {
+    if !should_run_test(3) {
+        return;
+    }
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
         return;
@@ -86,6 +122,9 @@ async fn test_launcher_key_value_lookup_tap_v6() {
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
+    if !should_run_test(4) {
+        return;
+    }
     env_logger::init();
     if oak_functions_test_utils::skip_test() {
         log::info!("skipping test");
