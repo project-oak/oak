@@ -90,10 +90,32 @@ pub struct SignedEndorsement {
     #[prost(message, optional, tag = "2")]
     pub signature: ::core::option::Option<Signature>,
     /// The Rekor log entry about the endorsement or empty if there is no log
-    /// entry.
+    /// entry. Conceptually an endorsement should be rooted in only one t-log.
+    /// For convenience and flexibility, the t-log configuration is at the
+    /// caller's discretion - i.e., possible to pass and verify an arbitrary
+    /// subset of all supported t-logs.
+    /// Independent of c2sp_tlog_proof and pes_confirmation: any field
+    /// constellation is permissible and can be verified.
     #[prost(bytes = "vec", tag = "3")]
     #[serde(with = "crate::base64data")]
     pub rekor_log_entry: ::prost::alloc::vec::Vec<u8>,
+    /// A C2SP tlog-proof bundle proving inclusion of the endorsement in a
+    /// transparency log. This is the text-format proof as defined at
+    /// <https://c2sp.org/tlog-proof,> serialized as bytes.
+    /// Independent of rekor_log_entry and pes_confirmation: any field
+    /// constellation is permissible and can be verified.
+    #[prost(bytes = "vec", tag = "4")]
+    #[serde(with = "crate::base64data")]
+    pub c2sp_tlog_proof: ::prost::alloc::vec::Vec<u8>,
+    /// The confirmation from Public Endorsement Service (PES). PES manages
+    /// developer (or publisher) signing identities and verifies related
+    /// signatures. The present attestation verification once more verifies
+    /// these signatures.
+    /// Independent of rekor_log_entry and c2sp_tlog_proof: any field
+    /// constellation is permissible and can be verified.
+    #[prost(bytes = "vec", tag = "5")]
+    #[serde(with = "crate::base64data")]
+    pub pes_confirmation: ::prost::alloc::vec::Vec<u8>,
 }
 /// Tink endorsement consists of a single Tink signature over the endorsed
 /// evidence.
@@ -949,6 +971,54 @@ pub mod verifying_key_reference_value {
         Verify(super::VerifyingKeySet),
     }
 }
+/// TBD - no contents here yet.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct C2sptLogProofReferenceValue {}
+/// TBD - no contents here yet.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PesReferenceValue {}
+/// Encapsulates parameters related to verification of receipts from
+/// t-log-like setups. If nothing should be verified, then this needs to be
+/// disclaimed by
+/// tlog { strategy { skip {} } }
+/// NEXT_ID: 8
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TLogReferenceValues {
+    /// Verifies Rekor inclusion. Ignored if not populated.
+    #[prost(message, optional, tag = "5")]
+    pub rekor: ::core::option::Option<VerifyingKeySet>,
+    /// Verifies C2SP t-log proof. Ignored if not populated.
+    #[prost(message, optional, tag = "6")]
+    pub c2sp: ::core::option::Option<C2sptLogProofReferenceValue>,
+    /// Verifies PES confirmation. Ignored if not populated.
+    #[prost(message, optional, tag = "7")]
+    pub pes: ::core::option::Option<PesReferenceValue>,
+    /// Specifies how to aggegrate verification results from individual t-logs.
+    /// Must be populated - rejected if empty.
+    #[prost(oneof = "t_log_reference_values::Strategy", tags = "1, 2, 3")]
+    pub strategy: ::core::option::Option<t_log_reference_values::Strategy>,
+}
+/// Nested message and enum types in `TLogReferenceValues`.
+pub mod t_log_reference_values {
+    /// Specifies how to aggegrate verification results from individual t-logs.
+    /// Must be populated - rejected if empty.
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Strategy {
+        /// Doesn't verify anything, no matter what is populated.
+        #[prost(message, tag = "1")]
+        Skip(super::SkipVerification),
+        /// Requires that ALL of the populated t-log verifications pass. If none
+        /// of the verifications is populated, then this is equivalent to `skip`,
+        /// but exploiting this is discouraged.
+        #[prost(message, tag = "2")]
+        All(()),
+        /// Requires that ANY (at least one) of the populated t-log verifications
+        /// pass. If none of the verifications is populated, then this will
+        /// always fail.
+        #[prost(message, tag = "3")]
+        Any(()),
+    }
+}
 /// Specifies a list of claim types. Claims are assertions about artifacts made
 /// by the endorsing entity. An overview of the claims maintained by Oak can be
 /// found at: <https://github.com/project-oak/oak/tree/main/docs/tr/claim>
@@ -958,6 +1028,7 @@ pub struct ClaimReferenceValue {
     pub claim_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Verifies the transparency log entry, including signatures and the digest.
+/// NEXT_ID: 7
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EndorsementReferenceValue {
     /// The endorser's public verifying key for signature verification. The
@@ -988,8 +1059,20 @@ pub struct EndorsementReferenceValue {
     #[prost(message, optional, tag = "4")]
     pub required_claims: ::core::option::Option<ClaimReferenceValue>,
     /// Verifies the Rekor log entry, if present and requested.
+    /// DEPRECATED - use TLogReferenceValues instead. The deprecated
+    /// approach is equivalent to
+    ///
+    /// tlog {
+    /// strategy { all {} }
+    /// rekor { <the VerifyingKeySet> }
+    /// }
+    #[deprecated]
     #[prost(message, optional, tag = "5")]
     pub rekor: ::core::option::Option<VerifyingKeyReferenceValue>,
+    /// Verifies any t-log-like setups associated with the endorsement.
+    /// Leaving this empty is rejected.
+    #[prost(message, optional, tag = "6")]
+    pub tlog: ::core::option::Option<TLogReferenceValues>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BinaryReferenceValue {

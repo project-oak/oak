@@ -70,6 +70,8 @@ pub fn create_signed_endorsement(
         endorsement: Some(endorsement),
         signature: Some(Signature { key_id, raw: signature.to_vec() }),
         rekor_log_entry: log_entry.to_vec(),
+        c2sp_tlog_proof: vec![],
+        pes_confirmation: vec![],
     }
 }
 
@@ -83,6 +85,7 @@ pub fn create_endorsement_reference_value(
         rekor_key.map(|v| VerifyingKeySet { keys: [v].to_vec(), ..Default::default() });
     let rekor = create_verifying_key_reference_value(rekor_key_set);
 
+    #[allow(deprecated)]
     EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
         required_claims: Some(ClaimReferenceValue { claim_types }),
@@ -163,6 +166,7 @@ pub fn verify_endorsement(
     let claims: Vec<&str> = required_claims.claim_types.iter().map(|x| &**x).collect();
     statement.validate(None, current_time, &claims).context("validating endorsement statement")?;
 
+    #[allow(deprecated)]
     let rekor_ref_value =
         ref_value.rekor.as_ref().context("no rekor key set in signed endorsement")?;
     match rekor_ref_value.r#type.as_ref() {

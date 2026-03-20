@@ -52,7 +52,7 @@ pub fn confidential_space_policy_from_reference_values(
                 r#type: Some(binary_reference_value::Type::Endorsement(ref_value)),
             };
             let workload_ref_values =
-                WorkloadReferenceValues::ImageReferenceValue(binary_ref_value);
+                WorkloadReferenceValues::ImageReferenceValue(Box::new(binary_ref_value));
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
         Some(
@@ -69,7 +69,7 @@ pub fn confidential_space_policy_from_reference_values(
             ref_value,
         )) => {
             let workload_ref_values =
-                WorkloadReferenceValues::ImageReferenceValue(ref_value.clone());
+                WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value.clone()));
             Ok(ConfidentialSpacePolicy::new(root_certificate, workload_ref_values))
         }
         None => Ok(ConfidentialSpacePolicy::new_unendorsed(root_certificate)),

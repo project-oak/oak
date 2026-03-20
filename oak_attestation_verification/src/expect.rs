@@ -17,7 +17,7 @@
 // `get_`, while names of functions related to policy-based attestation
 // verification start with `acquire_`.
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use anyhow::{Context, Error};
 use intoto::statement::{
@@ -1106,6 +1106,8 @@ fn verify_endorsement_wrapper(
             }),
             signature: Some(Signature { key_id: key.key_id, raw: signature.to_vec() }),
             rekor_log_entry: log_entry.to_vec(),
+            c2sp_tlog_proof: vec![],
+            pes_confirmation: vec![],
         };
 
         let result = verify_endorsement(now_utc_millis, &signed_endorsement, ref_value);

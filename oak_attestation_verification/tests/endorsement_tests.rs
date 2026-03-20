@@ -209,6 +209,7 @@ fn test_verify_endorsement_fails_with_wrong_endorser_key_id() {
 fn test_verify_endorsement_fails_with_empty_rekor_key() {
     let mut d = EndorsementData::load();
 
+    #[allow(deprecated)]
     let key_set = match d
         .ref_value
         .rekor
@@ -236,6 +237,7 @@ fn test_verify_endorsement_fails_with_empty_rekor_key() {
 fn test_verify_endorsement_fails_with_invalid_rekor_key() {
     let mut d = EndorsementData::load();
 
+    #[allow(deprecated)]
     let key_set = match d
         .ref_value
         .rekor
@@ -278,6 +280,7 @@ fn test_verify_endorsement_fails_with_rekor_key_but_no_log_entry() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
     let mut d = EndorsementData::load();
 
@@ -292,6 +295,7 @@ fn test_verify_endorsement_fails_with_no_rekor_reference_value() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_verify_endorsement_succeeds_with_no_log_entry_and_no_rekor_key() {
     let mut d = EndorsementData::load();
 

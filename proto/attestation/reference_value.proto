@@ -20,6 +20,7 @@ syntax = "proto3";
 package oak.attestation.v1;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "proto/attestation/tcb_version.proto";
 import "proto/digest.proto";
@@ -94,6 +95,45 @@ message VerifyingKeyReferenceValue {
   }
 }
 
+// TBD - no contents here yet.
+message C2SPTLogProofReferenceValue {}
+
+// TBD - no contents here yet.
+message PesReferenceValue {}
+
+// Encapsulates parameters related to verification of receipts from
+// t-log-like setups. If nothing should be verified, then this needs to be
+// disclaimed by
+//   tlog { strategy { skip {} } }
+// NEXT_ID: 8
+message TLogReferenceValues {
+  // Specifies how to aggegrate verification results from individual t-logs.
+  // Must be populated - rejected if empty.
+  oneof strategy {
+    // Doesn't verify anything, no matter what is populated.
+    SkipVerification skip = 1;
+
+    // Requires that ALL of the populated t-log verifications pass. If none
+    // of the verifications is populated, then this is equivalent to `skip`,
+    // but exploiting this is discouraged.
+    google.protobuf.Empty all = 2;
+
+    // Requires that ANY (at least one) of the populated t-log verifications
+    // pass. If none of the verifications is populated, then this will
+    // always fail.
+    google.protobuf.Empty any = 3;
+  }
+
+  // Verifies Rekor inclusion. Ignored if not populated.
+  VerifyingKeySet rekor = 5;
+
+  // Verifies C2SP t-log proof. Ignored if not populated.
+  C2SPTLogProofReferenceValue c2sp = 6;
+
+  // Verifies PES confirmation. Ignored if not populated.
+  PesReferenceValue pes = 7;
+}
+
 // Specifies a list of claim types. Claims are assertions about artifacts made
 // by the endorsing entity. An overview of the claims maintained by Oak can be
 // found at: https://github.com/project-oak/oak/tree/main/docs/tr/claim
@@ -102,6 +142,7 @@ message ClaimReferenceValue {
 }
 
 // Verifies the transparency log entry, including signatures and the digest.
+// NEXT_ID: 7
 message EndorsementReferenceValue {
   // The endorser's public verifying key for signature verification. The
   // attestation verification requires that all endorsements need to be
@@ -129,7 +170,18 @@ message EndorsementReferenceValue {
   ClaimReferenceValue required_claims = 4;
 
   // Verifies the Rekor log entry, if present and requested.
-  VerifyingKeyReferenceValue rekor = 5;
+  // DEPRECATED - use TLogReferenceValues instead. The deprecated
+  // approach is equivalent to
+  //
+  // tlog {
+  //    strategy { all {} }
+  //    rekor { <the VerifyingKeySet> }
+  // }
+  VerifyingKeyReferenceValue rekor = 5 [deprecated = true];
+
+  // Verifies any t-log-like setups associated with the endorsement.
+  // Leaving this empty is rejected.
+  TLogReferenceValues tlog = 6;
 }
 
 message BinaryReferenceValue {

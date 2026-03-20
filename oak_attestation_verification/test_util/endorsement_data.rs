@@ -64,6 +64,7 @@ pub struct EndorsementData {
 }
 
 impl EndorsementData {
+    #[allow(deprecated)]
     pub fn load() -> EndorsementData {
         let serialized = fs::read(data_path(ENDORSEMENT_PATH)).expect("couldn't read endorsement");
         let signature = fs::read(data_path(SIGNATURE_PATH)).expect("couldn't read signature");
@@ -108,6 +109,8 @@ impl EndorsementData {
                 endorsement: Some(endorsement),
                 signature: Some(Signature { key_id: KEY_ID, raw: signature.clone() }),
                 rekor_log_entry: log_entry.clone(),
+                c2sp_tlog_proof: vec![],
+                pes_confirmation: vec![],
             },
             ref_value: EndorsementReferenceValue {
                 endorser: Some(VerifyingKeySet {

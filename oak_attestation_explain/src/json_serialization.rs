@@ -498,6 +498,50 @@ fn serialize_verifying_key_reference_value(
     }
 }
 
+fn serialize_c2sp_tlog_proof_reference_value(
+    _instance: &C2sptLogProofReferenceValue,
+) -> serde_json::Value {
+    json!({})
+}
+
+fn serialize_pes_reference_value(_instance: &PesReferenceValue) -> serde_json::Value {
+    json!({})
+}
+
+fn serialize_tlog_reference_values(instance: &TLogReferenceValues) -> serde_json::Value {
+    // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
+    // all fields. If a new field is added to the struct, this code won't
+    // compile unless this destructuring operation is updated, thereby reminding us
+    // to keep the serialization in sync manually.
+    let TLogReferenceValues { strategy, rekor, c2sp, pes } = instance;
+    let mut result = json!({});
+
+    match strategy {
+        Some(t_log_reference_values::Strategy::Skip(instance)) => {
+            result["skip"] = serialize_skip_verification(instance);
+        }
+        Some(t_log_reference_values::Strategy::All(_)) => {
+            result["all"] = json!({});
+        }
+        Some(t_log_reference_values::Strategy::Any(_)) => {
+            result["any"] = json!({});
+        }
+        None => {}
+    }
+
+    if let Some(rekor) = rekor {
+        result["rekor"] = serialize_verifying_key_set(rekor);
+    }
+    if let Some(c2sp) = c2sp {
+        result["c2sp"] = serialize_c2sp_tlog_proof_reference_value(c2sp);
+    }
+    if let Some(pes) = pes {
+        result["pes"] = serialize_pes_reference_value(pes);
+    }
+
+    result
+}
+
 fn serialize_claim_reference_value(instance: &ClaimReferenceValue) -> serde_json::Value {
     // Exhaustive destructuring (e.g., without ", ..") ensures this function handles
     // all fields. If a new field is added to the struct, this code won't
@@ -522,6 +566,7 @@ pub fn serialize_endorsement_reference_value(
         endorser,
         required_claims,
         rekor,
+        tlog,
     } = instance;
     json!({
         "endorser_public_key": hex::encode(endorser_public_key),
@@ -529,6 +574,7 @@ pub fn serialize_endorsement_reference_value(
         "endorser": endorser.as_ref().map(serialize_verifying_key_set),
         "required_claims": required_claims.as_ref().map(serialize_claim_reference_value),
         "rekor": rekor.as_ref().map(serialize_verifying_key_reference_value),
+        "tlog": tlog.as_ref().map(serialize_tlog_reference_values),
     })
 }
 
@@ -892,6 +938,7 @@ pub fn serialize_confidential_space_reference_values(
 }
 
 pub fn serialize_cosign_reference_values(instance: &CosignReferenceValues) -> serde_json::Value {
+    #[allow(deprecated)]
     let CosignReferenceValues { developer_public_key, rekor_public_key } = instance;
     let mut result = json!({});
     if let Some(developer_public_key) = developer_public_key {

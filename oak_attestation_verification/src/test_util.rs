@@ -95,6 +95,7 @@ fn endorsement_reference_value(public_key: PublicKey) -> EndorsementReferenceVal
         key_id: 1,
         raw: endorser_public_key.clone(),
     };
+    #[allow(deprecated)]
     EndorsementReferenceValue {
         endorser: Some(VerifyingKeySet { keys: [endorser_key].to_vec(), ..Default::default() }),
         required_claims: Some(ClaimReferenceValue { claim_types: vec![] }),

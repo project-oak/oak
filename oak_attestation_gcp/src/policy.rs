@@ -150,7 +150,7 @@ pub(crate) fn verify_endorsement_wrapper(
 // Workload reference values can either be `EndorsementReferenceValue` protos or
 // a string pointing to the referenced container image.
 pub enum WorkloadReferenceValues {
-    ImageReferenceValue(BinaryReferenceValue),
+    ImageReferenceValue(Box<BinaryReferenceValue>),
     // See https://cloud.google.com/confidential-computing/confidential-space/docs/reference/token-claims#workload-container-claims
     // TODO: b/439861326 - Remove this field once endorsements are supported with Oak Transparent
     // release.
@@ -457,7 +457,7 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(ref_value);
+        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value));
         let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.verify(current_time, &event.encode_to_vec(), &endorsement.into());
@@ -484,7 +484,7 @@ mod tests {
         let root_certificate_pem = read_testdata_string!("root_ca_cert.pem");
         let root_certificate = Certificate::from_pem(&root_certificate_pem).unwrap();
         let ref_value = create_reference_value(0);
-        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(ref_value);
+        let workload_ref_value = WorkloadReferenceValues::ImageReferenceValue(Box::new(ref_value));
         let policy = ConfidentialSpacePolicy::new(root_certificate, workload_ref_value);
 
         let result = policy.report(current_time, &event.encode_to_vec(), &endorsement.into());
