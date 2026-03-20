@@ -19,7 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
-use digest_util::is_raw_digest_match;
+use oak_digest::is_raw_digest_match;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{

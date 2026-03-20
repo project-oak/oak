@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-use digest_util::raw_to_hex_digest;
 use oak_attestation_verification::verify_endorsement;
+use oak_digest::raw_to_hex_digest;
 use oak_proto_rust::oak::attestation::v1::{
     SkipVerification, VerifyingKeyReferenceValue, verifying_key_reference_value,
 };

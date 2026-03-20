@@ -20,7 +20,7 @@
 // endorsements are created and signed on the fly. For other tests (in
 // particular negative ones) see verifier_tests.rs.
 
-use digest_util::raw_to_hex_digest;
+use oak_digest::raw_to_hex_digest;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{

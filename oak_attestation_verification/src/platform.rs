@@ -19,7 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
-use digest_util::hash_sha2_256;
+use oak_digest::hash_sha2_256;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{

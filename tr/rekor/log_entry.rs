@@ -24,8 +24,8 @@ use alloc::borrow::ToOwned;
 
 use anyhow::{Context, ensure};
 use base64::{Engine as _, prelude::BASE64_STANDARD};
-use digest_util::hash_sha2_256;
 use key_util::{convert_pem_to_raw, equal_keys, verify_signature_ecdsa};
+use oak_digest::hash_sha2_256;
 use oak_proto_rust::oak::attestation::v1::VerifyingKeySet;
 use oak_time::Instant;
 use serde::{Deserialize, Serialize};

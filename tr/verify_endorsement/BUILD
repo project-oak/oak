@@ -27,10 +27,10 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "//oak_time",
-        "//tr/digest_util",
         "//tr/intoto",
         "//tr/key_util",
         "//tr/rekor",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
     ],
 )

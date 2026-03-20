@@ -20,7 +20,7 @@
 use core::convert::Into;
 
 use anyhow::{Context, anyhow};
-use digest_util::hash_sha2_256;
+use oak_digest::hash_sha2_256;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::Instant;
 use p256::{

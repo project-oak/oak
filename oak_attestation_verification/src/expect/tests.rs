@@ -16,10 +16,10 @@
 
 use std::collections::BTreeMap;
 
-use digest_util::{
+use intoto::statement::Validity;
+use oak_digest::{
     hex_digest_from_contents, hex_to_raw_digest, raw_digest_from_contents, raw_to_hex_digest,
 };
-use intoto::statement::Validity;
 use oak_proto_rust::oak::{
     HexDigest,
     attestation::v1::{

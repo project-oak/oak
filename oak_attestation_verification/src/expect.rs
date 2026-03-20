@@ -20,11 +20,11 @@
 use alloc::{string::String, vec::Vec};
 
 use anyhow::{Context, Error};
-use digest_util::{
-    hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
-};
 use intoto::statement::{
     DefaultStatement, Validity, get_hex_digest_from_statement, parse_statement,
+};
+use oak_digest::{
+    hex_to_raw_digest, is_hex_digest_match, raw_digest_from_contents, raw_to_hex_digest,
 };
 use oak_proto_rust::oak::{
     RawDigest,

@@ -27,7 +27,7 @@ use alloc::{
 };
 
 use anyhow::{Context, ensure};
-use digest_util::{
+use oak_digest::{
     DigestSet, hex_to_raw_digest, hex_to_set_digest, is_hex_digest_match, set_to_hex_digest,
 };
 use oak_proto_rust::oak::{HexDigest, attestation::v1::EndorsementDetails};

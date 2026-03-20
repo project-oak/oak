@@ -28,8 +28,8 @@ rust_library(
     deps = [
         "//oak_proto_rust",
         "//oak_time",
-        "//tr/digest_util",
         "//tr/key_util",
+        "//util/digest:oak_digest",
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:hex",
