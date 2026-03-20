@@ -463,6 +463,7 @@ use_repo(crate, STD)
 crate.from_specs(
     name = NO_STD,
     supported_platform_triples = [
+        "aarch64-apple-darwin",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-none",
         "wasm32-unknown-unknown",

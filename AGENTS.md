@@ -123,6 +123,9 @@ Guidelines for `README.md` files:
 ## Style Guide
 
 - Do not use the word "learning". Use "lesson" instead.
+- Use the **current year** in copyright headers when creating new files (e.g.
+  `Copyright 2026 The Project Oak Authors`). Do not copy a stale year from an
+  older file.
 
 ### Errors
 
@@ -137,6 +140,22 @@ Examples:
 ```rust
 verify_signature(evidence).context("verifying signature")?;
 let timestamp = request.timestamp.as_ref().context("missing timestamp")?;
+```
+
+### CLI Flags
+
+Prefer long flag names over short ones (e.g. `--wasm-module-file` not `-w`).
+When passing flag values, use the `--flag=value` form with an equals sign, not
+the space-separated `--flag value` form. This applies both in code (e.g. in test
+helpers that invoke binaries) and in documentation examples.
+
+```bash
+# Preferred
+cleanroom --wasm-module-file=module.wasm
+
+# Avoid
+cleanroom --wasm-module-file module.wasm
+cleanroom -w module.wasm
 ```
 
 ## Version Control
