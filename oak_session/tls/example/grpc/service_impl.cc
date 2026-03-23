@@ -48,11 +48,24 @@ absl::StatusOr<std::unique_ptr<TlsOverGrpcServiceImpl>>
 TlsOverGrpcServiceImpl::Create(const std::string& server_key_asn1,
                                const std::string& server_cert_asn1,
                                const std::string& client_cert_path) {
+  class StaticIdentityProvider : public TlsIdentityProvider {
+   public:
+    StaticIdentityProvider(std::string key, std::string cert)
+        : current_identity_{.key_asn1 = std::move(key),
+                            .cert_asn1 = std::move(cert)} {}
+    absl::StatusOr<TlsIdentity> GetIdentity() override {
+      return current_identity_;
+    }
+
+   private:
+    TlsIdentity current_identity_;
+  };
+
   absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> server_ctx =
-      OakSessionTlsContext::Create(ServerContextConfig{TlsIdentity{
-          .key_asn1 = server_key_asn1,
-          .cert_asn1 = server_cert_asn1,
-      }});
+      OakSessionTlsContext::Create(ServerContextConfig{
+          .tls_identity_provider = std::make_unique<StaticIdentityProvider>(
+              server_key_asn1, server_cert_asn1),
+      });
   if (!server_ctx.ok()) {
     return server_ctx.status();
   }

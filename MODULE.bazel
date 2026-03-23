@@ -1322,6 +1322,22 @@ crate.spec(
 crate.spec(
     default_features = False,
     features = [
+        "ring",
+        "pem",
+        "x509-parser",
+    ],
+    package = "rcgen",
+    repositories = ALL_STD,
+    version = "0.13.1",
+)
+crate.spec(
+    package = "time-macros",
+    repositories = ALL_STD,
+    version = "=0.2.18",
+)
+crate.spec(
+    default_features = False,
+    features = [
         "std",
         "string",
     ],

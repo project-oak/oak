@@ -18,11 +18,16 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "oak_session/tls/oak_session_tls.h"
 
 namespace oak::session::tls::util {
 
 absl::StatusOr<std::string> LoadPrivateKeyFromFile(const char* key_path);
 absl::StatusOr<std::string> LoadCertificateFromFile(const char* cert_path);
+
+absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateFromFiles(
+    std::string key_path, std::string cert_path);
+absl::StatusOr<std::unique_ptr<TlsIdentityProvider>> CreateSelfSigned();
 
 }  // namespace oak::session::tls::util
 

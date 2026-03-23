@@ -55,14 +55,24 @@ void RunClient() {
   absl::StatusOr<std::string> client_cert_asn1 =
       util::LoadCertificateFromFile(absl::GetFlag(FLAGS_client_cert).c_str());
 
+  class StaticIdentityProvider : public TlsIdentityProvider {
+   public:
+    StaticIdentityProvider(std::string key, std::string cert)
+        : current_identity_{.key_asn1 = std::move(key),
+                            .cert_asn1 = std::move(cert)} {}
+    absl::StatusOr<TlsIdentity> GetIdentity() override {
+      return current_identity_;
+    }
+
+   private:
+    TlsIdentity current_identity_;
+  };
+
   absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> tls_context =
       OakSessionTlsContext::Create(ClientContextConfig{
           .server_trust_anchor_path = absl::GetFlag(FLAGS_ca_cert),
-          .tls_identity =
-              TlsIdentity{
-                  .key_asn1 = *client_key_asn1,
-                  .cert_asn1 = *client_cert_asn1,
-              },
+          .tls_identity_provider = std::make_unique<StaticIdentityProvider>(
+              *client_key_asn1, *client_cert_asn1),
       });
   grpc::ClientContext grpc_context;
   auto stream = stub->TlsSession(&grpc_context);

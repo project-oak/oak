@@ -26,7 +26,7 @@ use std::{io::BufReader, sync::Arc};
 use client::{PrivateMemoryAppClient, PrivateMemoryTlsClient};
 use oak_session_tls::{
     ClientContextConfig, OakSessionTlsClientContext, OakSessionTlsServerContext,
-    ServerContextConfig, TlsIdentity, utils,
+    ServerContextConfig, utils,
 };
 use private_memory_test_utils::start_server_with_tls;
 use runfiles::Runfiles;
@@ -67,7 +67,7 @@ fn test_server_context() -> OakSessionTlsServerContext {
     let server_key = load_test_key("oak_session/tls/testing/test_server.key");
 
     OakSessionTlsServerContext::create(ServerContextConfig {
-        tls_identity: TlsIdentity { key_der: server_key, cert_der: server_cert },
+        tls_identity_provider: utils::create_static_cert_identity_provider(server_key, server_cert),
         client_trust_anchor_der: Some(ca_cert),
     })
     .expect("failed to create TLS server context")
@@ -80,7 +80,10 @@ fn test_client_context() -> OakSessionTlsClientContext {
 
     OakSessionTlsClientContext::create(ClientContextConfig {
         server_trust_anchor_der: Some(ca_cert),
-        tls_identity: Some(TlsIdentity { key_der: client_key, cert_der: client_cert }),
+        tls_identity_provider: Some(utils::create_static_cert_identity_provider(
+            client_key,
+            client_cert,
+        )),
     })
     .expect("failed to create TLS client context")
 }

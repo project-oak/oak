@@ -20,6 +20,7 @@
 #include <functional>
 #include <optional>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -63,10 +64,19 @@ struct TlsIdentity {
   std::string cert_asn1;
 };
 
+// Provider interface that returns a TlsIdentity.
+// Called each time a new session is created on the context.
+class TlsIdentityProvider {
+ public:
+  virtual ~TlsIdentityProvider() = default;
+  virtual absl::StatusOr<TlsIdentity> GetIdentity() = 0;
+};
+
 // Parameters to configure OakSessionTlsContext for server behavior.
 struct ServerContextConfig {
-  // The key and certificate to use for this server.
-  TlsIdentity tls_identity;
+  // Provider that returns the key and certificate for this server.
+  // Called each time a new session is created.
+  std::unique_ptr<TlsIdentityProvider> tls_identity_provider;
 
   // Optional trust anchor path for the client.
   // If set, client verification mode will be enabled, and client verification
@@ -79,9 +89,10 @@ struct ClientContextConfig {
   // The path to a trust anchor that can verify the server.
   std::string server_trust_anchor_path;
 
-  // If provided, the client will support (but not require) mTLS mode, and the
-  // server can request a certificate for verification.
-  std::optional<TlsIdentity> tls_identity;
+  // If provided, called each time a new session is created to get the
+  // client's TLS identity. Enables mTLS mode, allowing the server to
+  // request a certificate for verification.
+  std::unique_ptr<TlsIdentityProvider> tls_identity_provider;
 };
 
 /**
@@ -94,9 +105,9 @@ struct ClientContextConfig {
 class OakSessionTlsContext {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> Create(
-      const ClientContextConfig& config);
+      ClientContextConfig config);
   static absl::StatusOr<std::unique_ptr<OakSessionTlsContext>> Create(
-      const ServerContextConfig& config);
+      ServerContextConfig config);
 
   // Create a new session and perform the TLS handshake using the provided
   // send/receive callbacks. Returns an initialized session ready for use.
@@ -124,12 +135,17 @@ class OakSessionTlsContext {
   // - After IsReady(), call GetOpenSession() to get the initialized session
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> NewSession();
 
-  OakSessionTlsContext(OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx)
-      : mode_(mode), ssl_ctx_(std::move(ssl_ctx)) {}
+  OakSessionTlsContext(
+      OakSessionTlsMode mode, bssl::UniquePtr<SSL_CTX> ssl_ctx,
+      std::unique_ptr<TlsIdentityProvider> tls_identity_provider)
+      : mode_(mode),
+        ssl_ctx_(std::move(ssl_ctx)),
+        tls_identity_provider_(std::move(tls_identity_provider)) {}
 
  private:
   OakSessionTlsMode mode_;
   bssl::UniquePtr<SSL_CTX> ssl_ctx_;
+  std::unique_ptr<TlsIdentityProvider> tls_identity_provider_;
 };
 
 /**
@@ -148,10 +164,10 @@ class OakSessionTlsContext {
 class OakSessionTlsInitializer {
  public:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateServer(
-      SSL_CTX* ssl_ctx);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
 
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> CreateClient(
-      SSL_CTX* ssl_ctx);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
 
   // Returns true if the handshake is complete.
   //
@@ -177,7 +193,7 @@ class OakSessionTlsInitializer {
 
  private:
   static absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> Create(
-      SSL_CTX* ssl_ctx);
+      SSL_CTX* ssl_ctx, const TlsIdentity* tls_identity = nullptr);
   OakSessionTlsInitializer(bssl::UniquePtr<SSL> ssl, BIO* bio_read,
                            BIO* bio_write)
       : ssl_(std::move(ssl)), bio_read_(bio_read), bio_write_(bio_write) {};

@@ -75,25 +75,19 @@ HandshakeResult RunHandshake(OakSessionTlsContext& client_ctx,
                              OakSessionTlsContext& server_ctx);
 
 TEST(OakSessionTlsTest, ManualHandshake) {
-  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
-  ASSERT_THAT(server_key, IsOk());
-  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
-  ASSERT_THAT(server_cert, IsOk());
-
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   // Manual handshake using OakSessionTlsInitializer
@@ -132,25 +126,19 @@ TEST(OakSessionTlsTest, ManualHandshake) {
 
 // Verify that PQC key exchange (X25519MLKEM768) is negotiated.
 TEST(OakSessionTlsTest, PqcKeyExchangeNegotiated) {
-  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
-  ASSERT_THAT(server_key, IsOk());
-  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
-  ASSERT_THAT(server_cert, IsOk());
-
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   auto result = RunHandshake(**client_ctx, **server_ctx);
@@ -178,26 +166,21 @@ constexpr char kTestUntrustedCertPath[] =
 // Verify that a server certificate not signed by the trusted CA is rejected.
 TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
   // Server uses a self-signed certificate NOT in the client's trust anchor.
-  auto untrusted_key = util::LoadPrivateKeyFromFile(kTestUntrustedKeyPath);
-  ASSERT_THAT(untrusted_key, IsOk());
-  auto untrusted_cert = util::LoadCertificateFromFile(kTestUntrustedCertPath);
-  ASSERT_THAT(untrusted_cert, IsOk());
 
+  auto server_provider =
+      util::CreateFromFiles(kTestUntrustedKeyPath, kTestUntrustedCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *untrusted_key,
-              .cert_asn1 = *untrusted_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   // Client trusts only the test CA, not the untrusted self-signed cert.
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   auto server_initializer = (*server_ctx)->NewSession();
@@ -221,36 +204,108 @@ TEST(OakSessionTlsTest, UntrustedCertificateRejected) {
   EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
-TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
+// Verify that the ServerContext can successfully rotate its certificate between
+// sessions.
+TEST(OakSessionTlsTest, CertificateRotationWorks) {
   auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
   ASSERT_THAT(server_key, IsOk());
   auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
   ASSERT_THAT(server_cert, IsOk());
-  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
-  ASSERT_THAT(client_key, IsOk());
-  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
-  ASSERT_THAT(client_cert, IsOk());
+
+  auto untrusted_key = util::LoadPrivateKeyFromFile(kTestUntrustedKeyPath);
+  ASSERT_THAT(untrusted_key, IsOk());
+  auto untrusted_cert = util::LoadCertificateFromFile(kTestUntrustedCertPath);
+  ASSERT_THAT(untrusted_cert, IsOk());
+
+  class RotatingIdentityProvider : public TlsIdentityProvider {
+   public:
+    TlsIdentity current_identity;
+    absl::StatusOr<TlsIdentity> GetIdentity() override {
+      return current_identity;
+    }
+  };
+
+  auto provider = std::make_unique<RotatingIdentityProvider>();
+  auto* provider_ptr = provider.get();
+  provider_ptr->current_identity = TlsIdentity{
+      .key_asn1 = *server_key,
+      .cert_asn1 = *server_cert,
+  };
 
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
-      .client_trust_anchor_path = std::string(kTestCaCertPath),
+      .tls_identity_provider = std::move(provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
+  // First client session (should succeed because server uses the trusted cert).
+  ClientContextConfig client_config1{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+  };
+  auto client_ctx1 = OakSessionTlsContext::Create(std::move(client_config1));
+  ASSERT_THAT(client_ctx1, IsOk());
+
+  auto server_initializer1 = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer1, IsOk());
+  auto client_initializer1 = (*client_ctx1)->NewSession();
+  ASSERT_THAT(client_initializer1, IsOk());
+
+  HandshakeToClientReady(**server_initializer1, **client_initializer1);
+  auto client_result1 = (*client_initializer1)->GetOpenSession();
+  EXPECT_THAT(client_result1, IsOk());
+
+  // Second client session (server rotates cert to untrusted).
+  provider_ptr->current_identity = TlsIdentity{
+      .key_asn1 = *untrusted_key,
+      .cert_asn1 = *untrusted_cert,
+  };
+
+  ClientContextConfig client_config2{
+      .server_trust_anchor_path = std::string(kTestCaCertPath),
+  };
+  auto client_ctx2 = OakSessionTlsContext::Create(std::move(client_config2));
+  ASSERT_THAT(client_ctx2, IsOk());
+
+  auto server_initializer2 = (*server_ctx)->NewSession();
+  ASSERT_THAT(server_initializer2, IsOk());
+  auto client_initializer2 = (*client_ctx2)->NewSession();
+  ASSERT_THAT(client_initializer2, IsOk());
+
+  // Client sends ClientHello
+  auto client_hello = (*client_initializer2)->GetTLSFrame();
+  ASSERT_THAT(client_hello, IsOk());
+
+  // Server processes ClientHello
+  ASSERT_THAT((*server_initializer2)->PutTLSFrame(*client_hello), IsOk());
+
+  // Server sends ServerHello + Certificate (untrusted now)
+  auto server_hello = (*server_initializer2)->GetTLSFrame();
+  ASSERT_THAT(server_hello, IsOk());
+
+  // Client should reject the untrusted certificate
+  auto result = (*client_initializer2)->PutTLSFrame(*server_hello);
+  EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
+}
+
+TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
+  ServerContextConfig server_config{
+      .tls_identity_provider = std::move(*server_provider),
+      .client_trust_anchor_path = std::string(kTestCaCertPath),
+  };
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
+  ASSERT_THAT(server_ctx, IsOk());
+
+  auto client_provider =
+      util::CreateFromFiles(kTestClientKeyPath, kTestClientCertPath);
+  ASSERT_THAT(client_provider, IsOk());
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *client_key,
-              .cert_asn1 = *client_cert,
-          },
+      .tls_identity_provider = std::move(*client_provider),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   auto result = RunHandshake(**client_ctx, **server_ctx);
@@ -265,37 +320,26 @@ TEST(OakSessionTlsTest, CreateAndUseMtlsSession) {
 }
 
 TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
-  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
-  ASSERT_THAT(server_key, IsOk());
-  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
-  ASSERT_THAT(server_cert, IsOk());
-  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
-  ASSERT_THAT(client_key, IsOk());
-  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
-  ASSERT_THAT(client_cert, IsOk());
-
   // Do not enable a trust anchor so the server does not request a client
   // certificate.
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   // Set client credentials (but server won't request them).
+  auto client_provider =
+      util::CreateFromFiles(kTestClientKeyPath, kTestClientCertPath);
+  ASSERT_THAT(client_provider, IsOk());
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *client_key,
-              .cert_asn1 = *client_cert,
-          },
+      .tls_identity_provider = std::move(*client_provider),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   auto result = RunHandshake(**client_ctx, **server_ctx);
@@ -305,25 +349,15 @@ TEST(OakSessionTlsTest, ClientSetsTlsIdentServerDoesntRequest) {
 
 TEST(OakSessionTlsTest,
      ServerRequestsClientCertButClientDoesntSetFailsHandshake) {
-  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
-  ASSERT_THAT(server_key, IsOk());
-  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
-  ASSERT_THAT(server_cert, IsOk());
-  auto client_key = util::LoadPrivateKeyFromFile(kTestClientKeyPath);
-  ASSERT_THAT(client_key, IsOk());
-  auto client_cert = util::LoadCertificateFromFile(kTestClientCertPath);
-  ASSERT_THAT(client_cert, IsOk());
-
   // Enable a client trust anchor, which will trigger client cert request.
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
       .client_trust_anchor_path = std::string(kTestCaCertPath),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   // Don't set client credentials.
@@ -331,7 +365,7 @@ TEST(OakSessionTlsTest,
       .server_trust_anchor_path = std::string(kTestCaCertPath),
 
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   // Handshake
@@ -356,25 +390,19 @@ TEST(OakSessionTlsTest,
 }
 
 TEST(OakSessionTlsTest, LargeDataTransfer) {
-  auto server_key = util::LoadPrivateKeyFromFile(kTestServerKeyPath);
-  ASSERT_THAT(server_key, IsOk());
-  auto server_cert = util::LoadCertificateFromFile(kTestServerCertPath);
-  ASSERT_THAT(server_cert, IsOk());
-
+  auto server_provider =
+      util::CreateFromFiles(kTestServerKeyPath, kTestServerCertPath);
+  ASSERT_THAT(server_provider, IsOk());
   ServerContextConfig server_config{
-      .tls_identity =
-          TlsIdentity{
-              .key_asn1 = *server_key,
-              .cert_asn1 = *server_cert,
-          },
+      .tls_identity_provider = std::move(*server_provider),
   };
-  auto server_ctx = OakSessionTlsContext::Create(server_config);
+  auto server_ctx = OakSessionTlsContext::Create(std::move(server_config));
   ASSERT_THAT(server_ctx, IsOk());
 
   ClientContextConfig client_config{
       .server_trust_anchor_path = std::string(kTestCaCertPath),
   };
-  auto client_ctx = OakSessionTlsContext::Create(client_config);
+  auto client_ctx = OakSessionTlsContext::Create(std::move(client_config));
   ASSERT_THAT(client_ctx, IsOk());
 
   auto result = RunHandshake(**client_ctx, **server_ctx);

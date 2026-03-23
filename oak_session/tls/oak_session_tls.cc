@@ -36,11 +36,11 @@ namespace oak::session::tls {
 namespace {
 absl::StatusOr<std::string> BioReadAll(BIO* bio);
 absl::StatusOr<std::string> SslReadAll(SSL* ssl);
-absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity);
+absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity);
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::Create(const ServerContextConfig& config) {
+OakSessionTlsContext::Create(ServerContextConfig config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_server_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
@@ -55,11 +55,6 @@ OakSessionTlsContext::Create(const ServerContextConfig& config) {
                                      SSL_GROUP_X25519};
   SSL_CTX_set1_group_ids(ctx.get(), kGroups, std::size(kGroups));
 
-  absl::Status creds_status = SetTlsIdentity(ctx.get(), config.tls_identity);
-  if (!creds_status.ok()) {
-    return creds_status;
-  }
-
   if (config.client_trust_anchor_path.has_value()) {
     SSL_CTX_set_verify(
         ctx.get(), SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, nullptr);
@@ -71,12 +66,13 @@ OakSessionTlsContext::Create(const ServerContextConfig& config) {
     }
   }
 
-  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kServer,
-                                                std::move(ctx));
+  return std::make_unique<OakSessionTlsContext>(
+      OakSessionTlsMode::kServer, std::move(ctx),
+      std::move(config.tls_identity_provider));
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsContext>>
-OakSessionTlsContext::Create(const ClientContextConfig& config) {
+OakSessionTlsContext::Create(ClientContextConfig config) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_client_method()));
   if (!ctx) {
     return absl::InternalError("Failed to create SSL_CTX");
@@ -99,24 +95,31 @@ OakSessionTlsContext::Create(const ClientContextConfig& config) {
   // certs.
   SSL_CTX_set_verify(ctx.get(), SSL_VERIFY_PEER, nullptr);
 
-  if (config.tls_identity.has_value()) {
-    absl::Status creds_status = SetTlsIdentity(ctx.get(), *config.tls_identity);
-    if (!creds_status.ok()) {
-      return creds_status;
-    }
-  }
-
-  return std::make_unique<OakSessionTlsContext>(OakSessionTlsMode::kClient,
-                                                std::move(ctx));
+  return std::make_unique<OakSessionTlsContext>(
+      OakSessionTlsMode::kClient, std::move(ctx),
+      std::move(config.tls_identity_provider));
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
 OakSessionTlsContext::NewSession() {
+  const TlsIdentity* identity_ptr = nullptr;
+  std::optional<TlsIdentity> identity;
+  if (tls_identity_provider_ != nullptr) {
+    auto identity_or = tls_identity_provider_->GetIdentity();
+    if (!identity_or.ok()) {
+      return identity_or.status();
+    }
+    identity = std::move(*identity_or);
+    identity_ptr = &*identity;
+  }
+
   switch (mode_) {
     case OakSessionTlsMode::kClient:
-      return OakSessionTlsInitializer::CreateClient(ssl_ctx_.get());
+      return OakSessionTlsInitializer::CreateClient(ssl_ctx_.get(),
+                                                    identity_ptr);
     case OakSessionTlsMode::kServer:
-      return OakSessionTlsInitializer::CreateServer(ssl_ctx_.get());
+      return OakSessionTlsInitializer::CreateServer(ssl_ctx_.get(),
+                                                    identity_ptr);
   }
 }
 
@@ -179,11 +182,19 @@ absl::StatusOr<InitializedSession> OakSessionTlsContext::NewInitializedSession(
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx,
+                                 const TlsIdentity* tls_identity) {
   auto ssl = bssl::UniquePtr<SSL>(SSL_new(ssl_ctx));
   if (!ssl) {
     // TODO: b/448338977 - can we get more error details?
     return absl::FailedPreconditionError("Failed to create SSL instance");
+  }
+
+  if (tls_identity != nullptr) {
+    absl::Status identity_status = SetTlsIdentity(ssl.get(), *tls_identity);
+    if (!identity_status.ok()) {
+      return identity_status;
+    }
   }
 
   // Enable the BIO API for this SSL instance.
@@ -207,9 +218,10 @@ OakSessionTlsInitializer::Create(SSL_CTX* ssl_ctx) {
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::CreateClient(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::CreateClient(SSL_CTX* ssl_ctx,
+                                       const TlsIdentity* tls_identity) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx);
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity);
   if (!initializer.ok()) {
     return initializer.status();
   }
@@ -231,9 +243,10 @@ OakSessionTlsInitializer::CreateClient(SSL_CTX* ssl_ctx) {
 }
 
 absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>>
-OakSessionTlsInitializer::CreateServer(SSL_CTX* ssl_ctx) {
+OakSessionTlsInitializer::CreateServer(SSL_CTX* ssl_ctx,
+                                       const TlsIdentity* tls_identity) {
   absl::StatusOr<std::unique_ptr<OakSessionTlsInitializer>> initializer =
-      OakSessionTlsInitializer::Create(ssl_ctx);
+      OakSessionTlsInitializer::Create(ssl_ctx, tls_identity);
   if (!initializer.ok()) {
     return initializer.status();
   }
@@ -397,16 +410,16 @@ absl::StatusOr<std::string> SslReadAll(SSL* ssl) {
   return result;
 }
 
-absl::Status SetTlsIdentity(SSL_CTX* ctx, const TlsIdentity& tls_identity) {
-  if (SSL_CTX_use_RSAPrivateKey_ASN1(
-          ctx, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
+absl::Status SetTlsIdentity(SSL* ssl, const TlsIdentity& tls_identity) {
+  if (SSL_use_RSAPrivateKey_ASN1(
+          ssl, reinterpret_cast<const uint8_t*>(tls_identity.key_asn1.data()),
           tls_identity.key_asn1.size()) != 1) {
     return absl::InternalError("Failed to load private key");
   }
 
-  if (SSL_CTX_use_certificate_ASN1(ctx, tls_identity.cert_asn1.size(),
-                                   reinterpret_cast<const uint8_t*>(
-                                       tls_identity.cert_asn1.data())) != 1) {
+  if (SSL_use_certificate_ASN1(
+          ssl, reinterpret_cast<const uint8_t*>(tls_identity.cert_asn1.data()),
+          tls_identity.cert_asn1.size()) != 1) {
     return absl::InternalError("Failed to load certificate");
   }
 

@@ -27,6 +27,7 @@ rust_library(
         "oak_session_tls.rs",
     ],
     deps = [
+        "@oak_crates_index//:rcgen",
         "@oak_crates_index//:rustls",
         "@oak_crates_index//:rustls-pemfile",
         "@oak_crates_index//:rustls-pki-types",

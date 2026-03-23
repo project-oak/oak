@@ -130,6 +130,80 @@ async fn test_decrypt_invalid() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_certificate_rotation_works() -> Result<(), Box<dyn std::error::Error>> {
+    let ca_cert = load_test_cert("oak_session/tls/testing/test_ca.pem");
+    let server_cert = load_test_cert("oak_session/tls/testing/test_server.pem");
+    let server_key = load_test_key("oak_session/tls/testing/test_server.key");
+
+    let untrusted_cert = load_test_cert("oak_session/tls/testing/test_untrusted.pem");
+    let untrusted_key = load_test_key("oak_session/tls/testing/test_untrusted.key");
+
+    let current_identity =
+        Arc::new(std::sync::Mutex::new(TlsIdentity { key_der: server_key, cert_der: server_cert }));
+
+    let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
+        tls_identity_provider: Box::new({
+            let current = current_identity.clone();
+            move || {
+                let id = current.lock().unwrap();
+                Ok(TlsIdentity { key_der: id.key_der.clone_key(), cert_der: id.cert_der.clone() })
+            }
+        }),
+        client_trust_anchor_der: None,
+    })
+    .expect("failed to create server context");
+
+    let client_ctx1 = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: Some(ca_cert.clone()),
+        tls_identity_provider: None,
+    })
+    .expect("failed to create client context");
+
+    // First session: should succeed with the trusted cert
+    {
+        let mut server1 = server_ctx.new_session()?;
+        let mut client1 = client_ctx1.new_session()?;
+
+        let frame = client1.get_tls_frame()?;
+        let _ = server1.put_tls_frame(&frame)?;
+        let frame = server1.get_tls_frame()?;
+        let result = client1.put_tls_frame(&frame);
+
+        assert!(result.is_ok(), "Client should accept the trusted certificate");
+    }
+
+    // Rotate certificate to untrusted one
+    {
+        let mut id = current_identity.lock().unwrap();
+        id.key_der = untrusted_key;
+        id.cert_der = untrusted_cert;
+    }
+
+    let client_ctx2 = OakSessionTlsClientContext::create(ClientContextConfig {
+        server_trust_anchor_der: Some(ca_cert),
+        tls_identity_provider: None,
+    })
+    .expect("failed to create second client context");
+
+    // Second session: should fail during handshake
+    {
+        let mut server2 = server_ctx.new_session()?;
+        let mut client2 = client_ctx2.new_session()?;
+
+        let frame = client2.get_tls_frame()?;
+        let _ = server2.put_tls_frame(&frame)?;
+        let frame = server2.get_tls_frame()?;
+
+        // Client rejects the untrusted certificate emitted by the server's rotated
+        // session
+        let result = client2.put_tls_frame(&frame);
+        assert!(result.is_err(), "Client should reject the untrusted certificate");
+    }
+
+    Ok(())
+}
+
 struct TestSessionPair {
     pub server_ctx: OakSessionTlsServerContext,
     pub client_ctx: OakSessionTlsClientContext,
@@ -142,14 +216,18 @@ impl TestSessionPair {
         let server_key = load_test_key("oak_session/tls/testing/test_server.key");
 
         let server_ctx = OakSessionTlsServerContext::create(ServerContextConfig {
-            tls_identity: TlsIdentity { key_der: server_key, cert_der: server_cert },
+            tls_identity_provider: utils::create_static_cert_identity_provider(
+                server_key.clone_key(),
+                server_cert.clone(),
+            ),
             client_trust_anchor_der: client_identity.as_ref().map(|_| ca_cert.clone()),
         })
         .expect("failed to create server context");
 
         let client_ctx = OakSessionTlsClientContext::create(ClientContextConfig {
             server_trust_anchor_der: Some(ca_cert),
-            tls_identity: client_identity,
+            tls_identity_provider: client_identity
+                .map(|id| utils::create_static_cert_identity_provider(id.key_der, id.cert_der)),
         })
         .expect("failed to create client context");
 
