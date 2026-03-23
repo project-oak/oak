@@ -112,6 +112,15 @@ platform(
 )
 
 platform(
+    name = "wasm32-wasip2",
+    constraint_values = [
+        "@platforms//cpu:wasm32",
+        "@platforms//os:wasi",
+        "@rules_rust//rust/platform:wasi_preview_2",
+    ],
+)
+
+platform(
     name = "x86_64-linux",
     constraint_values = [
         "@platforms//cpu:x86_64",

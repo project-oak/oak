@@ -21,6 +21,7 @@ SUPPORTED_TARGET_TRIPLES = [
     "aarch64-apple-darwin",
     "x86_64-unknown-none",
     "wasm32-unknown-unknown",
+    "wasm32-wasip2",
 ]
 
 SUPPORTED_RUST_COMPONENTS = [
@@ -53,6 +54,7 @@ RUST_SHA256S = {
     "2025-03-01/rustfmt-nightly-aarch64-apple-darwin.tar.xz": "03569e9884f02a97fee511868f89573562f7c2742b7afd1acfba99fea0b5ffd0",
     # Target-only triples
     "2025-03-01/rust-std-nightly-wasm32-unknown-unknown.tar.xz": "8ca5b9a0de5a3d72b8866638e0255adfdcd5445a1a650a895c3814d41b956c09",
+    "2025-03-01/rust-std-nightly-wasm32-wasip2.tar.xz": "83d6c2b3c4ad1257c5ce2ff0c0821011d83ef2a31157e5ff76f2544c89877af5",
     "2025-03-01/rust-std-nightly-x86_64-unknown-none.tar.xz": "77ee6bffcfd1383903eb5ea095a2a06ae58b8c30312deda75b562402f56dadb0",
 }
 

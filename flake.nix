@@ -132,6 +132,7 @@
                 pyink
                 qemu_kvm
                 wasm-pack
+                wasmtime
                 iconv
                 util-linux
               ]

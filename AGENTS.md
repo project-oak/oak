@@ -120,6 +120,24 @@ Guidelines for `README.md` files:
   excessive abstraction or showing every single instruction.
 - Ensure they remain a single source of truth for the folder's purpose.
 
+### External References
+
+When code relies on formats, protocols, conventions, or assumptions defined
+outside this repository (e.g. file formats, URL patterns, API contracts, wire
+protocols), doc comments and README files **must** include a link to the
+authoritative source. This makes it possible to verify assumptions and detect
+when upstream specifications change.
+
+Example:
+
+```rust
+/// Downloads a `.crate` archive from crates.io.
+///
+/// The URL pattern follows the crates.io download endpoint documented at
+/// <https://doc.rust-lang.org/cargo/reference/registry-web-api.html#download>
+fn download_url(&self) -> String { /* ... */ }
+```
+
 ## Style Guide
 
 - Do not use the word "learning". Use "lesson" instead.

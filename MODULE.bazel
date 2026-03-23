@@ -271,8 +271,10 @@ use_repo(
     # Standard toolchains (for most Rust code)
     "oak_rust_darwin__aarch64-apple-darwin__nightly",
     "oak_rust_darwin__wasm32-unknown-unknown__nightly",
+    "oak_rust_darwin__wasm32-wasip2__nightly",
     "oak_rust_darwin__x86_64-unknown-none__nightly",
     "oak_rust_linux__wasm32-unknown-unknown__nightly",
+    "oak_rust_linux__wasm32-wasip2__nightly",
     "oak_rust_linux__x86_64-unknown-linux-gnu__nightly",
     "oak_rust_linux__x86_64-unknown-none__nightly",
     # Custom AVX toolchains (for restricted kernel)
@@ -301,9 +303,11 @@ register_toolchains(
     "@rust_toolchain_repo_darwin_aarch64__x86_64-unknown-none__nightly//:all",
     # Standard toolchains (wasm and fallback)
     "@oak_rust_linux__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_linux__wasm32-wasip2__nightly//:all",
     "@oak_rust_linux__x86_64-unknown-linux-gnu__nightly//:all",
     "@oak_rust_linux__x86_64-unknown-none__nightly//:all",
     "@oak_rust_darwin__wasm32-unknown-unknown__nightly//:all",
+    "@oak_rust_darwin__wasm32-wasip2__nightly//:all",
     "@oak_rust_darwin__aarch64-apple-darwin__nightly//:all",
     "@oak_rust_darwin__x86_64-unknown-none__nightly//:all",
 )
@@ -453,9 +457,10 @@ crate.from_specs(
     name = STD,
     supported_platform_triples = [
         "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip2",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-none",
-        "wasm32-unknown-unknown",
     ],
 )
 use_repo(crate, STD)
@@ -464,9 +469,10 @@ crate.from_specs(
     name = NO_STD,
     supported_platform_triples = [
         "aarch64-apple-darwin",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip2",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-none",
-        "wasm32-unknown-unknown",
     ],
 )
 use_repo(crate, NO_STD)
@@ -751,6 +757,13 @@ crate.spec(
     package = "env_logger",
     repositories = ALL_STD,
     version = "0.11.2",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "flate2",
+    repositories = ALL_STD,
+    version = "1.1.1",
 )
 crate.spec(
     default_features = True,
@@ -1386,10 +1399,17 @@ crate.spec(
 )
 crate.spec(
     default_features = False,
-    features = ["derive"],
+    features = [],
     package = "serde",
     repositories = ALL_REPOSITORIES,
     version = "1.0.210",
+)
+crate.spec(
+    default_features = False,
+    features = [],
+    package = "serde",
+    repositories = ALL_REPOSITORIES,
+    version = "1.0.228",
 )
 crate.spec(
     default_features = False,
@@ -1404,6 +1424,10 @@ crate.spec(
     package = "yaml_serde",
     repositories = ALL_STD,
     version = "0.10.4",
+)
+crate.annotation(
+    crate = "zmij",
+    rustc_flags = ["--cfg=zmij_no_select_unpredictable"],
 )
 crate.spec(
     default_features = False,
@@ -1681,6 +1705,13 @@ crate.spec(
     package = "walkdir",
     repositories = ALL_STD,
     version = "2.5.0",
+)
+crate.spec(
+    default_features = True,
+    features = [],
+    package = "waki",
+    repositories = ALL_STD,
+    version = "0.5.1",
 )
 crate.spec(
     default_features = True,

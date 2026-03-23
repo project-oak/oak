@@ -69,6 +69,11 @@ def _rust_toolchains_impl(_ctx):
                 "@platforms//cpu:wasm32",
                 "@platforms//os:none",
             ],
+            "wasm32-wasip2": [
+                "@platforms//cpu:wasm32",
+                "@platforms//os:wasi",
+                "@rules_rust//rust/platform:wasi_preview_2",
+            ],
         },
         versions = RUST_VERSIONS,
         sha256s = RUST_SHA256S,
@@ -92,6 +97,11 @@ def _rust_toolchains_impl(_ctx):
             "wasm32-unknown-unknown": [
                 "@platforms//cpu:wasm32",
                 "@platforms//os:none",
+            ],
+            "wasm32-wasip2": [
+                "@platforms//cpu:wasm32",
+                "@platforms//os:wasi",
+                "@rules_rust//rust/platform:wasi_preview_2",
             ],
         },
         versions = RUST_VERSIONS,
