@@ -49,3 +49,20 @@ function configure_bazelrc() {
     _install_tmp_bazelrc ""
   fi
 }
+
+function collect_test_logs {
+  mkdir --parents artifacts/bazel-testlogs
+
+  # Copy all test.log and test.xml for the most recent bazel test run into our artifacts directory.
+  fd "^test.log$" "bazel-testlogs" \
+    --threads=1 --exec cp --parents --force --preserve=timestamps \
+    {} artifacts
+  fd "^test.xml$" "bazel-testlogs" \
+    --threads=1 --exec cp --parents --force --preserve=timestamps \
+    {} artifacts
+
+  # Rename the files to the name that will let them be parsed as sponge logs.
+  fd "^test.log" artifacts/bazel-testlogs --exec mv {} "{//}/sponge_log.log"
+  fd "^test.xml" artifacts/bazel-testlogs --exec mv {} "{//}/sponge_log.xml"
+}
+
