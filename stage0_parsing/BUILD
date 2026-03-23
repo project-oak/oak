@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "stage0_parsing",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_sev_guest",
         "@oak_crates_index//:env_logger",

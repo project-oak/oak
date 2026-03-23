@@ -25,6 +25,7 @@ rust_library(
     name = "native",
     srcs = ["lib.rs"],
     crate_name = "falsify_native",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//falsify",
         "@oak_crates_index//:clap",

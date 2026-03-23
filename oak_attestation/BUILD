@@ -44,6 +44,7 @@ rust_library(
 rust_test(
     name = "oak_attestation_tests",
     crate = ":oak_attestation",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:googletest",
     ],

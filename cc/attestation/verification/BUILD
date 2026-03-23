@@ -24,6 +24,7 @@ package(
 cc_library(
     name = "attestation_verifier",
     hdrs = ["attestation_verifier.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto/attestation:endorsement_cc_proto",
         "//proto/attestation:evidence_cc_proto",
@@ -36,6 +37,7 @@ cc_library(
     name = "insecure_attestation_verifier",
     srcs = ["insecure_attestation_verifier.cc"],
     hdrs = ["insecure_attestation_verifier.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":attestation_verifier",
         ":utils",
@@ -50,6 +52,7 @@ cc_library(
     name = "utils",
     srcs = ["utils.cc"],
     hdrs = ["utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/utils/cose:cwt",
         "//proto/attestation:eventlog_cc_proto",

@@ -30,6 +30,7 @@ rust_library(
         "test/database/service.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto:sealed_memory_rust_proto",
         "//proto/grpc:sealed_memory_grpc_proto",
@@ -50,6 +51,7 @@ rust_library(
 rust_test(
     name = "private_memory_test",
     crate = ":private_memory_server_lib",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:googletest",
         "@oak_crates_index//:tempfile",
@@ -59,6 +61,7 @@ rust_test(
 rust_library(
     name = "attestation",
     srcs = ["src/attestation.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak//oak_attestation_types",
         "@oak//oak_proto_rust",
@@ -72,6 +75,7 @@ rust_library(
     name = "attestation_testing",
     testonly = True,
     srcs = ["src/attestation_testing.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak//oak_attestation_types",
         "@oak//oak_attestation_verification_types",
@@ -84,6 +88,7 @@ rust_library(
 rust_library(
     name = "encryption",
     srcs = ["src/encryption.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@pm_crates//:aes-gcm-siv",
@@ -93,6 +98,7 @@ rust_library(
 rust_library(
     name = "log",
     srcs = ["src/log.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//src/icing",
         "@oak_crates_index//:env_logger",
@@ -103,6 +109,7 @@ rust_library(
 rust_library(
     name = "metrics",
     srcs = ["src/metrics.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto:sealed_memory_rust_proto",
         "@oak//oak_containers/agent:oak_containers_agent",
@@ -118,6 +125,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log",
         ":metrics",
@@ -139,6 +147,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto:sealed_memory_rust_proto",
         "@oak//oak_proto_rust",
@@ -159,6 +168,7 @@ rust_library(
     srcs = [
         "src/lib.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":encryption",
         ":external_db_client",
@@ -176,6 +186,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":log",
         "//proto:sealed_memory_rust_proto",
@@ -193,6 +204,7 @@ rust_library(
 rust_binary(
     name = "private_memory_server",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":attestation",
         ":private_memory_server_lib",
@@ -209,6 +221,7 @@ rust_binary(
 cc_test(
     name = "icing_porting_test",
     srcs = ["test/icing_porting_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_googletest//:gtest_main",
         "@icing",
@@ -219,6 +232,7 @@ rust_library(
     name = "private_memory_test_utils",
     testonly = True,
     srcs = ["test/test_utils.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":attestation_testing",
         ":private_memory_server_lib",
@@ -248,6 +262,7 @@ rust_library(
         "@oak_containers_system_image//file",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":client",
         ":private_memory_server_lib",
@@ -281,6 +296,7 @@ rust_test(
     name = "session_binder_test",
     srcs = ["test/session_binder_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":private_memory_server_lib",
         "//proto:sealed_memory_rust_proto",
@@ -296,6 +312,7 @@ rust_test(
     crate = ":server_e2e_test_lib",
     # Tracking: b/5034099
     flaky = True,
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
@@ -305,12 +322,14 @@ rust_test(
     # Tracking: b/5034099
     flaky = True,
     tags = ["requires-kvm"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
     name = "client_test",
     srcs = ["test/client_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":attestation_testing",
         ":client",
@@ -341,6 +360,7 @@ rust_test(
 rust_test(
     name = "external_db_client_test",
     srcs = ["test/external_db_client_test.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":external_db_client",
         ":private_memory_test_database_server_lib",
@@ -353,6 +373,7 @@ rust_test(
 rust_test(
     name = "search_test",
     srcs = ["test/search_test.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//database",
         "//proto:sealed_memory_rust_proto",

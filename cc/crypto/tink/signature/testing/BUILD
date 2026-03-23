@@ -26,6 +26,7 @@ cc_library(
     testonly = True,
     srcs = ["signature-ffi.cc"],
     hdrs = ["signature-ffi.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":signature_utils",
         "//cc/ffi:bytes_view",
@@ -39,6 +40,7 @@ cc_library(
     testonly = True,
     srcs = ["signature_utils.cc"],
     hdrs = ["signature_utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/utils/status",
         "@com_github_tink_crypto_tink_cc//tink:keyset_handle",

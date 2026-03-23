@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_attestation_explain",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
@@ -40,6 +41,7 @@ rust_library(
 rust_test_suite(
     name = "oak_attestation_explain_integration_tests",
     srcs = glob(["tests/**/*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_explain",
         "//oak_attestation_verification",

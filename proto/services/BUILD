@@ -34,6 +34,7 @@ proto_library(
 
 cc_proto_library(
     name = "session_v1_service_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":session_v1_service_proto"],
 )
 
@@ -41,6 +42,7 @@ cc_grpc_library(
     name = "session_v1_service_cc_grpc",
     srcs = [":session_v1_service_proto"],
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":session_v1_service_cc_proto"],
 )
 

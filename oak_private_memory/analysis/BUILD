@@ -8,6 +8,7 @@ package(
 rust_binary(
     name = "analysis",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//database:oak_private_memory_database",
         "//proto:sealed_memory_rust_proto",
@@ -22,6 +23,7 @@ rust_binary(
 rust_binary(
     name = "icing_benchmark",
     srcs = ["icing_benchmark.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//database:oak_private_memory_database",
         "//proto:sealed_memory_rust_proto",

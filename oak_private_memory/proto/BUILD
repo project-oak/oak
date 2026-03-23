@@ -87,6 +87,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:prost-derive",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":build",
         "@oak//oak_proto_rust",

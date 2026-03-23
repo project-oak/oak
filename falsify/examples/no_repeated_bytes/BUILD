@@ -40,4 +40,5 @@ rust_shared_library(
 rust_test(
     name = "no_repeated_bytes_test",
     crate = ":no_repeated_bytes",
+    target_compatible_with = ["@platforms//os:linux"],
 )

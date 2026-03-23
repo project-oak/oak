@@ -51,6 +51,7 @@ x509_cert(
 rust_binary(
     name = "jwtgen",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:public"],
     deps = [
         "@oak_crates_index//:anyhow",

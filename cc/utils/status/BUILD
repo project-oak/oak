@@ -25,6 +25,7 @@ cc_library(
     name = "status",
     srcs = ["status.cc"],
     hdrs = ["status.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",

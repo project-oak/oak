@@ -49,6 +49,7 @@ rust_test(
         "//oak_restricted_kernel_wrapper:stage0_test_kernel_bin",
         "//stage0_bin",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:googletest",

@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_restricted_kernel_interface",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:strum",
@@ -34,6 +35,10 @@ rust_test(
     name = "oak_restricted_kernel_interface_test",
     size = "small",
     crate = ":oak_restricted_kernel_interface",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
     deps = [
         "@oak_crates_index//:os_pipe",
     ],

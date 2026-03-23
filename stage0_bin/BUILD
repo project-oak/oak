@@ -45,6 +45,7 @@ rust_binary(
         "--codegen=link-arg=-Wl,-static",
     ],
     tags = ["no-clippy"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//stage0",
         "//stage0_sev",
@@ -54,6 +55,7 @@ rust_binary(
 objcopy(
     name = "stage0_bin",
     src = ":stage0_bin_elf",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
 genrule(
@@ -75,4 +77,5 @@ genrule(
             --vcpu-count=1,2,4,8,16,32,64 \
             --stage0-rom=$(location :stage0_bin) \
             --attestation-measurements-output-dir=$(@D)",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )

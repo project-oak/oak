@@ -31,6 +31,7 @@ rust_library(
         "src/lib.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_containers/examples/hello_world/proto:hello_world_rust_proto",
         "//oak_crypto",
@@ -50,6 +51,7 @@ rust_test(
     name = "standalone_test",
     srcs = ["tests/standalone_test.rs"],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
         "//oak_client",
@@ -70,6 +72,7 @@ rust_test(
 rust_binary(
     name = "bin/oak_containers_examples_hello_world_enclave_app",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_containers_examples_hello_world_enclave_app",
         "//oak_sdk/containers:oak_sdk_containers",
@@ -82,4 +85,5 @@ rust_binary(
 app_bundle(
     name = "bundle",
     binary = ":bin/oak_containers_examples_hello_world_enclave_app",
+    target_compatible_with = ["@platforms//os:linux"],
 )

@@ -24,6 +24,7 @@ package(
 rust_binary(
     name = "oak_attestation_verification_cli",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_gcp",
         "//oak_attestation_verification",
@@ -44,6 +45,7 @@ rust_binary(
 rust_test(
     name = "oak_attestation_verification_tests",
     crate = ":oak_attestation_verification_cli",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:jwt",
         "@oak_crates_index//:openssl",

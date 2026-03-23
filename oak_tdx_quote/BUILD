@@ -36,6 +36,7 @@ rust_library(
 rust_test(
     name = "oak_tdx_quote_tests",
     crate = ":oak_tdx_quote",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification:test_util",
         "//oak_proto_rust",

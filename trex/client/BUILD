@@ -26,6 +26,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_time",
         "//tr/endorscope",
@@ -49,4 +50,5 @@ rust_library(
 rust_test(
     name = "client_test",
     crate = ":client",
+    target_compatible_with = ["@platforms//os:linux"],
 )

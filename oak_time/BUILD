@@ -40,6 +40,7 @@ rust_test(
     crate_features = [
         "prost",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:googletest",
     ],
@@ -48,6 +49,7 @@ rust_test(
 rust_library(
     name = "oak_time_std",
     srcs = glob(["std/**/*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_time",
     ],
@@ -56,6 +58,7 @@ rust_library(
 rust_test(
     name = "oak_time_std_test",
     crate = ":oak_time_std",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:googletest",
     ],

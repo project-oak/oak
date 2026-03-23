@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "endorscope",
     srcs = glob(["*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//tr/c2sp",

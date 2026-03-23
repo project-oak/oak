@@ -17,7 +17,11 @@
 //! Main benchmark service that dispatches requests to benchmark
 //! implementations.
 
-use core::marker::PhantomData;
+use core::{
+    default::Default,
+    marker::PhantomData,
+    result::Result::{self, Err, Ok},
+};
 
 use oak_benchmark_proto_rust::oak::benchmark::{
     BenchmarkType, RunBenchmarkRequest, RunBenchmarkResponse,

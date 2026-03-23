@@ -82,6 +82,7 @@ app_bundle(
     ],
     binary = ":test_binary_gen",
     env = {"MY_ENV": "test"},
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 py_test(
@@ -99,5 +100,6 @@ py_test(
         "CUSTOM_ROOT_CONFIG_PATH": "$(location :custom_root_config_json)",
         "EXTRA_MOUNTS_CONFIG_PATH": "$(location :extra_mounts_config_json)",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [],
 )

@@ -24,6 +24,7 @@ package(
 rust_binary(
     name = "falsify_wasm",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//falsify",
         "//falsify/native",
@@ -50,6 +51,7 @@ rust_test(
         "NO_REPEATED_BYTES_WASM": "$(rootpath //falsify/examples/no_repeated_bytes:no_repeated_bytes_wasm)",
         "ALWAYS_PANICS_WASM": "$(rootpath //falsify/examples/always_panics:always_panics_wasm)",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:tempfile",
     ],

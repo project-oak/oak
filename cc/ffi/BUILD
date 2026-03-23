@@ -16,6 +16,7 @@ cc_library(
     hdrs = [
         "bytes_bindings.h",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_ffi:oak_ffi_bytes",
         "@com_google_absl//absl/strings:string_view",
@@ -25,6 +26,7 @@ cc_library(
 cc_library(
     name = "bytes_view",
     hdrs = ["bytes_view.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/strings:string_view",
     ],
@@ -34,6 +36,7 @@ cc_library(
     name = "error_bindings",
     srcs = ["error_bindings.cc"],
     hdrs = ["error_bindings.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bytes_bindings",
         "//oak_ffi:oak_ffi_error",
@@ -53,6 +56,7 @@ rust_library(
 cc_test(
     name = "error_bindings_test",
     srcs = ["error_bindings_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":error_bindings",
         ":error_bindings_test_foreign",
@@ -63,6 +67,7 @@ cc_test(
 cc_library(
     name = "rust_bytes",
     hdrs = ["rust_bytes.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bytes_bindings",
         ":error_bindings",
@@ -75,11 +80,13 @@ cc_library(
     name = "cxx_string",
     srcs = ["cxx_string.cc"],
     hdrs = ["cxx_string.h"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_test(
     name = "bytes_view_test",
     srcs = ["bytes_view_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bytes_view",
         # Without this dependency, we see linker errors, with allocator-related symbols not being present.
@@ -94,6 +101,7 @@ cc_library(
     name = "absl_status",
     srcs = ["absl_status.cc"],
     hdrs = ["absl_status.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bytes_view",
         "@com_google_absl//absl/status",

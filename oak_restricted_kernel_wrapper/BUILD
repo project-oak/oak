@@ -23,20 +23,24 @@ package(
 kernel_bzimage_and_measurements(
     name = "oak_restricted_kernel_wrapper_virtio_console_channel",
     payload = "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_virtio_console_channel",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
 kernel_bzimage_and_measurements(
     name = "oak_restricted_kernel_wrapper_simple_io_channel",
     payload = "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_simple_io_channel",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
 kernel_bzimage_and_measurements(
     name = "oak_restricted_kernel_wrapper_serial_channel",
     payload = "//oak_restricted_kernel_bin:oak_restricted_kernel_bin_serial_channel",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
 kernel_bzimage_and_measurements(
     name = "stage0_test_kernel",
     payload = "//stage0/testing:test_kernel",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     visibility = ["//stage0:__subpackages__"],
 )

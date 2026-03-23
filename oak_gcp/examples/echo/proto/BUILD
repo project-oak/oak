@@ -37,6 +37,7 @@ rust_tonic_grpc_service(
     extern_paths = {
         ".oak": "::oak_proto_rust::oak",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
     ],

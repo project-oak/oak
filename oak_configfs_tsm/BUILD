@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_configfs_tsm",
     srcs = glob(["src/*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:lazy_static",

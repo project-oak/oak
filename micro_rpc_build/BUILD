@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "micro_rpc_build",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:prost-build",
@@ -33,6 +34,7 @@ rust_library(
 rust_binary(
     name = "generator",
     srcs = glob(["*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//bazel/rust/proto:proto_gen",
         "//micro_rpc_build",

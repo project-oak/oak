@@ -45,6 +45,7 @@ proto_library(
 
 cc_proto_library(
     name = "tls_over_grpc_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":tls_over_grpc_proto"],
 )
 
@@ -52,6 +53,7 @@ cc_grpc_library(
     name = "tls_over_grpc_cc_grpc",
     srcs = [":tls_over_grpc_proto"],
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":tls_over_grpc_cc_proto"],
 )
 
@@ -59,6 +61,7 @@ cc_library(
     name = "tls_over_grpc_service_impl",
     srcs = ["service_impl.cc"],
     hdrs = ["service_impl.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_cc_grpc",
         "@boringssl//:crypto",
@@ -75,6 +78,7 @@ cc_binary(
     data = [
         ":generate_keys",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_service_impl",
         "@com_github_grpc_grpc//:grpc++",
@@ -92,6 +96,7 @@ cc_binary(
     data = [
         ":generate_keys",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_cc_grpc",
         "@boringssl//:crypto",

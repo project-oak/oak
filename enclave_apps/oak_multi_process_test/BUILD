@@ -28,6 +28,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_restricted_kernel_interface",
         "//oak_restricted_kernel_sdk",

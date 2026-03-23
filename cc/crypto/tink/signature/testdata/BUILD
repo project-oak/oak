@@ -31,6 +31,7 @@ exports_files([
 cc_binary(
     name = "generate_keyset_and_sign",
     srcs = ["generate_keyset_and_sign.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/crypto:signing_key",
         "//cc/crypto/certificate:certificate_authority",

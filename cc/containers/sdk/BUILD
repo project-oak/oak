@@ -24,12 +24,14 @@ package(
 cc_library(
     name = "common",
     hdrs = ["common.h"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
     name = "encryption_key_handle",
     srcs = ["encryption_key_handle.cc"],
     hdrs = ["encryption_key_handle.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":orchestrator_crypto_client",
         "//cc/crypto:encryption_key",
@@ -44,6 +46,7 @@ cc_library(
     name = "orchestrator_client",
     srcs = ["orchestrator_client.cc"],
     hdrs = ["orchestrator_client.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         "//proto/containers:interfaces_cc_grpc",
@@ -59,6 +62,7 @@ cc_library(
     name = "orchestrator_crypto_client",
     srcs = ["orchestrator_crypto_client.cc"],
     hdrs = ["orchestrator_crypto_client.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         "//proto/containers:orchestrator_crypto_cc_grpc",
@@ -74,6 +78,7 @@ cc_library(
     name = "signing_key_handle",
     srcs = ["signing_key_handle.cc"],
     hdrs = ["signing_key_handle.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":orchestrator_crypto_client",
         "//cc/crypto:signing_key",
@@ -87,6 +92,7 @@ cc_library(
     name = "oak_session",
     srcs = ["oak_session.cc"],
     hdrs = ["oak_session.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/containers/sdk:encryption_key_handle",
         "//cc/crypto:common",

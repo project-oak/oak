@@ -20,11 +20,17 @@
 //! This is a trivially falsifiable claim useful for testing the falsify_wasm
 //! runner.
 
+#![no_std]
+extern crate alloc;
+
 /// Claim: the input contains no repeated consecutive bytes.
 pub struct NoRepeatedBytes;
 
 impl falsify::Claim for NoRepeatedBytes {
-    fn evaluate(&self, input: &[u8]) -> Result<falsify::Evaluation, Box<dyn core::error::Error>> {
+    fn evaluate(
+        &self,
+        input: &[u8],
+    ) -> Result<falsify::Evaluation, alloc::boxed::Box<dyn core::error::Error>> {
         for window in input.windows(2) {
             if window[0] == window[1] {
                 return Ok(falsify::Evaluation::Falsified);

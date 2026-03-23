@@ -63,6 +63,7 @@ cc_library(
     name = "bootstrap",
     srcs = ["boot.s"],
     linkstatic = True,
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )
 
 rust_library(
@@ -73,7 +74,9 @@ rust_library(
     ],
     crate_name = "oak_restricted_kernel",
     target_compatible_with = [
-        "//:x86_64-none-setting",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_ON",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         ":bootstrap",
@@ -90,7 +93,9 @@ rust_library(
     ],
     crate_name = "oak_restricted_kernel",
     target_compatible_with = [
-        "//:x86_64-none-setting",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_ON",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         ":bootstrap",
@@ -106,7 +111,9 @@ rust_library(
     ],
     crate_name = "oak_restricted_kernel",
     target_compatible_with = [
-        "//:x86_64-none-setting",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:none",
+        "//bazel/rust:avx_ON",
     ],
     deps = _OAK_RESTRICTED_KERNEL_COMMON_DEPS + [
         ":bootstrap",
@@ -123,6 +130,7 @@ rust_library(
         ],
         # So we can do `bazel build //oak_restricted_kernel:all --platforms=//:x86_64-unknown-none`:
         platform = "//:x86_64-linux",
+        target_compatible_with = ["@platforms//cpu:x86_64"],
         deps = [
             "@oak_crates_index//:assertables",
         ],

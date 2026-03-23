@@ -25,6 +25,7 @@ package(
 cc_library(
     name = "transport",
     hdrs = ["transport.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto/crypto:crypto_cc_proto",
         "//proto/session:messages_cc_proto",
@@ -37,6 +38,7 @@ cc_library(
     name = "grpc_streaming_transport",
     srcs = ["grpc_streaming_transport.cc"],
     hdrs = ["grpc_streaming_transport.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":transport",
         ":util",
@@ -55,6 +57,7 @@ cc_library(
 cc_library(
     name = "grpc_unary_transport",
     hdrs = ["grpc_unary_transport.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":transport",
         ":util",
@@ -74,6 +77,7 @@ cc_library(
     name = "util",
     srcs = ["util.cc"],
     hdrs = ["util.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
@@ -83,6 +87,7 @@ cc_library(
 cc_test(
     name = "grpc_streaming_transport_test",
     srcs = ["grpc_streaming_transport_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":grpc_streaming_transport",
         "//proto/crypto:crypto_cc_proto",
@@ -100,6 +105,7 @@ cc_test(
 cc_test(
     name = "grpc_unary_transport_test",
     srcs = ["grpc_unary_transport_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":grpc_unary_transport",
         "//proto/crypto:crypto_cc_proto",

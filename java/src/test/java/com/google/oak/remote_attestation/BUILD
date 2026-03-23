@@ -25,6 +25,7 @@ kt_jvm_library(
     name = "AttestationVerificationClockTestLib",
     testonly = True,
     srcs = ["AttestationVerificationClockTest.kt"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verification_clock",
         "@maven//:junit_junit",
@@ -35,6 +36,7 @@ kt_jvm_library(
 # We structure the test this way because kt_jvm_test doesn't handle JNI deps very easily.
 java_test(
     name = "AttestationVerificationClockTest",
+    target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.remote_attestation.AttestationVerificationClockTest",
     runtime_deps = [
         ":AttestationVerificationClockTestLib",

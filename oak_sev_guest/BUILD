@@ -75,4 +75,5 @@ rust_test(
     name = "oak_sev_guest_test",
     size = "small",
     crate = ":oak_sev_guest",
+    target_compatible_with = ["@platforms//os:linux"],
 )

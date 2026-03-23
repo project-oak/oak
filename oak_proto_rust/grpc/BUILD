@@ -28,6 +28,7 @@ rust_library(
         "lib.rs",
     ],
     crate_name = "oak_grpc",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":build",
         "//oak_proto_rust",
@@ -72,6 +73,7 @@ cargo_build_script(
         "@com_google_protobuf//:protoc",
         "@com_google_protobuf//:well_known_type_protos",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_grpc_utils",
         "//oak_proto_build_utils",

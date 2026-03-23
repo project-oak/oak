@@ -27,7 +27,7 @@ rust_library(
     crate_features = [
         "no_std",
     ],
-    tags = ["ci-build-for-x86_64-unknown-none"],
+    target_compatible_with = ["//:x86_64-none-setting"],
     deps = [
         "//oak_restricted_kernel_interface",
         "@oak_crates_index//:libm",

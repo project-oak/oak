@@ -24,6 +24,7 @@ package(
 rust_test(
     name = "test",
     srcs = ["test.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":icing",
         "@oak_crates_index//:log",
@@ -35,6 +36,7 @@ rust_test(
 rust_library(
     name = "icing",
     srcs = ["lib.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":icing_ffi_bridge",
         "//proto:sealed_memory_rust_proto",
@@ -48,6 +50,7 @@ rust_library(
 rust_library(
     name = "icing_ffi_bridge",
     srcs = ["ffi_bridge.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bridge",
         ":ffi_wrapper-sys",
@@ -73,6 +76,7 @@ cc_library(
     name = "bridge",
     srcs = ["ffi_bridge.rs.cc"],
     linkstatic = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bridge/include",
         ":ffi_wrapper-include",
@@ -82,12 +86,14 @@ cc_library(
 cc_library(
     name = "bridge/include",
     hdrs = ["ffi_bridge.rs.h"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 cc_library(
     name = "ffi_wrapper-sys",
     srcs = ["ffi_wrapper.cc"],
     linkstatic = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bridge/include",
         ":ffi_wrapper-include",
@@ -97,6 +103,7 @@ cc_library(
 cc_library(
     name = "ffi_wrapper-include",
     hdrs = ["ffi_wrapper.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@cxx.rs//:core",
         "@icing",

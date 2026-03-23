@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "server",
     srcs = ["server.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",
@@ -34,6 +35,7 @@ rust_library(
 rust_binary(
     name = "main",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":server",
         "//oak_proto_rust",

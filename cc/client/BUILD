@@ -29,6 +29,7 @@ cc_library(
     name = "client",
     srcs = ["client.cc"],
     hdrs = ["client.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/attestation/verification:attestation_verifier",
         "//cc/crypto:client_encryptor",
@@ -52,6 +53,7 @@ cc_test(
     name = "client_test",
     size = "small",
     srcs = ["client_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":client",
         "//cc/attestation/verification:attestation_verifier",
@@ -72,6 +74,7 @@ cc_test(
 cc_binary(
     name = "cli",
     srcs = ["grpc_client_cli.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":client",
         "//cc/attestation/verification:insecure_attestation_verifier",

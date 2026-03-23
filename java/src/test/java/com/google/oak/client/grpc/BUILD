@@ -47,6 +47,7 @@ kt_jvm_library(
     name = "stream_observer_session_client_test_lib",
     testonly = True,
     srcs = ["StreamObserverSessionClientTest.kt"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":test_service_java_grpc",
         ":test_service_java_proto",
@@ -69,6 +70,7 @@ kt_jvm_library(
 # We structure the test this way because kt_jvm_test doesn't handle JNI deps very easily.
 java_test(
     name = "StreamObserverSessionClientTest",
+    target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.client.grpc.StreamObserverSessionClientTest",
     runtime_deps = [
         ":stream_observer_session_client_test_lib",

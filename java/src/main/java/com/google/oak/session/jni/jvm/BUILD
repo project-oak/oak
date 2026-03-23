@@ -23,6 +23,7 @@ package(
 oak_jvm_jni_library(
     name = "oak_client_session_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session/jni:oak_client_session_rust",
         "//java/src/main/java/com/google/oak/session/jni:oak_session_config_builder_rust",
@@ -32,6 +33,7 @@ oak_jvm_jni_library(
 oak_jvm_jni_library(
     name = "oak_server_session_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session/jni:oak_server_session_rust",
         "//java/src/main/java/com/google/oak/session/jni:oak_session_config_builder_rust",

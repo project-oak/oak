@@ -29,6 +29,7 @@ rust_binary(
     name = "snp_measurement",
     srcs = glob(["src/**"]),
     crate_root = "src/main.rs",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_sev_guest",
         "//stage0_parsing",

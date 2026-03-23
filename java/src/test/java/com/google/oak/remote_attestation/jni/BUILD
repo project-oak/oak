@@ -26,6 +26,7 @@ rust_library(
     name = "attestation_verification_clock_test_rust",
     testonly = True,
     srcs = ["attestation_verification_clock_test_jni.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation/jni:oak_jni_attestation_verification_clock",
         "//oak_attestation_verification_types",
@@ -39,6 +40,7 @@ cc_binary(
     name = "attestation_verification_clock_test_jni",
     testonly = True,
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":attestation_verification_clock_test_rust",
     ],

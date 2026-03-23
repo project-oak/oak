@@ -126,19 +126,10 @@ test-codelab:
 
 
 bare-metal-crates:
-    #!/bin/bash
-    set -o pipefail
-    echo "Building bare metal crates": $(bazel query "{{bare_metal_crates_query}}")
-    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --keep_going --platforms=//:x86_64-unknown-none
+    bazel build --platforms=//:x86_64-unknown-none //... -- -//third_party/...
 
 wasm-crates:
-    #!/bin/bash
-    set -o pipefail
-    echo "Building wasm crates": $(bazel query "{{wasm_crates_query}}")
-    bazel query "{{wasm_crates_query}}" | xargs bazel build --keep_going --platforms=//:wasm32-unknown-unknown --
-
-list-bare-metal-crates:
-    bazel query "{{bare_metal_crates_query}}"
+    bazel build --platforms=//:wasm32-unknown-unknown //... -- -//third_party/...
 
 rk-comms-benchmark:
     bazel run -c opt //oak_restricted_kernel_benchmark:basic_comms_bench -- --bench
@@ -152,16 +143,16 @@ benchmarks: rk-comms-benchmark
 bazel-clippy: bare-metal-clippy std-clippy wasm-clippy
 
 std-clippy:
-    bazel build --config=release --config=clippy "$@" //...:all -- -third_party/...
+    bazel build --config=release --config=clippy "$@" //...:all -- -//third_party/...
 
 bare-metal-clippy:
-    bazel query "{{bare_metal_crates_query}}" | xargs bazel build --config=clippy --config=release --keep_going --platforms=//:x86_64-unknown-none
+    bazel build --config=clippy --config=release --platforms=//:x86_64-unknown-none --keep_going //... -- -//third_party/...
 
 wasm-clippy:
-    bazel query "{{wasm_crates_query}}" | xargs bazel build --config=clippy --config=release --keep_going --platforms=//:wasm32-unknown-unknown
+    bazel build --config=clippy --config=release --platforms=//:wasm32-unknown-unknown --keep_going //... -- -//third_party/...
 
 bazel-rustfmt:
-    bazel build --config=rustfmt //...:all -- -third_party/...
+    bazel build --config=rustfmt //...:all -- -//third_party/...
 
 clippy: bazel-clippy
 

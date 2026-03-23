@@ -26,6 +26,7 @@ package(
 rust_test(
     name = "oak_proto_serialization_test",
     srcs = ["test/serde_test.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_proto_rust",
         "@oak_crates_index//:prost",
@@ -109,6 +110,7 @@ cargo_build_script(
 rust_library(
     name = "annotation",
     srcs = ["annotation.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_build_utils",
         "@oak_crates_index//:prost",

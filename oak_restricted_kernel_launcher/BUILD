@@ -24,6 +24,7 @@ package(
 rust_binary(
     name = "oak_restricted_kernel_launcher",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//oak_launcher_utils",
@@ -38,6 +39,7 @@ rust_library(
     name = "lib",
     srcs = ["src/lib.rs"],
     crate_name = "oak_restricted_kernel_launcher",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_launcher_utils",
         "@oak_crates_index//:log",
@@ -54,6 +56,7 @@ rust_test(
         "//oak_restricted_kernel_wrapper:oak_restricted_kernel_wrapper_virtio_console_channel_bin",
         "//stage0_bin",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//micro_rpc",

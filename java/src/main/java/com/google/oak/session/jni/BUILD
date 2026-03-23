@@ -25,6 +25,7 @@ package(
 rust_library(
     name = "oak_client_session_rust",
     srcs = ["oak_client_session_jni.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",
@@ -37,6 +38,7 @@ rust_library(
 oak_android_jni_library(
     name = "oak_client_session_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_client_session_rust",
         ":oak_session_config_builder_rust",
@@ -46,6 +48,7 @@ oak_android_jni_library(
 rust_library(
     name = "oak_server_session_rust",
     srcs = ["oak_server_session_jni.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",
@@ -58,6 +61,7 @@ rust_library(
 oak_android_jni_library(
     name = "oak_server_session_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_server_session_rust",
         ":oak_session_config_builder_rust",
@@ -67,6 +71,7 @@ oak_android_jni_library(
 rust_library(
     name = "oak_session_config_builder_rust",
     srcs = ["oak_session_config_builder_jni.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",
@@ -79,6 +84,7 @@ rust_library(
 oak_android_jni_library(
     name = "oak_session_config_builder_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session_config_builder_rust",
     ],
@@ -87,6 +93,7 @@ oak_android_jni_library(
 rust_library(
     name = "oak_jni_attestation_publisher",
     srcs = ["oak_jni_attestation_publisher.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_session",

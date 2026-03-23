@@ -27,6 +27,7 @@ java_library(
     srcs = [
         "OakSessionException.java",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 android_library(
@@ -41,6 +42,7 @@ java_library(
     srcs = [
         "OakClientSession.java",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":exception",
         ":session_config_builder",
@@ -55,6 +57,7 @@ java_library(
     srcs = [
         "OakClientSession.java",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":exception",
         ":session_config_builder_no_jni",
@@ -95,6 +98,7 @@ java_library(
     srcs = [
         "OakServerSession.java",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":exception",
         ":session_config_builder",
@@ -109,6 +113,7 @@ java_library(
     srcs = [
         "OakServerSession.java",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":exception",
         ":session_config_builder_no_jni",
@@ -147,6 +152,7 @@ android_library(
 java_library(
     name = "session_config_builder",
     srcs = ["OakSessionConfigBuilder.java"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session/jni:oak_session_config_builder_jni",
     ],
@@ -155,6 +161,7 @@ java_library(
 java_library(
     name = "session_config_builder_no_jni",
     srcs = ["OakSessionConfigBuilder.java"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [],
 )
 
@@ -175,6 +182,7 @@ android_library(
 java_library(
     name = "attestation_publisher",
     srcs = ["AttestationPublisher.java"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 android_library(

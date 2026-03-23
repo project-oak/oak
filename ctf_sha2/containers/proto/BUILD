@@ -38,6 +38,7 @@ rust_tonic_grpc_service(
     extern_paths = {
         ".oak.attestation.v1": "::oak_proto_rust::oak::attestation::v1",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
     ],

@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_debug_service",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",

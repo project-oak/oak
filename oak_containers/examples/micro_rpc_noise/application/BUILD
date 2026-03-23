@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "micro_rpc_noise_application",
     srcs = ["lib.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
     ],

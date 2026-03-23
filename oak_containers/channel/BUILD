@@ -11,6 +11,7 @@ rust_library(
         "src/buffer.rs",
         "src/lib.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:bytes",
@@ -24,6 +25,7 @@ rust_library(
 rust_test(
     name = "channel_test",
     crate = ":channel",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "//oak_proto_rust/grpc",

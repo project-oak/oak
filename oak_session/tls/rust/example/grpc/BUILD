@@ -27,6 +27,7 @@ rust_tonic_grpc_service(
     name = "tls_over_grpc_rust_proto",
     srcs = ["//oak_session/tls/example/grpc:tls_over_grpc_proto"],
     crate_name = "oak_session_tls_example_grpc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
     ],
@@ -36,6 +37,7 @@ rust_binary(
     name = "server_rust",
     srcs = ["server.rs"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_rust_proto",
         "//oak_session/tls/rust:oak_session_tls",
@@ -51,6 +53,7 @@ rust_test(
     name = "server_rust_test",
     srcs = ["server.rs"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_rust_proto",
         "//oak_session/tls/rust:oak_session_tls",
@@ -66,6 +69,7 @@ rust_binary(
     name = "client_rust",
     srcs = ["client.rs"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_rust_proto",
         "//oak_session/tls/rust:oak_session_tls",
@@ -88,6 +92,7 @@ sh_test(
         "CLIENT": "$(location :client_rust)",
         "SERVER": "$(location :server_rust)",
     },
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -101,6 +106,7 @@ sh_test(
         "CLIENT": "$(location :client_rust)",
         "SERVER": "$(location //oak_session/tls/example/grpc:server)",
     },
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -114,4 +120,5 @@ sh_test(
         "CLIENT": "$(location //oak_session/tls/example/grpc:client)",
         "SERVER": "$(location :server_rust)",
     },
+    target_compatible_with = ["@platforms//os:linux"],
 )

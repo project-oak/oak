@@ -32,6 +32,7 @@
 //! no access to `std::collections::HashMap`).
 
 use alloc::vec::Vec;
+use core::result::Result::{self, Err, Ok};
 
 use hashbrown::HashMap;
 

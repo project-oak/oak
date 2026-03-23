@@ -29,6 +29,7 @@ cc_library(
         "variant.cc",
     ],
     hdrs = ["variant.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//proto:variant_cc_proto",
         "//proto/attestation:endorsement_cc_proto",
@@ -40,6 +41,7 @@ cc_library(
 cc_test(
     name = "variant_test",
     srcs = ["variant_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":variant",
         "//proto/attestation:endorsement_cc_proto",

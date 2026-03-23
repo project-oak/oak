@@ -404,7 +404,7 @@ http_file(
 
 git_repository(
     name = "jemalloc",
-    build_file = "@oak//bazel:jemalloc.BUILD",
+    build_file = "//bazel:jemalloc.BUILD",
     # jemalloc pointer for tikv-jemalloc-sys submodule pointer at 0.5.3
     commit = "e13ca993e8ccb9ba9847cc330696e02839f328f7",
 
@@ -1206,7 +1206,7 @@ crate.annotation(
         "-u",
         "-p0",
     ],
-    patches = ["@oak//third_party/pprof:pprof-prost13.patch"],
+    patches = ["//third_party/pprof:pprof-prost13.patch"],
     repositories = ALL_STD,
 )
 crate.spec(
@@ -1806,7 +1806,7 @@ crate.annotation(
         "-u",
         "-p0",
     ],
-    patches = ["@oak//third_party/cranelift-codegen:patch_build_rs.patch"],
+    patches = ["//third_party/cranelift-codegen:patch_build_rs.patch"],
     repositories = ALL_STD,
 )
 crate.spec(

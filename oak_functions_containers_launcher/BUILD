@@ -32,6 +32,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_containers/launcher:lib",
         "//oak_crypto",
@@ -58,11 +59,13 @@ rust_library(
 rust_test(
     name = "unit_tests",
     crate = ":lib",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_binary(
     name = "oak_functions_containers_launcher",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//oak_containers/launcher:lib",
@@ -94,6 +97,7 @@ rust_test(
     # Tracking: b/5034099
     flaky = True,
     shard_count = 5,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_client",
         "//oak_file_utils",

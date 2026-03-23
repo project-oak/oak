@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_file_utils",
     srcs = ["src/lib.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@rules_rust//tools/runfiles",
     ],

@@ -34,6 +34,7 @@ proto_library(
 
 cc_proto_library(
     name = "oak_debug_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":oak_debug_proto"],
 )
 

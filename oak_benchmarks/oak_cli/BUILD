@@ -26,6 +26,7 @@ exports_files(["run_oak_cli.sh"])
 rust_binary(
     name = "oak_cli",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_benchmarks/cli_common",

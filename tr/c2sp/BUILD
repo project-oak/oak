@@ -42,4 +42,5 @@ rust_test(
         "testdata/test.tlog-proof",
     ],
     crate = ":c2sp",
+    target_compatible_with = ["@platforms//os:linux"],
 )

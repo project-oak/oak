@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_tdx_guest",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "@oak_crates_index//:bitflags",
         "@oak_crates_index//:strum",

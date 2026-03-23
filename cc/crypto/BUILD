@@ -26,6 +26,7 @@ cc_library(
     name = "client_encryptor",
     srcs = ["client_encryptor.cc"],
     hdrs = ["client_encryptor.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         "//cc/crypto/hpke:sender_context",
@@ -40,6 +41,7 @@ cc_library(
     name = "server_encryptor",
     srcs = ["server_encryptor.cc"],
     hdrs = ["server_encryptor.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         ":encryption_key",
@@ -56,6 +58,7 @@ cc_library(
     name = "encryption_key",
     srcs = ["encryption_key.cc"],
     hdrs = ["encryption_key.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         "//cc/crypto/hpke:recipient_context",
@@ -68,6 +71,7 @@ cc_library(
 cc_library(
     name = "common",
     hdrs = ["common.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/strings",
     ],
@@ -76,6 +80,7 @@ cc_library(
 cc_library(
     name = "signing_key",
     hdrs = ["signing_key.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":common",
         "//proto/crypto:crypto_cc_proto",
@@ -88,6 +93,7 @@ cc_test(
     name = "encryptor_test",
     size = "small",
     srcs = ["encryptor_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":client_encryptor",
         ":common",

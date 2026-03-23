@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_proto_rust_lib",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:p256",
@@ -37,6 +38,7 @@ rust_test(
     data = [
         "//oak_proto_rust/oak_proto_rust_lib/testdata:developer_key_public_key",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
         "//oak_proto_rust",

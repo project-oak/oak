@@ -27,6 +27,7 @@ rust_binary(
         "main.rs",
         "vm.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_benchmarks/cli_common",
         "//oak_benchmarks/proto:grpc_service",

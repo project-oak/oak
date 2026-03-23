@@ -36,6 +36,7 @@ proto_library(
 
 cc_proto_library(
     name = "assertion_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":assertion_proto"],
 )
 
@@ -52,6 +53,7 @@ proto_library(
 
 cc_proto_library(
     name = "attachment_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":attachment_proto"],
 )
 
@@ -68,6 +70,7 @@ proto_library(
 
 cc_proto_library(
     name = "cb_eventlog_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":cb_eventlog_proto"],
 )
 
@@ -79,6 +82,7 @@ proto_library(
 
 cc_proto_library(
     name = "dice_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":dice_proto"],
 )
 
@@ -98,6 +102,7 @@ proto_library(
 
 cc_proto_library(
     name = "endorsement_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":endorsement_proto"],
 )
 
@@ -122,6 +127,7 @@ proto_library(
 
 cc_proto_library(
     name = "eventlog_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":eventlog_proto"],
 )
 
@@ -143,6 +149,7 @@ proto_library(
 
 cc_proto_library(
     name = "evidence_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":evidence_proto"],
 )
 
@@ -181,6 +188,7 @@ proto_library(
 
 cc_proto_library(
     name = "reference_value_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":reference_value_proto"],
 )
 
@@ -211,6 +219,7 @@ proto_library(
 
 cc_proto_library(
     name = "tcb_version_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":tcb_version_proto"],
 )
 
@@ -234,6 +243,7 @@ proto_library(
 
 cc_proto_library(
     name = "verification_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":verification_proto"],
 )
 

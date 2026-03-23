@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "oak_sdk_containers",
     srcs = ["lib.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":orchestrator_channel",
         ":orchestrator_client",
@@ -35,6 +36,7 @@ rust_library(
 rust_library(
     name = "orchestrator_channel",
     srcs = ["orchestrator_channel.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "@oak_crates_index//:anyhow",
@@ -51,6 +53,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "//oak_crypto",
@@ -67,6 +70,7 @@ rust_library(
 rust_library(
     name = "orchestrator_client",
     srcs = ["orchestrator_client.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//oak_sdk:__subpackages__"],
     deps = [
         "//oak_proto_rust",

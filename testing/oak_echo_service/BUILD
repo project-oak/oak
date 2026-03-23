@@ -48,11 +48,13 @@ rust_test(
     name = "oak_echo_service_test",
     size = "small",
     crate = ":oak_echo_service",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test_suite(
     name = "oak_echo_service_integration_test",
     srcs = ["tests/integration_test.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_echo_service",
         "//oak_restricted_kernel_sdk",

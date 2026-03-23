@@ -34,6 +34,7 @@ rust_library(
         "@oak_std_crates_index//:rmcp-macros",
         "@oak_std_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
         "//oak_proto_rust",
@@ -63,6 +64,7 @@ rust_binary(
         "@oak_std_crates_index//:rmcp-macros",
         "@oak_std_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":mcp_server_lib",
         "//oak_functions_standalone/client:oak_functions_standalone_client_lib",
@@ -128,6 +130,7 @@ oci_image(
         "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE,OAK_FUNCTIONS_URL",
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [
         ":mcp_server_tar",
         ":config_tar",
@@ -138,4 +141,5 @@ oci_load(
     name = "mcp_server_load_image",
     image = ":mcp_server_image",
     repo_tags = ["attested-mcp-server:latest"],
+    target_compatible_with = ["@platforms//os:linux"],
 )

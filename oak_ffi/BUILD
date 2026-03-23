@@ -26,6 +26,7 @@ cc_library(
     name = "cxx_string_test_foreign",
     srcs = ["cxx_string_test_foreign.cc"],
     hdrs = ["cxx_string_test_foreign.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/ffi:bytes_bindings",
         "//cc/ffi:bytes_view",
@@ -37,22 +38,26 @@ cc_library(
 rust_library(
     name = "oak_ffi_bytes",
     srcs = ["bytes.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
     name = "oak_ffi_bytes_test",
     crate = ":oak_ffi_bytes",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_library(
     name = "oak_ffi_error",
     srcs = ["error.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":oak_ffi_bytes"],
 )
 
 rust_library(
     name = "cxx_string",
     srcs = ["cxx_string.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/ffi:cxx_string",
     ],
@@ -61,6 +66,7 @@ rust_library(
 rust_test(
     name = "cxx_string_test",
     crate = ":cxx_string",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":cxx_string_test_foreign",
         ":oak_ffi_bytes",
@@ -71,6 +77,7 @@ rust_test(
 rust_library(
     name = "absl_status",
     srcs = ["absl_status.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_ffi_bytes",
         "//cc/ffi:absl_status",
@@ -80,6 +87,7 @@ rust_library(
 cc_library(
     name = "absl_status_test_foreign",
     srcs = ["absl_status_test_foreign.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/ffi:absl_status",
         "//cc/ffi:bytes_view",
@@ -91,6 +99,7 @@ cc_library(
 rust_test(
     name = "absl_status_test",
     crate = ":absl_status",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":absl_status_test_foreign",
         ":oak_ffi_bytes",

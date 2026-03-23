@@ -40,6 +40,7 @@ rust_binary(
         "--codegen=link-arg=-Wl,-static",
     ],
     tags = ["no-clippy"],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_attestation",
         "//oak_dice",
@@ -58,4 +59,5 @@ rust_binary(
 objcopy(
     name = "stage0_bin_tdx",
     src = ":stage0_bin_tdx_elf",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
 )

@@ -31,6 +31,7 @@ rust_test_suite(
         "//oak_proxy/server",
         "//oak_proxy/testdata",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proxy/lib:oak_proxy_lib",
         "@oak_crates_index//:anyhow",
@@ -77,6 +78,7 @@ oci_image(
         # Logs from the open-sourced code are permitted.
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [
         ":oak_proxy_tar",
         ":config_tar",
@@ -87,4 +89,5 @@ oci_load(
     name = "oak_proxy_load_image",
     image = ":oak_proxy_image",
     repo_tags = ["oak-proxy:latest"],
+    target_compatible_with = ["@platforms//os:linux"],
 )

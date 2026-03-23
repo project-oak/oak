@@ -30,4 +30,5 @@ rust_library(
     data = [
         "@com_google_protobuf//:descriptor_proto_srcs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
 )

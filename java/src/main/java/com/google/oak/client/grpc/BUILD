@@ -27,6 +27,7 @@ kt_jvm_library(
     srcs = [
         "StreamObserverSessionClient.kt",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session:client_session",
         "//java/src/main/java/com/google/oak/session:exception",
@@ -43,6 +44,7 @@ kt_jvm_library(
     srcs = [
         "StreamObserverSessionClient.kt",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session:client_session_no_jni",
         "//java/src/main/java/com/google/oak/session:exception",

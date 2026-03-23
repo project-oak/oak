@@ -48,6 +48,7 @@ sh_binary(
 rust_library(
     name = "oak_private_memory_database",
     srcs = glob(["*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//:encryption",
         "//:external_db_client",
@@ -74,6 +75,7 @@ rust_test(
     name = "database_test",
     crate = ":oak_private_memory_database",
     data = ["testdata/golden_icing_export.pb"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:googletest",
         "@rules_rust//tools/runfiles",

@@ -39,6 +39,7 @@ proto_library(
 
 cc_proto_library(
     name = "messages_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":messages_proto"],
 )
 
@@ -66,6 +67,7 @@ proto_library(
 
 cc_proto_library(
     name = "service_streaming_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":service_streaming_proto"],
 )
 
@@ -73,11 +75,13 @@ cc_grpc_library(
     name = "service_streaming_cc_grpc",
     srcs = [":service_streaming_proto"],
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":service_streaming_cc_proto"],
 )
 
 cc_proto_library(
     name = "service_unary_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":service_unary_proto"],
 )
 
@@ -86,6 +90,7 @@ cc_grpc_library(
     srcs = [":service_unary_proto"],
     generate_mocks = True,
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":service_unary_cc_proto"],
 )
 
@@ -127,6 +132,7 @@ proto_library(
 
 cc_proto_library(
     name = "session_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":session_proto"],
 )
 

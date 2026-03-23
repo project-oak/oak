@@ -32,6 +32,7 @@ rust_library(
         "src/lib.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_gcp",
@@ -57,6 +58,7 @@ rust_library(
 rust_binary(
     name = "bin/oak_gcp_examples_echo_enclave_app",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_gcp_examples_echo_enclave_app",
         "//oak_attestation_gcp",
@@ -77,6 +79,7 @@ pkg_tar(
     srcs = [":bin/oak_gcp_examples_echo_enclave_app"],
     package_dir = "/usr/local/bin",
     strip_prefix = "/oak_gcp/examples/echo/enclave_app/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_image(
@@ -88,6 +91,7 @@ oci_image(
         "tee.launch_policy.allow_env_override": "CONTAINER_IMAGE",
         "tee-container-log-redirect": "true",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [":tar"],
 )
 
@@ -101,6 +105,7 @@ oci_push(
     # $ bazel run //oak_gcp/examples/echo/enclave_app:push -- --repository=${YOUR_REPO}
     #
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/echo_enclave_app",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_binary(
@@ -112,6 +117,7 @@ rust_binary(
         ":push",
         "//trex/doremint",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

@@ -76,6 +76,7 @@ rust_library(
         "wasmtime",
     ],
     crate_name = "oak_functions_service",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = UNRESTRICTED_DEPS,
 )
 
@@ -88,6 +89,7 @@ rust_library(
         "wasmtime",
     ],
     crate_name = "oak_functions_service",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = UNRESTRICTED_DEPS,
 )
 

@@ -23,6 +23,7 @@ package(
 java_test(
     name = "util_test",
     srcs = glob(["*.java"]),
+    target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.util.ResultTest",
     deps = [
         "//java/src/main/java/com/google/oak/util",

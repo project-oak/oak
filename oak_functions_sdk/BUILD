@@ -43,6 +43,7 @@ rust_test_suite(
         "//oak_functions_sdk/tests/lookup_module",
         "//oak_functions_sdk/tests/testing_module",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_functions_sdk",
         "//oak_file_utils",

@@ -26,6 +26,7 @@ rust_binary(
     srcs = glob(["**/*.rs"]),
     # TODO: b/445140472 - Clean up access to Rekor public key in entire repo.
     compile_data = ["//oak_attestation_verification/testdata:endorsement"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//tr/key_util",
         "//tr/rekor",

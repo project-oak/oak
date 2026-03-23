@@ -25,6 +25,7 @@ package(
 rust_binary(
     name = "linux_enclave_app",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_benchmarks/benchmark:benchmark_std",
         "//oak_benchmarks/cli_common",

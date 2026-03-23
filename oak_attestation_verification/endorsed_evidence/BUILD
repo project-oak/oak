@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "endorsed_evidence_assertion_verifier",
     srcs = glob(["*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification:oak_attestation_verification_results",
         "//oak_attestation_verification_types",
@@ -43,6 +44,7 @@ rust_test(
     data = [
         "//oak_attestation_verification/endorsed_evidence/testdata",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification",
         "//oak_attestation_verification:test_util",

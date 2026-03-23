@@ -26,6 +26,7 @@ cc_library(
     name = "certificate_authority",
     srcs = ["certificate_authority.cc"],
     hdrs = ["certificate_authority.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":utils",
         "//cc/crypto:common",
@@ -45,6 +46,7 @@ cc_library(
     name = "utils",
     srcs = ["utils.cc"],
     hdrs = ["utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -59,6 +61,7 @@ cc_test(
     name = "certificate_authority_test",
     size = "small",
     srcs = ["certificate_authority_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":certificate_authority",
         "//cc/crypto:signing_key",
@@ -71,6 +74,7 @@ cc_test(
     name = "utils_test",
     size = "small",
     srcs = ["utils_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":utils",
         "@com_google_absl//absl/status:statusor",

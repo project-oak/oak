@@ -64,6 +64,7 @@ rust_library(
         "deny_sensitive_logging",
     ],
     crate_name = "oak_functions_containers_app",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = LIB_DEPS + ["//oak_functions_service:lib_unrestricted"],
 )
 
@@ -75,32 +76,9 @@ rust_library(
         "allow_sensitive_logging",
     ],
     crate_name = "oak_functions_containers_app",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = LIB_DEPS + ["//oak_functions_service:lib_insecure_unrestricted"],
 )
-
-APP_DEPS = [
-    "//oak_containers/agent",
-    "//oak_containers/orchestrator",
-    "//oak_sdk/containers:oak_sdk_containers",
-    "//oak_crypto",
-    "//oak_proto_rust",
-    "@oak_crates_index//:anyhow",
-    "@oak_crates_index//:clap",
-    "@oak_crates_index//:log",
-    "@oak_crates_index//:opentelemetry",
-    "@oak_crates_index//:opentelemetry-appender-tracing",
-    "@oak_crates_index//:opentelemetry-otlp",
-    "@oak_crates_index//:opentelemetry_sdk",
-    "@oak_crates_index//:prost",
-    "@oak_crates_index//:env_logger",
-    "@oak_crates_index//:tikv-jemallocator",
-    "@oak_crates_index//:tonic",
-    "@oak_crates_index//:tokio",
-    "@oak_crates_index//:tokio-stream",
-    "@oak_crates_index//:tracing",
-    "@oak_crates_index//:tracing-subscriber",
-    "@oak_crates_index//:tokio-vsock",
-]
 
 rust_binary(
     name = "oak_functions_containers_app",
@@ -108,9 +86,31 @@ rust_binary(
     crate_features = [
         "deny_sensitive_logging",
     ],
-    deps = APP_DEPS + [
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
         ":lib",
+        "//oak_containers/agent",
+        "//oak_containers/orchestrator",
+        "//oak_crypto",
         "//oak_functions_service:lib_unrestricted",
+        "//oak_proto_rust",
+        "//oak_sdk/containers:oak_sdk_containers",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
+        "@oak_crates_index//:opentelemetry-otlp",
+        "@oak_crates_index//:opentelemetry_sdk",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tikv-jemallocator",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tokio-vsock",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 
@@ -120,15 +120,38 @@ rust_binary(
     crate_features = [
         "allow_sensitive_logging",
     ],
-    deps = APP_DEPS + [
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
         ":lib_insecure",
+        "//oak_containers/agent",
+        "//oak_containers/orchestrator",
+        "//oak_crypto",
         "//oak_functions_service:lib_insecure_unrestricted",
+        "//oak_proto_rust",
+        "//oak_sdk/containers:oak_sdk_containers",
+        "@oak_crates_index//:anyhow",
+        "@oak_crates_index//:clap",
+        "@oak_crates_index//:env_logger",
+        "@oak_crates_index//:log",
+        "@oak_crates_index//:opentelemetry",
+        "@oak_crates_index//:opentelemetry-appender-tracing",
+        "@oak_crates_index//:opentelemetry-otlp",
+        "@oak_crates_index//:opentelemetry_sdk",
+        "@oak_crates_index//:prost",
+        "@oak_crates_index//:tikv-jemallocator",
+        "@oak_crates_index//:tokio",
+        "@oak_crates_index//:tokio-stream",
+        "@oak_crates_index//:tokio-vsock",
+        "@oak_crates_index//:tonic",
+        "@oak_crates_index//:tracing",
+        "@oak_crates_index//:tracing-subscriber",
     ],
 )
 
 rust_test(
     name = "lib_test",
     crate = ":lib",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
@@ -138,6 +161,7 @@ rust_test(
     data = [
         "//oak_functions/examples/key_value_lookup",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//micro_rpc",
@@ -161,9 +185,11 @@ rust_test(
 app_bundle(
     name = "bundle",
     binary = ":oak_functions_containers_app",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 app_bundle(
     name = "bundle_insecure",
     binary = ":oak_functions_containers_app_insecure",
+    target_compatible_with = ["@platforms//os:linux"],
 )

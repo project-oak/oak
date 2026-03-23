@@ -26,6 +26,7 @@ rust_library(
     srcs = glob([
         "src/tink/*.rs",
     ]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_crypto",
         "//cc/crypto/tink/signature:verification-ffi",
@@ -76,6 +77,7 @@ rust_test(
     name = "oak_crypto_test",
     size = "small",
     crate = ":oak_crypto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:hex",
         "@oak_crates_index//:tokio",
@@ -92,6 +94,7 @@ rust_test(
             "//cc/crypto/tink/signature/testdata:public_keyset",
             "//cc/crypto/tink/signature/testdata:signature",
         ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
     ],

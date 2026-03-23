@@ -28,6 +28,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//micro_rpc",
         "//oak_functions_enclave_service:lib",
@@ -42,6 +43,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     crate_features = ["allow_sensitive_logging"],
     platform = "//:x86_64-unknown-none",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//micro_rpc",
         "//oak_functions_enclave_service:lib_insecure",

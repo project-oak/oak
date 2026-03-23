@@ -26,6 +26,7 @@ cc_library(
     name = "verification-ffi",
     srcs = ["verification-ffi.cc"],
     hdrs = ["verification-ffi.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":verification_utils",
         "//cc/ffi:bytes_view",
@@ -39,6 +40,7 @@ cc_library(
     name = "verification_utils",
     srcs = ["verification_utils.cc"],
     hdrs = ["verification_utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/ffi:bytes_view",
         "//cc/ffi:cxx_string",
@@ -58,6 +60,7 @@ cc_test(
     name = "verification_utils_test",
     size = "small",
     srcs = ["verification_utils_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":verification_utils",
         "@com_github_tink_crypto_tink_cc//tink:configuration",
@@ -80,6 +83,7 @@ cc_library(
     testonly = True,
     srcs = ["signature-ffi.cc"],
     hdrs = ["signature-ffi.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":signature_utils",
         "//cc/ffi:bytes_view",
@@ -95,6 +99,7 @@ cc_library(
     testonly = True,
     srcs = ["signature_utils.cc"],
     hdrs = ["signature_utils.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/utils/status",
         "@com_github_tink_crypto_tink_cc//tink:keyset_handle",

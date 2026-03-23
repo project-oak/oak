@@ -36,6 +36,7 @@ proto_library(
 
 cc_proto_library(
     name = "certificate_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":certificate_proto"],
 )
 
@@ -56,6 +57,7 @@ proto_library(
 
 cc_proto_library(
     name = "crypto_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":crypto_proto"],
 )
 

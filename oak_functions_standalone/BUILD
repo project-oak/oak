@@ -37,6 +37,7 @@ rust_library(
         "deny_sensitive_logging",
     ],
     crate_name = "oak_functions_standalone",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_attestation",
@@ -62,6 +63,7 @@ rust_binary(
     crate_features = [
         "deny_sensitive_logging",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//oak_attestation_gcp",
@@ -86,6 +88,7 @@ rust_binary(
 rust_test(
     name = "lib_test",
     crate = ":lib",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_test(
@@ -96,6 +99,7 @@ rust_test(
         "//oak_functions/examples/echo",
         "//oak_functions/examples/key_value_lookup",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//micro_rpc",
@@ -120,6 +124,7 @@ pkg_tar(
         ":oak_functions_standalone",
     ],
     package_dir = "/usr/local/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_image(
@@ -136,16 +141,19 @@ oci_image(
         # Logs from the open-sourced code are permitted.
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [":oak_functions_standalone_tar"],
 )
 
 app_bundle(
     name = "bundle",
     binary = ":oak_functions_standalone",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_load(
     name = "oak_functions_standalone_load_image",
     image = ":oak_functions_standalone_image",
     repo_tags = ["oak_functions_standalone:latest"],
+    target_compatible_with = ["@platforms//os:linux"],
 )

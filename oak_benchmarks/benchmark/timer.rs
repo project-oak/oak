@@ -23,7 +23,10 @@
 //! - [`NativeTimer`] (std only): Uses `std::time::Instant` for direct
 //!   nanosecond measurement on Linux.
 
-use core::arch::x86_64::{_mm_lfence, _rdtsc};
+use core::{
+    arch::x86_64::{_mm_lfence, _rdtsc},
+    marker::Sized,
+};
 
 /// Default assumed TSC frequency in Hz (3.0 GHz).
 ///

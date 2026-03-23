@@ -42,6 +42,7 @@ proto_library(
 
 cc_proto_library(
     name = "application_config_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":application_config_proto"],
 )
 
@@ -52,6 +53,7 @@ proto_library(
 
 cc_proto_library(
     name = "lookup_data_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":lookup_data_proto"],
 )
 

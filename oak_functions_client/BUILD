@@ -25,6 +25,7 @@ rust_library(
     name = "lib",
     srcs = ["src/lib.rs"],
     crate_name = "oak_functions_client",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_client",
@@ -40,6 +41,7 @@ rust_library(
 rust_binary(
     name = "oak_functions_client",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//oak_client",

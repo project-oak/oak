@@ -25,6 +25,7 @@ cc_library(
     name = "app_service",
     srcs = ["app_service.cc"],
     hdrs = ["app_service.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//cc/containers/sdk:orchestrator_client",
         "//cc/crypto:common",
@@ -41,6 +42,7 @@ cc_library(
 cc_binary(
     name = "main",
     srcs = ["main.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":app_service",
         "//cc/containers/sdk:orchestrator_client",
@@ -56,6 +58,7 @@ cc_binary(
 cc_test(
     name = "standalone_test",
     srcs = ["standalone_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":app_service",
         "//cc/oak_session:client_session",
@@ -71,6 +74,7 @@ cc_binary(
     name = "standalone_benchmark",
     testonly = True,
     srcs = ["standalone_benchmark.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":app_service",
         "//cc/attestation/verification:insecure_attestation_verifier",
@@ -86,6 +90,7 @@ cc_binary(
 app_bundle(
     name = "bundle",
     binary = ":main",
+    target_compatible_with = ["@platforms//os:linux"],
     visibility = [
         "//oak_containers/examples/hello_world/host_app:__subpackages__",
     ],

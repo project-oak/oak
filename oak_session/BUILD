@@ -50,6 +50,7 @@ rust_test(
     name = "oak_session_tests",
     srcs = glob(["src/tests/*.rs"]),
     crate_root = "src/tests/mod.rs",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session",
         ":oak_session_testing",
@@ -71,6 +72,7 @@ rust_library(
     name = "oak_session_testing",
     testonly = True,
     srcs = glob(["testing/*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session",
         "//oak_attestation_types",

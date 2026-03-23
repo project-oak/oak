@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "nist_pulse_verifier",
     srcs = glob(["src/*.rs"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
@@ -40,6 +41,7 @@ rust_test(
     name = "nist_pulse_verifier_tests",
     compile_data = ["src/testdata/certificate.pem"],
     crate = ":nist_pulse_verifier",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:mockall",

@@ -30,6 +30,7 @@ rust_library(
         "@oak_std_crates_index//:rmcp-macros",
         "@oak_std_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_functions_service:lib_unrestricted",
@@ -51,6 +52,7 @@ rust_library(
 rust_binary(
     name = "oak_functions_mcp_server",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_functions_mcp_lib",
         "//oak_functions_service:lib_unrestricted",
@@ -80,12 +82,14 @@ pkg_tar(
         "//oak_proxy/server",
     ],
     package_dir = "/bin",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 pkg_tar(
     name = "config_tar",
     srcs = [":config"],
     package_dir = "/etc",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_image(
@@ -111,6 +115,7 @@ oci_image(
         # Logs from the open-sourced code are permitted.
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [
         ":oak_functions_mcp_server_tar",
         ":config_tar",
@@ -121,10 +126,12 @@ oci_load(
     name = "oak_functions_mcp_server_load_image",
     image = ":oak_functions_mcp_server_image",
     repo_tags = ["oak-functions-mcp:latest"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_push(
     name = "oak_functions_mcp_server_push",
     image = ":oak_functions_mcp_server_image",
     repository = "europe-west1-docker.pkg.dev/oak-functions-standalone/oak-functions-mcp-containers/oak-functions-mcp",
+    target_compatible_with = ["@platforms//os:linux"],
 )

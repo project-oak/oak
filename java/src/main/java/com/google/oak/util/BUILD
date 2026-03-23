@@ -25,6 +25,7 @@ package(
 java_library(
     name = "util",
     srcs = glob(["*.java"]),
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 android_library(

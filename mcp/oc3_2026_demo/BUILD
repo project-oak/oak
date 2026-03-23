@@ -24,6 +24,7 @@ package(
 rust_binary(
     name = "generate_reference_values",
     srcs = ["generate_reference_values.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",

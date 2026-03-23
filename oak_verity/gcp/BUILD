@@ -26,6 +26,7 @@ package(
 rust_binary(
     name = "oak_verity_gcp",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_gcp",
         "//oak_attestation_types",
@@ -43,6 +44,7 @@ pkg_tar(
     srcs = [":oak_verity_gcp"],
     package_dir = "/usr/local/bin",
     strip_prefix = "",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_image(
@@ -54,6 +56,7 @@ oci_image(
     labels = {
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [":tar"],
 )
 
@@ -61,4 +64,5 @@ oci_push(
     name = "image_push",
     image = ":image",
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/oak_verity",
+    target_compatible_with = ["@platforms//os:linux"],
 )

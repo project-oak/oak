@@ -33,6 +33,7 @@ proto_library(
 
 cc_proto_library(
     name = "tls_over_grpc_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":tls_over_grpc_proto"],
 )
 
@@ -40,6 +41,7 @@ cc_grpc_library(
     name = "tls_over_grpc_cc_grpc",
     srcs = [":tls_over_grpc_proto"],
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":tls_over_grpc_cc_proto"],
 )
 
@@ -47,6 +49,7 @@ cc_library(
     name = "service_impl",
     srcs = ["service_impl.cc"],
     hdrs = ["service_impl.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_cc_grpc",
         "//oak_session/tls:oak_session_tls",
@@ -66,6 +69,7 @@ cc_binary(
     name = "server",
     srcs = ["server_main.cc"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":service_impl",
         "//oak_session/tls:oak_session_tls",
@@ -86,6 +90,7 @@ cc_binary(
     name = "client",
     srcs = ["client_main.cc"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":tls_over_grpc_cc_grpc",
         "//oak_session/tls:oak_session_tls",

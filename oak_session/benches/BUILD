@@ -28,6 +28,7 @@ rust_binary(
     env = {
         "RUST_LOG": "debug",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_crypto",
         "//oak_proto_rust",

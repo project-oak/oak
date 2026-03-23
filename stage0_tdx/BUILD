@@ -25,6 +25,7 @@ rust_library(
     name = "stage0_tdx",
     srcs = glob(["src/**/*.rs"]),
     aliases = {"@//stage0": "oak_stage0"},
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -50,6 +51,7 @@ rust_library(
     name = "stage0_tdx_for_test",
     srcs = glob(["src/**/*.rs"]),
     aliases = {"@//stage0:stage0_for_test": "oak_stage0"},
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_attestation",
         "//oak_attestation_types",
@@ -75,6 +77,7 @@ rust_test(
     name = "stage0_tdx_test",
     size = "small",
     crate = ":stage0_tdx_for_test",
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//stage0_dice",
     ],

@@ -23,6 +23,7 @@ package(
 rust_library(
     name = "oak_jni_attestation_verification_clock",
     srcs = ["oak_jni_attestation_verification_clock.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_verification_types",
         "//oak_time",

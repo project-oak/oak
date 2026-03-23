@@ -27,6 +27,7 @@ rust_library(
         "lib.rs",
     ],
     proc_macro_deps = ["@oak_crates_index//:async-trait"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_containers/examples/micro_rpc_noise/application:micro_rpc_noise_application",

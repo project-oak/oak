@@ -25,6 +25,7 @@ rust_binary(
     name = "oak_kernel_measurement",
     srcs = ["src/main.rs"],
     crate_root = "src/main.rs",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:anyhow",
         "@oak_crates_index//:clap",

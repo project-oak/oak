@@ -35,6 +35,7 @@ rust_library(
         "timer.rs",
     ],
     crate_features = [],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
@@ -60,6 +61,10 @@ rust_library(
     ],
     crate_features = ["std"],
     crate_name = "benchmark",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
     deps = [
         "//oak_benchmarks/proto:oak_benchmark_proto_rust",
         "//oak_benchmarks/proto:service",
@@ -73,4 +78,8 @@ rust_test(
     name = "benchmark_test",
     crate = ":benchmark_std",
     crate_features = ["std"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
 )

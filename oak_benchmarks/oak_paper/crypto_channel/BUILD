@@ -35,6 +35,7 @@ rust_library(
 rust_library(
     name = "message_stream_client",
     srcs = ["message_stream.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_channel:oak_channel_client",
         "//oak_proto_rust",
@@ -46,6 +47,7 @@ rust_library(
 rust_library(
     name = "linux_server",
     srcs = ["linux_server.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_stream_client",
         "//oak_file_utils",
@@ -72,6 +74,7 @@ rust_binary(
         "RUST_LOG": "debug",
         "RUST_BACKTRACE": "1",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":linux_server",
         ":message_stream_client",
@@ -97,6 +100,7 @@ rust_binary(
     srcs = [
         "linux_main.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":linux_server",
         ":message_stream_client",
@@ -111,6 +115,7 @@ rust_binary(
 rust_library(
     name = "rk_launcher",
     srcs = ["rk_launcher.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":message_stream_client",
         "//oak_channel:oak_channel_client",
@@ -123,6 +128,7 @@ rust_library(
 rust_binary(
     name = "cert_gen",
     srcs = ["cert_gen.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:openssl",
     ],
@@ -142,6 +148,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         ":message_stream",
         "//oak_channel",

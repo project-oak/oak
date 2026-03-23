@@ -25,6 +25,7 @@ package(
 rust_binary(
     name = "enclave_app",
     srcs = ["enclave_app.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//ctf_sha2/containers/proto:tonic_service",
         "//oak_proto_rust",
@@ -43,6 +44,7 @@ rust_binary(
 app_bundle(
     name = "bundle",
     binary = ":enclave_app",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_binary(
@@ -55,6 +57,7 @@ rust_binary(
         "//oak_containers/system_image:oak_containers_system_image",
         "//stage0_bin",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//ctf_sha2/containers/proto:tonic_service",
         "//oak_containers/launcher:lib",

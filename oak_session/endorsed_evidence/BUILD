@@ -36,6 +36,7 @@ rust_library(
 rust_test(
     name = "oak_session_endorsed_evidence_tests",
     srcs = ["tests.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session_endorsed_evidence",
         "//oak_attestation_types",

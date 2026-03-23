@@ -32,6 +32,7 @@ proto_library(
 
 cc_proto_library(
     name = "messages_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":messages_proto"],
 )
 

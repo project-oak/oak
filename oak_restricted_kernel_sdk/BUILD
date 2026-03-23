@@ -36,7 +36,7 @@ rust_library(
     target_compatible_with = any_platform([
         "//:x86_64-linux-setting",  # Needed to run unit tests.
         "//:x86_64-none-setting",
-    ]),
+    ]) + ["@platforms//cpu:x86_64"],
     deps = [
         "//micro_rpc",
         "//oak_attestation",

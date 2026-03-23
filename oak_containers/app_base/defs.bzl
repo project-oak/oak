@@ -115,6 +115,9 @@ def _app_bundle_impl(
     if args:
         actual_args.extend(args)
 
+    compat = kwargs.get("target_compatible_with", None)
+    compat_kwargs = {"target_compatible_with": compat} if compat != None else {}
+
     config_target = name + "_config_json"
     oak_app_config(
         name = config_target,
@@ -123,6 +126,7 @@ def _app_bundle_impl(
         root_path = root_path,
         extra_mounts = extra_mounts,
         process_rlimits = process_rlimits,
+        **compat_kwargs
     )
 
     pkg_files(
@@ -131,23 +135,27 @@ def _app_bundle_impl(
         renames = {
             ":" + config_target: "config.json",
         },
+        **compat_kwargs
     )
 
     pkg_tar(
         name = name + "_config_tar",
         srcs = [":" + name + "_config_file"],
+        **compat_kwargs
     )
 
     pkg_tar(
         name = name + "_binary_tar",
         srcs = [binary],
         package_dir = "/" + root_path + entrypoint_path,
+        **compat_kwargs
     )
 
     pkg_tar(
         name = name + "_app_base_tar",
         deps = [base_image],
         package_dir = "./" + root_path,
+        **compat_kwargs
     )
 
     flatten(

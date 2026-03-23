@@ -27,6 +27,7 @@ rust_library(
     compile_data = [
         "//oak_attestation_gcp:data/confidential_space_root.pem",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_types",
         "//oak_attestation_verification",
@@ -71,6 +72,7 @@ rust_test(
         "//oak_attestation_gcp/testdata:root_ca_cert",
         "//oak_attestation_gcp/testdata:valid_token",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
         "@oak_crates_index//:googletest",

@@ -29,6 +29,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//micro_rpc",
         "//oak_benchmarks/benchmark",

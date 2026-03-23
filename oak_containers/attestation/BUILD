@@ -26,6 +26,7 @@ rust_library(
     srcs = [
         "src/lib.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation",
         "//oak_crypto",

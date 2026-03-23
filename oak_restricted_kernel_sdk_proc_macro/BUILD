@@ -23,6 +23,7 @@ package(
 rust_proc_macro(
     name = "oak_restricted_kernel_sdk_proc_macro",
     srcs = glob(["src/**"]),
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:quote",
         "@oak_crates_index//:syn",

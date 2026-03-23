@@ -35,6 +35,7 @@ rust_library(
 rust_test(
     name = "user_info_derive_test",
     crate = ":user_info_derive",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:hex",
     ],

@@ -32,16 +32,19 @@ proto_library(
 
 cc_proto_library(
     name = "digest_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":digest_proto"],
 )
 
 java_proto_library(
     name = "digest_java_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":digest_proto"],
 )
 
 py_proto_library(
     name = "digest_py_pb2",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":digest_proto"],
 )
 
@@ -56,16 +59,19 @@ proto_library(
 
 cc_proto_library(
     name = "validity_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":validity_proto"],
 )
 
 java_proto_library(
     name = "validity_java_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":validity_proto"],
 )
 
 py_proto_library(
     name = "validity_py_pb2",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":validity_proto"],
 )
 
@@ -76,21 +82,25 @@ proto_library(
 
 cc_proto_library(
     name = "variant_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":variant_proto"],
 )
 
 java_proto_library(
     name = "variant_java_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":variant_proto"],
 )
 
 py_proto_library(
     name = "variant_py_pb2",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":variant_proto"],
 )
 
 build_test(
     name = "build_test",
+    target_compatible_with = ["@platforms//os:linux"],
     targets = [
         ":digest_proto",
         ":digest_cc_proto",

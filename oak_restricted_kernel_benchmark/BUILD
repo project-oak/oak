@@ -38,6 +38,10 @@ rust_binary(
         "RUST_LOG": "debug",
         "RUST_BACKTRACE": "1",
     },
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
     deps = [
         "//oak_channel:oak_channel_client",
         "//oak_file_utils",
@@ -60,6 +64,7 @@ rust_binary(
     rustc_flags = [
         "--codegen=link-arg=-Wl,-zmax-page-size=0x200000",
     ],
+    target_compatible_with = ["@platforms//cpu:x86_64"],
     deps = [
         "//oak_restricted_kernel_sdk",
         "@oak_crates_index//:anyhow",
@@ -84,6 +89,7 @@ rust_test(
     },
     # TODO: b/477383650 remove this once we resolve the virtio hanging issue.
     tags = ["manual"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_channel:oak_channel_client",
         "//oak_file_utils",

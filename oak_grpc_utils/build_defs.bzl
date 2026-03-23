@@ -85,11 +85,15 @@ def rust_tonic_grpc_service(
     """
 
     generate_service_lib_name = name + "_gen"
+    compat = kwargs.get("target_compatible_with", None)
+    compat_kwargs = {"target_compatible_with": compat} if compat != None else {}
+
     _generate_service_lib(
         name = generate_service_lib_name,
         srcs = srcs,
         out_filename = name + ".rs",
         extern_paths = extern_paths,
+        **compat_kwargs
     )
 
     rust_library(

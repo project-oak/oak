@@ -40,4 +40,5 @@ rust_library(
 rust_test(
     name = "oak_core_tests",
     crate = ":oak_core",
+    target_compatible_with = ["@platforms//os:linux"],
 )

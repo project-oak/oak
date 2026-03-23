@@ -25,6 +25,7 @@ cc_library(
     name = "matchers",
     testonly = True,
     hdrs = ["matchers.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_googletest//:gtest",
     ],

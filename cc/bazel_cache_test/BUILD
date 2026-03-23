@@ -24,6 +24,7 @@ package(
 cc_test(
     name = "test",
     srcs = ["test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
     ],
 )

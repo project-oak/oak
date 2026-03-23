@@ -25,6 +25,7 @@ cc_binary(
     srcs = ["main.cc"],
     target_compatible_with = [
         "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
         "//:os_oak",
     ],
 )

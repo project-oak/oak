@@ -26,6 +26,7 @@ rust_library(
     srcs = [
         "oak_session_tls.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:rcgen",
         "@oak_crates_index//:rustls",
@@ -39,6 +40,7 @@ rust_test(
     name = "oak_session_tls_test",
     srcs = ["oak_session_tls_test.rs"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session_tls",
         "@oak_crates_index//:futures",

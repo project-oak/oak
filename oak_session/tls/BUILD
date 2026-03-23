@@ -26,6 +26,7 @@ cc_library(
     name = "oak_session_tls",
     srcs = ["oak_session_tls.cc"],
     hdrs = ["oak_session_tls.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@boringssl//:crypto",
         "@boringssl//:ssl",
@@ -42,6 +43,7 @@ cc_library(
     name = "util",
     srcs = ["util.cc"],
     hdrs = ["util.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session_tls",
         "@boringssl//:crypto",
@@ -56,6 +58,7 @@ cc_test(
     name = "oak_session_tls_test",
     srcs = ["oak_session_tls_test.cc"],
     data = ["//oak_session/tls/testing:test_keys"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_session_tls",
         ":util",

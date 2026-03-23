@@ -26,6 +26,7 @@ rust_binary(
     srcs = [
         "src/main.rs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:clap",

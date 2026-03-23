@@ -28,9 +28,11 @@ exports_files(["config.json.tpl"])
 alias(
     name = "flat",
     actual = "@oak_containers_app_base//:flat",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oak_app_config(
     name = "config",
     args = ["/usr/local/bin/entrypoint"],
+    target_compatible_with = ["@platforms//os:linux"],
 )

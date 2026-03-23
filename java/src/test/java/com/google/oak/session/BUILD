@@ -26,6 +26,7 @@ package(
 java_test(
     name = "session_test",
     srcs = ["OakSessionTest.java"],
+    target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.session.OakSessionTest",
     deps = [
         "//java/src/main/java/com/google/oak/session:client_session",
@@ -41,6 +42,7 @@ java_test(
 rust_library(
     name = "attestation_publisher_test_rust",
     srcs = ["attestation_publisher_test_jni.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session/jni:oak_jni_attestation_publisher",
         "//oak_proto_rust",
@@ -55,6 +57,7 @@ rust_library(
 oak_jvm_jni_library(
     name = "attestation_publisher_test_jni",
     linkshared = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "attestation_publisher_test_rust",
     ],
@@ -64,6 +67,7 @@ kt_jvm_library(
     name = "attestation_publisher_test_lib",
     testonly = True,
     srcs = ["AttestationPublisherTest.kt"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//java/src/main/java/com/google/oak/session:attestation_publisher",
         "//java/src/main/java/com/google/oak/session:client_session",
@@ -84,6 +88,7 @@ kt_jvm_library(
 
 java_test(
     name = "AttestationPublisherTest",
+    target_compatible_with = ["@platforms//os:linux"],
     test_class = "com.google.oak.session.AttestationPublisherTest",
     runtime_deps = [
         ":attestation_publisher_test_jni",

@@ -36,6 +36,7 @@ rust_library(
 rust_test(
     name = "results_unit_tests",
     crate = ":oak_attestation_verification_results",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_library(
@@ -92,6 +93,7 @@ rust_test(
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":test_util",
         "//oak_file_utils",
@@ -111,6 +113,7 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:fake_attestation",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_attestation_verification",
         ":test_util",
@@ -137,6 +140,7 @@ rust_library(
         "//oak_attestation_verification/data:intel_pck_root",
     ],
     crate_features = ["regex"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_attestation_verification_results",
         "//oak_attestation_verification_types",
@@ -182,6 +186,7 @@ rust_test(
         "//oak_attestation_verification/data:amd_ark_certs",
         "//oak_attestation_verification/data:amd_ask_certs",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":test_util",
         "//oak_crypto",
@@ -204,6 +209,7 @@ rust_test_suite(
         "//oak_attestation_verification/data:amd_ask_certs",
         "//oak_attestation_verification/testdata:fake_attestation",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_attestation_verification_with_regex",
         ":test_util",
@@ -255,6 +261,7 @@ rust_library(
 rust_test(
     name = "benches",
     srcs = ["tests/benchmarks.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_attestation_verification",
         ":test_util",

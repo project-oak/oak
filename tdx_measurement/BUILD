@@ -28,6 +28,7 @@ rust_binary(
     name = "tdx_measurement",
     srcs = glob(["src/**"]),
     crate_root = "src/main.rs",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//stage0_parsing",
         "@oak_crates_index//:anyhow",
@@ -47,6 +48,7 @@ rust_test(
     name = "tdx_measurement_test",
     crate = ":tdx_measurement",
     data = ["@stage0_tdx_bin_for_test//file"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_file_utils",
         "@rules_rust//tools/runfiles",

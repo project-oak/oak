@@ -26,7 +26,7 @@ _RK_WRAPPER_RUSTC_FLAGS = [
     "--codegen=opt-level=z",  # Optimize for binary size, but also turn off loop vectorization.
 ]
 
-def kernel_bzimage_and_measurements(name, payload, visibility = None):
+def kernel_bzimage_and_measurements(name, payload, visibility = None, **kwargs):
     rust_binary(
         name = name,
         srcs = native.glob(["src/**/*.rs"]),
@@ -46,16 +46,19 @@ def kernel_bzimage_and_measurements(name, payload, visibility = None):
             "@oak_crates_index//:x86_64",
         ],
         visibility = ["//visibility:private"],
+        **kwargs
     )
 
     objcopy(
         name = name + "_bin",
         src = ":" + name,
+        **kwargs
     )
 
     kernel_measurement(
         name = name + "_measurement",
         src = ":" + name + "_bin",
+        **kwargs
     )
 
     native.filegroup(
@@ -65,4 +68,5 @@ def kernel_bzimage_and_measurements(name, payload, visibility = None):
             ":" + name + "_measurement",
         ],
         visibility = visibility,
+        **kwargs
     )

@@ -83,6 +83,7 @@ rust_tonic_grpc_service(
     extern_paths = {
         ".oak.benchmark": "::oak_benchmark_proto_rust::oak::benchmark",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":oak_benchmark_proto_rust",
     ],

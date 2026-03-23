@@ -28,6 +28,7 @@ cc_library(
     name = "cose",
     srcs = ["cose.cc"],
     hdrs = ["cose.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -40,6 +41,7 @@ cc_library(
     name = "cwt",
     srcs = ["cwt.cc"],
     hdrs = ["cwt.h"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":cose",
         "@com_google_absl//absl/status",
@@ -55,6 +57,7 @@ cc_test(
     name = "cose_test",
     size = "small",
     srcs = ["cose_test.cc"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":cose",
         "@com_google_googletest//:gtest_main",
@@ -66,6 +69,7 @@ cc_test(
     size = "small",
     srcs = ["cwt_test.cc"],
     data = ["//oak_attestation_verification/testdata:milan_oc_staging_attestation"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":cwt",
         "//proto/attestation:evidence_cc_proto",

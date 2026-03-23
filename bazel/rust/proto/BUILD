@@ -24,6 +24,7 @@ package(
 rust_library(
     name = "proto_gen",
     srcs = ["proto_gen.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "@oak_crates_index//:thiserror",
     ],
@@ -32,6 +33,7 @@ rust_library(
 rust_binary(
     name = "generator",
     srcs = ["main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":proto_gen",
         "@oak_crates_index//:anyhow",

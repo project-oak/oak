@@ -28,6 +28,7 @@ rust_library(
         "src/lib.rs",
     ],
     crate_name = "lookup_data_generator",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_proto_rust",
         "@oak_crates_index//:anyhow",
@@ -40,6 +41,7 @@ rust_library(
 rust_binary(
     name = "lookup_data_generator",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "@oak_crates_index//:anyhow",

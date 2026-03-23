@@ -41,4 +41,5 @@ rust_library(
 rust_test(
     name = "digest_test",
     crate = ":oak_digest",
+    target_compatible_with = ["@platforms//os:linux"],
 )

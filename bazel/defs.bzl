@@ -37,20 +37,16 @@ def any_platform(platform_list):
     is equivalent to:
     ```
     target_compatible_with = select({
-        "//:x86_64-linux-setting": ["//:x86_64-linux-setting"],
-        "//:x86_64-none-setting": ["//:x86_64-none-setting"],
+        "//:x86_64-linux-setting": [],
+        "//:x86_64-none-setting": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     ```
     This is the idiomatic way to select one of several possible compatible
     platforms as pointed out in
-    https://bazel.build/extending/platforms#expressive-constraints,
-    except we return the same OS string in the values (instead of `[]`), as
-    that is required for our cquery in just bazel-ci to work properly. If we
-    return `[]`, that query will include false positives, as all targets that
-    don't specify any value for `target_compatible_with` will default to `[]`.
+    https://bazel.build/extending/platforms#expressive-constraints.
     """
-    select_dict = {platform: [platform] for platform in platform_list}
+    select_dict = {platform: [] for platform in platform_list}
     select_dict["//conditions:default"] = ["@platforms//:incompatible"]
     return select(select_dict)
 

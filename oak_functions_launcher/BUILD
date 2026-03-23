@@ -35,6 +35,7 @@ rust_library(
     proc_macro_deps = [
         "@oak_crates_index//:async-trait",
     ],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//micro_rpc",
         "//oak_client",
@@ -59,11 +60,13 @@ rust_test(
     name = "oak_functions_launcher_test",
     size = "small",
     crate = ":lib",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 rust_binary(
     name = "oak_functions_launcher",
     srcs = ["src/main.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//oak_client",
@@ -98,6 +101,7 @@ rust_test(
     env = {
         "RUST_LOG": "debug",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//micro_rpc",
@@ -128,6 +132,7 @@ rust_test(
     env = {
         "RUST_LOG": "debug",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":lib",
         "//micro_rpc",

@@ -26,6 +26,7 @@ package(
 rust_binary(
     name = "workload",
     srcs = ["workload.rs"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [
         "//oak_attestation_gcp",
         "@oak_crates_index//:base64",
@@ -40,6 +41,7 @@ pkg_tar(
     srcs = [":workload"],
     package_dir = "/usr/local/bin",
     strip_prefix = "",
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 oci_image(
@@ -51,6 +53,7 @@ oci_image(
     labels = {
         "tee.launch_policy.log_redirect": "always",
     },
+    target_compatible_with = ["@platforms//os:linux"],
     tars = [":workload_tar"],
 )
 
@@ -58,4 +61,5 @@ oci_push(
     name = "workload_image_push",
     image = ":workload_image",
     repository = "europe-west1-docker.pkg.dev/oak-examples-477357/c0n741n3r-1m4635/ctf_sha2",
+    target_compatible_with = ["@platforms//os:linux"],
 )

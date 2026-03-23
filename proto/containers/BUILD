@@ -37,6 +37,7 @@ proto_library(
 
 cc_proto_library(
     name = "interfaces_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":interfaces_proto"],
 )
 
@@ -45,6 +46,7 @@ cc_grpc_library(
     srcs = [":interfaces_proto"],
     generate_mocks = True,
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":interfaces_cc_proto"],
 )
 
@@ -60,6 +62,7 @@ proto_library(
 
 cc_proto_library(
     name = "orchestrator_crypto_cc_proto",
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":orchestrator_crypto_proto"],
 )
 
@@ -68,5 +71,6 @@ cc_grpc_library(
     srcs = [":orchestrator_crypto_proto"],
     generate_mocks = True,
     grpc_only = True,
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":orchestrator_crypto_cc_proto"],
 )
