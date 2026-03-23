@@ -18,7 +18,6 @@ jobs:
       matrix:
         buildconfig:
           - buildconfigs/key_xor_test_app.sh
-          - buildconfigs/oak_client_android_app.sh
           - buildconfigs/oak_containers_agent.sh
           - buildconfigs/oak_containers_kernel.sh
           - buildconfigs/oak_containers_orchestrator.sh
