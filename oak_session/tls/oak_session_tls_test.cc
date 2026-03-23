@@ -442,13 +442,13 @@ HandshakeResult RunHandshake(OakSessionTlsContext& client_ctx,
     server_result = server_ctx.NewInitializedSession(
         /*send=*/
         [&](absl::string_view data) {
-          absl::MutexLock lock(&mtx);
+          absl::MutexLock lock(mtx);
           server_to_client.push(std::string(data));
           return absl::OkStatus();
         },
         /*receive=*/
         [&]() -> absl::StatusOr<std::string> {
-          absl::MutexLock lock(&mtx);
+          absl::MutexLock lock(mtx);
           mtx.Await(absl::Condition(
               +[](std::queue<std::string>* q) { return !q->empty(); },
               &client_to_server));
@@ -461,13 +461,13 @@ HandshakeResult RunHandshake(OakSessionTlsContext& client_ctx,
   auto client_result = client_ctx.NewInitializedSession(
       /*send=*/
       [&](absl::string_view data) {
-        absl::MutexLock lock(&mtx);
+        absl::MutexLock lock(mtx);
         client_to_server.push(std::string(data));
         return absl::OkStatus();
       },
       /*receive=*/
       [&]() -> absl::StatusOr<std::string> {
-        absl::MutexLock lock(&mtx);
+        absl::MutexLock lock(mtx);
         mtx.Await(absl::Condition(
             +[](std::queue<std::string>* q) { return !q->empty(); },
             &server_to_client));
