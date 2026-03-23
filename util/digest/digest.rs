@@ -215,6 +215,11 @@ impl From<[u8; 64]> for Sha3_512 {
     }
 }
 
+impl AsRef<[u8]> for Psha2 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 impl AsRef<[u8]> for Sha1 {
     fn as_ref(&self) -> &[u8] {
         &self.0
@@ -255,23 +260,99 @@ impl AsRef<[u8]> for Sha3_512 {
         &self.0
     }
 }
-impl AsRef<[u8]> for Psha2 {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
+
+impl From<Psha2> for Vec<u8> {
+    fn from(val: Psha2) -> Self {
+        val.0
     }
 }
-
+impl From<Sha1> for Vec<u8> {
+    fn from(val: Sha1) -> Self {
+        val.0.to_vec()
+    }
+}
 impl From<Sha256> for Vec<u8> {
     fn from(val: Sha256) -> Self {
         val.0.to_vec()
+    }
+}
+impl From<Sha384> for Vec<u8> {
+    fn from(val: Sha384) -> Self {
+        val.0.to_vec()
+    }
+}
+impl From<Sha512> for Vec<u8> {
+    fn from(val: Sha512) -> Self {
+        val.0.to_vec()
+    }
+}
+impl From<Sha3_224> for Vec<u8> {
+    fn from(val: Sha3_224) -> Self {
+        val.0.to_vec()
+    }
+}
+impl From<Sha3_256> for Vec<u8> {
+    fn from(val: Sha3_256) -> Self {
+        val.0.to_vec()
+    }
+}
+impl From<Sha3_384> for Vec<u8> {
+    fn from(val: Sha3_384) -> Self {
+        val.0.to_vec()
+    }
+}
+impl From<Sha3_512> for Vec<u8> {
+    fn from(val: Sha3_512) -> Self {
+        val.0.to_vec()
+    }
+}
+
+impl From<Sha1> for [u8; 20] {
+    fn from(val: Sha1) -> Self {
+        val.0
+    }
+}
+impl From<Sha256> for [u8; 32] {
+    fn from(val: Sha256) -> Self {
+        val.0
+    }
+}
+impl From<Sha384> for [u8; 48] {
+    fn from(val: Sha384) -> Self {
+        val.0
+    }
+}
+impl From<Sha512> for [u8; 64] {
+    fn from(val: Sha512) -> Self {
+        val.0
+    }
+}
+impl From<Sha3_224> for [u8; 28] {
+    fn from(val: Sha3_224) -> Self {
+        val.0
+    }
+}
+impl From<Sha3_256> for [u8; 32] {
+    fn from(val: Sha3_256) -> Self {
+        val.0
+    }
+}
+impl From<Sha3_384> for [u8; 48] {
+    fn from(val: Sha3_384) -> Self {
+        val.0
+    }
+}
+impl From<Sha3_512> for [u8; 64] {
+    fn from(val: Sha3_512) -> Self {
+        val.0
     }
 }
 
 /// Represents a specific digest type and its (mostly) fixed-size data.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Digest {
-    Sha1(Sha1),
     Psha2(Psha2),
+    Sha1(Sha1),
     Sha256(Sha256),
     Sha384(Sha384),
     Sha512(Sha512),
@@ -371,8 +452,8 @@ impl Digest {
 
     pub fn to_typed_hash(&self) -> String {
         match self {
-            Digest::Sha1(h) => h.to_typed_hash(),
             Digest::Psha2(h) => h.to_typed_hash(),
+            Digest::Sha1(h) => h.to_typed_hash(),
             Digest::Sha256(h) => h.to_typed_hash(),
             Digest::Sha384(h) => h.to_typed_hash(),
             Digest::Sha512(h) => h.to_typed_hash(),
@@ -384,14 +465,14 @@ impl Digest {
     }
 }
 
-impl From<Sha1> for Digest {
-    fn from(h: Sha1) -> Self {
-        Digest::Sha1(h)
-    }
-}
 impl From<Psha2> for Digest {
     fn from(h: Psha2) -> Self {
         Digest::Psha2(h)
+    }
+}
+impl From<Sha1> for Digest {
+    fn from(h: Sha1) -> Self {
+        Digest::Sha1(h)
     }
 }
 impl From<Sha256> for Digest {
@@ -433,8 +514,8 @@ impl From<Sha3_512> for Digest {
 impl From<Digest> for RawDigest {
     fn from(digest: Digest) -> Self {
         match digest {
-            Digest::Sha1(h) => RawDigest { sha1: h.as_ref().to_vec(), ..Default::default() },
             Digest::Psha2(h) => RawDigest { psha2: h.as_ref().to_vec(), ..Default::default() },
+            Digest::Sha1(h) => RawDigest { sha1: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha256(h) => RawDigest { sha2_256: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha384(h) => RawDigest { sha2_384: h.as_ref().to_vec(), ..Default::default() },
             Digest::Sha512(h) => RawDigest { sha2_512: h.as_ref().to_vec(), ..Default::default() },
@@ -457,8 +538,8 @@ impl From<Digest> for RawDigest {
 impl From<Digest> for HexDigest {
     fn from(digest: Digest) -> Self {
         match digest {
-            Digest::Sha1(h) => HexDigest { sha1: hex::encode(h), ..Default::default() },
             Digest::Psha2(h) => HexDigest { psha2: hex::encode(h), ..Default::default() },
+            Digest::Sha1(h) => HexDigest { sha1: hex::encode(h), ..Default::default() },
             Digest::Sha256(h) => HexDigest { sha2_256: hex::encode(h), ..Default::default() },
             Digest::Sha384(h) => HexDigest { sha2_384: hex::encode(h), ..Default::default() },
             Digest::Sha512(h) => HexDigest { sha2_512: hex::encode(h), ..Default::default() },

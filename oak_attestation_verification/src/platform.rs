@@ -19,7 +19,7 @@
 use alloc::format;
 
 use anyhow::Context;
-use oak_digest::hash_sha2_256;
+use oak_digest::Sha256;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{
@@ -52,12 +52,13 @@ pub fn verify_dice_root_eca_key(
     attestation_report: &AttestationReport,
     eca_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let expected = &hash_sha2_256(eca_public_key)[..];
+    let expected = Sha256::from_contents(eca_public_key);
     let actual = attestation_report.data.report_data;
     anyhow::ensure!(
         // The report data contains 64 bytes by default, but we only use the
         // first 32 bytes at the moment.
-        expected.len() < actual.len() && expected == &actual[..expected.len()],
+        expected.as_ref().len() < actual.len()
+            && expected.as_ref() == &actual[..expected.as_ref().len()],
         "the root ECA public key is not bound to the AMD SEV-SNP attestation report"
     );
     Ok(())

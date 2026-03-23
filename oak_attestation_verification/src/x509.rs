@@ -18,7 +18,6 @@ use const_oid::db::rfc5912::{ECDSA_WITH_SHA_256, ID_RSASSA_PSS};
 use oak_time::Instant;
 use p256::ecdsa::{Signature as P256Signature, VerifyingKey as P256VerifyingKey};
 use rsa::{RsaPublicKey, pss::Signature as RsaSignature, signature::Verifier};
-use sha2::Sha384;
 use x509_cert::{
     Certificate,
     der::{Encode, referenced::OwnedToRef},
@@ -38,7 +37,7 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
                 let pubkey_info = signer.tbs_certificate.subject_public_key_info.owned_to_ref();
                 let pubkey = RsaPublicKey::try_from(pubkey_info)
                     .map_err(|_err| anyhow::anyhow!("could not parse RSA public key"))?;
-                rsa::pss::VerifyingKey::<Sha384>::new(pubkey)
+                rsa::pss::VerifyingKey::<rsa::sha2::Sha384>::new(pubkey)
             };
             let signature = RsaSignature::try_from(signature_bytes)
                 .map_err(|_err| anyhow::anyhow!("could not extract RSA signature"))?;

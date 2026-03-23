@@ -41,7 +41,6 @@ rust_binary(
         "@oak_crates_index//:oci-spec",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:tokio",
         "@oak_crates_index//:toml",
     ],

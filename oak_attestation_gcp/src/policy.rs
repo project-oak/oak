@@ -19,7 +19,7 @@ use alloc::{string::String, vec::Vec};
 use jwt::Token;
 use oak_attestation_verification::{decode_event_proto, results::set_session_binding_public_key};
 use oak_attestation_verification_types::policy::Policy;
-use oak_digest::Digest;
+use oak_digest::{Digest, Sha256};
 use oak_proto_rust::oak::{
     Variant,
     attestation::v1::{
@@ -29,7 +29,6 @@ use oak_proto_rust::oak::{
 };
 use oak_time::Instant;
 use oci_spec::distribution::Reference as OciReference;
-use sha2::{Digest as OtherDigest, Sha256};
 use verify_endorsement::verify_endorsement;
 use x509_cert::Certificate;
 
@@ -264,9 +263,9 @@ impl Policy<[u8]> for ConfidentialSpacePolicy {
 
 fn verify_claims_public_key(
     claims: &Claims,
-    expected_public_key: &Vec<u8>,
+    expected_public_key: &[u8],
 ) -> Result<(), ConfidentialSpaceVerificationError> {
-    let public_key_hash = hex::encode(Sha256::digest(expected_public_key));
+    let public_key_hash = hex::encode(Sha256::from_contents(expected_public_key));
     if claims.eat_nonce != public_key_hash {
         return Err(ConfidentialSpaceVerificationError::TokenClaimPublicKeyMismatch {
             expected: public_key_hash,

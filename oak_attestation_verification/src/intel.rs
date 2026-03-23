@@ -20,14 +20,13 @@
 use core::convert::Into;
 
 use anyhow::{Context, anyhow};
-use oak_digest::hash_sha2_256;
+use oak_digest::{Sha256, Sha384};
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::Instant;
 use p256::{
     EncodedPoint,
     ecdsa::{Signature, VerifyingKey, signature::Verifier},
 };
-use sha2::{Digest, Sha384};
 use x509_cert::{
     Certificate,
     der::{DecodePem, referenced::OwnedToRef},
@@ -84,7 +83,7 @@ pub fn verify_intel_tdx_quote_validity(
     let mut key_binding_data = signature_data.ecdsa_attestation_key.to_vec();
     key_binding_data.extend_from_slice(report_certification.authentication_data);
     anyhow::ensure!(
-        hash_sha2_256(key_binding_data.as_slice()) == qe_report.report_data[..32],
+        Sha256::from_contents(key_binding_data.as_slice()).as_ref() == &qe_report.report_data[..32],
         "attestation key is not bound to quoting enclave report"
     );
     anyhow::ensure!(
@@ -162,7 +161,7 @@ impl RtmrEmulator {
         // [Intel® TDX Module v1.5 ABI Specification](https://cdrdv2.intel.com/v1/dl/getContent/817877?fileName=intel-tdx-module-1.5-abi-spec-348551004.pdf)
         // for more information.
         current.extend_from_slice(digest.as_slice());
-        self.state = Sha384::digest(&current).into();
+        self.state = Sha384::from_contents(&current).into();
     }
 
     /// Gets the current value of the RTMR.

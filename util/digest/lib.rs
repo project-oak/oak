@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Provides utilities related to digest protocol buffers.
+//! Provides utilities related to processing digests.
 
 #![no_std]
 

@@ -60,6 +60,5 @@ rust_binary(
         "@oak_crates_index//:pem",
         "@oak_crates_index//:rsa",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:sha2",
     ],
 )

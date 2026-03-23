@@ -49,7 +49,6 @@ rust_library(
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
         "@oak_crates_index//:x509-cert",
         "@oak_crates_index//:x509-verify",
@@ -80,6 +79,5 @@ rust_test(
         "@oak_crates_index//:prost",
         "@oak_crates_index//:prost-types",
         "@oak_crates_index//:serde_json",
-        "@oak_crates_index//:sha2",
     ],
 )

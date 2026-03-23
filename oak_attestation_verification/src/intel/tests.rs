@@ -18,9 +18,9 @@ extern crate std;
 
 use core::assert_eq;
 
+use oak_digest::Sha384;
 use oak_tdx_quote::{QeCertificationData, TdxQuoteWrapper};
 use oak_time::{Duration, Instant};
-use sha2::{Digest, Sha384};
 use test_util::AttestationData;
 use x509_cert::{Certificate, der::DecodePem};
 
@@ -215,7 +215,7 @@ fn test_extend_rtmr_once() {
     ];
 
     let mut rtmr = RtmrEmulator::new();
-    rtmr.extend(&Sha384::digest(encoded_event.as_slice()).into());
+    rtmr.extend(&Sha384::from_contents(encoded_event.as_slice()).into());
     let actual = rtmr.get_state();
 
     assert_eq!(actual.len(), expected.len(), "slice lengths do not match");
@@ -237,9 +237,9 @@ fn test_extend_rtmr_three_times() {
     ];
 
     let mut rtmr = RtmrEmulator::new();
-    rtmr.extend(&Sha384::digest(event_1.as_slice()).into());
-    rtmr.extend(&Sha384::digest(event_2.as_slice()).into());
-    rtmr.extend(&Sha384::digest(event_3.as_slice()).into());
+    rtmr.extend(&Sha384::from_contents(event_1.as_slice()).into());
+    rtmr.extend(&Sha384::from_contents(event_2.as_slice()).into());
+    rtmr.extend(&Sha384::from_contents(event_3.as_slice()).into());
     let actual = rtmr.get_state();
 
     assert_eq!(actual.len(), expected.len(), "slice lengths do not match");
@@ -267,7 +267,7 @@ fn event_log_matches_rtmr_evidence() {
         .as_slice()
         .iter()
     {
-        rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+        rtmr_2.extend(&Sha384::from_contents(entry.as_slice()).into());
     }
 
     assert_eq!(
@@ -300,7 +300,7 @@ fn tampered_event_log_doesnt_match_rtmr_evidence() {
         if index == 0 {
             entry[0] = 0;
         }
-        rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+        rtmr_2.extend(&Sha384::from_contents(entry.as_slice()).into());
     }
 
     assert_ne!(

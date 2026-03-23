@@ -24,6 +24,7 @@ use oak_attestation_verification_types::{
     policy::{EventPolicy, Policy},
     verifier::AttestationVerifier,
 };
+use oak_digest::Sha384;
 use oak_proto_rust::oak::{
     Variant,
     attestation::v1::{
@@ -33,7 +34,6 @@ use oak_proto_rust::oak::{
 };
 use oak_tdx_quote::TdxQuoteWrapper;
 use oak_time::{Clock, Instant};
-use sha2::{Digest, Sha384};
 
 use crate::{
     IntelTdxPolicy,
@@ -309,7 +309,7 @@ impl AttestationVerifier for IntelTdxAttestationVerifier {
         // Verify integrity of the event log.
         let mut rtmr_2 = RtmrEmulator::new();
         for entry in event_log.encoded_events.as_slice().iter() {
-            rtmr_2.extend(&Sha384::digest(entry.as_slice()).into());
+            rtmr_2.extend(&Sha384::from_contents(entry.as_slice()).into());
         }
         anyhow::ensure!(rtmr_2.get_state() == expected, "event log integrity check failed");
 

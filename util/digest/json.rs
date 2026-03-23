@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-//! Provides JSON-related utilities for digests.
+//! Provides JSON-related utilities for digests: Type `DigestSet` is intended
+//! to be used as a JSON map as part of serde conversion.
 
 use alloc::{collections::BTreeMap, string::String};
 

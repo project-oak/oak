@@ -26,6 +26,7 @@ use oak_dice::cert::{
     SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID, TRANSPARENT_EVENT_ID,
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
 };
+use oak_digest::Sha256;
 use oak_proto_rust::oak::{
     RawDigest,
     attestation::v1::{
@@ -38,7 +39,6 @@ use oak_proto_rust::oak::{
 };
 use oak_sev_snp_attestation_report::AttestationReport;
 use prost::Message;
-use sha2::Digest;
 use zerocopy::FromBytes;
 
 use crate::{platform::convert_amd_sev_snp_attestation_report, verifier::EventLogType};
@@ -228,7 +228,7 @@ pub(crate) fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<Evi
                 for event in encoded_events {
                     layers.push(EventData {
                         event: Some(RawDigest {
-                            sha2_256: sha2::Sha256::digest(event).to_vec(),
+                            sha2_256: Sha256::from_contents(event.as_slice()).into(),
                             ..Default::default()
                         }),
                     });

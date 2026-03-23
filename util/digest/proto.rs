@@ -14,41 +14,23 @@
 // limitations under the License.
 //
 
-//! Provides utilities related to digest protocol buffers.
+//! Provides utilities related to digest protocol buffers: Adds conversion
+//! and comparison support for protos `RawDigest` and `HexDigest`.
 
 use alloc::string::ToString;
 
 use anyhow::Context;
 use oak_proto_rust::oak::{HexDigest, RawDigest};
-use sha2::{Digest, Sha256, Sha384, Sha512};
 
-use crate::{DigestSet, set_to_hex_digest};
-
-pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    hasher.update(input);
-    hasher.finalize().into()
-}
-
-fn hash_sha2_512(input: &[u8]) -> [u8; 64] {
-    let mut hasher = Sha512::new();
-    hasher.update(input);
-    hasher.finalize().into()
-}
-
-fn hash_sha2_384(input: &[u8]) -> [u8; 48] {
-    let mut hasher = Sha384::new();
-    hasher.update(input);
-    hasher.finalize().into()
-}
+use crate::{DigestSet, Sha256, Sha384, Sha512, set_to_hex_digest};
 
 /// Computes various digest formats of a binary array.
 /// The empty arrays need to be filled, when we depend on SHA{1,3} hashers.
 pub fn raw_digest_from_contents(contents: &[u8]) -> RawDigest {
     RawDigest {
-        sha2_256: hash_sha2_256(contents).to_vec(),
-        sha2_512: hash_sha2_512(contents).to_vec(),
-        sha2_384: hash_sha2_384(contents).to_vec(),
+        sha2_256: Sha256::from_contents(contents).into(),
+        sha2_512: Sha512::from_contents(contents).into(),
+        sha2_384: Sha384::from_contents(contents).into(),
         ..Default::default()
     }
 }

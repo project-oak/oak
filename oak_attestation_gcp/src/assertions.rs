@@ -22,6 +22,7 @@ use oak_attestation_types::assertion_generator::{AssertionGenerator, AssertionGe
 use oak_attestation_verification_types::assertion_verifier::{
     AssertionVerifier, AssertionVerifierError,
 };
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
     Assertion, BinaryReferenceValue, ConfidentialSpaceAssertion, ConfidentialSpaceEndorsement,
     ConfidentialSpaceReferenceValues, SignedEndorsement, binary_reference_value,
@@ -30,7 +31,6 @@ use oak_proto_rust::oak::attestation::v1::{
 use oak_time::Instant;
 use oci_spec::distribution::Reference;
 use prost::Message;
-use sha2::Digest;
 use verify_endorsement::create_endorsement_reference_value;
 use x509_cert::{Certificate, der::DecodePem};
 
@@ -52,7 +52,7 @@ impl GcpAssertionGenerator {
 }
 
 fn generate_nonce_from_asserted_data(data: &[u8]) -> String {
-    let digest = sha2::Sha256::digest(data);
+    let digest = Sha256::from_contents(data);
     hex::encode(digest)
 }
 

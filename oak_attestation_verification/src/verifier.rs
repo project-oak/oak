@@ -23,6 +23,7 @@ use coset::{CborSerializable, CoseKey, cwt::ClaimsSet};
 use ecdsa::{Signature, signature::Verifier};
 use oak_attestation_verification_types::verifier::AttestationVerifier;
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
+use oak_digest::Sha256;
 use oak_proto_rust::oak::attestation::v1::{
     AttestationResults, Endorsements, EventAttestationResults, EventLog, Evidence, ExpectedValues,
     ExtractedEvidence, LayerEvidence, ReferenceValues, attestation_results::Status, endorsements,
@@ -488,8 +489,9 @@ fn validate_that_event_log_is_captured_in_dice_layers(
                     .event
                     .context("missing event")?
             };
-            let actual_event_hash = &<sha2::Sha256 as sha2::Digest>::digest(encoded_event).to_vec();
-            if actual_event_hash != &event_digest.sha2_256 {
+            let actual_event_hash = Sha256::from_contents(encoded_event);
+            let expected_event_hash = Sha256::try_from(event_digest.sha2_256)?;
+            if actual_event_hash != expected_event_hash {
                 Err(anyhow::anyhow!("event log hash mismatch"))
             } else {
                 Ok(())
