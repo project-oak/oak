@@ -18,60 +18,229 @@ use prost_types::Timestamp;
 use sealed_memory_rust_proto::{
     oak::private_memory::{
         EmbeddingQuery, LlmView, LlmViews, MatchType, MemoryField, QueryClauses, QueryOperator,
-        SearchMemoryQuery, TextQuery, search_memory_query, text_query,
+        SearchMemoryQuery, TextQuery, search_memories_filter::Value as FilterValue,
+        search_memories_sort::Sort as SortValue, search_memory_query, text_query,
     },
     prelude::v1::*,
 };
 
-#[gtest]
-fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+// =============================================================================
+// Test helpers — Memory builders
+// =============================================================================
 
-    // Add memories with different embeddings
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 2.0, 3.0],
-                }),
-                ..Default::default()
-            }],
+/// Shorthand for `Some(Timestamp { seconds, nanos: 0 })`.
+fn ts(seconds: i64) -> Option<Timestamp> {
+    Some(Timestamp { seconds, nanos: 0 })
+}
+
+/// Creates a single `LlmView` with a "test_model" embedding.
+fn llm_view(id: &str, values: &[f32]) -> LlmView {
+    LlmView {
+        id: id.to_string(),
+        embedding: Some(Embedding {
+            model_signature: "test_model".to_string(),
+            values: values.to_vec(),
         }),
         ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    }
+}
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view2".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![4.0, 5.0, 6.0],
-                }),
-                ..Default::default()
-            }],
-        }),
+/// Creates a `Memory` with a single embedding view.
+fn mem_embedded(id: &str, values: &[f32]) -> Memory {
+    Memory {
+        id: id.to_string(),
+        views: Some(LlmViews { llm_views: vec![llm_view(&format!("{id}_view"), values)] }),
         ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    }
+}
 
-    // Query for memories with an embedding that is closer to memory2
-    let embedding_query = SearchMemoryQuery {
+/// Creates a `Memory` with tags.
+fn mem_tagged(id: &str, tags: &[&str]) -> Memory {
+    Memory {
+        id: id.to_string(),
+        tags: tags.iter().map(|t| t.to_string()).collect(),
+        ..Default::default()
+    }
+}
+
+// =============================================================================
+// Test helpers — v1 query clause builders (SearchMemoryQuery)
+// =============================================================================
+
+/// Builds an embedding search clause with "test_model".
+fn embedding_clause(values: &[f32]) -> SearchMemoryQuery {
+    SearchMemoryQuery {
         clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
             embedding: vec![Embedding {
                 model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 1.0],
+                values: values.to_vec(),
             }],
             ..Default::default()
         })),
-    };
+    }
+}
 
-    let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+/// Builds a tag equality clause.
+fn tag_clause(tag: &str) -> SearchMemoryQuery {
+    SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: MatchType::Equal as i32,
+            field: MemoryField::Tags as i32,
+            value: Some(text_query::Value::StringVal(tag.to_string())),
+        })),
+    }
+}
+
+/// Builds a timestamp comparison clause.
+fn ts_clause(field: MemoryField, match_type: MatchType, seconds: i64) -> SearchMemoryQuery {
+    SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
+            match_type: match_type as i32,
+            field: field as i32,
+            value: Some(text_query::Value::TimestampVal(Timestamp { seconds, nanos: 0 })),
+        })),
+    }
+}
+
+/// Combines clauses with AND.
+fn and_q(clauses: Vec<SearchMemoryQuery>) -> SearchMemoryQuery {
+    SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::And as i32,
+            clauses,
+        })),
+    }
+}
+
+/// Combines clauses with OR.
+fn or_q(clauses: Vec<SearchMemoryQuery>) -> SearchMemoryQuery {
+    SearchMemoryQuery {
+        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
+            query_operator: QueryOperator::Or as i32,
+            clauses,
+        })),
+    }
+}
+
+/// Runs a v1 `search()` and returns blob IDs in result order.
+fn query_blob_ids(
+    db: &IcingMetaDatabase,
+    query: &SearchMemoryQuery,
+    limit: i32,
+) -> anyhow::Result<Vec<String>> {
+    let (results, _) = db.search(query, limit, PageToken::Start)?;
+    Ok(results.items.iter().map(|r| r.blob_id.clone()).collect())
+}
+
+/// Builds a TextQuery for timestamp comparisons (used with `text_search`).
+fn text_ts_query(field: MemoryField, match_type: MatchType, seconds: i64) -> TextQuery {
+    TextQuery {
+        field: field as i32,
+        match_type: match_type as i32,
+        value: Some(text_query::Value::TimestampVal(Timestamp { seconds, nanos: 0 })),
+    }
+}
+
+/// Runs `text_search()` and returns blob IDs in result order.
+fn text_search_blob_ids(
+    db: &IcingMetaDatabase,
+    query: &TextQuery,
+    limit: i32,
+) -> anyhow::Result<Vec<String>> {
+    let (results, _) = db.text_search(query, limit, PageToken::Start)?;
+    Ok(results.items.iter().map(|r| r.blob_id.clone()).collect())
+}
+
+// =============================================================================
+// Test helpers — v2 filter builders (SearchMemoriesFilter /
+// SearchMemoriesRequest)
+// =============================================================================
+
+fn tag_filter(tag: &str) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::TagsFilter(StringFilter { value: tag.to_string() })),
+    }
+}
+
+fn id_filter(id: &str) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::IdFilter(StringFilter { value: id.to_string() })),
+    }
+}
+
+fn name_filter(name: &str) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::NameFilter(StringFilter { value: name.to_string() })),
+    }
+}
+
+fn created_ts_filter(cmp: ComparisonType, seconds: i64) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::CreatedTimestampFilter(TimeFilter {
+            comparison: cmp as i32,
+            value: Some(Timestamp { seconds, nanos: 0 }),
+        })),
+    }
+}
+
+fn event_ts_filter(cmp: ComparisonType, seconds: i64) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::EventTimestampFilter(TimeFilter {
+            comparison: cmp as i32,
+            value: Some(Timestamp { seconds, nanos: 0 }),
+        })),
+    }
+}
+
+fn and_filter(filters: Vec<SearchMemoriesFilter>) -> SearchMemoriesFilter {
+    SearchMemoriesFilter {
+        value: Some(FilterValue::AndOperator(SearchMemoriesFilters { filters })),
+    }
+}
+
+fn or_filter(filters: Vec<SearchMemoriesFilter>) -> SearchMemoriesFilter {
+    SearchMemoriesFilter { value: Some(FilterValue::OrOperator(SearchMemoriesFilters { filters })) }
+}
+
+fn not_filter(inner: SearchMemoriesFilter) -> SearchMemoriesFilter {
+    SearchMemoriesFilter { value: Some(FilterValue::NotOperator(Box::new(inner))) }
+}
+
+fn filter_request(filter: SearchMemoriesFilter, page_size: i32) -> SearchMemoriesRequest {
+    SearchMemoriesRequest { filter: Some(filter), page_size, ..Default::default() }
+}
+
+/// Build a `SearchMemoriesRequest` with both a filter and a sort spec.
+fn sorted_request(filter: SearchMemoriesFilter, sort: SortValue) -> SearchMemoriesRequest {
+    SearchMemoriesRequest {
+        filter: Some(filter),
+        sort: vec![SearchMemoriesSort { sort: Some(sort) }],
+        page_size: 10,
+        ..Default::default()
+    }
+}
+
+/// Execute `search_memories` and return the blob IDs in result order.
+fn search_blob_ids(
+    db: &IcingMetaDatabase,
+    request: &SearchMemoriesRequest,
+) -> anyhow::Result<Vec<String>> {
+    let (results, _) = db.search_memories(request)?;
+    Ok(results.items.iter().map(|r| r.blob_id.clone()).collect())
+}
+
+// =============================================================================
+// v1 Search API tests
+// =============================================================================
+
+#[gtest]
+fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+    db.add_memory(&mem_embedded("memory1", &[1.0, 2.0, 3.0]), "blob1".into())?;
+    db.add_memory(&mem_embedded("memory2", &[4.0, 5.0, 6.0]), "blob2".into())?;
+
+    let query = embedding_clause(&[1.0, 1.0, 1.0]);
+    let (results, _) = db.search(&query, 10, PageToken::Start)?;
     let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
     let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
     assert_that!(scores, not(is_empty()));
@@ -85,75 +254,22 @@ fn test_embedding_search_returns_scores() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
 
-    // Add memories with different embeddings and timestamps
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 2.0, 3.0],
-                }),
-                ..Default::default()
-            }],
-        }),
-        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_embedded("memory1", &[1.0, 2.0, 3.0]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view2".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.1, 2.1, 3.1],
-                }),
-                ..Default::default()
-            }],
-        }),
-        event_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_embedded("memory2", &[1.1, 2.1, 3.1]);
+    m2.event_timestamp = ts(200);
+    db.add_memory(&m2, "blob2".into())?;
 
-    // Query for memories with an embedding and a timestamp range.
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 2.0, 3.0],
-            }],
-            ..Default::default()
-        })),
-    };
-
-    let timestamp_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Gte as i32,
-            field: MemoryField::EventTimestamp as i32,
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::text_query::Value::TimestampVal(
-                    Timestamp { seconds: 150, nanos: 0 },
-                ),
-            ),
-        })),
-    };
-
-    let hybrid_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![embedding_query, timestamp_query],
-        })),
-    };
-
-    let (results, _) = icing_database.search(&hybrid_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    // embedding [1,2,3] AND event_timestamp >= 150 → only blob2.
+    let query = and_q(vec![
+        embedding_clause(&[1.0, 2.0, 3.0]),
+        ts_clause(MemoryField::EventTimestamp, MatchType::Gte, 150),
+    ]);
+    let blob_ids = query_blob_ids(&db, &query, 10)?;
     assert_that!(blob_ids, unordered_elements_are![eq(&"blob2")]);
     assert_that!(blob_ids.len(), eq(1));
 
@@ -168,92 +284,34 @@ fn test_hybrid_search_with_timestamp() -> anyhow::Result<()> {
 // `embedding AND tag` to incorrectly sort by CreationTimestamp.
 #[gtest]
 fn test_hybrid_search_clause_order_does_not_affect_ranking() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("hybrid-order-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("hybrid-order-test"))?;
 
-    // Add memories with embeddings that have different similarity scores to the
-    // query. memory1 has higher similarity (1.0+2.0+3.0=6.0) than memory2
-    // (0.1+0.2+0.3=0.6).
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 2.0, 3.0],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["test_tag".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    // memory1 has higher similarity (1+2+3=6) than memory2 (0.1+0.2+0.3=0.6).
+    let mut m1 = mem_embedded("memory1", &[1.0, 2.0, 3.0]);
+    m1.tags = vec!["test_tag".into()];
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view2".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![0.1, 0.2, 0.3],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["test_tag".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_embedded("memory2", &[0.1, 0.2, 0.3]);
+    m2.tags = vec!["test_tag".into()];
+    db.add_memory(&m2, "blob2".into())?;
 
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 1.0],
-            }],
-            ..Default::default()
-        })),
-    };
+    let emb = embedding_clause(&[1.0, 1.0, 1.0]);
+    let tag = tag_clause("test_tag");
 
-    let tag_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("test_tag".to_string())),
-        })),
-    };
+    // Order 1: embedding AND tag
+    let query1 = and_q(vec![emb.clone(), tag.clone()]);
+    // Order 2: tag AND embedding (was buggy before the fix)
+    let query2 = and_q(vec![tag, emb]);
 
-    // Test order 1: embedding AND tag
-    let query_embedding_first = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![embedding_query.clone(), tag_query.clone()],
-        })),
-    };
+    let (results1, _) = db.search(&query1, 10, PageToken::Start)?;
+    let (results2, _) = db.search(&query2, 10, PageToken::Start)?;
 
-    // Test order 2: tag AND embedding (this was buggy before the fix)
-    let query_tag_first = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![tag_query, embedding_query],
-        })),
-    };
+    // Both should return the same results sorted by embedding similarity.
+    let ids1: Vec<String> = results1.items.iter().map(|r| r.blob_id.clone()).collect();
+    let ids2: Vec<String> = results2.items.iter().map(|r| r.blob_id.clone()).collect();
+    assert_that!(ids1, elements_are![eq(&"blob1"), eq(&"blob2")]);
+    assert_that!(ids2, elements_are![eq(&"blob1"), eq(&"blob2")]);
 
-    let (results1, _) = icing_database.search(&query_embedding_first, 10, PageToken::Start)?;
-    let (results2, _) = icing_database.search(&query_tag_first, 10, PageToken::Start)?;
-
-    // Both should return the same results in the same order (sorted by embedding
-    // similarity).
-    let blob_ids1: Vec<String> = results1.items.iter().map(|r| r.blob_id.clone()).collect();
-    let blob_ids2: Vec<String> = results2.items.iter().map(|r| r.blob_id.clone()).collect();
-
-    // memory1 (blob1) has higher embedding similarity, so it should come first.
-    assert_that!(blob_ids1, elements_are![eq(&"blob1"), eq(&"blob2")]);
-    assert_that!(blob_ids2, elements_are![eq(&"blob1"), eq(&"blob2")]);
-
-    // Verify scores are the same regardless of order.
     let scores1: Vec<f32> = results1.items.iter().map(|r| r.score).collect();
     let scores2: Vec<f32> = results2.items.iter().map(|r| r.score).collect();
     assert_that!(scores1, eq(&scores2));
@@ -265,90 +323,22 @@ fn test_hybrid_search_clause_order_does_not_affect_ranking() -> anyhow::Result<(
 // Embedding is in a nested inner clause; should still sort by embedding.
 #[gtest]
 fn test_hybrid_search_nested_embedding_inner() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("nested-inner-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("nested-inner-test"))?;
 
-    // memory1 has higher embedding similarity (1.0+2.0+3.0=6.0)
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 2.0, 3.0],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["tag1".to_string(), "tag2".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_embedded("memory1", &[1.0, 2.0, 3.0]);
+    m1.tags = vec!["tag1".into(), "tag2".into()];
+    db.add_memory(&m1, "blob1".into())?;
 
-    // memory2 has lower embedding similarity (0.1+0.2+0.3=0.6)
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view2".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![0.1, 0.2, 0.3],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["tag1".to_string(), "tag2".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_embedded("memory2", &[0.1, 0.2, 0.3]);
+    m2.tags = vec!["tag1".into(), "tag2".into()];
+    db.add_memory(&m2, "blob2".into())?;
 
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 1.0],
-            }],
-            ..Default::default()
-        })),
-    };
-
-    let tag1_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("tag1".to_string())),
-        })),
-    };
-
-    let tag2_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("tag2".to_string())),
-        })),
-    };
-
-    // Build: { TAG1 AND { TAG2 AND EMBEDDING } }
-    let inner_clause = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![tag2_query, embedding_query],
-        })),
-    };
-    let outer_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![tag1_query, inner_clause],
-        })),
-    };
-
-    let (results, _) = icing_database.search(&outer_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    // { tag1 AND { tag2 AND embedding[1,1,1] } }
+    let inner = and_q(vec![tag_clause("tag2"), embedding_clause(&[1.0, 1.0, 1.0])]);
+    let outer = and_q(vec![tag_clause("tag1"), inner]);
 
     // Should be sorted by embedding similarity (blob1 first).
-    assert_that!(blob_ids, elements_are![eq(&"blob1"), eq(&"blob2")]);
-
+    assert_that!(query_blob_ids(&db, &outer, 10)?, elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
@@ -356,128 +346,32 @@ fn test_hybrid_search_nested_embedding_inner() -> anyhow::Result<()> {
 // Embedding is in a nested inner clause with outer tag after.
 #[gtest]
 fn test_hybrid_search_nested_embedding_outer_tag() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("nested-outer-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("nested-outer-test"))?;
 
-    // memory1 has higher embedding similarity
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 2.0, 3.0],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["tag1".to_string(), "tag2".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_embedded("memory1", &[1.0, 2.0, 3.0]);
+    m1.tags = vec!["tag1".into(), "tag2".into()];
+    db.add_memory(&m1, "blob1".into())?;
 
-    // memory2 has lower embedding similarity
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view2".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![0.1, 0.2, 0.3],
-                }),
-                ..Default::default()
-            }],
-        }),
-        tags: vec!["tag1".to_string(), "tag2".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_embedded("memory2", &[0.1, 0.2, 0.3]);
+    m2.tags = vec!["tag1".into(), "tag2".into()];
+    db.add_memory(&m2, "blob2".into())?;
 
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 1.0],
-            }],
-            ..Default::default()
-        })),
-    };
+    // { { tag1 AND embedding[1,1,1] } AND tag2 }
+    let inner = and_q(vec![tag_clause("tag1"), embedding_clause(&[1.0, 1.0, 1.0])]);
+    let outer = and_q(vec![inner, tag_clause("tag2")]);
 
-    let tag1_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("tag1".to_string())),
-        })),
-    };
-
-    let tag2_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("tag2".to_string())),
-        })),
-    };
-
-    // Build: { { TAG1 AND EMBEDDING } AND TAG2 }
-    let inner_clause = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![tag1_query, embedding_query],
-        })),
-    };
-    let outer_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![inner_clause, tag2_query],
-        })),
-    };
-
-    let (results, _) = icing_database.search(&outer_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-
-    // Should be sorted by embedding similarity (blob1 first).
-    assert_that!(blob_ids, elements_are![eq(&"blob1"), eq(&"blob2")]);
-
+    assert_that!(query_blob_ids(&db, &outer, 10)?, elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_views() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+    db.add_memory(&mem_embedded("memory1", &[1.0, 1.0, 1.0]), "memory1".into())?;
+    db.add_memory(&Memory { id: "memory2".into(), ..Default::default() }, "memory2".into())?;
 
-    // Add memories with different embeddings and timestamps
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        views: Some(LlmViews {
-            llm_views: vec![LlmView {
-                id: "view1".to_string(),
-                embedding: Some(Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![1.0, 1.0, 1.0],
-                }),
-                ..Default::default()
-            }],
-        }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "memory1".to_string())?;
-    let memory2 = Memory { id: "memory2".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory2, "memory2".to_string())?;
-
-    // Query for memories with an embedding and a timestamp range.
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 1.0],
-            }],
-            ..Default::default()
-        })),
-    };
-
-    let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+    let query = embedding_clause(&[1.0, 1.0, 1.0]);
+    let (results, _) = db.search(&query, 10, PageToken::Start)?;
     let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
     let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
     assert_that!(blob_ids, unordered_elements_are![eq("memory1")]);
@@ -488,340 +382,183 @@ fn test_search_views() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_text_search_timestamp_filtering() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    for (id, blob, secs) in
+        [("memory1", "blob1", 100), ("memory2", "blob2", 200), ("memory3", "blob3", 300)]
+    {
+        let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
+        db.add_memory(&m, blob.into())?;
+    }
 
-    // Add memories with different timestamps
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    // GTE 200 → blob2, blob3
+    let gte = text_ts_query(MemoryField::CreatedTimestamp, MatchType::Gte, 200);
+    assert_that!(
+        text_search_blob_ids(&db, &gte, 10)?,
+        unordered_elements_are![eq("blob2"), eq("blob3")]
+    );
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    let memory3 = Memory {
-        id: "memory3".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Test case 1: Greater than or equal to
-    let gte_query = TextQuery {
-        field: MemoryField::CreatedTimestamp as i32,
-        match_type: MatchType::Gte as i32,
-        value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 200, nanos: 0 })),
-    };
-    let (results, _) = icing_database.text_search(&gte_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2"), eq("blob3")]);
-
-    // Test case 2: Less than
-    let lt_query = TextQuery {
-        field: MemoryField::CreatedTimestamp as i32,
-        match_type: MatchType::Lt as i32,
-        value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 200, nanos: 0 })),
-    };
-    let (results, _) = icing_database.text_search(&lt_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
+    // LT 200 → blob1
+    let lt = text_ts_query(MemoryField::CreatedTimestamp, MatchType::Lt, 200);
+    assert_that!(text_search_blob_ids(&db, &lt, 10)?, unordered_elements_are![eq("blob1")]);
 
     Ok(())
 }
 
 #[gtest]
 fn test_text_search_id_filtering() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    for (id, blob, secs) in
+        [("memory1", "blob1", 100), ("memory2", "blob2", 200), ("memory3", "blob3", 300)]
+    {
+        let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
+        db.add_memory(&m, blob.into())?;
+    }
 
-    // Add memories with different timestamps
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    let memory3 = Memory {
-        id: "memory3".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Test case 1: Exact match
     let eq_query = TextQuery {
         field: MemoryField::Id as i32,
         match_type: MatchType::Equal as i32,
-        value: Some(text_query::Value::StringVal("memory2".to_string())),
+        value: Some(text_query::Value::StringVal("memory2".into())),
     };
-    let (results, _) = icing_database.text_search(&eq_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+    assert_that!(text_search_blob_ids(&db, &eq_query, 10)?, unordered_elements_are![eq("blob2")]);
 
     Ok(())
 }
 
 #[gtest]
 fn test_query_clauses_and_operator() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
-    // Add memories with different timestamps and tags
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        tags: vec!["tag1".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("memory1", &["tag1"]);
+    m1.created_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        tags: vec!["tag1".to_string(), "tag2".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("memory2", &["tag1", "tag2"]);
+    m2.created_timestamp = ts(200);
+    db.add_memory(&m2, "blob2".into())?;
 
-    let memory3 = Memory {
-        id: "memory3".to_string(),
-        tags: vec!["tag2".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    let mut m3 = mem_tagged("memory3", &["tag2"]);
+    m3.created_timestamp = ts(300);
+    db.add_memory(&m3, "blob3".into())?;
 
-    // Query for memories with "tag1" AND timestamp >= 200
-    let tag_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            field: MemoryField::Tags as i32,
-            match_type: MatchType::Equal as i32,
-            value: Some(text_query::Value::StringVal("tag1".to_string())),
-        })),
-    };
-    let timestamp_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            field: MemoryField::CreatedTimestamp as i32,
-            match_type: MatchType::Gte as i32,
-            value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 200, nanos: 0 })),
-        })),
-    };
-    let and_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::And as i32,
-            clauses: vec![tag_query, timestamp_query],
-        })),
-    };
-
-    let (results, _) = icing_database.search(&and_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
+    // tag1 AND created_timestamp >= 200 → blob2
+    let query = and_q(vec![
+        tag_clause("tag1"),
+        ts_clause(MemoryField::CreatedTimestamp, MatchType::Gte, 200),
+    ]);
+    assert_that!(query_blob_ids(&db, &query, 10)?, unordered_elements_are![eq("blob2")]);
 
     Ok(())
 }
 
 #[gtest]
 fn test_query_clauses_or_operator() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("text-search-test"))?;
 
-    // Add memories with different timestamps and tags
-    let memory1 = Memory {
-        id: "memory1".to_string(),
-        tags: vec!["tag1".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("memory1", &["tag1"]);
+    m1.created_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "memory2".to_string(),
-        tags: vec!["tag2".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("memory2", &["tag2"]);
+    m2.created_timestamp = ts(200);
+    db.add_memory(&m2, "blob2".into())?;
 
-    let memory3 = Memory {
-        id: "memory3".to_string(),
-        tags: vec!["tag3".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    let mut m3 = mem_tagged("memory3", &["tag3"]);
+    m3.created_timestamp = ts(300);
+    db.add_memory(&m3, "blob3".into())?;
 
-    // Query for memories with "tag1" OR timestamp >= 300
-    let tag_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            field: MemoryField::Tags as i32,
-            match_type: MatchType::Equal as i32,
-            value: Some(text_query::Value::StringVal("tag1".to_string())),
-        })),
-    };
-    let timestamp_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            field: MemoryField::CreatedTimestamp as i32,
-            match_type: MatchType::Gte as i32,
-            value: Some(text_query::Value::TimestampVal(Timestamp { seconds: 300, nanos: 0 })),
-        })),
-    };
-    let or_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::QueryClauses(QueryClauses {
-            query_operator: QueryOperator::Or as i32,
-            clauses: vec![tag_query, timestamp_query],
-        })),
-    };
-
-    let (results, _) = icing_database.search(&or_query, 10, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
+    // tag1 OR created_timestamp >= 300 → blob1, blob3
+    let query = or_q(vec![
+        tag_clause("tag1"),
+        ts_clause(MemoryField::CreatedTimestamp, MatchType::Gte, 300),
+    ]);
+    assert_that!(
+        query_blob_ids(&db, &query, 10)?,
+        unordered_elements_are![eq("blob1"), eq("blob3")]
+    );
 
     Ok(())
 }
 
 #[gtest]
 fn test_search_with_pagination_returns_correct_view() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("embedding-search-test"))?;
 
-    // Add memory 1 with two views.
+    // Memory 1 with two views.
     let memory1 = Memory {
-        id: "memory1".to_string(),
+        id: "memory1".into(),
         views: Some(LlmViews {
             llm_views: vec![
-                LlmView {
-                    id: "view1a".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: "test_model".to_string(),
-                        values: vec![1.0, 0.0, 0.0],
-                    }),
-                    ..Default::default()
-                },
-                LlmView {
-                    id: "view1b".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: "test_model".to_string(),
-                        values: vec![0.0, 1.0, 0.0],
-                    }),
-                    ..Default::default()
-                },
+                llm_view("view1a", &[1.0, 0.0, 0.0]),
+                llm_view("view1b", &[0.0, 1.0, 0.0]),
             ],
         }),
         ..Default::default()
     };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    db.add_memory(&memory1, "blob1".into())?;
 
-    // Add memory 2 with two views.
+    // Memory 2 with two views (view2b has the highest score).
     let memory2 = Memory {
-        id: "memory2".to_string(),
+        id: "memory2".into(),
         views: Some(LlmViews {
             llm_views: vec![
-                LlmView {
-                    id: "view2a".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: "test_model".to_string(),
-                        values: vec![0.0, 0.0, 1.0],
-                    }),
-                    ..Default::default()
-                },
-                LlmView {
-                    id: "view2b".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: "test_model".to_string(),
-                        values: vec![1.0, 1.0, 0.0], // This view will have the highest score.
-                    }),
-                    ..Default::default()
-                },
+                llm_view("view2a", &[0.0, 0.0, 1.0]),
+                llm_view("view2b", &[1.0, 1.0, 0.0]),
             ],
         }),
         ..Default::default()
     };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    db.add_memory(&memory2, "blob2".into())?;
 
-    // Query for memories with an embedding that is closer to memory2's view2b.
-    let embedding_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-            embedding: vec![Embedding {
-                model_signature: "test_model".to_string(),
-                values: vec![1.0, 1.0, 0.0],
-            }],
-            ..Default::default()
-        })),
-    };
+    // Query closer to memory2's view2b.
+    let query = embedding_clause(&[1.0, 1.0, 0.0]);
+    let (results, _) = db.search(&query, 1, PageToken::Start)?;
 
-    let (results, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-    assert_that!(blob_ids.len(), eq(1));
-    let top_blob_id = blob_ids.first().unwrap();
-    assert_that!(top_blob_id, eq("blob2"));
-    assert_that!(scores[0], eq(2.0));
-    let view_ids = &results.items.first().unwrap().view_ids;
-    assert_that!(view_ids.len(), eq(1));
-    let top_view_id = view_ids.first().unwrap();
-    assert_that!(top_view_id, eq("view2b"));
+    assert_that!(results.items.len(), eq(1));
+    let top = results.items.first().unwrap();
+    assert_that!(&top.blob_id, eq("blob2"));
+    assert_that!(top.score, eq(2.0));
+    assert_that!(top.view_ids.len(), eq(1));
+    assert_that!(top.view_ids.first().unwrap(), eq("view2b"));
 
     Ok(())
 }
 
 /// Verify that `search()` with a tag-only text query returns memories sorted
 /// by `created_timestamp` descending (newest first).
-/// This test mirrors the user's exact scenario: 5 memories with the
-/// "ts_order_test" tag, content, and no embeddings.
 #[gtest]
 fn test_search_by_tag_sorts_by_created_timestamp() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("tag-ts-order-test"))?;
+    use sealed_memory_rust_proto::oak::private_memory::memory_value;
 
-    // Insert 5 memories in non-monotonic timestamp order to catch ordering bugs.
-    // Insertion order: 0, 3, 1, 4, 2
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("tag-ts-order-test"))?;
+
+    // Insert 5 memories in non-monotonic order to catch ordering bugs.
     let insertion_order: Vec<usize> = vec![0, 3, 1, 4, 2];
     let timestamps: Vec<i64> = vec![1000, 2000, 3000, 4000, 5000];
 
     for &i in &insertion_order {
         let memory = Memory {
             id: format!("ts_order_test_ts_verify_{}", i),
-            tags: vec!["ts_order_test".to_string()],
-            created_timestamp: Some(Timestamp { seconds: timestamps[i], nanos: 0 }),
+            tags: vec!["ts_order_test".into()],
+            created_timestamp: ts(timestamps[i]),
             content: Some(MemoryContent {
                 contents: std::collections::HashMap::from([(
-                    "text_content".to_string(),
+                    "text_content".into(),
                     MemoryValue {
-                        value: Some(
-                            sealed_memory_rust_proto::oak::private_memory::memory_value::Value::StringVal(
-                                format!("verify_content_{}", i),
-                            ),
-                        ),
+                        value: Some(memory_value::Value::StringVal(format!(
+                            "verify_content_{}",
+                            i
+                        ))),
                         ..Default::default()
                     },
                 )]),
             }),
             ..Default::default()
         };
-        icing_database.add_memory(&memory, format!("blob_ts_verify_{}", i))?;
+        db.add_memory(&memory, format!("blob_ts_verify_{}", i))?;
     }
 
-    // Search using a tag text query (equivalent to SearchMemoryRequest with
-    // text_query { match_type: EQUAL, field: TAGS, string_val: "ts_order_test" })
-    let tag_query = SearchMemoryQuery {
-        clause: Some(search_memory_query::Clause::TextQuery(TextQuery {
-            match_type: MatchType::Equal as i32,
-            field: MemoryField::Tags as i32,
-            value: Some(text_query::Value::StringVal("ts_order_test".to_string())),
-        })),
-    };
-
-    let (results, _) = icing_database.search(&tag_query, 100, PageToken::Start)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
+    let query = tag_clause("ts_order_test");
+    let blob_ids = query_blob_ids(&db, &query, 100)?;
 
     assert_that!(blob_ids.len(), eq(5));
     // Expect newest-first: 4 (5000s), 3 (4000s), 2 (3000s), 1 (2000s), 0 (1000s)
@@ -845,168 +582,63 @@ fn test_search_by_tag_sorts_by_created_timestamp() -> anyhow::Result<()> {
 
 #[gtest]
 fn test_search_memories_v2_tag_filter() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-filter-test"))?;
+    db.add_memory(&mem_tagged("m1", &["alpha", "beta"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["beta", "gamma"]), "blob2".into())?;
+    db.add_memory(&mem_tagged("m3", &["gamma"]), "blob3".into())?;
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["alpha".to_string(), "beta".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["beta".to_string(), "gamma".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    let memory3 =
-        Memory { id: "m3".to_string(), tags: vec!["gamma".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Filter by tag "beta" — should match m1 and m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
-                    StringFilter { value: "beta".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
-
+    // tag "beta" → m1, m2
+    let req = filter_request(tag_filter("beta"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1"), eq("blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_id_filter() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-id-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-id-filter-test"))?;
+    db.add_memory(&Memory { id: "m1".into(), ..Default::default() }, "blob1".into())?;
+    db.add_memory(&Memory { id: "m2".into(), ..Default::default() }, "blob2".into())?;
 
-    let memory1 = Memory { id: "m1".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory { id: "m2".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter by id "m2" — should match only m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::IdFilter(
-                    StringFilter { value: "m2".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
-
+    let req = filter_request(id_filter("m2"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_name_filter() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-name-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-name-filter-test"))?;
+    db.add_memory(
+        &Memory { id: "m1".into(), name: "grocery_list".into(), ..Default::default() },
+        "blob1".into(),
+    )?;
+    db.add_memory(
+        &Memory { id: "m2".into(), name: "todo_list".into(), ..Default::default() },
+        "blob2".into(),
+    )?;
 
-    let memory1 =
-        Memory { id: "m1".to_string(), name: "grocery_list".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 =
-        Memory { id: "m2".to_string(), name: "todo_list".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter by name "grocery_list" — should match only m1.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::NameFilter(
-                    StringFilter { value: "grocery_list".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
-
+    let req = filter_request(name_filter("grocery_list"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
     Ok(())
 }
+
 #[gtest]
 fn test_search_memories_v2_tag_filter_with_missing_tags() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-tag-missing-test"))?;
+    db.add_memory(&mem_tagged("m1", &["alpha", "beta"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
+    db.add_memory(&Memory { id: "m3".into(), ..Default::default() }, "blob3".into())?; // no tags
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["alpha".to_string(), "beta".to_string()],
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    // "beta" → m1, m2 (not m3)
+    let req = filter_request(tag_filter("beta"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1"), eq("blob2")]);
 
-    let memory2 =
-        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    // "alpha" → m1 only
+    let req = filter_request(tag_filter("alpha"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
 
-    // m3: no tags at all.
-    let memory3 = Memory { id: "m3".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Filter by tag "beta" — should match m1 and m2, but NOT m3 (no tags).
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
-                    StringFilter { value: "beta".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob2")]);
-
-    // Filter by tag "alpha" — should match only m1.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
-                    StringFilter { value: "alpha".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
-
-    // Filter by a tag that nobody has — should return empty results.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::TagsFilter(
-                    StringFilter { value: "nonexistent".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
+    // "nonexistent" → empty
+    let req = filter_request(tag_filter("nonexistent"), 10);
+    let (results, _) = db.search_memories(&req)?;
     assert_that!(results.items, is_empty());
 
     Ok(())
@@ -1014,585 +646,231 @@ fn test_search_memories_v2_tag_filter_with_missing_tags() -> anyhow::Result<()> 
 
 #[gtest]
 fn test_search_memories_v2_name_filter_with_missing_name() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-name-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-name-missing-test"))?;
+    db.add_memory(
+        &Memory { id: "m1".into(), name: "grocery_list".into(), ..Default::default() },
+        "blob1".into(),
+    )?;
+    db.add_memory(&Memory { id: "m2".into(), ..Default::default() }, "blob2".into())?;
 
-    let memory1 =
-        Memory { id: "m1".to_string(), name: "grocery_list".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    // m2: no name set (empty string default).
-    let memory2 = Memory { id: "m2".to_string(), ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter by name "grocery_list" — should match only m1, not m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::NameFilter(
-                    StringFilter { value: "grocery_list".to_string() },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1")]);
-
+    let req = filter_request(name_filter("grocery_list"), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_timestamp_gte() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-gte-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-gte-test"))?;
+    for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200), ("m3", "blob3", 300)] {
+        let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
+        db.add_memory(&m, blob.into())?;
+    }
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    let memory3 = Memory {
-        id: "m3".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Filter: created_timestamp >= 200 — should match m2 and m3.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
-                    TimeFilter {
-                        comparison: ComparisonType::Gte as i32,
-                        value: Some(Timestamp { seconds: 200, nanos: 0 }),
-                    },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob2"), eq(&"blob3")]);
-
+    // created_timestamp >= 200 → m2, m3
+    let req = filter_request(created_ts_filter(ComparisonType::Gte, 200), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob2"), eq(&"blob3")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_timestamp_lt() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-lt-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-lt-test"))?;
+    for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200)] {
+        let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
+        db.add_memory(&m, blob.into())?;
+    }
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter: created_timestamp < 200 — should match only m1.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
-                    TimeFilter {
-                        comparison: ComparisonType::Lt as i32,
-                        value: Some(Timestamp { seconds: 200, nanos: 0 }),
-                    },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
-
+    // created_timestamp < 200 → m1 only
+    let req = filter_request(created_ts_filter(ComparisonType::Lt, 200), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob1")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_timestamp_eq() -> anyhow::Result<()> {
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-eq-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-ts-eq-test"))?;
+    for (id, blob, secs) in [("m1", "blob1", 100), ("m2", "blob2", 200)] {
+        let m = Memory { id: id.into(), created_timestamp: ts(secs), ..Default::default() };
+        db.add_memory(&m, blob.into())?;
+    }
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter: created_timestamp == 100 — should match only m1.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(
-                sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value::CreatedTimestampFilter(
-                    TimeFilter {
-                        comparison: ComparisonType::Eq as i32,
-                        value: Some(Timestamp { seconds: 100, nanos: 0 }),
-                    },
-                ),
-            ),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
-
+    // created_timestamp == 100 → m1 only
+    let req = filter_request(created_ts_filter(ComparisonType::Eq, 100), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob1")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_gte_with_missing() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-gte-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-gte-missing-test"))?;
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("m2", &["common"]);
+    m2.event_timestamp = ts(300);
+    db.add_memory(&m2, "blob2".into())?;
 
-    // m3: no event_timestamp — should NOT match any numeric comparison.
-    let memory3 =
-        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    // m3: no event_timestamp
+    db.add_memory(&mem_tagged("m3", &["common"]), "blob3".into())?;
 
-    // event_timestamp >= 200 — should match only m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::EventTimestampFilter(TimeFilter {
-                comparison: ComparisonType::Gte as i32,
-                value: Some(Timestamp { seconds: 200, nanos: 0 }),
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob2")]);
+    // event_timestamp >= 200 → m2 only
+    let req = filter_request(event_ts_filter(ComparisonType::Gte, 200), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob2")]);
 
-    // event_timestamp >= 0 — should match m1 and m2 (both have the field), NOT m3.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::EventTimestampFilter(TimeFilter {
-                comparison: ComparisonType::Gte as i32,
-                value: Some(Timestamp { seconds: 0, nanos: 0 }),
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    // event_timestamp >= 0 → m1, m2 (not m3 which has no field)
+    let req = filter_request(event_ts_filter(ComparisonType::Gte, 0), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_lt_with_missing() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-lt-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-lt-missing-test"))?;
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("m2", &["common"]);
+    m2.event_timestamp = ts(300);
+    db.add_memory(&m2, "blob2".into())?;
 
-    // m3: no event_timestamp
-    let memory3 =
-        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    db.add_memory(&mem_tagged("m3", &["common"]), "blob3".into())?; // no event_timestamp
 
-    // event_timestamp < 200 — should match only m1. m3 (no field) is excluded.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::EventTimestampFilter(TimeFilter {
-                comparison: ComparisonType::Lt as i32,
-                value: Some(Timestamp { seconds: 200, nanos: 0 }),
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1")]);
+    // event_timestamp < 200 → m1 only (m3 excluded)
+    let req = filter_request(event_ts_filter(ComparisonType::Lt, 200), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob1")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_event_timestamp_eq_with_missing() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-eq-missing-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-evt-eq-missing-test"))?;
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["common".to_string()],
-        event_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("m2", &["common"]);
+    m2.event_timestamp = ts(100);
+    db.add_memory(&m2, "blob2".into())?;
 
-    // m3: no event_timestamp
-    let memory3 =
-        Memory { id: "m3".to_string(), tags: vec!["common".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    db.add_memory(&mem_tagged("m3", &["common"]), "blob3".into())?; // no event_timestamp
 
-    // event_timestamp == 100 — should match m1 and m2. m3 (no field) is excluded.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::EventTimestampFilter(TimeFilter {
-                comparison: ComparisonType::Eq as i32,
-                value: Some(Timestamp { seconds: 100, nanos: 0 }),
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<&str> = results.items.iter().map(|r| r.blob_id.as_str()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
+    // event_timestamp == 100 → m1, m2 (m3 excluded)
+    let req = filter_request(event_ts_filter(ComparisonType::Eq, 100), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq(&"blob1"), eq(&"blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_and_filter() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-and-filter-test"))?;
 
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["alpha".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("m1", &["alpha"]);
+    m1.created_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["alpha".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("m2", &["alpha"]);
+    m2.created_timestamp = ts(200);
+    db.add_memory(&m2, "blob2".into())?;
 
-    let memory3 = Memory {
-        id: "m3".to_string(),
-        tags: vec!["beta".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    let mut m3 = mem_tagged("m3", &["beta"]);
+    m3.created_timestamp = ts(300);
+    db.add_memory(&m3, "blob3".into())?;
 
-    // Filter: tag == "alpha" AND created_timestamp >= 200 — should match m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::AndOperator(SearchMemoriesFilters {
-                filters: vec![
-                    SearchMemoriesFilter {
-                        value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
-                    },
-                    SearchMemoriesFilter {
-                        value: Some(Value::CreatedTimestampFilter(TimeFilter {
-                            comparison: ComparisonType::Gte as i32,
-                            value: Some(Timestamp { seconds: 200, nanos: 0 }),
-                        })),
-                    },
-                ],
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
-
+    // tag == "alpha" AND created_timestamp >= 200 → m2
+    let req = filter_request(
+        and_filter(vec![tag_filter("alpha"), created_ts_filter(ComparisonType::Gte, 200)]),
+        10,
+    );
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_or_filter() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-or-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-or-filter-test"))?;
+    db.add_memory(&mem_tagged("m1", &["alpha"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
+    db.add_memory(&mem_tagged("m3", &["gamma"]), "blob3".into())?;
 
-    let memory1 =
-        Memory { id: "m1".to_string(), tags: vec!["alpha".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 =
-        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    let memory3 =
-        Memory { id: "m3".to_string(), tags: vec!["gamma".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
-
-    // Filter: tag == "alpha" OR tag == "gamma" — should match m1 and m3.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::OrOperator(SearchMemoriesFilters {
-                filters: vec![
-                    SearchMemoriesFilter {
-                        value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
-                    },
-                    SearchMemoriesFilter {
-                        value: Some(Value::TagsFilter(StringFilter { value: "gamma".to_string() })),
-                    },
-                ],
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob1"), eq("blob3")]);
-
+    // tag == "alpha" OR tag == "gamma" → m1, m3
+    let req = filter_request(or_filter(vec![tag_filter("alpha"), tag_filter("gamma")]), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob1"), eq("blob3")]);
     Ok(())
 }
 
 #[gtest]
 fn test_search_memories_v2_not_filter() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-not-filter-test"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-not-filter-test"))?;
+    db.add_memory(&mem_tagged("m1", &["alpha"]), "blob1".into())?;
+    db.add_memory(&mem_tagged("m2", &["beta"]), "blob2".into())?;
 
-    let memory1 =
-        Memory { id: "m1".to_string(), tags: vec!["alpha".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-    let memory2 =
-        Memory { id: "m2".to_string(), tags: vec!["beta".to_string()], ..Default::default() };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-    // Filter: NOT tag == "alpha" — should match only m2.
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::NotOperator(Box::new(SearchMemoriesFilter {
-                value: Some(Value::TagsFilter(StringFilter { value: "alpha".to_string() })),
-            }))),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2")]);
-
+    // NOT tag == "alpha" → m2
+    let req = filter_request(not_filter(tag_filter("alpha")), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2")]);
     Ok(())
 }
+
 #[gtest]
 fn test_search_memories_v2_nested_composite_filter() -> anyhow::Result<()> {
-    use sealed_memory_rust_proto::oak::private_memory::search_memories_filter::Value;
-    let mut icing_database = IcingMetaDatabase::new(IcingTempDir::new("v2-nested-composite"))?;
+    let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-nested-composite"))?;
 
-    // m1: tag "alpha", created at t=100
-    let memory1 = Memory {
-        id: "m1".to_string(),
-        tags: vec!["alpha".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 100, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory1, "blob1".to_string())?;
+    let mut m1 = mem_tagged("m1", &["alpha"]);
+    m1.created_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
 
-    // m2: tag "alpha", created at t=200
-    let memory2 = Memory {
-        id: "m2".to_string(),
-        tags: vec!["alpha".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 200, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory2, "blob2".to_string())?;
+    let mut m2 = mem_tagged("m2", &["alpha"]);
+    m2.created_timestamp = ts(200);
+    db.add_memory(&m2, "blob2".into())?;
 
-    // m3: tag "beta", created at t=300
-    let memory3 = Memory {
-        id: "m3".to_string(),
-        tags: vec!["beta".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 300, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory3, "blob3".to_string())?;
+    let mut m3 = mem_tagged("m3", &["beta"]);
+    m3.created_timestamp = ts(300);
+    db.add_memory(&m3, "blob3".into())?;
 
-    // m4: tag "gamma", created at t=400
-    let memory4 = Memory {
-        id: "m4".to_string(),
-        tags: vec!["gamma".to_string()],
-        created_timestamp: Some(Timestamp { seconds: 400, nanos: 0 }),
-        ..Default::default()
-    };
-    icing_database.add_memory(&memory4, "blob4".to_string())?;
+    let mut m4 = mem_tagged("m4", &["gamma"]);
+    m4.created_timestamp = ts(400);
+    db.add_memory(&m4, "blob4".into())?;
 
-    // Nested: (tag="alpha" AND created_timestamp >= 150) OR tag="beta"
-    // Should match m2 (alpha, t=200>=150) and m3 (beta). NOT m1 (alpha, t=100<150),
-    // NOT m4 (gamma).
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::OrOperator(SearchMemoriesFilters {
-                filters: vec![
-                    SearchMemoriesFilter {
-                        value: Some(Value::AndOperator(SearchMemoriesFilters {
-                            filters: vec![
-                                SearchMemoriesFilter {
-                                    value: Some(Value::TagsFilter(StringFilter {
-                                        value: "alpha".to_string(),
-                                    })),
-                                },
-                                SearchMemoriesFilter {
-                                    value: Some(Value::CreatedTimestampFilter(TimeFilter {
-                                        value: Some(Timestamp { seconds: 150, nanos: 0 }),
-                                        comparison: ComparisonType::Gte as i32,
-                                    })),
-                                },
-                            ],
-                        })),
-                    },
-                    SearchMemoriesFilter {
-                        value: Some(Value::TagsFilter(StringFilter { value: "beta".to_string() })),
-                    },
-                ],
-            })),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob2"), eq("blob3")]);
+    // (tag="alpha" AND created_timestamp >= 150) OR tag="beta"
+    // → m2 (alpha, t=200>=150) and m3 (beta). NOT m1 (alpha, t=100<150), NOT m4
+    // (gamma).
+    let req = filter_request(
+        or_filter(vec![
+            and_filter(vec![tag_filter("alpha"), created_ts_filter(ComparisonType::Gte, 150)]),
+            tag_filter("beta"),
+        ]),
+        10,
+    );
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob2"), eq("blob3")]);
 
-    // Nested: NOT (tag="alpha" OR tag="beta")
-    // Should match m4 (gamma) only. NOT m1, m2 (alpha), NOT m3 (beta).
-    let request = SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter {
-            value: Some(Value::NotOperator(Box::new(SearchMemoriesFilter {
-                value: Some(Value::OrOperator(SearchMemoriesFilters {
-                    filters: vec![
-                        SearchMemoriesFilter {
-                            value: Some(Value::TagsFilter(StringFilter {
-                                value: "alpha".to_string(),
-                            })),
-                        },
-                        SearchMemoriesFilter {
-                            value: Some(Value::TagsFilter(StringFilter {
-                                value: "beta".to_string(),
-                            })),
-                        },
-                    ],
-                })),
-            }))),
-        }),
-        page_size: 10,
-        ..Default::default()
-    };
-    let (results, _) = icing_database.search_memories(&request)?;
-    let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-    assert_that!(blob_ids, unordered_elements_are![eq("blob4")]);
+    // NOT (tag="alpha" OR tag="beta") → m4 (gamma) only.
+    let req =
+        filter_request(not_filter(or_filter(vec![tag_filter("alpha"), tag_filter("beta")])), 10);
+    assert_that!(search_blob_ids(&db, &req)?, unordered_elements_are![eq("blob4")]);
 
     Ok(())
 }
-use sealed_memory_rust_proto::oak::private_memory::{
-    search_memories_filter::Value as FilterValue, search_memories_sort::Sort as SortValue,
-};
 
-/// Build a `SearchMemoriesRequest` with both a filter and a sort spec.
-fn sorted_request(value: FilterValue, sort: SortValue) -> SearchMemoriesRequest {
-    SearchMemoriesRequest {
-        filter: Some(SearchMemoriesFilter { value: Some(value) }),
-        sort: vec![SearchMemoriesSort { sort: Some(sort) }],
-        page_size: 10,
-        ..Default::default()
-    }
-}
-
-/// Execute `search_memories` and return the blob IDs in result order.
-fn search_blob_ids(
-    db: &IcingMetaDatabase,
-    request: &SearchMemoriesRequest,
-) -> anyhow::Result<Vec<String>> {
-    let (results, _) = db.search_memories(request)?;
-    Ok(results.items.iter().map(|r| r.blob_id.clone()).collect())
-}
-
-fn ts(seconds: i64) -> Option<Timestamp> {
-    Some(Timestamp { seconds, nanos: 0 })
-}
+// =============================================================================
+// Search API v2: sort tests
+// =============================================================================
 
 #[gtest]
 fn test_search_memories_v2_sort_created_timestamp_descending() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-desc-test"))?;
 
     for i in 0..5 {
-        db.add_memory(
-            &Memory {
-                id: format!("m{i}"),
-                tags: vec!["common".into()],
-                created_timestamp: ts(100 * (i as i64 + 1)),
-                ..Default::default()
-            },
-            format!("blob{i}"),
-        )?;
+        let mut m = mem_tagged(&format!("m{i}"), &["common"]);
+        m.created_timestamp = ts(100 * (i as i64 + 1));
+        db.add_memory(&m, format!("blob{i}"))?;
     }
 
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::CreatedTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
     );
     // Latest first: blob4, blob3, blob2, blob1, blob0
@@ -1608,19 +886,13 @@ fn test_search_memories_v2_sort_created_timestamp_ascending() -> anyhow::Result<
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-ts-asc-test"))?;
 
     for i in 0..5 {
-        db.add_memory(
-            &Memory {
-                id: format!("m{i}"),
-                tags: vec!["common".into()],
-                created_timestamp: ts(100 * (i as i64 + 1)),
-                ..Default::default()
-            },
-            format!("blob{i}"),
-        )?;
+        let mut m = mem_tagged(&format!("m{i}"), &["common"]);
+        m.created_timestamp = ts(100 * (i as i64 + 1));
+        db.add_memory(&m, format!("blob{i}"))?;
     }
 
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::CreatedTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
     );
     // Oldest first: blob0, blob1, blob2, blob3, blob4
@@ -1635,35 +907,19 @@ fn test_search_memories_v2_sort_created_timestamp_ascending() -> anyhow::Result<
 fn test_search_memories_v2_sort_event_timestamp_descending() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-desc-test"))?;
 
-    // m0: event_timestamp = 500
-    db.add_memory(
-        &Memory {
-            id: "m0".into(),
-            tags: vec!["common".into()],
-            event_timestamp: ts(500),
-            ..Default::default()
-        },
-        "blob0".into(),
-    )?;
-    // m1: event_timestamp = 100
-    db.add_memory(
-        &Memory {
-            id: "m1".into(),
-            tags: vec!["common".into()],
-            event_timestamp: ts(100),
-            ..Default::default()
-        },
-        "blob1".into(),
-    )?;
-    // m2: no event_timestamp — propertyWeights returns 0
-    db.add_memory(
-        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
-        "blob2".into(),
-    )?;
+    let mut m0 = mem_tagged("m0", &["common"]);
+    m0.event_timestamp = ts(500);
+    db.add_memory(&m0, "blob0".into())?;
 
-    // Sort by event_timestamp descending: m0 (500) > m1 (100) > m2 (0/missing)
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: no event_timestamp — propertyWeights returns 0
+    db.add_memory(&mem_tagged("m2", &["common"]), "blob2".into())?;
+
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
     );
     assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob0"), eq("blob1"), eq("blob2")]);
@@ -1674,36 +930,20 @@ fn test_search_memories_v2_sort_event_timestamp_descending() -> anyhow::Result<(
 fn test_search_memories_v2_sort_event_timestamp_ascending() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-event-asc-test"))?;
 
-    // m0: event_timestamp = 500
-    db.add_memory(
-        &Memory {
-            id: "m0".into(),
-            tags: vec!["common".into()],
-            event_timestamp: ts(500),
-            ..Default::default()
-        },
-        "blob0".into(),
-    )?;
-    // m1: event_timestamp = 100
-    db.add_memory(
-        &Memory {
-            id: "m1".into(),
-            tags: vec!["common".into()],
-            event_timestamp: ts(100),
-            ..Default::default()
-        },
-        "blob1".into(),
-    )?;
-    // m2: no event_timestamp — propertyWeights returns 0
-    db.add_memory(
-        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
-        "blob2".into(),
-    )?;
+    let mut m0 = mem_tagged("m0", &["common"]);
+    m0.event_timestamp = ts(500);
+    db.add_memory(&m0, "blob0".into())?;
 
-    // Sort by event_timestamp ascending: m1 (100) < m0 (500), then m2 (missing)
-    // last.
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.event_timestamp = ts(100);
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: no event_timestamp
+    db.add_memory(&mem_tagged("m2", &["common"]), "blob2".into())?;
+
+    // Ascending: m1 (100) < m0 (500), then m2 (missing) last.
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
     );
     assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob1"), eq("blob0"), eq("blob2")]);
@@ -1714,34 +954,19 @@ fn test_search_memories_v2_sort_event_timestamp_ascending() -> anyhow::Result<()
 fn test_search_memories_v2_sort_expiration_timestamp_descending() -> anyhow::Result<()> {
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-exp-desc-test"))?;
 
-    db.add_memory(
-        &Memory {
-            id: "m0".into(),
-            tags: vec!["common".into()],
-            expiration_timestamp: ts(1000),
-            ..Default::default()
-        },
-        "blob0".into(),
-    )?;
-    db.add_memory(
-        &Memory {
-            id: "m1".into(),
-            tags: vec!["common".into()],
-            expiration_timestamp: ts(300),
-            ..Default::default()
-        },
-        "blob1".into(),
-    )?;
-    // m2: no expiration_timestamp
-    db.add_memory(
-        &Memory { id: "m2".into(), tags: vec!["common".into()], ..Default::default() },
-        "blob2".into(),
-    )?;
+    let mut m0 = mem_tagged("m0", &["common"]);
+    m0.expiration_timestamp = ts(1000);
+    db.add_memory(&m0, "blob0".into())?;
 
-    // Sort by expiration_timestamp descending: m0 (1000) > m1 (300) > m2
-    // (0/missing)
+    let mut m1 = mem_tagged("m1", &["common"]);
+    m1.expiration_timestamp = ts(300);
+    db.add_memory(&m1, "blob1".into())?;
+
+    // m2: no expiration_timestamp
+    db.add_memory(&mem_tagged("m2", &["common"]), "blob2".into())?;
+
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::ExpirationTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
     );
     assert_that!(search_blob_ids(&db, &req)?, elements_are![eq("blob0"), eq("blob1"), eq("blob2")]);
@@ -1755,24 +980,15 @@ fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<(
     let mut db = IcingMetaDatabase::new(IcingTempDir::new("v2-sort-tiebreak-test"))?;
 
     // Insert 5 memories all with the same event_timestamp.
-    // The tiebreaker (creationTimestamp / 1e18) should produce a deterministic
-    // order based on insertion order.
     for i in 0..5 {
-        db.add_memory(
-            &Memory {
-                id: format!("m{i}"),
-                tags: vec!["common".into()],
-                event_timestamp: ts(1000),
-                ..Default::default()
-            },
-            format!("blob{i}"),
-        )?;
+        let mut m = mem_tagged(&format!("m{i}"), &["common"]);
+        m.event_timestamp = ts(1000);
+        db.add_memory(&m, format!("blob{i}"))?;
     }
 
-    // Descending: all have the same primary score (1000). Tiebreaker is
-    // creationTimestamp DESC, so newer (later-inserted) items come first.
+    // Descending: tiebreaker is creationTimestamp DESC → newer first.
     let req = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderDescending as i32 }),
     );
     let result = search_blob_ids(&db, &req)?;
@@ -1781,14 +997,13 @@ fn test_search_memories_v2_sort_event_timestamp_tiebreaker() -> anyhow::Result<(
         elements_are![eq("blob4"), eq("blob3"), eq("blob2"), eq("blob1"), eq("blob0")]
     );
 
-    // Run the same query again to confirm the order is stable.
+    // Same query again → stable order.
     let result2 = search_blob_ids(&db, &req)?;
     assert_that!(result, eq(&result2));
 
-    // Ascending: same primary score (1000). Tiebreaker is creationTimestamp ASC,
-    // so older (earlier-inserted) items come first.
+    // Ascending: tiebreaker is creationTimestamp ASC → older first.
     let req_asc = sorted_request(
-        FilterValue::TagsFilter(StringFilter { value: "common".into() }),
+        tag_filter("common"),
         SortValue::EventTimestampSort(TimeSort { order: SortOrder::OrderAscending as i32 }),
     );
     let result_asc = search_blob_ids(&db, &req_asc)?;

@@ -1847,265 +1847,233 @@ mod tests {
 
     use super::*;
 
+    // =========================================================================
+    // Test helpers
+    // =========================================================================
+
     fn tempdir() -> IcingTempDir {
         IcingTempDir::new("icing-test-")
     }
 
+    /// Creates a single `LlmView` with a "test_model" embedding.
+    fn llm_view(id: &str, values: &[f32]) -> LlmView {
+        LlmView {
+            id: id.to_string(),
+            embedding: Some(Embedding {
+                model_signature: "test_model".to_string(),
+                values: values.to_vec(),
+            }),
+            ..Default::default()
+        }
+    }
+
+    /// Creates a tagged memory with a single embedding view.
+    fn mem_with_view(id: &str, tags: &[&str], view_id: &str, values: &[f32]) -> Memory {
+        Memory {
+            id: id.into(),
+            tags: tags.iter().map(|t| t.to_string()).collect(),
+            views: Some(LlmViews { llm_views: vec![llm_view(view_id, values)] }),
+            ..Default::default()
+        }
+    }
+
+    /// Creates a tagged memory with multiple views.
+    fn mem_with_views(id: &str, tags: &[&str], views: Vec<LlmView>) -> Memory {
+        Memory {
+            id: id.into(),
+            tags: tags.iter().map(|t| t.to_string()).collect(),
+            views: Some(LlmViews { llm_views: views }),
+            ..Default::default()
+        }
+    }
+
+    /// Builds an embedding search query with "test_model".
+    fn embedding_query(values: &[f32]) -> SearchMemoryQuery {
+        SearchMemoryQuery {
+            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
+                embedding: vec![Embedding {
+                    model_signature: "test_model".to_string(),
+                    values: values.to_vec(),
+                }],
+                ..Default::default()
+            })),
+        }
+    }
+
+    fn add_test_memory(db: &mut IcingMetaDatabase, suffix: &str) -> (MemoryId, BlobId) {
+        let memory_id = format!("memory_id_{suffix}");
+        let blob_id = format!("blob_id_{suffix}");
+        db.add_memory(
+            &Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() },
+            blob_id.clone(),
+        )
+        .expect("failed to add memory");
+        (memory_id, blob_id)
+    }
+
+    fn ts(seconds: i64) -> prost_types::Timestamp {
+        prost_types::Timestamp { seconds, nanos: 0 }
+    }
+
+    // =========================================================================
+    // Tests
+    // =========================================================================
+
     #[gtest]
     fn basic_icing_search_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        let memory = Memory {
-            id: "Thisisanid".to_string(),
-            tags: vec!["the_tag".to_string()],
-            ..Default::default()
-        };
         let blob_id = 12345.to_string();
-        icing_database.add_memory(&memory, blob_id.clone())?;
-        let memory2 = Memory {
-            id: "Thisisanid2".to_string(),
-            tags: vec!["the_tag".to_string()],
-            ..Default::default()
-        };
+        db.add_memory(
+            &Memory { id: "Thisisanid".into(), tags: vec!["the_tag".into()], ..Default::default() },
+            blob_id.clone(),
+        )?;
         let blob_id2 = 12346.to_string();
-        icing_database.add_memory(&memory2, blob_id2.clone())?;
+        db.add_memory(
+            &Memory {
+                id: "Thisisanid2".into(),
+                tags: vec!["the_tag".into()],
+                ..Default::default()
+            },
+            blob_id2.clone(),
+        )?;
 
-        let (result, _) = icing_database.get_memories_by_tag("the_tag", 10, PageToken::Start)?;
+        let (result, _) = db.get_memories_by_tag("the_tag", 10, PageToken::Start)?;
         assert_that!(result, unordered_elements_are![eq(&blob_id), eq(&blob_id2)]);
         Ok(())
     }
 
     #[gtest]
     fn icing_import_export_test() -> anyhow::Result<()> {
-        // Save the path to check for deletion later.
         let base_dir = tempdir();
         let base_dir_string = base_dir.as_str().to_string();
-        let mut icing_database = IcingMetaDatabase::new(base_dir)?;
+        let mut db = IcingMetaDatabase::new(base_dir)?;
 
         let memory_id1 = "memory_id_export_1".to_string();
         let blob_id1 = 654321.to_string();
-        let memory1 = Memory {
-            id: memory_id1.clone(),
-            tags: vec!["export_tag".to_string()],
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory1, blob_id1.clone())?;
+        db.add_memory(
+            &Memory {
+                id: memory_id1.clone(),
+                tags: vec!["export_tag".into()],
+                ..Default::default()
+            },
+            blob_id1.clone(),
+        )?;
 
-        // Export the database
-        let exported_data = icing_database.export()?.encode_to_vec();
-        drop(icing_database); // Drop the original instance
+        let exported_data = db.export()?.encode_to_vec();
+        drop(db);
         expect_false!(std::path::Path::new(base_dir_string.as_str()).exists());
 
-        // Import into a new directory (or the same one after cleaning)
-        let imported_database = IcingMetaDatabase::import(tempdir(), exported_data.as_slice())
+        let imported_db = IcingMetaDatabase::import(tempdir(), exported_data.as_slice())
             .expect("failed to import");
 
-        // Verify data exists in the imported database
         expect_that!(
-            imported_database.get_blob_id_by_memory_id(memory_id1)?,
+            imported_db.get_blob_id_by_memory_id(memory_id1)?,
             eq(&Some(blob_id1.clone()))
         );
-        let (result, _) =
-            imported_database.get_memories_by_tag("export_tag", 10, PageToken::Start)?;
+        let (result, _) = imported_db.get_memories_by_tag("export_tag", 10, PageToken::Start)?;
         assert_that!(result, unordered_elements_are![eq(&blob_id1)]);
         Ok(())
     }
 
     #[gtest]
     fn icing_get_blob_id_by_memory_id_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        let memory_id1 = "memory_id_1".to_string();
-        let blob_id1 = 54321.to_string();
-        let memory1 =
-            Memory { id: memory_id1.clone(), tags: vec!["tag1".to_string()], ..Default::default() };
-        icing_database.add_memory(&memory1, blob_id1.clone())?;
+        let (mid1, bid1) = ("memory_id_1".to_string(), 54321.to_string());
+        db.add_memory(
+            &Memory { id: mid1.clone(), tags: vec!["tag1".into()], ..Default::default() },
+            bid1.clone(),
+        )?;
 
-        let memory_id2 = "memory_id_2".to_string();
-        let blob_id2 = 54322.to_string();
-        let memory2 =
-            Memory { id: memory_id2.clone(), tags: vec!["tag2".to_string()], ..Default::default() };
-        icing_database.add_memory(&memory2, blob_id2.clone())?;
+        let (mid2, bid2) = ("memory_id_2".to_string(), 54322.to_string());
+        db.add_memory(
+            &Memory { id: mid2.clone(), tags: vec!["tag2".into()], ..Default::default() },
+            bid2.clone(),
+        )?;
 
-        // Test finding an existing blob ID
-        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id1)?, eq(&Some(blob_id1)));
-        // Test finding another existing blob ID
-        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id2)?, eq(&Some(blob_id2)));
-        // Test finding a non-existent blob ID
-        expect_that!(
-            icing_database.get_blob_id_by_memory_id("non_existent_id".to_string())?,
-            eq(&None)
-        );
+        expect_that!(db.get_blob_id_by_memory_id(mid1)?, eq(&Some(bid1)));
+        expect_that!(db.get_blob_id_by_memory_id(mid2)?, eq(&Some(bid2)));
+        expect_that!(db.get_blob_id_by_memory_id("non_existent_id".into())?, eq(&None));
         Ok(())
     }
 
     #[gtest]
     fn icing_embedding_search_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        let memory_id1 = "memory_embed_1".to_string();
-        let blob_id1 = 98765.to_string();
-        let embedding1 = Embedding {
-            model_signature: "test_model".to_string(),
-            values: vec![1.0, 0.0, 0.0], // Vector pointing along x-axis
-        };
-        let memory1 = Memory {
-            id: memory_id1.clone(),
-            tags: vec!["embed_tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "view1".to_string(),
-                    embedding: Some(embedding1),
-                    ..Default::default()
-                }],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory1, blob_id1.clone())?;
+        let bid1 = 98765.to_string();
+        db.add_memory(
+            &mem_with_view("memory_embed_1", &["embed_tag"], "view1", &[1.0, 0.0, 0.0]),
+            bid1.clone(),
+        )?;
 
-        let memory_id2 = "memory_embed_2".to_string();
-        let blob_id2 = 98766.to_string();
-        let embedding2 = Embedding {
-            model_signature: "test_model".to_string(),
-            values: vec![0.0, 1.0, 0.0], // Vector pointing along y-axis
-        };
-        let memory2 = Memory {
-            id: memory_id2.clone(),
-            tags: vec!["embed_tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "view2".to_string(),
-                    embedding: Some(embedding2),
-                    ..Default::default()
-                }],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory2, blob_id2.clone())?;
+        let bid2 = 98766.to_string();
+        db.add_memory(
+            &mem_with_view("memory_embed_2", &["embed_tag"], "view2", &[0.0, 1.0, 0.0]),
+            bid2.clone(),
+        )?;
 
-        let embedding_query = SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-                embedding: vec![Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![0.9, 0.1, 0.0],
-                }],
-                ..Default::default()
-            })),
-        };
+        let query = embedding_query(&[0.9, 0.1, 0.0]);
+
         // Query embedding close to embedding1
-        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let (results, _) = db.search(&query, 10, PageToken::Start)?;
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
         let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-        // Expect memory1 to be the top result due to higher dot product
-        assert_that!(blob_ids, elements_are![eq(&blob_id1), eq(&blob_id2)]);
-        // We could also assert on the score if needed, but ordering is often sufficient
+        assert_that!(blob_ids, elements_are![eq(&bid1), eq(&bid2)]);
         assert_that!(scores, elements_are![eq(&0.9), eq(&0.1)]);
 
-        let (results, _) = icing_database.search(&embedding_query, 1, PageToken::Start)?;
+        // With limit=1, only top result
+        let (results, _) = db.search(&query, 1, PageToken::Start)?;
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
         let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
-        // Expect memory1 to be the top result due to higher dot product
-        assert_that!(blob_ids, elements_are![eq(&blob_id1)]);
-        // We could also assert on the score if needed, but ordering is often sufficient
+        assert_that!(blob_ids, elements_are![eq(&bid1)]);
         assert_that!(scores, elements_are![eq(&0.9)]);
         Ok(())
     }
 
     #[gtest]
     fn icing_embedding_search_expired_memory_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        let model_signature = "test_model".to_string();
-        let embedding_values = vec![1.0, 0.0, 0.0]; // Common embedding for query
+        let past = SystemTime::now() - std::time::Duration::from_secs(3600);
+        let future = SystemTime::now() + std::time::Duration::from_secs(3600);
 
-        // Create an expired memory
-        let expired_memory_id = "expired_memory_embed".to_string();
-        let expired_blob_id = "expired_blob_embed".to_string();
-        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
-        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
+        // Expired memory
+        let mut m_expired =
+            mem_with_view("expired_memory_embed", &["embed_tag"], "expired_view", &[1.0, 0.0, 0.0]);
+        m_expired.expiration_timestamp = Some(system_time_to_timestamp(past));
+        db.add_memory(&m_expired, "expired_blob_embed".into())?;
 
-        let expired_memory = Memory {
-            id: expired_memory_id.clone(),
-            tags: vec!["embed_tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "expired_view".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: model_signature.clone(),
-                        values: embedding_values.clone(),
-                    }),
-                    ..Default::default()
-                }],
-            }),
-            expiration_timestamp,
-            ..Default::default()
-        };
-        icing_database.add_memory(&expired_memory, expired_blob_id.clone())?;
+        // Non-expired memory (future expiration)
+        let mut m_future = mem_with_view(
+            "non_expired_memory_embed",
+            &["embed_tag"],
+            "non_expired_view",
+            &[1.0, 0.0, 0.0],
+        );
+        m_future.expiration_timestamp = Some(system_time_to_timestamp(future));
+        db.add_memory(&m_future, "non_expired_blob_embed".into())?;
 
-        // Create a non-expired memory (expires in the future)
-        let non_expired_memory_id = "non_expired_memory_embed".to_string();
-        let non_expired_blob_id = "non_expired_blob_embed".to_string();
-        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour in future
-        let non_expired_timestamp = Some(system_time_to_timestamp(future_time));
+        // Never-expired memory (no expiration)
+        db.add_memory(
+            &mem_with_view(
+                "never_expired_memory_embed",
+                &["embed_tag"],
+                "never_expired_view",
+                &[1.0, 0.0, 0.0],
+            ),
+            "never_expired_blob_embed".into(),
+        )?;
 
-        let non_expired_memory = Memory {
-            id: non_expired_memory_id.clone(),
-            tags: vec!["embed_tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "non_expired_view".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: model_signature.clone(),
-                        values: embedding_values.clone(),
-                    }),
-                    ..Default::default()
-                }],
-            }),
-            expiration_timestamp: non_expired_timestamp,
-            ..Default::default()
-        };
-        icing_database.add_memory(&non_expired_memory, non_expired_blob_id.clone())?;
-
-        // Create a never-expired memory (no expiration_timestamp)
-        let never_expired_memory_id = "never_expired_memory_embed".to_string();
-        let never_expired_blob_id = "never_expired_blob_embed".to_string();
-        let never_expired_memory = Memory {
-            id: never_expired_memory_id.clone(),
-            tags: vec!["embed_tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "never_expired_view".to_string(),
-                    embedding: Some(Embedding {
-                        model_signature: model_signature.clone(),
-                        values: embedding_values.clone(),
-                    }),
-                    ..Default::default()
-                }],
-            }),
-            expiration_timestamp: None,
-            ..Default::default()
-        };
-        icing_database.add_memory(&never_expired_memory, never_expired_blob_id.clone())?;
-
-        // Query with an embedding that matches all three (if not for expiration)
-        let embedding_query = SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-                embedding: vec![Embedding {
-                    model_signature: model_signature.clone(),
-                    values: embedding_values,
-                }],
-                ..Default::default()
-            })),
-        };
-
-        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
+        let query = embedding_query(&[1.0, 0.0, 0.0]);
+        let (results, _) = db.search(&query, 10, PageToken::Start)?;
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
 
-        // Assert that just the non-expired and never-expired memories are in the search
-        // results
+        // Only non-expired and never-expired memories should appear.
         assert_that!(
             blob_ids,
-            unordered_elements_are![eq(&non_expired_blob_id), eq(&never_expired_blob_id)]
+            unordered_elements_are![eq(&"non_expired_blob_embed"), eq(&"never_expired_blob_embed")]
         );
 
         Ok(())
@@ -2241,72 +2209,35 @@ mod tests {
         Ok(())
     }
 
-    fn add_test_memory(db: &mut IcingMetaDatabase, suffix: &str) -> (MemoryId, BlobId) {
-        let memory_id = format!("memory_id_{suffix}");
-        let blob_id = format!("blob_id_{suffix}");
-        db.add_memory(
-            &Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() },
-            blob_id.clone(),
-        )
-        .expect("failed to add memory");
-        (memory_id, blob_id)
-    }
-
     #[gtest]
     fn icing_deduplicate_search_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        let model_signature = "test_model".to_string();
-        let mut memories = vec![];
+        let mut blob_ids_expected = vec![];
         for i in 0..5 {
-            let memory_id = format!("memory_embed_{}", i);
             let blob_id = (1000 + i).to_string();
-            let mut views = vec![];
-            for j in 0..2 {
-                let view_id = format!("view_{}_{}", i, j);
-                let score = 1.0 - (i as f32 * 0.2 + j as f32 * 0.1);
-                let embedding = Embedding {
-                    model_signature: model_signature.clone(),
-                    values: vec![score, 0.0, 0.0],
-                };
-                views.push(LlmView {
-                    id: view_id,
-                    embedding: Some(embedding),
-                    ..Default::default()
-                });
-            }
-            let memory = Memory {
-                id: memory_id,
-                tags: vec!["embed_tag".to_string()],
-                views: Some(LlmViews { llm_views: views }),
-                ..Default::default()
-            };
-            icing_database.add_memory(&memory, blob_id.clone())?;
-            memories.push((memory, blob_id));
+            let views: Vec<LlmView> = (0..2)
+                .map(|j| {
+                    let score = 1.0 - (i as f32 * 0.2 + j as f32 * 0.1);
+                    llm_view(&format!("view_{i}_{j}"), &[score, 0.0, 0.0])
+                })
+                .collect();
+            db.add_memory(
+                &mem_with_views(&format!("memory_embed_{i}"), &["embed_tag"], views),
+                blob_id.clone(),
+            )?;
+            blob_ids_expected.push(blob_id);
         }
 
-        let embedding_query = SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-                embedding: vec![Embedding {
-                    model_signature: model_signature.clone(),
-                    values: vec![1.0, 0.0, 0.0],
-                }],
-                ..Default::default()
-            })),
-        };
-
-        let (results, _) = icing_database.search(&embedding_query, 2, PageToken::Start)?;
+        let query = embedding_query(&[1.0, 0.0, 0.0]);
+        let (results, _) = db.search(&query, 2, PageToken::Start)?;
         assert_that!(results.items, len(eq(2)));
 
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
         let scores: Vec<f32> = results.items.iter().map(|r| r.score).collect();
 
-        // The first two views have scores 1.0 and 0.9, so the score is 1.9. The
-        // second two views have scores 0.8 and 0.7. But the first two views belong to
-        // the first memory, so the final score is 1.9. The last two views
-        // belong to the second memory, we only match one more view.
-        // So we match three views to get two memories.
-        assert_that!(blob_ids, elements_are![eq(&memories[0].1), eq(&memories[1].1)]);
+        // Memory 0: views score 1.0+0.9=1.9. Memory 1: first matching view 0.8.
+        assert_that!(blob_ids, elements_are![eq(&blob_ids_expected[0]), eq(&blob_ids_expected[1])]);
         assert_that!(scores, elements_are![eq(&1.9), eq(&0.8)]);
 
         Ok(())
@@ -2314,162 +2245,63 @@ mod tests {
 
     #[gtest]
     fn icing_delete_memory_also_deletes_views_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
-        let memory_id = "memory_id".to_string();
-        let blob_id = 12345.to_string();
-        let memory = Memory {
-            id: memory_id.clone(),
-            tags: vec!["tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![
-                    LlmView {
-                        id: "view1".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 0.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                    LlmView {
-                        id: "view2".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![0.0, 1.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                ],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory, blob_id.clone())?;
-        let view_ids = icing_database.get_view_ids_by_memory_id(memory_id.clone());
-        assert_that!(view_ids, ok(unordered_elements_are![eq(&"view1"), eq(&"view2")]));
-        icing_database.delete_memories(&[memory_id.clone()])?;
-        let view_ids = icing_database.get_view_ids_by_memory_id(memory_id);
-        assert_that!(view_ids, ok(is_empty()));
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mid = "memory_id".to_string();
+        let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
+        db.add_memory(&mem_with_views(&mid, &["tag"], views), 12345.to_string())?;
+
+        assert_that!(
+            db.get_view_ids_by_memory_id(mid.clone()),
+            ok(unordered_elements_are![eq(&"view1"), eq(&"view2")])
+        );
+        db.delete_memories(&[mid.clone()])?;
+        assert_that!(db.get_view_ids_by_memory_id(mid), ok(is_empty()));
         Ok(())
     }
 
     #[gtest]
     fn icing_update_memory_replaces_views_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
-        let memory_id = "memory_id_to_update".to_string();
-        let blob_id1 = "blob_id_1".to_string();
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mid = "memory_id_to_update".to_string();
 
-        // First, add a memory with two views.
-        let memory1 = Memory {
-            id: memory_id.clone(),
-            tags: vec!["tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![
-                    LlmView {
-                        id: "view1".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 0.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                    LlmView {
-                        id: "view2".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![0.0, 1.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                ],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory1, blob_id1)?;
+        // Add memory with two views.
+        let views1 = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
+        db.add_memory(&mem_with_views(&mid, &["tag"], views1), "blob_id_1".into())?;
+        assert_that!(
+            db.get_view_ids_by_memory_id(mid.clone())?,
+            unordered_elements_are![eq(&"view1"), eq(&"view2")]
+        );
 
-        // Check that the views were added.
-        let view_ids1 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
-        assert_that!(view_ids1, unordered_elements_are![eq(&"view1"), eq(&"view2")]);
+        // Update: replace views with a single new view.
+        db.add_memory(
+            &mem_with_view(&mid, &["tag"], "view3", &[0.0, 0.0, 1.0]),
+            "blob_id_2".into(),
+        )?;
+        assert_that!(
+            db.get_view_ids_by_memory_id(mid.clone())?,
+            unordered_elements_are![eq(&"view3")]
+        );
 
-        // Now, "update" the memory by adding a new memory with the same ID but
-        // different views.
-        let blob_id2 = "blob_id_2".to_string();
-        let memory2 = Memory {
-            id: memory_id.clone(),
-            tags: vec!["tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![LlmView {
-                    id: "view3".to_string(), // New view
-                    embedding: Some(Embedding {
-                        model_signature: "test_model".to_string(),
-                        values: vec![0.0, 0.0, 1.0],
-                    }),
-                    ..Default::default()
-                }],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory2, blob_id2)?;
-
-        // Check that the old views are gone and only the new one exists.
-        let view_ids2 = icing_database.get_view_ids_by_memory_id(memory_id.clone())?;
-        assert_that!(view_ids2, unordered_elements_are![eq(&"view3")]);
-
-        // Update again, this time with no views.
-        let blob_id3 = "blob_id_3".to_string();
-        let memory3 =
-            Memory { id: memory_id.clone(), tags: vec!["tag".to_string()], ..Default::default() };
-        icing_database.add_memory(&memory3, blob_id3)?;
-
-        // Check that all views are gone.
-        let view_ids3 = icing_database.get_view_ids_by_memory_id(memory_id)?;
-        assert_that!(view_ids3, is_empty());
+        // Update again: no views.
+        db.add_memory(
+            &Memory { id: mid.clone(), tags: vec!["tag".into()], ..Default::default() },
+            "blob_id_3".into(),
+        )?;
+        assert_that!(db.get_view_ids_by_memory_id(mid)?, is_empty());
 
         Ok(())
     }
 
     #[gtest]
     fn icing_search_with_view_scores_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
-
-        let memory_id = "memory_id_view_scores".to_string();
+        let mut db = IcingMetaDatabase::new(tempdir())?;
         let blob_id = "blob_id_view_scores".to_string();
-        let memory = Memory {
-            id: memory_id.clone(),
-            tags: vec!["tag".to_string()],
-            views: Some(LlmViews {
-                llm_views: vec![
-                    LlmView {
-                        id: "view1".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![1.0, 0.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                    LlmView {
-                        id: "view2".to_string(),
-                        embedding: Some(Embedding {
-                            model_signature: "test_model".to_string(),
-                            values: vec![0.0, 1.0, 0.0],
-                        }),
-                        ..Default::default()
-                    },
-                ],
-            }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory, blob_id.clone())?;
+        let views = vec![llm_view("view1", &[1.0, 0.0, 0.0]), llm_view("view2", &[0.0, 1.0, 0.0])];
+        db.add_memory(&mem_with_views("memory_id_view_scores", &["tag"], views), blob_id.clone())?;
 
-        let embedding_query = SearchMemoryQuery {
-            clause: Some(search_memory_query::Clause::EmbeddingQuery(EmbeddingQuery {
-                embedding: vec![Embedding {
-                    model_signature: "test_model".to_string(),
-                    values: vec![0.7, 0.3, 0.0],
-                }],
-                ..Default::default()
-            })),
-        };
+        let query = embedding_query(&[0.7, 0.3, 0.0]);
+        let (results, _) = db.search(&query, 10, PageToken::Start)?;
 
-        let (results, _) = icing_database.search(&embedding_query, 10, PageToken::Start)?;
         assert_that!(results.items, len(eq(1)));
         let result = &results.items[0];
         assert_eq!(result.blob_id, blob_id);
@@ -2482,26 +2314,22 @@ mod tests {
 
     #[gtest]
     fn icing_get_memory_by_id_with_expiration_timestamp_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
         let memory_id = "expired_memory_id".to_string();
         let blob_id = "expired_blob_id".to_string();
-
-        // Create a timestamp in the past (e.g., 1 hour ago)
         let past_time = SystemTime::now() - std::time::Duration::from_secs(3600);
-        let expiration_timestamp = Some(system_time_to_timestamp(past_time));
 
         let memory = Memory {
             id: memory_id.clone(),
-            tags: vec!["expired".to_string()],
-            expiration_timestamp,
+            tags: vec!["expired".into()],
+            expiration_timestamp: Some(system_time_to_timestamp(past_time)),
             ..Default::default()
         };
-        icing_database.add_memory(&memory, blob_id.clone())?;
+        db.add_memory(&memory, blob_id.clone())?;
 
-        // Verify the memory is actually stored in the database without considering
-        // expiration.
-        let search_spec_for_existence = icing::SearchSpecProto {
+        // Verify the memory is stored (bypassing expiration filter).
+        let search_spec = icing::SearchSpecProto {
             query: Some(memory_id.to_string()),
             term_match_type: Some(icing::term_match_type::Code::ExactOnly.into()),
             schema_type_filters: vec![SCHEMA_NAME.to_string()],
@@ -2511,121 +2339,93 @@ mod tests {
             )],
             ..Default::default()
         };
-
-        let result_spec_for_existence = icing::ResultSpecProto {
+        let result_spec = icing::ResultSpecProto {
             num_per_page: Some(1),
             type_property_masks: vec![IcingMetaDatabase::create_blob_id_projection(SCHEMA_NAME)],
             ..Default::default()
         };
-        let search_result_for_existence = icing_database.icing_search_engine.search(
-            &search_spec_for_existence,
+        let raw_result = db.icing_search_engine.search(
+            &search_spec,
             &icing::get_default_scoring_spec(),
-            &result_spec_for_existence,
+            &result_spec,
         );
-
-        assert_that!(search_result_for_existence.as_ref().unwrap().results, len(eq(1)));
+        assert_that!(raw_result.as_ref().unwrap().results, len(eq(1)));
         assert_that!(
-            IcingMetaDatabase::extract_blob_id_from_doc(
-                &search_result_for_existence.unwrap().results[0]
-            ),
+            IcingMetaDatabase::extract_blob_id_from_doc(&raw_result.unwrap().results[0]),
             eq(&Some(blob_id.clone()))
         );
 
-        // Try to retrieve the memory using the public API, it should not be found
-        // because it's expired
-        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
+        // Public API should NOT find it (expired).
+        expect_that!(db.get_blob_id_by_memory_id(memory_id)?, eq(&None));
 
         Ok(())
     }
 
     #[gtest]
     fn icing_get_memory_by_name_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        db.add_memory(
+            &Memory { id: "memory_id".into(), name: "memory_name".into(), ..Default::default() },
+            "blob_id".into(),
+        )?;
 
-        let memory_id = "memory_id".to_string();
-        let memory_name = "memory_name".to_string();
-        let blob_id = "blob_id".to_string();
-
-        let memory =
-            Memory { id: memory_id.clone(), name: memory_name.clone(), ..Default::default() };
-        icing_database.add_memory(&memory, blob_id.clone())?;
-
-        expect_that!(icing_database.get_memory_by_name(&memory_name)?, eq(&Some(blob_id.clone())));
-
-        let wrong_memory_name: String = "memory_name_wrong".to_string();
-        expect_that!(icing_database.get_memory_by_name(&wrong_memory_name)?, eq(&None));
-
+        expect_that!(db.get_memory_by_name("memory_name")?, eq(&Some("blob_id".to_string())));
+        expect_that!(db.get_memory_by_name("memory_name_wrong")?, eq(&None));
         Ok(())
     }
 
     #[gtest]
     fn icing_get_memory_by_name_duplicate_error_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        db.add_memory(
+            &Memory { id: "memory_id1".into(), name: "memory_name".into(), ..Default::default() },
+            "blob_id".into(),
+        )?;
+        db.add_memory(
+            &Memory { id: "memory_id2".into(), name: "memory_name".into(), ..Default::default() },
+            "blob_id".into(),
+        )?;
 
-        let memory_id1 = "memory_id1".to_string();
-        let memory_id2 = "memory_id2".to_string();
-        let memory_name = "memory_name".to_string();
-        let blob_id = "blob_id".to_string();
-
-        let memory1 =
-            Memory { id: memory_id1.clone(), name: memory_name.clone(), ..Default::default() };
-        icing_database.add_memory(&memory1, blob_id.clone())?;
-
-        let memory2 =
-            Memory { id: memory_id2.clone(), name: memory_name.clone(), ..Default::default() };
-        icing_database.add_memory(&memory2, blob_id.clone())?;
-
-        expect_that!(icing_database.get_memory_by_name(&memory_name), err(anything()));
-
+        expect_that!(db.get_memory_by_name("memory_name"), err(anything()));
         Ok(())
     }
 
     #[gtest]
     fn icing_get_memories_by_tag_with_expiration_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
-        let common_tag = "test_tag".to_string();
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let past = SystemTime::now() - std::time::Duration::from_secs(3600);
+        let future = SystemTime::now() + std::time::Duration::from_secs(3600);
 
-        // Memory 1: Expired
-        let memory_id_expired = "memory_expired".to_string();
-        let blob_id_expired = "blob_expired".to_string();
-        let past_time = SystemTime::now() - std::time::Duration::from_secs(3600); // 1 hour ago
-        let memory_expired = Memory {
-            id: memory_id_expired.clone(),
-            tags: vec![common_tag.clone()],
-            expiration_timestamp: Some(system_time_to_timestamp(past_time)),
+        // Expired
+        let mut m_expired = Memory {
+            id: "memory_expired".into(),
+            tags: vec!["test_tag".into()],
             ..Default::default()
         };
-        icing_database.add_memory(&memory_expired, blob_id_expired.clone())?;
+        m_expired.expiration_timestamp = Some(system_time_to_timestamp(past));
+        db.add_memory(&m_expired, "blob_expired".into())?;
 
-        // Memory 2: Future expiration
-        let memory_id_future = "memory_future".to_string();
-        let blob_id_future = "blob_future".to_string();
-        let future_time = SystemTime::now() + std::time::Duration::from_secs(3600); // 1 hour from now
-        let memory_future = Memory {
-            id: memory_id_future.clone(),
-            tags: vec![common_tag.clone()],
-            expiration_timestamp: Some(system_time_to_timestamp(future_time)),
+        // Future expiration
+        let mut m_future = Memory {
+            id: "memory_future".into(),
+            tags: vec!["test_tag".into()],
             ..Default::default()
         };
-        icing_database.add_memory(&memory_future, blob_id_future.clone())?;
+        m_future.expiration_timestamp = Some(system_time_to_timestamp(future));
+        db.add_memory(&m_future, "blob_future".into())?;
 
-        // Memory 3: No expiration
-        let memory_id_no_expiry = "memory_no_expiry".to_string();
-        let blob_id_no_expiry = "blob_no_expiry".to_string();
-        let memory_no_expiry = Memory {
-            id: memory_id_no_expiry.clone(),
-            tags: vec![common_tag.clone()],
-            expiration_timestamp: None,
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_no_expiry, blob_id_no_expiry.clone())?;
+        // No expiration
+        db.add_memory(
+            &Memory {
+                id: "memory_no_expiry".into(),
+                tags: vec!["test_tag".into()],
+                ..Default::default()
+            },
+            "blob_no_expiry".into(),
+        )?;
 
-        // Retrieve memories by tag
-        let (results, _) = icing_database.get_memories_by_tag(&common_tag, 10, PageToken::Start)?;
-
-        // Assert that only non-expired memories are returned
-        assert_that!(results, unordered_elements_are![eq(&blob_id_future), eq(&blob_id_no_expiry)]);
-
+        let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
+        assert_that!(results, unordered_elements_are![eq(&"blob_future"), eq(&"blob_no_expiry")]);
         Ok(())
     }
 
@@ -2729,155 +2529,100 @@ mod tests {
         Ok(())
     }
 
-    /// Test that delete_memories correctly deletes a memory by MemoryId and
-    /// that get_blob_id_by_memory_id returns None after deletion.
-    /// This verifies the fix for the bug where cache deletion was passing
-    /// MemoryId instead of BlobId.
+    /// Verifies delete_memories uses MemoryId (not BlobId) for deletion.
     #[gtest]
     fn delete_memories_uses_correct_id_types_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        let mid = "test_memory_id".to_string();
+        let bid = "test_blob_id_12345".to_string();
+        db.add_memory(
+            &Memory { id: mid.clone(), tags: vec!["test_tag".into()], ..Default::default() },
+            bid.clone(),
+        )?;
 
-        // Add a memory with a distinct memory_id and blob_id
-        let memory_id = "test_memory_id".to_string();
-        let blob_id = "test_blob_id_12345".to_string();
-        let memory = Memory {
-            id: memory_id.clone(),
-            tags: vec!["test_tag".to_string()],
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory, blob_id.clone())?;
+        expect_that!(db.get_blob_id_by_memory_id(mid.clone())?, eq(&Some(bid.clone())));
+        let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
+        expect_that!(results, contains(eq(&bid)));
 
-        // Verify the memory was added and blob_id can be looked up
-        expect_that!(
-            icing_database.get_blob_id_by_memory_id(memory_id.clone())?,
-            eq(&Some(blob_id.clone()))
-        );
+        db.delete_memories(&[mid.clone()])?;
 
-        // Verify we can find this memory by tag search
-        let (results, _) = icing_database.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
-        expect_that!(results, contains(eq(&blob_id)));
-
-        // Now delete the memory using memory_id (not blob_id!)
-        icing_database.delete_memories(&[memory_id.clone()])?;
-
-        // After deletion, get_blob_id_by_memory_id should return None.
-        // This is the key lookup that DatabaseWithCache uses to get the
-        // correct BlobId for cache deletion.
-        expect_that!(icing_database.get_blob_id_by_memory_id(memory_id)?, eq(&None));
-
-        // Verify the memory is no longer findable by tag search
-        let (results, _) = icing_database.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
+        expect_that!(db.get_blob_id_by_memory_id(mid)?, eq(&None));
+        let (results, _) = db.get_memories_by_tag("test_tag", 10, PageToken::Start)?;
         expect_that!(results, is_empty());
 
         Ok(())
     }
 
-    /// Test that text_search returns results sorted by created_timestamp
-    /// in descending order (newest first).
+    /// text_search returns results sorted by created_timestamp descending.
     #[gtest]
     fn text_search_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        // Add memories with different created_timestamps, inserted in non-sorted order
-        let memory_old = Memory {
-            id: "memory_old".to_string(),
-            tags: vec!["sort_test".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 1000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_old, "blob_old".to_string())?;
+        // Insert in non-sorted order: old, new, mid.
+        for (id, blob, secs) in [
+            ("memory_old", "blob_old", 1000),
+            ("memory_new", "blob_new", 3000),
+            ("memory_mid", "blob_mid", 2000),
+        ] {
+            let m = Memory {
+                id: id.into(),
+                tags: vec!["sort_test".into()],
+                created_timestamp: Some(ts(secs)),
+                ..Default::default()
+            };
+            db.add_memory(&m, blob.into())?;
+        }
 
-        let memory_new = Memory {
-            id: "memory_new".to_string(),
-            tags: vec!["sort_test".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 3000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_new, "blob_new".to_string())?;
-
-        let memory_mid = Memory {
-            id: "memory_mid".to_string(),
-            tags: vec!["sort_test".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 2000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_mid, "blob_mid".to_string())?;
-
-        // Search for all memories with tag "sort_test"
         let text_query = TextQuery {
             field: MemoryField::Tags as i32,
             match_type: MatchType::Equal as i32,
-            value: Some(text_query::Value::StringVal("sort_test".to_string())),
+            value: Some(text_query::Value::StringVal("sort_test".into())),
         };
-        let (results, _) = icing_database.text_search(&text_query, 10, PageToken::Start)?;
-
-        // Results should be sorted by created_timestamp descending (newest first)
+        let (results, _) = db.text_search(&text_query, 10, PageToken::Start)?;
         let blob_ids: Vec<String> = results.items.iter().map(|r| r.blob_id.clone()).collect();
-        expect_that!(blob_ids.len(), eq(3));
-        // Newest (3000) first, then middle (2000), then oldest (1000)
-        expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
 
+        expect_that!(blob_ids.len(), eq(3));
+        expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
         Ok(())
     }
 
     #[gtest]
     fn get_memories_by_tag_sorts_by_created_timestamp_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
 
-        // Insert memories in non-sorted order with different created_timestamps.
-        let memory_old = Memory {
-            id: "memory_old".to_string(),
-            tags: vec!["sort_tag".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 1000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_old, "blob_old".to_string())?;
+        for (id, blob, secs) in [
+            ("memory_old", "blob_old", 1000),
+            ("memory_new", "blob_new", 3000),
+            ("memory_mid", "blob_mid", 2000),
+        ] {
+            let m = Memory {
+                id: id.into(),
+                tags: vec!["sort_tag".into()],
+                created_timestamp: Some(ts(secs)),
+                ..Default::default()
+            };
+            db.add_memory(&m, blob.into())?;
+        }
 
-        let memory_new = Memory {
-            id: "memory_new".to_string(),
-            tags: vec!["sort_tag".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 3000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_new, "blob_new".to_string())?;
-
-        let memory_mid = Memory {
-            id: "memory_mid".to_string(),
-            tags: vec!["sort_tag".to_string()],
-            created_timestamp: Some(prost_types::Timestamp { seconds: 2000, nanos: 0 }),
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory_mid, "blob_mid".to_string())?;
-
-        // Results should be sorted by created_timestamp descending (newest first).
-        let (blob_ids, _) = icing_database.get_memories_by_tag("sort_tag", 10, PageToken::Start)?;
+        let (blob_ids, _) = db.get_memories_by_tag("sort_tag", 10, PageToken::Start)?;
         expect_that!(blob_ids, elements_are![eq("blob_new"), eq("blob_mid"), eq("blob_old")]);
-
         Ok(())
     }
 
     #[gtest]
     fn get_memories_by_empty_tag_returns_all_memories_test() -> anyhow::Result<()> {
-        let mut icing_database = IcingMetaDatabase::new(tempdir())?;
+        let mut db = IcingMetaDatabase::new(tempdir())?;
+        db.add_memory(
+            &Memory { id: "memory1".into(), tags: vec!["tag_a".into()], ..Default::default() },
+            "blob1".into(),
+        )?;
+        db.add_memory(
+            &Memory { id: "memory2".into(), tags: vec!["tag_b".into()], ..Default::default() },
+            "blob2".into(),
+        )?;
 
-        let memory1 = Memory {
-            id: "memory1".to_string(),
-            tags: vec!["tag_a".to_string()],
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory1, "blob1".to_string())?;
-
-        let memory2 = Memory {
-            id: "memory2".to_string(),
-            tags: vec!["tag_b".to_string()],
-            ..Default::default()
-        };
-        icing_database.add_memory(&memory2, "blob2".to_string())?;
-
-        // Empty tag should return all memories that have any tag.
-        let (results, _) = icing_database.get_memories_by_tag("", 10, PageToken::Start)?;
+        let (results, _) = db.get_memories_by_tag("", 10, PageToken::Start)?;
         assert_that!(results, unordered_elements_are![eq("blob1"), eq("blob2")]);
-
         Ok(())
     }
 }
