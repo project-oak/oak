@@ -40,7 +40,7 @@ use core::fmt;
 
 use thiserror::Error;
 
-use crate::{NoteVerifyingKey, SignatureType};
+use crate::note::{NoteVerifyingKey, SignatureType};
 
 /// A policy-local name identifying a witness or group within a
 /// [`WitnessPolicy`].
@@ -326,13 +326,16 @@ fn parse_threshold(s: &str, n: usize) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    use ed25519_dalek::SigningKey;
+
     use super::*;
     use crate::alloc::string::ToString;
 
-    /// Helper to create a NoteVerifyingKey for testing. Uses the C2SP vkey
-    /// format with signature type 0x04 (CosignatureV1).
+    /// Helper to create a NoteVerifyingKey for testing. Derives a valid
+    /// Ed25519 public key from the given raw secret key bytes.
     fn make_witness_vkey(origin: &str, raw: [u8; 32]) -> NoteVerifyingKey {
-        NoteVerifyingKey::from_parts(origin, SignatureType::CosignatureV1, raw)
+        let vk = SigningKey::from_bytes(&raw).verifying_key();
+        NoteVerifyingKey::from_parts(origin, SignatureType::CosignatureV1, vk)
     }
 
     #[test]
@@ -537,11 +540,9 @@ mod tests {
     #[test]
     fn parse_non_cosignature_witness_fails() {
         // A verifying key with type 0x01 (Ed25519) should be rejected.
-        let vkey = NoteVerifyingKey::from_parts(
-            "witness.example.com/w1",
-            SignatureType::Ed25519,
-            [0xAA; 32],
-        );
+        let vk = SigningKey::from_bytes(&[0xAA; 32]).verifying_key();
+        let vkey =
+            NoteVerifyingKey::from_parts("witness.example.com/w1", SignatureType::Ed25519, vk);
         let policy_text =
             alloc::format!(concat!("witness w1 {}\n", "quorum w1\n",), vkey.to_vkey_string());
         let err = WitnessPolicy::parse(&policy_text).unwrap_err();

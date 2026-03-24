@@ -37,6 +37,7 @@
 
 extern crate alloc;
 
+pub mod note;
 pub mod policy;
 
 use alloc::{
@@ -47,10 +48,9 @@ use alloc::{
 };
 
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
-use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+pub use note::{NoteError, NoteSignature, NoteSigningKey, NoteVerifyingKey, SignatureType};
 use oak_digest::Sha256;
 use rs_merkle::Hasher;
-use sha2::{Digest, Sha256 as Sha256Hasher};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -61,195 +61,22 @@ pub enum TLogProofError {
     InvalidIndex,
     #[error("malformed checkpoint section")]
     MalformedCheckpoint,
-    #[error("malformed signature")]
-    MalformedSignature,
-    #[error("malformed verifying key")]
-    MalformedVerifyingKey,
     #[error("malformed proof")]
     MalformedProof,
     #[error("checkpoint origin mismatch: expected {0}, got {1}")]
     OriginMismatch(String, String),
     #[error("mismatch between signatures and verifying keys")]
     SignatureMismatch,
-    #[error("signature verification failed")]
-    SignatureVerificationFailed,
     #[error("root hash mismatch")]
     RootMismatch,
     #[error("invalid Merkle chain")]
     InvalidMerkleChain,
     #[error("witness quorum not satisfied")]
     InsufficientWitnesses,
+    #[error(transparent)]
+    Note(#[from] NoteError),
     #[error("malformed data")]
     Format(#[from] Box<dyn core::error::Error + Send + Sync>),
-}
-
-/// Signature type identifier as defined by the
-/// [C2SP signed-note specification](https://c2sp.org/signed-note#signature-types).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SignatureType {
-    /// 0x01 — Ed25519 (RFC 8032) signature over the note text.
-    Ed25519,
-    /// 0x04 — Timestamped Ed25519 witness cosignature
-    /// ([c2sp.org/tlog-cosignature](https://c2sp.org/tlog-cosignature)).
-    CosignatureV1,
-}
-
-impl SignatureType {
-    fn from_byte(b: u8) -> Result<Self, TLogProofError> {
-        match b {
-            0x01 => Ok(SignatureType::Ed25519),
-            0x04 => Ok(SignatureType::CosignatureV1),
-            _ => Err(TLogProofError::MalformedVerifyingKey),
-        }
-    }
-}
-
-/// A signing key in note format.
-#[derive(Debug, Clone)]
-pub struct NoteSigningKey {
-    // This is only (currently!) used by tests.
-    #[allow(dead_code)]
-    raw: [u8; 32],
-}
-
-/// A verifying key for a checkpoint signature in note format.
-///
-/// Supports Ed25519 signatures (type 0x01) and timestamped Ed25519 witness
-/// cosignatures (type 0x04) as defined by the
-/// [C2SP signed-note specification](https://c2sp.org/signed-note).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NoteVerifyingKey {
-    pub origin: String,
-    pub key_id_hint: [u8; 4],
-    pub signature_type: SignatureType,
-    pub raw: [u8; 32],
-}
-
-impl NoteVerifyingKey {
-    /// Creates a new `NoteVerifyingKey` from its constituent parts.
-    pub fn from_parts(origin: &str, signature_type: SignatureType, raw: [u8; 32]) -> Self {
-        let mut hasher = Sha256Hasher::new();
-        hasher.update(origin.as_bytes());
-        hasher.update(b"\n");
-        hasher.update(raw);
-        let hash = hasher.finalize();
-        let key_id_hint: [u8; 4] = hash[..4].try_into().unwrap();
-        Self { origin: origin.to_string(), key_id_hint, signature_type, raw }
-    }
-
-    /// Parses a verifying key in note format.
-    ///
-    /// The format is `<key name>+<hex key ID>+<base64(signature type || public
-    /// key)>`.
-    ///
-    /// Valid example input:
-    /// ```text
-    /// paic.google.com/log/0+609b8245+Ae74NkuIVBowBYu37xUJ5e3wf52bMPhW9e59idWfWR2j
-    /// ```
-    pub fn parse(serialized: &str) -> Result<Self, TLogProofError> {
-        // There may be more plusses in the base64 encoded part.
-        let parts: Vec<&str> = serialized.splitn(3, '+').collect();
-        if parts.len() < 3 {
-            return Err(TLogProofError::MalformedVerifyingKey);
-        }
-        let origin = parts[0].to_string();
-        let id_encoded = parts[1];
-        let key_encoded = parts[2];
-        let id_bytes =
-            hex::decode(id_encoded).map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        let key_bytes =
-            B64.decode(key_encoded).map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        if key_bytes.len() != 33 {
-            return Err(TLogProofError::MalformedVerifyingKey);
-        }
-        let signature_type = SignatureType::from_byte(key_bytes[0])?;
-        let key_id_hint: [u8; 4] =
-            id_bytes.as_slice().try_into().map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        let raw: [u8; 32] =
-            key_bytes[1..33].try_into().map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        Ok(NoteVerifyingKey { origin, key_id_hint, signature_type, raw })
-    }
-
-    /// Serialises this verifying key back to note vkey string format:
-    /// `<origin>+<hex key ID>+<base64(signature type || public key)>`.
-    pub fn to_vkey_string(&self) -> String {
-        let sig_type_byte = match self.signature_type {
-            SignatureType::Ed25519 => 0x01u8,
-            SignatureType::CosignatureV1 => 0x04u8,
-        };
-        let mut key_material = alloc::vec![sig_type_byte];
-        key_material.extend_from_slice(&self.raw);
-        format!("{}+{}+{}", self.origin, hex::encode(self.key_id_hint), B64.encode(&key_material))
-    }
-
-    /// Verifies that `sig` is a valid signature over the given checkpoint text
-    /// using this key, handling signature-type-specific payload framing.
-    pub fn verify(&self, checkpoint_text: &str, sig: &NoteSignature) -> Result<(), TLogProofError> {
-        match self.signature_type {
-            SignatureType::Ed25519 => {
-                if sig.sig_bytes.len() != 64 {
-                    return Err(TLogProofError::MalformedSignature);
-                }
-                self.verify_ed25519(checkpoint_text.as_bytes(), &sig.sig_bytes)
-            }
-            SignatureType::CosignatureV1 => {
-                if sig.sig_bytes.len() != 72 {
-                    return Err(TLogProofError::MalformedSignature);
-                }
-                let timestamp = u64::from_be_bytes(sig.sig_bytes[0..8].try_into().unwrap());
-                let payload = format!("cosignature/v1\ntime {}\n{}", timestamp, checkpoint_text);
-                self.verify_ed25519(payload.as_bytes(), &sig.sig_bytes[8..72])
-            }
-        }
-    }
-
-    /// Performs raw Ed25519 signature verification.
-    fn verify_ed25519(&self, message: &[u8], signature: &[u8]) -> Result<(), TLogProofError> {
-        let vkey = VerifyingKey::from_bytes(&self.raw)
-            .map_err(|_| TLogProofError::MalformedVerifyingKey)?;
-        let sig = Signature::from_bytes(
-            signature.try_into().map_err(|_| TLogProofError::MalformedSignature)?,
-        );
-        vkey.verify(message, &sig).map_err(|_| TLogProofError::SignatureVerificationFailed)?;
-        Ok(())
-    }
-}
-
-/// A signature on a checkpoint in note format.
-#[derive(Debug, Clone)]
-pub struct NoteSignature {
-    pub origin: String,
-    pub key_id_hint: [u8; 4],
-    pub sig_bytes: Vec<u8>,
-}
-
-impl NoteSignature {
-    /// Parses a signature line from a C2SP t-log proof.
-    ///
-    /// Valid example input:
-    /// ```text
-    /// — paic.google.com/log/0 YJuCRffzjw85Wjrgi2alFJT94ZC97L+PYMnBPs4q/pN8y/h5Q3lyUfILQCS7bA6xgc/1CaX+T/yRXNhIIJbqvsjR4wU=
-    /// ```
-    pub fn parse(serialized: &str) -> Result<NoteSignature, TLogProofError> {
-        let strip = serialized.strip_prefix("— ").ok_or(TLogProofError::MalformedSignature)?;
-        let (origin, encoded) = strip.split_once(' ').ok_or(TLogProofError::MalformedSignature)?;
-        let b = B64.decode(encoded).map_err(|e| TLogProofError::Format(Box::new(e)))?;
-        if b.len() < 4 {
-            return Err(TLogProofError::MalformedSignature);
-        }
-        Ok(NoteSignature {
-            origin: origin.to_string(),
-            key_id_hint: b[0..4].try_into().unwrap(),
-            sig_bytes: b[4..].to_vec(),
-        })
-    }
-
-    /// Returns `true` if this signature's origin and key ID hint match the
-    /// given verifying key, i.e. this signature *could* have been produced
-    /// by that key.
-    pub fn matches_key(&self, vkey: &NoteVerifyingKey) -> bool {
-        self.origin == vkey.origin && self.key_id_hint == vkey.key_id_hint
-    }
 }
 
 /// Represents the checkpoint section of a t-log proof.
@@ -457,21 +284,22 @@ impl Hasher for C2spHasher {
 
     fn hash(data: &[u8]) -> Self::Hash {
         // Leaf hash: SHA256(0x00 || data)
-        <Self::Hash>::from(<[u8; 32]>::from(
-            Sha256Hasher::new().chain_update([0x00]).chain_update(data).finalize(),
-        ))
+        let mut buf = alloc::vec::Vec::with_capacity(1 + data.len());
+        buf.push(0x00);
+        buf.extend_from_slice(data);
+        Sha256::from_contents(&buf)
     }
 
     fn concat_and_hash(left: &Self::Hash, right: Option<&Self::Hash>) -> Self::Hash {
         match right {
             // Node hash: SHA256(0x01 || left || right)
-            Some(right_hash) => <Self::Hash>::from(<[u8; 32]>::from(
-                Sha256Hasher::new()
-                    .chain_update([0x01])
-                    .chain_update(left)
-                    .chain_update(right_hash)
-                    .finalize(),
-            )),
+            Some(right_hash) => {
+                let mut buf = [0u8; 65];
+                buf[0] = 0x01;
+                buf[1..33].copy_from_slice(left.as_ref());
+                buf[33..65].copy_from_slice(right_hash.as_ref());
+                Sha256::from_contents(&buf)
+            }
             // Promote the left child if there is no right child.
             None => *left,
         }
@@ -483,9 +311,10 @@ mod tests {
     use alloc::vec;
 
     use base64::{Engine, engine::general_purpose::STANDARD as B64};
-    use ed25519_dalek::{Signer, SigningKey};
+    use oak_time::Instant;
 
     use super::*;
+    use crate::note::NoteError;
 
     const FAKE_ORIGIN: &str = "example.com/log";
     const TEST_TLOG_PROOF: &str = include_str!("testdata/test.tlog-proof");
@@ -535,44 +364,15 @@ mod tests {
             Self::fake("fake-witness", SignatureType::CosignatureV1, [43u8; 32])
         }
 
-        fn fake(origin: &str, signature_type: SignatureType, seed: [u8; 32]) -> Self {
-            let signing_key = NoteSigningKey { raw: seed };
-            let s = SigningKey::from_bytes(&signing_key.raw);
-            let key_id_hint = [seed[0], seed[1], seed[2], seed[3]];
-            let verifying_key = NoteVerifyingKey {
-                origin: origin.into(),
-                key_id_hint,
-                signature_type,
-                raw: s.verifying_key().to_bytes(),
-            };
-            Self { origin: origin.into(), signing_key: Some(signing_key), verifying_key }
+        fn fake(origin: &str, signature_type: SignatureType, raw: [u8; 32]) -> Self {
+            let note_key = NoteSigningKey::from_parts(origin, signature_type, raw);
+            let verifying_key = note_key.verifying_key.clone();
+            Self { origin: origin.into(), signing_key: Some(note_key), verifying_key }
         }
 
-        /// Creates an Ed25519 (type 0x01) signature over the given text.
-        fn sign(&self, msg: &str) -> NoteSignature {
-            let signing_key = SigningKey::from_bytes(&self.signing_key.as_ref().unwrap().raw);
-            let signature = signing_key.sign(msg.as_bytes());
-            NoteSignature {
-                origin: self.origin.clone(),
-                key_id_hint: self.verifying_key.key_id_hint,
-                sig_bytes: signature.to_bytes().to_vec(),
-            }
-        }
-
-        /// Creates a timestamped cosignature (type 0x04) over the given
-        /// checkpoint text.
-        fn cosign(&self, checkpoint_text: &str, timestamp: u64) -> NoteSignature {
-            let signing_key = SigningKey::from_bytes(&self.signing_key.as_ref().unwrap().raw);
-            let payload = format!("cosignature/v1\ntime {}\n{}", timestamp, checkpoint_text);
-            let signature = signing_key.sign(payload.as_bytes());
-            let mut sig_bytes = Vec::new();
-            sig_bytes.extend_from_slice(&timestamp.to_be_bytes());
-            sig_bytes.extend_from_slice(&signature.to_bytes());
-            NoteSignature {
-                origin: self.origin.clone(),
-                key_id_hint: self.verifying_key.key_id_hint,
-                sig_bytes,
-            }
+        /// Signs a checkpoint, dispatching based on the key's signature type.
+        fn sign(&self, checkpoint_text: &str, timestamp: Instant) -> NoteSignature {
+            self.signing_key.as_ref().unwrap().sign(checkpoint_text, timestamp)
         }
     }
 
@@ -616,7 +416,7 @@ mod tests {
     fn make_checkpoint(identity: &TestIdentity, tree_size: u64, root_hash: &Sha256) -> Checkpoint {
         let root_b64 = B64.encode(root_hash);
         let signed_payload = format!("{}\n{}\n{}\n", identity.origin, tree_size, root_b64);
-        let sig = identity.sign(&signed_payload);
+        let sig = identity.sign(&signed_payload, Instant::UNIX_EPOCH);
         Checkpoint {
             origin: identity.origin.clone(),
             tree_size,
@@ -653,67 +453,14 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_signature_missing_prefix() {
-        assert!(matches!(
-            NoteSignature::parse("origin sig"),
-            Err(TLogProofError::MalformedSignature)
-        ));
-    }
-
-    #[test]
-    fn test_parse_signature_invalid_base64() {
-        assert!(matches!(NoteSignature::parse("— origin @@@@"), Err(TLogProofError::Format(_))));
-    }
-
-    #[test]
-    fn test_parse_signature_too_short() {
-        // "AAAA" decodes to 3 bytes, below the 4-byte key ID minimum.
-        assert!(matches!(
-            NoteSignature::parse("— origin AAAA"),
-            Err(TLogProofError::MalformedSignature)
-        ));
-    }
-
-    #[test]
-    fn test_parse_verifying_key_too_few_parts() {
-        assert!(matches!(
-            NoteVerifyingKey::parse("origin+id"),
-            Err(TLogProofError::MalformedVerifyingKey)
-        ));
-    }
-
-    #[test]
-    fn test_parse_verifying_key_unsupported_version() {
-        let mut key_bytes = [0u8; 33];
-        key_bytes[0] = 0x02; // unsupported version
-        let key_b64 = B64.encode(key_bytes);
-        let serialized = format!("origin+12345678+{}", key_b64);
-        assert!(matches!(
-            NoteVerifyingKey::parse(&serialized),
-            Err(TLogProofError::MalformedVerifyingKey)
-        ));
-    }
-
-    #[test]
-    fn test_parse_verifying_key_wrong_length() {
-        let key_bytes = [0u8; 30]; // too short
-        let key_b64 = B64.encode(key_bytes);
-        let serialized = format!("origin+12345678+{}", key_b64);
-        assert!(matches!(
-            NoteVerifyingKey::parse(&serialized),
-            Err(TLogProofError::MalformedVerifyingKey)
-        ));
-    }
-
-    #[test]
     fn test_verify_ed25519_wrong_key() {
         let signer = TestIdentity::fake_log();
         let other = TestIdentity::fake(FAKE_ORIGIN, SignatureType::Ed25519, [99u8; 32]);
         let signed_text = "test message\n";
-        let sig = signer.sign(signed_text);
+        let sig = signer.sign(signed_text, Instant::UNIX_EPOCH);
 
         let result = other.verifying_key.verify(signed_text, &sig);
-        assert!(matches!(result, Err(TLogProofError::SignatureVerificationFailed)));
+        assert!(matches!(result, Err(NoteError::SignatureVerificationFailed)));
     }
 
     #[test]
@@ -914,9 +661,9 @@ mod tests {
         let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
 
         // Log signs with Ed25519 (type 0x01).
-        let log_sig = log.sign(&signed_payload);
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
         // Witness cosigns with timestamp (type 0x04).
-        let witness_sig = witness.cosign(&signed_payload, 1700000000);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
 
         let checkpoint = Checkpoint {
             origin: log.origin.clone(),
@@ -948,7 +695,7 @@ mod tests {
 
         // Build signed_payload with an extension line.
         let signed_payload = format!("{}\n{}\n{}\nextra-data\n", identity.origin, 2, root_b64);
-        let sig = identity.sign(&signed_payload);
+        let sig = identity.sign(&signed_payload, Instant::UNIX_EPOCH);
 
         let checkpoint = Checkpoint {
             origin: identity.origin.clone(),
@@ -1052,7 +799,10 @@ mod tests {
 
         let result = proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry);
 
-        assert!(matches!(result, Err(TLogProofError::SignatureVerificationFailed)));
+        assert!(matches!(
+            result,
+            Err(TLogProofError::Note(NoteError::SignatureVerificationFailed))
+        ));
     }
 
     #[test]
@@ -1102,9 +852,9 @@ mod tests {
         let root_b64 = B64.encode(root);
         let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
 
-        let log_sig = log.sign(&signed_payload);
-        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
-        let witness2_sig = witness2.cosign(&signed_payload, 1700000001);
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness1_sig = witness1.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+        let witness2_sig = witness2.sign(&signed_payload, Instant::from_unix_seconds(1700000001));
 
         let checkpoint = Checkpoint {
             origin: log.origin.clone(),
@@ -1140,9 +890,9 @@ mod tests {
         let root_b64 = B64.encode(root);
         let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
 
-        let log_sig = log.sign(&signed_payload);
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
         // Only witness1 cosigns.
-        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
+        let witness1_sig = witness1.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
 
         let checkpoint = Checkpoint {
             origin: log.origin.clone(),
@@ -1179,8 +929,8 @@ mod tests {
         let root_b64 = B64.encode(root);
         let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
 
-        let log_sig = log.sign(&signed_payload);
-        let witness1_sig = witness1.cosign(&signed_payload, 1700000000);
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness1_sig = witness1.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
 
         let checkpoint = Checkpoint {
             origin: log.origin.clone(),

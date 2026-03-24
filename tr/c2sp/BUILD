@@ -25,12 +25,12 @@ rust_library(
     name = "c2sp",
     srcs = glob(["**/*.rs"]),
     deps = [
+        "//oak_time",
         "//util/digest:oak_digest",
         "@oak_crates_index//:base64",
         "@oak_crates_index//:ed25519-dalek",
         "@oak_crates_index//:hex",
         "@oak_crates_index//:rs_merkle",
-        "@oak_crates_index//:sha2",
         "@oak_crates_index//:thiserror",
     ],
 )
