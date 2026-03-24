@@ -80,7 +80,7 @@ pub enum TLogProofError {
 }
 
 /// Represents the checkpoint section of a t-log proof.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checkpoint {
     pub origin: String,
     pub tree_size: u64,
@@ -143,10 +143,27 @@ impl Checkpoint {
             signatures,
         })
     }
+
+    /// Serialises this checkpoint to its textual representation.
+    ///
+    /// The output is the signed payload (which includes any extension lines)
+    /// followed by a blank line and the signature lines.
+    pub fn serialize(&self) -> String {
+        let mut s = String::new();
+        // signed_payload already ends with '\n'.
+        s.push_str(&self.signed_payload);
+        // Blank line separating body from signatures.
+        s.push('\n');
+        for sig in &self.signatures {
+            s.push_str(&sig.to_signature_line());
+            s.push('\n');
+        }
+        s
+    }
 }
 
 /// A C2SP t-log proof bundle.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TLogProof {
     pub index: u64,
     pub proof_hashes: Vec<Sha256>,
@@ -193,6 +210,22 @@ impl TLogProof {
         let checkpoint = Checkpoint::parse(&checkpoint_str)?;
 
         Ok(TLogProof { index, proof_hashes, checkpoint })
+    }
+
+    /// Serialises this proof to the
+    /// [C2SP tlog-proof](https://c2sp.org/tlog-proof) text format.
+    pub fn serialize(&self) -> String {
+        let mut s = String::new();
+        s.push_str("c2sp.org/tlog-proof@v1\n");
+        s.push_str(&format!("index {}\n", self.index));
+        for hash in &self.proof_hashes {
+            s.push_str(&B64.encode(hash));
+            s.push('\n');
+        }
+        // Blank line separating proof hashes from checkpoint.
+        s.push('\n');
+        s.push_str(&self.checkpoint.serialize());
+        s
     }
 
     /// Verifies a C2SP tlog-proof bundle.
@@ -595,6 +628,49 @@ mod tests {
         assert!(
             proof.verify(&identity.verifying_key, &policy::WitnessPolicy::empty(), entry).is_ok()
         );
+    }
+
+    #[test]
+    fn test_serialize_roundtrip_synthetic() {
+        let identity = TestIdentity::fake_log();
+        let entry = b"roundtrip-entry";
+        let test_tree = TestTree::new(4, 2, entry);
+        let checkpoint = make_checkpoint(&identity, 4, &test_tree.root());
+        let proof_str = make_tlog_proof(2, &test_tree.proof(2), &checkpoint);
+
+        let proof = TLogProof::parse(&proof_str).unwrap();
+        let displayed = proof.serialize();
+        let reparsed = TLogProof::parse(&displayed).expect("re-parsing displayed proof");
+
+        assert_eq!(reparsed, proof);
+    }
+
+    #[test]
+    fn test_serialize_roundtrip_with_cosignature() {
+        let log = TestIdentity::fake_log();
+        let witness = TestIdentity::fake_witness();
+        let entry = b"cosig-roundtrip";
+        let test_tree = TestTree::new(3, 1, entry);
+        let root = test_tree.root();
+        let root_b64 = B64.encode(root);
+        let signed_payload = format!("{}\n{}\n{}\n", log.origin, 3, root_b64);
+
+        let log_sig = log.sign(&signed_payload, Instant::UNIX_EPOCH);
+        let witness_sig = witness.sign(&signed_payload, Instant::from_unix_seconds(1700000000));
+
+        let checkpoint = Checkpoint {
+            origin: log.origin.clone(),
+            tree_size: 3,
+            root_hash: root,
+            signed_payload,
+            signatures: vec![log_sig, witness_sig],
+        };
+
+        let proof = TLogProof { index: 1, proof_hashes: test_tree.proof(1), checkpoint };
+        let displayed = proof.serialize();
+        let reparsed = TLogProof::parse(&displayed).expect("re-parsing displayed proof");
+
+        assert_eq!(reparsed, proof);
     }
 
     #[test]

@@ -246,7 +246,7 @@ impl NoteVerifyingKey {
 }
 
 /// A signature on a checkpoint in note format.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteSignature {
     pub origin: String,
     pub key_id_hint: [u8; 4],
